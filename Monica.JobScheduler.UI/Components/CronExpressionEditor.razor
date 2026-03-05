@@ -69,7 +69,7 @@
                     @foreach (var (time, index) in _nextOccurrences.Select((t, i) => (t, i)))
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @(index + 1). @time.ToString("yyyy-MM-dd HH:mm:ss")
+                            @(index + 1). @time.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                         </MudText>
                     }
                 </MudStack>

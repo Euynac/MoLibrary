@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.RAG.Services;
-using Monica.AI.UI.Helpers;
 using Monica.AI.UI.Models;
 using Monica.Tool.MoResponse;
 
@@ -26,10 +25,7 @@ public class EmbeddingModelManagementUIService(
                     .Select(model => new EmbeddingModelOption
                     {
                         ProviderId = provider.ProviderId,
-                        ProviderDisplayName = ProviderLabelFormatter.FormatWithDisplayName(
-                            provider.Info.ProviderType,
-                            provider.ProviderId,
-                            provider.Info.DisplayName),
+                        ProviderDisplayName = provider.DisplayName,
                         ModelName = model.ModelName,
                         Dimensions = model.Dimensions,
                         Description = model.Description
@@ -85,18 +81,12 @@ public class EmbeddingModelManagementUIService(
             }
 
             var provider = providerFactory.GetProvider(kb.EmbeddingProviderId);
-            var providerType = provider?.Info.ProviderType;
-            var providerDisplayName = provider?.Info.DisplayName;
+            var fallbackProviderId = kb.EmbeddingProviderId.Trim();
 
             return Res.Ok<EmbeddingModelOption?>(new EmbeddingModelOption
             {
                 ProviderId = kb.EmbeddingProviderId,
-                ProviderDisplayName = provider is null
-                    ? ProviderLabelFormatter.FormatFromProviderId(kb.EmbeddingProviderId)
-                    : ProviderLabelFormatter.FormatWithDisplayName(
-                        providerType,
-                        kb.EmbeddingProviderId,
-                        providerDisplayName),
+                ProviderDisplayName = provider?.DisplayName ?? fallbackProviderId,
                 ModelName = kb.EmbeddingModelName,
                 Description = "Embedding model is persisted in KB metadata but unavailable in current providers."
             });

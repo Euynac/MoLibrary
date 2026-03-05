@@ -9,6 +9,87 @@ namespace Monica.AI.UI.Helpers;
 public static class ChatPageHelper
 {
     /// <summary>
+    /// Gets providers that have at least one chat-capable (LLM) model.
+    /// </summary>
+    public static IReadOnlyList<AIProviderInfo> GetChatProviders(IReadOnlyList<AIProviderInfo> providers)
+    {
+        return providers
+            .Where(HasChatModel)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets chat-capable models (LLM only) for a provider.
+    /// </summary>
+    public static IReadOnlyList<AIModelInfo> GetChatModels(AIProviderInfo? provider)
+    {
+        return provider?.SupportedModels?
+            .OfType<LLMModelInfo>()
+            .Cast<AIModelInfo>()
+            .ToList() ?? [];
+    }
+
+    /// <summary>
+    /// Resolves the preferred provider for chat usage.
+    /// </summary>
+    public static AIProviderInfo? GetPreferredChatProvider(
+        IReadOnlyList<AIProviderInfo> providers,
+        string? preferredProviderId = null)
+    {
+        var chatProviders = GetChatProviders(providers);
+        if (chatProviders.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredProviderId))
+        {
+            var preferred = chatProviders.FirstOrDefault(
+                p => string.Equals(p.ProviderId, preferredProviderId, StringComparison.OrdinalIgnoreCase));
+            if (preferred != null)
+            {
+                return preferred;
+            }
+        }
+
+        return chatProviders.FirstOrDefault(p => p.IsDefault) ?? chatProviders.First();
+    }
+
+    /// <summary>
+    /// Resolves the preferred chat model name for a provider.
+    /// </summary>
+    public static string? GetPreferredChatModel(AIProviderInfo? provider, string? preferredModelName = null)
+    {
+        var chatModels = provider?.SupportedModels?.OfType<LLMModelInfo>().ToList();
+        if (chatModels is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredModelName) &&
+            chatModels.Any(m => string.Equals(m.ModelName, preferredModelName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return preferredModelName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(provider?.DefaultModel) &&
+            chatModels.Any(m => string.Equals(m.ModelName, provider.DefaultModel, StringComparison.OrdinalIgnoreCase)))
+        {
+            return provider.DefaultModel;
+        }
+
+        return chatModels.First().ModelName;
+    }
+
+    /// <summary>
+    /// Validates whether the provider has at least one chat-capable model.
+    /// </summary>
+    public static bool HasChatModel(AIProviderInfo? provider)
+    {
+        return provider?.SupportedModels?.OfType<LLMModelInfo>().Any() ?? false;
+    }
+
+    /// <summary>
     /// Updates reasoning support based on current provider and model.
     /// </summary>
     public static bool GetReasoningSupport(
@@ -61,5 +142,22 @@ public static class ChatPageHelper
             return false;
 
         return provider.SupportedModels?.Any(m => m.ModelName == modelName) ?? false;
+    }
+
+    /// <summary>
+    /// Validates whether the model is a chat-capable (LLM) model on the provider.
+    /// </summary>
+    public static bool IsChatModelValid(
+        AIProviderInfo? provider,
+        string? modelName)
+    {
+        if (provider == null || string.IsNullOrWhiteSpace(modelName))
+        {
+            return false;
+        }
+
+        return provider.SupportedModels?
+            .OfType<LLMModelInfo>()
+            .Any(m => string.Equals(m.ModelName, modelName, StringComparison.OrdinalIgnoreCase)) ?? false;
     }
 }

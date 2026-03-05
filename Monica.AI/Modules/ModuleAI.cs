@@ -81,11 +81,15 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// 添加 OpenAI Provider
     /// </summary>
     /// <param name="configure">配置委托</param>
+    /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>当前引导器实例</returns>
-    public ModuleAIGuide AddOpenAIProvider(Action<OpenAIProviderOptions> configure)
+    public ModuleAIGuide AddOpenAIProvider(
+        Action<OpenAIProviderOptions> configure,
+        string? providerId = null)
     {
         var options = new OpenAIProviderOptions { ApiKey = "", SupportedModels = [] };
         configure(options);
+        options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.OpenAI);
 
         ConfigureApplicationBuilder(context =>
         {
@@ -93,7 +97,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new OpenAIProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"openai-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -102,11 +106,16 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// 添加 Anthropic Provider
     /// </summary>
     /// <param name="configure">配置委托</param>
+    /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>当前引导器实例</returns>
-    public ModuleAIGuide AddAnthropicProvider(Action<AnthropicProviderOptions> configure)
+    public ModuleAIGuide AddAnthropicProvider(
+        Action<AnthropicProviderOptions> configure,
+        string? providerId = null)
     {
         var options = new AnthropicProviderOptions { ApiKey = "", SupportedModels = [] };
         configure(options);
+       
+        options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Anthropic);
 
         ConfigureApplicationBuilder(context =>
         {
@@ -114,7 +123,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"anthropic-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }
@@ -123,11 +132,15 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     /// Add fake embedding provider.
     /// </summary>
     /// <param name="configure">Options configure delegate.</param>
+    /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
     /// <returns>Current guide instance.</returns>
-    public ModuleAIGuide AddFakeProvider(Action<FakeProviderOptions> configure)
+    public ModuleAIGuide AddFakeProvider(
+        Action<FakeProviderOptions> configure,
+        string? providerId = null)
     {
         var options = new FakeProviderOptions { ApiKey = "fake", SupportedModels = [] };
         configure(options);
+        options.ProviderId = providerId ?? options.ProviderId ?? nameof(EAIProviderType.Fake);
 
         ConfigureApplicationBuilder(context =>
         {
@@ -135,7 +148,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new FakeProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: $"fake-{options.ProviderId ?? options.SupportedModels?.FirstOrDefault() ?? "invalid"}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
 
         return this;
     }

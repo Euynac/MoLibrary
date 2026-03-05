@@ -4,7 +4,7 @@ description: This skill should be used when the user asks to create or modify Bl
 version: 2.0.0
 ---
 
-# Monica UI Development Guide (MudBlazor v9 Source-First)
+# Monica UI Development Guide
 
 This skill is for Monica Blazor UI work with MudBlazor v9.
 

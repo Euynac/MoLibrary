@@ -5,7 +5,6 @@ using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.RAG.Services;
 using Monica.AI.Services;
-using Monica.Tool.MoResponse;
 
 namespace Monica.AI.Providers.Fake;
 
@@ -14,6 +13,7 @@ namespace Monica.AI.Providers.Fake;
 /// </summary>
 public class FakeProvider : IAIProvider
 {
+    private const EAIProviderType ProviderKind = EAIProviderType.Fake;
     private readonly FakeProviderOptions _options;
     private readonly IReadOnlyList<AIModelInfo> _models;
     private readonly string? _defaultModel;
@@ -36,10 +36,13 @@ public class FakeProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "fake-embeddings" : $"fake-{_defaultModel}");
+    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? "Fake Embeddings";
+    public string ProviderType => ProviderKind.ToString();
+
+    /// <inheritdoc />
+    public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
@@ -47,7 +50,7 @@ public class FakeProvider : IAIProvider
         ProviderId = ProviderId,
         DisplayName = DisplayName,
         Description = "Fake embedding provider for development and testing.",
-        ProviderType = "Fake",
+        ProviderType = ProviderType,
         DefaultModel = _defaultModel,
         SystemPrompt = _systemPrompt,
         SupportedModels = _models,
@@ -89,23 +92,22 @@ public class FakeProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public Task<Res> TestConnectionAsync(CancellationToken ct = default)
+    public Task TestConnectionAsync(CancellationToken ct = default)
     {
-        return Task.FromResult(Res.Ok("Fake provider is ready."));
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<string>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        var models = _models.Select(m => m.ModelName).ToList();
-        return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+        IReadOnlyList<string> models = _models.Select(m => m.ModelName).ToList();
+        return Task.FromResult(models);
     }
 
     /// <inheritdoc />
-    public Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
-        return Task.FromResult<Res<IReadOnlyList<AIRemoteModelInfo>>>(
-            Res.Fail("Fake provider does not support remote model listing."));
+        throw new NotSupportedException("Fake provider does not support remote model listing.");
     }
 
     /// <inheritdoc />

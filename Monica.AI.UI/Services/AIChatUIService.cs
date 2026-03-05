@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.AI.Extensions;
 using Monica.AI.Models;
 using Monica.AI.Services;
-using Monica.AI.UI.Modules;
+using Monica.Tool.MoResponse;
 
 namespace Monica.AI.UI.Services;
 
@@ -42,7 +41,7 @@ public class AIChatUIService(
     /// <summary>
     /// Create a new session with the specified configuration.
     /// </summary>
-    public async Task<AgentSessionState> CreateSessionAsync(
+    public async Task<Res<AgentSessionState>> CreateSessionAsync(
         string? providerId = null,
         string? modelName = null,
         string? systemPrompt = null,
@@ -51,19 +50,30 @@ public class AIChatUIService(
         string? title = null,
         CancellationToken ct = default)
     {
-        var state = await chatService.CreateSessionAsync(
-            providerId,
-            modelName,
-            systemPrompt,
-            knowledgeBaseIds,
-            reasoningEnabled,
-            title,
-            ct);
+        try
+        {
+            var state = await chatService.CreateSessionAsync(
+                providerId,
+                modelName,
+                systemPrompt,
+                knowledgeBaseIds,
+                reasoningEnabled,
+                title,
+                ct);
 
-        sessionStorage.AddSession(state);
-        sessionStorage.CurrentSessionId = state.SessionId;
+            sessionStorage.AddSession(state);
+            sessionStorage.CurrentSessionId = state.SessionId;
 
-        return state;
+            return state;
+        }
+        catch (NotSupportedException ex)
+        {
+            return Res.Fail(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to create chat session: {ex.Message}");
+        }
     }
 
     /// <summary>

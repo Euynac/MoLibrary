@@ -38,6 +38,9 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<RAGMarkdownDocumentResolver>();
+        services.AddScoped<RAGChunkViewCoordinator>();
+        services.AddScoped<RAGBatchIndexCoordinator>();
         services.AddScoped<RAGUIService>();
         services.AddScoped<IEmbeddingModelManagementUIService, EmbeddingModelManagementUIService>();
         services.AddScoped<IChunkerManagementUIService, ChunkerManagementUIService>();

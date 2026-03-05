@@ -1,13 +1,8 @@
 @page "/ai/rag/debug"
 @rendermode InteractiveServer
 @using Monica.AI.RAG.Models
-@using Monica.AI.RAG.Services
-@using Monica.AI.UI.Components.RAG
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.Models
-@using Monica.AI.UI.Services
-@using Monica.AI.UI.Helpers
-@using Monica.AI.Abstractions
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Localization
 @inject RAGUIService RAGUIService
@@ -409,12 +404,9 @@
         var provider = ProviderFactory.GetProvider(providerId);
         if (provider is not null)
         {
-            return ProviderLabelFormatter.FormatWithDisplayName(
-                provider.Info.ProviderType,
-                provider.ProviderId,
-                provider.Info.DisplayName);
+            return provider.DisplayName;
         }
 
-        return ProviderLabelFormatter.FormatFromProviderId(providerId);
+        return providerId.Trim();
     }
 }

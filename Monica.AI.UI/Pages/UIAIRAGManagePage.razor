@@ -2,12 +2,8 @@
 @implements IDisposable
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.Services
 @using Monica.AI.RAG.Models
-@using Monica.AI.UI.Components.RAG
-@using Monica.AI.UI.Helpers
 @using Monica.AI.UI.Models
-@using Monica.AI.Abstractions
 @using Monica.Tool.MoResponse
 @inject IStringLocalizer<AIResource> L
 @inject RAGUIService RAGService
@@ -353,14 +349,15 @@
     private List<EmbeddingModelOption> _availableModels = new();
     private List<DocumentQueueItem> _documentQueue = new();
     private int _parallelCount = 5;
-    private bool _isBatchIndexing;
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
     private const int QueueRefreshIntervalMs = 700;
-    private static readonly TimeSpan QueueActivityGracePeriod = TimeSpan.FromSeconds(25);
-    private DateTimeOffset _lastObservedIndexingAt = DateTimeOffset.MinValue;
+    private static readonly TimeSpan ProgressQueueRefreshInterval = TimeSpan.FromSeconds(1);
     private CancellationTokenSource? _queuePollingCts;
     private Task? _queuePollingTask;
+    private string? _batchStartInFlightKbId;
+    private DateTimeOffset _lastProgressQueueRefreshAtUtc = DateTimeOffset.MinValue;
+    private int _progressQueueRefreshInFlight;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -373,7 +370,6 @@
             if (_selectedKB is not null)
             {
                 await LoadDocumentQueueAsync();
-                SyncBatchIndexingStateFromQueueAndService();
                 EnsureQueuePolling();
             }
 
@@ -420,6 +416,12 @@
 
     private async Task OnKBSelected(KnowledgeBase? kb)
     {
+        if (!string.Equals(_batchStartInFlightKbId, kb?.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            // Batch-start marker is bound to one KB and must not leak across selections.
+            ClearBatchStartInFlight();
+        }
+
         _selectedKB = kb;
         if (kb is not null)
         {
@@ -443,14 +445,13 @@
 
             // Load document queue for this KB
             await LoadDocumentQueueAsync();
-            SyncBatchIndexingStateFromQueueAndService();
             EnsureQueuePolling();
         }
         else
         {
             _currentEmbeddingModelKey = string.Empty;
             _documentQueue.Clear();
-            _isBatchIndexing = false;
+            ClearBatchStartInFlight();
             StopQueuePolling();
         }
     }
@@ -475,6 +476,7 @@
             if (_selectedKB?.Id == kb.Id)
             {
                 _selectedKB = null;
+                ClearBatchStartInFlight();
             }
             await LoadKnowledgeBasesAsync();
         }
@@ -502,8 +504,6 @@
         else
         {
             _documentQueue = queue.ToList();
-            TrackQueueActivity(_documentQueue);
-            SyncBatchIndexingStateFromQueueAndService();
         }
 
         if (ensurePolling)
@@ -635,6 +635,8 @@
     {
         if (_selectedKB == null) return;
 
+        var selectedKbId = _selectedKB.Id;
+
         var pendingDocs = _documentQueue.Where(d => d.Status == DocumentStatus.Pending).ToList();
         if (pendingDocs.Count == 0)
         {
@@ -642,12 +644,12 @@
             return;
         }
 
-        _isBatchIndexing = true;
-        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        _batchStartInFlightKbId = selectedKbId;
         EnsureQueuePolling();
-        var progress = new Progress<IndexingProgress>(__ => { _ = InvokeAsync(StateHasChanged); });
+        await InvokeAsync(StateHasChanged);
+        var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
         var indexingTask = RAGService.StartBatchIndexingAsync(
-            _selectedKB.Id,
+            selectedKbId,
             _parallelCount,
             progress);
 
@@ -676,9 +678,14 @@
         }
         finally
         {
-            _isBatchIndexing = false;
+            if (_selectedKB is not null
+                && string.Equals(_batchStartInFlightKbId, _selectedKB.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                _batchStartInFlightKbId = null;
+            }
+
             await RefreshSelectedKnowledgeBaseAsync();
-            await LoadDocumentQueueAsync();
+            await LoadDocumentQueueAsync(ensurePolling: false);
             EnsureQueuePolling();
             await InvokeAsync(StateHasChanged);
         }
@@ -691,16 +698,18 @@
             return;
         }
 
-        if (RAGService.CancelBatchIndexing(_selectedKB.Id).IsFailed(out var error))
+        var cancelResult = await RAGService.CancelBatchIndexingAsync(_selectedKB.Id);
+        if (cancelResult.IsFailed(out var error))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+        ClearBatchStartInFlight();
         EnsureQueuePolling();
-        Snackbar.Add(L["Error:RequestCancelled"], Severity.Warning);
+        Snackbar.Add(cancelResult.Message ?? L["Error:RequestCancelled"].Value, Severity.Warning);
         await LoadDocumentQueueAsync();
+        await RefreshSelectedKnowledgeBaseAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -889,6 +898,7 @@
     {
         if (_selectedKB is null)
         {
+            ClearBatchStartInFlight();
             return;
         }
 
@@ -910,37 +920,7 @@
 
     private bool HasActiveQueueWork()
     {
-        if (_selectedKB is null)
-        {
-            return false;
-        }
-
-        if (IsBatchIndexingRunning())
-        {
-            return true;
-        }
-
-        var hasInFlightProgress = _documentQueue.Any(d =>
-            d.Status == DocumentStatus.Indexing ||
-            (d.Progress > 0 && d.Progress < 100));
-        if (hasInFlightProgress)
-        {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
-            return true;
-        }
-
-        var hasPending = _documentQueue.Any(d => d.Status == DocumentStatus.Pending);
-        return hasPending && DateTimeOffset.UtcNow - _lastObservedIndexingAt <= QueueActivityGracePeriod;
-    }
-
-    private void TrackQueueActivity(IEnumerable<DocumentQueueItem> queueItems)
-    {
-        if (queueItems.Any(item =>
-                item.Status == DocumentStatus.Indexing ||
-                (item.Progress > 0 && item.Progress < 100)))
-        {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
-        }
+        return IsBatchIndexingRunning();
     }
 
     private bool IsBatchIndexingRunning()
@@ -950,12 +930,15 @@
             return false;
         }
 
-        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
-        var hasInFlightQueueRows = _documentQueue.Any(d =>
-            d.Status == DocumentStatus.Indexing ||
-            (d.Progress > 0 && d.Progress < 100));
+        if (string.Equals(_batchStartInFlightKbId, _selectedKB.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
 
-        return _isBatchIndexing || hasActiveServerBatch || hasInFlightQueueRows;
+        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
+        var hasInFlightQueueRows = _documentQueue.Any(d => d.Status == DocumentStatus.Indexing);
+
+        return hasActiveServerBatch || hasInFlightQueueRows;
     }
 
     private bool CanStartBatchIndexing()
@@ -983,24 +966,40 @@
         => !string.IsNullOrWhiteSpace(message)
            && message.Contains("cancel", StringComparison.OrdinalIgnoreCase);
 
-    private void SyncBatchIndexingStateFromQueueAndService()
+    private void OnBatchIndexingProgress(IndexingProgress progress)
     {
-        if (_selectedKB is null)
+        _ = InvokeAsync(RefreshQueueFromProgressAsync);
+    }
+
+    private async Task RefreshQueueFromProgressAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastProgressQueueRefreshAtUtc < ProgressQueueRefreshInterval)
         {
-            _isBatchIndexing = false;
+            StateHasChanged();
             return;
         }
 
-        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
-        var hasInFlightQueueRows = _documentQueue.Any(d =>
-            d.Status == DocumentStatus.Indexing ||
-            (d.Progress > 0 && d.Progress < 100));
-
-        _isBatchIndexing = hasActiveServerBatch || hasInFlightQueueRows;
-        if (_isBatchIndexing)
+        if (Interlocked.Exchange(ref _progressQueueRefreshInFlight, 1) == 1)
         {
-            _lastObservedIndexingAt = DateTimeOffset.UtcNow;
+            return;
         }
+
+        try
+        {
+            _lastProgressQueueRefreshAtUtc = now;
+            await LoadDocumentQueueAsync(ensurePolling: false);
+            StateHasChanged();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _progressQueueRefreshInFlight, 0);
+        }
+    }
+
+    private void ClearBatchStartInFlight()
+    {
+        _batchStartInFlightKbId = null;
     }
 
     private void EnsureQueuePolling()
@@ -1078,6 +1077,7 @@
 
     public void Dispose()
     {
+        ClearBatchStartInFlight();
         StopQueuePolling();
     }
 
@@ -1127,13 +1127,10 @@
         var provider = ProviderFactory.GetProvider(providerId);
         if (provider is not null)
         {
-            return ProviderLabelFormatter.FormatWithDisplayName(
-                provider.Info.ProviderType,
-                provider.ProviderId,
-                provider.Info.DisplayName);
+            return provider.DisplayName;
         }
 
-        return ProviderLabelFormatter.FormatFromProviderId(providerId);
+        return providerId.Trim();
     }
 
     private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)

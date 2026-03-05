@@ -6,7 +6,6 @@ using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.Services;
-using Monica.Tool.MoResponse;
 using OpenAI;
 using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
@@ -17,6 +16,7 @@ namespace Monica.AI.Providers.OpenAI;
 /// </summary>
 public class OpenAIProvider : IAIProvider
 {
+    private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
     private readonly IReadOnlyList<AIModelInfo> _models;
@@ -50,18 +50,21 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public string ProviderId => _options.ProviderId ?? (_defaultModel == null ? "openai" : $"openai-{_defaultModel}");
+    public string ProviderId => _options.ProviderId ?? ProviderKind.ToString();
 
     /// <inheritdoc />
-    public string DisplayName => _options.DisplayName ?? (_defaultModel == null ? "OpenAI" : $"OpenAI ({_defaultModel})");
+    public string ProviderType => ProviderKind.ToString();
+
+    /// <inheritdoc />
+    public string DisplayName => _options.DisplayName ?? AIProviderNaming.BuildDisplayName(ProviderType, ProviderId);
 
     /// <inheritdoc />
     public AIProviderInfo Info => new()
     {
         ProviderId = ProviderId,
         DisplayName = DisplayName,
-        Description = "OpenAI GPT models",
-        ProviderType = "OpenAI",
+        Description = $"{ProviderType} GPT models",
+        ProviderType = ProviderType,
         DefaultModel = _defaultModel,
         SystemPrompt = _systemPrompt,
         SupportedModels = _models,
@@ -99,32 +102,35 @@ public class OpenAIProvider : IAIProvider
     }
 
     /// <inheritdoc />
-    public async Task<Res> TestConnectionAsync(CancellationToken ct = default)
+    public async Task TestConnectionAsync(CancellationToken ct = default)
     {
         try
         {
             var chatClient = GetChatClient();
-            var response = await chatClient.GetResponseAsync(
+            _ = await chatClient.GetResponseAsync(
                 [new AIChatMessage(ChatRole.User, "Hello")],
                 new ChatOptions { MaxOutputTokens = 10 },
                 ct);
-            return Res.Ok();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail($"OpenAI connection test failed: {ex.Message}");
+            throw new InvalidOperationException($"OpenAI connection test failed: {ex.Message}", ex);
         }
     }
 
     /// <inheritdoc />
-    public Task<Res<IReadOnlyList<string>>> GetAvailableModelsAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<string>> GetAvailableModelsAsync(CancellationToken ct = default)
     {
-        var models = _models.Select(m => m.ModelName).ToList();
-        return Task.FromResult(Res.Ok<IReadOnlyList<string>>(models));
+        IReadOnlyList<string> models = _models.Select(m => m.ModelName).ToList();
+        return Task.FromResult(models);
     }
 
     /// <inheritdoc />
-    public async Task<Res<IReadOnlyList<AIRemoteModelInfo>>> FetchRemoteModelsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<AIRemoteModelInfo>> FetchRemoteModelsAsync(CancellationToken ct = default)
     {
         try
         {
@@ -142,11 +148,15 @@ public class OpenAIProvider : IAIProvider
                 })
                 .OrderBy(m => m.ModelId)
                 .ToList();
-            return Res.Ok<IReadOnlyList<AIRemoteModelInfo>>(remoteModels);
+            return remoteModels;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return Res.Fail("Failed to fetch OpenAI models: " + ex.Message);
+            throw new InvalidOperationException("Failed to fetch OpenAI models: " + ex.Message, ex);
         }
     }
 

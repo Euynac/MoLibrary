@@ -2,6 +2,8 @@ using Cronos;
 using Monica.Tool.MoResponse;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using Monica.Core.Modules;
 using Monica.JobScheduler.UI.Localization;
 
 namespace Monica.JobScheduler.UI.Services;
@@ -26,8 +28,12 @@ public enum CronFormat
 /// Cron 表达式服务，提供表达式解析、验证和执行时间计算
 /// 注意：解析描述功能需要组件提供 JS 模块引用
 /// </summary>
-public class CronExpressionService(IStringLocalizer<JobSchedulerResource> localizer)
+public class CronExpressionService(
+    IStringLocalizer<JobSchedulerResource> localizer,
+    IOptions<ModuleClockOption> clockOptions)
 {
+    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
+
     /// <summary>
     /// 验证 Cron 表达式是否有效
     /// </summary>
@@ -80,7 +86,7 @@ public class CronExpressionService(IStringLocalizer<JobSchedulerResource> locali
 
             for (int i = 0; i < count; i++)
             {
-                var next = cronExpression.GetNextOccurrence(currentTime, TimeZoneInfo.Local);
+                var next = cronExpression.GetNextOccurrence(currentTime, _cronTimeZone);
                 if (next == null)
                 {
                     break;

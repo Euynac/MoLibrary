@@ -1,6 +1,5 @@
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
-using System;
 using Microsoft.Extensions.AI;
 using Monica.Tool.MoResponse;
 
@@ -24,7 +23,20 @@ public class AIProviderUIService(IAIProviderFactory providerFactory)
             return Task.FromResult(Res.Fail($"Provider '{providerId}' not found"));
         }
 
-        return provider.TestConnectionAsync(ct);
+        return TestProviderCoreAsync(provider, ct);
+    }
+
+    private static async Task<Res> TestProviderCoreAsync(IAIProvider provider, CancellationToken ct)
+    {
+        try
+        {
+            await provider.TestConnectionAsync(ct);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.Message);
+        }
     }
 
     public async Task<Res> TestModelAsync(string providerId, string modelName, CancellationToken ct = default)
@@ -83,7 +95,15 @@ public class AIProviderUIService(IAIProviderFactory providerFactory)
             return Res.Fail("Provider does not support remote model listing");
         }
 
-        return await provider.FetchRemoteModelsAsync(ct);
+        try
+        {
+            var models = await provider.FetchRemoteModelsAsync(ct);
+            return Res.Ok(models);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.Message);
+        }
     }
 
     public bool SupportsRemoteModelListing(string providerId)

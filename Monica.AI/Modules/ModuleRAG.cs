@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Monica.AI.Models;
+using Monica.AI.Providers;
+using Monica.AI.Providers.Fake;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
 using Monica.Core.Module;
@@ -42,10 +44,13 @@ public class ModuleRAG(ModuleRAGOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<RAGService>();
+        services.AddSingleton<RAGEmbeddingBindingResolver>();
+        services.AddSingleton<RAGVectorCollectionCoordinator>();
+        services.AddSingleton<RAGIndexStateCoordinator>();
         services.AddSingleton<ChunkerRegistry>();
-        services.AddSingleton<IDocumentQueueStore, Monica.AI.RAG.Stores.InMemoryDocumentQueueStore>();
+        services.TryAddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
+        services.TryAddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
-        services.TryAddSingleton<IDocumentChunkSnapshotStore, FileDocumentChunkSnapshotStore>();
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());
@@ -63,20 +68,20 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     public int DefaultTopK { get; set; } = 5;
 
     /// <summary>
-    /// Relative file path for the file-based knowledge base store.
+    /// Relative file path for the unified document index state store.
     /// Resolved relative to the application's running directory.
     /// </summary>
-    public string KnowledgeBaseStoreFilePath { get; set; } = "monica_data/rag/knowledge_bases.json";
+    public string DocumentIndexStateStoreFilePath { get; set; } = "monica_data/rag/document_index_state.json";
+
+    /// <summary>
+    /// Relative root path for source document content storage.
+    /// </summary>
+    public string UploadedDocumentSourceRootPath { get; set; } = "monica_data/rag/document_sources";
 
     /// <summary>
     /// Relative file path for extension-to-chunker routing configuration.
     /// </summary>
     public string ChunkerRoutingStoreFilePath { get; set; } = "monica_data/rag/chunker_routing.json";
-
-    /// <summary>
-    /// Relative file path for document chunk snapshots used by chunk viewer.
-    /// </summary>
-    public string DocumentChunkSnapshotStoreFilePath { get; set; } = "monica_data/rag/document_chunk_snapshots.json";
 
     /// <summary>
     /// Target chunk size for the production markdown chunker.
@@ -112,35 +117,62 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
 public class ModuleRAGGuide
     : MoModuleGuide<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>
 {
-    private const string CONFIG_KB_STORE = nameof(CONFIG_KB_STORE);
+    private const string CONFIG_INDEX_STATE_STORE = nameof(CONFIG_INDEX_STATE_STORE);
+    private const string CONFIG_SOURCE_STORE = nameof(CONFIG_SOURCE_STORE);
     private const string CONFIG_VECTOR_STORE = nameof(CONFIG_VECTOR_STORE);
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [CONFIG_KB_STORE, CONFIG_VECTOR_STORE];
+        return [CONFIG_INDEX_STATE_STORE, CONFIG_SOURCE_STORE, CONFIG_VECTOR_STORE];
     }
 
-    public ModuleRAGGuide UseKnowledgeBaseStore<TStore>()
-        where TStore : class, IKnowledgeBaseStore
+    /// <summary>
+    /// Uses a custom unified state store implementation.
+    /// </summary>
+    public ModuleRAGGuide UseDocumentIndexStateStore<TStore>()
+        where TStore : class, IDocumentIndexStateStore
     {
         ConfigureServices(ctx =>
         {
-            ctx.Services.AddSingleton<IKnowledgeBaseStore, TStore>();
-        }, key: CONFIG_KB_STORE);
+            ctx.Services.AddSingleton<IDocumentIndexStateStore, TStore>();
+        }, key: CONFIG_INDEX_STATE_STORE);
         return this;
     }
 
     /// <summary>
-    /// Uses the file-based knowledge base store.
-    /// Persists knowledge base metadata as a JSON file on disk.
-    /// File path is configured via <see cref="ModuleRAGOption.KnowledgeBaseStoreFilePath"/>.
+    /// Uses the file-based unified state store.
     /// </summary>
-    public ModuleRAGGuide UseKnowledgeBaseStoreFileProvider()
+    public ModuleRAGGuide UseDocumentIndexStateFileProvider()
     {
         ConfigureServices(ctx =>
         {
-            ctx.Services.AddSingleton<IKnowledgeBaseStore, FileKnowledgeBaseStore>();
-        }, key: CONFIG_KB_STORE);
+            ctx.Services.AddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
+        }, key: CONFIG_INDEX_STATE_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Uses a custom source content store implementation.
+    /// </summary>
+    public ModuleRAGGuide UseKnowledgeDocumentSourceStore<TStore>()
+        where TStore : class, IKnowledgeDocumentSourceStore
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, TStore>();
+        }, key: CONFIG_SOURCE_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Uses file-based source content store.
+    /// </summary>
+    public ModuleRAGGuide UseKnowledgeDocumentSourceFileProvider()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
+        }, key: CONFIG_SOURCE_STORE);
         return this;
     }
 
@@ -193,43 +225,19 @@ public class ModuleRAGGuide
     }
 
     /// <summary>
-    /// Uses a custom document chunk snapshot store implementation.
-    /// </summary>
-    public ModuleRAGGuide UseDocumentChunkSnapshotStore<TStore>()
-        where TStore : class, IDocumentChunkSnapshotStore
-    {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IDocumentChunkSnapshotStore, TStore>();
-        });
-        return this;
-    }
-
-    /// <summary>
-    /// Uses file-based document chunk snapshot store.
-    /// </summary>
-    public ModuleRAGGuide UseDocumentChunkSnapshotFileProvider()
-    {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IDocumentChunkSnapshotStore, FileDocumentChunkSnapshotStore>();
-        });
-        return this;
-    }
-
-    /// <summary>
     /// Uses fake embeddings for testing and development through the unified AI provider pipeline.
     /// </summary>
     /// <param name="dimensions">Embedding dimensions.</param>
-    /// <param name="providerId">Provider ID used for fake embedding provider.</param>
-    /// <param name="modelName">Optional model name. If null, uses `fake-embeddings-{dimensions}d`.</param>
+    /// <param name="providerId">Optional provider ID used for fake embedding provider. Defaults to provider type.</param>
+    /// <param name="modelName">Optional model name. If null, uses `Fake-Embeddings-{dimensions}d`.</param>
     public ModuleRAGGuide AddFakeEmbeddingsModel(
         int dimensions = 384,
-        string providerId = "fake-embeddings",
+        string? providerId = null,
         string? modelName = null)
     {
+        var resolvedProviderId = providerId ?? nameof(EAIProviderType.Fake);
         var resolvedModelName = string.IsNullOrWhiteSpace(modelName)
-            ? $"fake-embeddings-{dimensions}d"
+            ? $"Fake-Embeddings-{dimensions}d"
             : modelName.Trim();
 
         DependsOnModule<ModuleAIGuide>().Register()
@@ -241,12 +249,10 @@ public class ModuleRAGGuide
             })
             .AddFakeProvider(options =>
             {
-                options.ProviderId = providerId;
-                options.DisplayName ??= "Fake Embeddings";
                 options.ApiKey = "fake";
                 options.DefaultDimensions = dimensions;
                 options.SupportedModels = [resolvedModelName];
-            });
+            }, resolvedProviderId);
 
         return this;
     }

@@ -41,11 +41,6 @@ public sealed class DocumentQueueItem
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Original document text content.
-    /// </summary>
-    public string? OriginalText { get; set; }
-
-    /// <summary>
     /// Knowledge base ID this document belongs to.
     /// </summary>
     public required string KnowledgeBaseId { get; init; }

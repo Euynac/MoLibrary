@@ -1,5 +1,7 @@
 using Cronos;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Api;
 using Monica.JobScheduler.Metadata;
@@ -15,8 +17,11 @@ namespace Monica.JobScheduler.UI.Services;
 public class JobDefinitionQueryService(
     JobSchedulerApiService apiService,
     IMoJobMetadataRepository metadataRepository,
+    IOptions<ModuleClockOption> clockOptions,
     ILogger<JobDefinitionQueryService> logger)
 {
+    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
+
     public async Task<ResPaged<JobDefinition>> GetJobDefinitionsAsync(
         JobDefinitionFilterRequest filter,
         CancellationToken cancellationToken = default)
@@ -146,7 +151,7 @@ public class JobDefinitionQueryService(
             // 如果有开始时间限制，使用开始时间和当前时间中较晚的时间
             var fromTime = startTime.HasValue && startTime.Value > now ? startTime.Value : now;
 
-            var nextOccurrence = cron.GetNextOccurrence(fromTime, TimeZoneInfo.Utc);
+            var nextOccurrence = cron.GetNextOccurrence(fromTime, _cronTimeZone);
 
             // 检查是否超过结束时间
             if (nextOccurrence.HasValue && endTime.HasValue && nextOccurrence.Value > endTime.Value)
