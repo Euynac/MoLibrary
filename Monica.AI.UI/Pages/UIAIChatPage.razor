@@ -68,7 +68,7 @@
         _sessionStorage = ChatUIService.SessionStorage;
         _state = new ChatPageState
         {
-            Providers = ChatUIService.GetProviders()
+            Providers = ChatPageHelper.GetChatProviders(ChatUIService.GetProviders())
         };
 
         InitializeDefaultProvider();
@@ -90,13 +90,27 @@
 
     private void InitializeDefaultProvider()
     {
-        var defaultProvider = ChatUIService.GetDefaultProvider();
-        _state.DefaultProviderId = defaultProvider?.ProviderId;
-        _state.DefaultModelName = defaultProvider?.DefaultModel;
-        _state.CurrentProviderName = defaultProvider?.DisplayName ?? string.Empty;
-        _state.CurrentProviderModels = defaultProvider?.SupportedModels ?? [];
+        var defaultProvider = ChatPageHelper.GetPreferredChatProvider(
+            _state.Providers,
+            ChatUIService.GetDefaultProvider()?.ProviderId);
+        if (defaultProvider == null)
+        {
+            _state.DefaultProviderId = null;
+            _state.DefaultModelName = null;
+            _state.CurrentProviderName = string.Empty;
+            _state.CurrentProviderModels = [];
+            _state.SupportsReasoning = false;
+            HandlePageError(L["Provider:NoChatProvider"], showSnackbar: false);
+            return;
+        }
+
+        _state.ClearError();
+        _state.DefaultProviderId = defaultProvider.ProviderId;
+        _state.DefaultModelName = ChatPageHelper.GetPreferredChatModel(defaultProvider, defaultProvider.DefaultModel);
+        _state.CurrentProviderName = defaultProvider.DisplayName;
+        _state.CurrentProviderModels = ChatPageHelper.GetChatModels(defaultProvider);
         _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
-            _state.Providers, defaultProvider?.ProviderId, defaultProvider?.DefaultModel);
+            _state.Providers, defaultProvider.ProviderId, _state.DefaultModelName);
     }
 
     private void InitializeRAG()
@@ -134,15 +148,15 @@
     {
         _state.DefaultProviderId = provider.ProviderId;
         _state.CurrentProviderName = provider.DisplayName;
-        _state.CurrentProviderModels = provider.SupportedModels ?? [];
+        _state.CurrentProviderModels = ChatPageHelper.GetChatModels(provider);
 
-        if (ChatPageHelper.IsModelValid(provider, savedModelName))
+        if (ChatPageHelper.IsChatModelValid(provider, savedModelName))
         {
             _state.DefaultModelName = savedModelName;
         }
         else
         {
-            _state.DefaultModelName = provider.DefaultModel;
+            _state.DefaultModelName = ChatPageHelper.GetPreferredChatModel(provider, provider.DefaultModel);
             if (!string.IsNullOrEmpty(savedModelName))
             {
                 _ = BrowserStorage.RemoveAsync("ai-chat:default-model");
@@ -171,10 +185,7 @@
     {
         if (_sessionStorage.Sessions.Count == 0)
         {
-            await ChatUIService.CreateSessionAsync(
-                _state.CurrentProviderId!,
-                _state.CurrentModelName!,
-                knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+            _ = await TryCreateSessionAsync();
         }
         else
         {
@@ -205,7 +216,7 @@
             if (provider != null)
             {
                 _state.CurrentProviderName = provider.DisplayName;
-                _state.CurrentProviderModels = provider.SupportedModels ?? [];
+                _state.CurrentProviderModels = ChatPageHelper.GetChatModels(provider);
             }
         }
     }
@@ -216,24 +227,30 @@
         var provider = ChatPageHelper.FindProvider(_state.Providers, providerId);
         if (provider == null) return;
 
+        var resolvedModelName = ChatPageHelper.GetPreferredChatModel(provider, provider.DefaultModel);
+
         _state.DefaultProviderId = providerId;
-        _state.DefaultModelName = provider.DefaultModel;
+        _state.DefaultModelName = resolvedModelName;
         _state.CurrentProviderName = provider.DisplayName;
-        _state.CurrentProviderModels = provider.SupportedModels ?? [];
+        _state.CurrentProviderModels = ChatPageHelper.GetChatModels(provider);
         _state.SupportsReasoning = ChatPageHelper.GetReasoningSupport(
-            _state.Providers, providerId, provider.DefaultModel);
+            _state.Providers, providerId, resolvedModelName);
 
         await BrowserStorage.SaveDefaultProviderAsync(providerId);
-        if (!string.IsNullOrEmpty(provider.DefaultModel))
+        if (!string.IsNullOrEmpty(resolvedModelName))
         {
-            await BrowserStorage.SaveDefaultModelAsync(provider.DefaultModel);
+            await BrowserStorage.SaveDefaultModelAsync(resolvedModelName);
+        }
+        else
+        {
+            await BrowserStorage.RemoveAsync("ai-chat:default-model");
         }
 
         var currentSession = _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
         if (currentSession != null)
         {
             currentSession.ProviderId = providerId;
-            currentSession.ModelName = provider.DefaultModel;
+            currentSession.ModelName = resolvedModelName;
         }
 
         StateHasChanged();
@@ -260,10 +277,7 @@
     private async Task HandleNewSession()
     {
         _state.ClearError();
-        await ChatUIService.CreateSessionAsync(
-            _state.CurrentProviderId!,
-            _state.CurrentModelName!,
-            knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+        _ = await TryCreateSessionAsync();
         UpdateCurrentSession();
     }
 
@@ -281,10 +295,7 @@
         {
             if (_sessionStorage.Sessions.Count == 0)
             {
-                await ChatUIService.CreateSessionAsync(
-                    _state.CurrentProviderId!,
-                    _state.CurrentModelName!,
-                    knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+                _ = await TryCreateSessionAsync();
             }
             else
             {
@@ -304,24 +315,69 @@
         _state.LastMessage = message;
 
         var sessionId = await EnsureCurrentSession();
-        AddUserMessageAndUpdateTitle(sessionId, message);
-        StateManager.UpdateReasoning(sessionId, _state.ReasoningEnabled);
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return;
+        }
 
-        await SendMessageAsync(sessionId, message);
+        var resolvedSessionId = sessionId!;
+        AddUserMessageAndUpdateTitle(resolvedSessionId, message);
+        StateManager.UpdateReasoning(resolvedSessionId, _state.ReasoningEnabled);
+
+        await SendMessageAsync(resolvedSessionId, message);
     }
 
-    private async Task<string> EnsureCurrentSession()
+    private async Task<string?> EnsureCurrentSession()
     {
         var sessionId = _sessionStorage.CurrentSessionId;
         if (string.IsNullOrEmpty(sessionId))
         {
-            var session = await ChatUIService.CreateSessionAsync(
-                _state.CurrentProviderId!,
-                _state.CurrentModelName!,
-                knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+            var session = await TryCreateSessionAsync();
+            if (session == null)
+            {
+                return null;
+            }
+
             sessionId = session.SessionId;
         }
         return sessionId;
+    }
+
+    private async Task<AgentSessionState?> TryCreateSessionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_state.CurrentProviderId))
+        {
+            HandlePageError(L["Provider:NoChatProvider"]);
+            return null;
+        }
+
+        var createResult = await ChatUIService.CreateSessionAsync(
+            _state.CurrentProviderId,
+            _state.CurrentModelName,
+            knowledgeBaseIds: ChatPageHelper.GetKnowledgeBaseIds(_state.SelectedKnowledgeBaseIds));
+
+        if (createResult.IsFailed(out var error, out var state))
+        {
+            HandlePageError(error.Message ?? L["Error:Generic"]);
+            return null;
+        }
+
+        _state.ClearError();
+        return state;
+    }
+
+    private void HandlePageError(string message, bool canRetry = false, bool showSnackbar = true)
+    {
+        _state.IsSending = false;
+        _state.StreamingContent = null;
+        _state.SetError(message, canRetry);
+
+        if (showSnackbar)
+        {
+            Snackbar.Add(message, Severity.Error);
+        }
+
+        StateHasChanged();
     }
 
     private void AddUserMessageAndUpdateTitle(string sessionId, string message)
@@ -498,7 +554,7 @@
             session.SystemPrompt = prompt;
         }
 
-        _state.Providers = ChatUIService.GetProviders();
+        _state.Providers = ChatPageHelper.GetChatProviders(ChatUIService.GetProviders());
         Snackbar.Add(L["Provider:Settings:UpdateSuccess"], Severity.Success);
         StateHasChanged();
     }

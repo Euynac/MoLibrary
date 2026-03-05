@@ -28,6 +28,7 @@
   "Provider": {
     "Label": "Provider",
     "NotFound": "未找到可用 Provider",
+    "NoChatProvider": "没有可用于聊天的 Provider。请至少配置一个包含 LLM 模型的 Provider。",
     "Default": "默认",
     "Settings": {
       "Title": "系统提示词设置",

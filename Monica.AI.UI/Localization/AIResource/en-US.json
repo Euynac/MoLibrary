@@ -28,6 +28,7 @@
   "Provider": {
     "Label": "Provider",
     "NotFound": "No provider available",
+    "NoChatProvider": "No chat-capable provider available. Configure at least one provider with an LLM model.",
     "Default": "Default",
     "Settings": {
       "Title": "System Prompt Settings",
