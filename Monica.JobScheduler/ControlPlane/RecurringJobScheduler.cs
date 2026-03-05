@@ -3,6 +3,7 @@ using Cronos;
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Helpers;
 using Microsoft.Extensions.Options;
+using Monica.Core.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Models;
@@ -21,9 +22,11 @@ public class RecurringJobScheduler(
     JobDispatcher jobDispatcher,
     RecurringJobValidator validator,
     IOptions<ModuleJobSchedulerOption> options,
+    IOptions<ModuleClockOption> clockOptions,
     ILogger<RecurringJobScheduler> logger)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
+    private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
 
     // Recurring job scheduling state
     private readonly ConcurrentDictionary<string, RecurringJobSchedule> _inFlightRecurringSchedules = new();
@@ -46,6 +49,12 @@ public class RecurringJobScheduler(
             logger.LogWarning("RecurringJobDebugMode is enabled. Jobs will not be automatically scheduled.");
             return;
         }
+
+        logger.LogInformation(
+            "Recurring cron evaluation timezone: {TimeZoneId} (Display: {DisplayName}, BaseUtcOffset: {BaseUtcOffset})",
+            _cronTimeZone.Id,
+            _cronTimeZone.DisplayName,
+            _cronTimeZone.BaseUtcOffset);
 
         // Load all recurring job definitions from cache
         var allDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
@@ -144,6 +153,14 @@ public class RecurringJobScheduler(
             }
           
 
+            if (string.IsNullOrWhiteSpace(validatedDefinition.CronExpression))
+            {
+                logger.LogWarning(
+                    "Recurring job {JobKey} has empty cron expression after validation. Skipping scheduling.",
+                    validatedDefinition.JobKey);
+                return;
+            }
+
             // Parse cron expression (supports both 5-segment standard and 6-segment with seconds)
             var cronExpression = CronHelper.Parse(validatedDefinition.CronExpression);
 
@@ -151,12 +168,12 @@ public class RecurringJobScheduler(
             // IMPORTANT: Add 100ms buffer to current time to prevent dueTime from being too small
             var now = DateTime.UtcNow;
             var baseTime = now.AddMilliseconds(100);
-            var nextOccurrence = cronExpression.GetNextOccurrence(baseTime, TimeZoneInfo.Utc);
+            var nextOccurrence = cronExpression.GetNextOccurrence(baseTime, _cronTimeZone);
 
             // If rescheduling and next occurrence is same as last, advance by 1ms to get exact next occurrence
             if (lastOccurrence.HasValue && nextOccurrence.HasValue && nextOccurrence.Value == lastOccurrence.Value)
             {
-                nextOccurrence = cronExpression.GetNextOccurrence(lastOccurrence.Value.AddMilliseconds(1), TimeZoneInfo.Utc);
+                nextOccurrence = cronExpression.GetNextOccurrence(lastOccurrence.Value.AddMilliseconds(1), _cronTimeZone);
             }
 
             if (!nextOccurrence.HasValue)
