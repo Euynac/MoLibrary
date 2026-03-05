@@ -1,0 +1,126 @@
+@using Monica.Markdown.Git.Models
+@using Monica.Markdown.UIGit.Services
+
+@inject GitUIService GitService
+@inject ISnackbar Snackbar
+
+<MudDataGrid T="GitRepositoryInfo"
+             Items="_repositories"
+             Dense="true"
+             Hover="true"
+             Loading="_loading"
+             Striped="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Git Repositories</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadRepositoriesAsync"
+                       Title="Refresh" />
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+        <PropertyColumn Property="x => x.Url" Title="URL" />
+        <PropertyColumn Property="x => x.Branch" Title="Branch" />
+        <TemplateColumn Title="Status">
+            <CellTemplate>
+                <MudChip T="string"
+                         Color="@GetStatusColor(context.Item.Status)"
+                         Size="Size.Small">
+                    @context.Item.Status
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.LastSyncUtc" Title="Last Sync" Format="yyyy-MM-dd HH:mm:ss" />
+        <TemplateColumn Title="Actions">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Download"
+                               Size="Size.Small"
+                               Title="Pull"
+                               Disabled="_pullingId == context.Item.Id"
+                               OnClick="() => PullAsync(context.Item.Id)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                               Size="Size.Small"
+                               Title="Details"
+                               OnClick="() => ToggleDetail(context.Item)" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@if (_selectedRepo is not null)
+{
+    <GitRepositoryDetail Repository="_selectedRepo" />
+}
+
+@code {
+    private IReadOnlyList<GitRepositoryInfo>? _repositories;
+    private bool _loading = true;
+    private string? _pullingId;
+    private GitRepositoryInfo? _selectedRepo;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadRepositoriesAsync();
+        }
+    }
+
+    private async Task LoadRepositoriesAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await GitService.GetAllRepositoriesAsync()).IsFailed(out var error, out var repos))
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _repositories = repos;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PullAsync(string repositoryId)
+    {
+        _pullingId = repositoryId;
+        StateHasChanged();
+
+        try
+        {
+            if ((await GitService.PullRepositoryAsync(repositoryId)).IsFailed(out var error))
+            {
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            Snackbar.Add("Pull completed successfully", Severity.Success);
+            await LoadRepositoriesAsync();
+        }
+        finally
+        {
+            _pullingId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleDetail(GitRepositoryInfo repo)
+    {
+        _selectedRepo = _selectedRepo?.Id == repo.Id ? null : repo;
+    }
+
+    private static Color GetStatusColor(EGitRepositoryStatus status) => status switch
+    {
+        EGitRepositoryStatus.Ready => Color.Success,
+        EGitRepositoryStatus.Cloning or EGitRepositoryStatus.Pulling => Color.Info,
+        EGitRepositoryStatus.Error => Color.Error,
+        _ => Color.Default
+    };
+}

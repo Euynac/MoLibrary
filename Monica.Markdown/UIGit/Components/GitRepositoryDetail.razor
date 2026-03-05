@@ -1,0 +1,69 @@
+@using Monica.Markdown.Git.Models
+
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Repository Details: @Repository.Id</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudSimpleTable Dense="true" Hover="true">
+            <tbody>
+                <tr>
+                    <td><strong>ID</strong></td>
+                    <td>@Repository.Id</td>
+                </tr>
+                <tr>
+                    <td><strong>URL</strong></td>
+                    <td>@Repository.Url</td>
+                </tr>
+                <tr>
+                    <td><strong>Local Path</strong></td>
+                    <td>@Repository.LocalPath</td>
+                </tr>
+                <tr>
+                    <td><strong>Branch</strong></td>
+                    <td>@(Repository.Branch ?? "—")</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Commit</strong></td>
+                    <td style="font-family: monospace;">@(Repository.LastCommitSha ?? "—")</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Sync (UTC)</strong></td>
+                    <td>@(Repository.LastSyncUtc?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Never")</td>
+                </tr>
+                <tr>
+                    <td><strong>Status</strong></td>
+                    <td>
+                        <MudChip T="string"
+                                 Color="@GetStatusColor(Repository.Status)"
+                                 Size="Size.Small">
+                            @Repository.Status
+                        </MudChip>
+                    </td>
+                </tr>
+                @if (!string.IsNullOrEmpty(Repository.ErrorMessage))
+                {
+                    <tr>
+                        <td><strong>Error</strong></td>
+                        <td style="color: var(--mud-palette-error);">@Repository.ErrorMessage</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public GitRepositoryInfo Repository { get; set; } = null!;
+
+    private static Color GetStatusColor(EGitRepositoryStatus status) => status switch
+    {
+        EGitRepositoryStatus.Ready => Color.Success,
+        EGitRepositoryStatus.Cloning or EGitRepositoryStatus.Pulling => Color.Info,
+        EGitRepositoryStatus.Error => Color.Error,
+        _ => Color.Default
+    };
+}

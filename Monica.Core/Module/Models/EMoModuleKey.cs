@@ -173,5 +173,13 @@ public enum EMoModuleKey
     /// <summary>
     /// Localization module - provides JSON-based localization with culture fallback
     /// </summary>
-    Localization
+    Localization,
+    /// <summary>
+    /// Git integration module for repository management and webhook handling
+    /// </summary>
+    Git,
+    /// <summary>
+    /// Git UI module for repository and credential management
+    /// </summary>
+    GitUI
 }

@@ -1,0 +1,21 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Markdown.UIGit.Components
+
+<PageTitle>Git Repositories</PageTitle>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mt-2">
+    <MudTabPanel Text="Repositories" Icon="@Icons.Material.Filled.Source">
+        <div class="pa-4">
+            <GitRepositoryList />
+        </div>
+    </MudTabPanel>
+    <MudTabPanel Text="Credentials" Icon="@Icons.Material.Filled.Key">
+        <div class="pa-4">
+            <GitCredentialList />
+        </div>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    public const string PAGE_URL = "/git";
+}
