@@ -176,7 +176,7 @@ public class RAGUIService(
     {
         try
         {
-            var queue = await documentQueueStore.GetQueueAsync(kbId);
+            var queue = await ragService.GetDocumentQueueAsync(kbId);
             return Res.Ok(queue);
         }
         catch (Exception ex)

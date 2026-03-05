@@ -92,14 +92,34 @@ public sealed partial class RAGService(
     /// <summary>
     /// Lists all knowledge bases from the store.
     /// </summary>
-    public Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
-        => kbStore.GetAllAsync(ct);
+    public async Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
+    {
+        var knowledgeBases = (await kbStore.GetAllAsync(ct)).ToList();
+        if (knowledgeBases.Count == 0)
+        {
+            return knowledgeBases;
+        }
+
+        await ReconcileKnowledgeBaseStatsAsync(knowledgeBases, ct);
+        return knowledgeBases;
+    }
 
     /// <summary>
     /// Gets a knowledge base by id.
     /// </summary>
-    public Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(string knowledgeBaseId, CancellationToken ct = default)
-        => kbStore.GetByIdAsync(knowledgeBaseId, ct);
+    public async Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await kbStore.GetByIdAsync(knowledgeBaseId, ct);
+        if (kb is null)
+        {
+            return null;
+        }
+
+        await RefreshKnowledgeBaseStatsAsync(kb, ct);
+        return kb;
+    }
 
     /// <summary>
     /// Persists the embedding provider/model for a knowledge base and optionally clears index data.
@@ -169,6 +189,58 @@ public sealed partial class RAGService(
         logger.LogInformation("Deleted knowledge base {Id}", knowledgeBaseId);
     }
 
+    public async Task<IReadOnlyList<DocumentQueueItem>> GetDocumentQueueAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        _ = await kbStore.GetByIdAsync(knowledgeBaseId, ct)
+            ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
+
+        var queueItems = (await documentQueueStore.GetQueueAsync(knowledgeBaseId, ct)).ToList();
+        var queueLookup = queueItems.ToDictionary(item => item.Id, StringComparer.OrdinalIgnoreCase);
+
+        var snapshots = await chunkSnapshotStore.GetByKnowledgeBaseAsync(knowledgeBaseId, ct);
+        var latestSnapshots = snapshots
+            .GroupBy(snapshot => snapshot.DocumentPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(snapshot => snapshot.UpdatedAt)
+                .First())
+            .ToList();
+        var snapshotPaths = latestSnapshots
+            .Select(snapshot => snapshot.DocumentPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var snapshot in latestSnapshots)
+        {
+            if (queueLookup.TryGetValue(snapshot.DocumentPath, out var queueItem))
+            {
+                continue;
+            }
+
+            var indexedItem = BuildIndexedQueueItemFromSnapshot(snapshot);
+            await documentQueueStore.AddAsync(indexedItem, ct);
+            queueItems.Add(indexedItem);
+            queueLookup[indexedItem.Id] = indexedItem;
+        }
+
+        var staleDoneItems = queueItems
+            .Where(item =>
+                item.Status == DocumentStatus.Done
+                && !snapshotPaths.Contains(item.Id))
+            .ToList();
+
+        foreach (var staleItem in staleDoneItems)
+        {
+            await documentQueueStore.RemoveAsync(knowledgeBaseId, staleItem.Id, ct);
+            queueItems.Remove(staleItem);
+            queueLookup.Remove(staleItem.Id);
+        }
+
+        return queueItems
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     public async Task RemoveDocumentAsync(
         string knowledgeBaseId,
         string documentPath,
@@ -178,16 +250,10 @@ public sealed partial class RAGService(
                  ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
 
         var existingSnapshot = await chunkSnapshotStore.GetAsync(knowledgeBaseId, documentPath, ct);
-        var removedChunkCount = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
+        _ = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
 
         await documentQueueStore.RemoveAsync(knowledgeBaseId, documentPath, ct);
-
-        if (existingSnapshot is not null || removedChunkCount > 0)
-        {
-            kb.DocumentCount = Math.Max(0, kb.DocumentCount - 1);
-            kb.ChunkCount = Math.Max(0, kb.ChunkCount - removedChunkCount);
-            await kbStore.SaveAsync(kb, ct);
-        }
+        await RefreshKnowledgeBaseStatsAsync(kb, ct);
     }
 
     public async Task IndexDocumentAsync(
@@ -275,13 +341,7 @@ public sealed partial class RAGService(
         }
 
         var existingSnapshot = await chunkSnapshotStore.GetAsync(kb.Id, documentPath, ct);
-        var removedChunkCount = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
-        var wasIndexedBefore = existingSnapshot is not null || removedChunkCount > 0;
-
-        if (removedChunkCount > 0)
-        {
-            kb.ChunkCount = Math.Max(0, kb.ChunkCount - removedChunkCount);
-        }
+        _ = await RemoveIndexedDocumentDataAsync(kb, documentPath, existingSnapshot, ct);
 
         // Build all records with pre-generated vectors.
         var records = chunks.Select((chunk, index) => new Dictionary<string, object?>
@@ -323,13 +383,7 @@ public sealed partial class RAGService(
             },
             ct);
 
-        if (!wasIndexedBefore)
-        {
-            kb.DocumentCount++;
-        }
-
-        kb.ChunkCount += chunks.Count;
-        await kbStore.SaveAsync(kb, ct);
+        await RefreshKnowledgeBaseStatsAsync(kb, ct);
 
         logger.LogInformation(
             "Indexed document '{Title}' into KB '{KbId}': {ChunkCount} chunks by '{ChunkerId}'",
@@ -588,10 +642,7 @@ public sealed partial class RAGService(
                 continue;
             }
 
-            var indexedSnapshots = await chunkSnapshotStore.GetByKnowledgeBaseAsync(kbId, ct);
-            kb.DocumentCount = indexedSnapshots.Count;
-            kb.ChunkCount = indexedSnapshots.Sum(snapshot => snapshot.Chunks.Count);
-            await kbStore.SaveAsync(kb, ct);
+            await RefreshKnowledgeBaseStatsAsync(kb, ct);
         }
 
         await chunkerRegistry.SetDefaultChunkerAsync(preview.Extension, preview.TargetChunkerId, ct);
@@ -637,6 +688,52 @@ public sealed partial class RAGService(
     }
 
     #region Private helpers
+
+    private async Task ReconcileKnowledgeBaseStatsAsync(
+        IEnumerable<KnowledgeBase> knowledgeBases,
+        CancellationToken ct)
+    {
+        var snapshotStatsByKnowledgeBase = (await chunkSnapshotStore.GetAllAsync(ct))
+            .GroupBy(snapshot => snapshot.KnowledgeBaseId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => (
+                    DocumentCount: group.Count(),
+                    ChunkCount: group.Sum(snapshot => snapshot.Chunks?.Count ?? 0)),
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kb in knowledgeBases)
+        {
+            var stats = snapshotStatsByKnowledgeBase.TryGetValue(kb.Id, out var value)
+                ? value
+                : (DocumentCount: 0, ChunkCount: 0);
+
+            if (kb.DocumentCount == stats.DocumentCount && kb.ChunkCount == stats.ChunkCount)
+            {
+                continue;
+            }
+
+            kb.DocumentCount = stats.DocumentCount;
+            kb.ChunkCount = stats.ChunkCount;
+            await kbStore.SaveAsync(kb, ct);
+        }
+    }
+
+    private async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBase kb, CancellationToken ct)
+    {
+        var indexedSnapshots = await chunkSnapshotStore.GetByKnowledgeBaseAsync(kb.Id, ct);
+        var documentCount = indexedSnapshots.Count;
+        var chunkCount = indexedSnapshots.Sum(snapshot => snapshot.Chunks?.Count ?? 0);
+
+        if (kb.DocumentCount == documentCount && kb.ChunkCount == chunkCount)
+        {
+            return;
+        }
+
+        kb.DocumentCount = documentCount;
+        kb.ChunkCount = chunkCount;
+        await kbStore.SaveAsync(kb, ct);
+    }
 
     private static string BuildBindingKey(string providerId, string modelName, int dimensions)
         => $"{providerId}::{modelName}::{dimensions}";
@@ -991,7 +1088,7 @@ public sealed partial class RAGService(
                 continue;
             }
 
-            var queue = await documentQueueStore.GetQueueAsync(kb.Id, ct);
+            var queue = await GetDocumentQueueAsync(kb.Id, ct);
             var queueLookup = queue.ToDictionary(item => item.Id, StringComparer.OrdinalIgnoreCase);
 
             foreach (var snapshot in snapshotGroup)
@@ -1022,6 +1119,17 @@ public sealed partial class RAGService(
             KnowledgeBaseId = snapshot.KnowledgeBaseId,
             OriginalText = snapshot.OriginalText
         };
+    }
+
+    private static DocumentQueueItem BuildIndexedQueueItemFromSnapshot(DocumentChunkSnapshot snapshot)
+    {
+        var queueItem = BuildQueueItemFromSnapshot(snapshot);
+        queueItem.Status = DocumentStatus.Done;
+        queueItem.ChunkCount = snapshot.Chunks?.Count ?? 0;
+        queueItem.Progress = 100;
+        queueItem.IndexedAt = snapshot.UpdatedAt;
+        queueItem.ErrorMessage = null;
+        return queueItem;
     }
 
     private static void MarkQueueItemPending(DocumentQueueItem queueItem, string originalText)

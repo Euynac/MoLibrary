@@ -45,7 +45,7 @@ public class ModuleRAG(ModuleRAGOption option)
     {
         services.AddSingleton<RAGService>();
         services.AddSingleton<ChunkerRegistry>();
-        services.AddSingleton<IDocumentQueueStore, Monica.AI.RAG.Stores.InMemoryDocumentQueueStore>();
+        services.TryAddSingleton<IDocumentQueueStore, FileDocumentQueueStore>();
         services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
         services.TryAddSingleton<IDocumentChunkSnapshotStore, FileDocumentChunkSnapshotStore>();
 
@@ -74,6 +74,11 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
     /// Relative file path for extension-to-chunker routing configuration.
     /// </summary>
     public string ChunkerRoutingStoreFilePath { get; set; } = "monica_data/rag/chunker_routing.json";
+
+    /// <summary>
+    /// Relative file path for document queue persistence.
+    /// </summary>
+    public string DocumentQueueStoreFilePath { get; set; } = "monica_data/rag/document_queue.json";
 
     /// <summary>
     /// Relative file path for document chunk snapshots used by chunk viewer.
@@ -190,6 +195,31 @@ public class ModuleRAGGuide
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Uses a custom document queue store implementation.
+    /// </summary>
+    public ModuleRAGGuide UseDocumentQueueStore<TStore>()
+        where TStore : class, IDocumentQueueStore
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IDocumentQueueStore, TStore>();
+        });
+        return this;
+    }
+
+    /// <summary>
+    /// Uses file-based document queue store.
+    /// </summary>
+    public ModuleRAGGuide UseDocumentQueueFileProvider()
+    {
+        ConfigureServices(ctx =>
+        {
+            ctx.Services.AddSingleton<IDocumentQueueStore, FileDocumentQueueStore>();
         });
         return this;
     }
