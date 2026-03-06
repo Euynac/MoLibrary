@@ -1,12 +1,15 @@
 @attribute [Route(PAGE_URL)]
+@using System.Threading
 @using Microsoft.Extensions.Localization
 @using Monica.Markdown.Git.Models
 @using Monica.Markdown.Localization
 @using Monica.Markdown.UIGit.Services
 @using Monica.Tool.MoResponse
+@implements IAsyncDisposable
 
 @inject GitUIService GitService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject IStringLocalizer<MarkdownResource> L
 
 <PageTitle>@L["GitDashboard:PageTitle"]</PageTitle>
@@ -17,15 +20,15 @@
         <MudStack Row="true" Spacing="2">
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
-                       OnClick="LoadAsync"
-                       Disabled="@_isLoading">
+                       OnClick="RefreshAsync"
+                       Disabled="@IsBusy">
                 @L["GitDashboard:Actions:Refresh"]
             </MudButton>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Sync"
                        OnClick="SyncAllAsync"
-                       Disabled="@(_isLoading || _repositories.Count == 0)">
+                       Disabled="@(IsBusy || _repositories.Count == 0)">
                 @L["GitDashboard:Actions:SyncAll"]
             </MudButton>
         </MudStack>
@@ -36,7 +39,7 @@
             <MudPaper Class="pa-4">
                 <MudText Typo="Typo.h6" Class="mb-3">@L["GitDashboard:Sections:Repositories"]</MudText>
 
-                <MudTable T="GitRepositoryStatus" Items="@_repositories" Dense="true" Hover="true" Loading="@_isLoading">
+                <MudTable T="GitRepositoryStatus" Items="@_repositories" Dense="true" Hover="true" Loading="@IsBusy">
                     <HeaderContent>
                         <MudTh>@L["GitDashboard:Columns:Id"]</MudTh>
                         <MudTh>@L["GitDashboard:Columns:Provider"]</MudTh>
@@ -62,8 +65,18 @@
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => SelectRepository(context.Id))">
                                     @L["GitDashboard:Actions:Select"]
                                 </MudButton>
-                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => SyncRepositoryAsync(context.Id))" Disabled="@_isLoading">
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           OnClick="@(() => SyncRepositoryAsync(context.Id))"
+                                           Disabled="@IsBusy">
                                     @L["GitDashboard:Actions:Sync"]
+                                </MudButton>
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           Color="Color.Error"
+                                           OnClick="@(() => DeleteRepositoryAsync(context.Id))"
+                                           Disabled="@IsBusy">
+                                    @L["GitDashboard:Actions:DeleteLocal"]
                                 </MudButton>
                             </MudStack>
                         </MudTd>
@@ -86,6 +99,22 @@
                 else
                 {
                     <MudStack Spacing="2">
+                        <MudStack Row="true" Spacing="1">
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.Sync"
+                                       OnClick="@(() => SyncRepositoryAsync(_selectedRepository.Id))"
+                                       Disabled="@IsBusy">
+                                @L["GitDashboard:Actions:Sync"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.Delete"
+                                       OnClick="@(() => DeleteRepositoryAsync(_selectedRepository.Id))"
+                                       Disabled="@IsBusy">
+                                @L["GitDashboard:Actions:DeleteLocal"]
+                            </MudButton>
+                        </MudStack>
+
                         <MudText><strong>@L["GitDashboard:Labels:RemoteUrl"]:</strong> @_selectedRepository.RemoteUrl</MudText>
                         <MudText><strong>@L["GitDashboard:Labels:LocalPath"]:</strong> @_selectedRepository.LocalPath</MudText>
                         <MudText><strong>@L["GitDashboard:Labels:ResolvedLocalPath"]:</strong> @_selectedRepository.ResolvedLocalPath</MudText>
@@ -168,42 +197,126 @@
 @code {
     public const string PAGE_URL = "/git-repositories";
 
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(5);
+
     private bool _isLoading;
+    private bool _isOperating;
+    private bool _isDisposed;
+    private readonly CancellationTokenSource _refreshLoopCts = new();
+    private Task? _refreshLoopTask;
+    private PeriodicTimer? _refreshTimer;
     private List<GitRepositoryStatus> _repositories = [];
     private List<GitCredentialInfo> _credentials = [];
     private List<GitCredentialResolverInfo> _resolvers = [];
     private GitRepositoryStatus? _selectedRepository;
 
+    private bool IsBusy => _isLoading || _isOperating;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            await LoadAsync();
+            return;
+        }
+
+        StartAutoRefreshLoop();
+        await LoadAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _isDisposed = true;
+        _refreshLoopCts.Cancel();
+        _refreshTimer?.Dispose();
+
+        if (_refreshLoopTask is not null)
+        {
+            try
+            {
+                await _refreshLoopTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _refreshLoopCts.Dispose();
+    }
+
+    private void StartAutoRefreshLoop()
+    {
+        _refreshTimer = new PeriodicTimer(AutoRefreshInterval);
+        _refreshLoopTask = RunAutoRefreshLoopAsync(_refreshLoopCts.Token);
+    }
+
+    private async Task RunAutoRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        if (_refreshTimer is null)
+        {
+            return;
+        }
+
+        try
+        {
+            while (await _refreshTimer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (IsBusy || _isDisposed)
+                {
+                    continue;
+                }
+
+                await LoadAsync(showErrors: false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 
-    private async Task LoadAsync()
+    private Task RefreshAsync()
     {
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync(bool showErrors = true)
+    {
+        if (_isDisposed || _isLoading)
+        {
+            return;
+        }
+
         _isLoading = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
             if ((await GitService.GetRepositoriesAsync()).IsFailed(out var repoError, out var repositories))
             {
-                Snackbar.Add(L["GitDashboard:Messages:LoadFailed", repoError], Severity.Error);
+                if (showErrors)
+                {
+                    Snackbar.Add(L["GitDashboard:Messages:LoadFailed", repoError], Severity.Error);
+                }
+
                 return;
             }
 
             if ((await GitService.GetCredentialsAsync()).IsFailed(out var credentialError, out var credentials))
             {
-                Snackbar.Add(L["GitDashboard:Messages:LoadFailed", credentialError], Severity.Error);
+                if (showErrors)
+                {
+                    Snackbar.Add(L["GitDashboard:Messages:LoadFailed", credentialError], Severity.Error);
+                }
+
                 return;
             }
 
             if ((await GitService.GetCredentialResolversAsync()).IsFailed(out var resolverError, out var resolvers))
             {
-                Snackbar.Add(L["GitDashboard:Messages:LoadFailed", resolverError], Severity.Error);
+                if (showErrors)
+                {
+                    Snackbar.Add(L["GitDashboard:Messages:LoadFailed", resolverError], Severity.Error);
+                }
+
                 return;
             }
 
@@ -224,7 +337,10 @@
         finally
         {
             _isLoading = false;
-            StateHasChanged();
+            if (!_isDisposed)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
@@ -235,37 +351,166 @@
 
     private async Task SyncRepositoryAsync(string repositoryId)
     {
-        if ((await GitService.SyncRepositoryAsync(repositoryId)).IsFailed(out var error, out var result))
+        UpdateRepositoryPreview(repositoryId, repository => CloneRepository(
+            repository,
+            state: GitRepositorySyncState.Syncing,
+            lastSyncMessage: L["GitDashboard:Messages:SyncInProgress", repositoryId],
+            lastError: null));
+
+        _isOperating = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
         {
-            Snackbar.Add(L["GitDashboard:Messages:OperationFailed", error], Severity.Error);
+            if ((await GitService.SyncRepositoryAsync(repositoryId)).IsFailed(out var error, out var result))
+            {
+                Snackbar.Add(L["GitDashboard:Messages:OperationFailed", error], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(
+                result.Success
+                    ? L["GitDashboard:Messages:SyncRepositorySuccess", repositoryId]
+                    : L["GitDashboard:Messages:OperationFailed", result.Message],
+                result.Success ? Severity.Success : Severity.Error);
+        }
+        finally
+        {
+            _isOperating = false;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteRepositoryAsync(string repositoryId)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["GitDashboard:Dialogs:DeleteLocalRepository:Title"],
+            L["GitDashboard:Dialogs:DeleteLocalRepository:Message", repositoryId],
+            yesText: L["GitDashboard:Dialogs:DeleteLocalRepository:Confirm"],
+            cancelText: L["GitDashboard:Dialogs:DeleteLocalRepository:Cancel"]);
+
+        if (confirmed != true)
+        {
             return;
         }
 
-        Snackbar.Add(
-            result.Success
-                ? L["GitDashboard:Messages:SyncRepositorySuccess", repositoryId]
-                : L["GitDashboard:Messages:OperationFailed", result.Message],
-            result.Success ? Severity.Success : Severity.Error);
+        _isOperating = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if ((await GitService.DeleteRepositoryAsync(repositoryId)).IsFailed(out var error, out var result))
+            {
+                Snackbar.Add(L["GitDashboard:Messages:OperationFailed", error], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(
+                result.Success
+                    ? L["GitDashboard:Messages:DeleteRepositorySuccess", repositoryId]
+                    : L["GitDashboard:Messages:OperationFailed", result.Message],
+                result.Success ? Severity.Success : Severity.Error);
+        }
+        finally
+        {
+            _isOperating = false;
+        }
 
         await LoadAsync();
     }
 
     private async Task SyncAllAsync()
     {
-        if ((await GitService.SyncAllAsync()).IsFailed(out var error, out var results))
+        UpdateAllRepositoriesPreview(GitRepositorySyncState.Syncing, L["GitDashboard:Messages:SyncAllInProgress"]);
+
+        _isOperating = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
         {
-            Snackbar.Add(L["GitDashboard:Messages:OperationFailed", error], Severity.Error);
+            if ((await GitService.SyncAllAsync()).IsFailed(out var error, out var results))
+            {
+                Snackbar.Add(L["GitDashboard:Messages:OperationFailed", error], Severity.Error);
+                return;
+            }
+
+            var failures = results.Where(x => !x.Success).ToList();
+            Snackbar.Add(
+                failures.Count == 0
+                    ? L["GitDashboard:Messages:SyncAllSuccess"]
+                    : L["GitDashboard:Messages:OperationFailed", string.Join("; ", failures.Select(x => x.Message))],
+                failures.Count == 0 ? Severity.Success : Severity.Warning);
+        }
+        finally
+        {
+            _isOperating = false;
+        }
+
+        await LoadAsync();
+    }
+
+    private void UpdateAllRepositoriesPreview(GitRepositorySyncState state, string? message = null)
+    {
+        _repositories = _repositories
+            .Select(repository => CloneRepository(repository, state: state, lastSyncMessage: message, lastError: null))
+            .ToList();
+
+        if (_selectedRepository is not null)
+        {
+            _selectedRepository = _repositories.FirstOrDefault(x => x.Id == _selectedRepository.Id)
+                ?? _selectedRepository;
+        }
+    }
+
+    private void UpdateRepositoryPreview(string repositoryId, Func<GitRepositoryStatus, GitRepositoryStatus> updater)
+    {
+        var index = _repositories.FindIndex(x => string.Equals(x.Id, repositoryId, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+        {
             return;
         }
 
-        var failures = results.Where(x => !x.Success).ToList();
-        Snackbar.Add(
-            failures.Count == 0
-                ? L["GitDashboard:Messages:SyncAllSuccess"]
-                : L["GitDashboard:Messages:OperationFailed", string.Join("; ", failures.Select(x => x.Message))],
-            failures.Count == 0 ? Severity.Success : Severity.Warning);
+        var updated = updater(_repositories[index]);
+        _repositories[index] = updated;
 
-        await LoadAsync();
+        if (_selectedRepository is not null
+            && string.Equals(_selectedRepository.Id, repositoryId, StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedRepository = updated;
+        }
+    }
+
+    private static GitRepositoryStatus CloneRepository(
+        GitRepositoryStatus repository,
+        GitRepositorySyncState? state = null,
+        bool? isAvailable = null,
+        bool? isDirty = null,
+        string? resolvedBranch = null,
+        string? currentCommit = null,
+        string? lastSyncMessage = null,
+        string? lastError = null)
+    {
+        return new GitRepositoryStatus
+        {
+            Id = repository.Id,
+            Provider = repository.Provider,
+            RemoteUrl = repository.RemoteUrl,
+            LocalPath = repository.LocalPath,
+            ResolvedLocalPath = repository.ResolvedLocalPath,
+            ConfiguredBranch = repository.ConfiguredBranch,
+            ResolvedBranch = resolvedBranch ?? repository.ResolvedBranch,
+            CredentialId = repository.CredentialId,
+            State = state ?? repository.State,
+            IsAvailable = isAvailable ?? repository.IsAvailable,
+            IsDirty = isDirty ?? repository.IsDirty,
+            CurrentCommit = currentCommit ?? repository.CurrentCommit,
+            LastSyncAtUtc = repository.LastSyncAtUtc,
+            LastSyncMessage = lastSyncMessage ?? repository.LastSyncMessage,
+            LastError = lastError ?? repository.LastError,
+            BoundDocumentGroupKeys = repository.BoundDocumentGroupKeys,
+            MissingDocumentGroupKeys = repository.MissingDocumentGroupKeys
+        };
     }
 
     private string GetStateText(GitRepositorySyncState state)

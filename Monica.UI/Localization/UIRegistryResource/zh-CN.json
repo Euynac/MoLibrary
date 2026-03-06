@@ -89,6 +89,9 @@
     },
     "JobStatistics": {
       "Title": "统计分析"
+    },
+    "GitRepositories": {
+      "Title": "Git 仓库"
     }
   }
 }

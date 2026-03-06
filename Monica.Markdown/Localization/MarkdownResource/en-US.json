@@ -54,7 +54,8 @@
       "Refresh": "Refresh",
       "SyncAll": "Sync All",
       "Sync": "Sync",
-      "Select": "Select"
+      "Select": "Select",
+      "DeleteLocal": "Delete Local"
     },
     "States": {
       "NotReady": "Not Ready",
@@ -65,10 +66,21 @@
       "No": "No",
       "None": "(None)"
     },
+    "Dialogs": {
+      "DeleteLocalRepository": {
+        "Title": "Delete Local Repository",
+        "Message": "Delete the local working copy for repository '{0}'? You can sync again later to clone it back.",
+        "Confirm": "Delete",
+        "Cancel": "Cancel"
+      }
+    },
     "Messages": {
       "LoadFailed": "Failed to load Git dashboard: {0}",
       "SyncAllSuccess": "All repositories synchronized successfully.",
+      "SyncAllInProgress": "Synchronizing all repositories...",
       "SyncRepositorySuccess": "Repository '{0}' synchronized successfully.",
+      "SyncInProgress": "Repository '{0}' is synchronizing...",
+      "DeleteRepositorySuccess": "Repository '{0}' local working copy deleted successfully.",
       "OperationFailed": "Operation failed: {0}",
       "NoRepositories": "No Git repositories configured.",
       "NoCredentials": "No Git credentials configured.",

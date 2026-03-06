@@ -22,7 +22,6 @@ public sealed class GitRepositoryService(
     IMoLocalEventBus localEventBus,
     ILogger<GitRepositoryService> logger) : IGitRepositoryService
 {
-    private readonly ModuleGitOption _option = options.Value;
     private readonly Dictionary<string, GitRepositoryRegistration> _repositories = options.Value
         .RepositoryRegistrations
         .GroupBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
@@ -46,25 +45,28 @@ public sealed class GitRepositoryService(
     private readonly Dictionary<string, SemaphoreSlim> _locks = new(StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<GitRepositoryStatus>> GetRepositoriesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GitRepositoryStatus>> GetRepositoriesAsync(CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<GitRepositoryStatus> result = _repositories.Values
-            .OrderBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(CreateSnapshot)
-            .ToArray();
+        var result = new List<GitRepositoryStatus>(_repositories.Count);
 
-        return Task.FromResult(result);
+        foreach (var registration in _repositories.Values.OrderBy(x => x.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            result.Add(await CreateSnapshotAsync(registration, cancellationToken));
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public Task<GitRepositoryStatus> GetRepositoryAsync(string repositoryId, CancellationToken cancellationToken = default)
+    public async Task<GitRepositoryStatus> GetRepositoryAsync(string repositoryId, CancellationToken cancellationToken = default)
     {
         var registration = GetRegistration(repositoryId);
-        return Task.FromResult(CreateSnapshot(registration));
+        return await CreateSnapshotAsync(registration, cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<GitRepositoryStatus?> FindRepositoryByRemoteUrlAsync(string remoteUrl, CancellationToken cancellationToken = default)
+    public async Task<GitRepositoryStatus?> FindRepositoryByRemoteUrlAsync(string remoteUrl, CancellationToken cancellationToken = default)
     {
         var normalized = GitRemoteUrlNormalizer.Normalize(remoteUrl);
         var registration = _repositories.Values.FirstOrDefault(x =>
@@ -73,7 +75,7 @@ public sealed class GitRepositoryService(
                 normalized,
                 StringComparison.OrdinalIgnoreCase));
 
-        return Task.FromResult(registration is null ? null : CreateSnapshot(registration));
+        return registration is null ? null : await CreateSnapshotAsync(registration, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -165,8 +167,8 @@ public sealed class GitRepositoryService(
             }
             catch (Exception ex)
             {
+                RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
                 state.State = GitRepositorySyncState.Failed;
-                state.IsAvailable = Directory.Exists(resolvedLocalPath) && Repository.IsValid(resolvedLocalPath);
                 state.LastError = ex.Message;
                 state.LastSyncMessage = ex.Message;
 
@@ -180,6 +182,82 @@ public sealed class GitRepositoryService(
                     HasChanges = false,
                     PreviousCommit = previousCommit,
                     CurrentCommit = state.CurrentCommit,
+                    Message = ex.Message
+                };
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<GitRepositoryDeleteResult> DeleteRepositoryAsync(
+        string repositoryId,
+        CancellationToken cancellationToken = default)
+    {
+        var registration = GetRegistration(repositoryId);
+        var state = _runtimeStates[registration.Id];
+        var gate = GetLock(registration.Id);
+
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
+            var pathExisted = Directory.Exists(resolvedLocalPath);
+
+            try
+            {
+                if (File.Exists(resolvedLocalPath))
+                {
+                    throw new InvalidOperationException(
+                        $"Local path '{resolvedLocalPath}' is a file and cannot be deleted as a repository directory.");
+                }
+
+                if (pathExisted)
+                {
+                    await DeleteDirectoryAsync(resolvedLocalPath, cancellationToken);
+                }
+
+                var refreshMessage = await RefreshBoundDocumentGroupsAsync(registration.Id, cancellationToken);
+                state.State = GitRepositorySyncState.NotReady;
+                state.IsAvailable = false;
+                state.IsDirty = false;
+                state.CurrentCommit = null;
+                state.ResolvedBranch = null;
+                state.LastError = null;
+                state.LastSyncMessage = BuildDeleteMessage(pathExisted, refreshMessage);
+
+                logger.LogInformation(
+                    "Deleted local Git repository working copy '{RepositoryId}' at '{LocalPath}'",
+                    registration.Id,
+                    resolvedLocalPath);
+
+                return new GitRepositoryDeleteResult
+                {
+                    RepositoryId = registration.Id,
+                    ResolvedLocalPath = resolvedLocalPath,
+                    Success = true,
+                    PathExisted = pathExisted,
+                    Message = state.LastSyncMessage ?? "Local repository deleted."
+                };
+            }
+            catch (Exception ex)
+            {
+                RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
+                state.State = GitRepositorySyncState.Failed;
+                state.LastError = ex.Message;
+                state.LastSyncMessage = ex.Message;
+
+                logger.LogError(ex, "Failed to delete local Git repository '{RepositoryId}'", registration.Id);
+
+                return new GitRepositoryDeleteResult
+                {
+                    RepositoryId = registration.Id,
+                    ResolvedLocalPath = resolvedLocalPath,
+                    Success = false,
+                    PathExisted = pathExisted,
                     Message = ex.Message
                 };
             }
@@ -243,36 +321,87 @@ public sealed class GitRepositoryService(
         }
     }
 
-    private GitRepositoryStatus CreateSnapshot(GitRepositoryRegistration registration)
+    private async Task<GitRepositoryStatus> CreateSnapshotAsync(
+        GitRepositoryRegistration registration,
+        CancellationToken cancellationToken)
     {
-        var state = _runtimeStates[registration.Id];
-        var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
-        var boundGroups = GetBoundDocumentGroups(registration.Id);
-        var validGroups = GetRegisteredMarkdownGroupKeys();
-        var missingGroups = boundGroups
-            .Where(x => !validGroups.Contains(x))
-            .ToArray();
-
-        return new GitRepositoryStatus
+        var gate = GetLock(registration.Id);
+        await gate.WaitAsync(cancellationToken);
+        try
         {
-            Id = registration.Id,
-            Provider = registration.Provider,
-            RemoteUrl = registration.RemoteUrl,
-            LocalPath = registration.LocalPath,
-            ResolvedLocalPath = resolvedLocalPath,
-            ConfiguredBranch = registration.Branch,
-            ResolvedBranch = state.ResolvedBranch,
-            CredentialId = registration.CredentialId,
-            State = state.State,
-            IsAvailable = state.IsAvailable,
-            IsDirty = state.IsDirty,
-            CurrentCommit = state.CurrentCommit,
-            LastSyncAtUtc = state.LastSyncAtUtc,
-            LastSyncMessage = state.LastSyncMessage,
-            LastError = state.LastError,
-            BoundDocumentGroupKeys = boundGroups,
-            MissingDocumentGroupKeys = missingGroups
-        };
+            var state = _runtimeStates[registration.Id];
+            var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
+            RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
+
+            var boundGroups = GetBoundDocumentGroups(registration.Id);
+            var validGroups = GetRegisteredMarkdownGroupKeys();
+            var missingGroups = boundGroups
+                .Where(x => !validGroups.Contains(x))
+                .ToArray();
+
+            return new GitRepositoryStatus
+            {
+                Id = registration.Id,
+                Provider = registration.Provider,
+                RemoteUrl = registration.RemoteUrl,
+                LocalPath = registration.LocalPath,
+                ResolvedLocalPath = resolvedLocalPath,
+                ConfiguredBranch = registration.Branch,
+                ResolvedBranch = state.ResolvedBranch,
+                CredentialId = registration.CredentialId,
+                State = ResolveDisplayState(state),
+                IsAvailable = state.IsAvailable,
+                IsDirty = state.IsDirty,
+                CurrentCommit = state.CurrentCommit,
+                LastSyncAtUtc = state.LastSyncAtUtc,
+                LastSyncMessage = state.LastSyncMessage,
+                LastError = state.LastError,
+                BoundDocumentGroupKeys = boundGroups,
+                MissingDocumentGroupKeys = missingGroups
+            };
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private static GitRepositorySyncState ResolveDisplayState(GitRepositoryRuntimeState state)
+    {
+        if (state.State == GitRepositorySyncState.Syncing)
+        {
+            return GitRepositorySyncState.Syncing;
+        }
+
+        return state.IsAvailable
+            ? state.State
+            : GitRepositorySyncState.NotReady;
+    }
+
+    private static void RefreshRuntimeStateFromDisk(GitRepositoryRuntimeState state, string resolvedLocalPath)
+    {
+        if (state.State == GitRepositorySyncState.Syncing)
+        {
+            state.IsAvailable = Directory.Exists(resolvedLocalPath);
+            return;
+        }
+
+        if (!Directory.Exists(resolvedLocalPath) || !Repository.IsValid(resolvedLocalPath))
+        {
+            state.IsAvailable = false;
+            state.IsDirty = false;
+            state.CurrentCommit = null;
+            state.ResolvedBranch = null;
+            return;
+        }
+
+        using var repository = new Repository(resolvedLocalPath);
+        state.IsAvailable = true;
+        state.IsDirty = repository.RetrieveStatus().IsDirty;
+        state.CurrentCommit = repository.Head.Tip?.Sha;
+        state.ResolvedBranch = repository.Info.IsHeadDetached
+            ? null
+            : NormalizeBranchName(repository.Head.FriendlyName);
     }
 
     private IReadOnlyList<string> GetBoundDocumentGroups(string repositoryId)
@@ -340,6 +469,86 @@ public sealed class GitRepositoryService(
         }
 
         return syncMessage;
+    }
+
+    private static string BuildDeleteMessage(bool pathExisted, string? refreshMessage)
+    {
+        var message = pathExisted
+            ? "Local repository deleted. Synchronize to clone again."
+            : "Local repository path was already missing. Synchronize to clone again.";
+
+        if (!string.IsNullOrWhiteSpace(refreshMessage))
+        {
+            message += $" {refreshMessage}";
+        }
+
+        return message;
+    }
+
+
+    private static async Task DeleteDirectoryAsync(string directoryPath, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 5;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                if (!Directory.Exists(directoryPath))
+                {
+                    return;
+                }
+
+                DeleteDirectoryCore(directoryPath);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts && IsRetryableDeleteException(ex))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), cancellationToken);
+            }
+        }
+
+        if (Directory.Exists(directoryPath))
+        {
+            DeleteDirectoryCore(directoryPath);
+        }
+    }
+
+    private static void DeleteDirectoryCore(string directoryPath)
+    {
+        var directoryInfo = new DirectoryInfo(directoryPath);
+        if (!directoryInfo.Exists)
+        {
+            return;
+        }
+
+        foreach (var fileInfo in directoryInfo.EnumerateFiles())
+        {
+            fileInfo.Attributes = FileAttributes.Normal;
+            fileInfo.Delete();
+        }
+
+        foreach (var subdirectoryInfo in directoryInfo.EnumerateDirectories())
+        {
+            if (subdirectoryInfo.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            {
+                subdirectoryInfo.Attributes = FileAttributes.Normal;
+                subdirectoryInfo.Delete();
+                continue;
+            }
+
+            DeleteDirectoryCore(subdirectoryInfo.FullName);
+        }
+
+        directoryInfo.Attributes = FileAttributes.Normal;
+        directoryInfo.Delete();
+    }
+
+    private static bool IsRetryableDeleteException(Exception exception)
+    {
+        return exception is IOException or UnauthorizedAccessException;
     }
 
     private async Task PublishUpdatedEventAsync(

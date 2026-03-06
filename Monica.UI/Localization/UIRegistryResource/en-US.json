@@ -89,6 +89,9 @@
     },
     "JobStatistics": {
       "Title": "Statistics"
+    },
+    "GitRepositories": {
+      "Title": "Git Repositories"
     }
   }
 }

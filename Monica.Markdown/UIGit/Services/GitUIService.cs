@@ -91,6 +91,22 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     }
 
     /// <summary>
+    /// Deletes a local repository working copy.
+    /// </summary>
+    public async Task<Res<GitRepositoryDeleteResult>> DeleteRepositoryAsync(string repositoryId)
+    {
+        try
+        {
+            return Res.Ok(await repositoryService.DeleteRepositoryAsync(repositoryId));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete Git repository {RepositoryId}", repositoryId);
+            return Res.Fail($"Failed to delete Git repository: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Synchronizes all repositories.
     /// </summary>
     public async Task<Res<IReadOnlyList<GitSyncResult>>> SyncAllAsync()

@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IMoBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Monica UI Development Guide
@@ -153,6 +153,9 @@ See:
 - Do not hardcode user-facing text.
 - Use decentralized module resources with marker class + JSON resource files.
 - Keep `zh-CN.json` and `en-US.json` synchronized.
+- For page content, use the module-local resource marker and JSON files.
+- For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
+- When adding a new page to navigation, add the corresponding `Pages:*:Title` key to `UIRegistryResource` in addition to the page module resource when needed.
 
 Validation command:
 
@@ -187,7 +190,7 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 - `scripts/check_mudblazor_source.py` - Verify local MudBlazor source path (Windows/WSL compatible path resolution).
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON from source.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes.
-- `scripts/validate_localization.py` - Validate localization keys (missing/unused/sync).
+- `scripts/validate_localization.py` - Validate localization keys (missing/unused/sync) and verify `RegisterLocalizedComponent` keys against `UIRegistryResource`.
 - `scripts/font_downloader.py` - Download fonts for offline usage.
 
 ## Quick Checklist
@@ -200,3 +203,4 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 - [ ] Run CSS variable validation when styling changes
 - [ ] Use `IMoBrowserStorage` for browser persistence
 - [ ] Use localization for all user-facing text
+- [ ] Add AppBar/navigation keys to `UIRegistryResource` when using `RegisterLocalizedComponent`

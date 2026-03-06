@@ -21,7 +21,7 @@
     },
     "Columns": {
       "Id": "标识",
-      "Provider": "Provider",
+      "Provider": "提供商",
       "Branch": "分支",
       "State": "状态",
       "Commit": "提交",
@@ -54,7 +54,8 @@
       "Refresh": "刷新",
       "SyncAll": "全部同步",
       "Sync": "同步",
-      "Select": "查看"
+      "Select": "查看",
+      "DeleteLocal": "删除本地副本"
     },
     "States": {
       "NotReady": "未就绪",
@@ -65,10 +66,21 @@
       "No": "否",
       "None": "(无)"
     },
+    "Dialogs": {
+      "DeleteLocalRepository": {
+        "Title": "删除本地仓库",
+        "Message": "是否删除仓库 '{0}' 的本地工作副本？后续仍可通过同步重新克隆。",
+        "Confirm": "删除",
+        "Cancel": "取消"
+      }
+    },
     "Messages": {
       "LoadFailed": "加载 Git 面板失败: {0}",
       "SyncAllSuccess": "全部仓库同步成功。",
+      "SyncAllInProgress": "正在同步全部仓库...",
       "SyncRepositorySuccess": "仓库 '{0}' 同步成功。",
+      "SyncInProgress": "仓库 '{0}' 正在同步...",
+      "DeleteRepositorySuccess": "仓库 '{0}' 的本地工作副本已删除。",
       "OperationFailed": "操作失败: {0}",
       "NoRepositories": "未配置任何 Git 仓库。",
       "NoCredentials": "未配置任何 Git 凭据。",

@@ -31,6 +31,14 @@ public interface IGitRepositoryService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes the local working copy of a configured repository.
+    /// The repository registration remains available for a future re-sync.
+    /// </summary>
+    Task<GitRepositoryDeleteResult> DeleteRepositoryAsync(
+        string repositoryId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Synchronizes all configured repositories.
     /// </summary>
     Task<IReadOnlyList<GitSyncResult>> SyncAllAsync(
