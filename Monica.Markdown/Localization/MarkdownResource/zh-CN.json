@@ -32,7 +32,8 @@
       "UserName": "用户名",
       "HasSecret": "已配置密钥",
       "Resolver": "解析器",
-      "Order": "顺序"
+      "Order": "顺序",
+      "Size": "大小"
     },
     "Labels": {
       "RemoteUrl": "远端地址",
@@ -48,7 +49,9 @@
       "Dirty": "脏工作区",
       "Credential": "凭据",
       "CurrentCommit": "当前提交",
-      "LastSync": "最近同步"
+      "LastSync": "最近同步",
+      "WorkingDirectorySize": "工作区大小",
+      "Progress": "进度"
     },
     "Actions": {
       "Refresh": "刷新",
@@ -86,6 +89,14 @@
       "NoCredentials": "未配置任何 Git 凭据。",
       "NoResolvers": "未注册任何凭据解析器。",
       "NoSelection": "请选择一个仓库查看详情。"
+    },
+    "ProgressStages": {
+      "Preparing": "准备中",
+      "Cloning": "正在克隆仓库",
+      "Fetching": "正在拉取远端变更",
+      "Checkout": "正在检出文件",
+      "RefreshingDocuments": "正在刷新 Markdown 组",
+      "Deleting": "正在删除本地仓库"
     }
   }
 }

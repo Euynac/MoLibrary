@@ -32,7 +32,8 @@
       "UserName": "User Name",
       "HasSecret": "Has Secret",
       "Resolver": "Resolver",
-      "Order": "Order"
+      "Order": "Order",
+      "Size": "Size"
     },
     "Labels": {
       "RemoteUrl": "Remote URL",
@@ -48,13 +49,15 @@
       "Dirty": "Dirty",
       "Credential": "Credential",
       "CurrentCommit": "Current Commit",
-      "LastSync": "Last Sync"
+      "LastSync": "Last Sync",
+      "WorkingDirectorySize": "Working Directory Size",
+      "Progress": "Progress"
     },
     "Actions": {
       "Refresh": "Refresh",
       "SyncAll": "Sync All",
       "Sync": "Sync",
-      "Select": "Select",
+      "Select": "View",
       "DeleteLocal": "Delete Local"
     },
     "States": {
@@ -86,6 +89,14 @@
       "NoCredentials": "No Git credentials configured.",
       "NoResolvers": "No credential resolvers registered.",
       "NoSelection": "Select a repository to inspect details."
+    },
+    "ProgressStages": {
+      "Preparing": "Preparing",
+      "Cloning": "Cloning repository",
+      "Fetching": "Fetching remote changes",
+      "Checkout": "Checking out files",
+      "RefreshingDocuments": "Refreshing Markdown groups",
+      "Deleting": "Deleting local repository"
     }
   }
 }

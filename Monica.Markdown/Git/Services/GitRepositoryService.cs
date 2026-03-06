@@ -45,29 +45,32 @@ public sealed class GitRepositoryService(
     private readonly Dictionary<string, SemaphoreSlim> _locks = new(StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<GitRepositoryStatus>> GetRepositoriesAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<GitRepositoryStatus>> GetRepositoriesAsync(CancellationToken cancellationToken = default)
     {
         var result = new List<GitRepositoryStatus>(_repositories.Count);
 
         foreach (var registration in _repositories.Values.OrderBy(x => x.Id, StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            result.Add(await CreateSnapshotAsync(registration, cancellationToken));
+            result.Add(CreateSnapshot(registration));
         }
 
-        return result;
+        return Task.FromResult<IReadOnlyList<GitRepositoryStatus>>(result);
     }
 
     /// <inheritdoc />
-    public async Task<GitRepositoryStatus> GetRepositoryAsync(string repositoryId, CancellationToken cancellationToken = default)
+    public Task<GitRepositoryStatus> GetRepositoryAsync(string repositoryId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var registration = GetRegistration(repositoryId);
-        return await CreateSnapshotAsync(registration, cancellationToken);
+        return Task.FromResult(CreateSnapshot(registration));
     }
 
     /// <inheritdoc />
-    public async Task<GitRepositoryStatus?> FindRepositoryByRemoteUrlAsync(string remoteUrl, CancellationToken cancellationToken = default)
+    public Task<GitRepositoryStatus?> FindRepositoryByRemoteUrlAsync(string remoteUrl, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var normalized = GitRemoteUrlNormalizer.Normalize(remoteUrl);
         var registration = _repositories.Values.FirstOrDefault(x =>
             string.Equals(
@@ -75,7 +78,7 @@ public sealed class GitRepositoryService(
                 normalized,
                 StringComparison.OrdinalIgnoreCase));
 
-        return registration is null ? null : await CreateSnapshotAsync(registration, cancellationToken);
+        return Task.FromResult(registration is null ? null : CreateSnapshot(registration));
     }
 
     /// <inheritdoc />
@@ -91,24 +94,27 @@ public sealed class GitRepositoryService(
         await gate.WaitAsync(cancellationToken);
         try
         {
-            state.State = GitRepositorySyncState.Syncing;
-            state.LastError = null;
-            state.LastSyncMessage = null;
-
             var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
-            var previousCommit = state.CurrentCommit;
+            var previousCommit = state.Capture().CurrentCommit;
+
+            state.BeginSync(resolvedLocalPath);
 
             try
             {
                 var resolvedCredential = await credentialManager.ResolveAsync(registration, cancellationToken);
-                using var repository = OpenOrCloneRepository(registration, resolvedLocalPath, resolvedCredential);
+                using var repository = OpenOrCloneRepository(
+                    registration,
+                    resolvedLocalPath,
+                    resolvedCredential,
+                    state,
+                    cancellationToken);
 
                 var remote = repository.Network.Remotes["origin"]
                              ?? repository.Network.Remotes.FirstOrDefault()
                              ?? throw new InvalidOperationException(
                                  $"Repository '{registration.Id}' does not contain a Git remote.");
 
-                FetchRemote(repository, remote, resolvedCredential);
+                FetchRemote(repository, remote, resolvedCredential, state, resolvedLocalPath, cancellationToken);
 
                 var targetBranchName = ResolveTargetBranchName(repository, remote.Name, registration.Branch);
                 if (string.IsNullOrWhiteSpace(targetBranchName))
@@ -124,28 +130,35 @@ public sealed class GitRepositoryService(
                 var localBranch = repository.Branches[targetBranchName]
                                  ?? repository.CreateBranch(targetBranchName, remoteBranch.Tip);
 
-                Commands.Checkout(repository, localBranch, new CheckoutOptions
+                var checkoutOptions = new CheckoutOptions
                 {
-                    CheckoutModifiers = CheckoutModifiers.Force
-                });
+                    CheckoutModifiers = CheckoutModifiers.Force,
+                    OnCheckoutProgress = (_, completedSteps, totalSteps) =>
+                        UpdateCheckoutProgress(state, completedSteps, totalSteps, resolvedLocalPath)
+                };
+
+                Commands.Checkout(repository, localBranch, checkoutOptions);
 
                 var wasDirty = repository.RetrieveStatus().IsDirty;
                 repository.Reset(ResetMode.Hard, remoteBranch.Tip);
                 repository.RemoveUntrackedFiles();
 
-                var currentCommit = repository.Head.Tip?.Sha;
-                var hasChanges = !string.Equals(previousCommit, currentCommit, StringComparison.Ordinal);
+                state.UpdateOperationProgress(GitRepositoryProgressStages.RefreshingDocuments, null, resolvedLocalPath);
                 var refreshMessage = await RefreshBoundDocumentGroupsAsync(registration.Id, cancellationToken);
 
-                state.State = GitRepositorySyncState.Ready;
-                state.IsAvailable = true;
-                state.IsDirty = repository.RetrieveStatus().IsDirty;
-                state.CurrentCommit = currentCommit;
-                state.LastSyncAtUtc = DateTimeOffset.UtcNow;
-                state.ResolvedBranch = targetBranchName;
-                state.LastSyncMessage = BuildSyncMessage(trigger, hasChanges, wasDirty, refreshMessage);
+                var currentCommit = repository.Head.Tip?.Sha;
+                var hasChanges = !string.Equals(previousCommit, currentCommit, StringComparison.Ordinal);
+                var syncMessage = BuildSyncMessage(trigger, hasChanges, wasDirty, refreshMessage);
+                state.CompleteSync(repository, resolvedLocalPath, targetBranchName, syncMessage, DateTimeOffset.UtcNow);
 
-                await PublishUpdatedEventAsync(registration, previousCommit, currentCommit, hasChanges, trigger, targetBranchName, cancellationToken);
+                await PublishUpdatedEventAsync(
+                    registration,
+                    previousCommit,
+                    currentCommit,
+                    hasChanges,
+                    trigger,
+                    targetBranchName,
+                    cancellationToken);
 
                 logger.LogInformation(
                     "Git repository '{RepositoryId}' synchronized via {Trigger}. Branch={Branch}, Commit={Commit}",
@@ -162,15 +175,13 @@ public sealed class GitRepositoryService(
                     HasChanges = hasChanges,
                     PreviousCommit = previousCommit,
                     CurrentCommit = currentCommit,
-                    Message = state.LastSyncMessage ?? "Synchronization completed."
+                    Message = syncMessage
                 };
             }
             catch (Exception ex)
             {
                 RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
-                state.State = GitRepositorySyncState.Failed;
-                state.LastError = ex.Message;
-                state.LastSyncMessage = ex.Message;
+                state.MarkFailed(ex.Message);
 
                 logger.LogError(ex, "Failed to synchronize Git repository '{RepositoryId}'", registration.Id);
 
@@ -181,7 +192,7 @@ public sealed class GitRepositoryService(
                     Success = false,
                     HasChanges = false,
                     PreviousCommit = previousCommit,
-                    CurrentCommit = state.CurrentCommit,
+                    CurrentCommit = state.Capture().CurrentCommit,
                     Message = ex.Message
                 };
             }
@@ -215,19 +226,17 @@ public sealed class GitRepositoryService(
                         $"Local path '{resolvedLocalPath}' is a file and cannot be deleted as a repository directory.");
                 }
 
+                state.BeginDeletion();
+
                 if (pathExisted)
                 {
                     await DeleteDirectoryAsync(resolvedLocalPath, cancellationToken);
                 }
 
                 var refreshMessage = await RefreshBoundDocumentGroupsAsync(registration.Id, cancellationToken);
-                state.State = GitRepositorySyncState.NotReady;
-                state.IsAvailable = false;
-                state.IsDirty = false;
-                state.CurrentCommit = null;
-                state.ResolvedBranch = null;
-                state.LastError = null;
-                state.LastSyncMessage = BuildDeleteMessage(pathExisted, refreshMessage);
+                var deleteMessage = BuildDeleteMessage(pathExisted, refreshMessage);
+
+                state.CompleteDeletion(deleteMessage);
 
                 logger.LogInformation(
                     "Deleted local Git repository working copy '{RepositoryId}' at '{LocalPath}'",
@@ -240,15 +249,13 @@ public sealed class GitRepositoryService(
                     ResolvedLocalPath = resolvedLocalPath,
                     Success = true,
                     PathExisted = pathExisted,
-                    Message = state.LastSyncMessage ?? "Local repository deleted."
+                    Message = deleteMessage
                 };
             }
             catch (Exception ex)
             {
                 RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
-                state.State = GitRepositorySyncState.Failed;
-                state.LastError = ex.Message;
-                state.LastSyncMessage = ex.Message;
+                state.MarkFailed(ex.Message);
 
                 logger.LogError(ex, "Failed to delete local Git repository '{RepositoryId}'", registration.Id);
 
@@ -287,12 +294,14 @@ public sealed class GitRepositoryService(
     /// <inheritdoc />
     public Task<IReadOnlyList<GitCredentialInfo>> GetCredentialsAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(credentialManager.GetCredentialInfos());
     }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<GitCredentialResolverInfo>> GetCredentialResolversAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(credentialManager.GetResolverInfos());
     }
 
@@ -321,87 +330,77 @@ public sealed class GitRepositoryService(
         }
     }
 
-    private async Task<GitRepositoryStatus> CreateSnapshotAsync(
-        GitRepositoryRegistration registration,
-        CancellationToken cancellationToken)
+    private GitRepositoryStatus CreateSnapshot(GitRepositoryRegistration registration)
     {
-        var gate = GetLock(registration.Id);
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            var state = _runtimeStates[registration.Id];
-            var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
-            RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
+        var state = _runtimeStates[registration.Id];
+        var resolvedLocalPath = Path.GetFullPath(registration.LocalPath);
 
-            var boundGroups = GetBoundDocumentGroups(registration.Id);
-            var validGroups = GetRegisteredMarkdownGroupKeys();
-            var missingGroups = boundGroups
-                .Where(x => !validGroups.Contains(x))
-                .ToArray();
+        RefreshRuntimeStateFromDisk(state, resolvedLocalPath);
+        var snapshot = state.Capture();
+        var displayState = ResolveDisplayState(snapshot.State, snapshot.IsAvailable);
 
-            return new GitRepositoryStatus
-            {
-                Id = registration.Id,
-                Provider = registration.Provider,
-                RemoteUrl = registration.RemoteUrl,
-                LocalPath = registration.LocalPath,
-                ResolvedLocalPath = resolvedLocalPath,
-                ConfiguredBranch = registration.Branch,
-                ResolvedBranch = state.ResolvedBranch,
-                CredentialId = registration.CredentialId,
-                State = ResolveDisplayState(state),
-                IsAvailable = state.IsAvailable,
-                IsDirty = state.IsDirty,
-                CurrentCommit = state.CurrentCommit,
-                LastSyncAtUtc = state.LastSyncAtUtc,
-                LastSyncMessage = state.LastSyncMessage,
-                LastError = state.LastError,
-                BoundDocumentGroupKeys = boundGroups,
-                MissingDocumentGroupKeys = missingGroups
-            };
-        }
-        finally
+        var boundGroups = GetBoundDocumentGroups(registration.Id);
+        var validGroups = GetRegisteredMarkdownGroupKeys();
+        var missingGroups = boundGroups
+            .Where(x => !validGroups.Contains(x))
+            .ToArray();
+
+        return new GitRepositoryStatus
         {
-            gate.Release();
-        }
+            Id = registration.Id,
+            Provider = registration.Provider,
+            RemoteUrl = registration.RemoteUrl,
+            LocalPath = registration.LocalPath,
+            ResolvedLocalPath = resolvedLocalPath,
+            ConfiguredBranch = registration.Branch,
+            ResolvedBranch = snapshot.ResolvedBranch,
+            CredentialId = registration.CredentialId,
+            State = displayState,
+            IsAvailable = snapshot.IsAvailable,
+            IsDirty = snapshot.IsDirty,
+            CurrentCommit = snapshot.CurrentCommit,
+            ProgressStage = snapshot.ProgressStage,
+            ProgressPercent = snapshot.ProgressPercent,
+            WorkingDirectorySizeBytes = snapshot.WorkingDirectorySizeBytes,
+            LastSyncAtUtc = snapshot.LastSyncAtUtc,
+            LastSyncMessage = snapshot.LastSyncMessage,
+            LastError = snapshot.LastError,
+            BoundDocumentGroupKeys = boundGroups,
+            MissingDocumentGroupKeys = missingGroups
+        };
     }
 
-    private static GitRepositorySyncState ResolveDisplayState(GitRepositoryRuntimeState state)
+    private static GitRepositorySyncState ResolveDisplayState(GitRepositorySyncState state, bool isAvailable)
     {
-        if (state.State == GitRepositorySyncState.Syncing)
+        if (state == GitRepositorySyncState.Syncing)
         {
             return GitRepositorySyncState.Syncing;
         }
 
-        return state.IsAvailable
-            ? state.State
-            : GitRepositorySyncState.NotReady;
+        return isAvailable ? state : GitRepositorySyncState.NotReady;
     }
 
     private static void RefreshRuntimeStateFromDisk(GitRepositoryRuntimeState state, string resolvedLocalPath)
     {
-        if (state.State == GitRepositorySyncState.Syncing)
+        if (state.TryRefreshMetricsWhileSyncing(resolvedLocalPath))
         {
-            state.IsAvailable = Directory.Exists(resolvedLocalPath);
             return;
         }
 
         if (!Directory.Exists(resolvedLocalPath) || !Repository.IsValid(resolvedLocalPath))
         {
-            state.IsAvailable = false;
-            state.IsDirty = false;
-            state.CurrentCommit = null;
-            state.ResolvedBranch = null;
+            state.MarkNotReadyFromDisk();
+
             return;
         }
 
         using var repository = new Repository(resolvedLocalPath);
-        state.IsAvailable = true;
-        state.IsDirty = repository.RetrieveStatus().IsDirty;
-        state.CurrentCommit = repository.Head.Tip?.Sha;
-        state.ResolvedBranch = repository.Info.IsHeadDetached
+        var isDirty = repository.RetrieveStatus().IsDirty;
+        var currentCommit = repository.Head.Tip?.Sha;
+        var resolvedBranch = repository.Info.IsHeadDetached
             ? null
             : NormalizeBranchName(repository.Head.FriendlyName);
+        state.RefreshFromRepository(resolvedBranch, currentCommit, isDirty, resolvedLocalPath);
     }
 
     private IReadOnlyList<string> GetBoundDocumentGroups(string repositoryId)
@@ -423,7 +422,9 @@ public sealed class GitRepositoryService(
     private Repository OpenOrCloneRepository(
         GitRepositoryRegistration registration,
         string resolvedLocalPath,
-        GitResolvedCredential? resolvedCredential)
+        GitResolvedCredential? resolvedCredential,
+        GitRepositoryRuntimeState state,
+        CancellationToken cancellationToken)
     {
         if (!Repository.IsValid(resolvedLocalPath))
         {
@@ -435,12 +436,18 @@ public sealed class GitRepositoryService(
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(resolvedLocalPath) ?? resolvedLocalPath);
+            state.UpdateOperationProgress(GitRepositoryProgressStages.Cloning, 0d, resolvedLocalPath);
 
             var cloneOptions = new CloneOptions
             {
-                BranchName = registration.Branch
+                BranchName = registration.Branch,
+                OnCheckoutProgress = (_, completedSteps, totalSteps) =>
+                    UpdateCheckoutProgress(state, completedSteps, totalSteps, resolvedLocalPath)
             };
+
             cloneOptions.FetchOptions.CredentialsProvider = CreateCredentialsProvider(resolvedCredential);
+            cloneOptions.FetchOptions.OnTransferProgress = progress =>
+                UpdateTransferProgress(state, GitRepositoryProgressStages.Cloning, progress, resolvedLocalPath, cancellationToken);
 
             Repository.Clone(registration.RemoteUrl, resolvedLocalPath, cloneOptions);
         }
@@ -484,7 +491,6 @@ public sealed class GitRepositoryService(
 
         return message;
     }
-
 
     private static async Task DeleteDirectoryAsync(string directoryPath, CancellationToken cancellationToken)
     {
@@ -666,11 +672,18 @@ public sealed class GitRepositoryService(
     private static void FetchRemote(
         Repository repository,
         Remote remote,
-        GitResolvedCredential? resolvedCredential)
+        GitResolvedCredential? resolvedCredential,
+        GitRepositoryRuntimeState state,
+        string resolvedLocalPath,
+        CancellationToken cancellationToken)
     {
+        state.UpdateOperationProgress(GitRepositoryProgressStages.Fetching, 0d, resolvedLocalPath);
+
         var fetchOptions = new FetchOptions
         {
-            CredentialsProvider = CreateCredentialsProvider(resolvedCredential)
+            CredentialsProvider = CreateCredentialsProvider(resolvedCredential),
+            OnTransferProgress = progress =>
+                UpdateTransferProgress(state, GitRepositoryProgressStages.Fetching, progress, resolvedLocalPath, cancellationToken)
         };
 
         Commands.Fetch(
@@ -686,5 +699,39 @@ public sealed class GitRepositoryService(
         return resolvedCredential is null
             ? null
             : (_, _, _) => resolvedCredential.ToLibGitCredential();
+    }
+
+    private static bool UpdateTransferProgress(
+        GitRepositoryRuntimeState state,
+        string progressStage,
+        TransferProgress progress,
+        string resolvedLocalPath,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        var completedObjects = Math.Max(progress.ReceivedObjects, progress.IndexedObjects);
+        double? progressPercent = progress.TotalObjects > 0
+            ? Math.Clamp(completedObjects * 100d / progress.TotalObjects, 0d, 100d)
+            : null;
+
+        state.UpdateOperationProgress(progressStage, progressPercent, resolvedLocalPath);
+        return true;
+    }
+
+    private static void UpdateCheckoutProgress(
+        GitRepositoryRuntimeState state,
+        int completedSteps,
+        int totalSteps,
+        string resolvedLocalPath)
+    {
+        double? progressPercent = totalSteps > 0
+            ? Math.Clamp(completedSteps * 100d / totalSteps, 0d, 100d)
+            : null;
+
+        state.UpdateOperationProgress(GitRepositoryProgressStages.Checkout, progressPercent, resolvedLocalPath);
     }
 }

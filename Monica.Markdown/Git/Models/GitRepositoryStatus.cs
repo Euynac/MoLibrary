@@ -66,6 +66,21 @@ public sealed class GitRepositoryStatus
     public string? CurrentCommit { get; init; }
 
     /// <summary>
+    /// Gets the current operation progress stage.
+    /// </summary>
+    public string? ProgressStage { get; init; }
+
+    /// <summary>
+    /// Gets the current operation progress percent.
+    /// </summary>
+    public double? ProgressPercent { get; init; }
+
+    /// <summary>
+    /// Gets the current working directory size in bytes.
+    /// </summary>
+    public required long WorkingDirectorySizeBytes { get; init; }
+
+    /// <summary>
     /// Gets the last synchronization timestamp.
     /// </summary>
     public DateTimeOffset? LastSyncAtUtc { get; init; }

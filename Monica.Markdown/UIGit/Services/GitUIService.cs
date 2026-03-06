@@ -81,7 +81,7 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     {
         try
         {
-            return Res.Ok(await repositoryService.SyncRepositoryAsync(repositoryId));
+            return Res.Ok(await Task.Run(() => repositoryService.SyncRepositoryAsync(repositoryId)));
         }
         catch (Exception ex)
         {
@@ -97,7 +97,7 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     {
         try
         {
-            return Res.Ok(await repositoryService.DeleteRepositoryAsync(repositoryId));
+            return Res.Ok(await Task.Run(() => repositoryService.DeleteRepositoryAsync(repositoryId)));
         }
         catch (Exception ex)
         {
@@ -113,7 +113,7 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     {
         try
         {
-            return Res.Ok(await repositoryService.SyncAllAsync());
+            return Res.Ok(await Task.Run(() => repositoryService.SyncAllAsync()));
         }
         catch (Exception ex)
         {
