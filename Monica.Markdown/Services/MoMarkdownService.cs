@@ -15,11 +15,16 @@ namespace Monica.Markdown.Services;
 public class MoMarkdownService(
     IOptions<ModuleMarkdownOption> options,
     IMarkdownDocumentProvider documentProvider,
-    ILogger<MoMarkdownService> logger) : IMoMarkdownService
+    ILogger<MoMarkdownService> logger) : IMoMarkdownService, IDisposable
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly IMarkdownChangeNotifier? _changeNotifier = documentProvider.GetChangeNotifier();
+    private readonly Dictionary<string, CancellationTokenSource> _pendingRefreshTokens = new(
+        StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _watcherLock = new();
     private volatile bool _initialized;
+    private int _changeNotifierInitialized;
 
     private Dictionary<string, MarkdownDocumentGroup> _groups = new(
         StringComparer.OrdinalIgnoreCase);
@@ -36,6 +41,7 @@ public class MoMarkdownService(
         {
             if (_initialized) return;
             await ScanAllGroupsAsync();
+            EnsureChangeNotifierInitialized();
             _initialized = true;
         }
         finally
@@ -84,6 +90,8 @@ public class MoMarkdownService(
 
         _groups = newGroups;
         _pathIndex = newPathIndex;
+
+        UpdateAllWatchers();
     }
 
     public async Task<List<MarkdownDocumentGroup>> GetAllDocumentGroupsAsync()
@@ -243,6 +251,7 @@ public class MoMarkdownService(
 
             // Rebuild path index
             RebuildPathIndex();
+            UpdateWatcher(group);
 
             logger.LogInformation(
                 "Document group '{Key}' refreshed: {Count} documents",
@@ -304,5 +313,122 @@ public class MoMarkdownService(
         }
 
         _pathIndex = newIndex;
+    }
+
+    private void EnsureChangeNotifierInitialized()
+    {
+        if (_changeNotifier is null)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _changeNotifierInitialized, 1) == 1)
+        {
+            return;
+        }
+
+        _changeNotifier.DocumentsChanged += OnDocumentsChanged;
+    }
+
+    private void UpdateAllWatchers()
+    {
+        if (_changeNotifier is null)
+        {
+            return;
+        }
+
+        foreach (var group in _groups.Values)
+        {
+            UpdateWatcher(group);
+        }
+    }
+
+    private void UpdateWatcher(MarkdownDocumentGroup group)
+    {
+        if (_changeNotifier is null)
+        {
+            return;
+        }
+
+        _changeNotifier.StopWatching(group.Key);
+        if (group.IsValid)
+        {
+            _changeNotifier.StartWatching(group.Key, group.BasePath);
+        }
+    }
+
+    private void OnDocumentsChanged(object? sender, DocumentsChangedEventArgs e)
+    {
+        if (_changeNotifier is null)
+        {
+            return;
+        }
+
+        CancellationTokenSource refreshCts;
+        lock (_watcherLock)
+        {
+            if (_pendingRefreshTokens.TryGetValue(e.GroupKey, out var existing))
+            {
+                existing.Cancel();
+                existing.Dispose();
+            }
+
+            refreshCts = new CancellationTokenSource();
+            _pendingRefreshTokens[e.GroupKey] = refreshCts;
+        }
+
+        _ = DebouncedRefreshAsync(e.GroupKey, refreshCts.Token);
+    }
+
+    private async Task DebouncedRefreshAsync(string groupKey, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            await RefreshAsync(groupKey);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to refresh document group '{GroupKey}' from change notification", groupKey);
+        }
+        finally
+        {
+            lock (_watcherLock)
+            {
+                if (_pendingRefreshTokens.TryGetValue(groupKey, out var existing)
+                    && existing.Token == cancellationToken)
+                {
+                    existing.Dispose();
+                    _pendingRefreshTokens.Remove(groupKey);
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (_changeNotifier is not null)
+        {
+            _changeNotifier.DocumentsChanged -= OnDocumentsChanged;
+            _changeNotifier.Dispose();
+        }
+
+        lock (_watcherLock)
+        {
+            foreach (var pending in _pendingRefreshTokens.Values)
+            {
+                pending.Cancel();
+                pending.Dispose();
+            }
+
+            _pendingRefreshTokens.Clear();
+        }
+
+        _initLock.Dispose();
+        _refreshLock.Dispose();
     }
 }

@@ -1,0 +1,79 @@
+{
+  "Pages": {
+    "MarkdownDocuments": {
+      "Title": "Markdown Documents"
+    },
+    "GitRepositories": {
+      "Title": "Git Repositories"
+    }
+  },
+  "Categories": {
+    "Documentation": "Documentation"
+  },
+  "GitDashboard": {
+    "PageTitle": "Git Repositories",
+    "Title": "Git Repositories",
+    "Sections": {
+      "Repositories": "Repositories",
+      "Details": "Repository Details",
+      "Credentials": "Credentials",
+      "Resolvers": "Credential Resolvers"
+    },
+    "Columns": {
+      "Id": "Id",
+      "Provider": "Provider",
+      "Branch": "Branch",
+      "State": "State",
+      "Commit": "Commit",
+      "Updated": "Updated",
+      "Actions": "Actions",
+      "CredentialId": "Credential",
+      "Type": "Type",
+      "UserName": "User Name",
+      "HasSecret": "Has Secret",
+      "Resolver": "Resolver",
+      "Order": "Order"
+    },
+    "Labels": {
+      "RemoteUrl": "Remote URL",
+      "LocalPath": "Local Path",
+      "ResolvedLocalPath": "Resolved Local Path",
+      "ConfiguredBranch": "Configured Branch",
+      "ResolvedBranch": "Resolved Branch",
+      "BoundGroups": "Bound Markdown Groups",
+      "MissingGroups": "Missing Markdown Groups",
+      "LastError": "Last Error",
+      "LastMessage": "Last Message",
+      "Available": "Available",
+      "Dirty": "Dirty",
+      "Credential": "Credential",
+      "CurrentCommit": "Current Commit",
+      "LastSync": "Last Sync"
+    },
+    "Actions": {
+      "Refresh": "Refresh",
+      "SyncAll": "Sync All",
+      "Sync": "Sync",
+      "Select": "Select"
+    },
+    "States": {
+      "NotReady": "Not Ready",
+      "Syncing": "Syncing",
+      "Ready": "Ready",
+      "Failed": "Failed",
+      "Yes": "Yes",
+      "No": "No",
+      "None": "(None)"
+    },
+    "Messages": {
+      "LoadFailed": "Failed to load Git dashboard: {0}",
+      "SyncAllSuccess": "All repositories synchronized successfully.",
+      "SyncRepositorySuccess": "Repository '{0}' synchronized successfully.",
+      "OperationFailed": "Operation failed: {0}",
+      "NoRepositories": "No Git repositories configured.",
+      "NoCredentials": "No Git credentials configured.",
+      "NoResolvers": "No credential resolvers registered.",
+      "NoSelection": "Select a repository to inspect details."
+    }
+  }
+}
