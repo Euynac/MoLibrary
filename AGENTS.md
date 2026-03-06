@@ -32,6 +32,8 @@ Invoke when:
 Invoke when:
 - Improving code quality or readability
 - Reviewing current git changes, AI-generated code, or a user-specified code area
+- Using git diff as an entry point to discover broader related refactoring opportunities unless the user explicitly limits scope
+- Planning a refactor before editing, especially when moving behavior into the object that owns the state
 - Simplifying/refactoring code while preserving exact behavior
 - Making code more object-oriented or moving behavior closer to data/state
 - Increasing cohesion and reducing procedural mutation

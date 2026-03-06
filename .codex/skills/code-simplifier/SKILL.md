@@ -1,22 +1,24 @@
 ---
 name: code-simplifier
-description: Improve the quality of C#/.NET code without changing behavior. Use when the user asks to simplify or refactor code, review current git changes, clean up AI-generated code, rework a specific class or method, increase cohesion, move behavior onto the object that owns the data/state, or make code more readable and maintainable while preserving exact functionality.
+description: Improve the quality of C#/.NET code without changing behavior. Use when the user asks to simplify or refactor code, review current git changes, clean up AI-generated code, rework a specific class or method, use git diff as the starting point for broader related refactoring, increase cohesion, move behavior onto the object that owns the data/state, or make code more readable and maintainable while preserving exact functionality.
 ---
 
 # Code Simplifier
 
 ## Overview
 
-Refine C#/.NET code so it is clearer, more cohesive, and easier to maintain without changing behavior. Start from the user-specified scope when provided; otherwise inspect recent changes first, follow repo-local instructions, then simplify toward explicit, object-centered design.
+Refine C#/.NET code so it is clearer, more cohesive, and easier to maintain without changing behavior. Start from the user-specified scope when provided; otherwise use recent changes as the entry point, inspect the surrounding area and related collaborators, form a refactoring plan, then simplify toward explicit, object-centered design.
 
 ## Workflow
 
 1. Determine the target scope from the user request. Use the explicitly named class, method, file, or module when provided.
-2. If the user does not name a scope, inspect recent changes first with `git status` and `git diff`.
-3. Focus on the requested or touched code unless the user explicitly asks for a broader cleanup.
-4. Preserve exact behavior, outputs, exceptions, and side effects.
-5. Prefer the simplest design that makes responsibilities obvious.
-6. Apply local repository instructions before generic .NET heuristics.
+2. If the scope comes from `git diff`, treat the diff as the entry point, not the boundary. Inspect the surrounding types, related collaborators, and nearby responsibilities.
+3. Unless the user explicitly limits scope, look beyond the changed lines to find additional refactoring opportunities in the same area.
+4. Before editing, analyze the design as a whole: identify responsibility boundaries, state ownership, behavior that can move onto the owning object, and the safest refactoring order.
+5. Form a concise refactoring plan first, then implement the refactor.
+6. Preserve exact behavior, outputs, exceptions, and side effects.
+7. Prefer the simplest design that makes responsibilities obvious.
+8. Apply local repository instructions before generic .NET heuristics.
 
 ## Simplification Priorities
 
@@ -34,6 +36,7 @@ Refine C#/.NET code so it is clearer, more cohesive, and easier to maintain with
 - Never change observable behavior just to make the code look cleaner.
 - Preserve existing API shape unless the user explicitly asks for a breaking redesign.
 - Keep refactors debuggable; do not collapse too many concerns into one method or type.
+- Do not jump straight into edits. Understand the area first, decide on the target design, and refactor in a deliberate sequence.
 - Follow repository-specific guidance from `AGENTS.md`, nested `AGENTS.md`, `CLAUDE.md`, or equivalent local instructions when present.
 
 ## Example Pattern
