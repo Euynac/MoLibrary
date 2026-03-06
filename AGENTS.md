@@ -27,6 +27,15 @@ Invoke when:
 
 **Current MudBlazor version**: 9.0.0 (migrated from 8.9.0)
 
+### /code-simplifier
+
+Invoke when:
+- Improving code quality or readability
+- Reviewing current git changes, AI-generated code, or a user-specified code area
+- Simplifying/refactoring code while preserving exact behavior
+- Making code more object-oriented or moving behavior closer to data/state
+- Increasing cohesion and reducing procedural mutation
+
 ### Microsoft Documentation Skill
 
 You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
@@ -40,6 +49,7 @@ When handling questions around how to work with native Microsoft technologies, s
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
+- Prefer rich models over anemic models: keep behavior on the object that owns the data/state, favor high cohesion and encapsulation, and let services focus on orchestration.
 - Split files to avoid overly large single files
 - Instead of just fixing errors and introducing complexity merely to solve problems, you **MUST** focus on simplification to enhance code quality. Refactor whenever possible, **WITHOUT** considering backward compatibility. 
 - If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
