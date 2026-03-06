@@ -3,12 +3,12 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Markdown.Git.Modules;
-using Monica.Markdown.UIGit.Pages;
+using Monica.Markdown.Pages;
 using Monica.Markdown.UIGit.Services;
 using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Markdown.UIGit.Modules;
+namespace Monica.Markdown.Modules;
 
 /// <summary>
 /// Builder extensions for the Git dashboard UI module.

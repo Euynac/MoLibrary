@@ -7,7 +7,7 @@ using Monica.Markdown.UIGit.Services;
 using Monica.Tool.MoResponse;
 using MudBlazor;
 
-namespace Monica.Markdown.UIGit.Pages;
+namespace Monica.Markdown.Pages;
 
 public partial class UIGitRepositoriesPage : IAsyncDisposable
 {
