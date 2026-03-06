@@ -1,0 +1,15 @@
+:root[data-theme="vintage-press-light"] .mo-markdown-style-default,
+:root[data-theme="vintage-press-dark"] .mo-markdown-style-default,
+.mo-theme-vintage-press-light .mo-markdown-style-default,
+.mo-theme-vintage-press-dark .mo-markdown-style-default {
+    --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 94%, #f2e7d0);
+    --mo-markdown-panel-border: color-mix(in srgb, var(--mud-palette-text-secondary) 32%, var(--mud-palette-lines-default));
+    --mo-markdown-accent: color-mix(in srgb, var(--mud-palette-text-primary) 82%, #7a4b25);
+}
+
+:root[data-theme="vintage-press-light"] .mo-markdown-style-default .mud-markdown-body,
+:root[data-theme="vintage-press-dark"] .mo-markdown-style-default .mud-markdown-body,
+.mo-theme-vintage-press-light .mo-markdown-style-default .mud-markdown-body,
+.mo-theme-vintage-press-dark .mo-markdown-style-default .mud-markdown-body {
+    font-family: Georgia, "Times New Roman", serif;
+}

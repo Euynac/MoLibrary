@@ -1,0 +1,18 @@
+:root[data-theme="glassmorphic-light"] .mo-markdown-style-default,
+:root[data-theme="glassmorphic-dark"] .mo-markdown-style-default,
+.mo-theme-glassmorphic-light .mo-markdown-style-default,
+.mo-theme-glassmorphic-dark .mo-markdown-style-default {
+    --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 82%, transparent);
+    --mo-markdown-panel-border: color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-lines-default));
+}
+
+:root[data-theme="glassmorphic-light"] .mo-markdown-style-default .mud-markdown-body blockquote,
+:root[data-theme="glassmorphic-dark"] .mo-markdown-style-default .mud-markdown-body blockquote,
+.mo-theme-glassmorphic-light .mo-markdown-style-default .mud-markdown-body blockquote,
+.mo-theme-glassmorphic-dark .mo-markdown-style-default .mud-markdown-body blockquote,
+:root[data-theme="glassmorphic-light"] .mo-markdown-style-default .mo-markdown-mermaid-surface,
+:root[data-theme="glassmorphic-dark"] .mo-markdown-style-default .mo-markdown-mermaid-surface,
+.mo-theme-glassmorphic-light .mo-markdown-style-default .mo-markdown-mermaid-surface,
+.mo-theme-glassmorphic-dark .mo-markdown-style-default .mo-markdown-mermaid-surface {
+    backdrop-filter: blur(14px);
+}

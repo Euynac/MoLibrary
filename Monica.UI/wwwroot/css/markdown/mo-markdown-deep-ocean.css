@@ -1,0 +1,7 @@
+:root[data-theme="deep-ocean-light"] .mo-markdown-style-default,
+:root[data-theme="deep-ocean-dark"] .mo-markdown-style-default,
+.mo-theme-deep-ocean-light .mo-markdown-style-default,
+.mo-theme-deep-ocean-dark .mo-markdown-style-default {
+    --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 88%, var(--mud-palette-info));
+    --mo-markdown-panel-border: color-mix(in srgb, var(--mud-palette-info) 35%, var(--mud-palette-lines-default));
+}

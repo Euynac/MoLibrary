@@ -1,0 +1,27 @@
+.mo-markdown-host {
+    position: relative;
+}
+
+.mo-markdown-host ::deep .mud-markdown-body {
+    color: var(--mud-palette-text-primary);
+}
+
+.mo-markdown-host ::deep .mud-markdown-body img {
+    display: block;
+    max-width: 100%;
+    margin: 1.5rem auto;
+    border-radius: var(--mud-default-borderradius);
+}
+
+.mo-markdown-host ::deep .mud-markdown-body pre {
+    margin: 0 0 1.5rem 0;
+}
+
+.mo-markdown-host ::deep .mud-markdown-body table {
+    width: 100%;
+}
+
+.mo-markdown-host ::deep .mud-markdown-body .mud-markdown-code-highlight {
+    overflow: hidden;
+    border-radius: var(--mud-default-borderradius);
+}

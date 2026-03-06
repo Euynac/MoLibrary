@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Core.Module;
 using Monica.Core.Module.Dashboard.Interfaces;
@@ -11,6 +12,7 @@ using Monica.Core.Module.Models;
 using Monica.Localization.Modules;
 using Monica.UI.Components;
 using Monica.UI.Components.Pages;
+using Monica.UI.Components.Markdown;
 using MudBlazor;
 using MudBlazor.Services;
 using Monica.UI.UICore.Interfaces;
@@ -111,6 +113,9 @@ public class ModuleUICore(ModuleUICoreOption option)
         // 注册主题服务 (Scoped: each Blazor circuit gets its own theme state)
         services.AddScoped<MoThemeService>();
         services.AddScoped<IMoThemeService>(sp => sp.GetRequiredService<MoThemeService>());
+
+        // Register the default markdown asset resolver so Markdown components work without optional modules.
+        services.TryAddScoped<IMoMarkdownAssetResolver, PassThroughMarkdownAssetResolver>();
 
         // 注册用户上下文服务
         services.AddScoped<MoUserContextService>();

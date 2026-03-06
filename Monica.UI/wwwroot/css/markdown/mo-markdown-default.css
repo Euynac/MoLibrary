@@ -1,0 +1,52 @@
+.mo-markdown-style-default {
+    --mo-markdown-body-max-width: none;
+    --mo-markdown-body-font-size: 0.98rem;
+    --mo-markdown-body-line-height: 1.75;
+    --mo-markdown-panel-background: var(--mud-palette-surface);
+    --mo-markdown-panel-border: var(--mud-palette-lines-default);
+    --mo-markdown-accent: var(--mud-palette-primary);
+    --mo-markdown-muted: var(--mud-palette-text-secondary);
+    --mo-markdown-inline-code-background: var(--mud-palette-action-disabled-background);
+}
+
+.mo-markdown-style-default .mud-markdown-body {
+    max-width: var(--mo-markdown-body-max-width);
+    font-size: var(--mo-markdown-body-font-size);
+    line-height: var(--mo-markdown-body-line-height);
+}
+
+.mo-markdown-style-default .mud-markdown-body h1,
+.mo-markdown-style-default .mud-markdown-body h2,
+.mo-markdown-style-default .mud-markdown-body h3,
+.mo-markdown-style-default .mud-markdown-body h4,
+.mo-markdown-style-default .mud-markdown-body h5,
+.mo-markdown-style-default .mud-markdown-body h6 {
+    letter-spacing: -0.02em;
+}
+
+.mo-markdown-style-default .mud-markdown-body h1,
+.mo-markdown-style-default .mud-markdown-body h2 {
+    border-bottom-color: var(--mo-markdown-panel-border);
+}
+
+.mo-markdown-style-default .mud-markdown-body code:not(.hljs) {
+    background: var(--mo-markdown-inline-code-background);
+    border: 1px solid var(--mo-markdown-panel-border);
+}
+
+.mo-markdown-style-default .mud-markdown-body blockquote {
+    border-left-color: var(--mo-markdown-accent);
+    background: color-mix(in srgb, var(--mo-markdown-panel-background) 92%, transparent);
+    color: var(--mo-markdown-muted);
+    border-radius: 0 var(--mud-default-borderradius) var(--mud-default-borderradius) 0;
+}
+
+.mo-markdown-style-default .mud-markdown-body a,
+.mo-markdown-style-default .mud-markdown-body .mud-link {
+    color: var(--mo-markdown-accent);
+}
+
+.mo-markdown-style-default .mo-markdown-mermaid-surface {
+    background: var(--mo-markdown-panel-background);
+    border-color: var(--mo-markdown-panel-border);
+}

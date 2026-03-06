@@ -1,0 +1,22 @@
+.mo-markdown-mermaid-block {
+    margin: 1.5rem 0;
+}
+
+.mo-markdown-mermaid-surface {
+    overflow-x: auto;
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-surface);
+}
+
+.mo-markdown-mermaid-surface.has-error {
+    display: none;
+}
+
+.mo-markdown-mermaid-surface ::deep svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}

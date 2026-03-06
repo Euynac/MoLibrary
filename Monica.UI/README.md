@@ -72,3 +72,9 @@ jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/
 1. **下载依赖库**：将第三方库文件保存到`wwwroot/lib/`目录
 2. **按需加载**：在组件中按正确顺序加载依赖项
 3. **版本管理**：在README中记录使用的库版本
+
+## Bundled Third-Party Assets
+
+- `Mermaid` `11.12.3` is bundled locally at `wwwroot/lib/mermaid/mermaid.min.js`.
+- The upstream license file is stored at `wwwroot/lib/mermaid/LICENSE`.
+- Mermaid rendering is loaded through `/_content/Monica.UI/js/mo-markdown-mermaid.js` so runtime usage stays offline-friendly.
