@@ -58,7 +58,11 @@ public class ModuleGit(ModuleGitOption option)
         services.TryAddSingleton<IGitRepositoryService, GitRepositoryService>();
         services.TryAddSingleton<GitWebhookEndpointService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitCredentialResolver, GitOptionsCredentialResolver>());
-        services.AddHostedService<GitStartupSyncHostedService>();
+
+        if (Option.IsSyncTriggerEnabled(GitSyncTrigger.Startup))
+        {
+            services.AddHostedService<GitStartupSyncHostedService>();
+        }
     }
 
     /// <inheritdoc />
@@ -89,6 +93,15 @@ public class ModuleGit(ModuleGitOption option)
 /// </summary>
 public class ModuleGitGuide : MoModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
 {
+    /// <summary>
+    /// Sets which synchronization triggers are enabled.
+    /// </summary>
+    public ModuleGitGuide UseSyncTriggers(params GitSyncTrigger[] triggers)
+    {
+        ConfigureModuleOption(option => option.SetEnabledSyncTriggers(triggers));
+        return this;
+    }
+
     /// <summary>
     /// Adds a Git repository.
     /// </summary>
@@ -244,6 +257,16 @@ public class ModuleGitGuide : MoModuleGuide<ModuleGit, ModuleGitOption, ModuleGi
 public class ModuleGitOption : MoModuleOptionWithMinimalApi<ModuleGit>
 {
     /// <summary>
+    /// Gets the synchronization triggers that are allowed to execute.
+    /// </summary>
+    public HashSet<GitSyncTrigger> EnabledSyncTriggers { get; set; } =
+    [
+        GitSyncTrigger.Startup,
+        GitSyncTrigger.Webhook,
+        GitSyncTrigger.Manual
+    ];
+
+    /// <summary>
     /// Gets the configured repository registrations.
     /// </summary>
     public List<GitRepositoryRegistration> RepositoryRegistrations { get; set; } = [];
@@ -267,4 +290,23 @@ public class ModuleGitOption : MoModuleOptionWithMinimalApi<ModuleGit>
     /// Gets or sets the GitLab webhook provider configuration.
     /// </summary>
     public GitLabWebhookOption GitLabWebhook { get; set; } = new();
+
+    /// <summary>
+    /// Replaces the enabled synchronization triggers.
+    /// </summary>
+    public void SetEnabledSyncTriggers(params GitSyncTrigger[] triggers)
+    {
+        EnabledSyncTriggers = triggers?
+            .Distinct()
+            .ToHashSet()
+            ?? [];
+    }
+
+    /// <summary>
+    /// Determines whether the specified synchronization trigger is enabled.
+    /// </summary>
+    public bool IsSyncTriggerEnabled(GitSyncTrigger trigger)
+    {
+        return EnabledSyncTriggers.Contains(trigger);
+    }
 }

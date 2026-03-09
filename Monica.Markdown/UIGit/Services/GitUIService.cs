@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
+using Monica.Markdown.Git.Modules;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Markdown.UIGit.Services;
@@ -8,8 +10,14 @@ namespace Monica.Markdown.UIGit.Services;
 /// <summary>
 /// UI service wrapper for Git operations.
 /// </summary>
-public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUIService> logger)
+public class GitUIService(
+    IGitRepositoryService repositoryService,
+    IOptions<ModuleGitOption> options,
+    ILogger<GitUIService> logger)
 {
+    private const string ManualSyncDisabledMessage = "Manual Git synchronization is disabled by module configuration.";
+    private readonly ModuleGitOption _option = options.Value;
+
     /// <summary>
     /// Gets all repository snapshots.
     /// </summary>
@@ -79,9 +87,14 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     /// </summary>
     public async Task<Res<GitSyncResult>> SyncRepositoryAsync(string repositoryId)
     {
+        if (!_option.IsSyncTriggerEnabled(GitSyncTrigger.Manual))
+        {
+            return Res.Fail(ManualSyncDisabledMessage);
+        }
+
         try
         {
-            return Res.Ok(await Task.Run(() => repositoryService.SyncRepositoryAsync(repositoryId)));
+            return Res.Ok(await repositoryService.SyncRepositoryAsync(repositoryId, GitSyncTrigger.Manual));
         }
         catch (Exception ex)
         {
@@ -97,7 +110,7 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     {
         try
         {
-            return Res.Ok(await Task.Run(() => repositoryService.DeleteRepositoryAsync(repositoryId)));
+            return Res.Ok(await repositoryService.DeleteRepositoryAsync(repositoryId));
         }
         catch (Exception ex)
         {
@@ -111,9 +124,14 @@ public class GitUIService(IGitRepositoryService repositoryService, ILogger<GitUI
     /// </summary>
     public async Task<Res<IReadOnlyList<GitSyncResult>>> SyncAllAsync()
     {
+        if (!_option.IsSyncTriggerEnabled(GitSyncTrigger.Manual))
+        {
+            return Res.Fail(ManualSyncDisabledMessage);
+        }
+
         try
         {
-            return Res.Ok(await Task.Run(() => repositoryService.SyncAllAsync()));
+            return Res.Ok(await repositoryService.SyncAllAsync(GitSyncTrigger.Manual));
         }
         catch (Exception ex)
         {

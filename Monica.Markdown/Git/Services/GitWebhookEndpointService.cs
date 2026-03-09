@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
+using Monica.Markdown.Git.Modules;
 
 namespace Monica.Markdown.Git.Services;
 
@@ -9,8 +11,10 @@ namespace Monica.Markdown.Git.Services;
 /// </summary>
 public sealed class GitWebhookEndpointService(
     IEnumerable<IGitWebhookProvider> webhookProviders,
-    IGitRepositoryService repositoryService)
+    IGitRepositoryService repositoryService,
+    IOptions<ModuleGitOption> options)
 {
+    private readonly ModuleGitOption _option = options.Value;
     private readonly Dictionary<string, IGitWebhookProvider> _providers = webhookProviders
         .GroupBy(x => x.RouteSegment, StringComparer.OrdinalIgnoreCase)
         .ToDictionary(x => x.Key, x => x.Last(), StringComparer.OrdinalIgnoreCase);
@@ -29,6 +33,17 @@ public sealed class GitWebhookEndpointService(
             {
                 message = $"Webhook provider '{routeSegment}' is not registered."
             }, statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!_option.IsSyncTriggerEnabled(GitSyncTrigger.Webhook))
+        {
+            return Results.Json(new
+            {
+                message = "Git webhook synchronization is disabled by module configuration.",
+                provider = provider.ProviderKey,
+                route = provider.RouteSegment,
+                shouldSync = false
+            }, statusCode: StatusCodes.Status202Accepted);
         }
 
         var providerResult = await provider.ProcessAsync(request, cancellationToken);

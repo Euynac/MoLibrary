@@ -22,6 +22,7 @@ public sealed class GitRepositoryService(
     IMoLocalEventBus localEventBus,
     ILogger<GitRepositoryService> logger) : IGitRepositoryService
 {
+    private readonly ModuleGitOption _option = options.Value;
     private readonly Dictionary<string, GitRepositoryRegistration> _repositories = options.Value
         .RepositoryRegistrations
         .GroupBy(x => x.Id, StringComparer.OrdinalIgnoreCase)
@@ -87,6 +88,11 @@ public sealed class GitRepositoryService(
         GitSyncTrigger trigger = GitSyncTrigger.Manual,
         CancellationToken cancellationToken = default)
     {
+        if (!_option.IsSyncTriggerEnabled(trigger))
+        {
+            return CreateDisabledSyncResult(repositoryId, trigger);
+        }
+
         var registration = GetRegistration(repositoryId);
         var state = _runtimeStates[registration.Id];
         var gate = GetLock(registration.Id);
@@ -280,6 +286,14 @@ public sealed class GitRepositoryService(
         GitSyncTrigger trigger = GitSyncTrigger.Manual,
         CancellationToken cancellationToken = default)
     {
+        if (!_option.IsSyncTriggerEnabled(trigger))
+        {
+            return _repositories.Keys
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .Select(repositoryId => CreateDisabledSyncResult(repositoryId, trigger))
+                .ToList();
+        }
+
         var results = new List<GitSyncResult>();
 
         foreach (var repositoryId in _repositories.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
@@ -313,6 +327,23 @@ public sealed class GitRepositoryService(
         }
 
         throw new KeyNotFoundException($"Git repository '{repositoryId}' is not registered.");
+    }
+
+    private static GitSyncResult CreateDisabledSyncResult(string repositoryId, GitSyncTrigger trigger)
+    {
+        return new GitSyncResult
+        {
+            RepositoryId = repositoryId,
+            Trigger = trigger,
+            Success = false,
+            HasChanges = false,
+            Message = BuildDisabledSyncMessage(trigger)
+        };
+    }
+
+    private static string BuildDisabledSyncMessage(GitSyncTrigger trigger)
+    {
+        return $"Git synchronization triggered by '{trigger}' is disabled by module configuration.";
     }
 
     private SemaphoreSlim GetLock(string repositoryId)
