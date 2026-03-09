@@ -4,8 +4,8 @@
     <PackageDescription>Markdown document management module with document groups, hierarchical navigation, YAML front matter parsing, and metadata search.</PackageDescription>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
-    <PackageReference Include="YamlDotNet" Version="16.*" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
@@ -14,11 +14,5 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Localization\**\*.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <AdditionalFiles Include="UIMarkdown\Components\DocumentGroupSelector.razor" />
-    <AdditionalFiles Include="UIMarkdown\Components\DocumentTreePanel.razor" />
-    <AdditionalFiles Include="UIMarkdown\Components\DocumentContentViewer.razor" />
-    <AdditionalFiles Include="UIMarkdown\Components\DocumentMetadataPanel.razor" />
   </ItemGroup>
 </Project>
