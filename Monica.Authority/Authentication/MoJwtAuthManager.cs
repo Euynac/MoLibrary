@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Authority.Implements.Authorization;
-using Monica.Authority.Modules;
+using Monica.Modules;
 using Monica.Authority.Security;
 
 namespace Monica.Authority.Authentication;

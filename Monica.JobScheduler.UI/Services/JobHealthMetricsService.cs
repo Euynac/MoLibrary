@@ -4,7 +4,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
-using Monica.JobScheduler.UI.Modules;
+using Monica.Modules;
 using Monica.Tool.MoResponse;
 
 namespace Monica.JobScheduler.UI.Services;

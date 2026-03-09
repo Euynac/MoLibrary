@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Localization.Json;
-using Monica.Localization.Modules;
+using Monica.Modules;
 
 namespace Monica.Localization.Localizers;
 

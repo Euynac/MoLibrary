@@ -3,20 +3,17 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.EventBus.Modules;
 using Monica.Framework.Core;
 using Monica.Framework.Core.Extensions;
 using Monica.Framework.Core.Model;
 using Monica.Framework.Services;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
 
-namespace Monica.Framework.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleFrameworkMonitorBuilderExtensions
 {

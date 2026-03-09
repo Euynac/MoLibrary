@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Monica.Core.GlobalJson.Converters;
-using Monica.Core.Modules;
+using Monica.Modules;
 
 namespace Monica.Core.GlobalJson;
 

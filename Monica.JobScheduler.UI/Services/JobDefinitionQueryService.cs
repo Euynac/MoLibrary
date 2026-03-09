@@ -1,10 +1,9 @@
 using Cronos;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Api;
-using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Tool.MoResponse;

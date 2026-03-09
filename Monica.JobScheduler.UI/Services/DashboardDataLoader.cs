@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.UI.Models;
-using Monica.JobScheduler.UI.Modules;
+using Monica.Modules;
 
 namespace Monica.JobScheduler.UI.Services;
 

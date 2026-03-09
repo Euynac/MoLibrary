@@ -4,10 +4,10 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Modules;
-using Monica.Repository.Modules;
+using Monica.JobScheduler.EfCore;
 
-namespace Monica.JobScheduler.EfCore.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// Extension methods for integrating EF Core persistence into JobScheduler module.

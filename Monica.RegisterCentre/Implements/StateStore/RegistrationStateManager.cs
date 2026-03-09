@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
-using Monica.RegisterCentre.Modules;
+using Monica.Modules;
 using Monica.StateStore;
 
 namespace Monica.RegisterCentre.Implements.StateStore;

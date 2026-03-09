@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Framework.UI.Modules;
+using Monica.Modules;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
 using Monica.Tool.MoResponse;

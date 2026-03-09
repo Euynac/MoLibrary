@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using System.Linq;
 using Monica.Core.Features.MoDecorator;
 
 namespace Scrutor.Tests;

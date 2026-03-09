@@ -1,14 +1,14 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.Profiling.Models;
 using Monica.Profiling.Pages;
 using Monica.Profiling.Services;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Profiling.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleProfilingUIBuilderExtensions
 {
@@ -145,7 +145,7 @@ public class ModuleProfilingUIOption : MoModuleOption<ModuleProfilingUI>
     /// <summary>
     ///     默认采样模式 (用于自动启动时)
     /// </summary>
-    public Models.AllocationSamplingMode DefaultSamplingMode { get; set; } = Models.AllocationSamplingMode.High;
+    public AllocationSamplingMode DefaultSamplingMode { get; set; } = AllocationSamplingMode.High;
 
     /// <summary>
     ///     最大跟踪类型数量

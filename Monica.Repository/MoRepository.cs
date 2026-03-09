@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Exceptions;
-using Monica.Repository.Extensions;
 using Monica.Repository.Interfaces;
 using Monica.Tool.Extensions;
 

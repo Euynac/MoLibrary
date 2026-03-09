@@ -1,23 +1,17 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Authority.Modules;
-using Monica.AutoModel.Exceptions;
-using Monica.AutoModel.Modules;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.DefaultInterceptors;
-using Monica.DependencyInjection.Modules;
 using Monica.DomainDrivenDesign.ExceptionHandler;
 using Monica.DomainDrivenDesign.Interfaces;
-using Monica.Repository.Modules;
 using Monica.Tool.Extensions;
 
-namespace Monica.DomainDrivenDesign.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {

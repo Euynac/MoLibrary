@@ -1,10 +1,11 @@
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
+using Monica.Modules;
 
 namespace Monica.Markdown.Git.Services;
 
 /// <summary>
-/// Resolves credentials directly from <see cref="Monica.Markdown.Git.Modules.ModuleGitOption"/> registrations.
+/// Resolves credentials directly from <see cref="ModuleGitOption"/> registrations.
 /// </summary>
 public sealed class GitOptionsCredentialResolver : IGitCredentialResolver
 {

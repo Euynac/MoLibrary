@@ -1,13 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
-using Monica.AI.Models;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
-using Monica.AI.Modules;
+using Monica.Modules;
 using AgentTextSearchResult = Microsoft.Agents.AI.TextSearchProvider.TextSearchResult;
 
 namespace Monica.AI.RAG.Services;

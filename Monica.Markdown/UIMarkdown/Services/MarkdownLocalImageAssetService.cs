@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using Monica.Markdown.Interfaces;
-using Monica.Markdown.Modules;
+using Monica.Modules;
 using Monica.Markdown.UIMarkdown.Models;
 
 namespace Monica.Markdown.UIMarkdown.Services;

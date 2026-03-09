@@ -2,20 +2,18 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.AutoModel.Modules;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.DomainDrivenDesign.AutoController;
 using Monica.DomainDrivenDesign.AutoController.Components;
 using Monica.DomainDrivenDesign.AutoController.Extensions;
 using Monica.DomainDrivenDesign.AutoController.Features;
 using Monica.DomainDrivenDesign.AutoController.Interfaces;
 using Monica.DomainDrivenDesign.AutoController.Settings;
-using Monica.Tool.Extensions;
 
-namespace Monica.DomainDrivenDesign.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleAutoControllersBuilderExtensions

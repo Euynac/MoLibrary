@@ -6,6 +6,7 @@ using Monica.Core.Features.MoLogProvider;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.Logging;
 using Monica.Logging.Middlewares;
 using Monica.Logging.ProviderSerilog;
 using Monica.Logging.ProviderSerilog.Enrichers;
@@ -14,7 +15,8 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
 
-namespace Monica.Logging.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleLoggingBuilderExtensions

@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Monica.Repository.Transaction;
-
 namespace Monica.Framework.Features.MoSeeder;
 
 public interface IMoSeeder

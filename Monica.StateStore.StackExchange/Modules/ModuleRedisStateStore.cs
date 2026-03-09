@@ -3,12 +3,14 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.StateStore.Modules;
+using Monica.StateStore;
 using Monica.StateStore.Providers;
+using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
 using StackExchange.Redis;
 
-namespace Monica.StateStore.StackExchange.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleRedisStateStoreBuilderExtensions
 {

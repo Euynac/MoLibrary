@@ -15,7 +15,8 @@ using Monica.SignalR.Interfaces;
 using Monica.SignalR.Services;
 using SignalRSwaggerGen;
 
-namespace Monica.SignalR.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleSignalRBuilderExtensions
 {

@@ -3,7 +3,7 @@ using Monica.Tool.MoResponse;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.JobScheduler.UI.Localization;
 
 namespace Monica.JobScheduler.UI.Services;

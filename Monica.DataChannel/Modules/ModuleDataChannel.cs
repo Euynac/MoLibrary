@@ -6,13 +6,13 @@ using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.Dapr.Modules;
+using Monica.DataChannel;
 using Monica.DataChannel.Interfaces;
 using Monica.DataChannel.Services;
 using Monica.DataChannel.UIDataChannel.Services;
 
-namespace Monica.DataChannel.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public class ModuleDataChannel(ModuleDataChannelOption option)
     : MoModuleWithDependencies<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)

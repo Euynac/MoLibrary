@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Extensions;
 using Monica.Tool.Extensions;
 
 namespace Monica.Authority.Security;

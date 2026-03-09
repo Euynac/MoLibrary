@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
-using Monica.AI.Providers;
 using Monica.AI.RAG.Services;
 using Monica.AI.Services;
 

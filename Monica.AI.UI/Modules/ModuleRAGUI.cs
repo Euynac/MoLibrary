@@ -1,14 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.AI.Modules;
 using Monica.AI.UI.Pages;
 using Monica.AI.UI.Services;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.AI.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// RAG UI module builder extensions.

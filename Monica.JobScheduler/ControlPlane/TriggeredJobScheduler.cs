@@ -1,12 +1,11 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Extensions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
+using Monica.Modules;
 
 namespace Monica.JobScheduler.ControlPlane;
 

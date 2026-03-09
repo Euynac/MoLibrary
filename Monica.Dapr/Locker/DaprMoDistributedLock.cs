@@ -1,7 +1,7 @@
 ﻿using Dapr.DistributedLock;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Dapr.Modules;
+using Monica.Modules;
 using Monica.Locker.DistributedLocking;
 
 namespace Monica.Dapr.Locker;

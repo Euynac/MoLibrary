@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Monica.StateStore.StackExchange.Modules;
+using Monica.Modules;
 using StackExchange.Redis;
 
 namespace Monica.StateStore.StackExchange.Connection;

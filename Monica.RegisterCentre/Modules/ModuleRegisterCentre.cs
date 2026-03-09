@@ -9,19 +9,18 @@ using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
+using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Implements;
 using Monica.RegisterCentre.Implements.StateStore;
 using Monica.StateStore;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
-using Monica.StateStore.Modules;
 using Monica.Tool.MoResponse;
-using Monica.Resilience.Modules;
 using Polly;
 using Polly.Retry;
 
-namespace Monica.RegisterCentre.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleWithDependencies<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
@@ -174,7 +173,7 @@ public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModuleW
                     return Res.Fail("当前实例不是 Leader").GetResponse();
                 }
 
-                leaderService.TriggerLeaderLost(Events.LeaderLostReason.GracefulShutdown);
+                leaderService.TriggerLeaderLost(LeaderLostReason.GracefulShutdown);
                 await stateManager.DeleteLeaderKeyAsync();
                 return Res.Ok("已释放 Leader 状态").GetResponse();
             })

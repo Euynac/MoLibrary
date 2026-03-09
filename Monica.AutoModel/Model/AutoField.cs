@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Monica.AutoModel.Configurations;
-using Monica.AutoModel.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.AutoModel.Model;

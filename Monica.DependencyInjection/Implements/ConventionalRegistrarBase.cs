@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DependencyInjection.Attributes;
 using Monica.DependencyInjection.CoreInterfaces;
-using Monica.DependencyInjection.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.DependencyInjection.Implements;

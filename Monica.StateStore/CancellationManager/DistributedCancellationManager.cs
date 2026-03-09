@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
-using Monica.StateStore.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 // ReSharper disable PossiblyMistakenUseOfCancellationToken
 

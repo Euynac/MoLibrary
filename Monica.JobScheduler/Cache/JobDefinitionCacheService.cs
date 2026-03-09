@@ -6,7 +6,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
+using Monica.Modules;
 using Monica.StateStore;
 
 namespace Monica.JobScheduler.Cache;

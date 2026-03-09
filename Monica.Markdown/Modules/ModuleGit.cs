@@ -6,14 +6,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.EventBus.Modules;
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
 using Monica.Markdown.Git.Providers;
 using Monica.Markdown.Git.Services;
 
-namespace Monica.Markdown.Git.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// Builder extensions for the Git synchronization module.

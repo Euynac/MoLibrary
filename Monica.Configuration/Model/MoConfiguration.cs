@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Annotations;
 using Monica.Tool.Extensions;
 

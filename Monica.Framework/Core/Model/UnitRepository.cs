@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Framework.Core.Interfaces;
-using Monica.Framework.Modules;
+using Monica.Modules;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Interfaces;
 using Monica.Tool.Extensions;

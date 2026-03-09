@@ -9,7 +9,8 @@ using Monica.Core.Module.Models;
 using Monica.Profiling.Services;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Profiling.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleProfilingBuilderExtensions
 {

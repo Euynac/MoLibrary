@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Monica.Generators.AutoController.Constants;
 using Monica.Generators.AutoController.Diagnostics;
 using Monica.Generators.AutoController.Helpers;
 using Monica.Generators.AutoController.Models;

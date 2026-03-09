@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.EfCore.Mappers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;

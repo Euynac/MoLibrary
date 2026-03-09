@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
-using Monica.RegisterCentre.Modules;
+using Monica.Modules;
 
 namespace Monica.RegisterCentre.Implements;
 

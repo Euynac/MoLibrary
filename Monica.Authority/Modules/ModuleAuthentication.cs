@@ -13,7 +13,8 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 
-namespace Monica.Authority.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleAuthenticationBuilderExtensions
 {

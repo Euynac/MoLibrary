@@ -11,7 +11,8 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 
-namespace Monica.Core.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// 差异对比高亮模块

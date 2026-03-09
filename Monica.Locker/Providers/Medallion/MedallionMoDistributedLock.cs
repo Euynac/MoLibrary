@@ -1,5 +1,4 @@
 ﻿using Medallion.Threading;
-using Microsoft.Extensions.Options;
 using Monica.Locker.DistributedLocking;
 
 namespace Monica.Locker.Providers.Medallion;

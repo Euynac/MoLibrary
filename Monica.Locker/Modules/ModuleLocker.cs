@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Medallion.Threading;
 using Monica.Core.Module;
@@ -8,7 +7,8 @@ using Monica.Locker.DistributedLocking;
 using Monica.Locker.Providers.Local;
 using Monica.Locker.Providers.Medallion;
 
-namespace Monica.Locker.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleLockerBuilderExtensions
 {

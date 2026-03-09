@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
@@ -6,7 +5,8 @@ using Monica.Core.Module.Models;
 using Monica.RegisterCentre.ServiceInvocation.Implements;
 using Monica.RegisterCentre.ServiceInvocation.Interfaces;
 
-namespace Monica.RegisterCentre.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// 服务调用模块

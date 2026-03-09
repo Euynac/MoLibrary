@@ -1,6 +1,6 @@
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
-using Monica.Markdown.Modules;
+using Monica.Modules;
 using Monica.Markdown.Scanner;
 
 namespace Monica.Markdown.Services;

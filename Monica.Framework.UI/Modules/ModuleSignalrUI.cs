@@ -1,17 +1,13 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Framework.UI.UISignalr.Services;
 using Monica.Framework.UI.Pages;
-using Monica.SignalR.Services;
-using Monica.SignalR.Implements;
-using Monica.SignalR.Modules;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Framework.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleSignalrUIBuilderExtensions

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
@@ -10,9 +9,9 @@ using Monica.Office.Excel.EpPlus.Import;
 using Monica.Office.Excel.Npoi;
 using Monica.Office.Excel.Npoi.Export;
 using Monica.Office.Excel.Npoi.Import;
-using Monica.StateStore.Modules;
 
-namespace Monica.Office.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleExcelBuilderExtensions

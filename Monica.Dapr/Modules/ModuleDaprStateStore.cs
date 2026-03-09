@@ -1,17 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Dapr.StateStore;
-using Monica.RegisterCentre.Modules;
 using Monica.StateStore;
-using Monica.StateStore.Modules;
 using Monica.StateStore.Providers;
 
-namespace Monica.Dapr.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleDaprStateStoreBuilderExtensions

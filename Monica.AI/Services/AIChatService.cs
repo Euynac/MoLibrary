@@ -4,8 +4,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
-using Monica.AI.Models;
-using Monica.AI.Modules;
+using Monica.Modules;
 using Monica.AI.RAG.Services;
 
 namespace Monica.AI.Services;

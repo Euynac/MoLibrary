@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
-using Monica.DependencyInjection.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.DependencyInjection.DynamicProxy;

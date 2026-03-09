@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Monica.Locker.Modules;
+using Monica.Modules;
 
 namespace Monica.Locker.DistributedLocking;
 

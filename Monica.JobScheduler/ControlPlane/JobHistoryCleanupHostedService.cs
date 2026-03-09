@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.Modules;
-using Monica.JobScheduler.Modules;
-using Monica.RegisterCentre.Modules;
+using Monica.Modules;
 using Monica.RegisterCentre.Core;
 using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Interfaces;

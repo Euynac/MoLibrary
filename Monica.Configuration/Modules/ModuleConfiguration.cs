@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Monica.Configuration;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Implements;
 using Monica.Configuration.Interfaces;
@@ -12,7 +13,8 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 
-namespace Monica.Configuration.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleConfigurationBuilderExtensions
 {

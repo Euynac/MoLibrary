@@ -1,6 +1,3 @@
-using Microsoft.OpenApi;
-using Swashbuckle.AspNetCore.SwaggerGen;
-
 namespace Monica.DomainDrivenDesign.Swagger;
 //
 // /// <summary>

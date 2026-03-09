@@ -2,7 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Profiling.Models;
-using Monica.Profiling.Modules;
+using Monica.Modules;
 
 namespace Monica.Profiling.Services;
 

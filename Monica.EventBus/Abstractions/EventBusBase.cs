@@ -5,7 +5,6 @@ using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Attributes;
 using Monica.EventBus.Helpers;
 using Monica.EventBus.Models;
-using Monica.EventBus.Subscriptions;
 
 namespace Monica.EventBus.Abstractions;
 

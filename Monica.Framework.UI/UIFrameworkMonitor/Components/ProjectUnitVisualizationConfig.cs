@@ -1,6 +1,5 @@
 using Monica.Framework.Core.Model;
 using MudBlazor;
-using System.Linq;
 using System.Reflection;
 
 namespace Monica.Framework.UI.UIFrameworkMonitor.Components;

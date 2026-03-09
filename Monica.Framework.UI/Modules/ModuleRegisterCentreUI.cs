@@ -1,16 +1,13 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.Framework.UI.UIRegisterCentre.Services;
 using Monica.Framework.UI.Pages;
-using Monica.RegisterCentre.Modules;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Framework.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
     : MoModuleWithDependencies<ModuleRegisterCentreUI, ModuleRegisterCentreUIOption, ModuleRegisterCentreUIGuide>(option)

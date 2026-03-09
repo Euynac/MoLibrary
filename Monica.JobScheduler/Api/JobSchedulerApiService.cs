@@ -8,8 +8,7 @@ using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
-using Monica.RegisterCentre.Modules;
+using Monica.Modules;
 using Monica.Tool.MoResponse;
 
 namespace Monica.JobScheduler.Api;

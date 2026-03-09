@@ -11,7 +11,8 @@ using Monica.Tool.Extensions;
 using Monica.Tool.General;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Core.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleGlobalExceptionHandlerBuilderExtensions

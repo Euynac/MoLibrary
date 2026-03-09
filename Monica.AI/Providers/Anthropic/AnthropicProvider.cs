@@ -1,11 +1,9 @@
-using System;
 using Anthropic;
 using Anthropic.Models.Models;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
-using Monica.AI.Providers;
 using Monica.AI.Services;
 
 namespace Monica.AI.Providers.Anthropic;

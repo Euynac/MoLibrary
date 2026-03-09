@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Framework.Core.Interfaces;
-using Monica.Framework.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Core.Model;

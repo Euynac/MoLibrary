@@ -1,19 +1,17 @@
 using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.GlobalJson.Interfaces;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.RegisterCentre.Modules;
 using Monica.RegisterCentre.ServiceInvocation.Interfaces;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Dapr.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleDaprServiceInvocationBuilderExtensions
 {

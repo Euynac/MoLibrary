@@ -1,15 +1,13 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.StateStore.Modules;
 using Monica.StateStore.UI.Pages;
 using Monica.StateStore.UI.Services;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.StateStore.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleStateStoreUIBuilderExtensions
 {

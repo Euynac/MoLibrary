@@ -8,7 +8,6 @@ using Monica.Core.Module.Exceptions;
 using Monica.Core.Module.Features;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Module.TypeFinder;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Module;

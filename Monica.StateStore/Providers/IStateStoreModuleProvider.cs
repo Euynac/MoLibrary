@@ -1,5 +1,4 @@
 using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
 
 namespace Monica.StateStore.Providers;
 

@@ -10,11 +10,11 @@ using Monica.Authority.Security;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Tool.Extensions;
 
-namespace Monica.DomainDrivenDesign.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleRpcClientBuilderExtensions
 {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Monica.Generators.AutoController.Diagnostics;
 using Monica.Generators.AutoController.Models;

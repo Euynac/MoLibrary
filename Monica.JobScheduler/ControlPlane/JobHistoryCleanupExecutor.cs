@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
+using Monica.Modules;
 
 namespace Monica.JobScheduler.ControlPlane;
 

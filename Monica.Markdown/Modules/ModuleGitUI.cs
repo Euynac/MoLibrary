@@ -2,13 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Markdown.Git.Modules;
 using Monica.Markdown.Pages;
 using Monica.Markdown.UIGit.Services;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Markdown.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// Builder extensions for the Git dashboard UI module.

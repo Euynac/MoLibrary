@@ -3,11 +3,10 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.HostedServices;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
 
 namespace Monica.JobScheduler.ControlPlane;
 

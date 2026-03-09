@@ -1,11 +1,9 @@
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.GlobalJson;
 using Monica.Core.GlobalJson.Attributes;
 using Monica.Core.GlobalJson.Converters;
-using Monica.Core.Modules;
-using Monica.Repository.Modules;
+using Monica.Modules;
 using NUnit.Framework;
 
 namespace Test.Monica.Core.EnumFormatValue;

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.HostedServices.Interfaces;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Features.HostedServices;

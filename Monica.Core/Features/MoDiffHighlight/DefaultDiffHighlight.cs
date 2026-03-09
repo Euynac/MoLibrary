@@ -7,7 +7,7 @@ using Monica.Core.Features.MoDiffHighlight.Renderers;
 namespace Monica.Core.Features.MoDiffHighlight;
 
 using Microsoft.Extensions.Options;
-using Monica.Core.Modules;
+using Monica.Modules;
 
 
 /// <summary>

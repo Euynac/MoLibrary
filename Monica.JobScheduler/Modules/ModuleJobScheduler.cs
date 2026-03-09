@@ -1,17 +1,13 @@
 using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Cronos;
 using Monica.Core.Module;
 using Monica.JobScheduler.Helpers;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.EventBus.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Api;
 using Monica.JobScheduler.Attributes;
@@ -21,11 +17,10 @@ using Monica.JobScheduler.HealthChecks;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.WorkerPlane;
-using Monica.RegisterCentre.Modules;
-using Monica.StateStore.Modules;
 using Monica.Tool.Extensions;
 
-namespace Monica.JobScheduler.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleJobSchedulerBuilderExtensions
 {

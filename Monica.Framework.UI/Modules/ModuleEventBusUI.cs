@@ -6,14 +6,12 @@ using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.EventBus.Modules;
 using Monica.Framework.UI.UIEventBus.Services;
 using Monica.Framework.UI.Pages;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Framework.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleEventBusUIBuilderExtensions
 {

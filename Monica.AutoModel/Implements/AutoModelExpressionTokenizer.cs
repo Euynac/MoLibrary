@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Interfaces;
 using Monica.AutoModel.Model;
-using Monica.AutoModel.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 

@@ -4,10 +4,10 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.DataChannel.Pages;
 using Monica.DataChannel.UIDataChannel.Services;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.DataChannel.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// DataChannel UI模块，提供DataChannel的管理界面

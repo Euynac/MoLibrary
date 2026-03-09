@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
-using Monica.AI.Modules;
+using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 
 namespace Monica.AI.RAG.Services;

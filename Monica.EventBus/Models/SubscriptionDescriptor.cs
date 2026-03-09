@@ -1,4 +1,3 @@
-using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 
 namespace Monica.EventBus.Models;

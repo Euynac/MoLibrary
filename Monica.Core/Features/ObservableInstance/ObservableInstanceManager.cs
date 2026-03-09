@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
-using Monica.Core.Modules;
+using Monica.Modules;
 
 namespace Monica.Core.Features.ObservableInstance;
 

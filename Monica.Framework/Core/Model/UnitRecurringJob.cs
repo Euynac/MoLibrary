@@ -1,5 +1,5 @@
 using Monica.Framework.Core.Interfaces;
-using Monica.Framework.Modules;
+using Monica.Modules;
 using Monica.JobScheduler.Jobs;
 
 namespace Monica.Framework.Core.Model;

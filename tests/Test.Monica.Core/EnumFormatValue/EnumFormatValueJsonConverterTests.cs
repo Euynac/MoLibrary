@@ -1,6 +1,5 @@
 using System.Text.Json;
 using FluentAssertions;
-using Monica.Core.GlobalJson;
 using Monica.Core.GlobalJson.Attributes;
 using Monica.Core.GlobalJson.Converters;
 using NUnit.Framework;

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
-using Monica.Markdown.Git.Modules;
+using Monica.Modules;
 
 namespace Monica.Markdown.Git.Services;
 

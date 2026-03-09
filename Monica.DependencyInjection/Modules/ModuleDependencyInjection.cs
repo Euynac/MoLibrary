@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
@@ -7,7 +6,8 @@ using Monica.DependencyInjection.AppInterfaces;
 using Monica.DependencyInjection.CoreInterfaces;
 using Monica.DependencyInjection.Implements;
 
-namespace Monica.DependencyInjection.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleDependencyInjectionBuilderExtensions
 {

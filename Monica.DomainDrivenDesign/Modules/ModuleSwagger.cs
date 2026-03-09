@@ -11,7 +11,8 @@ using Monica.Tool.Extensions;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
-namespace Monica.DomainDrivenDesign.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {

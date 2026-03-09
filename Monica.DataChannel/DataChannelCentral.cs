@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using Monica.DataChannel.Interfaces;
-using Monica.DataChannel.Modules;
+using Monica.Modules;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel;

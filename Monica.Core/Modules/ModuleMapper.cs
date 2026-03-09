@@ -13,7 +13,8 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Core.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// Mapper服务，实现核心业务逻辑

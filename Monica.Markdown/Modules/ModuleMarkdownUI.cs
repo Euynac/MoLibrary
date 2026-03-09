@@ -9,10 +9,10 @@ using Monica.Core.Module.Models;
 using Monica.Markdown.Pages;
 using Monica.Markdown.UIMarkdown.Services;
 using Monica.UI.Components.Markdown;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Markdown.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// Markdown UI module providing a document viewer with group selection,

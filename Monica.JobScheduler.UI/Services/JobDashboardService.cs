@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
-using Monica.JobScheduler.UI.Modules;
+using Monica.Modules;
 using Monica.Tool.MoResponse;
 using Microsoft.Extensions.Localization;
 using Monica.JobScheduler.UI.Localization;

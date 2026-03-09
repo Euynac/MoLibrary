@@ -6,9 +6,8 @@ using Monica.EventBus.Abstractions;
 using Monica.Markdown.Git.Events;
 using Monica.Markdown.Git.Interfaces;
 using Monica.Markdown.Git.Models;
-using Monica.Markdown.Git.Modules;
 using Monica.Markdown.Interfaces;
-using Monica.Markdown.Modules;
+using Monica.Modules;
 
 namespace Monica.Markdown.Git.Services;
 

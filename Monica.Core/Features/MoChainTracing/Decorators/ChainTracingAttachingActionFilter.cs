@@ -2,7 +2,7 @@ using System.Dynamic;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 

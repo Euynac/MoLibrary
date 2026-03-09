@@ -4,13 +4,12 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.HostedServices;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
 
 namespace Monica.JobScheduler.WorkerPlane;
 

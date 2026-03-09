@@ -1,4 +1,4 @@
-using Monica.AutoModel.Modules;
+using Monica.Modules;
 
 namespace Monica.AutoModel.Annotations;
 [AttributeUsage(AttributeTargets.Class)]

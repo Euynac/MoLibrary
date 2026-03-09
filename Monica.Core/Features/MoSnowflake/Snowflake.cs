@@ -1,4 +1,4 @@
-using Monica.Core.Modules;
+using Monica.Modules;
 
 namespace Monica.Core.Features.MoSnowflake;
 

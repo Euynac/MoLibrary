@@ -6,9 +6,11 @@ using Monica.Core.GlobalJson;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
+using Monica.Dapr.HealthCheck;
+using Monica.Dapr.Interfaces;
 
-namespace Monica.Dapr.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleDaprClientBuilderExtensions
@@ -51,11 +53,11 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
         }).UseJsonSerializationOptions(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions));
 
         // Register health coordinator (singleton implementing both interface and IHostedService)
-        services.AddSingleton<HealthCheck.DaprSidecarHealthCoordinator>();
-        services.AddSingleton<Interfaces.IDaprSidecarHealthCoordinator>(sp =>
-            sp.GetRequiredService<HealthCheck.DaprSidecarHealthCoordinator>());
+        services.AddSingleton<DaprSidecarHealthCoordinator>();
+        services.AddSingleton<IDaprSidecarHealthCoordinator>(sp =>
+            sp.GetRequiredService<DaprSidecarHealthCoordinator>());
         services.AddHostedService(sp =>
-            sp.GetRequiredService<HealthCheck.DaprSidecarHealthCoordinator>());
+            sp.GetRequiredService<DaprSidecarHealthCoordinator>());
     }
 
     public override void ClaimDependencies()

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Monica.Configuration.Modules;
+using Monica.Modules;
 using Monica.Configuration.Model;
 
 namespace Monica.Configuration;

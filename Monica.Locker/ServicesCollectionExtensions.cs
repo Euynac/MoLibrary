@@ -1,7 +1,7 @@
 using Medallion.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Locker.DistributedLocking;
-using Monica.Locker.Modules;
+using Monica.Modules;
 using Monica.Locker.Providers.Local;
 using Monica.Locker.Providers.Medallion;
 

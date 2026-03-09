@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Monica.AI.Modules;
+using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.Tool.Extensions;
 

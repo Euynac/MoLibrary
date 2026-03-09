@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoDiffHighlight;
 using Monica.Core.Features.MoDiffHighlight.Models;
-using Monica.Core.Modules;
+using Monica.Modules;
 using NSubstitute;
 using Xunit;
 

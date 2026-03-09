@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Monica.Repository.EFCoreExtensions;
-using Monica.Repository.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.Repository.EntityInterfaces;

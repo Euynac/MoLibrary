@@ -5,7 +5,7 @@ using Monica.Core.Extensions;
 using Monica.StateStore.QueryBuilder;
 using Monica.StateStore.QueryBuilder.Interfaces;
 using Monica.StateStore.StackExchange.Connection;
-using Monica.StateStore.StackExchange.Modules;
+using Monica.Modules;
 using Monica.StateStore.StackExchange.Scripts;
 using StackExchange.Redis;
 

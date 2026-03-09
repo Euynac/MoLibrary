@@ -9,7 +9,7 @@ using Monica.AutoModel.Configurations;
 using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Interfaces;
 using Monica.AutoModel.Model;
-using Monica.AutoModel.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 // ReSharper disable StaticMemberInGenericType

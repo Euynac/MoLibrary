@@ -8,10 +8,10 @@ using Monica.Core.ExceptionHandler;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.Tool.Extensions;
 
-namespace Monica.AutoModel.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleAutoModelBuilderExtensions
 {

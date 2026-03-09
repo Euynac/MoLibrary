@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Monica.Repository.EntityInterfaces;
-using Monica.Repository.Modules;
+using Monica.Modules;
 
 namespace Monica.Repository.EFCoreExtensions;
 

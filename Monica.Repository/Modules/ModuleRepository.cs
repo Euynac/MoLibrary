@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -6,16 +5,17 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.DefaultInterceptors;
+using Monica.Repository;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Interfaces;
 using Monica.Repository.Registrar;
 using Monica.Repository.Transaction;
 using Monica.Tool.Extensions;
 
-namespace Monica.Repository.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleRepositoryBuilderExtensions
 {

@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Monica.Localization.Modules;
+using Monica.Modules;
 
 namespace Monica.Localization.Localizers;
 

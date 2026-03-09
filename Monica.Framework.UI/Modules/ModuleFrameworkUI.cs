@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Builder;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.UI.Modules;
 
-namespace Monica.Framework.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleFrameworkUIBuilderExtensions

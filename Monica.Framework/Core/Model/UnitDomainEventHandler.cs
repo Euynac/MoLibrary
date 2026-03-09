@@ -1,10 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Events;
 using Monica.Framework.Core.Interfaces;
-using Monica.Framework.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Core.Model;

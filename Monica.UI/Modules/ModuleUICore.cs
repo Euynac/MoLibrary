@@ -9,7 +9,6 @@ using Monica.Core.Module.Dashboard.Interfaces;
 using Monica.Core.Module.Dashboard;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Localization.Modules;
 using Monica.UI.Components;
 using Monica.UI.Components.Pages;
 using Monica.UI.Components.Markdown;
@@ -19,7 +18,8 @@ using Monica.UI.UICore.Interfaces;
 using Monica.UI.UICore.Services;
 using Monica.UI.Services;
 
-namespace Monica.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleUICoreBuilderExtensions
 {

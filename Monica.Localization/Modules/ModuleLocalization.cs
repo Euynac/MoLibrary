@@ -13,7 +13,8 @@ using Monica.Core.Module.Models;
 using Monica.Localization.Localizers;
 using Monica.Tool.Extensions;
 
-namespace Monica.Localization.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleLocalizationBuilderExtensions
 {

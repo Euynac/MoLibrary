@@ -1,17 +1,14 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.JobScheduler.Modules;
 using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.Services;
-using Monica.UI.Modules;
-using Monica.UI.UIStackTrace.Services;
 using MudBlazor;
 
-namespace Monica.JobScheduler.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleJobSchedulerUIBuilderExtensions
 {

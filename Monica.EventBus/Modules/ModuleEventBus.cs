@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
@@ -10,11 +9,11 @@ using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Models;
 using Monica.EventBus.Providers;
-using Monica.EventBus.Services;
 using Monica.EventBus.Subscriptions;
 using Monica.Tool.Extensions;
 
-namespace Monica.EventBus.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleEventBusBuilderExtensions
 {

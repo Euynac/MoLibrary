@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace Monica.RegisterCentre.Models;
 
 public class RegisteredServiceStatus

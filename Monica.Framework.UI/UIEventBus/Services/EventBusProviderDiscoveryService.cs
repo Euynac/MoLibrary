@@ -5,7 +5,7 @@ using Monica.Core.Module.Models;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Models;
-using Monica.EventBus.Modules;
+using Monica.Modules;
 using Monica.EventBus.Providers;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Tool.MoResponse;

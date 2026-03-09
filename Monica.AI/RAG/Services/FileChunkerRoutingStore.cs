@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.AI.Modules;
+using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.Tool.Extensions;

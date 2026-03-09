@@ -1,5 +1,3 @@
-using System;
-
 namespace Monica.DomainDrivenDesign.AutoController.Attributes;
 
 /// <summary>

@@ -5,14 +5,14 @@ using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Monica.AI.Models;
 using Monica.AI.Providers;
-using Monica.AI.Providers.Fake;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 
-namespace Monica.AI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 /// <summary>
 /// RAG module builder extensions.

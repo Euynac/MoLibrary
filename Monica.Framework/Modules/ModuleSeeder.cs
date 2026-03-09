@@ -5,7 +5,8 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Framework.Features.MoSeeder;
 
-namespace Monica.Framework.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleSeederBuilderExtensions

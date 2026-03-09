@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Monica.StateStore.Modules;
+using Monica.Modules;
 using Monica.Core.Extensions;
 
 namespace Monica.StateStore.ProgressBar;

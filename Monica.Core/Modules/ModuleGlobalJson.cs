@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.GlobalJson;
@@ -9,7 +8,8 @@ using Monica.Core.Module.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 
 public static class ModuleGlobalJsonBuilderExtensions

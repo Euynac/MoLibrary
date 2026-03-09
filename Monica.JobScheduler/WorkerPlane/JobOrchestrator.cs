@@ -7,7 +7,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.Modules;
+using Monica.Modules;
 using Monica.RegisterCentre.Interfaces;
 
 namespace Monica.JobScheduler.WorkerPlane;

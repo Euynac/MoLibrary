@@ -1,5 +1,5 @@
 using Monica.Core.Module.Interfaces;
-using Monica.DomainDrivenDesign.Modules;
+using Monica.Modules;
 
 namespace Monica.DomainDrivenDesign.AutoController.Settings;
 

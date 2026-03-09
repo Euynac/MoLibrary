@@ -4,10 +4,9 @@ using Monica.Core.Extensions;
 using Monica.Core.Features.HostedServices;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Interfaces;
-using Monica.RegisterCentre.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.RegisterCentre.Core;

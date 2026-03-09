@@ -3,8 +3,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
-using Monica.AI.Models;
-using Monica.AI.Modules;
+using Monica.Modules;
 using Monica.AI.RAG.Models;
 
 namespace Monica.AI.RAG.Services;

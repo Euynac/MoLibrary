@@ -1,7 +1,7 @@
 using MudBlazor;
 using Monica.UI.Themes;
 using Microsoft.Extensions.Options;
-using Monica.UI.Modules;
+using Monica.Modules;
 
 namespace Monica.UI.Services;
 

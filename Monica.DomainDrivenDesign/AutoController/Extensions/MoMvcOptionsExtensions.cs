@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.DomainDrivenDesign.AutoController.Components;
 
 namespace Monica.DomainDrivenDesign.AutoController.Extensions;

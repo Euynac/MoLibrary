@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
-using Monica.DataChannel.Interfaces;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel.BuildInMiddlewares;

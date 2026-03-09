@@ -1,6 +1,5 @@
 using System.Reflection;
-using Monica.Core.Modules;
-using Monica.Framework.Modules;
+using Monica.Modules;
 
 namespace Monica.Framework.Core.Model;
 

@@ -7,7 +7,8 @@ using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Markdown.Services;
 
-namespace Monica.Markdown.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleMarkdownBuilderExtensions
 {

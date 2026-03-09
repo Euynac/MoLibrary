@@ -16,7 +16,7 @@ using Monica.Repository.EFCoreExtensions;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Extensions;
 using Monica.Repository.Interfaces;
-using Monica.Repository.Modules;
+using Monica.Modules;
 using Monica.Repository.Transaction;
 using Monica.Repository.Transaction.EntityEvent;
 using Monica.Tool.Extensions;

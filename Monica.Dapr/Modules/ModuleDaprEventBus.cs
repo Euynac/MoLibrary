@@ -6,13 +6,12 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
 using Monica.Dapr.EventBus;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Modules;
 using Monica.EventBus.Providers;
 
-namespace Monica.Dapr.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleDaprEventBusBuilderExtensions
 {

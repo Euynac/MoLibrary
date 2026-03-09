@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.GlobalJson.Interfaces;
-using Monica.Core.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 using System.Text.Json;

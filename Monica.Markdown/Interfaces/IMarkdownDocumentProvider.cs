@@ -1,5 +1,5 @@
 using Monica.Markdown.Models;
-using Monica.Markdown.Modules;
+using Monica.Modules;
 
 namespace Monica.Markdown.Interfaces;
 

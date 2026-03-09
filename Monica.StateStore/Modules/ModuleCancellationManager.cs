@@ -1,11 +1,12 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.StateStore;
 using Monica.StateStore.CancellationManager;
 
-namespace Monica.StateStore.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleCancellationManagerBuilderExtensions
 {

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Monica.DomainDrivenDesign;
 using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Framework.Core.Interfaces;
-using Monica.Framework.Modules;
+using Monica.Modules;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Core.Model;

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Monica.Configuration.Modules;
+using Monica.Configuration;
 using Monica.Configuration.UI.Implements;
 using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
@@ -13,12 +13,10 @@ using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Core.Modules;
-using Monica.RegisterCentre.Modules;
-using Monica.UI.Modules;
 using MudBlazor;
 
-namespace Monica.Configuration.UI.Modules;
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
 
 public static class ModuleConfigurationUIBuilderExtensions
 {

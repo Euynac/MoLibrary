@@ -3,7 +3,7 @@ using Dapr.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
-using Monica.Dapr.Modules;
+using Monica.Modules;
 using Monica.StateStore;
 using Monica.StateStore.QueryBuilder;
 using Monica.StateStore.QueryBuilder.Interfaces;
