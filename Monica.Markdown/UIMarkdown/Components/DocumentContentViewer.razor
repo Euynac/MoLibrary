@@ -1,18 +1,40 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.UI.Components.Markdown
+@inject IStringLocalizer<MarkdownResource> L
 
-@if (IsGroupInvalid)
-{
-    <div class="content-container">
-        @if (ShowSidebarToggle)
-        {
-            <div class="content-navbar empty-navbar">
+<div class="content-container">
+    <div class="content-navbar">
+        <div class="navbar-left">
+            @if (ShowSidebarToggle)
+            {
                 <MudIconButton Icon="@Icons.Material.Filled.Menu"
                                Size="Size.Small"
                                OnClick="OnToggleSidebar"
+                               title="@L["MarkdownViewer:Navbar:ShowSidebar"]"
                                Class="sidebar-toggle-btn" />
-            </div>
+            }
+
+            @if (_breadcrumbs.Count > 0)
+            {
+                <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
+            }
+        </div>
+
+        @if (Document is not null)
+        {
+            <span class="last-edited">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule"
+                         Size="Size.Small"
+                         Class="last-edited-icon" />
+                @L["MarkdownViewer:Navbar:LastEdited", FormatLastEditedText(Document.LastModifiedUtc)]
+            </span>
         }
+    </div>
+
+    @if (CurrentGroup is { IsValid: false } invalidGroup)
+    {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
                 <MudIcon Icon="@Icons.Material.Filled.Warning"
@@ -20,97 +42,48 @@
                          Color="Color.Warning"
                          Style="font-size: 4rem;" />
                 <MudText Typo="Typo.h6" Color="Color.Warning">
-                    Document group unavailable
+                    @L["MarkdownViewer:States:GroupUnavailable"]
                 </MudText>
-                <MudText Typo="Typo.body2" Align="Align.Center"
-                         Style="opacity: 0.7;">
-                    The configured path does not exist or is not accessible.
+                <MudText Typo="Typo.body2" Align="Align.Center" Style="opacity: 0.7;">
+                    @L["MarkdownViewer:States:GroupUnavailableDescription"]
                 </MudText>
-                @if (InvalidGroupPath is not null)
-                {
-                    <MudAlert Severity="Severity.Warning"
-                              Variant="Variant.Outlined" Dense="true">
-                        <MudText Typo="Typo.body2"
-                                 Style="font-family: monospace;">
-                            @InvalidGroupPath
-                        </MudText>
-                    </MudAlert>
-                }
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @invalidGroup.BasePath
+                    </MudText>
+                </MudAlert>
             </MudStack>
         </div>
-    </div>
-}
-else if (IsLoading)
-{
-    <div class="content-container">
-        @if (ShowSidebarToggle)
-        {
-            <div class="content-navbar empty-navbar">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                               Size="Size.Small"
-                               OnClick="OnToggleSidebar"
-                               Class="sidebar-toggle-btn" />
-            </div>
-        }
+    }
+    else if (IsLoading)
+    {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
                 <MudProgressCircular Color="Color.Primary"
                                      Size="Size.Large"
                                      Indeterminate="true" />
                 <MudText Typo="Typo.body1" Color="Color.Primary">
-                    Loading document...
+                    @L["MarkdownViewer:States:LoadingDocument"]
                 </MudText>
             </MudStack>
         </div>
-    </div>
-}
-else if (Document is null)
-{
-    <div class="content-container">
-        @if (ShowSidebarToggle)
-        {
-            <div class="content-navbar empty-navbar">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                               Size="Size.Small"
-                               OnClick="OnToggleSidebar"
-                               Class="sidebar-toggle-btn" />
-            </div>
-        }
+    }
+    else if (Document is null)
+    {
         <div class="center-state">
             <MudStack AlignItems="AlignItems.Center" Spacing="4">
                 <MudIcon Icon="@Icons.Material.Filled.Article"
                          Size="Size.Large"
                          Color="Color.Default"
                          Style="opacity: 0.3; font-size: 4rem;" />
-                <MudText Typo="Typo.h6" Color="Color.Default"
-                         Style="opacity: 0.5;">
-                    Select a document to view
+                <MudText Typo="Typo.h6" Color="Color.Default" Style="opacity: 0.5;">
+                    @L["MarkdownViewer:States:NoDocumentSelected"]
                 </MudText>
             </MudStack>
         </div>
-    </div>
-}
-else
-{
-    <div class="content-container">
-        <div class="content-navbar">
-            <div class="navbar-left">
-                @if (ShowSidebarToggle)
-                {
-                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                                   Size="Size.Small"
-                                   OnClick="OnToggleSidebar"
-                                   Class="sidebar-toggle-btn" />
-                }
-                <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
-            </div>
-            <span class="last-edited">
-                <MudIcon Icon="@Icons.Material.Filled.Schedule"
-                         Size="Size.Small" Class="last-edited-icon" />
-                Last edited @FormatLastEdited(Document.LastModifiedUtc)
-            </span>
-        </div>
-
+    }
+    else
+    {
         <div class="content-scroll">
             <div class="content-body">
                 <h1 class="doc-title">@Document.Title</h1>
@@ -130,10 +103,13 @@ else
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
+    [Parameter]
+    public MarkdownDocumentGroup? CurrentGroup { get; set; }
+
     [Parameter]
     public MarkdownDocument? Document { get; set; }
 
@@ -142,15 +118,6 @@ else
 
     [Parameter]
     public bool IsLoading { get; set; }
-
-    [Parameter]
-    public string? GroupTitle { get; set; }
-
-    [Parameter]
-    public bool IsGroupInvalid { get; set; }
-
-    [Parameter]
-    public string? InvalidGroupPath { get; set; }
 
     [Parameter]
     public bool ShowSidebarToggle { get; set; }
@@ -176,35 +143,31 @@ else
             return;
         }
 
-        if (GroupTitle is not null)
+        if (!string.IsNullOrWhiteSpace(CurrentGroup?.Title))
         {
-            _breadcrumbs.Add(new BreadcrumbItem(GroupTitle, null,
-                icon: Icons.Material.Filled.Folder));
+            _breadcrumbs.Add(new BreadcrumbItem(CurrentGroup.Title, null));
         }
 
         var segments = Document.RelativePath.Split('/');
         for (var i = 0; i < segments.Length - 1; i++)
         {
-            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null,
-                icon: Icons.Material.Filled.FolderOpen));
+            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null));
         }
 
-        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null,
-            disabled: true,
-            icon: Icons.Custom.FileFormats.FileDocument));
+        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null, disabled: true));
     }
 
-    private static string FormatLastEdited(DateTime utcTime)
+    private string FormatLastEditedText(DateTime utcTime)
     {
         var elapsed = DateTime.UtcNow - utcTime;
 
         return elapsed switch
         {
-            { TotalMinutes: < 1 } => "just now",
-            { TotalMinutes: < 60 } => $"{(int)elapsed.TotalMinutes}m ago",
-            { TotalHours: < 24 } => $"{(int)elapsed.TotalHours}h ago",
-            { TotalDays: < 30 } => $"{(int)elapsed.TotalDays}d ago",
-            _ => utcTime.ToLocalTime().ToString("MMM dd, yyyy")
+            { TotalMinutes: < 1 } => L["MarkdownViewer:Time:JustNow"].Value,
+            { TotalMinutes: < 60 } => L["MarkdownViewer:Time:MinutesAgo", (int)elapsed.TotalMinutes].Value,
+            { TotalHours: < 24 } => L["MarkdownViewer:Time:HoursAgo", (int)elapsed.TotalHours].Value,
+            { TotalDays: < 30 } => L["MarkdownViewer:Time:DaysAgo", (int)elapsed.TotalDays].Value,
+            _ => utcTime.ToLocalTime().ToString("yyyy-MM-dd")
         };
     }
 

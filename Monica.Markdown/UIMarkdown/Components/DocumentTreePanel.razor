@@ -1,14 +1,14 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.Tool.Algorithm.Tree
+@inject IStringLocalizer<MarkdownResource> L
 
 <div class="tree-container">
-    <!-- Section Label -->
-    <div class="tree-section-label">DOCUMENTS</div>
-
-    <!-- Search -->
     <div class="tree-header">
-        <MudTextField @bind-Value="_searchText"
-                      Placeholder="Search files (Cmd+K)"
+        <MudTextField T="string"
+                      @bind-Value="SearchText"
+                      Placeholder="@L["MarkdownViewer:Placeholders:SearchFiles"]"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Variant="Variant.Outlined"
@@ -17,7 +17,6 @@
                       Class="tree-search" />
     </div>
 
-    <!-- Tree View -->
     <div class="tree-content">
         @if (_treeItems is null || _treeItems.Count == 0)
         {
@@ -27,7 +26,9 @@
                          Color="Color.Default"
                          Style="opacity: 0.3;" />
                 <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.5;">
-                    No documents found
+                    @(HasSearchText
+                        ? L["MarkdownViewer:States:NoMatchingDocuments"]
+                        : L["MarkdownViewer:States:NoDocumentsFound"])
                 </MudText>
             </MudStack>
         }
@@ -62,45 +63,90 @@
     [Parameter]
     public EventCallback<MarkdownDocument?> SelectedDocumentChanged { get; set; }
 
-    [Parameter]
-    public EventCallback OnCollapseRequested { get; set; }
-
     private string? _searchText;
     private List<DocumentTreeItem>? _treeItems;
+    private bool HasSearchText => !string.IsNullOrWhiteSpace(_searchText);
+
+    private string? SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value)
+            {
+                return;
+            }
+
+            _searchText = value;
+            ApplyTreeFilter();
+        }
+    }
 
     protected override void OnParametersSet()
     {
-        _treeItems = BuildTreeItems(TreeRoot);
+        ApplyTreeFilter();
     }
 
-    private List<DocumentTreeItem>? BuildTreeItems(
-        TreeNode<MarkdownDocumentNodeData>? node)
+    private void ApplyTreeFilter()
     {
-        if (node is null) return null;
+        _treeItems = BuildTreeItems(TreeRoot, _searchText);
+    }
+
+    private static List<DocumentTreeItem>? BuildTreeItems(
+        TreeNode<MarkdownDocumentNodeData>? node,
+        string? searchText,
+        string currentPath = "",
+        bool includeAllDescendants = false)
+    {
+        if (node is null)
+        {
+            return null;
+        }
 
         var items = new List<DocumentTreeItem>();
         foreach (var child in node.Children)
         {
-            if (!MatchesSearch(child)) continue;
+            var childPath = string.IsNullOrWhiteSpace(currentPath)
+                ? child.Data.Name
+                : $"{currentPath}/{child.Data.Name}";
+            var isMatched = includeAllDescendants || MatchesSearch(child, childPath, searchText);
+            var shouldIncludeSubtree = includeAllDescendants || (!child.Data.IsDocument && isMatched);
+            var childItems = BuildTreeItems(child, searchText, childPath, shouldIncludeSubtree);
 
-            var childItems = BuildTreeItems(child);
-            var item = new DocumentTreeItem(
-                child.Data,
-                child.Data.Name,
-                childItems);
-            items.Add(item);
+            if (!isMatched && childItems is null)
+            {
+                continue;
+            }
+
+            items.Add(new DocumentTreeItem(child.Data, child.Data.Name, childItems));
         }
+
         return items.Count > 0 ? items : null;
     }
 
-    private bool MatchesSearch(TreeNode<MarkdownDocumentNodeData> node)
+    private static bool MatchesSearch(
+        TreeNode<MarkdownDocumentNodeData> node,
+        string currentPath,
+        string? searchText)
     {
-        if (string.IsNullOrWhiteSpace(_searchText)) return true;
-
-        if (node.Data.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
             return true;
+        }
 
-        return node.Children.Any(MatchesSearch);
+        if (node.Data.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (currentPath.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return node.Data.Document is not null
+               && (node.Data.Document.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                   || node.Data.Document.RelativePath.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task OnItemSelected(MarkdownDocumentNodeData? data)
@@ -138,7 +184,7 @@
             Children = children;
             Icon = string.Empty;
             Expanded = false;
-            Expandable = true;
+            Expandable = children?.Count > 0;
             Selected = false;
             Visible = true;
         }

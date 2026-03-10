@@ -10,6 +10,43 @@
   "Categories": {
     "Documentation": "Documentation"
   },
+  "MarkdownViewer": {
+    "Placeholders": {
+      "SearchFiles": "Search files (Cmd+K)",
+      "SearchKnowledgeBases": "Find a knowledge base..."
+    },
+    "States": {
+      "LoadingDocuments": "Loading documents...",
+      "LoadingDocument": "Loading document...",
+      "NoKnowledgeBasesRegistered": "No knowledge bases registered",
+      "NoKnowledgeBases": "No knowledge bases available",
+      "NoMatchingKnowledgeBases": "No matching knowledge bases",
+      "NoDocumentSelected": "Select a document to view",
+      "NoDocumentsFound": "No documents found",
+      "NoMatchingDocuments": "No matching documents",
+      "GroupUnavailable": "Knowledge base unavailable",
+      "GroupUnavailableDescription": "The configured path does not exist or is not accessible."
+    },
+    "Navbar": {
+      "ShowSidebar": "Show sidebar",
+      "HideSidebar": "Hide sidebar",
+      "OpenKnowledgeBaseSwitcher": "Switch knowledge base",
+      "UnknownKnowledgeBase": "Unknown knowledge base",
+      "LastEdited": "Last edited {0}"
+    },
+    "Dialogs": {
+      "SwitchKnowledgeBaseTitle": "Switch Knowledge Base"
+    },
+    "Messages": {
+      "LoadDataFailed": "Failed to load markdown data: {0}"
+    },
+    "Time": {
+      "JustNow": "just now",
+      "MinutesAgo": "{0}m ago",
+      "HoursAgo": "{0}h ago",
+      "DaysAgo": "{0}d ago"
+    }
+  },
   "GitDashboard": {
     "PageTitle": "Git Repositories",
     "Title": "Git Repositories",

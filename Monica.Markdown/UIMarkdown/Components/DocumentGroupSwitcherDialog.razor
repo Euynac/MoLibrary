@@ -1,0 +1,82 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
+@using Monica.Markdown.Models
+@inject IStringLocalizer<MarkdownResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="group-switcher-dialog">
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Placeholder="@L["MarkdownViewer:Placeholders:SearchKnowledgeBases"]"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Class="group-switcher-search" />
+
+            <div class="group-switcher-list">
+                @if (FilteredGroups.Count == 0)
+                {
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="group-switcher-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff"
+                                 Size="Size.Large"
+                                 Color="Color.Default"
+                                 Style="opacity: 0.35;" />
+                        <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.65;">
+                            @GetEmptyStateText()
+                        </MudText>
+                    </MudStack>
+                }
+                else
+                {
+                    <DocumentGroupSelector Groups="FilteredGroups"
+                                           SelectedGroupKey="SelectedGroupKey"
+                                           SelectedGroupKeyChanged="SelectGroupAsync" />
+                }
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public List<MarkdownDocumentGroup> Groups { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedGroupKey { get; set; }
+
+    private string? _searchText;
+
+    private List<MarkdownDocumentGroup> FilteredGroups =>
+        Groups.Where(MatchesSearch).ToList();
+
+    private Task SelectGroupAsync(string groupKey)
+    {
+        MudDialog.Close(DialogResult.Ok(groupKey));
+        return Task.CompletedTask;
+    }
+
+    private bool MatchesSearch(MarkdownDocumentGroup group)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        var searchText = _searchText.Trim();
+        return group.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+               || (!string.IsNullOrWhiteSpace(group.Description)
+                   && group.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+               || group.BasePath.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetEmptyStateText() =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? L["MarkdownViewer:States:NoKnowledgeBases"]
+            : L["MarkdownViewer:States:NoMatchingKnowledgeBases"];
+}

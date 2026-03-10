@@ -1,0 +1,34 @@
+.group-switcher-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 280px;
+}
+
+::deep .group-switcher-search {
+    width: 100%;
+}
+
+.group-switcher-list {
+    max-height: min(60vh, 480px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.group-switcher-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.group-switcher-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.group-switcher-list::-webkit-scrollbar-thumb {
+    background-color: var(--mud-palette-lines-default);
+    border-radius: 999px;
+}
+
+.group-switcher-empty {
+    min-height: 220px;
+    justify-content: center;
+}
