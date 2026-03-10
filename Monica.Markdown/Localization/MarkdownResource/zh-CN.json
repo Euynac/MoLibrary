@@ -12,7 +12,7 @@
   },
   "MarkdownViewer": {
     "Placeholders": {
-      "SearchFiles": "搜索文件 (Cmd+K)",
+      "SearchFiles": "搜索文件",
       "SearchKnowledgeBases": "查找知识库..."
     },
     "States": {

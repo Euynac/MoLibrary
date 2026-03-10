@@ -12,7 +12,7 @@
   },
   "MarkdownViewer": {
     "Placeholders": {
-      "SearchFiles": "Search files (Cmd+K)",
+      "SearchFiles": "Search files",
       "SearchKnowledgeBases": "Find a knowledge base..."
     },
     "States": {

@@ -17,11 +17,6 @@
     margin-top: 0;
 }
 
-::deep .tree-search .mud-input-root {
-    border-radius: 14px;
-    background-color: var(--mud-palette-background-gray);
-}
-
 ::deep .tree-search .mud-input-outlined-border {
     border-color: var(--mud-palette-lines-default);
 }
