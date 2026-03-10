@@ -64,13 +64,15 @@ public class ModuleUICore(ModuleUICoreOption option)
     {
         if (builder.Environment.IsStaging())
         {
-            //巨坑：如果不使用下面的语句，WebAssets 在VS中debug环境虽然可以获得css等资源文件，但编译后的debug环境404错误。但生产环境又会访问.nuget目录，导致异常 所以必须限定环境，不能用于生产，生产要通过dotnet publish命令发布。
+            //巨坑：使用下面语句，使得 WebAssets 在VS中debug环境可以获得css等资源文件用于调试，但副作用是编译后的debug环境会出现404错误。因为它会使得生产环境访问.nuget目录，导致异常 所以必须限定环境，不能用于生产，生产要通过dotnet publish命令发布静态资源。
             //https://github.com/MudBlazor/MudBlazor/issues/2793
             builder.WebHost.UseStaticWebAssets();
             //测试环境可以通过查看.StaticWebAssets.xml看生成的静态资源文件。
 
             //生产环境是运行dotnet publish，会自动将依赖的static web assets拷贝到wwwroot文件夹。（直接通过dotnet build release 模式是不会生成wwwroot的）
             //https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-stuido#consume-content-from-a-referenced-rcl
+            
+            //如果遇到DEBUG 环境中http://localhost:5000/_framework/blazor.web.js 404错误，一般是因为没使用以上语句导致的。还有可能就是launchSettings.json没有被IDE读取到（缺少"$schema": "http://json.schemastore.org/launchsettings.json" ？），导致环境变量默认是Production，出现上述描述的问题。另外还有可能.csproj中没有配置<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
         }
     }
 
