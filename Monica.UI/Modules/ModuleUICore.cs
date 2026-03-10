@@ -72,7 +72,9 @@ public class ModuleUICore(ModuleUICoreOption option)
             //生产环境是运行dotnet publish，会自动将依赖的static web assets拷贝到wwwroot文件夹。（直接通过dotnet build release 模式是不会生成wwwroot的）
             //https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-stuido#consume-content-from-a-referenced-rcl
             
-            //如果遇到DEBUG 环境中http://localhost:5000/_framework/blazor.web.js 404错误，一般是因为没使用以上语句导致的。还有可能就是launchSettings.json没有被IDE读取到（缺少"$schema": "http://json.schemastore.org/launchsettings.json" ？），导致环境变量默认是Production，出现上述描述的问题。另外还有可能.csproj中没有配置<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
+            //如果遇到DEBUG 环境中http://localhost:5000/_framework/blazor.web.js 404错误，一般是因为没使用以上语句导致的。还有可能就是launchSettings.json没有被IDE读取到（缺少"$schema": "http://json.schemastore.org/launchsettings.json" ？），导致环境变量默认是Production，出现上述描述的问题。
+            //
+            //注意：现在发现似乎引起404的问题就只是因为 .csproj中没有配置<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>，和上述代码无关
         }
     }
 
