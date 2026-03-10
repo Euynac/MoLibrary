@@ -15,18 +15,56 @@
     line-height: var(--mo-markdown-body-line-height);
 }
 
-.mo-markdown-style-default .mud-markdown-body h1,
-.mo-markdown-style-default .mud-markdown-body h2,
-.mo-markdown-style-default .mud-markdown-body h3,
-.mo-markdown-style-default .mud-markdown-body h4,
-.mo-markdown-style-default .mud-markdown-body h5,
-.mo-markdown-style-default .mud-markdown-body h6 {
-    letter-spacing: -0.02em;
-}
-
-.mo-markdown-style-default .mud-markdown-body h1,
-.mo-markdown-style-default .mud-markdown-body h2 {
-    border-bottom-color: var(--mo-markdown-panel-border);
+.mo-markdown-style-default .mud-markdown-body {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-weight: bold;
+    }
+    h1 {
+        font-size: 1.875em;
+        /*30 / 16*/
+        line-height: 1.6em;
+        /* 48 / 30*/
+        margin-top: 2em;
+    }
+    h2,
+    h3 {
+        font-size: 1.3125em;
+        /*21 / 16*/
+        line-height: 1.15;
+        /*24 / 21*/
+        margin-top: 2.285714em;
+        /*48 / 21*/
+        margin-bottom: 1.15em;
+        /*24 / 21*/
+    }
+    h3 {
+        font-weight: normal;
+    }
+    h4 {
+        font-size: 1.125em;
+        /*18 / 16*/
+        margin-top: 2.67em;
+        /*48 / 18*/
+    }
+    h5,
+    h6 {
+        font-size: 1em;
+        /*16*/
+    }
+    h1 {
+        border-bottom: 1px solid;
+        margin-bottom: 1.875em;
+        padding-bottom: 0.8125em;
+    }
+    
+    h1, h2 {
+        border-bottom-color: var(--mo-markdown-panel-border);
+    }
 }
 
 .mo-markdown-style-default .mud-markdown-body code:not(.hljs) {
