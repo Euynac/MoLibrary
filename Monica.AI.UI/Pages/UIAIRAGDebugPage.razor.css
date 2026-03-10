@@ -207,7 +207,8 @@
     }
 
     .rag-sidebar {
-        max-height: 340px;
+        max-height: 40vh;
+        max-height: 40dvh;
     }
 
     .search-options {
