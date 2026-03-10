@@ -1,7 +1,7 @@
 ---
 name: mo-ui-design
 description: This skill should be used when the user asks to "design UI", "prototype UI", "UI mockup", "create UI design", "interactive MVP", "UI prototype", "design page layout", "wireframe", "rapid prototype", "ui-design", "design module UI", "preview UI", "UI设计", "设计UI", "原型设计", "UI原型", "界面设计", "模块设计", or needs to create an interactive HTML prototype before implementing a MudBlazor/Blazor UI module.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # Monica UI Design Prototyping
@@ -15,7 +15,7 @@ When this skill is active, the session is in **design mode**. Focus exclusively 
 - Do NOT write any Blazor/C#/MudBlazor implementation code
 - Do NOT create `.razor`, `.razor.cs`, `.razor.css`, or any `.cs` files
 - Do NOT discuss implementation details, service layers, or backend concerns
-- Only produce: `design.md`, `index.html`, and design-related conversation
+- Only produce design artifacts inside `.ui-design/{feature-name}/`, such as `design.md`, `index.html`, optional prototype CSS/JS/data files, and design-related conversation
 - If the user asks to start coding, remind them to begin a new session with `/mo-ui-development`
 
 Design first, code later.
@@ -26,7 +26,7 @@ Design first, code later.
 |-------|--------|--------|
 | 1. Discover | Gather requirements and commit to an aesthetic direction | Understanding + Design Thinking |
 | 2. Design | Break UI into modules, plan layout and interactions | `design.md` |
-| 3. Prototype | Build interactive HTML with distinctive aesthetics | `index.html` |
+| 3. Prototype | Build interactive HTML prototype with distinctive aesthetics | `index.html` + optional prototype support files |
 | 4. Iterate | Refine based on user feedback | Updated files |
 
 ## Phase 1: Discovery and Design Thinking
@@ -78,11 +78,56 @@ The `design.md` must contain:
 
 ### Output Structure
 
+Default to a single entry page, but do **not** force everything into one file when the prototype is large.
+
+#### Small / Medium Prototype
+
 ```
 .ui-design/{feature-name}/
 ├── design.md      # Design document
 └── index.html     # Interactive prototype
 ```
+
+#### Complex Prototype
+
+When the prototype has many views, large mock data, or substantial interaction logic, use a small static file structure instead:
+
+```
+.ui-design/{feature-name}/
+├── design.md          # Design document
+├── index.html         # Prototype entry point
+├── styles.css         # Optional shared styling
+├── app.js             # Optional interaction logic
+├── data.js            # Optional mock data / view models
+├── components/        # Optional view fragments or component renderers
+└── assets/            # Optional images, icons, sample media
+```
+
+Rules:
+- `index.html` must remain the main entry point
+- Keep the prototype static and browser-runnable without a build step
+- Prefer simple `<link>` and `<script>` references over bundlers
+- Keep design artifacts self-contained under `.ui-design/{feature-name}/`
+
+### Complexity Threshold
+
+Use **single-file** only when most of these are true:
+
+- One primary page/view
+- Up to 3 major interaction zones
+- Limited mock data
+- Minimal state management
+- Total file remains easy to review
+
+Switch to **multi-file prototype structure** when any of these become true:
+
+- Multiple screens, panels, dialogs, or navigation states
+- Large mock datasets or deeply nested example content
+- More than one substantial interaction system (tree, modal, filters, drag states, chart states, etc.)
+- Inline script/style blocks become hard to scan
+- `index.html` would become too large to comfortably maintain
+
+If splitting files, note the file map briefly in `design.md`.
 
 ### Aesthetic Execution Rules
 
@@ -98,17 +143,17 @@ No two designs should look the same. Vary themes, fonts, and aesthetics across p
 
 ### Prototype Technical Rules
 
-Build a single `index.html` that:
+Build an interactive prototype whose entry point is `index.html`:
 
 1. **Uses Tailwind CSS via CDN** with custom config extending colors and fonts to match the chosen aesthetic direction
 
-2. **Is fully interactive** — Tabs switch content, dialogs open/close, navigation highlights, forms accept input. All JS inline.
+2. **Is fully interactive** — Tabs switch content, dialogs open/close, navigation highlights, forms accept input. For small prototypes, inline JS is fine. For complex prototypes, move logic into `app.js` and keep `index.html` readable.
 
 3. **Is responsive** — Use Tailwind breakpoints (`sm:`, `md:`, `lg:`, `xl:`).
 
 4. **Includes meaningful animations** — Page load reveals, hover effects, transitions matching the aesthetic direction. CSS-only preferred.
 
-5. **Uses realistic placeholder data** — Show the real structure, sections, and interaction flow with data that feels authentic.
+5. **Uses realistic placeholder data** — Show the real structure, sections, and interaction flow with data that feels authentic. If mock data becomes large, move it into `data.js`.
 
 6. **Uses Lucide icons** (optional) for iconography:
 ```html
@@ -116,11 +161,23 @@ Build a single `index.html` that:
 <script>lucide.createIcons();</script>
 ```
 
+### Maintainability Rules
+
+- Optimize for readability of the prototype source, not just speed of generation
+- Avoid 1000+ line `index.html` files when a small split would make the prototype easier to evolve
+- Separate concerns when needed:
+  - structure in `index.html`
+  - reusable styling in `styles.css`
+  - interactions/state in `app.js`
+  - large mock content in `data.js`
+- Do not introduce frameworks, bundlers, or package managers just for the prototype
+- Keep the prototype easy to hand off, inspect, and iterate
+
 ## Phase 4: Iteration
 
 When the user provides feedback:
-1. Update `index.html` with the requested changes
-2. Update `design.md` if the module structure changed
+1. Update the relevant prototype files (`index.html`, optional CSS/JS/data files)
+2. Update `design.md` if the module structure or file strategy changed
 3. Summarize what changed
 4. Do NOT transition to implementation code — stay in design mode
 
