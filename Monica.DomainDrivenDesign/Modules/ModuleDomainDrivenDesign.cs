@@ -39,6 +39,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleAutoControllersGuide>().Register();
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register();
@@ -64,7 +65,7 @@ public static class ModuleDomainDrivenDesignBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DomainDrivenDesign 模块
+        /// 配置 DomainDrivenDesign 模块 （该模块还依赖配置 AutoController.Generator 项目）
         /// </summary>
         public static ModuleDomainDrivenDesignGuide AddDomainDrivenDesign(Action<ModuleDomainDrivenDesignOption>? action = null)
         {
