@@ -36,17 +36,22 @@
         {
             <MudTreeView T="MarkdownDocumentNodeData"
                          Items="_treeItems"
+                         SelectedValue="_selectedValue"
                          SelectedValueChanged="OnItemSelected"
                          Hover="true"
-                         Dense="true">
+                         Dense="true"
+                         Ripple="false"
+                         Class="doc-tree-view">
                 <ItemTemplate>
                     <MudTreeViewItem T="MarkdownDocumentNodeData"
                                      Items="@context.Children"
                                      Value="@context.Value"
                                      Text="@context.Text"
+                                     TextClass="@GetTextClass(context.Value)"
                                      Icon="@GetIcon(context.Value)"
-                                     IconColor="@GetIconColor(context.Value)"
-                                     Expanded="IsExpanded(context.Value)" />
+                                     IconColor="Color.Inherit"
+                                     Expanded="@context.Expanded"
+                                     ExpandedChanged="@((bool expanded) => OnExpandedChanged(context, expanded))" />
                 </ItemTemplate>
             </MudTreeView>
         }
@@ -63,7 +68,10 @@
     [Parameter]
     public EventCallback<MarkdownDocument?> SelectedDocumentChanged { get; set; }
 
+    private readonly HashSet<string> _expandedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private TreeNode<MarkdownDocumentNodeData>? _lastTreeRoot;
     private string? _searchText;
+    private MarkdownDocumentNodeData? _selectedValue;
     private List<DocumentTreeItem>? _treeItems;
     private bool HasSearchText => !string.IsNullOrWhiteSpace(_searchText);
 
@@ -72,29 +80,66 @@
         get => _searchText;
         set
         {
-            if (_searchText == value)
+            var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+            if (_searchText == normalized)
             {
                 return;
             }
 
-            _searchText = value;
+            _searchText = normalized;
             ApplyTreeFilter();
         }
     }
 
     protected override void OnParametersSet()
     {
+        if (!ReferenceEquals(_lastTreeRoot, TreeRoot))
+        {
+            _lastTreeRoot = TreeRoot;
+            ResetExpandedPaths(TreeRoot);
+        }
+
+        _selectedValue = FindSelectedValue(TreeRoot, SelectedDocument);
         ApplyTreeFilter();
     }
 
     private void ApplyTreeFilter()
     {
-        _treeItems = BuildTreeItems(TreeRoot, _searchText);
+        _treeItems = BuildTreeItems(TreeRoot, _searchText, _expandedPaths);
+    }
+
+    private void ResetExpandedPaths(TreeNode<MarkdownDocumentNodeData>? node)
+    {
+        _expandedPaths.Clear();
+
+        if (node is null)
+        {
+            return;
+        }
+
+        RegisterExpandedPaths(node);
+    }
+
+    private void RegisterExpandedPaths(TreeNode<MarkdownDocumentNodeData> node, string currentPath = "")
+    {
+        foreach (var child in node.Children)
+        {
+            var childPath = string.IsNullOrWhiteSpace(currentPath)
+                ? child.Data.Name
+                : $"{currentPath}/{child.Data.Name}";
+
+            if (!child.Data.IsDocument)
+            {
+                _expandedPaths.Add(childPath);
+                RegisterExpandedPaths(child, childPath);
+            }
+        }
     }
 
     private static List<DocumentTreeItem>? BuildTreeItems(
         TreeNode<MarkdownDocumentNodeData>? node,
         string? searchText,
+        HashSet<string> expandedPaths,
         string currentPath = "",
         bool includeAllDescendants = false)
     {
@@ -111,14 +156,23 @@
                 : $"{currentPath}/{child.Data.Name}";
             var isMatched = includeAllDescendants || MatchesSearch(child, childPath, searchText);
             var shouldIncludeSubtree = includeAllDescendants || (!child.Data.IsDocument && isMatched);
-            var childItems = BuildTreeItems(child, searchText, childPath, shouldIncludeSubtree);
+            var childItems = BuildTreeItems(child, searchText, expandedPaths, childPath, shouldIncludeSubtree);
 
             if (!isMatched && childItems is null)
             {
                 continue;
             }
 
-            items.Add(new DocumentTreeItem(child.Data, child.Data.Name, childItems));
+            var shouldExpand = !string.IsNullOrWhiteSpace(searchText)
+                ? !child.Data.IsDocument && (isMatched || childItems is not null)
+                : expandedPaths.Contains(childPath);
+
+            items.Add(new DocumentTreeItem(
+                child.Data,
+                child.Data.Name,
+                childPath,
+                childItems,
+                shouldExpand));
         }
 
         return items.Count > 0 ? items : null;
@@ -149,47 +203,95 @@
                    || node.Data.Document.RelativePath.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static MarkdownDocumentNodeData? FindSelectedValue(
+        TreeNode<MarkdownDocumentNodeData>? node,
+        MarkdownDocument? selectedDocument)
+    {
+        if (node is null || selectedDocument is null)
+        {
+            return null;
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (child.Data.Document is not null
+                && string.Equals(
+                    child.Data.Document.RelativePath,
+                    selectedDocument.RelativePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return child.Data;
+            }
+
+            var nested = FindSelectedValue(child, selectedDocument);
+            if (nested is not null)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
+
     private async Task OnItemSelected(MarkdownDocumentNodeData? data)
     {
         if (data?.IsDocument == true && data.Document is not null)
         {
+            _selectedValue = data;
             await SelectedDocumentChanged.InvokeAsync(data.Document);
         }
     }
 
+    private void OnExpandedChanged(MudBlazor.ITreeItemData<MarkdownDocumentNodeData> item, bool expanded)
+    {
+        if (item is not DocumentTreeItem documentTreeItem)
+        {
+            return;
+        }
+
+        documentTreeItem.Expanded = expanded;
+
+        if (expanded)
+        {
+            _expandedPaths.Add(documentTreeItem.Path);
+            return;
+        }
+
+        _expandedPaths.Remove(documentTreeItem.Path);
+    }
+
     private static string GetIcon(MarkdownDocumentNodeData? data) =>
         data?.IsDocument == true
-            ? Icons.Custom.FileFormats.FileDocument
-            : Icons.Custom.Uncategorized.Folder;
+            ? Icons.Material.Outlined.Description
+            : Icons.Material.Outlined.Folder;
 
-    private static Color GetIconColor(MarkdownDocumentNodeData? data) =>
-        data?.IsDocument == true ? Color.Info : Color.Warning;
+    private static string GetTextClass(MarkdownDocumentNodeData? data) =>
+        data?.IsDocument == true
+            ? "tree-item-label tree-item-label-file"
+            : "tree-item-label tree-item-label-folder";
 
-    private bool IsExpanded(MarkdownDocumentNodeData? data) =>
-        !string.IsNullOrWhiteSpace(_searchText) || data?.IsDocument != true;
-
-    /// <summary>
-    /// Custom tree item implementation for MudBlazor v9 TreeView.
-    /// Implements ITreeItemData to provide tree structure for MarkdownDocumentNodeData.
-    /// </summary>
     private sealed class DocumentTreeItem : MudBlazor.ITreeItemData<MarkdownDocumentNodeData>
     {
         public DocumentTreeItem(
             MarkdownDocumentNodeData value,
             string text,
-            List<DocumentTreeItem>? children)
+            string path,
+            List<DocumentTreeItem>? children,
+            bool expanded)
         {
             Value = value;
             Text = text;
+            Path = path;
             Children = children;
             Icon = string.Empty;
-            Expanded = false;
+            Expanded = expanded;
             Expandable = children?.Count > 0;
             Selected = false;
             Visible = true;
         }
 
         public MarkdownDocumentNodeData Value { get; }
+        public string Path { get; }
         public string? Text { get; set; }
         public string? Icon { get; set; }
         public bool Expanded { get; set; }
