@@ -103,25 +103,33 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
 
             if (Option.UseAuth)
             {
-                var securityScheme = new OpenApiSecurityScheme
-                {
-                    Name = "JWT Authentication",
-                    Description = "Enter JWT Bearer token **_only_**",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer", // must be lowercase
-                    BearerFormat = "JWT"
-                };
-                options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, securityScheme);
-                options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
-                {
-                    {new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme), new List<string>()}
-                });
+                ConfigureJwtBearerSecurity(options);
             }
 
             Option.ExtendSwaggerGenAction?.Invoke(options);
 
         }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
+    }
+
+    private const string JwtSecuritySchemeId = JwtBearerDefaults.AuthenticationScheme;
+    private const string JwtBearerHttpScheme = "bearer";
+
+    private static void ConfigureJwtBearerSecurity(SwaggerGenOptions options)
+    {
+        options.AddSecurityDefinition(JwtSecuritySchemeId, new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Description = "Enter JWT Bearer token **_only_**",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = JwtBearerHttpScheme,
+            BearerFormat = "JWT"
+        });
+
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(JwtSecuritySchemeId, document)] = []
+        });
     }
 
 }
