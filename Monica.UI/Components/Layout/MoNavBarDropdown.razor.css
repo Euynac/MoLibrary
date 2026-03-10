@@ -6,7 +6,7 @@
 }
 
 .navbar-link {
-    height: 64px;
+    height: 100%;
     padding: 0 20px;
     display: flex;
     align-items: center;
@@ -26,7 +26,7 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 底部边框效果 */
+/* Bottom border effect */
 .navbar-link::before {
     content: '';
     position: absolute;
@@ -43,7 +43,7 @@
     width: 80%;
 }
 
-/* 下拉菜单 */
+/* Dropdown menu */
 .dropdown-menu {
     position: absolute;
     top: 100%;
@@ -58,7 +58,7 @@
     animation: dropdownFadeIn 0.2s ease-out;
 }
 
-/* 处理MudNavLink组件 */
+/* MudNavLink styling */
 .dropdown-menu ::deep .dropdown-item {
     padding: 0;
     min-height: 42px;
@@ -110,7 +110,7 @@
     color: var(--mud-palette-primary);
 }
 
-/* 左侧强调线 */
+/* Left accent line */
 .dropdown-menu ::deep .dropdown-item .mud-nav-link::before {
     content: '';
     position: absolute;
@@ -128,9 +128,9 @@
     transform: translateX(0);
 }
 
-/* 暗色模式下拉菜单半透明效果 */
+/* Dark mode dropdown styling */
 [data-theme*="dark"] .dropdown-menu {
     background-color: var(--mud-palette-surface);
 }
 
-/* 动画已在MoNavBar.razor.css中定义 */
+/* Animations are defined in MoNavBar.razor.css */

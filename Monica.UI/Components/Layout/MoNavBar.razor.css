@@ -3,7 +3,7 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 64px;
+    height: var(--mo-appbar-height);
     background: linear-gradient(
         135deg,
         var(--mud-palette-surface) 0%,
@@ -102,7 +102,7 @@
     }
 }
 
-/* 主题适配 */
+/* Theme variants */
 [data-theme*="light"] .mo-navbar {
     background: linear-gradient(
         135deg,
@@ -119,7 +119,7 @@
     );
 }
 
-/* 动画关键帧 */
+/* Animation keyframes */
 @keyframes dropdownFadeIn {
     from {
         opacity: 0;

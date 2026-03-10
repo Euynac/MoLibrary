@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IMoBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.1.0
+version: 2.2.0
 ---
 
 # Monica UI Development Guide
@@ -95,6 +95,14 @@ Always specify `T` for generic MudBlazor components:
 
 - No online font/CDN dependencies for runtime UI assets.
 - Keep static resources local (`wwwroot/fonts`, local CSS/JS assets).
+
+### 8. Layout-Owned AppBar and Viewport Height
+
+- Keep AppBar height and remaining viewport height owned by the shell layout.
+- In `MoMainLayout.razor.css`, expose `--mo-appbar-height: var(--mud-appbar-height, 64px)` on `.mo-layout`.
+- AppBar and navigation components must consume the layout variable (`height: var(--mo-appbar-height)` or `height: 100%` when the parent already owns the height).
+- Full-height pages must rely on the parent container with `height: 100%`, `min-height: 0`, and local overflow handling instead of `calc(100vh - 64px)`, `calc(100vh - 56px)`, or similar hardcoded offsets.
+- Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
 ## MudBlazor CSS Variable Workflow (Required)
 
@@ -202,5 +210,6 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 - [ ] Use valid MudBlazor CSS variables only
 - [ ] Run CSS variable validation when styling changes
 - [ ] Use `IMoBrowserStorage` for browser persistence
+- [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use localization for all user-facing text
 - [ ] Add AppBar/navigation keys to `UIRegistryResource` when using `RegisterLocalizedComponent`

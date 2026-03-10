@@ -12,7 +12,7 @@
 }
 
 .navbar-link {
-    height: 64px;
+    height: 100%;
     padding: 0 20px;
     display: flex;
     align-items: center;
@@ -65,7 +65,8 @@
 }
 
 .more-menu-scrollable {
-    max-height: calc(100vh - 88px);
+    max-height: calc(100vh - var(--mo-appbar-height) - 24px);
+    max-height: calc(100dvh - var(--mo-appbar-height) - 24px);
     overflow-y: auto;
     overscroll-behavior: contain;
 }
@@ -115,7 +116,8 @@
     padding: 8px 0;
     animation: flyoutSlideIn 0.2s ease-out;
     z-index: 1001;
-    max-height: calc(100vh - 96px);
+    max-height: calc(100vh - var(--mo-appbar-height) - 32px);
+    max-height: calc(100dvh - var(--mo-appbar-height) - 32px);
     overflow-y: auto;
     overscroll-behavior: contain;
 }

@@ -32,7 +32,8 @@
 
 .ai-chat-shell {
     display: flex;
-    height: calc(100vh - 64px);
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
     font-family: "Nunito", "Open Sans", system-ui, sans-serif;
     background: var(--mud-palette-background);
@@ -90,10 +91,4 @@
 
 .ai-main ::deep .chat-container {
     flex: 1;
-}
-
-@media (max-width: 1024px) {
-    .ai-chat-shell {
-        height: calc(100vh - 56px);
-    }
 }
