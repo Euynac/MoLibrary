@@ -8,6 +8,8 @@ namespace Monica.Core.Features.ObservableInstance;
 /// </summary>
 public class ObservableAgent : IDisposable
 {
+    public delegate void StateChangedHandler(ObservableStateHistory stateChange);
+
     private readonly List<ObservableStateHistory> _stateHistory = [];
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly ILogger? _logger;
@@ -138,6 +140,11 @@ public class ObservableAgent : IDisposable
     }
 
     /// <summary>
+    /// Raised when a state transition is recorded.
+    /// </summary>
+    public event StateChangedHandler? StateChanged;
+
+    /// <summary>
     /// Initializes a new instance of the ObservableAgent class
     /// </summary>
     /// <param name="instanceId">Unique instance identifier</param>
@@ -170,14 +177,19 @@ public class ObservableAgent : IDisposable
     public void RecordState(string message, object? newState = null, Exception? exception = null,
         LogLevel? logLevel = null)
     {
+        ObservableStateHistory? history = null;
+        var shouldNotifyStateChanged = false;
+        var shouldLog = false;
+
         _lock.EnterWriteLock();
         try
         {
+            var previousState = CurrentState;
             logLevel ??= GetLogLevel(newState);
-            var history = new ObservableStateHistory
+            history = new ObservableStateHistory
             {
-                PreviousState = CurrentState,
-                CurrentState = newState ?? CurrentState,
+                PreviousState = previousState,
+                CurrentState = newState ?? previousState,
                 Message = message,
                 Exception = exception,
                 Timestamp = DateTime.UtcNow,
@@ -201,15 +213,22 @@ public class ObservableAgent : IDisposable
                 TotalExceptions++;
             }
 
-            // Auto-log based on state mapping
-            if (_logger != null && newState != null && logLevel.HasValue)
-            {
-                LogStateChange(logLevel.Value, message, newState, exception);
-            }
+            shouldLog = _logger != null && newState != null && logLevel.HasValue;
+            shouldNotifyStateChanged = newState != null && !Equals(previousState, newState);
         }
         finally
         {
             _lock.ExitWriteLock();
+        }
+
+        if (shouldLog && logLevel.HasValue && newState != null)
+        {
+            LogStateChange(logLevel.Value, message, newState, exception);
+        }
+
+        if (shouldNotifyStateChanged && history != null)
+        {
+            StateChanged?.Invoke(history);
         }
     }
 

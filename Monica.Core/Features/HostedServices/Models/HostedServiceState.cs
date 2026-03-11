@@ -26,6 +26,11 @@ public enum HostedServiceState
     Executing,
 
     /// <summary>
+    /// Service is waiting for a dependency checkpoint before it can continue initialization
+    /// </summary>
+    WaitingDependency,
+
+    /// <summary>
     /// Service is in the process of stopping gracefully
     /// </summary>
     Stopping,

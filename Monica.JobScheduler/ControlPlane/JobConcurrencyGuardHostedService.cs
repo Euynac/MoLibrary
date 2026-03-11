@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Features.HostedServices.Interfaces;
+using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
@@ -9,6 +11,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
+using Monica.JobScheduler.WorkerPlane;
 using Monica.RegisterCentre.Core;
 using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Interfaces;
@@ -25,6 +28,7 @@ public class JobConcurrencyGuardHostedService(
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILogger<JobConcurrencyGuardHostedService> logger,
+    IMoHostedServiceDependencyCoordinator hostedServiceDependencyCoordinator,
     ILeaderElectionService leaderService,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
@@ -40,6 +44,21 @@ public class JobConcurrencyGuardHostedService(
 
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
+        RecordState(
+            $"Waiting for {nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
+            HostedServiceState.WaitingDependency,
+            logLevel: LogLevel.Information);
+
+        await hostedServiceDependencyCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
+            JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady,
+            LeaderService.LeaderBecomeTime,
+            cancellationToken);
+
+        RecordState(
+            $"{nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing initialization",
+            HostedServiceState.Executing,
+            logLevel: LogLevel.Information);
+
         await InitializeConcurrencyTrackingAsync(cancellationToken);
     }
 
@@ -595,9 +614,7 @@ public class JobConcurrencyGuardHostedService(
     }
 
     /// <summary>
-    /// Handles JobDefinitionsChangedEvent to add/update concurrency tracking for dynamically registered jobs.
-    /// This resolves the race condition where JobConcurrencyGuardHostedService may initialize before
-    /// JobRegistrationHostedService has saved job definitions to the repository.
+    /// Handles JobDefinitionsChangedEvent to add or update concurrency tracking for job definition changes after startup.
     /// </summary>
     private Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
     {

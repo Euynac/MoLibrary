@@ -1,10 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Features.HostedServices.Interfaces;
+using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Models;
+using Monica.JobScheduler.WorkerPlane;
 using Monica.RegisterCentre.Core;
 using Monica.RegisterCentre.Events;
 using Monica.RegisterCentre.Interfaces;
@@ -22,6 +26,7 @@ public class JobSchedulerHostedService(
     RecurringJobScheduler recurringJobScheduler,
     TriggeredJobScheduler triggeredJobScheduler,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    IMoHostedServiceDependencyCoordinator hostedServiceDependencyCoordinator,
     ILeaderElectionService leaderService,
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
@@ -38,6 +43,21 @@ public class JobSchedulerHostedService(
 
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {
+        RecordState(
+            $"Waiting for {nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}'",
+            HostedServiceState.WaitingDependency,
+            logLevel: LogLevel.Information);
+
+        await hostedServiceDependencyCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
+            JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady,
+            LeaderService.LeaderBecomeTime,
+            cancellationToken);
+
+        RecordState(
+            $"{nameof(JobRegistrationHostedService)} checkpoint '{JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}' reached, continuing scheduler initialization",
+            HostedServiceState.Executing,
+            logLevel: LogLevel.Information);
+
         await recurringJobScheduler.InitializeAsync(cancellationToken);
 
         // Initialize triggered job scheduler

@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Features.HostedServices.Interfaces;
 using Monica.Core.Features.ObservableInstance;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
@@ -24,6 +25,7 @@ public class JobRegistrationHostedService(
     JobRegistry jobRegistry,
     IReadOnlyList<JobDefinition> jobDefinitions,
     ILogger<JobRegistrationHostedService> logger,
+    IMoHostedServiceDependencyCoordinator hostedServiceDependencyCoordinator,
     ILeaderElectionService leaderService,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IOptions<ModuleJobSchedulerOption> option,
@@ -79,6 +81,14 @@ public class JobRegistrationHostedService(
             var status = result.AddedJobKeys.Contains(definition.JobKey) ? "Added" : "Already Registered";
             await jobRegistry.RegisterJob(definition, status);
         }
+
+        hostedServiceDependencyCoordinator.SignalCheckpoint(
+            typeof(JobRegistrationHostedService),
+            JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady);
+
+        RecordState(
+            $"Signaled hosted service checkpoint: {JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady}",
+            logLevel: LogLevel.Information);
 
         if (_jobSchedulerOptions.RecurringJobDebugMode)
         {

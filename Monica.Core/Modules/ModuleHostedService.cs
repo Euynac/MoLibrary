@@ -45,8 +45,9 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register the HostedService manager as singleton
-        services.AddSingleton<IMoHostedServiceManager, MoHostedServiceManager>();
+        services.AddSingleton<MoHostedServiceManager>();
+        services.AddSingleton<IMoHostedServiceManager>(provider => provider.GetRequiredService<MoHostedServiceManager>());
+        services.AddSingleton<IMoHostedServiceDependencyCoordinator>(provider => provider.GetRequiredService<MoHostedServiceManager>());
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)

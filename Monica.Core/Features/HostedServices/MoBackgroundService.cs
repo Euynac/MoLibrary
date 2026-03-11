@@ -91,6 +91,7 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
         agent.SetInformationStates(
             HostedServiceState.Running,
             HostedServiceState.Executing,
+            HostedServiceState.WaitingDependency,
             HostedServiceState.Stopping,
             HostedServiceState.Stopped
         );
