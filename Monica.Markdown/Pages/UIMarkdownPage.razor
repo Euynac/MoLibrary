@@ -1,6 +1,7 @@
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Localization
 @using Microsoft.JSInterop
+@using System.Net
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.Markdown.UIMarkdown.Components
@@ -124,6 +125,7 @@
     private IJSObjectReference? _hashObserverModule;
     private IJSObjectReference? _layoutModule;
     private DotNetObjectReference<UIMarkdownPage>? _hashObserverReference;
+    private bool _pendingHeadingTrackerRefresh;
 
     protected override void OnInitialized()
     {
@@ -144,6 +146,11 @@
                 "import", "./_content/Monica.UI/js/mo-url-hash-observer.js");
             _hashObserverReference = DotNetObjectReference.Create(this);
             await _hashObserverModule.InvokeVoidAsync("observeHash", _hashObserverReference);
+        }
+
+        if (_pendingHeadingTrackerRefresh)
+        {
+            await RefreshHeadingTrackerAsync();
         }
     }
 
@@ -210,6 +217,7 @@
     {
         _currentAnchorId = null;
         _documentHeadings = [];
+        _pendingHeadingTrackerRefresh = true;
         await LoadGroupTreeAsync(groupKey);
         NavigateToLocation(new MarkdownViewerLocation(groupKey));
     }
@@ -218,6 +226,7 @@
     {
         _currentAnchorId = null;
         _documentHeadings = [];
+        _pendingHeadingTrackerRefresh = true;
         await LoadDocumentAsync(document);
         NavigateToLocation(new MarkdownViewerLocation(_selectedGroupKey, document?.RelativePath));
     }
@@ -244,6 +253,8 @@
         }
 
         _documentHeadings = normalizedHeadings;
+        _currentAnchorId = ResolveCurrentAnchorId(_currentAnchorId);
+        _pendingHeadingTrackerRefresh = true;
         return InvokeAsync(StateHasChanged);
     }
 
@@ -262,7 +273,7 @@
     [JSInvokable]
     public Task OnHashChangedAsync(string? anchorId)
     {
-        var normalizedAnchorId = string.IsNullOrWhiteSpace(anchorId) ? null : anchorId;
+        var normalizedAnchorId = ResolveCurrentAnchorId(anchorId);
         if (string.Equals(_currentAnchorId, normalizedAnchorId, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
@@ -274,7 +285,8 @@
 
     private async Task ApplyLocationAsync(MarkdownViewerLocation location)
     {
-        _currentAnchorId = location.AnchorId;
+        var requestedAnchorId = ResolveCurrentAnchorId(location.AnchorId);
+        _currentAnchorId = requestedAnchorId;
 
         if (_groups is not { Count: > 0 })
         {
@@ -292,7 +304,7 @@
         if (!string.Equals(_selectedGroupKey, targetGroup.Key, StringComparison.Ordinal)
             || (_currentTree is null && targetGroup.IsValid))
         {
-            await LoadGroupTreeAsync(targetGroup.Key);
+            await LoadGroupTreeAsync(targetGroup.Key, requestedAnchorId);
         }
 
         if (string.IsNullOrWhiteSpace(location.DocumentRelativePath))
@@ -319,17 +331,19 @@
         if (!isCurrentDocument || _documentContent is null)
         {
             _documentHeadings = [];
-            await LoadDocumentAsync(targetDocument);
+            await LoadDocumentAsync(targetDocument, requestedAnchorId);
             return;
         }
 
+        _currentAnchorId = requestedAnchorId;
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task LoadGroupTreeAsync(string groupKey)
+    private async Task LoadGroupTreeAsync(string groupKey, string? requestedAnchorId = null)
     {
         _selectedGroupKey = groupKey;
         ClearDocumentSelection();
+        _currentAnchorId = requestedAnchorId;
         _currentTree = null;
 
         var group = GetCurrentGroup();
@@ -350,10 +364,11 @@
         StateHasChanged();
     }
 
-    private async Task LoadDocumentAsync(MarkdownDocument? document)
+    private async Task LoadDocumentAsync(MarkdownDocument? document, string? requestedAnchorId = null)
     {
         _selectedDocument = document;
         _documentContent = null;
+        _currentAnchorId = requestedAnchorId;
 
         if (document is null)
         {
@@ -448,6 +463,92 @@
         _contentLoading = false;
         _currentAnchorId = null;
         _documentHeadings = [];
+        _pendingHeadingTrackerRefresh = true;
+    }
+
+    private async Task RefreshHeadingTrackerAsync()
+    {
+        if (_layoutModule is null)
+        {
+            return;
+        }
+
+        _pendingHeadingTrackerRefresh = false;
+
+        if (_selectedDocument is null || _documentHeadings.Count == 0)
+        {
+            await _layoutModule.InvokeVoidAsync("disposeActiveHeadingTracker");
+            return;
+        }
+
+        await _layoutModule.InvokeVoidAsync(
+            "observeActiveHeading",
+            _documentHeadings.Select(static heading => heading.Id).ToArray(),
+            _currentAnchorId,
+            _hashObserverReference);
+    }
+
+    private string? ResolveCurrentAnchorId(string? anchorId)
+    {
+        var normalizedAnchorId = NormalizeAnchorId(anchorId);
+        if (normalizedAnchorId is null || _documentHeadings.Count == 0)
+        {
+            return normalizedAnchorId;
+        }
+
+        foreach (var candidate in GetAnchorCandidates(normalizedAnchorId))
+        {
+            var matchedHeading = _documentHeadings.FirstOrDefault(
+                heading => string.Equals(heading.Id, candidate, StringComparison.Ordinal));
+            if (matchedHeading is not null)
+            {
+                return matchedHeading.Id;
+            }
+        }
+
+        return normalizedAnchorId;
+    }
+
+    private static IEnumerable<string> GetAnchorCandidates(string anchorId)
+    {
+        yield return anchorId;
+
+        string? decodedAnchorId = null;
+        try
+        {
+            decodedAnchorId = Uri.UnescapeDataString(anchorId);
+        }
+        catch (UriFormatException)
+        {
+        }
+
+        if (!string.IsNullOrEmpty(decodedAnchorId)
+            && !string.Equals(decodedAnchorId, anchorId, StringComparison.Ordinal))
+        {
+            yield return decodedAnchorId;
+
+            var encodedDecodedAnchorId = WebUtility.UrlEncode(decodedAnchorId);
+            if (!string.Equals(encodedDecodedAnchorId, anchorId, StringComparison.Ordinal))
+            {
+                yield return encodedDecodedAnchorId;
+            }
+        }
+    }
+
+    private static string? NormalizeAnchorId(string? anchorId)
+    {
+        if (string.IsNullOrWhiteSpace(anchorId))
+        {
+            return null;
+        }
+
+        var normalizedAnchorId = anchorId.Trim();
+        if (normalizedAnchorId.StartsWith('#'))
+        {
+            normalizedAnchorId = normalizedAnchorId[1..];
+        }
+
+        return string.IsNullOrWhiteSpace(normalizedAnchorId) ? null : normalizedAnchorId;
     }
 
     private void NavigateToLocation(MarkdownViewerLocation location)
@@ -504,6 +605,14 @@
 
         if (_layoutModule is not null)
         {
+            try
+            {
+                await _layoutModule.InvokeVoidAsync("disposeActiveHeadingTracker");
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+
             try
             {
                 await _layoutModule.DisposeAsync();

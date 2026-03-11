@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Localization
+@using System.Net
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.UI.Components.Markdown
@@ -44,6 +45,7 @@
                 <button type="button"
                         class="@GetHeadingClass(heading)"
                         title="@heading.Title"
+                        data-anchor-id="@heading.Id"
                         @onclick="@(() => SelectHeadingAsync(heading.Id))"
                         aria-current="@(IsCurrentHeading(heading) ? "location" : null)">
                     <span class="toc-link-text">@heading.Title</span>
@@ -91,8 +93,66 @@
         return string.Join(" ", classes);
     }
 
-    private bool IsCurrentHeading(MoMarkdownHeading heading) =>
-        string.Equals(heading.Id, CurrentAnchorId, StringComparison.Ordinal);
+    private bool IsCurrentHeading(MoMarkdownHeading heading)
+    {
+        var normalizedCurrentAnchorId = NormalizeAnchorId(CurrentAnchorId);
+        if (normalizedCurrentAnchorId is null)
+        {
+            return false;
+        }
+
+        foreach (var candidate in GetAnchorCandidates(normalizedCurrentAnchorId))
+        {
+            if (string.Equals(heading.Id, candidate, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> GetAnchorCandidates(string anchorId)
+    {
+        yield return anchorId;
+
+        string? decodedAnchorId = null;
+        try
+        {
+            decodedAnchorId = Uri.UnescapeDataString(anchorId);
+        }
+        catch (UriFormatException)
+        {
+        }
+
+        if (!string.IsNullOrWhiteSpace(decodedAnchorId)
+            && !string.Equals(decodedAnchorId, anchorId, StringComparison.Ordinal))
+        {
+            yield return decodedAnchorId;
+
+            var encodedDecodedAnchorId = WebUtility.UrlEncode(decodedAnchorId);
+            if (!string.Equals(encodedDecodedAnchorId, anchorId, StringComparison.Ordinal))
+            {
+                yield return encodedDecodedAnchorId;
+            }
+        }
+    }
+
+    private static string? NormalizeAnchorId(string? anchorId)
+    {
+        if (string.IsNullOrWhiteSpace(anchorId))
+        {
+            return null;
+        }
+
+        var normalizedAnchorId = anchorId.Trim();
+        if (normalizedAnchorId.StartsWith('#'))
+        {
+            normalizedAnchorId = normalizedAnchorId[1..];
+        }
+
+        return string.IsNullOrWhiteSpace(normalizedAnchorId) ? null : normalizedAnchorId;
+    }
 
     private Task SelectHeadingAsync(string headingId)
     {

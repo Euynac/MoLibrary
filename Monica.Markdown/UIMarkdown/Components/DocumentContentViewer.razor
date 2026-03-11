@@ -112,8 +112,8 @@
     }
     else
     {
-        <div class="content-scroll">
-            <div class="content-body">
+        <div class="content-scroll" data-markdown-scroll-root="true">
+            <div class="content-body" data-markdown-content-root="true">
                 <h1 class="doc-title">@Document.Title</h1>
 
                 @if (Document.FrontMatter is not null)
@@ -124,7 +124,7 @@
 
                 <MudDivider Class="my-4" />
 
-                <div class="markdown-body">
+                <div class="markdown-body" data-markdown-body="true">
                     <MoMarkdown Value="@_strippedContent"
                                 ScopeKey="@Document.GroupKey"
                                 DocumentRelativePath="@Document.RelativePath"
