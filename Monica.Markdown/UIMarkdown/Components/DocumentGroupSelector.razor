@@ -4,23 +4,40 @@
     @foreach (var group in Groups)
     {
         var isActive = group.Key == SelectedGroupKey;
-        <div class="group-item @(isActive ? "active" : "")"
-             @onclick="() => OnGroupClicked(group.Key)"
-             title="@(group.Description ?? group.BasePath)">
-            <span class="group-dot @(group.IsValid ? "" : "invalid")"></span>
-            <span class="group-name">@group.Title</span>
-            @if (!group.IsValid)
-            {
-                <MudIcon Icon="@Icons.Material.Filled.Warning"
-                         Size="Size.Small"
-                         Color="Color.Warning"
-                         Class="group-warning" />
-            }
-            else
-            {
-                <span class="group-count">@group.DocumentCount</span>
-            }
-        </div>
+        <button type="button"
+                class="group-item @(isActive ? "active" : "")"
+                @onclick="() => OnGroupClicked(group.Key)"
+                title="@GetItemTitle(group)">
+            <span class="group-dot @(group.IsValid ? string.Empty : "invalid")"></span>
+
+            <div class="group-content">
+                <div class="group-title-row">
+                    <span class="group-name">@group.Title</span>
+
+                    <div class="group-meta">
+                        <span class="group-count">@group.DocumentCount</span>
+
+                        @if (!group.IsValid)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Warning"
+                                     Size="Size.Small"
+                                     Color="Color.Warning"
+                                     Class="group-warning" />
+                        }
+
+                        @if (isActive)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check"
+                                     Size="Size.Small"
+                                     Color="Color.Primary"
+                                     Class="group-selected" />
+                        }
+                    </div>
+                </div>
+
+                <span class="group-description">@GetDescription(group)</span>
+            </div>
+        </button>
     }
 </div>
 
@@ -36,9 +53,12 @@
 
     private async Task OnGroupClicked(string groupKey)
     {
-        if (groupKey != SelectedGroupKey)
-        {
-            await SelectedGroupKeyChanged.InvokeAsync(groupKey);
-        }
+        await SelectedGroupKeyChanged.InvokeAsync(groupKey);
     }
+
+    private static string GetDescription(MarkdownDocumentGroup group) =>
+        string.IsNullOrWhiteSpace(group.Description) ? group.BasePath : group.Description;
+
+    private static string GetItemTitle(MarkdownDocumentGroup group) =>
+        $"{group.Title}{Environment.NewLine}{GetDescription(group)}";
 }

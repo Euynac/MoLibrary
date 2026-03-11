@@ -12,40 +12,66 @@
 .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 12px 8px 16px;
+    padding: 10px 10px 6px 10px;
     flex-shrink: 0;
 }
 
-.sidebar-brand {
-    display: flex;
+.knowledge-base-switcher {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    padding: 10px 12px 10px 10px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-::deep .brand-icon {
+.knowledge-base-switcher:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-lines-default);
+}
+
+.knowledge-base-switcher-icon-shell {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background-color: var(--mud-palette-primary-hover);
     color: var(--mud-palette-primary);
+    flex-shrink: 0;
 }
 
-.brand-title {
-    font-size: 0.95rem;
+::deep .knowledge-base-switcher-icon {
+    font-size: 1rem !important;
+}
+
+.knowledge-base-switcher-label {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.92rem;
     font-weight: 700;
     color: var(--mud-palette-text-primary);
+    text-align: left;
 }
 
-/* Section label */
-.sidebar-section-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: var(--mud-palette-text-secondary);
-    padding: 8px 16px 4px 16px;
-}
-
-/* Groups area */
-.sidebar-groups {
-    padding: 0 8px;
+::deep .knowledge-base-switcher-warning {
     flex-shrink: 0;
+}
+
+::deep .knowledge-base-switcher-chevron {
+    flex-shrink: 0;
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.8;
 }
 
 /* Tree area */
@@ -55,9 +81,20 @@
     overflow: hidden;
 }
 
+::deep .sidebar-collapse-button {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    background-color: var(--mud-palette-surface);
+}
+
 /* Footer */
 .sidebar-footer {
-    padding: 8px 16px;
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px 10px 16px;
     border-top: 1px solid var(--mud-palette-lines-default);
     flex-shrink: 0;
 }

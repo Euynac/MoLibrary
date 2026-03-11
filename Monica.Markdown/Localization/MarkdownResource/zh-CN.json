@@ -10,6 +10,43 @@
   "Categories": {
     "Documentation": "文档"
   },
+  "MarkdownViewer": {
+    "Placeholders": {
+      "SearchFiles": "搜索文件",
+      "SearchKnowledgeBases": "查找知识库..."
+    },
+    "States": {
+      "LoadingDocuments": "正在加载文档...",
+      "LoadingDocument": "正在加载文档内容...",
+      "NoKnowledgeBasesRegistered": "未注册任何知识库。",
+      "NoKnowledgeBases": "没有可用的知识库。",
+      "NoMatchingKnowledgeBases": "没有匹配的知识库。",
+      "NoDocumentSelected": "请选择一个文档进行查看",
+      "NoDocumentsFound": "未找到任何文档",
+      "NoMatchingDocuments": "没有匹配的文档",
+      "GroupUnavailable": "知识库不可用",
+      "GroupUnavailableDescription": "配置的路径不存在或当前无法访问。"
+    },
+    "Navbar": {
+      "ShowSidebar": "显示侧边栏",
+      "HideSidebar": "隐藏侧边栏",
+      "OpenKnowledgeBaseSwitcher": "切换知识库",
+      "UnknownKnowledgeBase": "未知知识库",
+      "LastEdited": "最后更新于 {0}"
+    },
+    "Dialogs": {
+      "SwitchKnowledgeBaseTitle": "切换知识库"
+    },
+    "Messages": {
+      "LoadDataFailed": "加载 Markdown 数据失败：{0}"
+    },
+    "Time": {
+      "JustNow": "刚刚",
+      "MinutesAgo": "{0} 分钟前",
+      "HoursAgo": "{0} 小时前",
+      "DaysAgo": "{0} 天前"
+    }
+  },
   "GitDashboard": {
     "PageTitle": "Git 仓库",
     "Title": "Git 仓库",

@@ -1,14 +1,18 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Tool.MoResponse
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.Markdown.UIMarkdown.Components
 @using Monica.Markdown.UIMarkdown.Services
 @using Monica.Tool.Algorithm.Tree
+@using Monica.Tool.MoResponse
 
 @inject MarkdownUIService MarkdownService
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<MarkdownResource> L
 
-<PageTitle>Markdown Documents</PageTitle>
+<PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
 
 <div class="doc-layout">
     @if (_loading)
@@ -19,7 +23,7 @@
                                      Size="Size.Large"
                                      Indeterminate="true" />
                 <MudText Typo="Typo.h6" Color="Color.Primary">
-                    Loading documents...
+                    @L["MarkdownViewer:States:LoadingDocuments"]
                 </MudText>
             </MudStack>
         </div>
@@ -33,7 +37,7 @@
                          Color="Color.Default"
                          Style="opacity: 0.3; font-size: 4rem;" />
                 <MudText Typo="Typo.h6" Style="opacity: 0.5;">
-                    No document groups registered
+                    @L["MarkdownViewer:States:NoKnowledgeBasesRegistered"]
                 </MudText>
             </MudStack>
         </div>
@@ -43,40 +47,36 @@
         @if (_showSidebar)
         {
             <div class="doc-sidebar">
-                <DocumentSidebar Groups="_groups"
-                                 SelectedGroupKey="@_selectedGroupKey"
-                                 SelectedGroupKeyChanged="OnGroupSelected"
+                <DocumentSidebar CurrentGroup="GetCurrentGroup()"
                                  CurrentTree="_currentTree"
                                  SelectedDocument="_selectedDocument"
                                  SelectedDocumentChanged="OnDocumentSelected"
-                                 OnCollapseRequested="ToggleSidebar" />
+                                 OnCollapseRequested="ToggleSidebar"
+                                 OnOpenGroupSwitcher="OpenGroupSwitcherAsync" />
             </div>
         }
 
         <div class="doc-main">
-            @if (IsCurrentGroupValid())
-            {
-                <DocumentContentViewer Document="_selectedDocument"
-                                       Content="@_documentContent"
-                                       IsLoading="_contentLoading"
-                                       GroupTitle="@GetCurrentGroupTitle()"
-                                       ShowSidebarToggle="!_showSidebar"
-                                       OnToggleSidebar="ToggleSidebar" />
-            }
-            else
-            {
-                <DocumentContentViewer IsGroupInvalid="true"
-                                       InvalidGroupPath="@GetCurrentGroupBasePath()"
-                                       GroupTitle="@GetCurrentGroupTitle()"
-                                       ShowSidebarToggle="!_showSidebar"
-                                       OnToggleSidebar="ToggleSidebar" />
-            }
+            <DocumentContentViewer CurrentGroup="GetCurrentGroup()"
+                                   Document="_selectedDocument"
+                                   Content="@_documentContent"
+                                   IsLoading="_contentLoading"
+                                   ShowSidebarToggle="!_showSidebar"
+                                   OnToggleSidebar="ToggleSidebar" />
         </div>
     }
 </div>
 
 @code {
     public const string PAGE_URL = "/markdown-docs";
+
+    private readonly DialogOptions _groupSwitcherDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true,
+        CloseOnEscapeKey = true
+    };
 
     private bool _loading = true;
     private bool _contentLoading;
@@ -91,20 +91,14 @@
     {
         if (firstRender)
         {
-            await LoadGroups();
+            await LoadGroupsAsync();
         }
     }
 
-    private string? GetCurrentGroupTitle() =>
-        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.Title;
+    private MarkdownDocumentGroup? GetCurrentGroup() =>
+        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey);
 
-    private string? GetCurrentGroupBasePath() =>
-        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.BasePath;
-
-    private bool IsCurrentGroupValid() =>
-        _groups?.FirstOrDefault(g => g.Key == _selectedGroupKey)?.IsValid ?? false;
-
-    private async Task LoadGroups()
+    private async Task LoadGroupsAsync()
     {
         _loading = true;
         StateHasChanged();
@@ -114,7 +108,7 @@
             if ((await MarkdownService.GetAllDocumentGroupsAsync())
                 .IsFailed(out var error, out var groups))
             {
-                Snackbar.Add("Failed to load document groups: " + error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
                 return;
             }
 
@@ -128,13 +122,41 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["MarkdownViewer:Messages:LoadDataFailed", ex.Message], Severity.Error);
         }
         finally
         {
             _loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task OpenGroupSwitcherAsync()
+    {
+        if (_groups is not { Count: > 0 } groups)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<DocumentGroupSwitcherDialog>
+        {
+            { x => x.Groups, groups },
+            { x => x.SelectedGroupKey, _selectedGroupKey }
+        };
+
+        var dialog = await DialogService.ShowAsync<DocumentGroupSwitcherDialog>(
+            L["MarkdownViewer:Dialogs:SwitchKnowledgeBaseTitle"],
+            parameters,
+            _groupSwitcherDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: string selectedGroupKey }
+            || string.Equals(selectedGroupKey, _selectedGroupKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await OnGroupSelected(selectedGroupKey);
     }
 
     private async Task OnGroupSelected(string groupKey)
@@ -144,7 +166,7 @@
         _documentContent = null;
         _currentTree = null;
 
-        var group = _groups?.FirstOrDefault(g => g.Key == groupKey);
+        var group = GetCurrentGroup();
         if (group is null || !group.IsValid)
         {
             StateHasChanged();
@@ -154,7 +176,7 @@
         if ((await MarkdownService.GetDocumentTreeAsync(groupKey))
             .IsFailed(out var error, out var tree))
         {
-            Snackbar.Add("Failed to load document tree: " + error, Severity.Error);
+            Snackbar.Add(error, Severity.Error);
             return;
         }
 
@@ -167,7 +189,10 @@
         _selectedDocument = document;
         _documentContent = null;
 
-        if (document is null) return;
+        if (document is null)
+        {
+            return;
+        }
 
         _contentLoading = true;
         StateHasChanged();
@@ -177,7 +202,7 @@
             if ((await MarkdownService.GetDocumentContentAsync(document))
                 .IsFailed(out var error, out var content))
             {
-                Snackbar.Add("Failed to load document: " + error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
                 return;
             }
 
