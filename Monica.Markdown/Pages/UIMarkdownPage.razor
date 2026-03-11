@@ -1,6 +1,5 @@
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Localization
-@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @using System.Net
 @using Monica.Markdown.Localization
@@ -19,7 +18,6 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<MarkdownResource> L
-@inject ILogger<UIMarkdownPage> Logger
 
 <PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
 
@@ -255,13 +253,7 @@
         }
 
         _documentHeadings = normalizedHeadings;
-        var previousAnchorId = _currentAnchorId;
         _currentAnchorId = ResolveCurrentAnchorId(_currentAnchorId);
-        Logger.LogInformation(
-            "[TOCDBG][Page][HeadingsChanged] PreviousCurrentAnchorId={PreviousCurrentAnchorId}; ResolvedCurrentAnchorId={ResolvedCurrentAnchorId}; HeadingCount={HeadingCount}",
-            previousAnchorId,
-            _currentAnchorId,
-            _documentHeadings.Count);
         _pendingHeadingTrackerRefresh = true;
         return InvokeAsync(StateHasChanged);
     }
@@ -273,11 +265,6 @@
             return Task.CompletedTask;
         }
 
-        Logger.LogInformation(
-            "[TOCDBG][Page][HeadingSelected] PreviousCurrentAnchorId={PreviousCurrentAnchorId}; SelectedAnchorId={SelectedAnchorId}; DocumentRelativePath={DocumentRelativePath}",
-            _currentAnchorId,
-            anchorId,
-            _selectedDocument.RelativePath);
         _currentAnchorId = anchorId;
         NavigateToLocation(new MarkdownViewerLocation(_selectedGroupKey, _selectedDocument.RelativePath, anchorId));
         return InvokeAsync(StateHasChanged);
@@ -286,13 +273,7 @@
     [JSInvokable]
     public Task OnHashChangedAsync(string? anchorId)
     {
-        var previousAnchorId = _currentAnchorId;
         var normalizedAnchorId = ResolveCurrentAnchorId(anchorId);
-        Logger.LogInformation(
-            "[TOCDBG][Page][HashChanged] RawAnchorId={RawAnchorId}; PreviousCurrentAnchorId={PreviousCurrentAnchorId}; NormalizedAnchorId={NormalizedAnchorId}",
-            anchorId,
-            previousAnchorId,
-            normalizedAnchorId);
         if (string.Equals(_currentAnchorId, normalizedAnchorId, StringComparison.Ordinal))
         {
             return InvokeAsync(StateHasChanged);
@@ -304,16 +285,8 @@
 
     private async Task ApplyLocationAsync(MarkdownViewerLocation location)
     {
-        var previousAnchorId = _currentAnchorId;
         var requestedAnchorId = ResolveCurrentAnchorId(location.AnchorId);
         _currentAnchorId = requestedAnchorId;
-        Logger.LogInformation(
-            "[TOCDBG][Page][ApplyLocation] GroupKey={GroupKey}; DocumentRelativePath={DocumentRelativePath}; RawAnchorId={RawAnchorId}; PreviousCurrentAnchorId={PreviousCurrentAnchorId}; RequestedAnchorId={RequestedAnchorId}",
-            location.GroupKey,
-            location.DocumentRelativePath,
-            location.AnchorId,
-            previousAnchorId,
-            requestedAnchorId);
 
         if (_groups is not { Count: > 0 })
         {
@@ -369,15 +342,9 @@
     private async Task LoadGroupTreeAsync(string groupKey, string? requestedAnchorId = null)
     {
         _selectedGroupKey = groupKey;
-        var previousAnchorId = _currentAnchorId;
         ClearDocumentSelection();
         _currentAnchorId = requestedAnchorId;
         _currentTree = null;
-        Logger.LogInformation(
-            "[TOCDBG][Page][LoadGroupTree] GroupKey={GroupKey}; PreviousCurrentAnchorId={PreviousCurrentAnchorId}; RequestedAnchorId={RequestedAnchorId}",
-            groupKey,
-            previousAnchorId,
-            requestedAnchorId);
 
         var group = GetCurrentGroup();
         if (group is null || !group.IsValid)
@@ -399,15 +366,9 @@
 
     private async Task LoadDocumentAsync(MarkdownDocument? document, string? requestedAnchorId = null)
     {
-        var previousAnchorId = _currentAnchorId;
         _selectedDocument = document;
         _documentContent = null;
         _currentAnchorId = requestedAnchorId;
-        Logger.LogInformation(
-            "[TOCDBG][Page][LoadDocument] DocumentRelativePath={DocumentRelativePath}; PreviousCurrentAnchorId={PreviousCurrentAnchorId}; RequestedAnchorId={RequestedAnchorId}",
-            document?.RelativePath,
-            previousAnchorId,
-            requestedAnchorId);
 
         if (document is null)
         {
