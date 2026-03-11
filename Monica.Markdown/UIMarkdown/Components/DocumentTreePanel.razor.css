@@ -34,7 +34,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0 8px 8px 8px;
+    padding: 0 4px 8px 2px;
 }
 
 .tree-content::-webkit-scrollbar {
@@ -69,22 +69,18 @@
     width: 100%;
     min-height: 34px;
     margin: 3px 0;
-    padding: 5px 8px 5px 4px;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    padding: 5px 8px 5px 6px;
     display: flex;
     align-items: center;
-    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
 }
 
 ::deep .doc-tree-view.mud-treeview-hover .mud-treeview-item-content:hover {
     background-color: var(--mud-palette-action-default-hover);
-    border-color: var(--mud-palette-lines-default);
 }
 
 ::deep .doc-tree-view .mud-treeview-item-content.mud-treeview-item-selected {
-    background-color: var(--mud-palette-primary-hover);
-    border-color: var(--mud-palette-primary);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
     box-shadow: inset 2px 0 0 var(--mud-palette-primary);
 }
 
@@ -158,4 +154,12 @@
 
 .empty-state {
     margin-top: 2rem;
+}
+
+.tree-empty-icon {
+    opacity: 0.3;
+}
+
+.tree-empty-text {
+    opacity: 0.56;
 }

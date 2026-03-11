@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Docs Redesign Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#f3ede2',
+            linen: '#fbf7ef',
+            ink: '#1b2230',
+            slate: '#667085',
+            cobalt: '#2f56d3',
+            brass: '#9a7844',
+            line: '#dacdb6',
+            mist: '#eef2fa'
+          },
+          fontFamily: {
+            sans: ['Barlow', 'sans-serif'],
+            display: ['Cormorant Garamond', 'serif'],
+            mono: ['IBM Plex Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="bg-paper text-ink font-sans">
+  <div class="manual-stage">
+    <div class="manual-orbit orbit-left"></div>
+    <div class="manual-orbit orbit-right"></div>
+
+    <div class="page-frame">
+      <header class="masthead reveal-item">
+        <div class="brand-cluster">
+          <div class="brand-mark">M</div>
+          <div>
+            <p class="masthead-kicker">Monica documentation prototype</p>
+            <h1 class="masthead-title">Markdown Reader Redesign</h1>
+          </div>
+        </div>
+
+        <div class="masthead-meta">
+          <span class="meta-pill">Editorial + utilitarian</span>
+          <span class="meta-pill meta-pill-accent">Custom TOC rail</span>
+          <span class="meta-note">Search is shown as a preview surface only</span>
+        </div>
+      </header>
+
+      <div id="sidebarScrim" class="sidebar-scrim"></div>
+
+      <div id="prototypeShell" class="manual-grid">
+        <aside id="sidebarCard" class="tree-card reveal-item">
+          <div class="tree-card-inner">
+            <div class="tree-topline">
+              <span class="section-eyebrow">Library map</span>
+              <span id="treeDocCount" class="section-stamp"></span>
+            </div>
+
+            <div class="group-switcher-wrap">
+              <button id="groupSwitcherButton" class="group-switcher-button" type="button">
+                <div class="group-switcher-copy">
+                  <span id="groupBadge" class="group-badge"></span>
+                  <strong id="groupName" class="group-name"></strong>
+                  <span id="groupDescription" class="group-description"></span>
+                </div>
+                <span class="group-switcher-icon">
+                  <i data-lucide="chevrons-up-down" class="icon-16"></i>
+                </span>
+              </button>
+
+              <div id="groupMenu" class="group-menu"></div>
+            </div>
+
+            <label class="tree-search-shell" for="treeSearchInput">
+              <i data-lucide="search" class="icon-16 tree-search-icon"></i>
+              <input id="treeSearchInput"
+                     class="tree-search-input"
+                     type="text"
+                     placeholder="Filter documents and folders">
+            </label>
+
+            <div class="tree-pane-header">
+              <span>Navigation</span>
+              <span class="tree-pane-rule"></span>
+            </div>
+
+            <div id="treeRoot" class="tree-root"></div>
+
+            <div class="tree-footer">
+              <div>
+                <p class="tree-footer-label">Current reading mode</p>
+                <p class="tree-footer-value">Long-form technical reference</p>
+              </div>
+              <button id="sidebarFooterToggle" class="footer-icon-button" type="button" title="Toggle tree">
+                <i data-lucide="panel-left-close" class="icon-16"></i>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <button id="sidebarDockToggle" class="sidebar-dock-toggle" type="button" title="Show navigation">
+          <i data-lucide="panel-left-open" class="icon-16"></i>
+          <span>Library map</span>
+        </button>
+
+        <div class="workspace-grid">
+          <main class="reader-card reveal-item">
+            <div class="reader-toolbar">
+              <div class="toolbar-primary">
+                <div class="toolbar-primary-left">
+                  <button id="searchTrigger" class="search-trigger" type="button">
+                    <span class="search-trigger-leading">
+                      <i data-lucide="search" class="icon-16"></i>
+                      <span>Search in all docs...</span>
+                    </span>
+                    <span class="search-trigger-shortcut">Ctrl K</span>
+                  </button>
+                </div>
+
+                <div class="toolbar-primary-right">
+                  <button id="tocToggle" class="outline-toggle" type="button">
+                    <i data-lucide="list-tree" class="icon-16"></i>
+                    <span>Hide outline</span>
+                  </button>
+                  <div id="updateStamp" class="update-stamp"></div>
+                </div>
+              </div>
+
+              <div class="toolbar-secondary">
+                <div id="breadcrumbs" class="breadcrumbs"></div>
+              </div>
+            </div>
+
+            <div class="reader-content">
+              <section class="article-pane">
+                <div id="articleScroll" class="article-scroll">
+                  <article id="articleBody" class="article-body"></article>
+                </div>
+              </section>
+            </div>
+          </main>
+
+          <aside id="tocCard" class="toc-card reveal-item">
+            <div class="toc-card-inner">
+                <div class="toc-header">
+                  <p class="section-eyebrow">Outline rail</p>
+                  <h2 class="toc-title">On this document</h2>
+                  <p class="toc-description">A Monica-owned TOC preview in its own card, outside the reader surface.</p>
+                </div>
+                <div id="tocList" class="toc-list"></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="searchOverlay" class="search-overlay" aria-hidden="true">
+    <div id="searchBackdrop" class="search-backdrop"></div>
+    <div class="search-dialog">
+      <div class="search-dialog-topline">
+        <span class="section-eyebrow">Preview only</span>
+        <button id="searchClose" class="icon-button" type="button" title="Close search">
+          <i data-lucide="x" class="icon-16"></i>
+        </button>
+      </div>
+
+      <div class="search-dialog-header">
+        <h2>Search across manuals</h2>
+        <span class="search-preview-badge">Visual placeholder</span>
+      </div>
+
+      <label class="search-input-shell" for="globalSearchInput">
+        <i data-lucide="search" class="icon-18"></i>
+        <input id="globalSearchInput"
+               class="global-search-input"
+               type="text"
+               placeholder="Type a title, topic, or folder">
+      </label>
+
+      <p class="search-guidance">This overlay exists to review placement, rhythm, and hierarchy before production search behavior is defined.</p>
+
+      <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

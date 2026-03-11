@@ -1,0 +1,101 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
+@using Monica.Markdown.Models
+@using Monica.UI.Components.Markdown
+@inject IStringLocalizer<MarkdownResource> L
+
+<div class="toc-panel">
+    <div class="toc-header">
+        <div class="toc-header-copy">
+            <h2 class="toc-title">@L["MarkdownViewer:Navbar:Outline"]</h2>
+            <p class="toc-description">@L["MarkdownViewer:Toolbar:OutlineDescription"]</p>
+        </div>
+    </div>
+
+    @if (Document is null)
+    {
+        <div class="toc-empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.Article"
+                     Size="Size.Large"
+                     Color="Color.Default"
+                     Class="toc-empty-icon" />
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="toc-empty-copy">
+                @L["MarkdownViewer:Toolbar:NoDocumentOutline"]
+            </MudText>
+        </div>
+    }
+    else if (_outlineHeadings.Count == 0)
+    {
+        <div class="toc-empty-state">
+            <MudIcon Icon="@Icons.Material.Filled.FormatListBulleted"
+                     Size="Size.Large"
+                     Color="Color.Default"
+                     Class="toc-empty-icon" />
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="toc-empty-copy">
+                @L["MarkdownViewer:Toolbar:NoOutlineAvailable"]
+            </MudText>
+        </div>
+    }
+    else
+    {
+        <div class="toc-list" role="navigation" aria-label="@L["MarkdownViewer:Navbar:Outline"]">
+            @foreach (var heading in _outlineHeadings)
+            {
+                <button type="button"
+                        class="@GetHeadingClass(heading)"
+                        title="@heading.Title"
+                        @onclick="@(() => SelectHeadingAsync(heading.Id))"
+                        aria-current="@(IsCurrentHeading(heading) ? "location" : null)">
+                    <span class="toc-link-text">@heading.Title</span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public MarkdownDocument? Document { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MoMarkdownHeading> Headings { get; set; } = [];
+
+    [Parameter]
+    public string? CurrentAnchorId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnHeadingSelected { get; set; }
+
+    private IReadOnlyList<MoMarkdownHeading> _outlineHeadings = [];
+
+    protected override void OnParametersSet()
+    {
+        _outlineHeadings = Headings
+            .Where(static heading => heading.Level <= 3)
+            .ToArray();
+    }
+
+    private string GetHeadingClass(MoMarkdownHeading heading)
+    {
+        var classes = new List<string>
+        {
+            "toc-link",
+            $"level-{Math.Clamp(heading.Level, 1, 3)}"
+        };
+
+        if (IsCurrentHeading(heading))
+        {
+            classes.Add("is-active");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private bool IsCurrentHeading(MoMarkdownHeading heading) =>
+        string.Equals(heading.Id, CurrentAnchorId, StringComparison.Ordinal);
+
+    private Task SelectHeadingAsync(string headingId)
+    {
+        return OnHeadingSelected.InvokeAsync(headingId);
+    }
+}

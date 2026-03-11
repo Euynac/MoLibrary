@@ -35,6 +35,16 @@
       "Outline": "目录",
       "LastEdited": "最后更新于 {0}"
     },
+    "Toolbar": {
+      "SearchPlaceholder": "搜索文档",
+      "SearchPreviewBadge": "预览",
+      "DocumentTree": "文档树",
+      "ShowOutline": "显示目录",
+      "HideOutline": "隐藏目录",
+      "OutlineDescription": "在当前文档标题之间快速跳转。",
+      "NoOutlineAvailable": "当前文档生成标题后，这里会显示目录。",
+      "NoDocumentOutline": "请选择一个文档后再浏览目录。"
+    },
     "Dialogs": {
       "SwitchKnowledgeBaseTitle": "切换知识库"
     },

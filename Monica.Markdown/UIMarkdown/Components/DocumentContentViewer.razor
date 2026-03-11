@@ -6,8 +6,8 @@
 @inject IStringLocalizer<MarkdownResource> L
 
 <div class="content-container">
-    <div class="content-navbar">
-        <div class="navbar-left">
+    <div class="content-toolbar">
+        <div class="toolbar-leading">
             @if (ShowSidebarToggle)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Menu"
@@ -17,20 +17,47 @@
                                Class="sidebar-toggle-btn" />
             }
 
-            @if (_breadcrumbs.Count > 0)
-            {
-                <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
-            }
+            <button type="button"
+                    class="search-trigger"
+                    disabled
+                    title="@L["MarkdownViewer:Toolbar:SearchPlaceholder"]">
+                <span class="search-trigger-leading">
+                    <MudIcon Icon="@Icons.Material.Filled.Search"
+                             Size="Size.Small"
+                             Class="search-trigger-icon" />
+                    <span class="search-trigger-label">@L["MarkdownViewer:Toolbar:SearchPlaceholder"]</span>
+                </span>
+                <span class="search-trigger-shortcut">@L["MarkdownViewer:Toolbar:SearchPreviewBadge"]</span>
+            </button>
         </div>
 
-        @if (Document is not null)
-        {
-            <span class="last-edited">
-                <MudIcon Icon="@Icons.Material.Filled.Schedule"
+        <div class="toolbar-trailing">
+            <button type="button"
+                    class="@GetOutlineToggleClass()"
+                    @onclick="ToggleTableOfContentsAsync"
+                    title="@GetOutlineToggleText()">
+                <MudIcon Icon="@Icons.Material.Filled.Toc"
                          Size="Size.Small"
-                         Class="last-edited-icon" />
-                @L["MarkdownViewer:Navbar:LastEdited", FormatLastEditedText(Document.LastModifiedUtc)]
-            </span>
+                         Class="outline-toggle-icon" />
+                <span>@GetOutlineToggleText()</span>
+            </button>
+
+            @if (Document is not null)
+            {
+                <span class="last-edited">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule"
+                             Size="Size.Small"
+                             Class="last-edited-icon" />
+                    @L["MarkdownViewer:Navbar:LastEdited", FormatLastEditedText(Document.LastModifiedUtc)]
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="content-breadcrumb-bar">
+        @if (_breadcrumbs.Count > 0)
+        {
+            <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
         }
     </div>
 
@@ -41,15 +68,15 @@
                 <MudIcon Icon="@Icons.Material.Filled.Warning"
                          Size="Size.Large"
                          Color="Color.Warning"
-                         Style="font-size: 4rem;" />
+                         Class="state-icon state-icon-warning" />
                 <MudText Typo="Typo.h6" Color="Color.Warning">
                     @L["MarkdownViewer:States:GroupUnavailable"]
                 </MudText>
-                <MudText Typo="Typo.body2" Align="Align.Center" Style="opacity: 0.7;">
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="state-copy">
                     @L["MarkdownViewer:States:GroupUnavailableDescription"]
                 </MudText>
                 <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
-                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                    <MudText Typo="Typo.body2" Class="state-path">
                         @invalidGroup.BasePath
                     </MudText>
                 </MudAlert>
@@ -76,8 +103,8 @@
                 <MudIcon Icon="@Icons.Material.Filled.Article"
                          Size="Size.Large"
                          Color="Color.Default"
-                         Style="opacity: 0.3; font-size: 4rem;" />
-                <MudText Typo="Typo.h6" Color="Color.Default" Style="opacity: 0.5;">
+                         Class="state-icon state-icon-muted" />
+                <MudText Typo="Typo.h6" Color="Color.Default" Class="state-copy state-copy-muted">
                     @L["MarkdownViewer:States:NoDocumentSelected"]
                 </MudText>
             </MudStack>
@@ -101,8 +128,7 @@
                     <MoMarkdown Value="@_strippedContent"
                                 ScopeKey="@Document.GroupKey"
                                 DocumentRelativePath="@Document.RelativePath"
-                                HasTableOfContents="true"
-                                TableOfContentsHeader="@L["MarkdownViewer:Navbar:Outline"]"
+                                HasTableOfContents="false"
                                 HeadingsChanged="OnHeadingsChanged" />
                 </div>
             </div>
@@ -130,7 +156,16 @@
     public bool ShowSidebarToggle { get; set; }
 
     [Parameter]
+    public bool IsTableOfContentsVisible { get; set; }
+
+    [Parameter]
     public EventCallback OnToggleSidebar { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleTableOfContents { get; set; }
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
 
     private List<BreadcrumbItem> _breadcrumbs = [];
     private IReadOnlyList<MoMarkdownHeading> _headings = [];
@@ -149,11 +184,6 @@
     {
         _breadcrumbs = [];
 
-        if (Document is null)
-        {
-            return;
-        }
-
         var currentGroup = CurrentGroup;
         if (!string.IsNullOrWhiteSpace(currentGroup?.Title))
         {
@@ -161,7 +191,12 @@
                 ? null
                 : new MarkdownViewerLocation(currentGroup.Key).ToRelativeUri();
 
-            _breadcrumbs.Add(new BreadcrumbItem(currentGroup.Title, groupHref));
+            _breadcrumbs.Add(new BreadcrumbItem(currentGroup.Title, groupHref, disabled: Document is null));
+        }
+
+        if (Document is null)
+        {
+            return;
         }
 
         var segments = Document.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -225,6 +260,7 @@
 
         _headings = headings.ToArray();
         BuildBreadcrumbs();
+        _ = HeadingsChanged.InvokeAsync(_headings);
         return InvokeAsync(StateHasChanged);
     }
 
@@ -241,6 +277,7 @@
         _lastDocumentRelativePath = currentRelativePath;
         _lastStrippedContent = _strippedContent;
         _headings = [];
+        _ = HeadingsChanged.InvokeAsync(_headings);
     }
 
     private List<MoMarkdownHeading> ResolveHeadingTrail()
@@ -277,5 +314,18 @@
         }
 
         return new MarkdownViewerLocation(Document.GroupKey, Document.RelativePath, anchorId).ToRelativeUri();
+    }
+
+    private string GetOutlineToggleClass() =>
+        IsTableOfContentsVisible ? "outline-toggle is-active" : "outline-toggle";
+
+    private string GetOutlineToggleText() =>
+        IsTableOfContentsVisible
+            ? L["MarkdownViewer:Toolbar:HideOutline"].Value
+            : L["MarkdownViewer:Toolbar:ShowOutline"].Value;
+
+    private Task ToggleTableOfContentsAsync()
+    {
+        return OnToggleTableOfContents.InvokeAsync();
     }
 }

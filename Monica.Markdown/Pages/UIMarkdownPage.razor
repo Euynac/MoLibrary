@@ -6,6 +6,7 @@
 @using Monica.Markdown.UIMarkdown.Components
 @using Monica.Markdown.UIMarkdown.Models
 @using Monica.Markdown.UIMarkdown.Services
+@using Monica.UI.Components.Markdown
 @using Monica.Tool.Algorithm.Tree
 @using Monica.Tool.MoResponse
 @implements IAsyncDisposable
@@ -49,26 +50,51 @@
     }
     else
     {
-        @if (_showSidebar)
-        {
-            <div class="doc-sidebar">
-                <DocumentSidebar CurrentGroup="GetCurrentGroup()"
-                                 CurrentTree="_currentTree"
-                                 SelectedDocument="_selectedDocument"
-                                 SelectedDocumentChanged="OnDocumentSelected"
-                                 OnCollapseRequested="ToggleSidebar"
-                                 OnOpenGroupSwitcher="OpenGroupSwitcherAsync" />
-            </div>
-        }
+        <div class="@GetWorkspaceClass()">
+            @if (_showSidebar)
+            {
+                <aside class="doc-sidebar-rail">
+                    <DocumentSidebar CurrentGroup="GetCurrentGroup()"
+                                     CurrentTree="_currentTree"
+                                     SelectedDocument="_selectedDocument"
+                                     SelectedDocumentChanged="OnDocumentSelected"
+                                     OnCollapseRequested="ToggleSidebar"
+                                     OnOpenGroupSwitcher="OpenGroupSwitcherAsync" />
+                </aside>
+            }
 
-        <div class="doc-main">
-            <DocumentContentViewer CurrentGroup="GetCurrentGroup()"
-                                   Document="_selectedDocument"
-                                   Content="@_documentContent"
-                                   CurrentAnchorId="_currentAnchorId"
-                                   IsLoading="_contentLoading"
-                                   ShowSidebarToggle="!_showSidebar"
-                                   OnToggleSidebar="ToggleSidebar" />
+            <div class="@GetMainStageClass()">
+                <main class="doc-reader-card">
+                    <DocumentContentViewer CurrentGroup="GetCurrentGroup()"
+                                           Document="_selectedDocument"
+                                           Content="@_documentContent"
+                                           CurrentAnchorId="_currentAnchorId"
+                                           IsLoading="_contentLoading"
+                                           ShowSidebarToggle="!_showSidebar"
+                                           IsTableOfContentsVisible="_showTableOfContents"
+                                           OnToggleSidebar="ToggleSidebar"
+                                           OnToggleTableOfContents="ToggleTableOfContents"
+                                           HeadingsChanged="OnDocumentHeadingsChanged" />
+                </main>
+
+                @if (_showTableOfContents)
+                {
+                    <aside class="doc-toc-rail">
+                        <DocumentTableOfContentsPanel Document="_selectedDocument"
+                                                      Headings="_documentHeadings"
+                                                      CurrentAnchorId="_currentAnchorId"
+                                                      OnHeadingSelected="OnHeadingSelectedAsync" />
+                    </aside>
+                }
+            </div>
+
+            @if (_showSidebar)
+            {
+                <button type="button"
+                        class="doc-sidebar-backdrop"
+                        @onclick="ToggleSidebar"
+                        aria-label="@L["MarkdownViewer:Navbar:HideSidebar"]"></button>
+            }
         </div>
     }
 </div>
@@ -86,14 +112,17 @@
 
     private bool _loading = true;
     private bool _contentLoading;
-    private bool _showSidebar = true;
+    private bool _showSidebar;
+    private bool _showTableOfContents = true;
     private List<MarkdownDocumentGroup>? _groups;
     private string? _selectedGroupKey;
     private TreeNode<MarkdownDocumentNodeData>? _currentTree;
     private MarkdownDocument? _selectedDocument;
     private string? _documentContent;
+    private IReadOnlyList<MoMarkdownHeading> _documentHeadings = [];
     private string? _currentAnchorId;
     private IJSObjectReference? _hashObserverModule;
+    private IJSObjectReference? _layoutModule;
     private DotNetObjectReference<UIMarkdownPage>? _hashObserverReference;
 
     protected override void OnInitialized()
@@ -105,6 +134,10 @@
     {
         if (firstRender)
         {
+            _layoutModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Monica.Markdown/js/markdown-layout.js");
+            _showSidebar = await _layoutModule.InvokeAsync<bool>("shouldShowSidebarByDefault");
+
             await LoadGroupsAsync();
 
             _hashObserverModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
@@ -175,21 +208,55 @@
 
     private async Task OnGroupSelected(string groupKey)
     {
-        await LoadGroupTreeAsync(groupKey);
         _currentAnchorId = null;
+        _documentHeadings = [];
+        await LoadGroupTreeAsync(groupKey);
         NavigateToLocation(new MarkdownViewerLocation(groupKey));
     }
 
     private async Task OnDocumentSelected(MarkdownDocument? document)
     {
-        await LoadDocumentAsync(document);
         _currentAnchorId = null;
+        _documentHeadings = [];
+        await LoadDocumentAsync(document);
         NavigateToLocation(new MarkdownViewerLocation(_selectedGroupKey, document?.RelativePath));
     }
 
     private void ToggleSidebar()
     {
         _showSidebar = !_showSidebar;
+    }
+
+    private void ToggleTableOfContents()
+    {
+        _showTableOfContents = !_showTableOfContents;
+    }
+
+    private Task OnDocumentHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
+    {
+        var normalizedHeadings = headings
+            .Where(static heading => heading.Level <= 3)
+            .ToArray();
+
+        if (_documentHeadings.SequenceEqual(normalizedHeadings))
+        {
+            return Task.CompletedTask;
+        }
+
+        _documentHeadings = normalizedHeadings;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnHeadingSelectedAsync(string anchorId)
+    {
+        if (_selectedDocument is null || string.IsNullOrWhiteSpace(anchorId))
+        {
+            return Task.CompletedTask;
+        }
+
+        _currentAnchorId = anchorId;
+        NavigateToLocation(new MarkdownViewerLocation(_selectedGroupKey, _selectedDocument.RelativePath, anchorId));
+        return Task.CompletedTask;
     }
 
     [JSInvokable]
@@ -251,6 +318,7 @@
 
         if (!isCurrentDocument || _documentContent is null)
         {
+            _documentHeadings = [];
             await LoadDocumentAsync(targetDocument);
             return;
         }
@@ -378,6 +446,8 @@
         _selectedDocument = null;
         _documentContent = null;
         _contentLoading = false;
+        _currentAnchorId = null;
+        _documentHeadings = [];
     }
 
     private void NavigateToLocation(MarkdownViewerLocation location)
@@ -397,6 +467,12 @@
     {
         _ = InvokeAsync(() => ApplyLocationAsync(MarkdownViewerLocation.FromAbsoluteUri(e.Location)));
     }
+
+    private string GetWorkspaceClass() =>
+        _showSidebar ? "doc-workspace" : "doc-workspace sidebar-hidden";
+
+    private string GetMainStageClass() =>
+        _showTableOfContents ? "doc-main-stage" : "doc-main-stage toc-hidden";
 
     public async ValueTask DisposeAsync()
     {
@@ -420,6 +496,17 @@
             try
             {
                 await _hashObserverModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        if (_layoutModule is not null)
+        {
+            try
+            {
+                await _layoutModule.DisposeAsync();
             }
             catch (JSDisconnectedException)
             {

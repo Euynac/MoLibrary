@@ -5,18 +5,23 @@
 @inject IStringLocalizer<MarkdownResource> L
 
 <div class="sidebar">
-    <div class="sidebar-header">
+    <div class="sidebar-group-switcher">
         <button type="button"
                 class="knowledge-base-switcher"
                 @onclick="OpenGroupSwitcher"
                 title="@GetCurrentGroupHint()">
-            <span class="knowledge-base-switcher-icon-shell">
-                <MudIcon Icon="@Icons.Material.Filled.MenuBook"
-                         Size="Size.Small"
-                         Class="knowledge-base-switcher-icon" />
-            </span>
+            <span class="knowledge-base-switcher-leading">
+                <span class="knowledge-base-switcher-icon-shell">
+                    <MudIcon Icon="@Icons.Material.Filled.MenuBook"
+                             Size="Size.Small"
+                             Class="knowledge-base-switcher-icon" />
+                </span>
 
-            <span class="knowledge-base-switcher-label">@GetCurrentGroupTitle()</span>
+                <span class="knowledge-base-switcher-copy">
+                    <span class="knowledge-base-switcher-label">@GetCurrentGroupTitle()</span>
+                    <span class="knowledge-base-switcher-description">@GetCurrentGroupHint()</span>
+                </span>
+            </span>
 
             @if (CurrentGroup is { IsValid: false })
             {
@@ -30,20 +35,24 @@
                      Size="Size.Small"
                      Class="knowledge-base-switcher-chevron" />
         </button>
-
     </div>
 
-    @if (CurrentTree is not null)
-    {
-        <div class="sidebar-tree">
+    <div class="sidebar-pane-header">
+        <span class="sidebar-pane-label">@L["MarkdownViewer:Toolbar:DocumentTree"]</span>
+        <span class="sidebar-pane-rule"></span>
+    </div>
+
+    <div class="sidebar-tree">
+        @if (CurrentTree is not null)
+        {
             <DocumentTreePanel TreeRoot="CurrentTree"
                                SelectedDocument="SelectedDocument"
                                SelectedDocumentChanged="SelectedDocumentChanged" />
-        </div>
-    }
+        }
+    </div>
 
     <div class="sidebar-footer">
-        <span class="footer-text">Monica Markdown</span>
+        <span class="footer-value" title="@GetFooterValue()">@GetFooterValue()</span>
         <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
                        Size="Size.Small"
                        OnClick="OnCollapseRequested"
@@ -83,4 +92,9 @@
         CurrentGroup?.Description
         ?? CurrentGroup?.BasePath
         ?? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value;
+
+    private string GetFooterValue() =>
+        !string.IsNullOrWhiteSpace(CurrentGroup?.Key)
+            ? CurrentGroup.Key
+            : GetCurrentGroupTitle();
 }

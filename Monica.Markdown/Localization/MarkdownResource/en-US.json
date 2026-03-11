@@ -35,6 +35,16 @@
       "Outline": "Outline",
       "LastEdited": "Last edited {0}"
     },
+    "Toolbar": {
+      "SearchPlaceholder": "Search documents",
+      "SearchPreviewBadge": "Preview",
+      "DocumentTree": "Document tree",
+      "ShowOutline": "Show outline",
+      "HideOutline": "Hide outline",
+      "OutlineDescription": "Jump through the current document headings.",
+      "NoOutlineAvailable": "The outline appears once the current document exposes headings.",
+      "NoDocumentOutline": "Select a document to browse its outline."
+    },
     "Dialogs": {
       "SwitchKnowledgeBaseTitle": "Switch Knowledge Base"
     },

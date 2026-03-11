@@ -24,8 +24,8 @@
                 <MudIcon Icon="@Icons.Material.Filled.SearchOff"
                          Size="Size.Large"
                          Color="Color.Default"
-                         Style="opacity: 0.3;" />
-                <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.5;">
+                         Class="tree-empty-icon" />
+                <MudText Typo="Typo.body2" Color="Color.Default" Class="tree-empty-text">
                     @(HasSearchText
                         ? L["MarkdownViewer:States:NoMatchingDocuments"]
                         : L["MarkdownViewer:States:NoDocumentsFound"])
