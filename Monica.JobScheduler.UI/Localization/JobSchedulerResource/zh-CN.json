@@ -67,7 +67,8 @@
     },
     "StateDistribution": {
       "Title": "状态分布",
-      "NoData": "暂无执行数据"
+      "NoData": "暂无执行数据",
+      "Total": "总数"
     },
     "ProblemJobs": {
       "Title": "需要关注",

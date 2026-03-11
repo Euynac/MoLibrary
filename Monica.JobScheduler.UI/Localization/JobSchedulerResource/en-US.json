@@ -67,7 +67,8 @@
     },
     "StateDistribution": {
       "Title": "State Distribution",
-      "NoData": "No execution data"
+      "NoData": "No execution data",
+      "Total": "Total"
     },
     "ProblemJobs": {
       "Title": "Needs Attention",
