@@ -11,11 +11,55 @@ namespace Monica.UI.Components.Markdown;
 /// </summary>
 public class MoMudMarkdown : MudMarkdown
 {
+    private IReadOnlyList<MoMarkdownHeading> _headings = [];
+    private int _tableOfContentsHeadingCount;
+
     /// <summary>
     /// Gets or sets whether Mermaid fenced code blocks should be rendered as diagrams.
     /// </summary>
     [Parameter]
     public bool EnableMermaid { get; set; } = true;
+
+    /// <summary>
+    /// Raised when the parsed markdown headings change.
+    /// </summary>
+    [Parameter]
+    public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        await base.SetParametersAsync(parameters);
+
+        var headings = MoMarkdownHeadingParser.Parse(Value);
+        _tableOfContentsHeadingCount = headings.Count(x => x.Level <= 3);
+
+        if (_headings.SequenceEqual(headings))
+        {
+            return;
+        }
+
+        _headings = headings;
+
+        if (HeadingsChanged.HasDelegate)
+        {
+            await HeadingsChanged.InvokeAsync(_headings);
+        }
+    }
+
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+        var originalHasTableOfContents = HasTableOfContents;
+        HasTableOfContents = HasTableOfContents && _tableOfContentsHeadingCount > 0;
+
+        try
+        {
+            base.BuildRenderTree(builder);
+        }
+        finally
+        {
+            HasTableOfContents = originalHasTableOfContents;
+        }
+    }
 
     protected override void RenderCodeBlock(in RenderTreeBuilder builder, ref int elementIndex, in CodeBlock code, in string? info)
     {

@@ -7,6 +7,7 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Markdown.Pages;
+using Monica.Markdown.UIMarkdown.Models;
 using Monica.Markdown.UIMarkdown.Services;
 using Monica.UI.Components.Markdown;
 using MudBlazor;
@@ -50,7 +51,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
         if (!Option.DisableMarkdownPage)
         {
             uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMarkdownPage>(
-                UIMarkdownPage.PAGE_URL,
+                MarkdownViewerLocation.PageUrl,
                 "Pages:MarkdownDocuments:Title",
                 Icons.Material.Filled.MenuBook,
                 "Categories:Documentation",

@@ -1,15 +1,20 @@
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.Markdown.UIMarkdown.Components
+@using Monica.Markdown.UIMarkdown.Models
 @using Monica.Markdown.UIMarkdown.Services
 @using Monica.Tool.Algorithm.Tree
 @using Monica.Tool.MoResponse
+@implements IAsyncDisposable
 
 @inject MarkdownUIService MarkdownService
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 @inject IStringLocalizer<MarkdownResource> L
 
 <PageTitle>@L["Pages:MarkdownDocuments:Title"]</PageTitle>
@@ -60,6 +65,7 @@
             <DocumentContentViewer CurrentGroup="GetCurrentGroup()"
                                    Document="_selectedDocument"
                                    Content="@_documentContent"
+                                   CurrentAnchorId="_currentAnchorId"
                                    IsLoading="_contentLoading"
                                    ShowSidebarToggle="!_showSidebar"
                                    OnToggleSidebar="ToggleSidebar" />
@@ -68,7 +74,7 @@
 </div>
 
 @code {
-    public const string PAGE_URL = "/markdown-docs";
+    public const string PAGE_URL = MarkdownViewerLocation.PageUrl;
 
     private readonly DialogOptions _groupSwitcherDialogOptions = new()
     {
@@ -86,12 +92,25 @@
     private TreeNode<MarkdownDocumentNodeData>? _currentTree;
     private MarkdownDocument? _selectedDocument;
     private string? _documentContent;
+    private string? _currentAnchorId;
+    private IJSObjectReference? _hashObserverModule;
+    private DotNetObjectReference<UIMarkdownPage>? _hashObserverReference;
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await LoadGroupsAsync();
+
+            _hashObserverModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Monica.UI/js/mo-url-hash-observer.js");
+            _hashObserverReference = DotNetObjectReference.Create(this);
+            await _hashObserverModule.InvokeVoidAsync("observeHash", _hashObserverReference);
         }
     }
 
@@ -113,12 +132,7 @@
             }
 
             _groups = groups;
-
-            if (_groups.Count > 0)
-            {
-                var firstValid = _groups.FirstOrDefault(g => g.IsValid) ?? _groups[0];
-                await OnGroupSelected(firstValid.Key);
-            }
+            await ApplyLocationAsync(MarkdownViewerLocation.FromAbsoluteUri(NavigationManager.Uri));
         }
         catch (Exception ex)
         {
@@ -161,9 +175,93 @@
 
     private async Task OnGroupSelected(string groupKey)
     {
+        await LoadGroupTreeAsync(groupKey);
+        _currentAnchorId = null;
+        NavigateToLocation(new MarkdownViewerLocation(groupKey));
+    }
+
+    private async Task OnDocumentSelected(MarkdownDocument? document)
+    {
+        await LoadDocumentAsync(document);
+        _currentAnchorId = null;
+        NavigateToLocation(new MarkdownViewerLocation(_selectedGroupKey, document?.RelativePath));
+    }
+
+    private void ToggleSidebar()
+    {
+        _showSidebar = !_showSidebar;
+    }
+
+    [JSInvokable]
+    public Task OnHashChangedAsync(string? anchorId)
+    {
+        var normalizedAnchorId = string.IsNullOrWhiteSpace(anchorId) ? null : anchorId;
+        if (string.Equals(_currentAnchorId, normalizedAnchorId, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _currentAnchorId = normalizedAnchorId;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyLocationAsync(MarkdownViewerLocation location)
+    {
+        _currentAnchorId = location.AnchorId;
+
+        if (_groups is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var targetGroup = ResolveTargetGroup(location.GroupKey);
+        if (targetGroup is null)
+        {
+            ClearDocumentSelection();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (!string.Equals(_selectedGroupKey, targetGroup.Key, StringComparison.Ordinal)
+            || (_currentTree is null && targetGroup.IsValid))
+        {
+            await LoadGroupTreeAsync(targetGroup.Key);
+        }
+
+        if (string.IsNullOrWhiteSpace(location.DocumentRelativePath))
+        {
+            ClearDocumentSelection();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var targetDocument = FindDocumentByRelativePath(_currentTree, location.DocumentRelativePath);
+        if (targetDocument is null)
+        {
+            ClearDocumentSelection();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var isCurrentDocument = _selectedDocument is not null
+                                && string.Equals(
+                                    _selectedDocument.RelativePath,
+                                    targetDocument.RelativePath,
+                                    StringComparison.OrdinalIgnoreCase);
+
+        if (!isCurrentDocument || _documentContent is null)
+        {
+            await LoadDocumentAsync(targetDocument);
+            return;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadGroupTreeAsync(string groupKey)
+    {
         _selectedGroupKey = groupKey;
-        _selectedDocument = null;
-        _documentContent = null;
+        ClearDocumentSelection();
         _currentTree = null;
 
         var group = GetCurrentGroup();
@@ -184,13 +282,15 @@
         StateHasChanged();
     }
 
-    private async Task OnDocumentSelected(MarkdownDocument? document)
+    private async Task LoadDocumentAsync(MarkdownDocument? document)
     {
         _selectedDocument = document;
         _documentContent = null;
 
         if (document is null)
         {
+            _contentLoading = false;
+            StateHasChanged();
             return;
         }
 
@@ -215,8 +315,115 @@
         }
     }
 
-    private void ToggleSidebar()
+    private MarkdownDocumentGroup? ResolveTargetGroup(string? groupKey)
     {
-        _showSidebar = !_showSidebar;
+        if (_groups is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(groupKey))
+        {
+            var matchedGroup = _groups.FirstOrDefault(g => string.Equals(g.Key, groupKey, StringComparison.Ordinal));
+            if (matchedGroup is not null)
+            {
+                return matchedGroup;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_selectedGroupKey))
+        {
+            var currentGroup = GetCurrentGroup();
+            if (currentGroup is not null)
+            {
+                return currentGroup;
+            }
+        }
+
+        return _groups.FirstOrDefault(g => g.IsValid) ?? _groups[0];
+    }
+
+    private static MarkdownDocument? FindDocumentByRelativePath(
+        TreeNode<MarkdownDocumentNodeData>? node,
+        string? relativePath)
+    {
+        if (node is null || string.IsNullOrWhiteSpace(relativePath))
+        {
+            return null;
+        }
+
+        foreach (var child in node.Children)
+        {
+            if (child.Data.Document is not null
+                && string.Equals(
+                    child.Data.Document.RelativePath,
+                    relativePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return child.Data.Document;
+            }
+
+            var nestedDocument = FindDocumentByRelativePath(child, relativePath);
+            if (nestedDocument is not null)
+            {
+                return nestedDocument;
+            }
+        }
+
+        return null;
+    }
+
+    private void ClearDocumentSelection()
+    {
+        _selectedDocument = null;
+        _documentContent = null;
+        _contentLoading = false;
+    }
+
+    private void NavigateToLocation(MarkdownViewerLocation location)
+    {
+        var targetUri = location.ToRelativeUri();
+        var currentUri = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+
+        if (string.Equals(targetUri, currentUri, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo(targetUri);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = InvokeAsync(() => ApplyLocationAsync(MarkdownViewerLocation.FromAbsoluteUri(e.Location)));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+
+        if (_hashObserverModule is not null && _hashObserverReference is not null)
+        {
+            try
+            {
+                await _hashObserverModule.InvokeVoidAsync("unobserveHash", _hashObserverReference);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+
+        _hashObserverReference?.Dispose();
+
+        if (_hashObserverModule is not null)
+        {
+            try
+            {
+                await _hashObserverModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 @using Microsoft.Extensions.Localization
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
+@using Monica.Markdown.UIMarkdown.Models
 @using Monica.UI.Components.Markdown
 @inject IStringLocalizer<MarkdownResource> L
 
@@ -99,7 +100,10 @@
                 <div class="markdown-body">
                     <MoMarkdown Value="@_strippedContent"
                                 ScopeKey="@Document.GroupKey"
-                                DocumentRelativePath="@Document.RelativePath" />
+                                DocumentRelativePath="@Document.RelativePath"
+                                HasTableOfContents="true"
+                                TableOfContentsHeader="@L["MarkdownViewer:Navbar:Outline"]"
+                                HeadingsChanged="OnHeadingsChanged" />
                 </div>
             </div>
         </div>
@@ -117,6 +121,9 @@
     public string? Content { get; set; }
 
     [Parameter]
+    public string? CurrentAnchorId { get; set; }
+
+    [Parameter]
     public bool IsLoading { get; set; }
 
     [Parameter]
@@ -126,12 +133,16 @@
     public EventCallback OnToggleSidebar { get; set; }
 
     private List<BreadcrumbItem> _breadcrumbs = [];
+    private IReadOnlyList<MoMarkdownHeading> _headings = [];
     private string? _strippedContent;
+    private string? _lastDocumentRelativePath;
+    private string? _lastStrippedContent;
 
     protected override void OnParametersSet()
     {
-        BuildBreadcrumbs();
         _strippedContent = StripLeadingTitle(Content);
+        ResetHeadingsIfDocumentChanged();
+        BuildBreadcrumbs();
     }
 
     private void BuildBreadcrumbs()
@@ -143,18 +154,35 @@
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(CurrentGroup?.Title))
+        var currentGroup = CurrentGroup;
+        if (!string.IsNullOrWhiteSpace(currentGroup?.Title))
         {
-            _breadcrumbs.Add(new BreadcrumbItem(CurrentGroup.Title, null));
+            var groupHref = string.IsNullOrWhiteSpace(currentGroup.Key)
+                ? null
+                : new MarkdownViewerLocation(currentGroup.Key).ToRelativeUri();
+
+            _breadcrumbs.Add(new BreadcrumbItem(currentGroup.Title, groupHref));
         }
 
-        var segments = Document.RelativePath.Split('/');
+        var segments = Document.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i < segments.Length - 1; i++)
         {
             _breadcrumbs.Add(new BreadcrumbItem(segments[i], null));
         }
 
-        _breadcrumbs.Add(new BreadcrumbItem(Document.Title, null, disabled: true));
+        var headingTrail = ResolveHeadingTrail();
+        _breadcrumbs.Add(new BreadcrumbItem(
+            Document.Title,
+            BuildDocumentHref(),
+            disabled: headingTrail.Count == 0));
+
+        foreach (var heading in headingTrail)
+        {
+            _breadcrumbs.Add(new BreadcrumbItem(
+                heading.Title,
+                BuildDocumentHref(heading.Id),
+                disabled: string.Equals(heading.Id, CurrentAnchorId, StringComparison.Ordinal)));
+        }
     }
 
     private string FormatLastEditedText(DateTime utcTime)
@@ -186,5 +214,68 @@
 
         var newlineIndex = trimmed.IndexOf('\n');
         return newlineIndex >= 0 ? trimmed[(newlineIndex + 1)..].TrimStart() : string.Empty;
+    }
+
+    private Task OnHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
+    {
+        if (_headings.SequenceEqual(headings))
+        {
+            return Task.CompletedTask;
+        }
+
+        _headings = headings.ToArray();
+        BuildBreadcrumbs();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetHeadingsIfDocumentChanged()
+    {
+        var currentRelativePath = Document?.RelativePath;
+
+        if (string.Equals(_lastDocumentRelativePath, currentRelativePath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(_lastStrippedContent, _strippedContent, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastDocumentRelativePath = currentRelativePath;
+        _lastStrippedContent = _strippedContent;
+        _headings = [];
+    }
+
+    private List<MoMarkdownHeading> ResolveHeadingTrail()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentAnchorId) || _headings.Count == 0)
+        {
+            return [];
+        }
+
+        var trail = new List<MoMarkdownHeading>();
+        foreach (var heading in _headings)
+        {
+            while (trail.Count > 0 && trail[^1].Level >= heading.Level)
+            {
+                trail.RemoveAt(trail.Count - 1);
+            }
+
+            trail.Add(heading);
+
+            if (string.Equals(heading.Id, CurrentAnchorId, StringComparison.Ordinal))
+            {
+                return trail.ToList();
+            }
+        }
+
+        return [];
+    }
+
+    private string? BuildDocumentHref(string? anchorId = null)
+    {
+        if (Document is null)
+        {
+            return null;
+        }
+
+        return new MarkdownViewerLocation(Document.GroupKey, Document.RelativePath, anchorId).ToRelativeUri();
     }
 }

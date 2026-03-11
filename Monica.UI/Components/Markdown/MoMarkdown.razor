@@ -10,7 +10,8 @@
                    Styling="@_resolvedStyling"
                    HasTableOfContents="@HasTableOfContents"
                    TableOfContentsHeader="@TableOfContentsHeader"
-                   EnableMermaid="@EnableMermaid" />
+                   EnableMermaid="@EnableMermaid"
+                   HeadingsChanged="@HeadingsChanged" />
 </div>
 
 @code {
@@ -40,6 +41,9 @@
 
     [Parameter]
     public bool EnableMermaid { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
 
     [Parameter]
     public MudMarkdownProps? Props { get; set; }

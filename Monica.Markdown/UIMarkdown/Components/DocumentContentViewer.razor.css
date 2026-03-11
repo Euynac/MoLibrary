@@ -43,6 +43,8 @@
 
 ::deep .content-breadcrumbs .mud-breadcrumbs {
     min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 4px;
 }
 
 ::deep .content-breadcrumbs .mud-breadcrumb-item {
@@ -101,6 +103,10 @@
     font-size: 0.95rem;
 }
 
+.markdown-body ::deep .mud-markdown-toc-content {
+    min-width: 0;
+}
+
 ::deep .markdown-body img {
     max-width: 100%;
     height: auto;
@@ -116,15 +122,6 @@
     overflow-x: auto;
 }
 
-@media (max-width: 960px) {
-    .content-navbar {
-        padding: 8px 12px;
-    }
-
-    .content-body {
-        padding: 24px 24px 40px 24px;
-    }
-}
 
 @media (max-width: 720px) {
     .content-navbar {
@@ -139,3 +136,14 @@
         padding: 20px 16px 32px 16px;
     }
 }
+
+@media (max-width: 960px) {
+    .content-navbar {
+        padding: 8px 12px;
+    }
+
+    .content-body {
+        padding: 24px 24px 40px 24px;
+    }
+}
+

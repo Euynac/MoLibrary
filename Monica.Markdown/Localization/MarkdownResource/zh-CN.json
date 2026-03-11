@@ -32,6 +32,7 @@
       "HideSidebar": "隐藏侧边栏",
       "OpenKnowledgeBaseSwitcher": "切换知识库",
       "UnknownKnowledgeBase": "未知知识库",
+      "Outline": "目录",
       "LastEdited": "最后更新于 {0}"
     },
     "Dialogs": {
