@@ -1,9 +1,11 @@
 @using Microsoft.Extensions.Localization
+@using Microsoft.Extensions.Logging
 @using System.Net
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.UI.Components.Markdown
 @inject IStringLocalizer<MarkdownResource> L
+@inject ILogger<DocumentTableOfContentsPanel> Logger
 
 <div class="toc-panel">
     <div class="toc-header">
@@ -69,12 +71,45 @@
     public EventCallback<string> OnHeadingSelected { get; set; }
 
     private IReadOnlyList<MoMarkdownHeading> _outlineHeadings = [];
+    private string? _lastLoggedCurrentAnchorId;
+    private int _lastLoggedHeadingCount = -1;
+    private string? _lastLoggedMatchedHeadingId;
+    private int _lastLoggedMatchedHeadingCount = -1;
 
     protected override void OnParametersSet()
     {
         _outlineHeadings = Headings
             .Where(static heading => heading.Level <= 3)
             .ToArray();
+
+        var normalizedCurrentAnchorId = NormalizeAnchorId(CurrentAnchorId);
+        var matchedHeadings = _outlineHeadings
+            .Where(heading => IsCurrentHeading(heading))
+            .Select(static heading => heading.Id)
+            .ToArray();
+
+        var matchedHeadingId = matchedHeadings.FirstOrDefault();
+        var matchedHeadingCount = matchedHeadings.Length;
+
+        if (!string.Equals(_lastLoggedCurrentAnchorId, normalizedCurrentAnchorId, StringComparison.Ordinal)
+            || _lastLoggedHeadingCount != _outlineHeadings.Count
+            || !string.Equals(_lastLoggedMatchedHeadingId, matchedHeadingId, StringComparison.Ordinal)
+            || _lastLoggedMatchedHeadingCount != matchedHeadingCount)
+        {
+            Logger.LogInformation(
+                "[TOCDBG][TOCPanel][ParametersSet] CurrentAnchorId={CurrentAnchorId}; NormalizedCurrentAnchorId={NormalizedCurrentAnchorId}; HeadingCount={HeadingCount}; MatchedHeadingCount={MatchedHeadingCount}; MatchedHeadingId={MatchedHeadingId}; HeadingSample={HeadingSample}",
+                CurrentAnchorId,
+                normalizedCurrentAnchorId,
+                _outlineHeadings.Count,
+                matchedHeadingCount,
+                matchedHeadingId,
+                string.Join(", ", _outlineHeadings.Take(3).Select(static heading => heading.Id)));
+
+            _lastLoggedCurrentAnchorId = normalizedCurrentAnchorId;
+            _lastLoggedHeadingCount = _outlineHeadings.Count;
+            _lastLoggedMatchedHeadingId = matchedHeadingId;
+            _lastLoggedMatchedHeadingCount = matchedHeadingCount;
+        }
     }
 
     private string GetHeadingClass(MoMarkdownHeading heading)
