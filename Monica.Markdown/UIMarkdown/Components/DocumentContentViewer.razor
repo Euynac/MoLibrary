@@ -19,7 +19,7 @@
 
             <button type="button"
                     class="search-trigger"
-                    disabled
+                    @onclick="OpenDocumentSearchAsync"
                     title="@L["MarkdownViewer:Toolbar:SearchPlaceholder"]">
                 <span class="search-trigger-leading">
                     <MudIcon Icon="@Icons.Material.Filled.Search"
@@ -163,6 +163,9 @@
 
     [Parameter]
     public EventCallback OnToggleTableOfContents { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpenDocumentSearch { get; set; }
 
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
@@ -327,5 +330,10 @@
     private Task ToggleTableOfContentsAsync()
     {
         return OnToggleTableOfContents.InvokeAsync();
+    }
+
+    private Task OpenDocumentSearchAsync()
+    {
+        return OnOpenDocumentSearch.InvokeAsync();
     }
 }

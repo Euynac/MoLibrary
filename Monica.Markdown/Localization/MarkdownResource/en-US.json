@@ -46,7 +46,19 @@
       "NoDocumentOutline": "Select a document to browse its outline."
     },
     "Dialogs": {
-      "SwitchKnowledgeBaseTitle": "Switch Knowledge Base"
+      "SwitchKnowledgeBaseTitle": "Switch Knowledge Base",
+      "Search": {
+        "Title": "Search",
+        "CurrentKnowledgeBaseLabel": "Current knowledge base",
+        "IncludeAllKnowledgeBases": "Search across knowledge bases",
+        "InputPlaceholder": "Type a title, topic, or folder",
+        "Hint": "Enter keywords to search document content in the current knowledge base.",
+        "Searching": "Searching documents...",
+        "ResultCount": "{0} documents",
+        "MinimumQueryLength": "Enter at least {0} characters.",
+        "NoResults": "No matching documents found.",
+        "SearchFailed": "Search failed: {0}"
+      }
     },
     "Messages": {
       "LoadDataFailed": "Failed to load markdown data: {0}"

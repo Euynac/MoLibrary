@@ -1,16 +1,20 @@
 using Microsoft.Extensions.Logging;
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
+using Monica.Markdown.UIMarkdown.Models;
 using Monica.Tool.Algorithm.Tree;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Markdown.UIMarkdown.Services;
 
 /// <summary>
-/// UI service wrapping IMoMarkdownService with Res&lt;T&gt; return types
+/// UI service wrapping markdown infrastructure services with Res&lt;T&gt; return types
 /// for consumption by Blazor components.
 /// </summary>
-public class MarkdownUIService(IMoMarkdownService markdownService, ILogger<MarkdownUIService> logger)
+public class MarkdownUIService(
+    IMoMarkdownService markdownService,
+    IMarkdownDocumentSearchService documentSearchService,
+    ILogger<MarkdownUIService> logger)
 {
     /// <summary>
     /// Gets all registered document groups.
@@ -77,6 +81,29 @@ public class MarkdownUIService(IMoMarkdownService markdownService, ILogger<Markd
         {
             logger.LogError(ex, "Failed to load document content: {Path}", document.FilePath);
             return Res.Fail($"Failed to load document content: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Searches markdown documents for the supplied query and returns UI-ready results.
+    /// </summary>
+    public async Task<Res<IReadOnlyList<MarkdownDocumentSearchResult>>> SearchDocumentsAsync(
+        MarkdownDocumentSearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var results = await documentSearchService.SearchAsync(request, cancellationToken);
+            return Res.Ok<IReadOnlyList<MarkdownDocumentSearchResult>>(results);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to search markdown documents for query '{Query}'", request.Query);
+            return Res.Fail($"Failed to search markdown documents: {ex.Message}");
         }
     }
 

@@ -185,6 +185,15 @@
     font-size: 0.95rem;
 }
 
+::deep [data-markdown-search-hit="true"],
+::deep .mo-markdown-search-hit {
+    padding: 0 0.14em;
+    border-radius: 0.35em;
+    background: rgba(var(--mud-palette-warning-rgb), 0.28);
+    color: var(--mud-palette-text-primary);
+    box-shadow: 0 0 0 1px rgba(var(--mud-palette-warning-rgb), 0.18);
+}
+
 .state-icon {
     font-size: 4rem !important;
 }

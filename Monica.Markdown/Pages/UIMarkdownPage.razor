@@ -74,6 +74,7 @@
                                            ShowSidebarToggle="!_showSidebar"
                                            IsTableOfContentsVisible="_showTableOfContents"
                                            OnToggleSidebar="ToggleSidebar"
+                                           OnOpenDocumentSearch="OpenDocumentSearchAsync"
                                            OnToggleTableOfContents="ToggleTableOfContents"
                                            HeadingsChanged="OnDocumentHeadingsChanged" />
                 </main>
@@ -110,6 +111,13 @@
         CloseButton = true,
         CloseOnEscapeKey = true
     };
+    private readonly DialogOptions _documentSearchDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraLarge,
+        FullWidth = true,
+        CloseButton = true,
+        CloseOnEscapeKey = true
+    };
 
     private bool _loading = true;
     private bool _contentLoading;
@@ -126,6 +134,8 @@
     private IJSObjectReference? _layoutModule;
     private DotNetObjectReference<UIMarkdownPage>? _hashObserverReference;
     private bool _pendingHeadingTrackerRefresh;
+    private PendingSearchNavigation? _pendingSearchNavigation;
+    private bool _pendingSearchHighlightClear;
 
     protected override void OnInitialized()
     {
@@ -151,6 +161,16 @@
         if (_pendingHeadingTrackerRefresh)
         {
             await RefreshHeadingTrackerAsync();
+        }
+
+        if (_pendingSearchHighlightClear)
+        {
+            await ClearSearchHitAsync();
+        }
+
+        if (_pendingSearchNavigation is not null && CanApplySearchNavigation(_pendingSearchNavigation))
+        {
+            await ApplySearchHitAsync(_pendingSearchNavigation);
         }
     }
 
@@ -213,8 +233,35 @@
         await OnGroupSelected(selectedGroupKey);
     }
 
+    private async Task OpenDocumentSearchAsync()
+    {
+        if (_groups is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<DocumentSearchDialog>
+        {
+            { x => x.CurrentGroup, GetCurrentGroup() }
+        };
+
+        var dialog = await DialogService.ShowAsync<DocumentSearchDialog>(
+            L["MarkdownViewer:Dialogs:Search:Title"],
+            parameters,
+            _documentSearchDialogOptions);
+
+        var result = await dialog.Result;
+        if (result is not { Canceled: false, Data: MarkdownDocumentSearchResult searchResult })
+        {
+            return;
+        }
+
+        await OpenSearchResultAsync(searchResult);
+    }
+
     private async Task OnGroupSelected(string groupKey)
     {
+        ResetSearchHighlight();
         _currentAnchorId = null;
         _documentHeadings = [];
         _pendingHeadingTrackerRefresh = true;
@@ -224,6 +271,7 @@
 
     private async Task OnDocumentSelected(MarkdownDocument? document)
     {
+        ResetSearchHighlight();
         _currentAnchorId = null;
         _documentHeadings = [];
         _pendingHeadingTrackerRefresh = true;
@@ -239,6 +287,28 @@
     private void ToggleTableOfContents()
     {
         _showTableOfContents = !_showTableOfContents;
+    }
+
+    private async Task OpenSearchResultAsync(MarkdownDocumentSearchResult result)
+    {
+        var navigation = new PendingSearchNavigation(Guid.NewGuid().ToString("N"), result);
+        _pendingSearchNavigation = navigation;
+        _pendingSearchHighlightClear = false;
+
+        var location = new MarkdownViewerLocation(
+            result.GroupKey,
+            result.DocumentRelativePath,
+            result.AnchorId);
+        var targetUri = location.ToRelativeUri();
+        var currentUri = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+
+        if (string.Equals(targetUri, currentUri, StringComparison.Ordinal))
+        {
+            await ApplyLocationAsync(location);
+            return;
+        }
+
+        NavigateToLocation(location);
     }
 
     private Task OnDocumentHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
@@ -296,6 +366,7 @@
         var targetGroup = ResolveTargetGroup(location.GroupKey);
         if (targetGroup is null)
         {
+            ResetSearchHighlight();
             ClearDocumentSelection();
             await InvokeAsync(StateHasChanged);
             return;
@@ -309,6 +380,7 @@
 
         if (string.IsNullOrWhiteSpace(location.DocumentRelativePath))
         {
+            ResetSearchHighlight();
             ClearDocumentSelection();
             await InvokeAsync(StateHasChanged);
             return;
@@ -317,6 +389,7 @@
         var targetDocument = FindDocumentByRelativePath(_currentTree, location.DocumentRelativePath);
         if (targetDocument is null)
         {
+            ResetSearchHighlight();
             ClearDocumentSelection();
             await InvokeAsync(StateHasChanged);
             return;
@@ -488,6 +561,67 @@
             _hashObserverReference);
     }
 
+    private void ResetSearchHighlight()
+    {
+        _pendingSearchNavigation = null;
+        _pendingSearchHighlightClear = true;
+    }
+
+    private bool CanApplySearchNavigation(PendingSearchNavigation navigation)
+    {
+        return _layoutModule is not null
+               && !_contentLoading
+               && _selectedDocument is not null
+               && _documentContent is not null
+               && string.Equals(_selectedDocument.GroupKey, navigation.Result.GroupKey, StringComparison.Ordinal)
+               && string.Equals(
+                   _selectedDocument.RelativePath,
+                   navigation.Result.DocumentRelativePath,
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ApplySearchHitAsync(PendingSearchNavigation navigation)
+    {
+        if (_layoutModule is null)
+        {
+            return;
+        }
+
+        _pendingSearchNavigation = null;
+
+        try
+        {
+            await _layoutModule.InvokeAsync<bool>(
+                "highlightSearchHit",
+                navigation.Result.Locator.AnchorId,
+                navigation.Result.Locator.HeadingLevel,
+                navigation.Result.Locator.MatchedText,
+                navigation.Result.Locator.PrefixContext,
+                navigation.Result.Locator.SuffixContext);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    private async Task ClearSearchHitAsync()
+    {
+        if (_layoutModule is null)
+        {
+            return;
+        }
+
+        _pendingSearchHighlightClear = false;
+
+        try
+        {
+            await _layoutModule.InvokeVoidAsync("clearSearchHit");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
     private string? ResolveCurrentAnchorId(string? anchorId)
     {
         var normalizedAnchorId = NormalizeAnchorId(anchorId);
@@ -607,6 +741,14 @@
         {
             try
             {
+                await _layoutModule.InvokeVoidAsync("clearSearchHit");
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+
+            try
+            {
                 await _layoutModule.InvokeVoidAsync("disposeActiveHeadingTracker");
             }
             catch (JSDisconnectedException)
@@ -622,4 +764,6 @@
             }
         }
     }
+
+    private sealed record PendingSearchNavigation(string RequestKey, MarkdownDocumentSearchResult Result);
 }

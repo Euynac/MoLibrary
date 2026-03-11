@@ -7,6 +7,8 @@ using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Markdown.Pages;
+using Monica.Markdown.Interfaces;
+using Monica.Markdown.Services;
 using Monica.Markdown.UIMarkdown.Models;
 using Monica.Markdown.UIMarkdown.Services;
 using Monica.UI.Components.Markdown;
@@ -37,6 +39,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     {
         services.AddScoped<MarkdownUIService>();
         services.AddScoped<MarkdownLocalImageAssetService>();
+        services.TryAddSingleton<IMarkdownDocumentSearchService, MarkdownDocumentSearchService>();
         services.Replace(ServiceDescriptor.Scoped<IMoMarkdownAssetResolver, MarkdownKnowledgeBaseAssetResolver>());
     }
 
@@ -174,6 +177,32 @@ public class ModuleMarkdownUIOption : MoModuleOptionWithMinimalApi<ModuleMarkdow
     /// Base path for the local markdown asset endpoint.
     /// </summary>
     public string AssetEndpointBasePath { get; set; } = "/markdown-ui/assets";
+
+    /// <summary>
+    /// Selects the matching strategy used by document search.
+    /// </summary>
+    public EMarkdownDocumentSearchAlgorithm DocumentSearchAlgorithm { get; set; } =
+        EMarkdownDocumentSearchAlgorithm.KeywordFuzzy;
+
+    /// <summary>
+    /// Minimum query length required before a search executes.
+    /// </summary>
+    public int DocumentSearchMinQueryLength { get; set; } = 2;
+
+    /// <summary>
+    /// Client-side debounce delay for search input, in milliseconds.
+    /// </summary>
+    public int DocumentSearchDebounceMilliseconds { get; set; } = 250;
+
+    /// <summary>
+    /// Maximum number of document results returned by each search request.
+    /// </summary>
+    public int DocumentSearchMaxResults { get; set; } = 50;
+
+    /// <summary>
+    /// Maximum number of preview characters displayed per result card.
+    /// </summary>
+    public int DocumentSearchPreviewLength { get; set; } = 180;
 
     /// <summary>
     /// Image extensions allowed to be served by the local markdown asset endpoint.
