@@ -159,28 +159,7 @@
         background-color: var(--mud-palette-surface) !important;
     }
     
-    .mud-tab {
-        border-radius: var(--mo-button-border-radius) !important;
-        transition: all var(--mo-transition-normal) ease !important;
-        color: var(--mud-palette-text-secondary) !important;
-    }
-    
-    .mud-tab.mud-tab-active {
-        background-color: var(--mud-palette-primary) !important;
-        color: var(--mud-palette-primary-text) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-    }
-    
-    .mud-tab:hover {
-        background-color: var(--mud-palette-action-default-hover) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-        transform: none !important;
-    }
-    
-    .mud-tab.mud-tab-active:hover {
-        background-color: var(--mud-palette-primary-lighten) !important;
-        border-radius: var(--mo-button-border-radius) !important;
-    }
+   
 }
 
 /* Light Theme Specific Styles */
