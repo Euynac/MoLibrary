@@ -19,7 +19,7 @@ public sealed class RAGVectorCollectionCoordinator(
 {
     private readonly ModuleRAGOption _options = options.Value;
 
-    private readonly ConcurrentDictionary<string, VectorStoreCollection<object, Dictionary<string, object?>>> _collections =
+    private readonly ConcurrentDictionary<string, VectorStoreCollection<Guid, RAGVectorRecord>> _collections =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _collectionBindings =
         new(StringComparer.OrdinalIgnoreCase);
@@ -28,12 +28,15 @@ public sealed class RAGVectorCollectionCoordinator(
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public static string BuildRecordKey(string knowledgeBaseId, string documentPath, int chunkIndex)
-        => $"{knowledgeBaseId}_{documentPath}_{chunkIndex}";
+        => RAGVectorRecord.BuildLogicalKey(knowledgeBaseId, documentPath, chunkIndex);
+
+    public static Guid BuildStorageKey(string knowledgeBaseId, string documentPath, int chunkIndex)
+        => RAGVectorRecord.BuildStorageKey(knowledgeBaseId, documentPath, chunkIndex);
 
     public string GetCollectionName(string knowledgeBaseId)
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
 
-    public async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetOrCreateCollectionAsync(
+    public async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetOrCreateCollectionAsync(
         KnowledgeBase kb,
         RAGEmbeddingBinding binding,
         CancellationToken ct)
@@ -63,14 +66,13 @@ public sealed class RAGVectorCollectionCoordinator(
 
         var foundKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await foreach (var record in collection.GetAsync(
-                           keys.Select(static key => (object)key),
+                           keys.Select(RAGVectorRecord.BuildStorageKey),
                            new RecordRetrievalOptions { IncludeVectors = false },
                            ct))
         {
-            if (record.TryGetValue("Key", out var rawKey)
-                && rawKey?.ToString() is { Length: > 0 } key)
+            if (!string.IsNullOrWhiteSpace(record.LogicalKey))
             {
-                foundKeys.Add(key);
+                foundKeys.Add(record.LogicalKey);
             }
         }
 
@@ -79,7 +81,7 @@ public sealed class RAGVectorCollectionCoordinator(
             .ToList();
     }
 
-    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetCollectionCoreAsync(
+    private async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetCollectionCoreAsync(
         KnowledgeBase kb,
         RAGEmbeddingBinding binding,
         bool ensureCollectionExists,
@@ -98,7 +100,7 @@ public sealed class RAGVectorCollectionCoordinator(
         {
             var embeddingGenerator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
             var definition = CreateCollectionDefinition(binding.Dimensions, embeddingGenerator);
-            return vectorStore.GetDynamicCollection(collectionName, definition);
+            return vectorStore.GetCollection<Guid, RAGVectorRecord>(collectionName, definition);
         });
 
         _collectionBindings[collectionName] = bindingKey;
@@ -120,7 +122,7 @@ public sealed class RAGVectorCollectionCoordinator(
             return 0;
         }
 
-        VectorStoreCollection<object, Dictionary<string, object?>>? collection = null;
+        VectorStoreCollection<Guid, RAGVectorRecord>? collection = null;
         try
         {
             var binding = await embeddingBindingResolver.ResolveAsync(kb, ct);
@@ -146,7 +148,7 @@ public sealed class RAGVectorCollectionCoordinator(
         }
 
         var keys = Enumerable.Range(0, existingState.ChunkCount)
-            .Select(index => (object)BuildRecordKey(kb.Id, existingState.DocumentPath, index))
+            .Select(index => BuildStorageKey(kb.Id, existingState.DocumentPath, index))
             .ToList();
 
         await collection.DeleteAsync(keys, ct);
@@ -166,7 +168,7 @@ public sealed class RAGVectorCollectionCoordinator(
 
     private async Task EnsureCollectionInitializedAsync(
         string collectionName,
-        VectorStoreCollection<object, Dictionary<string, object?>> collection,
+        VectorStoreCollection<Guid, RAGVectorRecord> collection,
         CancellationToken ct)
     {
         if (_initializedCollections.ContainsKey(collectionName))
@@ -203,17 +205,18 @@ public sealed class RAGVectorCollectionCoordinator(
             EmbeddingGenerator = embeddingGenerator,
             Properties =
             [
-                new VectorStoreKeyProperty("Key", typeof(string)),
-                new VectorStoreDataProperty("KnowledgeBaseId", typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty("DocumentPath", typeof(string)) { IsIndexed = true },
-                new VectorStoreDataProperty("DocumentTitle", typeof(string)),
-                new VectorStoreDataProperty("Content", typeof(string)) { IsFullTextIndexed = true },
-                new VectorStoreDataProperty("SectionPath", typeof(string)),
-                new VectorStoreDataProperty("ChunkIndex", typeof(int)),
-                new VectorStoreDataProperty("ChunkStart", typeof(int)),
-                new VectorStoreDataProperty("ChunkEnd", typeof(int)),
-                new VectorStoreDataProperty("ChunkerId", typeof(string)),
-                new VectorStoreVectorProperty("ContentEmbedding", typeof(float[]), vectorDimensions)
+                new VectorStoreKeyProperty(nameof(RAGVectorRecord.StorageKey), typeof(Guid)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.LogicalKey), typeof(string)) { IsIndexed = true },
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.KnowledgeBaseId), typeof(string)) { IsIndexed = true },
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.DocumentPath), typeof(string)) { IsIndexed = true },
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.DocumentTitle), typeof(string)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.Content), typeof(string)) { IsFullTextIndexed = true },
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.SectionPath), typeof(string)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkIndex), typeof(int)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkStart), typeof(int)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkEnd), typeof(int)),
+                new VectorStoreDataProperty(nameof(RAGVectorRecord.ChunkerId), typeof(string)),
+                new VectorStoreVectorProperty(nameof(RAGVectorRecord.ContentEmbedding), typeof(float[]), vectorDimensions)
                 {
                     EmbeddingGenerator = embeddingGenerator
                 }

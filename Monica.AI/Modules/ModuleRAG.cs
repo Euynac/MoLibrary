@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
+using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.RAG.Abstractions;
@@ -112,6 +113,32 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
 }
 
 /// <summary>
+/// Qdrant-specific settings for the RAG vector store provider.
+/// </summary>
+public class ModuleRAGQdrantOption : IMoModuleExtraOption<ModuleRAG>
+{
+    /// <summary>
+    /// Qdrant host name.
+    /// </summary>
+    public string Host { get; set; } = "localhost";
+
+    /// <summary>
+    /// Qdrant gRPC port.
+    /// </summary>
+    public int Port { get; set; } = 6334;
+
+    /// <summary>
+    /// Whether to use HTTPS for the Qdrant connection.
+    /// </summary>
+    public bool Https { get; set; }
+
+    /// <summary>
+    /// Optional Qdrant API key.
+    /// </summary>
+    public string? ApiKey { get; set; }
+}
+
+/// <summary>
 /// RAG module configuration guide.
 /// </summary>
 public class ModuleRAGGuide
@@ -120,6 +147,7 @@ public class ModuleRAGGuide
     private const string CONFIG_INDEX_STATE_STORE = nameof(CONFIG_INDEX_STATE_STORE);
     private const string CONFIG_SOURCE_STORE = nameof(CONFIG_SOURCE_STORE);
     private const string CONFIG_VECTOR_STORE = nameof(CONFIG_VECTOR_STORE);
+    private const string CONFIG_QDRANT_PROVIDER_OPTION = nameof(CONFIG_QDRANT_PROVIDER_OPTION);
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -196,6 +224,27 @@ public class ModuleRAGGuide
         {
             ctx.Services.AddSingleton<VectorStore, TVectorStore>();
         }, key: CONFIG_VECTOR_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Uses Qdrant as the vector store provider.
+    /// </summary>
+    public ModuleRAGGuide UseVectorStoreQdrantProvider(
+        Action<ModuleRAGQdrantOption>? action = null)
+    {
+        ConfigureExtraOption(action, key: CONFIG_QDRANT_PROVIDER_OPTION);
+        ConfigureServices(ctx =>
+        {
+            var option = ctx.GetModuleExtraOption<ModuleRAGQdrantOption>();
+            ctx.Services.AddQdrantVectorStore(
+                option.Host,
+                option.Port,
+                option.Https,
+                option.ApiKey ?? string.Empty,
+                new QdrantVectorStoreOptions());
+        }, key: CONFIG_VECTOR_STORE);
+
         return this;
     }
 

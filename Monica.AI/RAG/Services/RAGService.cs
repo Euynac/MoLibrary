@@ -459,20 +459,13 @@ public sealed partial class RAGService(
 
             _ = await vectorCollectionCoordinator.RemoveIndexedDocumentDataAsync(kb, existingState, ct);
 
-            var records = chunks.Select((chunk, index) => new Dictionary<string, object?>
-                {
-                    ["Key"] = RAGVectorCollectionCoordinator.BuildRecordKey(knowledgeBaseId, documentPath, chunk.ChunkIndex),
-                    ["KnowledgeBaseId"] = knowledgeBaseId,
-                    ["DocumentPath"] = documentPath,
-                    ["DocumentTitle"] = resolvedDocumentName,
-                    ["Content"] = chunk.Content,
-                    ["SectionPath"] = chunk.SectionPath,
-                    ["ChunkIndex"] = chunk.ChunkIndex,
-                    ["ChunkStart"] = chunk.StartOffset,
-                    ["ChunkEnd"] = chunk.EndOffset,
-                    ["ChunkerId"] = chunker.ChunkerId,
-                    ["ContentEmbedding"] = vectors[index]
-                })
+            var records = chunks.Select((chunk, index) => RAGVectorRecord.Create(
+                    knowledgeBaseId,
+                    documentPath,
+                    resolvedDocumentName,
+                    chunk,
+                    chunker.ChunkerId,
+                    vectors[index]))
                 .ToList();
 
             await collection.UpsertAsync(records, ct);
@@ -537,10 +530,10 @@ public sealed partial class RAGService(
                 continue;
             }
 
-            var hybridSearch = collection.GetService(typeof(IKeywordHybridSearchable<Dictionary<string, object?>>))
-                               as IKeywordHybridSearchable<Dictionary<string, object?>>;
+            var hybridSearch = collection.GetService(typeof(IKeywordHybridSearchable<RAGVectorRecord>))
+                               as IKeywordHybridSearchable<RAGVectorRecord>;
 
-            IAsyncEnumerable<VectorSearchResult<Dictionary<string, object?>>> searchResults;
+            IAsyncEnumerable<VectorSearchResult<RAGVectorRecord>> searchResults;
             if (hybridSearch is not null)
             {
                 var keywords = WordSegmenter().Matches(query).Select(m => m.Value).ToList();
@@ -558,18 +551,21 @@ public sealed partial class RAGService(
             await foreach (var result in searchResults)
             {
                 var record = result.Record;
+                if (record is null)
+                {
+                    continue;
+                }
+
                 results.Add(new TextSearchResult
                 {
-                    SourceName = record["DocumentTitle"]?.ToString(),
-                    SourceLink = record["DocumentPath"]?.ToString(),
-                    Text = record["Content"]?.ToString() ?? string.Empty,
+                    SourceName = record.DocumentTitle,
+                    SourceLink = record.DocumentPath,
+                    Text = record.Content,
                     Score = result.Score,
                     KnowledgeBaseId = kbId,
-                    SectionPath = record["SectionPath"]?.ToString(),
-                    DocumentId = record["DocumentPath"]?.ToString(),
-                    ChunkIndex = TryGetChunkIndex(record.TryGetValue("ChunkIndex", out var value)
-                        ? value
-                        : null)
+                    SectionPath = record.SectionPath,
+                    DocumentId = record.DocumentPath,
+                    ChunkIndex = record.ChunkIndex
                 });
             }
         }
@@ -1050,22 +1046,6 @@ public sealed partial class RAGService(
                 };
             })
             .ToList();
-    }
-
-    private static int? TryGetChunkIndex(object? rawChunkIndex)
-    {
-        if (rawChunkIndex is null)
-        {
-            return null;
-        }
-
-        return rawChunkIndex switch
-        {
-            int i => i,
-            long l => (int)l,
-            string s when int.TryParse(s, out var parsed) => parsed,
-            _ => null
-        };
     }
 
     private static string NormalizeExtension(string extension)
