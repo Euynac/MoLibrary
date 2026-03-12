@@ -6,7 +6,7 @@
     --mo-markdown-panel-border: var(--mud-palette-lines-default);
     --mo-markdown-accent: var(--mud-palette-primary);
     --mo-markdown-muted: var(--mud-palette-text-secondary);
-    --mo-markdown-inline-code-background: var(--mud-palette-action-disabled-background);
+    --mo-markdown-inline-code-background: rgba(var(--mud-palette-primary-rgb), 0.1);
 }
 
 .mo-markdown-style-default .mud-markdown-body {
@@ -58,8 +58,8 @@
     }
     h1 {
         border-bottom: 1px solid;
-        margin-bottom: 1.875em;
-        padding-bottom: 0.8125em;
+        margin-bottom: 0.875em !important;
+        padding-bottom: 0.3125em;
     }
     
     h1, h2 {
@@ -69,7 +69,10 @@
 
 .mo-markdown-style-default .mud-markdown-body code:not(.hljs) {
     background: var(--mo-markdown-inline-code-background);
-    border: 1px solid var(--mo-markdown-panel-border);
+    margin: 1px 3px;
+    /*border: 1px solid var(--mo-markdown-panel-border);*/
+    color: var(--mud-palette-primary) !important;
+    border-radius: 6px;
 }
 
 .mo-markdown-style-default .mud-markdown-body blockquote {
