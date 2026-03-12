@@ -1,4 +1,4 @@
 interface:
   display_name: "Subagent Progress Report"
-  short_description: "Manage sub-agent session folders, logs, and status scans."
-  default_prompt: "Use $subagent-progress-report to coordinate a main-agent session folder, sub-agent logs, and status scans."
+  short_description: "Manage sub-agent logs, status scans, and closure."
+  default_prompt: "Use $subagent-progress-report to coordinate sub-agent session folders, scoped delegation, status scans, and closed-agent archiving."

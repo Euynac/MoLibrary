@@ -9,12 +9,15 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from _session_common import resolve_project_tmp_dir
+from _session_common import (
+    is_closed_agent_dir,
+    normalize_agent_name,
+    resolve_session_root,
+)
 
 ENTRY_PATTERN = re.compile(
     r"^\[(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{2}:\d{2})\]\s*(?P<message>.*)$"
 )
-ROOT_PATTERN = re.compile(r"^(?P<stamp>\d{8}-\d{6})-agent-session$")
 
 
 @dataclass
@@ -27,6 +30,7 @@ class SessionStatus:
     latest_timestamp: str | None
     state: str
     message: str
+    is_closed: bool
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,6 +56,11 @@ def parse_args() -> argparse.Namespace:
         "--latest-per-agent",
         action="store_true",
         help="Return only the newest session for each agent.",
+    )
+    parser.add_argument(
+        "--include-closed",
+        action="store_true",
+        help="Include directories already renamed with the (Closed) prefix.",
     )
     parser.add_argument(
         "--json",
@@ -85,24 +94,17 @@ def first_entry(log_path: Path) -> tuple[str | None, str]:
         return match.group("timestamp"), match.group("message").strip()
 
 
-def resolve_session_root(base_dir: Path, explicit_root: str | None) -> Path:
-    if explicit_root:
-        return Path(explicit_root).resolve()
-
-    _, tmp_dir = resolve_project_tmp_dir(base_dir)
-    if not tmp_dir.exists():
-        return tmp_dir / "missing-agent-session"
-
-    candidates = [
-        path for path in tmp_dir.iterdir()
-        if path.is_dir() and ROOT_PATTERN.match(path.name)
-    ]
-    if not candidates:
-        return tmp_dir / "missing-agent-session"
-    return sorted(candidates, reverse=True)[0]
+def matches_filters(folder_name: str, agent_name: str, filters: set[str]) -> bool:
+    if not filters:
+        return True
+    return folder_name in filters or agent_name in filters
 
 
-def iter_sessions(session_root: Path, filters: set[str]) -> list[SessionStatus]:
+def iter_sessions(
+    session_root: Path,
+    filters: set[str],
+    include_closed: bool,
+) -> list[SessionStatus]:
     if not session_root.exists():
         return []
 
@@ -110,10 +112,15 @@ def iter_sessions(session_root: Path, filters: set[str]) -> list[SessionStatus]:
     for path in sorted(session_root.iterdir()):
         if not path.is_dir():
             continue
-        agent_name = path.name
+        folder_name = path.name
+        is_closed = is_closed_agent_dir(folder_name)
+        if is_closed and not include_closed:
+            continue
+
+        agent_name = normalize_agent_name(folder_name)
         stamp = session_root.name
 
-        if filters and agent_name not in filters:
+        if not matches_filters(folder_name, agent_name, filters):
             continue
 
         log_path = path / "agent.log"
@@ -128,6 +135,7 @@ def iter_sessions(session_root: Path, filters: set[str]) -> list[SessionStatus]:
                 latest_timestamp=latest_timestamp,
                 state=classify_state(message),
                 message=message,
+                is_closed=is_closed,
             )
         )
     return results
@@ -164,8 +172,8 @@ def render_text(items: list[SessionStatus], session_root: Path) -> str:
 def main() -> int:
     args = parse_args()
     session_root = resolve_session_root(Path(args.base_dir).resolve(), args.session_root)
-    filters = set(args.agent_name)
-    items = iter_sessions(session_root, filters)
+    filters = {normalize_agent_name(name) for name in args.agent_name}
+    items = iter_sessions(session_root, filters, args.include_closed)
     if args.latest_per_agent:
         items = latest_per_agent(items)
 

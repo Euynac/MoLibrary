@@ -5,16 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 
-from _session_common import resolve_project_tmp_dir
-
-
-def sanitize_agent_name(value: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
-    cleaned = cleaned.strip("-._")
-    return cleaned or "subagent"
+from _session_common import normalize_agent_name, resolve_project_tmp_dir
 
 
 def main() -> int:
@@ -47,7 +40,7 @@ def main() -> int:
             f"session root must be inside the current project tmp directory: {tmp_dir}"
         ) from exc
 
-    safe_agent_name = sanitize_agent_name(args.agent_name)
+    safe_agent_name = normalize_agent_name(args.agent_name)
     session_dir = session_root / safe_agent_name
     session_dir.mkdir(parents=True, exist_ok=True)
 
