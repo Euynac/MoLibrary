@@ -213,10 +213,6 @@
         transform: translateY(-1px);
     }
     
-    .mud-button:hover {
-        background-color: var(--mud-palette-action-default-hover);
-    }
-    
     .mud-button-filled {
         box-shadow: var(--mo-button-box-shadow) !important;
     }
@@ -308,11 +304,6 @@
         box-shadow: var(--mo-shadow-mystical), var(--mo-glow-primary);
         transform: translateY(-2px);
         border-color: rgba(183, 148, 246, 0.3);
-    }
-    
-    /* Dark Mode按钮悬停效果 */
-    .mud-button:hover {
-        background-color: var(--mud-palette-action-default-hover);
     }
     
     /* AppBar 深邃效果 */
