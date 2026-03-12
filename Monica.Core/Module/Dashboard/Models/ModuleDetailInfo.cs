@@ -60,6 +60,11 @@ public class ModuleConfigInfo
     public Dictionary<string, object?> ConfigurationItems { get; set; } = [];
 
     /// <summary>
+    /// Module options available for display in the UI.
+    /// </summary>
+    public List<ModuleConfiguredOption> ConfiguredOptions { get; set; } = [];
+
+    /// <summary>
     /// 模块注册请求数量
     /// </summary>
     public int RegisterRequestCount { get; set; }
@@ -68,6 +73,27 @@ public class ModuleConfigInfo
     /// 模块是否具有循环依赖
     /// </summary>
     public bool HasCircularDependency { get; set; }
+}
+
+/// <summary>
+/// Represents a configured module option instance.
+/// </summary>
+public class ModuleConfiguredOption
+{
+    /// <summary>
+    /// Gets or sets the option type.
+    /// </summary>
+    public Type OptionType { get; set; } = typeof(object);
+
+    /// <summary>
+    /// Gets or sets the configured option instance.
+    /// </summary>
+    public object? OptionInstance { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this option is an extra option.
+    /// </summary>
+    public bool IsExtraOption { get; set; }
 }
 
 /// <summary>

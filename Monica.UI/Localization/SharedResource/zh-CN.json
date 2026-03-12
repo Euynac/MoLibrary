@@ -219,6 +219,8 @@
         "RegistrationOrder": "注册顺序",
         "InitializationTime": "初始化时间",
         "ModuleStatus": "模块状态",
+        "ModuleOption": "模块选项",
+        "ExtraOption": "额外选项",
         "TotalDuration": "总耗时",
         "PhaseDetails": "阶段详情",
         "DirectDependencies": "直接依赖",

@@ -224,8 +224,22 @@
 
                 <MudTabPanel Text="@L["ModuleSystem:ModuleDetail:Tabs:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
                     <div class="tab-content">
-                        <ModuleOptionDisplay OptionType="@ModuleOptionType"
-                                           OptionInstance="@ModuleOptionInstance" />
+                        @if (SelectedModuleDetail.ConfigInfo.ConfiguredOptions.Any())
+                        {
+                            <MudStack Spacing="3">
+                                @foreach (var configuredOption in SelectedModuleDetail.ConfigInfo.ConfiguredOptions)
+                                {
+                                    <ModuleOptionDisplay OptionType="@configuredOption.OptionType"
+                                                       OptionInstance="@configuredOption.OptionInstance"
+                                                       OptionKindText="@(configuredOption.IsExtraOption ? L["ModuleSystem:ModuleDetail:Labels:ExtraOption"] : L["ModuleSystem:ModuleDetail:Labels:ModuleOption"])"
+                                                       OptionKindColor="@(configuredOption.IsExtraOption ? Color.Tertiary : Color.Primary)" />
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <ModuleOptionDisplay />
+                        }
                     </div>
                 </MudTabPanel>
 
@@ -278,16 +292,6 @@
     /// 选中的模块详情
     /// </summary>
     [Parameter] public ModuleDetailInfo? SelectedModuleDetail { get; set; }
-
-    /// <summary>
-    /// 模块选项类型
-    /// </summary>
-    [Parameter] public Type? ModuleOptionType { get; set; }
-
-    /// <summary>
-    /// 模块选项实例
-    /// </summary>
-    [Parameter] public object? ModuleOptionInstance { get; set; }
 
     /// <summary>
     /// 对话框选项

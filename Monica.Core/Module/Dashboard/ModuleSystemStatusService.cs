@@ -1,6 +1,7 @@
 using Monica.Core.Module.Dashboard.Interfaces;
 using Monica.Core.Module.Dashboard.Models;
 using Monica.Core.Module.Features;
+using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.Tool.Extensions;
 
@@ -276,21 +277,6 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取指定模块的选项实例。
-    /// </summary>
-    /// <param name="moduleKey">模块键</param>
-    /// <returns>选项类型和选项实例的元组，如果模块不存在则返回null</returns>
-    public (Type optionType, object? optionInstance)? GetModuleOptionInstance(ModuleKey moduleKey)
-    {
-        var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
-        if (snapshot == null) return null;
-
-        var optionType = snapshot.RegisterInfo.ModuleOptionType;
-        snapshot.RegisterInfo.FinalConfigures.TryGetValue(optionType, out var optionInstance);
-        return (optionType, optionInstance);
-    }
-
-    /// <summary>
     /// 获取模块系统的健康状态检查结果。
     /// </summary>
     /// <returns>健康状态检查结果</returns>
@@ -429,6 +415,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         {
             IsDisabled = false,
             ConfigurationItems = [], // 这里可能需要从实际的模块配置中获取
+            ConfiguredOptions = CreateConfiguredOptions(snapshot.RegisterInfo),
             RegisterRequestCount = snapshot.RegisterInfo.RegisterRequests.Count,
             HasCircularDependency = dependencyInfo.IsPartOfCycle
         };
@@ -455,6 +442,21 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             ExecutionHistory = executionHistory,
             Errors = errors
         };
+    }
+
+    private static List<ModuleConfiguredOption> CreateConfiguredOptions(ModuleRegisterInfo registerInfo)
+    {
+        return registerInfo.FinalConfigures
+            .Where(static entry => typeof(IMoModuleOptionBase).IsAssignableFrom(entry.Key))
+            .Select(entry => new ModuleConfiguredOption
+            {
+                OptionType = entry.Key,
+                OptionInstance = entry.Value,
+                IsExtraOption = entry.Key != registerInfo.ModuleOptionType
+            })
+            .OrderBy(option => option.IsExtraOption ? 1 : 0)
+            .ThenBy(option => option.OptionType.Name)
+            .ToList();
     }
 
     private static EMoModuleConfigMethods GetModuleStatus(ModuleKey moduleKey, Type? moduleType)

@@ -53,10 +53,4 @@ public interface IModuleSystemStatusService
     /// <returns>健康状态检查结果</returns>
     ModuleSystemHealthCheck GetHealthCheck();
 
-    /// <summary>
-    /// 获取指定模块的选项实例。
-    /// </summary>
-    /// <param name="moduleKey">模块键</param>
-    /// <returns>选项类型和选项实例的元组，如果模块不存在则返回null</returns>
-    (Type optionType, object? optionInstance)? GetModuleOptionInstance(ModuleKey moduleKey);
-} 
+}

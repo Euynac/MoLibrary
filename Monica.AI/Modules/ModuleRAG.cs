@@ -147,7 +147,6 @@ public class ModuleRAGGuide
     private const string CONFIG_INDEX_STATE_STORE = nameof(CONFIG_INDEX_STATE_STORE);
     private const string CONFIG_SOURCE_STORE = nameof(CONFIG_SOURCE_STORE);
     private const string CONFIG_VECTOR_STORE = nameof(CONFIG_VECTOR_STORE);
-    private const string CONFIG_QDRANT_PROVIDER_OPTION = nameof(CONFIG_QDRANT_PROVIDER_OPTION);
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -233,7 +232,7 @@ public class ModuleRAGGuide
     public ModuleRAGGuide UseVectorStoreQdrantProvider(
         Action<ModuleRAGQdrantOption>? action = null)
     {
-        ConfigureExtraOption(action, key: CONFIG_QDRANT_PROVIDER_OPTION);
+        ConfigureExtraOption(action);
         ConfigureServices(ctx =>
         {
             var option = ctx.GetModuleExtraOption<ModuleRAGQdrantOption>();

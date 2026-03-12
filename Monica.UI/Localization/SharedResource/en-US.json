@@ -219,6 +219,8 @@
         "RegistrationOrder": "Registration Order",
         "InitializationTime": "Initialization Time",
         "ModuleStatus": "Module Status",
+        "ModuleOption": "Module Option",
+        "ExtraOption": "Extra Option",
         "TotalDuration": "Total Duration",
         "PhaseDetails": "Phase Details",
         "DirectDependencies": "Direct Dependencies",

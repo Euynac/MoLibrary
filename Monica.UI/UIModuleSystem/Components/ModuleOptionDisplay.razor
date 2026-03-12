@@ -16,16 +16,28 @@
     }
     else
     {
+        var displayProperties = GetDisplayProperties().ToArray();
+
         <div class="header-wrapper">
-            <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Secondary">
+            <MudText Typo="Typo.subtitle1" Class="option-title" Color="Color.Secondary">
                 <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
                 @OptionType.Name
             </MudText>
+            @if (!string.IsNullOrWhiteSpace(OptionKindText))
+            {
+                <MudChip T="string"
+                         Class="option-kind-chip"
+                         Size="Size.Small"
+                         Color="@OptionKindColor"
+                         Variant="Variant.Outlined">
+                    @OptionKindText
+                </MudChip>
+            }
         </div>
 
         <div class="grid-wrapper">
             <MudGrid Spacing="3">
-                @foreach (var property in GetDisplayProperties())
+                @foreach (var property in displayProperties)
                 {
                     <MudItem xs="12" sm="6">
                         <MudPaper Class="pa-4 option-card" Elevation="2">
@@ -52,7 +64,7 @@
             </MudGrid>
         </div>
 
-        @if (!GetDisplayProperties().Any())
+        @if (displayProperties.Length == 0)
         {
             <div class="alert-wrapper">
                 <MudAlert Severity="Severity.Info" Class="mt-4">
@@ -93,6 +105,16 @@
     /// 模块选项实例
     /// </summary>
     [Parameter] public object? OptionInstance { get; set; }
+
+    /// <summary>
+    /// Optional label describing the option kind.
+    /// </summary>
+    [Parameter] public string? OptionKindText { get; set; }
+
+    /// <summary>
+    /// Chip color for the option kind label.
+    /// </summary>
+    [Parameter] public Color OptionKindColor { get; set; } = Color.Default;
 
     private bool _showJsonDialog;
     private string _selectedPropertyName = "";
