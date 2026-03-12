@@ -6,8 +6,7 @@
     padding: 18px;
     gap: 14px;
 }
-.sidebar-pane-label,
-.knowledge-base-switcher-description {
+.sidebar-pane-label {
     font-size: 0.74rem;
     letter-spacing: 0.08em;
 }
@@ -17,7 +16,10 @@
 }
 
 .knowledge-base-switcher-description {
-    color: var(--mud-palette-text-secondary);
+    font-size: 0.79rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.46);
 }
 
 .sidebar-group-switcher {
@@ -91,12 +93,12 @@
 }
 
 .knowledge-base-switcher-description {
-    display: -webkit-box;
+    display: block;
     overflow: hidden;
     text-align: left;
     line-height: 1.45;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 ::deep .knowledge-base-switcher-warning {
@@ -147,9 +149,7 @@
 
 .footer-value {
     min-width: 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--mud-palette-text-primary);
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.46);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

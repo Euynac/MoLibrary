@@ -32,12 +32,12 @@
       "HideSidebar": "Hide sidebar",
       "OpenKnowledgeBaseSwitcher": "Switch knowledge base",
       "UnknownKnowledgeBase": "Unknown knowledge base",
+      "KnowledgeBaseDocumentCount": "{0} documents",
       "Outline": "Outline",
       "LastEdited": "Last edited {0}"
     },
     "Toolbar": {
       "SearchPlaceholder": "Search documents",
-      "SearchPreviewBadge": "Preview",
       "DocumentTree": "Document tree",
       "ShowOutline": "Show outline",
       "HideOutline": "Hide outline",

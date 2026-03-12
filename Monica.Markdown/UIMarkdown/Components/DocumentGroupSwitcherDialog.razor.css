@@ -2,7 +2,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: 280px;
 }
 
 ::deep .group-switcher-search {

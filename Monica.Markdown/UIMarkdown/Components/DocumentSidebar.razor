@@ -9,7 +9,7 @@
         <button type="button"
                 class="knowledge-base-switcher"
                 @onclick="OpenGroupSwitcher"
-                title="@GetCurrentGroupHint()">
+                title="@GetCurrentGroupTooltip()">
             <span class="knowledge-base-switcher-leading">
                 <span class="knowledge-base-switcher-icon-shell">
                     <MudIcon Icon="@Icons.Material.Filled.MenuBook"
@@ -19,7 +19,7 @@
 
                 <span class="knowledge-base-switcher-copy">
                     <span class="knowledge-base-switcher-label">@GetCurrentGroupTitle()</span>
-                    <span class="knowledge-base-switcher-description">@GetCurrentGroupHint()</span>
+                    <span class="knowledge-base-switcher-description">@GetCurrentGroupSummary()</span>
                 </span>
             </span>
 
@@ -88,10 +88,15 @@
     private string GetCurrentGroupTitle() =>
         CurrentGroup?.Title ?? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"].Value;
 
-    private string GetCurrentGroupHint() =>
+    private string GetCurrentGroupTooltip() =>
         CurrentGroup?.Description
         ?? CurrentGroup?.BasePath
         ?? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value;
+
+    private string GetCurrentGroupSummary() =>
+        CurrentGroup is null
+            ? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value
+            : L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", CurrentGroup.DocumentCount].Value;
 
     private string GetFooterValue() =>
         !string.IsNullOrWhiteSpace(CurrentGroup?.Key)

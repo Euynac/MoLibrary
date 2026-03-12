@@ -27,7 +27,6 @@
                              Class="search-trigger-icon" />
                     <span class="search-trigger-label">@L["MarkdownViewer:Toolbar:SearchPlaceholder"]</span>
                 </span>
-                <span class="search-trigger-shortcut">@L["MarkdownViewer:Toolbar:SearchPreviewBadge"]</span>
             </button>
         </div>
 
@@ -57,7 +56,32 @@
     <div class="content-breadcrumb-bar">
         @if (_breadcrumbs.Count > 0)
         {
-            <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs" />
+            <MudBreadcrumbs Items="_breadcrumbs" Class="content-breadcrumbs">
+                <ItemTemplate Context="item">
+                    @if (ShouldRenderBreadcrumbLink(item))
+                    {
+                        <a href="@item.Href">
+                            @if (!string.IsNullOrWhiteSpace(item.Icon))
+                            {
+                                <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                            }
+
+                            @item.Text
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="content-breadcrumb-label">
+                            @if (!string.IsNullOrWhiteSpace(item.Icon))
+                            {
+                                <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                            }
+
+                            @item.Text
+                        </span>
+                    }
+                </ItemTemplate>
+            </MudBreadcrumbs>
         }
     </div>
 
@@ -194,7 +218,7 @@
                 ? null
                 : new MarkdownViewerLocation(currentGroup.Key).ToRelativeUri();
 
-            _breadcrumbs.Add(new BreadcrumbItem(currentGroup.Title, groupHref, disabled: Document is null));
+            _breadcrumbs.Add(CreateBreadcrumbItem(currentGroup.Title, groupHref, disabled: Document is null));
         }
 
         if (Document is null)
@@ -205,18 +229,18 @@
         var segments = Document.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i < segments.Length - 1; i++)
         {
-            _breadcrumbs.Add(new BreadcrumbItem(segments[i], null));
+            _breadcrumbs.Add(CreateBreadcrumbItem(segments[i]));
         }
 
         var headingTrail = ResolveHeadingTrail();
-        _breadcrumbs.Add(new BreadcrumbItem(
+        _breadcrumbs.Add(CreateBreadcrumbItem(
             Document.Title,
             BuildDocumentHref(),
             disabled: headingTrail.Count == 0));
 
         foreach (var heading in headingTrail)
         {
-            _breadcrumbs.Add(new BreadcrumbItem(
+            _breadcrumbs.Add(CreateBreadcrumbItem(
                 heading.Title,
                 BuildDocumentHref(heading.Id),
                 disabled: string.Equals(heading.Id, CurrentAnchorId, StringComparison.Ordinal)));
@@ -318,6 +342,18 @@
 
         return new MarkdownViewerLocation(Document.GroupKey, Document.RelativePath, anchorId).ToRelativeUri();
     }
+
+    private static BreadcrumbItem CreateBreadcrumbItem(
+        string text,
+        string? href = null,
+        bool disabled = false,
+        string? icon = null)
+    {
+        return new BreadcrumbItem(text, href, disabled || string.IsNullOrWhiteSpace(href), icon);
+    }
+
+    private static bool ShouldRenderBreadcrumbLink(BreadcrumbItem item) =>
+        !item.Disabled && !string.IsNullOrWhiteSpace(item.Href);
 
     private string GetOutlineToggleClass() =>
         IsTableOfContentsVisible ? "outline-toggle is-active" : "outline-toggle";

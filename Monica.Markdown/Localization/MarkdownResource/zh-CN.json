@@ -32,12 +32,12 @@
       "HideSidebar": "隐藏侧边栏",
       "OpenKnowledgeBaseSwitcher": "切换知识库",
       "UnknownKnowledgeBase": "未知知识库",
+      "KnowledgeBaseDocumentCount": "共 {0} 篇文档",
       "Outline": "目录",
       "LastEdited": "最后更新于 {0}"
     },
     "Toolbar": {
       "SearchPlaceholder": "搜索文档",
-      "SearchPreviewBadge": "预览",
       "DocumentTree": "文档树",
       "ShowOutline": "显示目录",
       "HideOutline": "隐藏目录",

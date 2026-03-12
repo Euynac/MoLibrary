@@ -63,9 +63,9 @@
 
 .search-trigger {
     min-width: min(360px, 100%);
-    justify-content: space-between;
-    cursor: default;
-    opacity: 1;
+    justify-content: flex-start;
+    cursor: pointer;
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.46);
 }
 
 .search-trigger:disabled {
@@ -85,13 +85,14 @@
     white-space: nowrap;
     text-align: left;
     font-size: 0.92rem;
+    color: currentColor;
+    font-weight: 500;
 }
 
-.search-trigger-shortcut {
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--mud-palette-text-secondary);
+::deep .search-trigger-icon {
+    font-size: 1rem !important;
+    color: currentColor;
+    opacity: 0.58;
 }
 
 .outline-toggle {
@@ -103,6 +104,11 @@
     transform: translateY(-1px);
     border-color: rgba(var(--mud-palette-primary-rgb), 0.22);
     background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
+}
+
+.search-trigger:hover,
+.search-trigger:focus-visible {
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.64);
 }
 
 .outline-toggle.is-active {
@@ -130,6 +136,13 @@
 
 ::deep .content-breadcrumbs .mud-breadcrumb-item {
     font-size: 0.8rem;
+}
+
+::deep .content-breadcrumbs .mud-breadcrumb-item > a,
+::deep .content-breadcrumbs .mud-breadcrumb-item > .content-breadcrumb-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .last-edited {
