@@ -13,13 +13,14 @@
 @inject IStringLocalizer<MarkdownResource> L
 
 <MudDialog>
+    <TitleContent>
+        <span class="document-search-chrome-spacer" aria-hidden="true"></span>
+    </TitleContent>
+
     <DialogContent>
         <div class="document-search-dialog">
             <div class="document-search-header">
                 <div class="document-search-heading">
-                    <span class="document-search-eyebrow">
-                        @L["MarkdownViewer:Dialogs:Search:CurrentKnowledgeBaseLabel"]
-                    </span>
                     <h2 class="document-search-title">@L["MarkdownViewer:Dialogs:Search:Title"]</h2>
                     <p class="document-search-current-group">@GetCurrentGroupTitle()</p>
                 </div>
@@ -120,18 +121,19 @@
                 {
                     @foreach (var result in _results)
                     {
+                        var locationText = GetResultLocationText(result);
+
                         <button type="button"
                                 class="document-search-result"
                                 @onclick="@(() => SelectResult(result))">
-                            <div class="document-search-result-top">
+                            <div class="document-search-result-meta">
                                 <span class="document-search-result-group">@result.GroupTitle</span>
 
-                                @if (!string.IsNullOrWhiteSpace(GetResultLocationText(result)))
+                                @if (!string.IsNullOrWhiteSpace(locationText))
                                 {
-                                    <span class="document-search-result-location">@GetResultLocationText(result)</span>
+                                    <div class="document-search-result-location">@locationText</div>
                                 }
                             </div>
-
                             <div class="document-search-result-title">@result.DocumentTitle</div>
                             <div class="document-search-result-preview">
                                 @foreach (var part in BuildPreviewParts(result))

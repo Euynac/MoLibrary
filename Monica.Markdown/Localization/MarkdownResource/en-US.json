@@ -49,7 +49,6 @@
       "SwitchKnowledgeBaseTitle": "Switch Knowledge Base",
       "Search": {
         "Title": "Search",
-        "CurrentKnowledgeBaseLabel": "Current knowledge base",
         "IncludeAllKnowledgeBases": "Search across knowledge bases",
         "InputPlaceholder": "Type a title, topic, or folder",
         "Hint": "Enter keywords to search document content in the current knowledge base.",
