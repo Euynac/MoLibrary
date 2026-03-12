@@ -1,34 +1,62 @@
-@using Microsoft.Extensions.Localization
-@using Monica.AI.UI.Localization
-@using Monica.AI.RAG.Models
 @using System.Text
 @using System.Web
+@using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@implements IAsyncDisposable
 @inject IStringLocalizer<AIResource> L
+@inject IJSRuntime JSRuntime
 
 <MudDialog>
     <DialogContent>
-        <div class="chunk-viewer-header">
-            <MudText Typo="Typo.h6">@DocumentName</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                @L["RAG:ChunkViewer:Info", ChunkCount, StatusText]
-            </MudText>
-        </div>
-
-        <div class="chunk-viewer-content">
-            @if (string.IsNullOrEmpty(OriginalText) || Chunks == null || Chunks.Count == 0)
-            {
-                <div class="empty-state">
+        <div class="chunk-viewer-root" @ref="_viewerRoot">
+            <div class="chunk-viewer-header">
+                <div class="chunk-viewer-title-block">
+                    <MudText Typo="Typo.h6">@DocumentName</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @L["RAG:ChunkViewer:NoContent"]
+                        @L["RAG:ChunkViewer:Info", ChunkCount, StatusText]
                     </MudText>
                 </div>
-            }
-            else
-            {
-                <div class="original-text">
-                    @((MarkupString)BuildHighlightedHtml())
-                </div>
-            }
+
+                @if (HasMatchedChunk)
+                {
+                    <MudChip T="string"
+                             Color="Color.Warning"
+                             Variant="Variant.Outlined"
+                             Size="Size.Small"
+                             Class="chunk-viewer-match-chip">
+                        @L["RAG:ChunkViewer:MatchedBadge"]
+                    </MudChip>
+                }
+            </div>
+
+            <div class="chunk-viewer-content" data-chunk-scroll-root="true">
+                @if (string.IsNullOrWhiteSpace(OriginalText))
+                {
+                    <div class="empty-state">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["RAG:ChunkViewer:NoContent"]
+                        </MudText>
+                    </div>
+                }
+                else if (UseMarkdownRendering)
+                {
+                    <div class="markdown-preview-content">
+                        <RAGChunkMarkdown Value="@OriginalText"
+                                          ScopeKey="@SourceGroupKey"
+                                          DocumentRelativePath="@DocumentPath"
+                                          Chunks="@Chunks"
+                                          MatchedChunkIndex="@MatchedChunkIndex" />
+                    </div>
+                }
+                else
+                {
+                    <div class="original-text">
+                        @((MarkupString)BuildHighlightedHtml())
+                    </div>
+                }
+            </div>
         </div>
     </DialogContent>
     <DialogActions>
@@ -44,6 +72,9 @@
     public string DocumentName { get; set; } = string.Empty;
 
     [Parameter]
+    public string DocumentPath { get; set; } = string.Empty;
+
+    [Parameter]
     public string OriginalText { get; set; } = string.Empty;
 
     [Parameter]
@@ -55,55 +86,227 @@
     [Parameter]
     public string StatusText { get; set; } = string.Empty;
 
-    private int ChunkCount => Chunks?.Count ?? 0;
+    [Parameter]
+    public string SourceKind { get; set; } = KnowledgeDocumentSourceKinds.Unknown;
+
+    [Parameter]
+    public string? SourceGroupKey { get; set; }
+
+    private readonly List<ChunkHighlight> OrderedChunks = [];
+    private ElementReference _viewerRoot;
+    private IJSObjectReference? _jsModule;
+    private string _lastAppliedSignature = string.Empty;
+
+    private int ChunkCount => OrderedChunks.Count;
+
+    private bool HasMatchedChunk =>
+        MatchedChunkIndex.HasValue && OrderedChunks.Any(chunk => chunk.Index == MatchedChunkIndex.Value);
+
+    private bool UseMarkdownRendering =>
+        string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        OrderedChunks.Clear();
+        OrderedChunks.AddRange(Chunks.OrderBy(chunk => chunk.Start).ThenBy(chunk => chunk.Index));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!HasMatchedChunk)
+        {
+            return;
+        }
+
+        await EnsureJsModuleAsync();
+        if (_jsModule is null)
+        {
+            return;
+        }
+
+        var signature = BuildScrollSignature();
+        if (string.Equals(signature, _lastAppliedSignature, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastAppliedSignature = signature;
+
+        try
+        {
+            await _jsModule.InvokeVoidAsync("scrollToMatchedChunk", _viewerRoot);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task EnsureJsModuleAsync()
+    {
+        if (_jsModule is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.AI.UI/Components/RAG/ChunkViewerDialog.razor.js");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
 
     private void Close() => MudDialog.Close();
 
-    /// <summary>
-    /// Build HTML with highlighted chunks.
-    /// Escapes user content to prevent XSS and inserts chunk highlights at correct positions.
-    /// </summary>
+    private string BuildScrollSignature()
+    {
+        return string.Join(
+            "|",
+            MatchedChunkIndex?.ToString() ?? string.Empty,
+            OriginalText.Length,
+            ChunkCount,
+            SourceKind,
+            SourceGroupKey ?? string.Empty,
+            DocumentPath);
+    }
+
     private string BuildHighlightedHtml()
     {
-        if (string.IsNullOrEmpty(OriginalText) || Chunks == null || Chunks.Count == 0)
-            return string.Empty;
-
-        var html = new StringBuilder();
-        var sortedChunks = Chunks.OrderBy(c => c.Start).ToList();
-        var lastPos = 0;
-
-        foreach (var chunk in sortedChunks)
+        if (string.IsNullOrEmpty(OriginalText))
         {
-            // Add text before chunk (escaped)
-            if (chunk.Start > lastPos)
-            {
-                var beforeText = OriginalText.Substring(lastPos, chunk.Start - lastPos);
-                html.Append(HttpUtility.HtmlEncode(beforeText));
-            }
-
-            // Add highlighted chunk
-            var chunkText = OriginalText.Substring(chunk.Start, chunk.End - chunk.Start);
-            var isMatched = MatchedChunkIndex.HasValue && chunk.Index == MatchedChunkIndex.Value;
-            var matchedClass = isMatched ? " matched" : "";
-            var matchedLabel = isMatched ? $" {L["RAG:ChunkViewer:Matched"]}" : "";
-
-            var tooltipText = $"{L["RAG:ChunkViewer:ChunkBadge", chunk.Index, chunk.Section ?? ""]}{matchedLabel}";
-
-            html.Append($"<span class=\"chunk-highlight{matchedClass}\" title=\"{HttpUtility.HtmlAttributeEncode(tooltipText)}\">");
-            html.Append(HttpUtility.HtmlEncode(chunkText));
-            html.Append($"<span class=\"chunk-badge{matchedClass}\">#{chunk.Index}</span>");
-            html.Append("</span>");
-
-            lastPos = chunk.End;
+            return string.Empty;
         }
 
-        // Add remaining text after last chunk (escaped)
-        if (lastPos < OriginalText.Length)
+        if (OrderedChunks.Count == 0)
         {
-            var remainingText = OriginalText.Substring(lastPos);
-            html.Append(HttpUtility.HtmlEncode(remainingText));
+            return HttpUtility.HtmlEncode(OriginalText);
+        }
+
+        var boundaries = new SortedSet<int> { 0, OriginalText.Length };
+        foreach (var chunk in OrderedChunks)
+        {
+            boundaries.Add(Math.Clamp(chunk.Start, 0, OriginalText.Length));
+            boundaries.Add(Math.Clamp(chunk.End, 0, OriginalText.Length));
+        }
+
+        var points = boundaries.ToArray();
+        var html = new StringBuilder();
+
+        for (var index = 0; index < points.Length - 1; index++)
+        {
+            var segmentStart = points[index];
+            var segmentEnd = points[index + 1];
+            if (segmentEnd <= segmentStart)
+            {
+                continue;
+            }
+
+            var segmentText = OriginalText[segmentStart..segmentEnd];
+            var activeChunks = OrderedChunks
+                .Where(chunk => chunk.Start < segmentEnd && chunk.End > segmentStart)
+                .ToList();
+
+            if (activeChunks.Count == 0)
+            {
+                html.Append(HttpUtility.HtmlEncode(segmentText));
+                continue;
+            }
+
+            var metadata = BuildChunkMetadata(activeChunks);
+            html.Append("<span");
+            html.Append($" class=\"{BuildChunkClass(activeChunks, isBlock: false)}\"");
+            html.Append(" data-rag-chunk=\"true\"");
+            html.Append($" data-rag-chunk-ids=\"{HttpUtility.HtmlAttributeEncode(string.Join(",", activeChunks.Select(chunk => chunk.Index)))}\"");
+            html.Append($" data-rag-chunk-label=\"{HttpUtility.HtmlAttributeEncode(metadata)}\"");
+            html.Append($" title=\"{HttpUtility.HtmlAttributeEncode(metadata)}\"");
+
+            if (ContainsMatchedChunk(activeChunks))
+            {
+                html.Append(" data-rag-chunk-target=\"true\"");
+            }
+
+            html.Append(">");
+            html.Append(HttpUtility.HtmlEncode(segmentText));
+            html.Append("</span>");
         }
 
         return html.ToString();
+    }
+
+    private bool ContainsMatchedChunk(IReadOnlyList<ChunkHighlight> chunks)
+        => MatchedChunkIndex.HasValue && chunks.Any(chunk => chunk.Index == MatchedChunkIndex.Value);
+
+    private string BuildChunkClass(IReadOnlyList<ChunkHighlight> chunks, bool isBlock)
+    {
+        var classes = new List<string>
+        {
+            "rag-chunk",
+            isBlock ? "rag-chunk--block" : "rag-chunk--inline"
+        };
+
+        if (chunks.Count > 1)
+        {
+            classes.Add("rag-chunk--overlap");
+        }
+
+        if (ContainsMatchedChunk(chunks))
+        {
+            classes.Add("rag-chunk--matched");
+        }
+
+        return string.Join(" ", classes);
+    }
+
+    private string BuildChunkMetadata(IReadOnlyList<ChunkHighlight> chunks)
+    {
+        var chunkLabel = chunks.Count == 1
+            ? L["RAG:ChunkViewer:ChunkNumber", chunks[0].Index].Value
+            : L["RAG:ChunkViewer:ChunkNumbers", string.Join(", ", chunks.Select(chunk => chunk.Index))].Value;
+
+        var sections = chunks
+            .Select(chunk => chunk.Section)
+            .Where(section => !string.IsNullOrWhiteSpace(section))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (sections.Count > 0)
+        {
+            chunkLabel = $"{chunkLabel} · {L["RAG:ChunkViewer:Section", string.Join(" / ", sections)]}";
+        }
+
+        if (ContainsMatchedChunk(chunks))
+        {
+            chunkLabel = $"{chunkLabel} · {L["RAG:ChunkViewer:MatchedBadge"]}";
+        }
+
+        return chunkLabel;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _jsModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
     }
 }

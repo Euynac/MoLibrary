@@ -223,6 +223,27 @@ public sealed partial class RAGService(
         await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
     }
 
+    public async Task<int> QueueKnowledgeBaseForReindexAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        if (states.Any(state =>
+                state.Status == DocumentStatus.Indexing
+                && IsDocumentIndexingActiveAtRuntime(state.KnowledgeBaseId, state.DocumentPath)))
+        {
+            throw new InvalidOperationException("Cannot re-index all documents while indexing is in progress.");
+        }
+
+        await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+        await indexStateCoordinator.ResetKnowledgeBaseDocumentStatesForReindexAsync(knowledgeBaseId, ct);
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
+        return states.Count;
+    }
+
     public async Task MarkDocumentPendingAsync(
         string knowledgeBaseId,
         string documentPath,
@@ -286,6 +307,62 @@ public sealed partial class RAGService(
         await indexStateCoordinator.DeleteDocumentStateAsync(knowledgeBaseId, documentPath, ct);
         await documentSourceStore.DeleteContentAsync(knowledgeBaseId, documentPath, ct);
         await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
+    }
+
+    public async Task<int> ClearKnowledgeBaseDocumentsAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        if (states.Any(state =>
+                state.Status == DocumentStatus.Indexing
+                && IsDocumentIndexingActiveAtRuntime(state.KnowledgeBaseId, state.DocumentPath)))
+        {
+            throw new InvalidOperationException("Cannot clear documents while indexing is in progress.");
+        }
+
+        var removedCount = states.Count;
+        await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+        await indexStateStore.DeleteKnowledgeBaseDocumentStatesAsync(knowledgeBaseId, ct);
+        await documentSourceStore.DeleteKnowledgeBaseAsync(knowledgeBaseId, ct);
+
+        kb.DocumentCount = 0;
+        kb.ChunkCount = 0;
+        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
+
+        return removedCount;
+    }
+
+    public async Task<int> ClearDocumentQueueAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        if (states.Any(state =>
+                state.Status == DocumentStatus.Indexing
+                && IsDocumentIndexingActiveAtRuntime(state.KnowledgeBaseId, state.DocumentPath)))
+        {
+            throw new InvalidOperationException("Cannot clear the queue while indexing is in progress.");
+        }
+
+        var queuedStates = states
+            .Where(state => state.Status != DocumentStatus.Done)
+            .ToList();
+
+        foreach (var state in queuedStates)
+        {
+            await indexStateCoordinator.DeleteDocumentStateAsync(knowledgeBaseId, state.DocumentPath, ct);
+            await documentSourceStore.DeleteContentAsync(knowledgeBaseId, state.DocumentPath, ct);
+        }
+
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
+        return queuedStates.Count;
     }
 
     public async Task IndexDocumentAsync(
@@ -503,6 +580,98 @@ public sealed partial class RAGService(
             .ToList();
     }
 
+    public async Task<KnowledgeBaseVectorValidationResult> ValidateKnowledgeBaseVectorsAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var indexedStates = (await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct))
+            .Where(state => state.Status == DocumentStatus.Done && state.ChunkCount > 0)
+            .OrderBy(state => state.DocumentPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var indexedDocumentCount = indexedStates.Count;
+        var indexedChunkCount = indexedStates.Sum(state => state.ChunkCount);
+        if (indexedStates.Count == 0)
+        {
+            return new KnowledgeBaseVectorValidationResult
+            {
+                KnowledgeBaseId = knowledgeBaseId,
+                HasPersistedIndexMetadata = false,
+                WasValidated = true,
+                HasValidVectors = true,
+                IndexedDocumentCount = 0,
+                IndexedChunkCount = 0
+            };
+        }
+
+        if (!HasEmbeddingBinding(kb))
+        {
+            return new KnowledgeBaseVectorValidationResult
+            {
+                KnowledgeBaseId = knowledgeBaseId,
+                HasPersistedIndexMetadata = true,
+                WasValidated = false,
+                HasValidVectors = false,
+                IndexedDocumentCount = indexedDocumentCount,
+                IndexedChunkCount = indexedChunkCount
+            };
+        }
+
+        RAGEmbeddingBinding binding;
+        try
+        {
+            binding = await embeddingBindingResolver.ResolveAsync(kb, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Skipping vector validation for KB '{KbId}' because embedding binding could not be resolved.", knowledgeBaseId);
+            return new KnowledgeBaseVectorValidationResult
+            {
+                KnowledgeBaseId = knowledgeBaseId,
+                HasPersistedIndexMetadata = true,
+                WasValidated = false,
+                HasValidVectors = false,
+                IndexedDocumentCount = indexedDocumentCount,
+                IndexedChunkCount = indexedChunkCount
+            };
+        }
+
+        var recordKeyMap = BuildValidationRecordKeyMap(indexedStates, knowledgeBaseId);
+        var missingKeys = await vectorCollectionCoordinator.GetMissingRecordKeysAsync(
+            kb,
+            binding,
+            recordKeyMap.Keys,
+            ct);
+
+        var firstMissingDocumentPath = missingKeys
+            .Select(key => recordKeyMap.TryGetValue(key, out var documentPath) ? documentPath : null)
+            .FirstOrDefault(static path => !string.IsNullOrWhiteSpace(path));
+
+        if (missingKeys.Count > 0)
+        {
+            logger.LogWarning(
+                "Vector validation failed for KB '{KbId}'. Missing {MissingKeyCount} expected vector record(s). Sample document: {DocumentPath}",
+                knowledgeBaseId,
+                missingKeys.Count,
+                firstMissingDocumentPath);
+        }
+
+        return new KnowledgeBaseVectorValidationResult
+        {
+            KnowledgeBaseId = knowledgeBaseId,
+            HasPersistedIndexMetadata = true,
+            WasValidated = true,
+            HasValidVectors = missingKeys.Count == 0,
+            IndexedDocumentCount = indexedDocumentCount,
+            IndexedChunkCount = indexedChunkCount,
+            MissingDocumentPath = firstMissingDocumentPath,
+            MissingVectorRecordKeys = missingKeys
+        };
+    }
+
     /// <summary>
     /// Creates a search adapter delegate compatible with TextSearchProvider constructor.
     /// Maps our TextSearchResult to the agent-framework's TextSearchResult.
@@ -547,7 +716,15 @@ public sealed partial class RAGService(
 
         var chunker = await ResolveChunkerForViewAsync(state, ct);
         var chunks = chunker.ChunkDocument(content, state.DocumentPath, state.DocumentName);
-        return BuildChunkView(content, chunks, chunker.ChunkerId, isPreview: false);
+        return BuildChunkView(
+            content,
+            chunks,
+            chunker.ChunkerId,
+            isPreview: false,
+            state.DocumentPath,
+            state.DocumentName,
+            state.SourceKind,
+            state.SourceGroupKey);
     }
 
     public async Task<DocumentChunkView> BuildDocumentChunkPreviewAsync(
@@ -555,6 +732,8 @@ public sealed partial class RAGService(
         string documentPath,
         string documentTitle,
         string content,
+        string? sourceKind = null,
+        string? sourceGroupKey = null,
         CancellationToken ct = default)
     {
         _ = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
@@ -566,7 +745,15 @@ public sealed partial class RAGService(
 
         var chunker = await chunkerRegistry.ResolveChunkerAsync(documentPath, ct);
         var chunks = chunker.ChunkDocument(content, documentPath, documentTitle);
-        return BuildChunkView(content, chunks, chunker.ChunkerId, isPreview: true);
+        return BuildChunkView(
+            content,
+            chunks,
+            chunker.ChunkerId,
+            isPreview: true,
+            documentPath,
+            documentTitle,
+            sourceKind,
+            sourceGroupKey);
     }
 
     public Task<ChunkerManagementState> GetChunkerManagementStateAsync(CancellationToken ct = default)
@@ -753,6 +940,33 @@ public sealed partial class RAGService(
     private static string BuildActiveIndexingDocumentKey(string knowledgeBaseId, string documentPath)
         => $"{knowledgeBaseId}::{documentPath}";
 
+    private static Dictionary<string, string> BuildValidationRecordKeyMap(
+        IReadOnlyList<DocumentIndexState> indexedStates,
+        string knowledgeBaseId)
+    {
+        var recordKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var state in indexedStates)
+        {
+            recordKeys[RAGVectorCollectionCoordinator.BuildRecordKey(knowledgeBaseId, state.DocumentPath, 0)] =
+                state.DocumentPath;
+
+            if (state.ChunkCount > 1)
+            {
+                recordKeys[RAGVectorCollectionCoordinator.BuildRecordKey(
+                    knowledgeBaseId,
+                    state.DocumentPath,
+                    state.ChunkCount - 1)] = state.DocumentPath;
+            }
+        }
+
+        return recordKeys;
+    }
+
+    private static bool HasEmbeddingBinding(KnowledgeBase kb)
+        => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
+
     private bool IsDocumentIndexingActiveAtRuntime(string knowledgeBaseId, string documentPath)
         => _activeIndexingDocuments.ContainsKey(BuildActiveIndexingDocumentKey(knowledgeBaseId, documentPath));
 
@@ -791,14 +1005,22 @@ public sealed partial class RAGService(
         string originalText,
         IReadOnlyList<DocumentChunk> chunks,
         string chunkerId,
-        bool isPreview)
+        bool isPreview,
+        string documentPath,
+        string documentName,
+        string? sourceKind,
+        string? sourceGroupKey)
     {
         return new DocumentChunkView
         {
+            DocumentPath = documentPath,
+            DocumentName = documentName,
             OriginalText = originalText,
             Chunks = BuildChunkHighlights(originalText, chunks),
             ChunkerId = chunkerId,
-            IsPreview = isPreview
+            IsPreview = isPreview,
+            SourceKind = RAGIndexStateCoordinator.NormalizeSourceKind(sourceKind),
+            SourceGroupKey = sourceGroupKey
         };
     }
 

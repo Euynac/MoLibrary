@@ -1,0 +1,12 @@
+.rag-chunk-markdown-host {
+    min-width: 0;
+}
+
+.rag-chunk-markdown-host ::deep .mud-markdown-body {
+    max-width: none;
+}
+
+.rag-chunk-markdown-host ::deep img {
+    max-width: 100%;
+    height: auto;
+}

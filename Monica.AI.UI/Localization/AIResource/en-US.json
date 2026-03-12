@@ -78,6 +78,7 @@
       "Label": "Embedding Model",
       "Dimensions": "{0}d",
       "NotConfigured": "No embedding model is configured in AI providers.",
+      "BindingRequired": "Configure an embedding model for this knowledge base before starting indexing.",
       "ReindexRequired": "Embedding model switched and current index was cleared. Reindex all documents in this knowledge base.",
       "ReindexConfirm": {
         "Title": "Reindex Required",
@@ -114,6 +115,16 @@
         "Title": "Edit Knowledge Base"
       }
     },
+    "VectorValidation": {
+      "MissingVectors": {
+        "Title": "Vector data is missing",
+        "Message": "Persisted index metadata still lists {0} document(s) and {1} chunk(s), but the active vector store is missing the expected vectors. Re-index all documents for this knowledge base to restore search.",
+        "Action": "Re-index All Documents"
+      },
+      "Messages": {
+        "ReindexQueued": "Queued {0} document(s) for re-indexing."
+      }
+    },
     "DocumentQueue": {
       "Title": "Documents & Queue",
       "Column": {
@@ -130,10 +141,19 @@
       },
       "Actions": {
         "ViewChunks": "View Chunks",
+        "StartIndex": "Start Index",
         "Reindex": "Re-index",
-        "Delete": "Delete"
+        "Delete": "Delete",
+        "ClearQueue": "Clear Queue",
+        "ClearDocuments": "Clear Documents"
       },
-      "DeleteConfirm": "Are you sure you want to delete '{0}'?"
+      "DeleteConfirm": "Are you sure you want to delete '{0}'?",
+      "ClearQueueConfirm": "Clear all queued documents from knowledge base '{0}'?",
+      "ClearDocumentsConfirm": "Remove every document and indexed chunk from knowledge base '{0}'?",
+      "Messages": {
+        "QueueCleared": "Cleared {0} queued document(s).",
+        "DocumentsCleared": "Removed {0} document(s) from the knowledge base."
+      }
     },
     "ParallelIndexing": {
       "Label": "Parallel",
@@ -152,10 +172,18 @@
       "Title": "Document Chunks",
       "Info": "{0} chunks · {1}",
       "Indexed": "Indexed {0}",
+      "SourceKnowledgeBase": "From knowledge base {0}",
       "PendingIndexing": "Pending indexing",
       "NoContent": "No original text or chunks available",
       "ChunkBadge": "Chunk {0}: {1}",
-      "Matched": "(Matched)"
+      "ChunkNumber": "Chunk #{0}",
+      "ChunkNumbers": "Chunks #{0}",
+      "Section": "Section: {0}",
+      "Matched": "(Matched)",
+      "MatchedBadge": "Matched result",
+      "MatchedLabel": "Matched",
+      "TargetChunk": "Focus Chunk",
+      "ChunkOption": "Chunk #{0}"
     },
     "Debug": {
       "KBSidebar": {
@@ -186,7 +214,13 @@
       "Go": "Search",
       "Searching": "Searching...",
       "NoResults": "No results found",
-      "ResultsCount": "{0} results"
+      "ResultsCount": "{0} results",
+      "Result": {
+        "UnknownSource": "Unknown",
+        "ViewInDocument": "View in document",
+        "MissingDocumentId": "The selected result does not include a document identifier.",
+        "MissingKnowledgeBase": "The selected result does not include an originating knowledge base."
+      }
     },
     "Chunker": {
       "Title": "Chunker Management",

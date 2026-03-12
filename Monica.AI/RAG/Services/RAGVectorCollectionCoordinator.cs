@@ -37,6 +37,53 @@ public sealed class RAGVectorCollectionCoordinator(
         KnowledgeBase kb,
         RAGEmbeddingBinding binding,
         CancellationToken ct)
+        => await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: true, ct);
+
+    public async Task<IReadOnlyList<string>> GetMissingRecordKeysAsync(
+        KnowledgeBase kb,
+        RAGEmbeddingBinding binding,
+        IEnumerable<string> recordKeys,
+        CancellationToken ct)
+    {
+        var keys = recordKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (keys.Count == 0)
+        {
+            return [];
+        }
+
+        var collection = await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: false, ct);
+        if (!await collection.CollectionExistsAsync(ct))
+        {
+            return keys;
+        }
+
+        var foundKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await foreach (var record in collection.GetAsync(
+                           keys.Select(static key => (object)key),
+                           new RecordRetrievalOptions { IncludeVectors = false },
+                           ct))
+        {
+            if (record.TryGetValue("Key", out var rawKey)
+                && rawKey?.ToString() is { Length: > 0 } key)
+            {
+                foundKeys.Add(key);
+            }
+        }
+
+        return keys
+            .Where(key => !foundKeys.Contains(key))
+            .ToList();
+    }
+
+    private async Task<VectorStoreCollection<object, Dictionary<string, object?>>> GetCollectionCoreAsync(
+        KnowledgeBase kb,
+        RAGEmbeddingBinding binding,
+        bool ensureCollectionExists,
+        CancellationToken ct)
     {
         var collectionName = GetCollectionName(kb.Id);
         var bindingKey = BuildBindingKey(binding.ProviderId, binding.ModelName, binding.Dimensions);
@@ -55,7 +102,11 @@ public sealed class RAGVectorCollectionCoordinator(
         });
 
         _collectionBindings[collectionName] = bindingKey;
-        await EnsureCollectionInitializedAsync(collectionName, collection, ct);
+        if (ensureCollectionExists)
+        {
+            await EnsureCollectionInitializedAsync(collectionName, collection, ct);
+        }
+
         return collection;
     }
 

@@ -284,33 +284,40 @@
     {
         if (string.IsNullOrEmpty(result.DocumentId))
         {
-            Snackbar.Add("Document ID not available", Severity.Warning);
+            Snackbar.Add(L["RAG:Search:Result:MissingDocumentId"], Severity.Warning);
             return;
         }
 
-        var kbId = _selectedKbIds.FirstOrDefault();
+        var kbId = result.KnowledgeBaseId;
         if (string.IsNullOrEmpty(kbId))
         {
-            Snackbar.Add("Knowledge base not found", Severity.Warning);
+            Snackbar.Add(L["RAG:Search:Result:MissingKnowledgeBase"], Severity.Warning);
             return;
         }
 
         var chunksResult = await RAGUIService.GetDocumentChunksAsync(kbId, result.DocumentId);
-        if (chunksResult.IsFailed(out var error, out var data))
+        if (chunksResult.IsFailed(out var error, out var view))
         {
             Snackbar.Add(error.Message!, Severity.Error);
             return;
         }
 
-        var statusText = L["RAG:ChunkViewer:Indexed", DateTime.Now.ToString("yyyy-MM-dd")].Value;
+        var knowledgeBase = _knowledgeBases.FirstOrDefault(kb =>
+            string.Equals(kb.Id, kbId, StringComparison.OrdinalIgnoreCase));
+        var statusText = knowledgeBase is null
+            ? L["RAG:ChunkViewer:Indexed", DateTime.Now.ToString("yyyy-MM-dd")].Value
+            : L["RAG:ChunkViewer:SourceKnowledgeBase", knowledgeBase.Name].Value;
 
         var parameters = new DialogParameters
         {
-            { nameof(ChunkViewerDialog.DocumentName), result.SourceName ?? "Unknown" },
-            { nameof(ChunkViewerDialog.OriginalText), data.OriginalText },
-            { nameof(ChunkViewerDialog.Chunks), data.Chunks },
+            { nameof(ChunkViewerDialog.DocumentName), result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value },
+            { nameof(ChunkViewerDialog.DocumentPath), view.DocumentPath },
+            { nameof(ChunkViewerDialog.OriginalText), view.OriginalText },
+            { nameof(ChunkViewerDialog.Chunks), view.Chunks },
             { nameof(ChunkViewerDialog.MatchedChunkIndex), result.ChunkIndex },
-            { nameof(ChunkViewerDialog.StatusText), statusText }
+            { nameof(ChunkViewerDialog.StatusText), statusText },
+            { nameof(ChunkViewerDialog.SourceKind), view.SourceKind },
+            { nameof(ChunkViewerDialog.SourceGroupKey), view.SourceGroupKey }
         };
 
         var options = new DialogOptions

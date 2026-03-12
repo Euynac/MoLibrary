@@ -216,6 +216,38 @@
     font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
+.vector-warning-alert {
+    margin: 0;
+}
+
+.vector-warning-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+}
+
+.vector-warning-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.vector-warning-title {
+    font-weight: 700;
+}
+
+.vector-warning-message {
+    color: var(--mud-palette-warning-darken);
+}
+
+.vector-warning-action {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .document-queue-section {
     display: flex;
     flex-direction: column;
@@ -267,6 +299,10 @@
     gap: 10px;
     flex-wrap: wrap;
     margin-left: auto;
+}
+
+.queue-controls ::deep .mud-button-root {
+    white-space: nowrap;
 }
 
 .parallel-label {
@@ -430,5 +466,14 @@
 
     .queue-header {
         flex-direction: column;
+    }
+
+    .vector-warning-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .vector-warning-action {
+        width: 100%;
     }
 }

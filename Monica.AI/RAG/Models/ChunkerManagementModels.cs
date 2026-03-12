@@ -83,6 +83,10 @@ public sealed class ChunkerTestResult
 /// </summary>
 public sealed class DocumentChunkView
 {
+    public required string DocumentPath { get; init; }
+
+    public required string DocumentName { get; init; }
+
     public required string OriginalText { get; init; }
 
     public required IReadOnlyList<ChunkHighlight> Chunks { get; init; }
@@ -90,4 +94,30 @@ public sealed class DocumentChunkView
     public required string ChunkerId { get; init; }
 
     public required bool IsPreview { get; init; }
+
+    public string SourceKind { get; init; } = KnowledgeDocumentSourceKinds.Unknown;
+
+    public string? SourceGroupKey { get; init; }
+}
+
+/// <summary>
+/// Result of validating that persisted index metadata still has matching vectors in the active store.
+/// </summary>
+public sealed class KnowledgeBaseVectorValidationResult
+{
+    public required string KnowledgeBaseId { get; init; }
+
+    public required bool HasPersistedIndexMetadata { get; init; }
+
+    public required bool WasValidated { get; init; }
+
+    public required bool HasValidVectors { get; init; }
+
+    public required int IndexedDocumentCount { get; init; }
+
+    public required int IndexedChunkCount { get; init; }
+
+    public string? MissingDocumentPath { get; init; }
+
+    public IReadOnlyList<string> MissingVectorRecordKeys { get; init; } = [];
 }

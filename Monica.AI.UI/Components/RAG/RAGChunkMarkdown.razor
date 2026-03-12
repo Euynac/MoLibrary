@@ -1,0 +1,116 @@
+@using Markdig.Syntax.Inlines
+@using Monica.AI.RAG.Models
+@using Monica.UI.Components.Markdown
+@using MudBlazor.Utilities
+@inject IMoMarkdownAssetResolver AssetResolver
+
+<div class="@HostClass">
+    <RAGChunkMudMarkdown Value="@Value"
+                         SourceType="@SourceType"
+                         Props="@_resolvedProps"
+                         Styling="@_resolvedStyling"
+                         EnableMermaid="@EnableMermaid"
+                         Chunks="@Chunks"
+                         MatchedChunkIndex="@MatchedChunkIndex" />
+</div>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public MarkdownSourceType SourceType { get; set; } = MarkdownSourceType.RawValue;
+
+    [Parameter]
+    public IReadOnlyList<ChunkHighlight> Chunks { get; set; } = Array.Empty<ChunkHighlight>();
+
+    [Parameter]
+    public int? MatchedChunkIndex { get; set; }
+
+    [Parameter]
+    public string? ScopeKey { get; set; }
+
+    [Parameter]
+    public string? DocumentRelativePath { get; set; }
+
+    [Parameter]
+    public string StyleKey { get; set; } = "default";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public bool EnableMermaid { get; set; } = true;
+
+    [Parameter]
+    public MudMarkdownProps? Props { get; set; }
+
+    [Parameter]
+    public MudMarkdownStyling? Styling { get; set; }
+
+    private MudMarkdownProps _resolvedProps = new();
+    private MudMarkdownStyling _resolvedStyling = new();
+
+    private string HostClass => new CssBuilder("mo-markdown-host")
+        .AddClass("rag-chunk-markdown-host")
+        .AddClass($"mo-markdown-style-{NormalizeCssSegment(StyleKey)}")
+        .AddClass(Class)
+        .Build();
+
+    protected override void OnParametersSet()
+    {
+        _resolvedProps = CreateResolvedProps();
+        _resolvedStyling = CreateResolvedStyling();
+    }
+
+    private MudMarkdownProps CreateResolvedProps()
+    {
+        var resolved = new MudMarkdownProps();
+        var source = Props;
+
+        resolved.Link.Command = source?.Link.Command;
+        resolved.Link.DisableTargetBlank = source?.Link.DisableTargetBlank ?? false;
+        resolved.Link.OverrideUrl = link => ResolveUrl(link, source?.Link.OverrideUrl?.Invoke(link) ?? link.Url);
+        resolved.Heading.OverrideTypo = source?.Heading.OverrideTypo;
+
+        return resolved;
+    }
+
+    private MudMarkdownStyling CreateResolvedStyling()
+    {
+        var resolved = new MudMarkdownStyling();
+        var source = Styling;
+
+        if (source is null)
+        {
+            return resolved;
+        }
+
+        resolved.Table.IsStriped = source.Table.IsStriped;
+        resolved.Table.IsBordered = source.Table.IsBordered;
+        resolved.Table.Elevation = source.Table.Elevation;
+        resolved.Table.CellMinWidth = source.Table.CellMinWidth;
+        resolved.Table.Dense = source.Table.Dense;
+
+        resolved.Link.Underline = source.Link.Underline;
+
+        resolved.CodeBlock.Theme = source.CodeBlock.Theme;
+        resolved.CodeBlock.CopyButton = source.CodeBlock.CopyButton;
+        resolved.CodeBlock.CopyButtonText = source.CodeBlock.CopyButtonText;
+
+        return resolved;
+    }
+
+    private string? ResolveUrl(LinkInline link, string? originalUrl)
+        => AssetResolver.ResolveUrl(originalUrl, link.IsImage, ScopeKey, DocumentRelativePath);
+
+    private static string NormalizeCssSegment(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "default";
+        }
+
+        return value.Trim().ToLowerInvariant().Replace(' ', '-');
+    }
+}

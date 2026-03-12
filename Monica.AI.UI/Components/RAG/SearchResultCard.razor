@@ -1,4 +1,7 @@
+@using Microsoft.Extensions.Localization
 @using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
 
 <div class="result-card-wrapper" @onclick="HandleClick">
     <div class="result-card">
@@ -18,7 +21,7 @@
             <div class="result-meta">
                 <span class="result-source-name">
                     <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="source-icon" />
-                    @(Result.SourceName ?? "Unknown")
+                    @(Result.SourceName ?? L["RAG:Search:Result:UnknownSource"].Value)
                 </span>
                 @if (!string.IsNullOrEmpty(Result.SectionPath))
                 {
@@ -26,7 +29,7 @@
                     <span class="result-section">@Result.SectionPath</span>
                 }
                 <span class="meta-separator">·</span>
-                <span class="result-view-link">View in document</span>
+                <span class="result-view-link">@L["RAG:Search:Result:ViewInDocument"]</span>
             </div>
 
             <p class="result-text">@Result.Text</p>

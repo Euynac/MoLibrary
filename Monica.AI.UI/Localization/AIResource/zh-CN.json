@@ -77,6 +77,7 @@
     "EmbeddingModel": {
       "Label": "嵌入模型",
       "Dimensions": "{0}维",
+      "BindingRequired": "请先为该知识库配置嵌入模型，再开始索引。",
       "Warning": {
         "Title": "嵌入模型不匹配",
         "CurrentModel": "当前模型：{0}",
@@ -114,6 +115,16 @@
         "Title": "编辑知识库"
       }
     },
+    "VectorValidation": {
+      "MissingVectors": {
+        "Title": "向量数据缺失",
+        "Message": "持久化索引元数据仍显示有 {0} 个文档和 {1} 个分块，但当前向量存储缺少对应向量。请重新索引该知识库中的全部文档以恢复搜索能力。",
+        "Action": "重新索引全部文档"
+      },
+      "Messages": {
+        "ReindexQueued": "已将 {0} 个文档加入重新索引队列。"
+      }
+    },
     "DocumentQueue": {
       "Title": "文档与队列",
       "Column": {
@@ -130,10 +141,19 @@
       },
       "Actions": {
         "ViewChunks": "查看分块",
+        "StartIndex": "开始索引",
         "Reindex": "重新索引",
-        "Delete": "删除"
+        "Delete": "删除",
+        "ClearQueue": "清空队列",
+        "ClearDocuments": "清空文档"
       },
-      "DeleteConfirm": "确定要删除 '{0}' 吗？"
+      "DeleteConfirm": "确定要删除 '{0}' 吗？",
+      "ClearQueueConfirm": "确定要清空知识库 '{0}' 中所有排队文档吗？",
+      "ClearDocumentsConfirm": "确定要移除知识库 '{0}' 中的所有文档和已索引分块吗？",
+      "Messages": {
+        "QueueCleared": "已清空 {0} 个排队文档。",
+        "DocumentsCleared": "已从知识库中移除 {0} 个文档。"
+      }
     },
     "ParallelIndexing": {
       "Label": "并行数",
@@ -152,10 +172,18 @@
       "Title": "文档分块",
       "Info": "{0} 个分块 · {1}",
       "Indexed": "已索引于 {0}",
+      "SourceKnowledgeBase": "来自知识库 {0}",
       "PendingIndexing": "待索引",
       "NoContent": "无原始文本或分块",
       "ChunkBadge": "分块 {0}：{1}",
-      "Matched": "（匹配）"
+      "ChunkNumber": "分块 #{0}",
+      "ChunkNumbers": "分块 #{0}",
+      "Section": "章节：{0}",
+      "Matched": "（匹配）",
+      "MatchedBadge": "匹配结果",
+      "MatchedLabel": "匹配命中",
+      "TargetChunk": "定位分块",
+      "ChunkOption": "分块 #{0}"
     },
     "Debug": {
       "KBSidebar": {
@@ -186,7 +214,13 @@
       "Go": "搜索",
       "Searching": "搜索中...",
       "NoResults": "未找到结果",
-      "ResultsCount": "{0} 个结果"
+      "ResultsCount": "{0} 个结果",
+      "Result": {
+        "UnknownSource": "未知来源",
+        "ViewInDocument": "在文档中查看",
+        "MissingDocumentId": "所选结果不包含文档标识。",
+        "MissingKnowledgeBase": "所选结果不包含来源知识库。"
+      }
     },
     "Chunker": {
       "Title": "分块器管理",

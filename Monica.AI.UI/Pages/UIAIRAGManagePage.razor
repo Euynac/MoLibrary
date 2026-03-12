@@ -158,6 +158,33 @@
                     </div>
                 </div>
 
+                @if (ShouldShowMissingVectorWarning())
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Variant="Variant.Outlined"
+                              Class="vector-warning-alert">
+                        <div class="vector-warning-content">
+                            <div class="vector-warning-copy">
+                                <MudText Typo="Typo.subtitle2" Class="vector-warning-title">
+                                    @L["RAG:VectorValidation:MissingVectors:Title"]
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="vector-warning-message">
+                                    @GetMissingVectorWarningMessage()
+                                </MudText>
+                            </div>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                       Class="vector-warning-action"
+                                       OnClick="@ReindexSelectedKnowledgeBase"
+                                       Disabled="@(!CanReindexSelectedKnowledgeBase())">
+                                @L["RAG:VectorValidation:MissingVectors:Action"]
+                            </MudButton>
+                        </div>
+                    </MudAlert>
+                }
+
                 <!-- Document Queue Table -->
                 <div class="document-queue-section">
                     <div class="queue-header">
@@ -171,6 +198,22 @@
                             </div>
                         </div>
                         <div class="queue-controls">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.ClearAll"
+                                       OnClick="@ClearDocumentQueue"
+                                       Disabled="@(!CanClearDocumentQueue())">
+                                @L["RAG:DocumentQueue:Actions:ClearQueue"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                       OnClick="@ClearKnowledgeBaseDocuments"
+                                       Disabled="@(!CanClearKnowledgeBaseDocuments())">
+                                @L["RAG:DocumentQueue:Actions:ClearDocuments"]
+                            </MudButton>
                             <MudText Typo="Typo.caption" Class="parallel-label">
                                 @L["RAG:ParallelIndexing:Label"]
                             </MudText>
@@ -250,6 +293,12 @@
                                                    Size="Size.Small"
                                                    OnClick="@(() => ShowChunkViewer(context))"
                                                    title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => StartDocumentIndexing(context))"
+                                                   Disabled="@(!CanStartDocumentIndexing(context))"
+                                                   title="@L["RAG:DocumentQueue:Actions:StartIndex"]" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                                    Size="Size.Small"
                                                    OnClick="@(() => ReindexDocument(context))"
@@ -351,11 +400,14 @@
     private int _parallelCount = 5;
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
+    private KnowledgeBaseVectorValidationResult? _selectedKbVectorValidation;
     private const int QueueRefreshIntervalMs = 700;
     private static readonly TimeSpan ProgressQueueRefreshInterval = TimeSpan.FromSeconds(1);
     private CancellationTokenSource? _queuePollingCts;
     private Task? _queuePollingTask;
     private string? _batchStartInFlightKbId;
+    private string? _singleIndexInFlightKbId;
+    private string? _singleIndexInFlightDocumentId;
     private DateTimeOffset _lastProgressQueueRefreshAtUtc = DateTimeOffset.MinValue;
     private int _progressQueueRefreshInFlight;
 
@@ -422,6 +474,11 @@
             ClearBatchStartInFlight();
         }
 
+        if (!string.Equals(_singleIndexInFlightKbId, kb?.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            ClearSingleIndexInFlight();
+        }
+
         _selectedKB = kb;
         if (kb is not null)
         {
@@ -445,13 +502,16 @@
 
             // Load document queue for this KB
             await LoadDocumentQueueAsync();
+            await LoadSelectedKnowledgeBaseVectorValidationAsync();
             EnsureQueuePolling();
         }
         else
         {
             _currentEmbeddingModelKey = string.Empty;
             _documentQueue.Clear();
+            _selectedKbVectorValidation = null;
             ClearBatchStartInFlight();
+            ClearSingleIndexInFlight();
             StopQueuePolling();
         }
     }
@@ -477,6 +537,7 @@
             {
                 _selectedKB = null;
                 ClearBatchStartInFlight();
+                ClearSingleIndexInFlight();
             }
             await LoadKnowledgeBasesAsync();
         }
@@ -635,6 +696,11 @@
     {
         if (_selectedKB == null) return;
 
+        if (!EnsureEmbeddingModelConfiguredForIndexing())
+        {
+            return;
+        }
+
         var selectedKbId = _selectedKB.Id;
 
         var pendingDocs = _documentQueue.Where(d => d.Status == DocumentStatus.Pending).ToList();
@@ -691,6 +757,45 @@
         }
     }
 
+    private async Task StartDocumentIndexing(DocumentQueueItem document)
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        if (!EnsureEmbeddingModelConfiguredForIndexing())
+        {
+            return;
+        }
+
+        _singleIndexInFlightKbId = _selectedKB.Id;
+        _singleIndexInFlightDocumentId = document.Id;
+        EnsureQueuePolling();
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var progress = new Progress<IndexingProgress>(OnBatchIndexingProgress);
+            var result = await RAGService.StartDocumentIndexingAsync(_selectedKB.Id, document.Id, progress);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["Common:Success"], Severity.Success);
+        }
+        finally
+        {
+            ClearSingleIndexInFlight();
+            await RefreshSelectedKnowledgeBaseAsync();
+            await LoadDocumentQueueAsync(ensurePolling: false);
+            EnsureQueuePolling();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task CancelBatchIndexing()
     {
         if (_selectedKB is null)
@@ -713,21 +818,77 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ShowChunkViewer(DocumentQueueItem document)
+    private async Task ClearKnowledgeBaseDocuments()
     {
-        if (_selectedKB == null) return;
+        if (_selectedKB is null)
+        {
+            return;
+        }
 
-        // Get document chunks from service
-        var result = await RAGService.GetDocumentChunksAsync(_selectedKB.Id, document.Id);
-        if (result.IsFailed(out var error, out var data))
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Common:Confirm"],
+            L["RAG:DocumentQueue:ClearDocumentsConfirm", _selectedKB.Name],
+            yesText: L["RAG:DocumentQueue:Actions:ClearDocuments"],
+            cancelText: L["Common:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var result = await RAGService.ClearKnowledgeBaseDocumentsAsync(_selectedKB.Id);
+        if (result.IsFailed(out var error, out var removedCount))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        var (originalText, chunks) = data;
+        Snackbar.Add(L["RAG:DocumentQueue:Messages:DocumentsCleared", removedCount], Severity.Success);
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+    }
 
-        // Determine status text for display
+    private async Task ClearDocumentQueue()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Common:Confirm"],
+            L["RAG:DocumentQueue:ClearQueueConfirm", _selectedKB.Name],
+            yesText: L["RAG:DocumentQueue:Actions:ClearQueue"],
+            cancelText: L["Common:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var result = await RAGService.ClearDocumentQueueAsync(_selectedKB.Id);
+        if (result.IsFailed(out var error, out var removedCount))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["RAG:DocumentQueue:Messages:QueueCleared", removedCount], Severity.Success);
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+    }
+
+    private async Task ShowChunkViewer(DocumentQueueItem document)
+    {
+        if (_selectedKB == null) return;
+
+        var result = await RAGService.GetDocumentChunksAsync(_selectedKB.Id, document.Id);
+        if (result.IsFailed(out var error, out var view))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
         var statusText = document.Status switch
         {
             DocumentStatus.Done => L["RAG:ChunkViewer:Indexed", document.IndexedAt?.ToString("yyyy-MM-dd") ?? ""].Value,
@@ -735,14 +896,16 @@
             _ => document.Status.ToString()
         };
 
-        // Open dialog with chunk data
         var parameters = new DialogParameters
         {
             { nameof(ChunkViewerDialog.DocumentName), document.Name },
-            { nameof(ChunkViewerDialog.OriginalText), originalText },
-            { nameof(ChunkViewerDialog.Chunks), chunks },
-            { nameof(ChunkViewerDialog.MatchedChunkIndex), (int?)null }, // Will be used in Phase 7 for search results
-            { nameof(ChunkViewerDialog.StatusText), statusText }
+            { nameof(ChunkViewerDialog.DocumentPath), view.DocumentPath },
+            { nameof(ChunkViewerDialog.OriginalText), view.OriginalText },
+            { nameof(ChunkViewerDialog.Chunks), view.Chunks },
+            { nameof(ChunkViewerDialog.MatchedChunkIndex), (int?)null },
+            { nameof(ChunkViewerDialog.StatusText), statusText },
+            { nameof(ChunkViewerDialog.SourceKind), view.SourceKind },
+            { nameof(ChunkViewerDialog.SourceGroupKey), view.SourceGroupKey }
         };
 
         await DialogService.ShowAsync<ChunkViewerDialog>(
@@ -762,6 +925,7 @@
         else
         {
             Snackbar.Add(L["Common:Success"], Severity.Success);
+            await RefreshSelectedKnowledgeBaseAsync();
             await LoadDocumentQueueAsync();
         }
     }
@@ -785,8 +949,28 @@
         else
         {
             Snackbar.Add(L["Common:Success"], Severity.Success);
+            await RefreshSelectedKnowledgeBaseAsync();
             await LoadDocumentQueueAsync();
         }
+    }
+
+    private async Task ReindexSelectedKnowledgeBase()
+    {
+        if (_selectedKB is null)
+        {
+            return;
+        }
+
+        var result = await RAGService.ReindexKnowledgeBaseAsync(_selectedKB.Id);
+        if (result.IsFailed(out var error, out var queuedCount))
+        {
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["RAG:VectorValidation:Messages:ReindexQueued", queuedCount], Severity.Success);
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
     }
 
     private async Task ShowIndexingError(DocumentQueueItem document)
@@ -832,7 +1016,10 @@
         var result = await dialog.Result;
         if (result is { Canceled: false, Data: List<string> selectedDocIds })
         {
-            if ((await RAGService.AddDocumentsToQueueAsync(_selectedKB.Id, selectedDocIds)).IsFailed(out var addError))
+            if ((await RAGService.AddDocumentsToQueueAsync(
+                    _selectedKB.Id,
+                    selectedDocIds,
+                    _selectedMarkdownGroup)).IsFailed(out var addError))
             {
                 Snackbar.Add($"{L["Common:Error"]}: {addError.Message}", Severity.Error);
             }
@@ -848,9 +1035,13 @@
     {
         if (_selectedKB == null) return;
 
+        if (!EnsureEmbeddingModelConfiguredForIndexing())
+        {
+            return;
+        }
+
         try
         {
-            // Read file content (limit to 10MB)
             const long maxFileSize = 10 * 1024 * 1024;
             if (file.Size > maxFileSize)
             {
@@ -898,7 +1089,9 @@
     {
         if (_selectedKB is null)
         {
+            _selectedKbVectorValidation = null;
             ClearBatchStartInFlight();
+            ClearSingleIndexInFlight();
             return;
         }
 
@@ -910,17 +1103,23 @@
         {
             _currentEmbeddingModelKey = string.Empty;
             _documentQueue.Clear();
+            _selectedKbVectorValidation = null;
+            ClearSingleIndexInFlight();
             return;
         }
 
         _currentEmbeddingModelKey = HasEmbeddingBinding(_selectedKB)
             ? GetKnowledgeBaseModelKey(_selectedKB)
             : string.Empty;
+
+        await LoadSelectedKnowledgeBaseVectorValidationAsync();
     }
 
     private bool HasActiveQueueWork()
     {
-        return IsBatchIndexingRunning();
+        return IsBatchIndexingRunning()
+               || HasIndexingRowsInFlight()
+               || HasSingleDocumentIndexInFlight();
     }
 
     private bool IsBatchIndexingRunning()
@@ -935,10 +1134,7 @@
             return true;
         }
 
-        var hasActiveServerBatch = RAGService.IsBatchIndexingActive(_selectedKB.Id);
-        var hasInFlightQueueRows = _documentQueue.Any(d => d.Status == DocumentStatus.Indexing);
-
-        return hasActiveServerBatch || hasInFlightQueueRows;
+        return RAGService.IsBatchIndexingActive(_selectedKB.Id);
     }
 
     private bool CanStartBatchIndexing()
@@ -949,7 +1145,7 @@
         }
 
         var hasPending = _documentQueue.Any(d => d.Status == DocumentStatus.Pending);
-        return hasPending && !IsBatchIndexingRunning();
+        return hasPending && !HasActiveQueueWork();
     }
 
     private bool CanCancelBatchIndexing()
@@ -960,6 +1156,53 @@
         }
 
         return IsBatchIndexingRunning();
+    }
+
+    private bool CanStartDocumentIndexing(DocumentQueueItem document)
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        return document.Status is DocumentStatus.Pending or DocumentStatus.Error
+               && !HasActiveQueueWork();
+    }
+
+    private bool CanClearKnowledgeBaseDocuments()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        return _documentQueue.Count > 0 && !HasActiveQueueWork();
+    }
+
+    private bool CanClearDocumentQueue()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        return _documentQueue.Any(document => document.Status != DocumentStatus.Done)
+               && !HasActiveQueueWork();
+    }
+
+    private bool CanReindexSelectedKnowledgeBase()
+        => _selectedKB is not null
+           && ShouldShowMissingVectorWarning()
+           && !HasActiveQueueWork();
+
+    private bool HasIndexingRowsInFlight()
+        => _documentQueue.Any(document => document.Status == DocumentStatus.Indexing);
+
+    private bool HasSingleDocumentIndexInFlight()
+    {
+        return _selectedKB is not null
+               && !string.IsNullOrWhiteSpace(_singleIndexInFlightDocumentId)
+               && string.Equals(_singleIndexInFlightKbId, _selectedKB.Id, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsCancellationMessage(string? message)
@@ -1000,6 +1243,67 @@
     private void ClearBatchStartInFlight()
     {
         _batchStartInFlightKbId = null;
+    }
+
+    private void ClearSingleIndexInFlight()
+    {
+        _singleIndexInFlightKbId = null;
+        _singleIndexInFlightDocumentId = null;
+    }
+
+    private bool EnsureEmbeddingModelConfiguredForIndexing()
+    {
+        if (_selectedKB is null)
+        {
+            return false;
+        }
+
+        if (HasEmbeddingBinding(_selectedKB))
+        {
+            return true;
+        }
+
+        Snackbar.Add(L["RAG:EmbeddingModel:BindingRequired"], Severity.Warning);
+        return false;
+    }
+
+    private async Task LoadSelectedKnowledgeBaseVectorValidationAsync()
+    {
+        if (_selectedKB is null)
+        {
+            _selectedKbVectorValidation = null;
+            return;
+        }
+
+        var result = await RAGService.GetKnowledgeBaseVectorValidationAsync(_selectedKB.Id);
+        if (result.IsFailed(out var error, out var validation))
+        {
+            _selectedKbVectorValidation = null;
+            Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        _selectedKbVectorValidation = validation;
+    }
+
+    private bool ShouldShowMissingVectorWarning()
+        => _selectedKbVectorValidation is
+        {
+            HasPersistedIndexMetadata: true,
+            WasValidated: true,
+            HasValidVectors: false
+        };
+
+    private string GetMissingVectorWarningMessage()
+    {
+        if (_selectedKbVectorValidation is null)
+        {
+            return string.Empty;
+        }
+
+        return L["RAG:VectorValidation:MissingVectors:Message",
+            _selectedKbVectorValidation.IndexedDocumentCount,
+            _selectedKbVectorValidation.IndexedChunkCount];
     }
 
     private void EnsureQueuePolling()
@@ -1078,6 +1382,7 @@
     public void Dispose()
     {
         ClearBatchStartInFlight();
+        ClearSingleIndexInFlight();
         StopQueuePolling();
     }
 
@@ -1161,4 +1466,3 @@
         return $"{modelName} ({GetProviderDisplayLabel(providerId, modelName)})";
     }
 }
-

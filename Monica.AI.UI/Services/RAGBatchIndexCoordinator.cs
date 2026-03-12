@@ -202,6 +202,41 @@ public sealed class RAGBatchIndexCoordinator(
         }
     }
 
+    public async Task StartDocumentIndexingAsync(
+        string kbId,
+        string documentId,
+        IProgress<IndexingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsBatchIndexingActive(kbId))
+        {
+            throw new InvalidOperationException("Batch indexing is already running.");
+        }
+
+        var queue = await ragService.GetDocumentQueueAsync(kbId, cancellationToken);
+        var queueItem = queue.FirstOrDefault(item =>
+            string.Equals(item.Id, documentId, StringComparison.OrdinalIgnoreCase));
+
+        if (queueItem is null)
+        {
+            throw new KeyNotFoundException(
+                $"Document '{documentId}' was not found in the queue for knowledge base '{kbId}'.");
+        }
+
+        if (queueItem.Status == DocumentStatus.Done)
+        {
+            throw new InvalidOperationException(
+                $"Document '{documentId}' is already indexed. Queue it for reindex first.");
+        }
+
+        if (queueItem.Status == DocumentStatus.Indexing)
+        {
+            throw new InvalidOperationException($"Document '{documentId}' is already indexing.");
+        }
+
+        await IndexQueuedDocumentAsync(kbId, queueItem, progress, cancellationToken);
+    }
+
     private async Task IndexQueuedDocumentAsync(
         string kbId,
         DocumentQueueItem queueItem,

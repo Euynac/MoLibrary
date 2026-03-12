@@ -12,7 +12,7 @@ public sealed class RAGChunkViewCoordinator(
     IMoMarkdownService markdownService,
     RAGMarkdownDocumentResolver markdownDocumentResolver)
 {
-    public async Task<(string OriginalText, IReadOnlyList<ChunkHighlight> Chunks)> GetDocumentChunksAsync(
+    public async Task<DocumentChunkView> GetDocumentChunksAsync(
         string kbId,
         string documentId,
         CancellationToken ct = default)
@@ -20,7 +20,7 @@ public sealed class RAGChunkViewCoordinator(
         var indexedView = await ragService.GetDocumentChunkViewAsync(kbId, documentId, ct);
         if (indexedView is not null)
         {
-            return (indexedView.OriginalText, indexedView.Chunks);
+            return await EnrichMarkdownMetadataAsync(indexedView, ct);
         }
 
         var markdownDocument = await markdownDocumentResolver.FindByPathAsync(documentId, ct);
@@ -36,8 +36,42 @@ public sealed class RAGChunkViewCoordinator(
             markdownDocument.RelativePath,
             markdownDocument.Title,
             originalText,
-            ct);
+            sourceKind: KnowledgeDocumentSourceKinds.Markdown,
+            sourceGroupKey: markdownDocument.GroupKey,
+            ct: ct);
 
-        return (previewView.OriginalText, previewView.Chunks);
+        return previewView;
+    }
+
+    private async Task<DocumentChunkView> EnrichMarkdownMetadataAsync(
+        DocumentChunkView view,
+        CancellationToken ct)
+    {
+        var shouldResolveMarkdownMetadata =
+            string.Equals(view.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(view.SourceKind, KnowledgeDocumentSourceKinds.Unknown, StringComparison.OrdinalIgnoreCase);
+
+        if (!shouldResolveMarkdownMetadata || !string.IsNullOrWhiteSpace(view.SourceGroupKey))
+        {
+            return view;
+        }
+
+        var markdownDocument = await markdownDocumentResolver.FindByPathAsync(view.DocumentPath, ct);
+        if (markdownDocument is null)
+        {
+            return view;
+        }
+
+        return new DocumentChunkView
+        {
+            DocumentPath = markdownDocument.RelativePath,
+            DocumentName = view.DocumentName,
+            OriginalText = view.OriginalText,
+            Chunks = view.Chunks,
+            ChunkerId = view.ChunkerId,
+            IsPreview = view.IsPreview,
+            SourceKind = KnowledgeDocumentSourceKinds.Markdown,
+            SourceGroupKey = markdownDocument.GroupKey
+        };
     }
 }

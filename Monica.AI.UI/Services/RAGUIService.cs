@@ -32,6 +32,20 @@ public class RAGUIService(
         }
     }
 
+    public async Task<Res<KnowledgeBaseVectorValidationResult>> GetKnowledgeBaseVectorValidationAsync(string kbId)
+    {
+        try
+        {
+            var result = await ragService.ValidateKnowledgeBaseVectorsAsync(kbId);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to validate vectors for KB '{KbId}'", kbId);
+            return Res.Fail($"Failed to validate vectors: {ex.Message}");
+        }
+    }
+
     public async Task<Res<KnowledgeBase>> CreateKnowledgeBaseAsync(string name, string? description = null)
     {
         try
@@ -200,7 +214,10 @@ public class RAGUIService(
         }
     }
 
-    public async Task<Res> AddDocumentsToQueueAsync(string kbId, IEnumerable<string> documentIds)
+    public async Task<Res> AddDocumentsToQueueAsync(
+        string kbId,
+        IEnumerable<string> documentIds,
+        string? sourceGroupKey = null)
     {
         try
         {
@@ -210,7 +227,8 @@ public class RAGUIService(
             var addedCount = await ragService.AddDocumentsToQueueAsync(
                 kbId,
                 docIdList,
-                KnowledgeDocumentSourceKinds.Markdown);
+                KnowledgeDocumentSourceKinds.Markdown,
+                sourceGroupKey);
 
             return Res.Ok($"Added {addedCount} documents to queue.");
         }
@@ -236,6 +254,34 @@ public class RAGUIService(
         }
     }
 
+    public async Task<Res<int>> ClearKnowledgeBaseDocumentsAsync(string kbId)
+    {
+        try
+        {
+            var removedCount = await ragService.ClearKnowledgeBaseDocumentsAsync(kbId);
+            return Res.Ok(removedCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to clear documents for KB '{KbId}'", kbId);
+            return Res.Fail($"Failed to clear documents: {ex.Message}");
+        }
+    }
+
+    public async Task<Res<int>> ClearDocumentQueueAsync(string kbId)
+    {
+        try
+        {
+            var removedCount = await ragService.ClearDocumentQueueAsync(kbId);
+            return Res.Ok(removedCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to clear queue for KB '{KbId}'", kbId);
+            return Res.Fail($"Failed to clear queue: {ex.Message}");
+        }
+    }
+
     public async Task<Res> ReindexDocumentAsync(
         string kbId,
         string documentId,
@@ -251,6 +297,47 @@ public class RAGUIService(
         {
             logger.LogError(ex, "Failed to reindex document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
             return Res.Fail($"Failed to reindex document: {ex.Message}");
+        }
+    }
+
+    public async Task<Res<int>> ReindexKnowledgeBaseAsync(string kbId)
+    {
+        try
+        {
+            logger.LogInformation("Queueing all documents in KB '{KbId}' for reindex", kbId);
+            var queuedCount = await ragService.QueueKnowledgeBaseForReindexAsync(kbId);
+            return Res.Ok(queuedCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to queue KB '{KbId}' for reindex", kbId);
+            return Res.Fail($"Failed to reindex knowledge base: {ex.Message}");
+        }
+    }
+
+    public async Task<Res> StartDocumentIndexingAsync(
+        string kbId,
+        string documentId,
+        IProgress<IndexingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await batchIndexCoordinator.StartDocumentIndexingAsync(kbId, documentId, progress, cancellationToken);
+            return Res.Ok("Document indexed successfully.");
+        }
+        catch (OperationCanceledException)
+        {
+            return Res.Fail("Request was cancelled.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to start indexing for document '{DocumentId}' in KB '{KbId}'",
+                documentId,
+                kbId);
+            return Res.Fail($"Failed to start document indexing: {ex.Message}");
         }
     }
 
@@ -314,7 +401,7 @@ public class RAGUIService(
     /// <summary>
     /// Gets document original text and chunk highlights for the chunk viewer.
     /// </summary>
-    public async Task<Res<(string OriginalText, IReadOnlyList<ChunkHighlight> Chunks)>> GetDocumentChunksAsync(
+    public async Task<Res<DocumentChunkView>> GetDocumentChunksAsync(
         string kbId,
         string documentId)
     {
@@ -323,7 +410,7 @@ public class RAGUIService(
             logger.LogInformation("Getting chunks for document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
 
             var view = await chunkViewCoordinator.GetDocumentChunksAsync(kbId, documentId);
-            return Res.Ok((view.OriginalText, view.Chunks));
+            return Res.Ok(view);
         }
         catch (Exception ex)
         {

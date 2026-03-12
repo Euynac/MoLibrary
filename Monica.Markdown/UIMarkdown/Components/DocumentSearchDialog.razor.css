@@ -43,12 +43,6 @@
     align-items: center;
     gap: 8px;
     padding: 8px 14px;
-    border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.15);
-    border-radius: 18px;
-    background:
-        linear-gradient(135deg,
-            rgba(var(--mud-palette-primary-rgb), 0.08),
-            rgba(var(--mud-palette-surface-rgb), 0.94));
 }
 
 .document-search-scope-copy {
@@ -118,13 +112,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    border: 1px dashed rgba(var(--mud-palette-primary-rgb), 0.12);
     border-radius: 24px;
-    background:
-        radial-gradient(circle at top left,
-            rgba(var(--mud-palette-primary-rgb), 0.05),
-            transparent 48%),
-        rgba(var(--mud-palette-surface-rgb), 0.72);
 }
 
 .document-search-result {
