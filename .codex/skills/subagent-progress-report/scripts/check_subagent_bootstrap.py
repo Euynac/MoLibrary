@@ -11,7 +11,10 @@ from pathlib import Path
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Wait for <session-root>/<agent-name>/agent.log to appear and receive its first entry.",
+        description=(
+            "Wait for <session-root>/<agent-name>/ to appear, then wait for agent.log "
+            "to receive its first non-empty entry."
+        ),
     )
     parser.add_argument(
         "--session-root",
@@ -24,10 +27,16 @@ def parse_args() -> argparse.Namespace:
         help="Expected sub-agent directory name.",
     )
     parser.add_argument(
-        "--timeout-seconds",
+        "--directory-timeout-seconds",
         type=float,
         default=60.0,
-        help="Maximum wait time before classifying bootstrap state.",
+        help="Maximum wait time for <session-root>/<agent-name>/ to appear.",
+    )
+    parser.add_argument(
+        "--log-timeout-seconds",
+        type=float,
+        default=180.0,
+        help="Additional wait time for the first non-empty log entry after the directory appears.",
     )
     parser.add_argument(
         "--poll-seconds",
@@ -53,9 +62,12 @@ def inspect_state(session_root: Path, agent_name: str) -> dict[str, object]:
 
     if log_exists:
         try:
-            latest_entry = log_path.read_text(encoding="utf-8").splitlines()[0].strip()
-            has_log_entry = bool(latest_entry)
-        except IndexError:
+            for line in log_path.read_text(encoding="utf-8").splitlines():
+                latest_entry = line.strip()
+                if latest_entry:
+                    has_log_entry = True
+                    break
+        except OSError:
             latest_entry = ""
 
     if folder_exists and has_log_entry:
@@ -92,13 +104,25 @@ def render_text(result: dict[str, object]) -> str:
 def main() -> int:
     args = parse_args()
     session_root = Path(args.session_root).resolve()
-    deadline = time.monotonic() + max(args.timeout_seconds, 0.0)
+    directory_timeout_seconds = max(args.directory_timeout_seconds, 0.0)
+    log_timeout_seconds = max(args.log_timeout_seconds, 0.0)
     poll_seconds = max(args.poll_seconds, 0.1)
 
     result = inspect_state(session_root, args.agent_name)
-    while time.monotonic() < deadline and result["status"] != "bootstrapped":
+    directory_deadline = time.monotonic() + directory_timeout_seconds
+
+    while time.monotonic() < directory_deadline and not result["folder_exists"]:
         time.sleep(poll_seconds)
         result = inspect_state(session_root, args.agent_name)
+
+    if result["folder_exists"] and not result["has_log_entry"]:
+        log_deadline = time.monotonic() + log_timeout_seconds
+        while time.monotonic() < log_deadline and not result["has_log_entry"]:
+            time.sleep(poll_seconds)
+            result = inspect_state(session_root, args.agent_name)
+
+    result["directory_timeout_seconds"] = directory_timeout_seconds
+    result["log_timeout_seconds"] = log_timeout_seconds
 
     if args.json:
         print(json.dumps(result, ensure_ascii=True, indent=2))

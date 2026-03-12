@@ -1,17 +1,7 @@
 ---
 name: planning-with-files
 version: "3.0.0"
-description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md in .pending/NNN-description/ folders. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery and completion tracking.
-user-invocable: true
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Glob
-  - Grep
-  - WebFetch
-  - WebSearch
+description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md in .pending/NNN-description/ folders. Use when user ask for.
 ---
 
 # Planning with Files

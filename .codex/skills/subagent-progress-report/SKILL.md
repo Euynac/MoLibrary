@@ -61,38 +61,42 @@ python <skill-dir>/scripts/init_subagent_session.py --session-root "<session-roo
 7. Immediately after delegation, verify that the sub-agent actually entered `Sub-Agent mode`:
 
 ```bash
-python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "<agent-name>" --timeout-seconds 60
+python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "<agent-name>" --directory-timeout-seconds 60 --log-timeout-seconds 180
 ```
 
-8. If the bootstrap check times out with `missing`, treat that sub-agent as hallucinating: it did not realize it was a sub-agent, did not create its dedicated folder, and did not provide a log. Stop or discard that sub-agent and delegate the task again to a fresh sub-agent.
-9. Require the sub-agent to keep all generated files for that delegated task inside the returned child directory.
-10. Require the sub-agent to log:
+8. The bootstrap check uses two windows:
+   - first wait up to 60 seconds for `<session-root>/<agent-name>/` to appear
+   - if the directory appears, wait up to 180 additional seconds for the first non-empty `agent.log` entry
+9. If the bootstrap check ends with `missing`, treat that sub-agent as hallucinating: it did not create its dedicated folder within the first 60-second window. Stop or discard that sub-agent and delegate the task again to a fresh sub-agent.
+10. If the bootstrap check ends with `directory_only`, the sub-agent created its dedicated folder but did not write its first non-empty log entry within the additional 180-second window. Follow up with that sub-agent; do not redelegate automatically.
+11. Require the sub-agent to keep all generated files for that delegated task inside the returned child directory.
+12. Require the sub-agent to log:
    - task start
    - phase completions
    - discoveries that may change the plan
    - blockers or questions for the main agent
    - final outcome
-11. For one session, read progress from `<session-root>/<agent-name>/agent.log`. Read newest entries first because the log is prepended, not appended to the end.
-12. For multi-agent supervision, prefer the summary script:
+13. For one session, read progress from `<session-root>/<agent-name>/agent.log`. Read newest entries first because the log is prepended, not appended to the end.
+14. For multi-agent supervision, prefer the summary script:
 
 ```bash
 python <skill-dir>/scripts/collect_agent_status.py --session-root "<session-root>"
 ```
 
-13. Use the summary output to identify:
+15. Use the summary output to identify:
     - each sub-agent folder under the current session
     - the latest logged message
     - whether the session looks `completed`, `blocked`, `needs_input`, or `in_progress`
-14. `collect_agent_status.py` ignores directories prefixed with `(Closed)` by default. Pass `--include-closed` only when archived agents still matter for the current inspection.
-15. After closing a sub-agent in the harness, archive its directory so future status scans ignore it:
+16. `collect_agent_status.py` ignores directories prefixed with `(Closed)` by default. Pass `--include-closed` only when archived agents still matter for the current inspection.
+17. After closing a sub-agent in the harness, archive its directory so future status scans ignore it:
 
 ```bash
 python <skill-dir>/scripts/mark_subagents_closed.py --session-root "<session-root>" --agent-name "<agent-name>"
 ```
 
 Repeat `--agent-name` to archive multiple sub-agents in one command.
-16. Read-only rule: the main agent may read `agent.log` and summary output but must never edit `agent.log`.
-17. If the logged direction drifts, interrupt the sub-agent and provide a precise correction.
+18. Read-only rule: the main agent may read `agent.log` and summary output but must never edit `agent.log`.
+19. If the logged direction drifts, interrupt the sub-agent and provide a precise correction.
 
 ## Sub-Agent Mode
 
@@ -142,13 +146,14 @@ Example delegation instruction for one sub-agent:
 Use $subagent-progress-report in Sub-Agent mode.
 Your finalized session agent name is "BridgeVerifier--<tool-nickname>".
 Use the provided session root, initialize your child folder there, keep all artifacts there,
+write your first non-empty agent.log entry immediately after initialization,
 and report progress by prepending entries to agent.log after each major phase.
 ```
 
 Example bootstrap check for the main agent:
 
 ```bash
-python scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "BridgeVerifier--cedar" --timeout-seconds 60 --json
+python scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "BridgeVerifier--cedar" --directory-timeout-seconds 60 --log-timeout-seconds 180 --json
 ```
 
 Example status scan for the main agent:
@@ -179,7 +184,7 @@ Prepend a timestamped entry to `agent.log`. Use this script instead of manual ed
 
 ### `scripts/check_subagent_bootstrap.py`
 
-Wait for a specific sub-agent to create its dedicated folder and first log entry. If the timeout ends with no folder and no log entry, classify the sub-agent as `missing` so the main agent can discard it and redelegate the task.
+Wait up to 60 seconds for a specific sub-agent to create its dedicated folder. If the folder appears, wait up to 180 additional seconds for the first non-empty log entry. Return `missing` with `redelegate` when no folder appears in the first window. Return `directory_only` with `follow_up` when the folder exists but the second window ends without a non-empty log entry.
 
 ### `scripts/collect_agent_status.py`
 
