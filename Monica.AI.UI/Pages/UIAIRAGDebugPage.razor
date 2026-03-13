@@ -171,12 +171,9 @@
             if (!modelsResult.IsFailed(out error, out var models))
             {
                 _embeddingModels = models;
-                if (models.Count > 0)
-                {
-                    _selectedEmbeddingModelKey = models[0].ModelKey;
-                }
             }
 
+            RefreshEmbeddingModelSelection();
             CheckEmbeddingModelMismatch();
             await InvokeAsync(StateHasChanged);
         }
@@ -185,6 +182,7 @@
     private void SelectAllKBs()
     {
         _selectedKbIds = _knowledgeBases.Select(kb => kb.Id).ToHashSet();
+        RefreshEmbeddingModelSelection();
         CheckEmbeddingModelMismatch();
         StateHasChanged();
     }
@@ -192,7 +190,8 @@
     private void DeselectAllKBs()
     {
         _selectedKbIds.Clear();
-        _showEmbeddingWarning = false;
+        RefreshEmbeddingModelSelection();
+        CheckEmbeddingModelMismatch();
         StateHasChanged();
     }
 
@@ -203,6 +202,7 @@
         else
             _selectedKbIds.Remove(kbId);
 
+        RefreshEmbeddingModelSelection();
         CheckEmbeddingModelMismatch();
         StateHasChanged();
     }
@@ -212,6 +212,14 @@
         _selectedEmbeddingModelKey = modelKey;
         CheckEmbeddingModelMismatch();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshEmbeddingModelSelection()
+    {
+        if (TryGetCheckedKnowledgeBaseEmbeddingModelKey(out var autoSelectedModelKey))
+        {
+            _selectedEmbeddingModelKey = autoSelectedModelKey;
+        }
     }
 
     private void CheckEmbeddingModelMismatch()
@@ -251,6 +259,51 @@
             _showEmbeddingWarning = false;
             _embeddingWarningMessage = string.Empty;
         }
+    }
+
+    private bool TryGetCheckedKnowledgeBaseEmbeddingModelKey(out string modelKey)
+    {
+        modelKey = string.Empty;
+        if (!_selectedKbIds.Any() || _embeddingModels.Count == 0)
+        {
+            return false;
+        }
+
+        string? resolvedModelKey = null;
+        foreach (var kbId in _selectedKbIds)
+        {
+            var kb = _knowledgeBases.FirstOrDefault(k =>
+                string.Equals(k.Id, kbId, StringComparison.OrdinalIgnoreCase));
+            if (kb is null || !HasEmbeddingBinding(kb))
+            {
+                return false;
+            }
+
+            var knowledgeBaseModelKey = GetKnowledgeBaseModelKey(kb);
+            if (!HasAvailableEmbeddingModel(knowledgeBaseModelKey))
+            {
+                return false;
+            }
+
+            if (resolvedModelKey is null)
+            {
+                resolvedModelKey = knowledgeBaseModelKey;
+                continue;
+            }
+
+            if (!string.Equals(resolvedModelKey, knowledgeBaseModelKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedModelKey))
+        {
+            return false;
+        }
+
+        modelKey = resolvedModelKey;
+        return true;
     }
 
     private async Task HandleSearch()
@@ -360,6 +413,10 @@
 
         return $"{kb.EmbeddingModelName} ({providerLabel})";
     }
+
+    private bool HasAvailableEmbeddingModel(string modelKey)
+        => _embeddingModels.Any(m =>
+            string.Equals(m.ModelKey, modelKey, StringComparison.OrdinalIgnoreCase));
 
     private string GetModelDisplayByKey(string modelKey)
     {
