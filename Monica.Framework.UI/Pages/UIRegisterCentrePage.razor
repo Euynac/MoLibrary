@@ -9,85 +9,101 @@
 @inject IDialogService DialogService
 @implements IDisposable
 
-<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
-    
-    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="4" Rounded="true" Color="Color.Primary" PanelClass="pa-4">
-        <MudTabPanel Text="服务列表" Icon="@Icons.Material.Filled.List">
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudPaper Class="pa-4">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
-                                    <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60" 
-                                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px" 
-                                                   Disabled="!_autoRefreshEnabled" Immediate="true" />
+<div class="register-centre-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+        <MudText Typo="Typo.h4" Class="mb-4">注册中心管理</MudText>
+
+        <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
+                 Elevation="4"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 Class="mb-6 register-centre-tabs">
+            <MudTabPanel Text="服务列表" Icon="@Icons.Material.Filled.List">
+                <div class="tab-content-panel">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudPaper Class="pa-4">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudText Typo="Typo.h6">服务列表（包含预定义服务）</MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="自动刷新" />
+                                            <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="刷新间隔(秒)" Min="1" Max="60"
+                                                             Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"
+                                                             Disabled="!_autoRefreshEnabled" Immediate="true" />
+                                        </MudStack>
+                                    </MudStack>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
+                                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                                        刷新
+                                    </MudButton>
                                 </MudStack>
-                            </MudStack>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@_isLoading">
-                                <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
-                                刷新
-                            </MudButton>
-                        </MudStack>
-                    </MudPaper>
-                </MudItem>
+                            </MudPaper>
+                        </MudItem>
 
-                <MudItem xs="12">
-                    <ServiceFilterPanel
-                        AllServices="@_services"
-                        FilterText="@_filterText"
-                        FilterTextChanged="@((text) => { _filterText = text; ApplyFilters(); })"
-                        SelectedStatuses="@_selectedStatuses"
-                        SelectedStatusesChanged="@((statuses) => { _selectedStatuses = new HashSet<ServiceStatus>(statuses); ApplyFilters(); })"
-                        SelectedDomains="@_selectedDomains"
-                        SelectedDomainsChanged="@((domains) => { _selectedDomains = new HashSet<string>(domains); ApplyFilters(); })"
-                        ShowOnlyWithInstances="@_showOnlyWithInstances"
-                        ShowOnlyWithInstancesChanged="@((value) => { _showOnlyWithInstances = value; ApplyFilters(); })"
-                        OnFiltersChanged="@ApplyFilters" />
-                </MudItem>
+                        <MudItem xs="12">
+                            <ServiceFilterPanel
+                                AllServices="@_services"
+                                FilterText="@_filterText"
+                                FilterTextChanged="@((text) => { _filterText = text; ApplyFilters(); })"
+                                SelectedStatuses="@_selectedStatuses"
+                                SelectedStatusesChanged="@((statuses) => { _selectedStatuses = new HashSet<ServiceStatus>(statuses); ApplyFilters(); })"
+                                SelectedDomains="@_selectedDomains"
+                                SelectedDomainsChanged="@((domains) => { _selectedDomains = new HashSet<string>(domains); ApplyFilters(); })"
+                                ShowOnlyWithInstances="@_showOnlyWithInstances"
+                                ShowOnlyWithInstancesChanged="@((value) => { _showOnlyWithInstances = value; ApplyFilters(); })"
+                                OnFiltersChanged="@ApplyFilters" />
+                        </MudItem>
 
-                <MudItem xs="12">
-                    <RegisterCentreServiceList Services="_filteredServices" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
-                    
-                    @if (!_isLoading && !_services.Any())
+                        <MudItem xs="12">
+                            <RegisterCentreServiceList Services="_filteredServices" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="_isLoading" />
+
+                            @if (!_isLoading && !_services.Any())
+                            {
+                                <MudPaper Class="pa-4 mt-2">
+                                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                        暂无服务信息
+                                    </MudText>
+                                </MudPaper>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="微服务架构图" Icon="@Icons.Material.Filled.AccountTree">
+                <div class="tab-content-panel">
+                    <ServiceVisualization OnServiceClick="OnServiceClickFromVisualization" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
+                <div class="tab-content-panel">
+                    <DomainDependencyVisualization OnDomainClick="OnDomainClickFromVisualization" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="子域管理" Icon="@Icons.Material.Filled.Domain">
+                <div class="tab-content-panel">
+                    @if (_selectedDomain == null)
                     {
-                        <MudPaper Class="pa-4 mt-2">
-                            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-                                暂无服务信息
-                            </MudText>
-                        </MudPaper>
+                        <DomainList OnDomainSelected="OnDomainSelected" />
                     }
-                </MudItem>
-            </MudGrid>
-        </MudTabPanel>
-        
-        <MudTabPanel Text="微服务架构图" Icon="@Icons.Material.Filled.AccountTree">
-            <ServiceVisualization OnServiceClick="OnServiceClickFromVisualization" />
-        </MudTabPanel>
-        
-        <MudTabPanel Text="子域依赖图" Icon="@Icons.Material.Filled.Hub">
-            <DomainDependencyVisualization OnDomainClick="OnDomainClickFromVisualization" />
-        </MudTabPanel>
-        
-        <MudTabPanel Text="子域管理" Icon="@Icons.Material.Filled.Domain">
-            @if (_selectedDomain == null)
-            {
-                <DomainList OnDomainSelected="OnDomainSelected" />
-            }
-            else
-            {
-                <DomainDetail DomainName="@_selectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
-            }
-        </MudTabPanel>
+                    else
+                    {
+                        <DomainDetail DomainName="@_selectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
+                    }
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="当前实例" Icon="@Icons.Material.Filled.Computer">
-            <CurrentInstanceInfo />
-        </MudTabPanel>
-    </MudTabs>
-</MudContainer>
+            <MudTabPanel Text="当前实例" Icon="@Icons.Material.Filled.Computer">
+                <div class="tab-content-panel">
+                    <CurrentInstanceInfo />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+</div>
 
 @code {
     public const string REGISTERCENTRE_DEBUG_URL = "/register-centre-manage";

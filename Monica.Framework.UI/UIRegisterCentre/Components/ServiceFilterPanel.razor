@@ -37,15 +37,13 @@
                         SelectedValuesChanged="OnSelectedStatusesChanged">
                 @foreach (var status in AllStatuses)
                 {
-                    var color = status.GetHexColor();
                     var isSelected = SelectedStatuses.Contains(status);
                     <MudChip T="ServiceStatus"
                              Value="status"
-                             Style="@(isSelected
-                                 ? $"background-color: {color}; border-color: {color}; color: white"
-                                 : $"background-color: {color}20; border-color: {color}; color: {color}")"
+                             Color="@status.GetColor()"
+                             Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
                              Size="Size.Small">
-                        @status.GetText()
+                        @GetStatusLabel(status)
                     </MudChip>
                 }
             </MudChipSet>
@@ -183,5 +181,15 @@
         ShowOnlyWithInstances = value;
         await ShowOnlyWithInstancesChanged.InvokeAsync(value);
         await OnFiltersChanged.InvokeAsync();
+    }
+
+    private int GetStatusCount(ServiceStatus status)
+    {
+        return AllServices.Count(service => service.OverallStatus == status);
+    }
+
+    private string GetStatusLabel(ServiceStatus status)
+    {
+        return $"{status.GetText()}({GetStatusCount(status)})";
     }
 }
