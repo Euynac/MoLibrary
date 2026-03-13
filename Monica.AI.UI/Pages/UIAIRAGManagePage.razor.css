@@ -64,6 +64,59 @@
     font-size: 0.75rem;
 }
 
+.panel-loading-state,
+.detail-loading-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    min-height: 0;
+}
+
+.panel-loading-state {
+    flex: 1;
+    padding: 6px 0 2px;
+}
+
+.detail-loading-state {
+    flex: 1;
+    align-items: flex-start;
+    padding: 24px;
+    border: 1px dashed rgba(var(--mud-palette-primary-rgb), 0.35);
+    border-radius: 14px;
+    background:
+        linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08), rgba(var(--mud-palette-surface-rgb), 0.96));
+}
+
+.loading-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.loading-phase-chip {
+    width: fit-content;
+    font-weight: 600;
+}
+
+.loading-title {
+    font-weight: 700;
+}
+
+.loading-phase-text {
+    max-width: 32rem;
+}
+
+.loading-progress {
+    max-width: 360px;
+}
+
+.loading-skeletons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .kb-list {
     display: flex;
     flex-direction: column;
@@ -393,6 +446,16 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.markdown-loading-state {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.markdown-loading-progress {
+    max-width: 220px;
 }
 
 .upload-file-input {

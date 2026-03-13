@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
@@ -12,17 +13,15 @@ namespace Monica.AI.UI.Services;
 /// Wraps infrastructure services, catching exceptions and returning Res.
 /// </summary>
 public class RAGUIService(
-    RAGService ragService,
+    IServiceProvider serviceProvider,
     IMoMarkdownService markdownService,
-    RAGBatchIndexCoordinator batchIndexCoordinator,
-    RAGChunkViewCoordinator chunkViewCoordinator,
     ILogger<RAGUIService> logger)
 {
     public async Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()
     {
         try
         {
-            var result = await ragService.GetKnowledgeBasesAsync();
+            var result = await GetRagService().GetKnowledgeBasesAsync();
             return Res.Ok(result);
         }
         catch (Exception ex)
@@ -36,7 +35,7 @@ public class RAGUIService(
     {
         try
         {
-            var result = await ragService.ValidateKnowledgeBaseVectorsAsync(kbId);
+            var result = await GetRagService().ValidateKnowledgeBaseVectorsAsync(kbId);
             return Res.Ok(result);
         }
         catch (Exception ex)
@@ -50,7 +49,7 @@ public class RAGUIService(
     {
         try
         {
-            var kb = await ragService.CreateKnowledgeBaseAsync(name, description);
+            var kb = await GetRagService().CreateKnowledgeBaseAsync(name, description);
             return kb;
         }
         catch (Exception ex)
@@ -67,7 +66,7 @@ public class RAGUIService(
     {
         try
         {
-            var kb = await ragService.UpdateKnowledgeBaseAsync(id, name, description);
+            var kb = await GetRagService().UpdateKnowledgeBaseAsync(id, name, description);
             return kb;
         }
         catch (Exception ex)
@@ -81,7 +80,7 @@ public class RAGUIService(
     {
         try
         {
-            await ragService.DeleteKnowledgeBaseAsync(id);
+            await GetRagService().DeleteKnowledgeBaseAsync(id);
             return Res.Ok();
         }
         catch (Exception ex)
@@ -98,7 +97,7 @@ public class RAGUIService(
     {
         try
         {
-            var results = await ragService.SearchAsync(query, kbIds, topK);
+            var results = await GetRagService().SearchAsync(query, kbIds, topK);
             return Res.Ok(results);
         }
         catch (Exception ex)
@@ -136,7 +135,7 @@ public class RAGUIService(
             foreach (var doc in documents)
             {
                 var content = await markdownService.GetDocumentContentAsync(doc);
-                await ragService.IndexDocumentAsync(
+                await GetRagService().IndexDocumentAsync(
                     kbId,
                     doc.RelativePath,
                     doc.Title,
@@ -165,7 +164,7 @@ public class RAGUIService(
     {
         try
         {
-            await ragService.IndexDocumentAsync(
+            await GetRagService().IndexDocumentAsync(
                 kbId,
                 fileName,
                 fileName,
@@ -204,7 +203,7 @@ public class RAGUIService(
     {
         try
         {
-            var queue = await ragService.GetDocumentQueueAsync(kbId);
+            var queue = await GetRagService().GetDocumentQueueAsync(kbId);
             return Res.Ok(queue);
         }
         catch (Exception ex)
@@ -224,7 +223,7 @@ public class RAGUIService(
             var docIdList = documentIds.ToList();
             logger.LogInformation("Adding {Count} documents to queue for KB '{KbId}'", docIdList.Count, kbId);
 
-            var addedCount = await ragService.AddDocumentsToQueueAsync(
+            var addedCount = await GetRagService().AddDocumentsToQueueAsync(
                 kbId,
                 docIdList,
                 KnowledgeDocumentSourceKinds.Markdown,
@@ -244,7 +243,7 @@ public class RAGUIService(
         try
         {
             logger.LogInformation("Removing document '{DocumentId}' from KB '{KbId}'", documentId, kbId);
-            await ragService.RemoveDocumentAsync(kbId, documentId);
+            await GetRagService().RemoveDocumentAsync(kbId, documentId);
             return Res.Ok("Document removed successfully.");
         }
         catch (Exception ex)
@@ -258,7 +257,7 @@ public class RAGUIService(
     {
         try
         {
-            var removedCount = await ragService.ClearKnowledgeBaseDocumentsAsync(kbId);
+            var removedCount = await GetRagService().ClearKnowledgeBaseDocumentsAsync(kbId);
             return Res.Ok(removedCount);
         }
         catch (Exception ex)
@@ -272,7 +271,7 @@ public class RAGUIService(
     {
         try
         {
-            var removedCount = await ragService.ClearDocumentQueueAsync(kbId);
+            var removedCount = await GetRagService().ClearDocumentQueueAsync(kbId);
             return Res.Ok(removedCount);
         }
         catch (Exception ex)
@@ -290,7 +289,7 @@ public class RAGUIService(
         try
         {
             logger.LogInformation("Reindexing document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
-            await ragService.QueueDocumentForReindexAsync(kbId, documentId);
+            await GetRagService().QueueDocumentForReindexAsync(kbId, documentId);
             return Res.Ok("Document queued for reindexing.");
         }
         catch (Exception ex)
@@ -305,7 +304,7 @@ public class RAGUIService(
         try
         {
             logger.LogInformation("Queueing all documents in KB '{KbId}' for reindex", kbId);
-            var queuedCount = await ragService.QueueKnowledgeBaseForReindexAsync(kbId);
+            var queuedCount = await GetRagService().QueueKnowledgeBaseForReindexAsync(kbId);
             return Res.Ok(queuedCount);
         }
         catch (Exception ex)
@@ -323,7 +322,11 @@ public class RAGUIService(
     {
         try
         {
-            await batchIndexCoordinator.StartDocumentIndexingAsync(kbId, documentId, progress, cancellationToken);
+            await GetBatchIndexCoordinator().StartDocumentIndexingAsync(
+                kbId,
+                documentId,
+                progress,
+                cancellationToken);
             return Res.Ok("Document indexed successfully.");
         }
         catch (OperationCanceledException)
@@ -355,7 +358,7 @@ public class RAGUIService(
 
     public Res CancelBatchIndexing(string kbId)
     {
-        return batchIndexCoordinator.TryCancelBatchIndexing(kbId, out var message)
+        return GetBatchIndexCoordinator().TryCancelBatchIndexing(kbId, out var message)
             ? Res.Ok(string.IsNullOrWhiteSpace(message) ? "Cancellation requested." : message)
             : Res.Fail(message);
     }
@@ -364,7 +367,7 @@ public class RAGUIService(
     {
         try
         {
-            var message = await batchIndexCoordinator.CancelBatchIndexingAsync(kbId, cancellationToken);
+            var message = await GetBatchIndexCoordinator().CancelBatchIndexingAsync(kbId, cancellationToken);
             return Res.Ok(message);
         }
         catch (Exception ex)
@@ -375,7 +378,7 @@ public class RAGUIService(
     }
 
     public bool IsBatchIndexingActive(string kbId)
-        => batchIndexCoordinator.IsBatchIndexingActive(kbId);
+        => GetBatchIndexCoordinator().IsBatchIndexingActive(kbId);
 
     /// <summary>
     /// Gets available markdown documents from one group.
@@ -409,7 +412,7 @@ public class RAGUIService(
         {
             logger.LogInformation("Getting chunks for document '{DocumentId}' in KB '{KbId}'", documentId, kbId);
 
-            var view = await chunkViewCoordinator.GetDocumentChunksAsync(kbId, documentId);
+            var view = await GetChunkViewCoordinator().GetDocumentChunksAsync(kbId, documentId);
             return Res.Ok(view);
         }
         catch (Exception ex)
@@ -427,7 +430,7 @@ public class RAGUIService(
         IProgress<IndexingProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var outcome = await batchIndexCoordinator.StartBatchIndexingAsync(
+        var outcome = await GetBatchIndexCoordinator().StartBatchIndexingAsync(
             kbId,
             maxConcurrency,
             progress,
@@ -437,4 +440,14 @@ public class RAGUIService(
             ? Res.Ok(outcome.Message)
             : Res.Fail(outcome.Message);
     }
+
+    // Resolve heavy RAG graph only for methods that actually need it.
+    private RAGService GetRagService()
+        => serviceProvider.GetRequiredService<RAGService>();
+
+    private RAGBatchIndexCoordinator GetBatchIndexCoordinator()
+        => serviceProvider.GetRequiredService<RAGBatchIndexCoordinator>();
+
+    private RAGChunkViewCoordinator GetChunkViewCoordinator()
+        => serviceProvider.GetRequiredService<RAGChunkViewCoordinator>();
 }

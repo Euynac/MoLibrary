@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
@@ -11,7 +12,7 @@ namespace Monica.AI.UI.Services;
 /// UI service for embedding model management and KB-level embedding binding.
 /// </summary>
 public class EmbeddingModelManagementUIService(
-    RAGService ragService,
+    IServiceProvider serviceProvider,
     IAIProviderFactory providerFactory,
     ILogger<EmbeddingModelManagementUIService> logger) : IEmbeddingModelManagementUIService
 {
@@ -53,7 +54,7 @@ public class EmbeddingModelManagementUIService(
     {
         try
         {
-            var kb = await ragService.GetKnowledgeBaseByIdAsync(kbId);
+            var kb = await GetRagService().GetKnowledgeBaseByIdAsync(kbId);
             if (kb is null)
             {
                 return Res.Fail("Knowledge base not found.");
@@ -132,7 +133,7 @@ public class EmbeddingModelManagementUIService(
                     $"Embedding model '{modelName}' is not available on provider '{providerId}'.");
             }
 
-            await ragService.SetKnowledgeBaseEmbeddingModelAsync(
+            await GetRagService().SetKnowledgeBaseEmbeddingModelAsync(
                 kbId,
                 providerId,
                 modelName,
@@ -149,4 +150,9 @@ public class EmbeddingModelManagementUIService(
             return Res.Fail($"Failed to set embedding model: {ex.Message}");
         }
     }
+
+    // Delay RAG service resolution so the page can load provider metadata
+    // without constructing the vector-store pipeline on entry.
+    private RAGService GetRagService()
+        => serviceProvider.GetRequiredService<RAGService>();
 }

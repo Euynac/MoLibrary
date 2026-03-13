@@ -4,8 +4,10 @@
 @using Monica.AI.UI.Localization
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Models
+@using Monica.UI.Localization
 @using Monica.Tool.MoResponse
 @inject IStringLocalizer<AIResource> L
+@inject IStringLocalizer<SharedResource> Shared
 @inject RAGUIService RAGService
 @inject IEmbeddingModelManagementUIService EmbeddingService
 @inject IAIProviderFactory ProviderFactory
@@ -47,61 +49,133 @@
             </MudButton>
         </div>
 
-        <div class="kb-list">
-            @foreach (var kb in _knowledgeBases)
-            {
-                <div class="kb-card @(_selectedKB?.Id == kb.Id ? "selected" : "")"
-                     @onclick="@(() => OnKBSelected(kb))">
-                    <div class="kb-card-content">
-                        <MudText Typo="Typo.body1" Class="kb-name">@kb.Name</MudText>
-                        @if (!string.IsNullOrEmpty(kb.Description))
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kb-description">
-                                @kb.Description
+        @if (_isInitialLoading)
+        {
+            <div class="panel-loading-state">
+                <div class="loading-copy">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Primary"
+                             Class="loading-phase-chip">
+                        @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                    </MudChip>
+                    <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                        @_loadingPhaseText
+                    </MudText>
+                </div>
+                <MudProgressLinear Value="@_loadingProgressValue"
+                                   Color="Color.Primary"
+                                   Rounded="true"
+                                   Class="loading-progress" />
+                <div class="loading-skeletons">
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="kb-list">
+                @foreach (var kb in _knowledgeBases)
+                {
+                    <div class="kb-card @(_selectedKB?.Id == kb.Id ? "selected" : "")"
+                         @onclick="@(() => OnKBSelected(kb))">
+                        <div class="kb-card-content">
+                            <MudText Typo="Typo.body1" Class="kb-name">@kb.Name</MudText>
+                            @if (!string.IsNullOrEmpty(kb.Description))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kb-description">
+                                    @kb.Description
+                                </MudText>
+                            }
+                            <MudText Typo="Typo.caption" Class="kb-stats">
+                                @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
                             </MudText>
-                        }
-                        <MudText Typo="Typo.caption" Class="kb-stats">
-                            @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
-                        </MudText>
-                        @if (HasEmbeddingBinding(kb))
-                        {
-                            <MudText Typo="Typo.caption" Class="kb-embedding-model">
-                                @GetKnowledgeBaseModelDisplay(kb)
-                            </MudText>
-                        }
+                            @if (HasEmbeddingBinding(kb))
+                            {
+                                <MudText Typo="Typo.caption" Class="kb-embedding-model">
+                                    @GetKnowledgeBaseModelDisplay(kb)
+                                </MudText>
+                            }
+                        </div>
                     </div>
+                }
+            </div>
+
+            @if (_knowledgeBases.Count == 0)
+            {
+                <div class="kb-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["RAG:KnowledgeBase:EmptyHint"]
+                    </MudText>
                 </div>
             }
-        </div>
-
-        @if (_knowledgeBases.Count == 0)
-        {
-            <div class="kb-empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    @L["RAG:KnowledgeBase:EmptyHint"]
-                </MudText>
-            </div>
         }
     </div>
 
     <div class="kb-detail-panel">
-        @if (_selectedKB != null)
+        @if (_isInitialLoading)
         {
-            <div class="detail-content">
-                <!-- Embedding Model Selector -->
-                <div class="embedding-model-section">
-                    <EmbeddingModelSelector AvailableModels="@_availableModels"
-                                            SelectedModelKey="@_currentEmbeddingModelKey"
-                                            SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
-
-                    @if (_availableModels.Count == 0)
-                    {
-                        <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
-                            @L["RAG:EmbeddingModel:NotConfigured"]
-                        </MudAlert>
-                    }
+            <div class="detail-loading-state">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Color="Color.Primary"
+                         Class="loading-phase-chip">
+                    @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                </MudChip>
+                <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                    @_loadingPhaseText
+                </MudText>
+                <MudProgressLinear Value="@_loadingProgressValue"
+                                   Color="Color.Primary"
+                                   Rounded="true"
+                                   Class="loading-progress" />
+            </div>
+        }
+        else if (_selectedKB != null)
+        {
+            @if (_isSelectionLoading)
+            {
+                <div class="detail-loading-state">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Primary"
+                             Class="loading-phase-chip">
+                        @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                    </MudChip>
+                    <MudText Typo="Typo.h6" Class="loading-title">@_selectedKB.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                        @_loadingPhaseText
+                    </MudText>
+                    <MudProgressLinear Value="@_loadingProgressValue"
+                                       Color="Color.Primary"
+                                       Rounded="true"
+                                       Class="loading-progress" />
                 </div>
+            }
+            else
+            {
+                <div class="detail-content">
+                <!-- Embedding Model Selector -->
+                    <div class="embedding-model-section">
+                        <EmbeddingModelSelector AvailableModels="@_availableModels"
+                                                SelectedModelKey="@_currentEmbeddingModelKey"
+                                                SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
+
+                        @if (_availableModels.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
+                                @L["RAG:EmbeddingModel:NotConfigured"]
+                            </MudAlert>
+                        }
+                    </div>
 
                 <!-- Embedding Model Warning -->
                 @if (HasEmbeddingBinding(_selectedKB)
@@ -333,11 +407,24 @@
                             <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:Title"]</MudText>
                         </div>
                         <div class="markdown-group-section">
+                            @if (_isMarkdownGroupsLoading)
+                            {
+                                <div class="markdown-loading-state">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @Shared["ModuleSystem:SystemOverview:Labels:Loading"]
+                                    </MudText>
+                                    <MudProgressLinear Indeterminate="true"
+                                                       Color="Color.Primary"
+                                                       Rounded="true"
+                                                       Class="markdown-loading-progress" />
+                                </div>
+                            }
                             <MudSelect T="string"
                                        @bind-Value="@_selectedMarkdownGroup"
                                        Label="@L["RAG:Indexing:MarkdownGroup"]"
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"
+                                       Disabled="@(_isMarkdownGroupsLoading || _markdownGroups.Count == 0)"
                                        FullWidth="true">
                                 @foreach (var group in _markdownGroups)
                                 {
@@ -377,6 +464,7 @@
                     </div>
                 </div>
             </div>
+            }
         }
         else
         {
@@ -401,6 +489,14 @@
     private List<string> _markdownGroups = new();
     private string? _selectedMarkdownGroup;
     private KnowledgeBaseVectorValidationResult? _selectedKbVectorValidation;
+    private bool _isInitialLoading = true;
+    private bool _isSelectionLoading;
+    private bool _embeddingModelsLoaded;
+    private bool _markdownGroupsLoaded;
+    private bool _isMarkdownGroupsLoading;
+    private bool _embeddingModelWarningShown;
+    private string _loadingPhaseText = string.Empty;
+    private double _loadingProgressValue = 12;
     private const int QueueRefreshIntervalMs = 700;
     private static readonly TimeSpan ProgressQueueRefreshInterval = TimeSpan.FromSeconds(1);
     private CancellationTokenSource? _queuePollingCts;
@@ -413,57 +509,61 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            await LoadEmbeddingModelsAsync();
-            await LoadKnowledgeBasesAsync();
-            await LoadMarkdownGroupsAsync();
-
-            if (_selectedKB is not null)
-            {
-                await LoadDocumentQueueAsync();
-                EnsureQueuePolling();
-            }
-
-            await InvokeAsync(StateHasChanged);
+            return;
         }
+
+        await UpdateLoadingStateAsync(L["RAG:KnowledgeBase:Title"], 35);
+        await LoadKnowledgeBasesAsync();
+        _loadingProgressValue = 100;
+        _isInitialLoading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task LoadEmbeddingModelsAsync()
+    private async Task<bool> LoadEmbeddingModelsAsync()
     {
         if ((await EmbeddingService.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            return;
+            return false;
         }
 
         _availableModels = models.ToList();
+        _embeddingModelsLoaded = true;
 
-        if (_availableModels.Count == 0)
+        if (_availableModels.Count == 0 && !_embeddingModelWarningShown)
         {
-            _currentEmbeddingModelKey = string.Empty;
+            _embeddingModelWarningShown = true;
             Snackbar.Add(L["RAG:EmbeddingModel:NotConfigured"], Severity.Warning);
         }
+
+        return true;
     }
 
-    private async Task LoadKnowledgeBasesAsync()
+    private async Task<bool> LoadKnowledgeBasesAsync()
     {
         if ((await RAGService.GetKnowledgeBasesAsync()).IsFailed(out var error, out var kbs))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            return;
+            return false;
         }
+
         _knowledgeBases = kbs.ToList();
+        return true;
     }
 
-    private async Task LoadMarkdownGroupsAsync()
+    private async Task<bool> LoadMarkdownGroupsAsync()
     {
         if ((await RAGService.GetMarkdownGroupsAsync()).IsFailed(out var error, out var groups))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            return;
+            return false;
         }
+
         _markdownGroups = groups.Select(g => g.Key).ToList();
+        _markdownGroupsLoaded = true;
+        return true;
     }
 
     private async Task OnKBSelected(KnowledgeBase? kb)
@@ -480,30 +580,29 @@
         }
 
         _selectedKB = kb;
+        _selectedKbVectorValidation = null;
         if (kb is not null)
         {
-            // Load KB's embedding model
-            if ((await EmbeddingService.GetKnowledgeBaseEmbeddingModelAsync(kb.Id)).IsFailed(out var error, out var model))
+            _isSelectionLoading = true;
+            await UpdateLoadingStateAsync(L["RAG:EmbeddingModel:Label"], 28);
+
+            if (!_embeddingModelsLoaded)
             {
-                Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            }
-            else if (model != null)
-            {
-                _currentEmbeddingModelKey = model.ModelKey;
-            }
-            else if (HasEmbeddingBinding(kb))
-            {
-                _currentEmbeddingModelKey = GetKnowledgeBaseModelKey(kb);
-            }
-            else
-            {
-                _currentEmbeddingModelKey = string.Empty;
+                await LoadEmbeddingModelsAsync();
             }
 
-            // Load document queue for this KB
+            _currentEmbeddingModelKey = HasEmbeddingBinding(kb)
+                ? GetKnowledgeBaseModelKey(kb)
+                : string.Empty;
+
+            await UpdateLoadingStateAsync(L["RAG:DocumentQueue:Title"], 72);
             await LoadDocumentQueueAsync();
-            await LoadSelectedKnowledgeBaseVectorValidationAsync();
             EnsureQueuePolling();
+            _isSelectionLoading = false;
+            _loadingProgressValue = 100;
+            await InvokeAsync(StateHasChanged);
+            QueueMarkdownGroupWarmup();
+            QueueSelectedKnowledgeBaseVectorValidation(kb.Id);
         }
         else
         {
@@ -1112,7 +1211,7 @@
             ? GetKnowledgeBaseModelKey(_selectedKB)
             : string.Empty;
 
-        await LoadSelectedKnowledgeBaseVectorValidationAsync();
+        QueueSelectedKnowledgeBaseVectorValidation(_selectedKB.Id);
     }
 
     private bool HasActiveQueueWork()
@@ -1267,23 +1366,33 @@
         return false;
     }
 
-    private async Task LoadSelectedKnowledgeBaseVectorValidationAsync()
+    private async Task LoadSelectedKnowledgeBaseVectorValidationAsync(string kbId)
     {
-        if (_selectedKB is null)
+        if (_selectedKB is null
+            || !string.Equals(_selectedKB.Id, kbId, StringComparison.OrdinalIgnoreCase))
         {
             _selectedKbVectorValidation = null;
             return;
         }
 
-        var result = await RAGService.GetKnowledgeBaseVectorValidationAsync(_selectedKB.Id);
+        var result = await RAGService.GetKnowledgeBaseVectorValidationAsync(kbId);
+        if (_selectedKB is null
+            || !string.Equals(_selectedKB.Id, kbId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         if (result.IsFailed(out var error, out var validation))
         {
             _selectedKbVectorValidation = null;
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
-            return;
+        }
+        else
+        {
+            _selectedKbVectorValidation = validation;
         }
 
-        _selectedKbVectorValidation = validation;
+        await InvokeAsync(StateHasChanged);
     }
 
     private bool ShouldShowMissingVectorWarning()
@@ -1464,5 +1573,42 @@
         }
 
         return $"{modelName} ({GetProviderDisplayLabel(providerId, modelName)})";
+    }
+
+    private async Task UpdateLoadingStateAsync(string phaseText, double progressValue)
+    {
+        _loadingPhaseText = phaseText;
+        _loadingProgressValue = progressValue;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void QueueMarkdownGroupWarmup()
+    {
+        if (_markdownGroupsLoaded || _isMarkdownGroupsLoading || _selectedKB is null)
+        {
+            return;
+        }
+
+        _isMarkdownGroupsLoading = true;
+        _ = LoadMarkdownGroupsWarmupAsync();
+    }
+
+    private async Task LoadMarkdownGroupsWarmupAsync()
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await LoadMarkdownGroupsAsync();
+        }
+        finally
+        {
+            _isMarkdownGroupsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void QueueSelectedKnowledgeBaseVectorValidation(string kbId)
+    {
+        _ = LoadSelectedKnowledgeBaseVectorValidationAsync(kbId);
     }
 }
