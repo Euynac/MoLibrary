@@ -6,7 +6,7 @@ description: Local Git branch sync and merge workflow for repositories that use 
 1. Verify the current repository is a Git repository.
 2. Verify the working tree is clean. If there are uncommitted or untracked changes, stop and tell the user to commit or stash them first.
 3. Verify local branches `feature` and `dev` both exist. Do not create branches automatically.
-4. Verify the current branch is `feature`. If not, stop and tell the user to switch to `feature` first.
+4. If the current branch is not `feature`, switch to local branch `feature`.
 5. Stay fully local. Do not call `git pull`, `git fetch`, or `git push`.
 6. On `feature`, run `git merge dev` to sync local `dev` into local `feature`.
 7. If the merge in step 6 conflicts:

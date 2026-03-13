@@ -92,15 +92,10 @@ public class GitUIService(
             return Res.Fail(ManualSyncDisabledMessage);
         }
 
-        try
-        {
-            return Res.Ok(await repositoryService.SyncRepositoryAsync(repositoryId, GitSyncTrigger.Manual));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to synchronize Git repository {RepositoryId}", repositoryId);
-            return Res.Fail($"Failed to synchronize Git repository: {ex.Message}");
-        }
+        return await RunMutationAsync(
+            () => repositoryService.SyncRepositoryAsync(repositoryId, GitSyncTrigger.Manual),
+            ex => logger.LogError(ex, "Failed to synchronize Git repository {RepositoryId}", repositoryId),
+            "Failed to synchronize Git repository");
     }
 
     /// <summary>
@@ -108,15 +103,10 @@ public class GitUIService(
     /// </summary>
     public async Task<Res<GitRepositoryDeleteResult>> DeleteRepositoryAsync(string repositoryId)
     {
-        try
-        {
-            return Res.Ok(await repositoryService.DeleteRepositoryAsync(repositoryId));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to delete Git repository {RepositoryId}", repositoryId);
-            return Res.Fail($"Failed to delete Git repository: {ex.Message}");
-        }
+        return await RunMutationAsync(
+            () => repositoryService.DeleteRepositoryAsync(repositoryId),
+            ex => logger.LogError(ex, "Failed to delete Git repository {RepositoryId}", repositoryId),
+            "Failed to delete Git repository");
     }
 
     /// <summary>
@@ -129,14 +119,25 @@ public class GitUIService(
             return Res.Fail(ManualSyncDisabledMessage);
         }
 
+        return await RunMutationAsync(
+            () => repositoryService.SyncAllAsync(GitSyncTrigger.Manual),
+            ex => logger.LogError(ex, "Failed to synchronize all Git repositories"),
+            "Failed to synchronize all Git repositories");
+    }
+
+    private async Task<Res<TResult>> RunMutationAsync<TResult>(
+        Func<Task<TResult>> operation,
+        Action<Exception> logError,
+        string failureMessage)
+    {
         try
         {
-            return Res.Ok(await repositoryService.SyncAllAsync(GitSyncTrigger.Manual));
+            return Res.Ok(await Task.Run(operation));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to synchronize all Git repositories");
-            return Res.Fail($"Failed to synchronize all Git repositories: {ex.Message}");
+            logError(ex);
+            return Res.Fail($"{failureMessage}: {ex.Message}");
         }
     }
 }

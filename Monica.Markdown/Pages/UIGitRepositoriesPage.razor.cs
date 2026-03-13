@@ -155,6 +155,7 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
     private async Task SyncRepositoryAsync(string repositoryId)
     {
         PreviewRepositorySync(repositoryId);
+        await RefreshViewAsync();
 
         var syncTask = GitService.SyncRepositoryAsync(repositoryId);
         var response = await RunOperationAsync(
@@ -192,7 +193,17 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
             return;
         }
 
-        var response = await RunOperationAsync(GitService.DeleteRepositoryAsync(repositoryId));
+        PreviewRepositoryDeletion(repositoryId);
+        await RefreshViewAsync();
+
+        var deleteTask = GitService.DeleteRepositoryAsync(repositoryId);
+        var response = await RunOperationAsync(
+            deleteTask,
+            (task, cancellationToken) => TrackOperationAsync(
+                task,
+                () => RefreshRepositoryAsync(repositoryId, showErrors: false),
+                cancellationToken));
+
         if (response is null)
         {
             return;
@@ -217,6 +228,7 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
     private async Task SyncAllAsync()
     {
         PreviewAllRepositoriesSync();
+        await RefreshViewAsync();
 
         var syncTask = GitService.SyncAllAsync();
         var response = await RunOperationAsync(syncTask, (task, cancellationToken) =>
@@ -316,6 +328,17 @@ public partial class UIGitRepositoriesPage : IAsyncDisposable
             progressStage: GitRepositoryProgressStages.Preparing,
             progressPercent: null,
             lastSyncMessage: L["GitDashboard:Messages:SyncInProgress", repositoryId],
+            lastError: null));
+    }
+
+    private void PreviewRepositoryDeletion(string repositoryId)
+    {
+        UpdateRepositoryPreview(repositoryId, repository => CopyRepositoryStatus(
+            repository,
+            state: GitRepositorySyncState.Syncing,
+            progressStage: GitRepositoryProgressStages.Deleting,
+            progressPercent: null,
+            lastSyncMessage: L["GitDashboard:ProgressStages:Deleting"],
             lastError: null));
     }
 
