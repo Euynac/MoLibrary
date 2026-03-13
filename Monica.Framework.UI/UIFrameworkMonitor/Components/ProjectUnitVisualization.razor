@@ -9,12 +9,13 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<MudCard Class="framework-monitor-panel-card">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">项目架构可视化</MudText>
-        </CardHeaderContent>
-        <CardHeaderActions>
+<div class="framework-monitor-tab-section">
+    <MudStack Row="true"
+              Justify="Justify.SpaceBetween"
+              AlignItems="AlignItems.Center"
+              Class="framework-monitor-tab-section__header">
+        <MudText Typo="Typo.h6">项目架构可视化</MudText>
+        <div class="framework-monitor-tab-section__actions">
             <MudTooltip Text="刷新数据">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
@@ -37,9 +38,9 @@
                                Color="Color.Tertiary"
                                OnClick="ToggleFilterPanel" />
             </MudTooltip>
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent>
+        </div>
+    </MudStack>
+    <div class="framework-monitor-tab-section__body">
         @if (_showLayoutPanel)
         {
             <ProjectUnitLayoutPanel CurrentLayout="_currentLayout"
@@ -67,17 +68,19 @@
                                     OnFiltersChanged="ApplyFilters" />
         }
 
-        <MudPaper Class="visualization-container" Style="position: relative; height: calc(100vh - 400px); overflow: hidden;">
-            @if (_loading)
-            {
-                <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-                </MudOverlay>
-            }
-            <div id="project-unit-graph" style="width: 100%; height: 100%;" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
-        </MudPaper>
+        <div class="visualization-shell">
+            <MudPaper Class="visualization-container" Elevation="0" Outlined="true">
+                @if (_loading)
+                {
+                    <MudOverlay Visible="true" DarkBackground="false" Absolute="true">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                    </MudOverlay>
+                }
+                <div id="project-unit-graph" @onclick="OnBackgroundClick" @oncontextmenu:preventDefault="true"></div>
+            </MudPaper>
+        </div>
 
-        <MudPaper Class="mt-4 pa-2" Elevation="0" Outlined="true">
+        <MudPaper Class="pa-2" Elevation="0" Outlined="true">
             <MudGrid>
                 <MudItem xs="12" sm="8">
                     <MudText Typo="Typo.caption">
@@ -90,8 +93,8 @@
                 </MudItem>
             </MudGrid>
         </MudPaper>
-    </MudCardContent>
-</MudCard>
+    </div>
+</div>
 
 <ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
                          SelectedUnit="_selectedUnit"

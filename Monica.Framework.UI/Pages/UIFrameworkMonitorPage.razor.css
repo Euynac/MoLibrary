@@ -2,22 +2,55 @@
     width: 100%;
 }
 
-.framework-monitor-page ::deep .framework-monitor-panel-card,
-.framework-monitor-page ::deep .framework-monitor-panel-card:hover,
-.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within {
-    transform: none !important;
-    box-shadow: var(--mud-elevation-2) !important;
-    transition: none !important;
-    animation: none !important;
+.framework-monitor-page__header {
+    margin-bottom: 1rem;
 }
 
-.framework-monitor-page ::deep .framework-monitor-panel-card::before,
-.framework-monitor-page ::deep .framework-monitor-panel-card::after,
-.framework-monitor-page ::deep .framework-monitor-panel-card:hover::before,
-.framework-monitor-page ::deep .framework-monitor-panel-card:hover::after,
-.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within::before,
-.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within::after {
-    transform: none !important;
-    transition: none !important;
-    animation: none !important;
+.framework-monitor-page ::deep .framework-monitor-tab-panel {
+    padding: 1.25rem;
+}
+
+.framework-monitor-page ::deep .framework-monitor-tab-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.framework-monitor-page ::deep .framework-monitor-tab-section__header {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+}
+
+.framework-monitor-page ::deep .framework-monitor-tab-section__actions {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.framework-monitor-page ::deep .framework-monitor-tab-section__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+}
+
+@media (max-width: 959.98px) {
+
+    .framework-monitor-page ::deep .framework-monitor-tab-panel {
+        padding: 1rem;
+    }
+
+    .framework-monitor-page ::deep .framework-monitor-tab-section__header {
+        flex-direction: column;
+    }
+
+    .framework-monitor-page ::deep .framework-monitor-tab-section__actions {
+        width: 100%;
+    }
 }

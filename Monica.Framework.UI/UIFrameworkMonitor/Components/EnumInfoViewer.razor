@@ -12,12 +12,13 @@
 @implements IAsyncDisposable
 
 <div class="enum-info-viewer">
-    <MudCard Class="framework-monitor-panel-card">
-        <MudCardHeader>
-            <CardHeaderContent>
-                <MudText Typo="Typo.h6">枚举信息查看器</MudText>
-            </CardHeaderContent>
-            <CardHeaderActions>
+    <div class="framework-monitor-tab-section">
+        <MudStack Row="true"
+                  Justify="Justify.SpaceBetween"
+                  AlignItems="AlignItems.Center"
+                  Class="framework-monitor-tab-section__header">
+            <MudText Typo="Typo.h6">枚举信息查看器</MudText>
+            <div class="framework-monitor-tab-section__actions">
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            OnClick="LoadAllEnumsAsync"
@@ -25,9 +26,9 @@
                            Disabled="@_loading">
                     刷新
                 </MudButton>
-            </CardHeaderActions>
-        </MudCardHeader>
-        <MudCardContent>
+            </div>
+        </MudStack>
+        <div class="framework-monitor-tab-section__body">
             <div class="enum-info-viewer__toolbar">
                 <div class="enum-info-viewer__search-input">
                     <MudTextField T="string"
@@ -239,8 +240,8 @@
                     </MudPaper>
                 </MudItem>
             </MudGrid>
-        </MudCardContent>
-    </MudCard>
+        </div>
+    </div>
 </div>
 
 @code {

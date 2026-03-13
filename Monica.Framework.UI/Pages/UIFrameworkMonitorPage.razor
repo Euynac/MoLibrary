@@ -5,31 +5,52 @@
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 
+<PageTitle>框架监控</PageTitle>
+
 <div class="framework-monitor-page">
-    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
-        <MudText Typo="Typo.h4" Class="mb-4">框架监控</MudText>
+    <MudContainer MaxWidth="MaxWidth.False" Class="framework-monitor-page__outer-container">
+        <div class="framework-monitor-page__container">
+            <div class="framework-monitor-page__header">
+                <MudText Typo="Typo.h4">框架监控</MudText>
+            </div>
 
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
-            <MudTabPanel Text="项目单元" Icon="@Icons.Material.Filled.AccountTree">
-                <ProjectUnitMonitor />
-            </MudTabPanel>
+            <div class="framework-monitor-page__content">
+                <MudTabs Elevation="1"
+                         Rounded="true"
+                         ApplyEffectsToContainer="true"
+                         Class="framework-monitor-tabs">
+                    <MudTabPanel Text="项目单元"
+                                 Icon="@Icons.Material.Filled.AccountTree"
+                                 PanelClass="framework-monitor-tab-panel">
+                        <ProjectUnitMonitor />
+                    </MudTabPanel>
 
-            <MudTabPanel Text="架构可视化" Icon="@Icons.Material.Filled.Hub">
-                <ProjectUnitVisualization />
-            </MudTabPanel>
+                    <MudTabPanel Text="架构可视化"
+                                 Icon="@Icons.Material.Filled.Hub"
+                                 PanelClass="framework-monitor-tab-panel">
+                        <ProjectUnitVisualization />
+                    </MudTabPanel>
 
-            <MudTabPanel Text="领域事件测试" Icon="@Icons.Material.Filled.Event">
-                <DomainEventTester />
-            </MudTabPanel>
+                    <MudTabPanel Text="领域事件测试"
+                                 Icon="@Icons.Material.Filled.Event"
+                                 PanelClass="framework-monitor-tab-panel">
+                        <DomainEventTester />
+                    </MudTabPanel>
 
-            <MudTabPanel Text="请求过滤管理" Icon="@Icons.Material.Filled.FilterAlt">
-                <RequestFilterManager />
-            </MudTabPanel>
+                    <MudTabPanel Text="请求过滤管理"
+                                 Icon="@Icons.Material.Filled.FilterAlt"
+                                 PanelClass="framework-monitor-tab-panel">
+                        <RequestFilterManager />
+                    </MudTabPanel>
 
-            <MudTabPanel Text="枚举信息" Icon="@Icons.Material.Filled.List">
-                <EnumInfoViewer />
-            </MudTabPanel>
-        </MudTabs>
+                    <MudTabPanel Text="枚举信息"
+                                 Icon="@Icons.Material.Filled.List"
+                                 PanelClass="framework-monitor-tab-panel">
+                        <EnumInfoViewer />
+                    </MudTabPanel>
+                </MudTabs>
+            </div>
+        </div>
     </MudContainer>
 </div>
 

@@ -1,24 +1,39 @@
-.visualization-container {
-    border-radius: 4px;
+.visualization-shell {
+    display: flex;
+    width: 100%;
+    height: clamp(26rem, 65vh, 48rem);
+    min-height: 26rem;
+}
+
+.visualization-shell ::deep .visualization-container {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
     background: var(--mud-palette-background);
 }
 
-.visualization-container ::deep #project-unit-graph {
+.visualization-shell ::deep #project-unit-graph {
     background: var(--mud-palette-surface);
+    display: block;
     border-radius: 4px;
+    flex: 1;
+    height: 100%;
+    width: 100%;
 }
 
-.visualization-container ::deep .node {
+.visualization-shell ::deep .node {
     transition: opacity 0.3s ease;
 }
 
 /* 移除hover opacity，由JavaScript控制 */
 
-.visualization-container ::deep .link {
+.visualization-shell ::deep .link {
     transition: stroke-opacity 0.3s ease;
 }
 
-.visualization-container ::deep .links {
+.visualization-shell ::deep .links {
     pointer-events: none;
 }
 
@@ -32,7 +47,13 @@
 }
 
 @media (max-width: 600px) {
-    .visualization-container {
-        height: 400px !important;
+    .visualization-shell {
+        height: 26rem;
+        min-height: 26rem;
+    }
+
+    .visualization-shell ::deep .visualization-container {
+        height: 26rem;
+        min-height: 26rem;
     }
 }

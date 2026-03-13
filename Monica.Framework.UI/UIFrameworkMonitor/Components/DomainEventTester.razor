@@ -9,12 +9,13 @@
 @inject IGlobalJsonOption JsonOption
 @inject ISnackbar Snackbar
 
-<MudCard Class="framework-monitor-panel-card">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">领域事件测试</MudText>
-        </CardHeaderContent>
-        <CardHeaderActions>
+<div class="framework-monitor-tab-section">
+    <MudStack Row="true"
+              Justify="Justify.SpaceBetween"
+              AlignItems="AlignItems.Center"
+              Class="framework-monitor-tab-section__header">
+        <MudText Typo="Typo.h6">领域事件测试</MudText>
+        <div class="framework-monitor-tab-section__actions">
             <MudButton Variant="Variant.Filled" 
                       Color="Color.Primary" 
                       OnClick="LoadDomainEventsAsync"
@@ -22,12 +23,12 @@
                       Disabled="@_loading">
                 刷新事件列表
             </MudButton>
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent>
+        </div>
+    </MudStack>
+    <div class="framework-monitor-tab-section__body">
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4" Elevation="1">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.h6" Class="mb-3">事件列表</MudText>
                     @if (_loading)
                     {
@@ -58,7 +59,7 @@
             </MudItem>
             
             <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4" Elevation="1">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                     <MudText Typo="Typo.h6" Class="mb-3">事件测试</MudText>
                     @if (_selectedEvent != null)
                     {
@@ -103,8 +104,8 @@
                 </MudPaper>
             </MudItem>	
         </MudGrid>
-    </MudCardContent>
-</MudCard>
+    </div>
+</div>
 
 
 @code {
