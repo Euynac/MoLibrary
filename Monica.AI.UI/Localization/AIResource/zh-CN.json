@@ -106,6 +106,11 @@
     "Manage": {
       "CreateDialog": {
         "Title": "创建知识库",
+        "Id": "业务 ID",
+        "IdPlaceholder": "例如：product-docs",
+        "IdHelper": "将作为知识库唯一 ID 使用。仅支持小写字母、数字和连字符。",
+        "IdReadOnlyHelper": "知识库创建后业务 ID 不可修改。",
+        "IdInvalid": "业务 ID 只能包含小写字母、数字和连字符，且长度不能超过 64 个字符。",
         "Name": "名称",
         "Description": "描述",
         "NamePlaceholder": "例如：产品文档",

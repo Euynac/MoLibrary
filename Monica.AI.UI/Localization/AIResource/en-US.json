@@ -106,6 +106,11 @@
     "Manage": {
       "CreateDialog": {
         "Title": "Create Knowledge Base",
+        "Id": "Business ID",
+        "IdPlaceholder": "e.g. product-docs",
+        "IdHelper": "Used as the unique knowledge base ID. Lowercase letters, numbers, and hyphens only.",
+        "IdReadOnlyHelper": "The business ID cannot be changed after the knowledge base is created.",
+        "IdInvalid": "The business ID must use lowercase letters, numbers, and hyphens only, with a maximum length of 64 characters.",
         "Name": "Name",
         "Description": "Description",
         "NamePlaceholder": "e.g. Product Documentation",

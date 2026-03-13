@@ -83,8 +83,8 @@ When handling questions around how to work with native Microsoft technologies, s
 
 **Correct Usage**:
 ```bash
-# ✅ CORRECT - Use Windows path format with escaped backslashes
-dotnet build D:\\Code\\MoLibrary\\Monica.AI.UI\\Monica.AI.UI.csproj
+# ✅ CORRECT - Use Windows path format with single quotes
+dotnet build 'D:\Code\MoLibrary\Monica.AI.UI\Monica.AI.UI.csproj'
 
 # ❌ WRONG - WSL path format will fail
 dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
@@ -94,6 +94,7 @@ dotnet build Monica.AI.UI/Monica.AI.UI.csproj
 ```
 
 **Why This Happens**:
+
 - dotnet CLI in WSL is a Windows program running through interoperability
 - MSBuild (invoked by dotnet) cannot understand `/mnt/d/...` Linux-style paths
 - It expects native Windows paths like `D:\...`

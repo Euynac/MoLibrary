@@ -1,3 +1,5 @@
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Models
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
@@ -5,13 +7,30 @@
 <MudDialog>
     <DialogContent>
         <MudTextField T="string"
-                      @bind-Value="@Name"
+                      Value="@Name"
+                      ValueChanged="OnNameChangedAsync"
                       Label="@L["RAG:Manage:CreateDialog:Name"]"
                       Placeholder="@L["RAG:Manage:CreateDialog:NamePlaceholder"]"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
-                      Required="true"
-                      RequiredError="@L["Common:Validation:Required"]"
+                      Immediate="true"
+                      Error="@(!string.IsNullOrWhiteSpace(NameValidationMessage))"
+                      ErrorText="@NameValidationMessage"
+                      Class="mb-4" />
+
+        <MudTextField T="string"
+                      Value="@Id"
+                      ValueChanged="OnIdChangedAsync"
+                      Label="@L["RAG:Manage:CreateDialog:Id"]"
+                      Placeholder="@L["RAG:Manage:CreateDialog:IdPlaceholder"]"
+                      HelperText="@IdHelperText"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      MaxLength="@KnowledgeBaseIdPolicy.MaxLength"
+                      Disabled="@IsIdReadOnly"
+                      Error="@(!string.IsNullOrWhiteSpace(IdValidationMessage))"
+                      ErrorText="@IdValidationMessage"
                       Class="mb-4" />
 
         <MudTextField T="string"
@@ -27,7 +46,7 @@
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="Submit"
-                   Disabled="@string.IsNullOrWhiteSpace(Name)">
+                   Disabled="@(!CanSubmit)">
             @(SubmitText ?? L["Common:Create"].Value)
         </MudButton>
     </DialogActions>
@@ -37,13 +56,51 @@
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
+    [Parameter] public string? InitialId { get; set; }
     [Parameter] public string? InitialName { get; set; }
     [Parameter] public string? InitialDescription { get; set; }
     [Parameter] public string? SubmitText { get; set; }
+    [Parameter] public bool IsIdReadOnly { get; set; }
 
+    public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     private bool _initialized;
+    private bool _hasManualIdEdit;
+
+    private string? NameValidationMessage
+        => string.IsNullOrWhiteSpace(Name)
+            ? L["Common:Validation:Required"].Value
+            : null;
+
+    private string? IdValidationMessage
+    {
+        get
+        {
+            if (IsIdReadOnly)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(Id))
+            {
+                return L["Common:Validation:Required"].Value;
+            }
+
+            return KnowledgeBaseIdPolicy.IsValid(Id)
+                ? null
+                : L["RAG:Manage:CreateDialog:IdInvalid"].Value;
+        }
+    }
+
+    private string IdHelperText
+        => IsIdReadOnly
+            ? L["RAG:Manage:CreateDialog:IdReadOnlyHelper"].Value
+            : L["RAG:Manage:CreateDialog:IdHelper"].Value;
+
+    private bool CanSubmit
+        => string.IsNullOrWhiteSpace(NameValidationMessage)
+           && string.IsNullOrWhiteSpace(IdValidationMessage);
 
     protected override void OnParametersSet()
     {
@@ -52,8 +109,16 @@
             return;
         }
 
+        Id = InitialId ?? string.Empty;
         Name = InitialName ?? string.Empty;
         Description = InitialDescription ?? string.Empty;
+        _hasManualIdEdit = !string.IsNullOrWhiteSpace(InitialId);
+
+        if (!IsIdReadOnly && string.IsNullOrWhiteSpace(Id))
+        {
+            Id = KnowledgeBaseIdPolicy.CreateCandidate(Name);
+        }
+
         _initialized = true;
     }
 
@@ -62,8 +127,36 @@
         MudDialog.Cancel();
     }
 
+    private Task OnNameChangedAsync(string value)
+    {
+        Name = value;
+        if (!IsIdReadOnly && !_hasManualIdEdit)
+        {
+            Id = KnowledgeBaseIdPolicy.CreateCandidate(value);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnIdChangedAsync(string value)
+    {
+        _hasManualIdEdit = true;
+        Id = KnowledgeBaseIdPolicy.CreateCandidate(value);
+        return Task.CompletedTask;
+    }
+
     private void Submit()
     {
-        MudDialog.Close(DialogResult.Ok((Name, Description)));
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(new KnowledgeBaseDialogResult
+        {
+            Id = Id,
+            Name = Name.Trim(),
+            Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim()
+        }));
     }
 }

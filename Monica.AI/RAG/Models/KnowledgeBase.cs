@@ -5,8 +5,16 @@ namespace Monica.AI.RAG.Models;
 /// </summary>
 public record KnowledgeBase
 {
+    /// <summary>
+    /// Immutable business ID used by the vector store, state store, and source storage.
+    /// </summary>
     public required string Id { get; init; }
+
+    /// <summary>
+    /// Display name shown in the UI.
+    /// </summary>
     public required string Name { get; init; }
+
     public string? Description { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
     public int DocumentCount { get; set; }

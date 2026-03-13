@@ -31,23 +31,27 @@ public sealed partial class RAGService(
         new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
+        string id,
         string name,
         string? description = null,
         string? searchToolDescription = null,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        var normalizedId = NormalizeKnowledgeBaseId(id);
+        var normalizedName = NormalizeKnowledgeBaseName(name);
+
+        if (await indexStateStore.GetKnowledgeBaseAsync(normalizedId, ct) is not null)
         {
-            throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
+            throw new InvalidOperationException($"Knowledge base id '{normalizedId}' already exists.");
         }
 
         var kb = new KnowledgeBase
         {
-            Id = Guid.NewGuid().ToString("N"),
-            Name = name.Trim(),
-            Description = description,
+            Id = normalizedId,
+            Name = normalizedName,
+            Description = NormalizeOptionalText(description),
             CreatedAt = DateTimeOffset.UtcNow,
-            SearchToolDescription = searchToolDescription
+            SearchToolDescription = NormalizeOptionalText(searchToolDescription)
         };
 
         await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
@@ -61,21 +65,17 @@ public sealed partial class RAGService(
         string? description = null,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
-        }
-
-        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var normalizedKnowledgeBaseId = NormalizeKnowledgeBaseId(knowledgeBaseId);
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(normalizedKnowledgeBaseId, ct);
 
         var updatedKb = kb with
         {
-            Name = name.Trim(),
-            Description = description
+            Name = NormalizeKnowledgeBaseName(name),
+            Description = NormalizeOptionalText(description)
         };
 
         await indexStateStore.UpsertKnowledgeBaseAsync(updatedKb, ct);
-        logger.LogInformation("Updated knowledge base '{KbId}'", knowledgeBaseId);
+        logger.LogInformation("Updated knowledge base '{KbId}'", normalizedKnowledgeBaseId);
         return updatedKb;
     }
 
@@ -1060,6 +1060,37 @@ public sealed partial class RAGService(
             ? normalized.ToLowerInvariant()
             : $".{normalized.ToLowerInvariant()}";
     }
+
+    private static string NormalizeKnowledgeBaseId(string knowledgeBaseId)
+    {
+        var normalized = KnowledgeBaseIdPolicy.Normalize(knowledgeBaseId);
+        if (normalized.Length == 0)
+        {
+            throw new ArgumentException("Knowledge base id cannot be empty.", nameof(knowledgeBaseId));
+        }
+
+        if (!KnowledgeBaseIdPolicy.IsValid(normalized))
+        {
+            throw new ArgumentException(
+                "Knowledge base id must use lowercase letters, numbers, and hyphens only, with a maximum length of 64 characters.",
+                nameof(knowledgeBaseId));
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeKnowledgeBaseName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
+        }
+
+        return name.Trim();
+    }
+
+    private static string? NormalizeOptionalText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     [GeneratedRegex(@"\p{L}+", RegexOptions.IgnoreCase)]
     private static partial Regex WordSegmenter();

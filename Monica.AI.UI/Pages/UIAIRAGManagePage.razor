@@ -740,10 +740,9 @@
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
         var result = await dialog.Result;
-        if (result is { Canceled: false, Data: ValueTuple<string, string> data })
+        if (result is { Canceled: false, Data: KnowledgeBaseDialogResult data })
         {
-            var (name, description) = data;
-            if ((await RAGService.CreateKnowledgeBaseAsync(name, description)).IsFailed(out var error))
+            if ((await RAGService.CreateKnowledgeBaseAsync(data.Id, data.Name, data.Description)).IsFailed(out var error))
             {
                 Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             }
@@ -764,24 +763,25 @@
 
         var parameters = new DialogParameters
         {
+            { nameof(CreateKnowledgeBaseDialog.InitialId), _selectedKB.Id },
             { nameof(CreateKnowledgeBaseDialog.InitialName), _selectedKB.Name },
             { nameof(CreateKnowledgeBaseDialog.InitialDescription), _selectedKB.Description },
-            { nameof(CreateKnowledgeBaseDialog.SubmitText), L["Common:Actions:Save"].Value }
+            { nameof(CreateKnowledgeBaseDialog.SubmitText), L["Common:Actions:Save"].Value },
+            { nameof(CreateKnowledgeBaseDialog.IsIdReadOnly), true }
         };
 
         var dialog = await DialogService.ShowAsync<CreateKnowledgeBaseDialog>(
-            L["Common:Edit"],
+            L["RAG:Manage:EditDialog:Title"],
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
         var result = await dialog.Result;
-        if (result is not { Canceled: false, Data: ValueTuple<string, string> data })
+        if (result is not { Canceled: false, Data: KnowledgeBaseDialogResult data })
         {
             return;
         }
 
-        var (name, description) = data;
-        if ((await RAGService.UpdateKnowledgeBaseAsync(_selectedKB.Id, name, description)).IsFailed(out var error))
+        if ((await RAGService.UpdateKnowledgeBaseAsync(_selectedKB.Id, data.Name, data.Description)).IsFailed(out var error))
         {
             Snackbar.Add($"{L["Common:Error"]}: {error.Message}", Severity.Error);
             return;

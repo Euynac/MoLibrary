@@ -45,16 +45,19 @@ public class RAGUIService(
         }
     }
 
-    public async Task<Res<KnowledgeBase>> CreateKnowledgeBaseAsync(string name, string? description = null)
+    public async Task<Res<KnowledgeBase>> CreateKnowledgeBaseAsync(
+        string id,
+        string name,
+        string? description = null)
     {
         try
         {
-            var kb = await GetRagService().CreateKnowledgeBaseAsync(name, description);
+            var kb = await GetRagService().CreateKnowledgeBaseAsync(id, name, description);
             return kb;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create knowledge base '{Name}'", name);
+            logger.LogError(ex, "Failed to create knowledge base '{KbId}' ('{Name}')", id, name);
             return Res.Fail($"Failed to create knowledge base: {ex.Message}");
         }
     }
