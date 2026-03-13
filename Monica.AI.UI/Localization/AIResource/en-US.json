@@ -220,6 +220,14 @@
       "Searching": "Searching...",
       "NoResults": "No results found",
       "ResultsCount": "{0} results",
+      "Score": {
+        "SimilarityLabel": "Similarity",
+        "SimilarityTooltip": "Vector similarity score from the active vector search path.",
+        "SimilarityFromHybridTooltip": "Displayed as a vector-only similarity percentage. Raw hybrid rank score: {0:F4}.",
+        "HybridRankLabel": "Hybrid rank",
+        "HybridRankTooltip": "Hybrid search combines vector and keyword ranking, so the raw score can appear in coarse steps instead of a smooth similarity percentage.",
+        "HybridRankValue": "Hybrid rank {0:F4}"
+      },
       "Result": {
         "UnknownSource": "Unknown",
         "ViewInDocument": "View in document",

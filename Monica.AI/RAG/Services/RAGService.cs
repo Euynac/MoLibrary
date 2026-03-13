@@ -25,6 +25,8 @@ public sealed partial class RAGService(
     ILogger<RAGService> logger)
 {
     private const int EmbeddingProgressBatchSize = 16;
+    private const int HybridSimilaritySearchMultiplier = 10;
+    private const int HybridSimilaritySearchMinimum = 100;
 
     private readonly ModuleRAGOption _options = options.Value;
     private readonly ConcurrentDictionary<string, byte> _activeIndexingDocuments =
@@ -492,10 +494,18 @@ public sealed partial class RAGService(
         }
     }
 
-    public async Task<IReadOnlyList<TextSearchResult>> SearchAsync(
+    public Task<IReadOnlyList<TextSearchResult>> SearchAsync(
         string query,
         IEnumerable<string> knowledgeBaseIds,
         int topK = 0,
+        CancellationToken ct = default)
+        => SearchAsync(query, knowledgeBaseIds, topK, includeVectorSimilarityForHybrid: false, ct);
+
+    public async Task<IReadOnlyList<TextSearchResult>> SearchAsync(
+        string query,
+        IEnumerable<string> knowledgeBaseIds,
+        int topK,
+        bool includeVectorSimilarityForHybrid,
         CancellationToken ct = default)
     {
         if (topK <= 0)
@@ -533,11 +543,24 @@ public sealed partial class RAGService(
             var hybridSearch = collection.GetService(typeof(IKeywordHybridSearchable<RAGVectorRecord>))
                                as IKeywordHybridSearchable<RAGVectorRecord>;
 
+            Dictionary<string, double> similarityScoresByKey = [];
+
             IAsyncEnumerable<VectorSearchResult<RAGVectorRecord>> searchResults;
-            if (hybridSearch is not null)
+            var isHybridSearch = hybridSearch is not null;
+            if (hybridSearch is { } keywordHybridSearch)
             {
+                if (includeVectorSimilarityForHybrid)
+                {
+                    similarityScoresByKey = await GetSimilarityScoresForHybridResultsAsync(
+                        collection,
+                        kbId,
+                        query,
+                        topK,
+                        ct);
+                }
+
                 var keywords = WordSegmenter().Matches(query).Select(m => m.Value).ToList();
-                searchResults = hybridSearch.HybridSearchAsync(
+                searchResults = keywordHybridSearch.HybridSearchAsync(
                     query,
                     keywords,
                     top: topK,
@@ -556,12 +579,27 @@ public sealed partial class RAGService(
                     continue;
                 }
 
+                var logicalKey = RAGVectorCollectionCoordinator.BuildRecordKey(
+                    kbId,
+                    record.DocumentPath,
+                    record.ChunkIndex);
+
+                double? similarityScore = isHybridSearch
+                    ? similarityScoresByKey.TryGetValue(logicalKey, out var mappedSimilarityScore)
+                        ? mappedSimilarityScore
+                        : null
+                    : result.Score;
+
                 results.Add(new TextSearchResult
                 {
                     SourceName = record.DocumentTitle,
                     SourceLink = record.DocumentPath,
                     Text = record.Content,
                     Score = result.Score,
+                    ScoreKind = isHybridSearch
+                        ? TextSearchScoreKind.HybridRank
+                        : TextSearchScoreKind.VectorSimilarity,
+                    SimilarityScore = similarityScore,
                     KnowledgeBaseId = kbId,
                     SectionPath = record.SectionPath,
                     DocumentId = record.DocumentPath,
@@ -574,6 +612,35 @@ public sealed partial class RAGService(
             .OrderByDescending(r => r.Score)
             .Take(topK)
             .ToList();
+    }
+
+    private async Task<Dictionary<string, double>> GetSimilarityScoresForHybridResultsAsync(
+        VectorStoreCollection<Guid, RAGVectorRecord> collection,
+        string knowledgeBaseId,
+        string query,
+        int topK,
+        CancellationToken ct)
+    {
+        var similarityScores = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var similarityTop = Math.Max(topK * HybridSimilaritySearchMultiplier, HybridSimilaritySearchMinimum);
+
+        await foreach (var similarityResult in collection.SearchAsync(query, top: similarityTop, cancellationToken: ct))
+        {
+            var similarityRecord = similarityResult.Record;
+            if (similarityRecord is null || similarityResult.Score is null)
+            {
+                continue;
+            }
+
+            var logicalKey = RAGVectorCollectionCoordinator.BuildRecordKey(
+                knowledgeBaseId,
+                similarityRecord.DocumentPath,
+                similarityRecord.ChunkIndex);
+
+            similarityScores[logicalKey] = similarityResult.Score.Value;
+        }
+
+        return similarityScores;
     }
 
     public async Task<KnowledgeBaseVectorValidationResult> ValidateKnowledgeBaseVectorsAsync(

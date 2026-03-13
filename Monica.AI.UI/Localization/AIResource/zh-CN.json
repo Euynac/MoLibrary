@@ -220,6 +220,14 @@
       "Searching": "搜索中...",
       "NoResults": "未找到结果",
       "ResultsCount": "{0} 个结果",
+      "Score": {
+        "SimilarityLabel": "相似度",
+        "SimilarityTooltip": "来自当前向量检索路径的向量相似度分数。",
+        "SimilarityFromHybridTooltip": "当前显示的是向量检索得到的相似度百分比。原始混合排序分数：{0:F4}。",
+        "HybridRankLabel": "混合排序",
+        "HybridRankTooltip": "混合检索会综合向量与关键词排名，因此原始分数通常会呈现较粗的阶梯值，而不是平滑的相似度百分比。",
+        "HybridRankValue": "混合排序 {0:F4}"
+      },
       "Result": {
         "UnknownSource": "未知来源",
         "ViewInDocument": "在文档中查看",

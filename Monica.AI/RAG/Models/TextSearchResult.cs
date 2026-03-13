@@ -9,7 +9,23 @@ public sealed class TextSearchResult
     public string? SourceName { get; set; }
     public string? SourceLink { get; set; }
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Raw score returned by the active search path.
+    /// For hybrid search this is the fused ranking score, not a true similarity percentage.
+    /// </summary>
     public double? Score { get; set; }
+
+    /// <summary>
+    /// Describes how <see cref="Score"/> should be interpreted.
+    /// </summary>
+    public TextSearchScoreKind ScoreKind { get; set; } = TextSearchScoreKind.VectorSimilarity;
+
+    /// <summary>
+    /// Optional vector similarity score for display when the raw search score is not percentage-safe.
+    /// </summary>
+    public double? SimilarityScore { get; set; }
+
     public string? KnowledgeBaseId { get; set; }
     public string? SectionPath { get; set; }
     public object? RawRepresentation { get; set; }

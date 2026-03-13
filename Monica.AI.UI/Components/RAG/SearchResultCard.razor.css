@@ -18,23 +18,50 @@
 .result-score-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 8px 16px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
     background-color: var(--mud-palette-background-gray);
 }
 
+.result-score-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 /* Score badge */
 .score-badge {
     display: inline-flex;
+    justify-content: center;
     align-items: center;
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 700;
-    min-width: 44px;
+    min-width: 70px;
     text-align: center;
     flex-shrink: 0;
+}
+
+.score-kind {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    cursor: help;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.score-secondary {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    border-radius: 9999px;
+    padding: 2px 8px;
+    white-space: nowrap;
 }
 
 .score-badge--high {
@@ -55,6 +82,7 @@
 /* Progress bar track */
 .score-bar-track {
     flex: 1;
+    min-width: 140px;
     height: 6px;
     background-color: var(--mud-palette-lines-default);
     border-radius: 9999px;

@@ -7,12 +7,23 @@
     <div class="result-card">
         <!-- Score header row with badge + progress bar -->
         <div class="result-score-row">
-            <span class="score-badge score-badge--@GetScoreLevel()">
-                @($"{(Result.Score ?? 0) * 100:F0}%")
-            </span>
+            <div class="result-score-summary">
+                <span class="score-badge score-badge--@GetScoreLevel()">
+                    @GetPrimaryScoreText()
+                </span>
+                <span class="score-kind" title="@GetPrimaryScoreTooltip()">
+                    @GetPrimaryScoreLabel()
+                </span>
+                @if (ShowHybridRawScore())
+                {
+                    <span class="score-secondary" title="@L["RAG:Search:Score:HybridRankTooltip"]">
+                        @L["RAG:Search:Score:HybridRankValue", Result.Score ?? 0]
+                    </span>
+                }
+            </div>
             <div class="score-bar-track">
                 <div class="score-bar-fill score-bar-fill--@GetScoreLevel()"
-                     style="width: @($"{(Result.Score ?? 0) * 100:F0}%")"></div>
+                     style="width: @GetScoreBarWidth()"></div>
             </div>
         </div>
 
@@ -44,7 +55,50 @@
     [Parameter]
     public EventCallback OnClick { get; set; }
 
-    private string GetScoreLevel() => Result.Score switch
+    private double GetVisualScore()
+        => Math.Clamp(
+            Result.SimilarityScore
+            ?? Result.Score
+            ?? 0d,
+            0d,
+            1d);
+
+    private string GetPrimaryScoreText()
+    {
+        if (Result.SimilarityScore is double similarityScore)
+        {
+            return $"{Math.Clamp(similarityScore, 0d, 1d) * 100:F2}%";
+        }
+
+        return Result.ScoreKind == TextSearchScoreKind.HybridRank
+            ? $"{(Result.Score ?? 0d):F4}"
+            : $"{GetVisualScore() * 100:F2}%";
+    }
+
+    private string GetPrimaryScoreLabel() => Result switch
+    {
+        { SimilarityScore: not null } => L["RAG:Search:Score:SimilarityLabel"].Value,
+        { ScoreKind: TextSearchScoreKind.HybridRank } => L["RAG:Search:Score:HybridRankLabel"].Value,
+        _ => L["RAG:Search:Score:SimilarityLabel"].Value
+    };
+
+    private string GetPrimaryScoreTooltip() => Result switch
+    {
+        { SimilarityScore: not null, ScoreKind: TextSearchScoreKind.HybridRank } =>
+            L["RAG:Search:Score:SimilarityFromHybridTooltip", Result.Score ?? 0d].Value,
+        { ScoreKind: TextSearchScoreKind.HybridRank } =>
+            L["RAG:Search:Score:HybridRankTooltip"].Value,
+        _ => L["RAG:Search:Score:SimilarityTooltip"].Value
+    };
+
+    private bool ShowHybridRawScore()
+        => Result.ScoreKind == TextSearchScoreKind.HybridRank
+           && Result.Score is not null
+           && Result.SimilarityScore is not null;
+
+    private string GetScoreBarWidth() => $"{GetVisualScore() * 100:F2}%";
+
+    private string GetScoreLevel() => GetVisualScore() switch
     {
         >= 0.8f => "high",
         >= 0.5f => "mid",

@@ -100,7 +100,11 @@ public class RAGUIService(
     {
         try
         {
-            var results = await GetRagService().SearchAsync(query, kbIds, topK);
+            var results = await GetRagService().SearchAsync(
+                query,
+                kbIds,
+                topK,
+                includeVectorSimilarityForHybrid: true);
             return Res.Ok(results);
         }
         catch (Exception ex)
