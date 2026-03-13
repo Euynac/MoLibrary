@@ -5,7 +5,7 @@ public class ServiceHeartbeat
     /// <summary>微服务APPID</summary>
     public required string AppId { get; set; }
     
-    /// <summary>微服务构建时间</summary>
+    /// <summary>Microservice build time stored in UTC.</summary>
     public DateTime BuildTime { get; set; }
     
     /// <summary>微服务程序集版本号</summary>

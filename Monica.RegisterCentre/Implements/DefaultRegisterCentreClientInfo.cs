@@ -84,7 +84,7 @@ public class DefaultRegisterCentreClientInfo(
     }
 
     /// <summary>
-    /// 从配置选项构建基础实例状态信息，使用自动检测作为回退
+    /// Builds the base instance state and normalizes persisted timestamps to UTC.
     /// </summary>
     private static InstanceState BuildBaseServiceInfo(ModuleRegisterCentreOption options)
     {
@@ -98,7 +98,7 @@ public class DefaultRegisterCentreClientInfo(
             AppName = options.AppName ?? assemblyName,
             ProjectName = options.ProjectName ?? assemblyName,
             DomainName = options.DomainName,
-            BuildTime = options.BuildTime ?? GetBuildTime(entryAssembly),
+            BuildTime = ResolveBuildTimeUtc(options.BuildTime, entryAssembly),
             AssemblyVersion = options.AssemblyVersion ?? GetAssemblyVersion(entryAssembly),
             ReleaseVersion = options.ReleaseVersion,
             DependentSubDomains = options.DependentSubDomains,
@@ -120,9 +120,19 @@ public class DefaultRegisterCentreClientInfo(
     }
 
     /// <summary>
-    /// 从程序集文件的最后修改时间提取构建时间
+    /// Resolves the configured build time or falls back to the assembly file timestamp in UTC.
     /// </summary>
-    private static DateTime GetBuildTime(Assembly? assembly)
+    private static DateTime ResolveBuildTimeUtc(DateTime? configuredBuildTime, Assembly? assembly)
+    {
+        return configuredBuildTime is { } value
+            ? NormalizeUtc(value)
+            : GetBuildTimeUtc(assembly);
+    }
+
+    /// <summary>
+    /// Extracts the build time from the assembly file last write timestamp in UTC.
+    /// </summary>
+    private static DateTime GetBuildTimeUtc(Assembly? assembly)
     {
         if (assembly == null) return DateTime.MinValue;
 
@@ -131,12 +141,25 @@ public class DefaultRegisterCentreClientInfo(
             var location = assembly.Location;
             if (string.IsNullOrEmpty(location)) return DateTime.MinValue;
 
-            return File.GetLastWriteTime(location);
+            return File.GetLastWriteTimeUtc(location);
         }
         catch
         {
             return DateTime.MinValue;
         }
+    }
+
+    /// <summary>
+    /// Normalizes configured values so the stored timestamp is always UTC.
+    /// </summary>
+    private static DateTime NormalizeUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Local).ToUniversalTime()
+        };
     }
 
     /// <summary>

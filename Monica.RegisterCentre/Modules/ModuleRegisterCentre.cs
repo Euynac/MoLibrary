@@ -377,7 +377,9 @@ public class ModuleRegisterCentreOption : MoModuleOptionWithMinimalApi<ModuleReg
     // === Version Information ===
 
     /// <summary>
-    /// 应用构建时间（默认从程序集文件修改时间获取）
+    /// Application build time stored in UTC.
+    /// Defaults to the entry assembly file last write time in UTC.
+    /// Local or unspecified configured values are normalized to UTC.
     /// </summary>
     public DateTime? BuildTime { get; set; }
 

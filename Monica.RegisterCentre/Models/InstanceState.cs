@@ -45,7 +45,7 @@ public class InstanceState
     public string? DomainName { get; set; }
 
     /// <summary>
-    /// 微服务构建时间
+    /// Microservice build time stored in UTC.
     /// </summary>
     public DateTime BuildTime { get; set; }
 
