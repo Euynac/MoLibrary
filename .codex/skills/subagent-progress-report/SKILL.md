@@ -1,205 +1,53 @@
 ---
 name: subagent-progress-report
-description: Coordinate progress reporting between a main agent and spawned sub-agents using a main-agent-owned session folder, per-agent artifact folders, prepend-only log files, status scans, and closed-session archiving. Use when the runtime supports sub-agent features and the main agent needs to supervise delegated work, keep sub-agent artifacts isolated, enforce sub-agent scope when delegating with forked context, read status without interrupting the worker, archive closed sub-agents, or summarize updates from `.tmp/YYYYMMDD-HHMMSS-agent-session/agent-name/agent.log`.
+description: Coordinate progress reporting between a main agent and spawned sub-agents using a shared session root, per-agent folders, prepended `agent.log` files, bootstrap verification, patient post-bootstrap recovery, status scans, and closed-session archiving. Use when the runtime supports sub-agent features and the main agent must delegate with scoped ownership, monitor progress without editing child logs, wait through temporary quiet periods before interrupting, or summarize updates from `.tmp/YYYYMMDD-HHMMSS-agent-session/agent-name/agent.log`.
 ---
 
 # Subagent Progress Report
 
-Use this skill in two modes: `Main-Agent mode` when delegating work and `Sub-Agent mode` when executing delegated work.
+Use this skill only when the runtime exposes sub-agent management capabilities such as `spawn_agent`, `send_input`, or `wait`. If the environment cannot create or supervise sub-agents, stop and report that limitation.
 
-## Mandatory Check
-
-Before any setup, confirm the current runtime exposes sub-agent management capabilities.
-
-- Continue only if the environment provides sub-agent tooling such as `spawn_agent` and a way to send input or wait for completion.
-- If no sub-agent feature is available, stop immediately and tell the user that the current environment does not support sub-agents and should be checked.
-
-## Directory Model
-
-The main agent owns one shared session directory under the current project root:
+Keep one shared session root under the current project root:
 
 ```text
 .tmp/<timestamp>-agent-session/
 ```
 
-Each sub-agent owns one child directory inside that session:
+Each sub-agent owns one child directory inside that root:
 
 ```text
 .tmp/<timestamp>-agent-session/<agent-name>/
 ```
 
-Each sub-agent writes only its own `agent.log` and artifacts inside its own child directory.
+Each sub-agent writes only its own `agent.log` and coordination artifacts inside its own child directory.
 
-## Main-Agent Mode
+## Load Only What You Need
 
-1. Start by creating the shared session directory under the current project root:
-
-```bash
-python <skill-dir>/scripts/init_main_agent_session.py
-```
-
-2. Keep the returned `<session-root>` and pass it to every sub-agent.
-3. When spawning a sub-agent, explicitly tell it to use `$subagent-progress-report` in `Sub-Agent mode`.
-4. Finalize one stable session agent name for folder naming:
-   - start with the delegated task label
-   - append the sub-agent tool's generated nickname when available
-   - prefer a format like `<task-label>--<tool-nickname>`
-   - if the tool reveals its nickname only after `spawn_agent` returns, immediately send one follow-up message with the finalized session agent name before the sub-agent initializes its folder
-5. If delegation uses `fork_context=true` or any equivalent full-context handoff, add an explicit scope fence to the delegated prompt. Use wording equivalent to:
-
-```text
-You are a specialized subagent (for example, "Code Reviewer"). Your task is ONLY to <delegated task>.
-Do NOT act as the main orchestrator. You are not responsible for the overall project goal, only this task.
-```
-
-6. Tell the sub-agent to initialize its own child directory inside the shared session directory with that finalized session agent name:
-
-```bash
-python <skill-dir>/scripts/init_subagent_session.py --session-root "<session-root>" --agent-name "<agent-name>"
-```
-
-7. Immediately after delegation, verify that the sub-agent actually entered `Sub-Agent mode`:
-
-```bash
-python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "<agent-name>" --directory-timeout-seconds 60 --log-timeout-seconds 180
-```
-
-8. The bootstrap check uses two windows:
-   - first wait up to 60 seconds for `<session-root>/<agent-name>/` to appear
-   - if the directory appears, wait up to 180 additional seconds for the first non-empty `agent.log` entry
-9. If the bootstrap check ends with `missing`, treat that sub-agent as hallucinating: it did not create its dedicated folder within the first 60-second window. Stop or discard that sub-agent and delegate the task again to a fresh sub-agent.
-10. If the bootstrap check ends with `directory_only`, the sub-agent created its dedicated folder but did not write its first non-empty log entry within the additional 180-second window. Follow up with that sub-agent; do not redelegate automatically.
-11. Require the sub-agent to keep all generated files for that delegated task inside the returned child directory.
-12. Require the sub-agent to log:
-   - task start
-   - phase completions
-   - discoveries that may change the plan
-   - blockers or questions for the main agent
-   - final outcome
-13. For one session, read progress from `<session-root>/<agent-name>/agent.log`. Read newest entries first because the log is prepended, not appended to the end.
-14. For multi-agent supervision, prefer the summary script:
-
-```bash
-python <skill-dir>/scripts/collect_agent_status.py --session-root "<session-root>"
-```
-
-15. Use the summary output to identify:
-    - each sub-agent folder under the current session
-    - the latest logged message
-    - whether the session looks `completed`, `blocked`, `needs_input`, or `in_progress`
-16. `collect_agent_status.py` ignores directories prefixed with `(Closed)` by default. Pass `--include-closed` only when archived agents still matter for the current inspection.
-17. After closing a sub-agent in the harness, archive its directory so future status scans ignore it:
-
-```bash
-python <skill-dir>/scripts/mark_subagents_closed.py --session-root "<session-root>" --agent-name "<agent-name>"
-```
-
-Repeat `--agent-name` to archive multiple sub-agents in one command.
-18. Read-only rule: the main agent may read `agent.log` and summary output but must never edit `agent.log`.
-19. If the logged direction drifts, interrupt the sub-agent and provide a precise correction.
-
-## Sub-Agent Mode
-
-1. Expect the main agent to provide a shared `<session-root>` and one finalized `<agent-name>`.
-2. Use exactly the main-agent-provided `<agent-name>`. Do not invent a different folder name even if the harness also shows a generated nickname.
-3. Start by creating or reusing your child directory:
-
-```bash
-python scripts/init_subagent_session.py --session-root "<session-root>" --agent-name "<agent-name>"
-```
-
-4. The script creates or confirms:
-   - `<session-root>/<agent-name>/`
-   - `<session-root>/<agent-name>/agent.log`
-5. Keep every generated artifact for this delegated task inside that child directory.
-6. Whenever you need to notify the main agent, prepend a new entry to `agent.log`:
-
-```bash
-python scripts/write_agent_log.py --session-dir "<session-dir>" --message "Started cleanup of bridge processes."
-```
-
-7. Use log entries for:
-   - task start
-   - major phase changes
-   - findings that may affect the approach
-   - blockers
-   - completion
-8. Log format is fixed:
-   - `[YYYY-MM-DD HH:MM:SS +08:00] message`
-9. Only the sub-agent writes `agent.log`. The main agent only reads it.
-10. Before finishing, write a final entry that clearly states `completed`, `blocked`, or `needs input`.
+- Main-agent setup, delegation, bootstrap, supervision, and archiving: read [references/main-agent-mode.md](references/main-agent-mode.md).
+- Main-agent quiet-period patience and redelegation recovery: read [references/monitoring-and-recovery.md](references/monitoring-and-recovery.md).
+- Sub-agent initialization, artifact ownership, and logging rules: read [references/sub-agent-mode.md](references/sub-agent-mode.md).
+- Exact CLI syntax for bundled scripts: read [references/script-reference.md](references/script-reference.md).
 
 ## Quick Start
 
-Example setup for the main agent:
+Main agent:
 
-```text
-Use $subagent-progress-report in Main-Agent mode.
-Create one shared session root under the current project directory's .tmp for this coordination run.
-Pass that session root to every sub-agent and require them to log progress in their own child folder.
-If you delegate with forked context, add a scope fence that says the sub-agent is ONLY responsible for the delegated task and must not act as the main orchestrator.
-```
+1. Create a shared session root with `python <skill-dir>/scripts/init_main_agent_session.py`.
+2. Delegate with a stable `<task-label>--<tool-nickname>` agent name and require `$subagent-progress-report` in `Sub-Agent mode`.
+3. Run `python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "<agent-name>"`.
+4. After bootstrap succeeds, treat silence as a temporary quiet period until the recovery flow says otherwise.
 
-Example delegation instruction for one sub-agent:
+Sub-agent:
 
-```text
-Use $subagent-progress-report in Sub-Agent mode.
-Your finalized session agent name is "BridgeVerifier--<tool-nickname>".
-Use the provided session root, initialize your child folder there, keep all artifacts there,
-write your first non-empty agent.log entry immediately after initialization,
-and report progress by prepending entries to agent.log after each major phase.
-```
+1. Reuse the main-agent-provided `<session-root>` and exact `<agent-name>`.
+2. Initialize `<session-root>/<agent-name>/` with `python <skill-dir>/scripts/init_subagent_session.py --session-root "<session-root>" --agent-name "<agent-name>"`.
+3. Write the first non-empty `agent.log` entry immediately after initialization.
+4. Finish with `completed`, `blocked`, or `needs input` in the final log entry.
 
-Example bootstrap check for the main agent:
+## Key Rules
 
-```bash
-python scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "BridgeVerifier--cedar" --directory-timeout-seconds 60 --log-timeout-seconds 180 --json
-```
-
-Example status scan for the main agent:
-
-```bash
-python scripts/collect_agent_status.py --json
-```
-
-Example batch close after the main agent closes sub-agents in the harness:
-
-```bash
-python scripts/mark_subagents_closed.py --session-root "<session-root>" --agent-name "BridgeVerifier--cedar" --agent-name "CodeReviewer--lark" --json
-```
-
-## Scripts
-
-### `scripts/init_main_agent_session.py`
-
-Locate the current project root, create `.tmp/<timestamp>-agent-session` there, and print a JSON object with the session root path.
-
-### `scripts/init_subagent_session.py`
-
-Create or reuse `<session-root>/<agent-name>` and print a JSON object with the session and log paths. Reject session roots outside the current project directory's `.tmp`.
-
-### `scripts/write_agent_log.py`
-
-Prepend a timestamped entry to `agent.log`. Use this script instead of manual editing so the newest update is always first.
-
-### `scripts/check_subagent_bootstrap.py`
-
-Wait up to 60 seconds for a specific sub-agent to create its dedicated folder. If the folder appears, wait up to 180 additional seconds for the first non-empty log entry. Return `missing` with `redelegate` when no folder appears in the first window. Return `directory_only` with `follow_up` when the folder exists but the second window ends without a non-empty log entry.
-
-### `scripts/collect_agent_status.py`
-
-Scan one session root, or the newest session under the current project directory's `.tmp`, read the newest entry from each child `agent.log`, classify the session state, and print a main-agent-friendly summary. Ignore `(Closed)` directories by default. Use `--include-closed` when archived agents still matter. Use `--json` when another tool needs structured output.
-
-### `scripts/mark_subagents_closed.py`
-
-Rename one or more `<session-root>/<agent-name>` directories to `(Closed)<agent-name>`. This archives already-closed sub-agents so `collect_agent_status.py` ignores them during future scans.
-
-## Notes
-
-- Keep agent names filesystem-safe and stable.
-- Prefer agent names that combine a task label and the tool-generated nickname when one exists.
-- Prefer short, factual status messages.
-- Reuse the main-agent-provided session root instead of creating a second root.
-- Use explicit keywords in final log messages when possible: `completed`, `blocked`, or `needs input`.
-- Run the bootstrap check after each new delegation before trusting the sub-agent.
-- After closing a sub-agent in the harness, archive its folder with `mark_subagents_closed.py`.
+- Let only the sub-agent write `agent.log`; the main agent only reads it.
+- Read newest log entries first because `agent.log` is prepended, not appended.
+- Treat explicit `blocked` or `needs input` log entries as actionable state, not silence.
+- Run the bootstrap check after each new delegation before trusting the child.
+- Archive closed sub-agents with `scripts/mark_subagents_closed.py` so later scans ignore them.
