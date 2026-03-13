@@ -1,134 +1,318 @@
-@using Monica.Framework.Services
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using Monica.Framework.Core.Model
+@using Monica.Framework.Services
 @using Monica.Tool.MoResponse
+
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 
-<MudCard>
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">枚举信息查看器</MudText>
-        </CardHeaderContent>
-        <CardHeaderActions>
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      OnClick="LoadAllEnumsAsync"
-                      StartIcon="@Icons.Material.Filled.Refresh"
-                      Disabled="@_loading">
-                刷新
-            </MudButton>
-        </CardHeaderActions>
-    </MudCardHeader>
-    <MudCardContent>
-        <MudGrid>
-            <MudItem xs="12" md="4">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">程序集</MudText>
-                    @if (_loading)
+@implements IAsyncDisposable
+
+<div class="enum-info-viewer">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">枚举信息查看器</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="LoadAllEnumsAsync"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@_loading">
+                    刷新
+                </MudButton>
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <div class="enum-info-viewer__toolbar">
+                <div class="enum-info-viewer__search-input">
+                    <MudTextField T="string"
+                                  Value="@_searchText"
+                                  ValueChanged="OnSearchTextChanged"
+                                  Immediate="true"
+                                  Clearable="true"
+                                  Placeholder="搜索程序集、枚举和值中的任意内容"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  FullWidth="true"
+                                  Disabled="@(!_enumGroups.Any() && !_loading)" />
+                </div>
+                <div class="enum-info-viewer__toolbar-actions">
+                    @if (HasSearchQuery)
                     {
-                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-                    }
-                    else if (_enumGroups.Any())
-                    {
-                        <MudList T="string">
-                            @foreach (var group in _enumGroups)
-                            {
-                                <MudListItem T="string" OnClick="@(() => SelectAssembly(group))">
-                                    <div style="width: 100%;">
-                                        <MudText Typo="Typo.subtitle2">@GetShortAssemblyName(group.From)</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@group.Enums.Count 个枚举</MudText>
-                                    </div>
-                                </MudListItem>
-                                <MudDivider />
-                            }
-                        </MudList>
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Info">
-                            暂无枚举数据，请点击刷新按钮加载数据。
-                        </MudAlert>
-                    }
-                </MudPaper>
-            </MudItem>
-            
-            <MudItem xs="12" md="4">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">枚举列表</MudText>
-                    @if (_selectedAssembly != null)
-                    {
-                        <MudList T="string">
-                            @foreach (var enumInfo in _selectedAssembly.Enums)
-                            {
-                                <MudListItem T="string" OnClick="@(() => SelectEnum(enumInfo))">
-                                    <div style="width: 100%;">
-                                        <MudText Typo="Typo.subtitle2">@enumInfo.Name</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@enumInfo.Values.Count 个值</MudText>
-                                    </div>
-                                </MudListItem>
-                                <MudDivider />
-                            }
-                        </MudList>
+                        <MudChip T="string"
+                                 Variant="Variant.Outlined"
+                                 Color="@GetSearchSummaryColor()"
+                                 Icon="@Icons.Material.Filled.Search">
+                            @GetSearchSummary()
+                        </MudChip>
+                        <MudTooltip Text="上一个匹配">
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Outlined"
+                                           OnClick="GoToPreviousMatchAsync"
+                                           Disabled="@(!HasSearchMatches)" />
+                        </MudTooltip>
+                        <MudTooltip Text="下一个匹配">
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Outlined"
+                                           OnClick="GoToNextMatchAsync"
+                                           Disabled="@(!HasSearchMatches)" />
+                        </MudTooltip>
                     }
                     else
                     {
-                        <MudAlert Severity="Severity.Info">
-                            请先从左侧选择一个程序集。
-                        </MudAlert>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            输入关键词后会在程序集、枚举和枚举值中同步高亮定位
+                        </MudText>
                     }
-                </MudPaper>
-            </MudItem>
-            
-            <MudItem xs="12" md="4">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">枚举值</MudText>
-                    @if (_selectedEnum != null)
-                    {
-                        <MudStack Spacing="2">
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">@_selectedEnum.Name</MudText>
-                            @foreach (var value in _selectedEnum.Values)
+                </div>
+            </div>
+
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+            }
+
+            <MudGrid Class="enum-info-viewer__grid">
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                        <div class="enum-info-viewer__panel-header">
+                            <div class="enum-info-viewer__panel-title">程序集</div>
+                            <div class="enum-info-viewer__panel-subtitle">@GetAssemblyPanelSummary()</div>
+                        </div>
+
+                        <div class="enum-info-viewer__panel-content" @ref="_assemblyContainer">
+                            @if (_enumGroups.Any())
                             {
-                                <MudCard Elevation="0" Style="background-color: var(--mud-palette-background-gray);">
-                                    <MudCardContent Class="pa-2">
-                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                            <div>
-                                                <MudText Typo="Typo.subtitle2">@value.Name</MudText>
-                                                @if (!string.IsNullOrEmpty(value.Description))
-                                                {
-                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@value.Description</MudText>
-                                                }
+                                @for (var assemblyIndex = 0; assemblyIndex < _enumGroups.Count; assemblyIndex++)
+                                {
+                                    var currentAssemblyIndex = assemblyIndex;
+                                    var group = _enumGroups[currentAssemblyIndex];
+
+                                    <div class="@GetAssemblyItemClass(currentAssemblyIndex)"
+                                         data-search-key="@GetAssemblySearchKey(currentAssemblyIndex)"
+                                         role="button"
+                                         tabindex="0"
+                                         @onclick="@(() => SelectAssembly(currentAssemblyIndex))"
+                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectAssembly(currentAssemblyIndex)))">
+                                        <div class="enum-info-viewer__item-top">
+                                            <div class="enum-info-viewer__item-title">
+                                                <MudHighlighter Text="@GetShortAssemblyName(group.From)"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
                                             </div>
-                                            <MudChip T="int" Size="Size.Small" Color="Color.Primary">@value.Index</MudChip>
-                                        </MudStack>
-                                    </MudCardContent>
-                                </MudCard>
+                                            <div class="enum-info-viewer__item-badge">@group.Enums.Count 个枚举</div>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(group.From))
+                                        {
+                                            <div class="enum-info-viewer__assembly-full-name">
+                                                <MudHighlighter Text="@group.From"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             }
-                        </MudStack>
-                    }
-                    else
-                    {
-                        <MudAlert Severity="Severity.Info">
-                            请先从中间列表选择一个枚举。
-                        </MudAlert>
-                    }
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
-    </MudCardContent>
-</MudCard>
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
+                                    暂无枚举数据，请点击刷新按钮加载数据。
+                                </MudAlert>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                        <div class="enum-info-viewer__panel-header">
+                            <div class="enum-info-viewer__panel-title">枚举列表</div>
+                            <div class="enum-info-viewer__panel-subtitle">@GetEnumPanelSummary()</div>
+                        </div>
+
+                        <div class="enum-info-viewer__panel-content" @ref="_enumContainer">
+                            @if (SelectedAssembly is not null && _selectedAssemblyIndex is int selectedAssemblyIndex)
+                            {
+                                @for (var enumIndex = 0; enumIndex < SelectedAssembly.Enums.Count; enumIndex++)
+                                {
+                                    var currentEnumIndex = enumIndex;
+                                    var enumInfo = SelectedAssembly.Enums[currentEnumIndex];
+
+                                    <div class="@GetEnumItemClass(selectedAssemblyIndex, currentEnumIndex)"
+                                         data-search-key="@GetEnumSearchKey(selectedAssemblyIndex, currentEnumIndex)"
+                                         role="button"
+                                         tabindex="0"
+                                         @onclick="@(() => SelectEnum(selectedAssemblyIndex, currentEnumIndex))"
+                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectEnum(selectedAssemblyIndex, currentEnumIndex)))">
+                                        <div class="enum-info-viewer__item-top">
+                                            <div class="enum-info-viewer__item-title">
+                                                <MudHighlighter Text="@enumInfo.Name"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
+                                            </div>
+                                            <div class="enum-info-viewer__item-badge">@enumInfo.Values.Count 个值</div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
+                                    请先从左侧选择一个程序集。
+                                </MudAlert>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="enum-info-viewer__panel" Elevation="1">
+                        <div class="enum-info-viewer__panel-header">
+                            <div class="enum-info-viewer__panel-title">枚举值</div>
+                            <div class="enum-info-viewer__panel-subtitle">@GetValuePanelSummary()</div>
+                        </div>
+
+                        <div class="enum-info-viewer__panel-content" @ref="_valueContainer">
+                            @if (SelectedEnum is not null
+                                && _selectedAssemblyIndex is int selectedAssemblyIndex
+                                && _selectedEnumIndex is int selectedEnumIndex)
+                            {
+                                <div class="enum-info-viewer__selected-enum">
+                                    <div class="enum-info-viewer__selected-enum-title">
+                                        <MudHighlighter Text="@SelectedEnum.Name"
+                                                        HighlightedTexts="@_searchTerms"
+                                                        Class="enum-info-viewer__highlight" />
+                                    </div>
+                                    <div class="enum-info-viewer__selected-enum-meta">
+                                        共 @SelectedEnum.Values.Count 个枚举值
+                                    </div>
+                                </div>
+
+                                @for (var valueIndex = 0; valueIndex < SelectedEnum.Values.Count; valueIndex++)
+                                {
+                                    var currentValueIndex = valueIndex;
+                                    var value = SelectedEnum.Values[currentValueIndex];
+
+                                    <div class="@GetValueItemClass(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)"
+                                         data-search-key="@GetValueSearchKey(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)"
+                                         role="button"
+                                         tabindex="0"
+                                         @onclick="@(() => SelectValueMatch(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex))"
+                                         @onkeydown="@((KeyboardEventArgs args) => HandleItemKeyDown(args, () => SelectValueMatch(selectedAssemblyIndex, selectedEnumIndex, currentValueIndex)))">
+                                        <div class="enum-info-viewer__item-top">
+                                            <div class="enum-info-viewer__item-title">
+                                                <MudHighlighter Text="@value.Name"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
+                                            </div>
+                                            <div class="enum-info-viewer__value-index">
+                                                <MudHighlighter Text="@value.Index.ToString(CultureInfo.InvariantCulture)"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
+                                            </div>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(value.Description))
+                                        {
+                                            <div class="enum-info-viewer__item-description">
+                                                <MudHighlighter Text="@value.Description"
+                                                                HighlightedTexts="@_searchTerms"
+                                                                Class="enum-info-viewer__highlight" />
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
+                                    请先从中间列表选择一个枚举。
+                                </MudAlert>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+</div>
 
 @code {
-    private List<DtoAssemblyEnumInfo> _enumGroups = new();
-    private bool _loading = false;
-    private DtoAssemblyEnumInfo? _selectedAssembly;
-    private DtoEnumInfo? _selectedEnum;
+    private readonly HashSet<int> _matchedAssemblyIndices = [];
+    private readonly HashSet<(int AssemblyIndex, int EnumIndex)> _matchedEnumIndices = [];
+    private readonly HashSet<(int AssemblyIndex, int EnumIndex, int ValueIndex)> _matchedValueIndices = [];
+    private readonly List<SearchMatch> _searchMatches = [];
+    private readonly List<SearchScrollRequest> _pendingScrollRequests = [];
+
+    private IJSObjectReference? _jsModule;
+    private ElementReference _assemblyContainer;
+    private ElementReference _enumContainer;
+    private ElementReference _valueContainer;
+
+    private List<DtoAssemblyEnumInfo> _enumGroups = [];
+    private List<string> _searchTerms = [];
+    private string _searchText = string.Empty;
+    private bool _loading;
+    private int _currentMatchIndex = -1;
+    private int? _selectedAssemblyIndex;
+    private int? _selectedEnumIndex;
+
+    private DtoAssemblyEnumInfo? SelectedAssembly =>
+        _selectedAssemblyIndex is int assemblyIndex
+        && assemblyIndex >= 0
+        && assemblyIndex < _enumGroups.Count
+            ? _enumGroups[assemblyIndex]
+            : null;
+
+    private DtoEnumInfo? SelectedEnum =>
+        SelectedAssembly is not null
+        && _selectedEnumIndex is int enumIndex
+        && enumIndex >= 0
+        && enumIndex < SelectedAssembly.Enums.Count
+            ? SelectedAssembly.Enums[enumIndex]
+            : null;
+
+    private bool HasSearchQuery => _searchTerms.Count > 0;
+
+    private bool HasSearchMatches => _searchMatches.Count > 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.Framework.UI/UIFrameworkMonitor/enumInfoViewer.js");
+
             await LoadAllEnumsAsync();
+            return;
         }
+
+        if (_jsModule is null || _pendingScrollRequests.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var request in _pendingScrollRequests)
+        {
+            var container = request.Section switch
+            {
+                SearchSection.Assembly => _assemblyContainer,
+                SearchSection.Enum => _enumContainer,
+                SearchSection.Value => _valueContainer,
+                _ => default
+            };
+
+            await _jsModule.InvokeVoidAsync("scrollToMatch", container, request.SearchKey);
+        }
+
+        _pendingScrollRequests.Clear();
     }
 
     private async Task LoadAllEnumsAsync()
@@ -138,6 +322,9 @@
 
         try
         {
+            var selectedAssemblyFrom = SelectedAssembly?.From;
+            var selectedEnumName = SelectedEnum?.Name;
+
             var result = await FrameworkMonitorService.GetEnumInfoAsync();
             if (result.IsFailed(out var error, out var data))
             {
@@ -145,7 +332,16 @@
                 return;
             }
 
-            _enumGroups = data ?? new List<DtoAssemblyEnumInfo>();
+            _enumGroups = data ?? [];
+
+            if (HasSearchQuery)
+            {
+                RebuildSearchMatches(selectFirstMatch: true);
+            }
+            else
+            {
+                RestoreSelection(selectedAssemblyFrom, selectedEnumName);
+            }
         }
         catch (Exception ex)
         {
@@ -158,25 +354,448 @@
         }
     }
 
-
-    private void SelectAssembly(DtoAssemblyEnumInfo group)
+    private Task OnSearchTextChanged(string? value)
     {
-        _selectedAssembly = group;
-        _selectedEnum = null;
+        _searchText = value ?? string.Empty;
+        RebuildSearchMatches(selectFirstMatch: true);
+        return Task.CompletedTask;
     }
 
-    private void SelectEnum(DtoEnumInfo enumInfo)
+    private void SelectAssembly(int assemblyIndex)
     {
-        _selectedEnum = enumInfo;
+        _selectedAssemblyIndex = assemblyIndex;
+        _selectedEnumIndex = null;
+        SyncCurrentMatchFromSelection(SearchTargetType.Assembly, assemblyIndex, null, null);
     }
+
+    private void SelectEnum(int assemblyIndex, int enumIndex)
+    {
+        _selectedAssemblyIndex = assemblyIndex;
+        _selectedEnumIndex = enumIndex;
+        SyncCurrentMatchFromSelection(SearchTargetType.Enum, assemblyIndex, enumIndex, null);
+    }
+
+    private void SelectValueMatch(int assemblyIndex, int enumIndex, int valueIndex)
+    {
+        _selectedAssemblyIndex = assemblyIndex;
+        _selectedEnumIndex = enumIndex;
+        SyncCurrentMatchFromSelection(SearchTargetType.Value, assemblyIndex, enumIndex, valueIndex);
+    }
+
+    private Task GoToPreviousMatchAsync()
+    {
+        if (!HasSearchMatches)
+        {
+            return Task.CompletedTask;
+        }
+
+        _currentMatchIndex = (_currentMatchIndex - 1 + _searchMatches.Count) % _searchMatches.Count;
+        ActivateCurrentMatch(requestScroll: true);
+        return Task.CompletedTask;
+    }
+
+    private Task GoToNextMatchAsync()
+    {
+        if (!HasSearchMatches)
+        {
+            return Task.CompletedTask;
+        }
+
+        _currentMatchIndex = (_currentMatchIndex + 1) % _searchMatches.Count;
+        ActivateCurrentMatch(requestScroll: true);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleItemKeyDown(KeyboardEventArgs args, Action action)
+    {
+        if (args.Key is "Enter" or " " or "Space" or "Spacebar")
+        {
+            action();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void RebuildSearchMatches(bool selectFirstMatch)
+    {
+        _matchedAssemblyIndices.Clear();
+        _matchedEnumIndices.Clear();
+        _matchedValueIndices.Clear();
+        _searchMatches.Clear();
+        _pendingScrollRequests.Clear();
+
+        _searchTerms = ParseSearchTerms(_searchText);
+
+        if (!HasSearchQuery)
+        {
+            _currentMatchIndex = -1;
+            return;
+        }
+
+        for (var assemblyIndex = 0; assemblyIndex < _enumGroups.Count; assemblyIndex++)
+        {
+            var group = _enumGroups[assemblyIndex];
+            if (MatchesAssembly(group))
+            {
+                _matchedAssemblyIndices.Add(assemblyIndex);
+                _searchMatches.Add(new SearchMatch(SearchTargetType.Assembly, assemblyIndex, null, null));
+            }
+
+            for (var enumIndex = 0; enumIndex < group.Enums.Count; enumIndex++)
+            {
+                var enumInfo = group.Enums[enumIndex];
+                if (MatchesEnum(enumInfo))
+                {
+                    _matchedEnumIndices.Add((assemblyIndex, enumIndex));
+                    _searchMatches.Add(new SearchMatch(SearchTargetType.Enum, assemblyIndex, enumIndex, null));
+                }
+
+                for (var valueIndex = 0; valueIndex < enumInfo.Values.Count; valueIndex++)
+                {
+                    var value = enumInfo.Values[valueIndex];
+                    if (!MatchesValue(value))
+                    {
+                        continue;
+                    }
+
+                    _matchedValueIndices.Add((assemblyIndex, enumIndex, valueIndex));
+                    _searchMatches.Add(new SearchMatch(SearchTargetType.Value, assemblyIndex, enumIndex, valueIndex));
+                }
+            }
+        }
+
+        if (!HasSearchMatches)
+        {
+            _currentMatchIndex = -1;
+            return;
+        }
+
+        _currentMatchIndex = selectFirstMatch ? 0 : Math.Clamp(_currentMatchIndex, 0, _searchMatches.Count - 1);
+        ActivateCurrentMatch(requestScroll: true);
+    }
+
+    private void ActivateCurrentMatch(bool requestScroll)
+    {
+        var match = CurrentMatch;
+        if (match is null)
+        {
+            return;
+        }
+
+        _selectedAssemblyIndex = match.AssemblyIndex;
+        _selectedEnumIndex = match.EnumIndex;
+
+        if (!requestScroll)
+        {
+            return;
+        }
+
+        _pendingScrollRequests.Clear();
+        _pendingScrollRequests.Add(new SearchScrollRequest(SearchSection.Assembly, GetAssemblySearchKey(match.AssemblyIndex)));
+
+        if (match.EnumIndex is int enumIndex)
+        {
+            _pendingScrollRequests.Add(new SearchScrollRequest(SearchSection.Enum, GetEnumSearchKey(match.AssemblyIndex, enumIndex)));
+        }
+
+        if (match is { EnumIndex: int ownerEnumIndex, ValueIndex: int valueIndex })
+        {
+            _pendingScrollRequests.Add(new SearchScrollRequest(
+                SearchSection.Value,
+                GetValueSearchKey(match.AssemblyIndex, ownerEnumIndex, valueIndex)));
+        }
+    }
+
+    private void SyncCurrentMatchFromSelection(
+        SearchTargetType targetType,
+        int assemblyIndex,
+        int? enumIndex,
+        int? valueIndex)
+    {
+        if (!HasSearchMatches)
+        {
+            return;
+        }
+
+        var matchedIndex = _searchMatches.FindIndex(match =>
+            match.TargetType == targetType
+            && match.AssemblyIndex == assemblyIndex
+            && match.EnumIndex == enumIndex
+            && match.ValueIndex == valueIndex);
+
+        if (matchedIndex >= 0)
+        {
+            _currentMatchIndex = matchedIndex;
+        }
+    }
+
+    private void RestoreSelection(string? selectedAssemblyFrom, string? selectedEnumName)
+    {
+        _selectedAssemblyIndex = null;
+        _selectedEnumIndex = null;
+
+        if (string.IsNullOrWhiteSpace(selectedAssemblyFrom))
+        {
+            return;
+        }
+
+        var assemblyIndex = _enumGroups.FindIndex(group =>
+            string.Equals(group.From, selectedAssemblyFrom, StringComparison.Ordinal));
+
+        if (assemblyIndex < 0)
+        {
+            return;
+        }
+
+        _selectedAssemblyIndex = assemblyIndex;
+
+        if (string.IsNullOrWhiteSpace(selectedEnumName))
+        {
+            return;
+        }
+
+        var enumIndex = _enumGroups[assemblyIndex].Enums.FindIndex(enumInfo =>
+            string.Equals(enumInfo.Name, selectedEnumName, StringComparison.Ordinal));
+
+        if (enumIndex >= 0)
+        {
+            _selectedEnumIndex = enumIndex;
+        }
+    }
+
+    private bool MatchesAssembly(DtoAssemblyEnumInfo group)
+    {
+        return MatchesText(GetShortAssemblyName(group.From), group.From);
+    }
+
+    private bool MatchesEnum(DtoEnumInfo enumInfo)
+    {
+        return MatchesText(enumInfo.Name);
+    }
+
+    private bool MatchesValue(DtoEnumValue value)
+    {
+        return MatchesText(
+            value.Index.ToString(CultureInfo.InvariantCulture),
+            value.Name,
+            value.Description);
+    }
+
+    private bool MatchesText(params string?[] values)
+    {
+        if (!HasSearchQuery)
+        {
+            return false;
+        }
+
+        var searchableText = string.Join(' ',
+            values.Where(static value => !string.IsNullOrWhiteSpace(value)));
+
+        if (string.IsNullOrWhiteSpace(searchableText))
+        {
+            return false;
+        }
+
+        return _searchTerms.All(term =>
+            searchableText.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static List<string> ParseSearchTerms(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return value
+            .Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private SearchMatch? CurrentMatch =>
+        _currentMatchIndex >= 0 && _currentMatchIndex < _searchMatches.Count
+            ? _searchMatches[_currentMatchIndex]
+            : null;
+
+    private string GetAssemblyPanelSummary()
+    {
+        if (!_enumGroups.Any())
+        {
+            return "未加载数据";
+        }
+
+        return $"共 {_enumGroups.Count} 个程序集";
+    }
+
+    private string GetEnumPanelSummary()
+    {
+        if (SelectedAssembly is null)
+        {
+            return "选择程序集后显示";
+        }
+
+        return $"共 {SelectedAssembly.Enums.Count} 个枚举";
+    }
+
+    private string GetValuePanelSummary()
+    {
+        if (SelectedEnum is null)
+        {
+            return "选择枚举后显示";
+        }
+
+        return $"共 {SelectedEnum.Values.Count} 个枚举值";
+    }
+
+    private string GetSearchSummary()
+    {
+        if (!HasSearchQuery)
+        {
+            return "输入关键词开始搜索";
+        }
+
+        if (!HasSearchMatches)
+        {
+            return "0 个匹配";
+        }
+
+        return $"{_currentMatchIndex + 1} / {_searchMatches.Count} 个匹配";
+    }
+
+    private Color GetSearchSummaryColor()
+    {
+        if (!HasSearchQuery)
+        {
+            return Color.Default;
+        }
+
+        return HasSearchMatches ? Color.Success : Color.Warning;
+    }
+
+    private string GetAssemblyItemClass(int assemblyIndex)
+    {
+        return BuildItemClass(
+            isSelected: _selectedAssemblyIndex == assemblyIndex,
+            isMatched: _matchedAssemblyIndices.Contains(assemblyIndex),
+            isCurrent: CurrentMatch is
+            {
+                TargetType: SearchTargetType.Assembly,
+                AssemblyIndex: var currentAssemblyIndex
+            } && currentAssemblyIndex == assemblyIndex);
+    }
+
+    private string GetEnumItemClass(int assemblyIndex, int enumIndex)
+    {
+        return BuildItemClass(
+            isSelected: _selectedAssemblyIndex == assemblyIndex && _selectedEnumIndex == enumIndex,
+            isMatched: _matchedEnumIndices.Contains((assemblyIndex, enumIndex)),
+            isCurrent: CurrentMatch is
+            {
+                TargetType: SearchTargetType.Enum,
+                AssemblyIndex: var currentAssemblyIndex,
+                EnumIndex: var currentEnumIndex
+            } && currentAssemblyIndex == assemblyIndex && currentEnumIndex == enumIndex);
+    }
+
+    private string GetValueItemClass(int assemblyIndex, int enumIndex, int valueIndex)
+    {
+        return BuildItemClass(
+            isSelected: false,
+            isMatched: _matchedValueIndices.Contains((assemblyIndex, enumIndex, valueIndex)),
+            isCurrent: CurrentMatch is
+            {
+                TargetType: SearchTargetType.Value,
+                AssemblyIndex: var currentAssemblyIndex,
+                EnumIndex: var currentEnumIndex,
+                ValueIndex: var currentValueIndex
+            }
+            && currentAssemblyIndex == assemblyIndex
+            && currentEnumIndex == enumIndex
+            && currentValueIndex == valueIndex);
+    }
+
+    private static string BuildItemClass(bool isSelected, bool isMatched, bool isCurrent)
+    {
+        var classes = new List<string> { "enum-info-viewer__item" };
+
+        if (isSelected)
+        {
+            classes.Add("enum-info-viewer__item--selected");
+        }
+
+        if (isMatched)
+        {
+            classes.Add("enum-info-viewer__item--match");
+        }
+
+        if (isCurrent)
+        {
+            classes.Add("enum-info-viewer__item--current");
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private static string GetAssemblySearchKey(int assemblyIndex) => $"assembly-{assemblyIndex}";
+
+    private static string GetEnumSearchKey(int assemblyIndex, int enumIndex) => $"enum-{assemblyIndex}-{enumIndex}";
+
+    private static string GetValueSearchKey(int assemblyIndex, int enumIndex, int valueIndex) =>
+        $"value-{assemblyIndex}-{enumIndex}-{valueIndex}";
 
     private string GetShortAssemblyName(string? fullName)
     {
-        if (string.IsNullOrEmpty(fullName))
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
             return "Unknown";
-            
+        }
+
         var parts = fullName.Split(',');
         return parts.Length > 0 ? parts[0] : fullName;
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+    }
+
+    private sealed class SearchMatch(
+        SearchTargetType targetType,
+        int assemblyIndex,
+        int? enumIndex,
+        int? valueIndex)
+    {
+        public SearchTargetType TargetType { get; } = targetType;
+
+        public int AssemblyIndex { get; } = assemblyIndex;
+
+        public int? EnumIndex { get; } = enumIndex;
+
+        public int? ValueIndex { get; } = valueIndex;
+    }
+
+    private sealed class SearchScrollRequest(SearchSection section, string searchKey)
+    {
+        public SearchSection Section { get; } = section;
+
+        public string SearchKey { get; } = searchKey;
+    }
+
+    private enum SearchTargetType
+    {
+        Assembly,
+        Enum,
+        Value
+    }
+
+    private enum SearchSection
+    {
+        Assembly,
+        Enum,
+        Value
+    }
 }

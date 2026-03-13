@@ -1,0 +1,179 @@
+.enum-info-viewer__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.enum-info-viewer__search-input {
+    flex: 1 1 24rem;
+    min-width: 18rem;
+}
+
+.enum-info-viewer__toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.enum-info-viewer__grid {
+    align-items: stretch;
+}
+
+.enum-info-viewer ::deep .enum-info-viewer__panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 32rem;
+}
+
+.enum-info-viewer__panel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 16px 0;
+}
+
+.enum-info-viewer__panel-title {
+    color: var(--mud-palette-text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.enum-info-viewer__panel-subtitle {
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.7);
+    font-size: 0.8125rem;
+}
+
+.enum-info-viewer__panel-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+    padding: 16px;
+}
+
+.enum-info-viewer__selected-enum,
+.enum-info-viewer__item {
+    background: var(--mud-palette-surface);
+    border: 1px solid transparent;
+    border-radius: 14px;
+}
+
+.enum-info-viewer__selected-enum {
+    background: var(--mud-palette-background-gray);
+    padding: 14px 16px;
+}
+
+.enum-info-viewer__selected-enum-title {
+    color: var(--mud-palette-text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.enum-info-viewer__selected-enum-meta {
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.7);
+    font-size: 0.8125rem;
+    margin-top: 4px;
+}
+
+.enum-info-viewer__item {
+    cursor: pointer;
+    outline: none;
+    padding: 14px 16px;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease,
+        transform 0.15s ease;
+}
+
+.enum-info-viewer__item:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.enum-info-viewer__item:focus-visible {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 0 0 2px rgba(var(--mud-palette-primary-rgb), 0.16);
+}
+
+.enum-info-viewer__item--selected {
+    background: rgba(var(--mud-palette-primary-rgb), 0.1);
+}
+
+.enum-info-viewer__item--match {
+    border-color: rgba(var(--mud-palette-primary-rgb), 0.22);
+}
+
+.enum-info-viewer__item--current {
+    background: rgba(var(--mud-palette-primary-rgb), 0.16);
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 10px 24px rgba(var(--mud-palette-primary-rgb), 0.16);
+}
+
+.enum-info-viewer__item-top {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.enum-info-viewer__item-title {
+    color: var(--mud-palette-text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.enum-info-viewer__item-badge,
+.enum-info-viewer__value-index {
+    align-items: center;
+    background: rgba(var(--mud-palette-primary-rgb), 0.1);
+    border-radius: 999px;
+    color: var(--mud-palette-primary);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    justify-content: center;
+    min-width: 4.5rem;
+    padding: 4px 10px;
+    text-align: center;
+}
+
+.enum-info-viewer__assembly-full-name,
+.enum-info-viewer__item-description {
+    color: rgba(var(--mud-palette-text-primary-rgb), 0.74);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin-top: 6px;
+    word-break: break-word;
+}
+
+.enum-info-viewer__empty {
+    margin: 0;
+}
+
+.enum-info-viewer ::deep mark.enum-info-viewer__highlight {
+    background: rgba(var(--mud-palette-primary-rgb), 0.26);
+    border-radius: 4px;
+    color: inherit;
+    padding: 0 2px;
+}
+
+@media (max-width: 959.98px) {
+    .enum-info-viewer__search-input {
+        min-width: 100%;
+    }
+
+    .enum-info-viewer__toolbar-actions {
+        width: 100%;
+    }
+
+    .enum-info-viewer ::deep .enum-info-viewer__panel {
+        min-height: 22rem;
+    }
+}
