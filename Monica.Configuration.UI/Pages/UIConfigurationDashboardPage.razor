@@ -5,75 +5,85 @@
 @using Monica.Configuration.UI.Model
 @using Microsoft.Extensions.Options
 @using Monica.Tool.MoResponse
-@using Microsoft.Extensions.DependencyInjection
 @using Monica.Modules
-@inject IServiceProvider ServiceProvider
+@inject ConfigurationUIService ConfigurationUIService
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleRegisterCentreOption> Options
 
-<PageTitle>配置面板</PageTitle>
+<PageTitle>@DashboardTitle</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    @if (!Options.Value.IsCentreServer)
-    {
-        <MudText Typo="Typo.h4" Class="mb-4">配置客户端面板</MudText>
-    }
-    else
-    {
-        <MudText Typo="Typo.h4" Class="mb-4">配置中心面板</MudText>
-    }
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
+    <MudPaper Class="pa-6 mb-6" Elevation="2">
+        <MudText Typo="Typo.h3" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-3" />
+            @DashboardTitle
+        </MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            @DashboardDescription
+        </MudText>
+    </MudPaper>
 
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex" @bind-ActivePanelIndex:after="OnTabChangedAsync">
-        <MudTabPanel Text="配置状态">
-            <div class="pa-4">
-                <MudGrid>
-                    <MudItem xs="12">
-                        <MudCard>
-                            <MudCardHeader>
-                                <CardHeaderContent>
-                                    <MudText Typo="Typo.h6">配置状态</MudText>
-                                </CardHeaderContent>
-                                <CardHeaderActions>
-                                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadConfigStatusAsync">刷新</MudButton>
-                                </CardHeaderActions>
-                            </MudCardHeader>
-                            <MudCardContent>
-                                @if (configStatus != null)
-                                {
-                                    <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate"/>
-                                }
-                                else if (isLoading)
-                                {
-                                    <MudProgressCircular Color="Color.Primary" Indeterminate="true"/>
-                                }
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                </MudGrid>
+    <MudTabs Elevation="4"
+             Rounded="true"
+             ApplyEffectsToContainer="true"
+             Class="mb-6"
+             @bind-ActivePanelIndex="activeTabIndex"
+             @bind-ActivePanelIndex:after="OnTabChangedAsync">
+        <MudTabPanel Text="配置状态" Icon="@Icons.Material.Filled.Tune">
+            <div class="tab-content-panel">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Row="true"
+                              Justify="Justify.SpaceBetween"
+                              AlignItems="AlignItems.Center"
+                              Class="mb-4">
+                        <MudText Typo="Typo.h6">配置状态</MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="LoadConfigStatusAsync"
+                                   Disabled="@isLoading">
+                            刷新
+                        </MudButton>
+                    </MudStack>
+
+                    @if (configStatus != null)
+                    {
+                        <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                    }
+                    else if (isLoading)
+                    {
+                        <MudStack AlignItems="AlignItems.Center"
+                                  Justify="Justify.Center"
+                                  Spacing="2"
+                                  Class="loading-state">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载配置状态...</MudText>
+                        </MudStack>
+                    }
+                </MudPaper>
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="配置历史">
-            <div class="pa-4">
-                <ConfigurationHistory/>
+        <MudTabPanel Text="配置历史" Icon="@Icons.Material.Filled.History">
+            <div class="tab-content-panel">
+                <ConfigurationHistory />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="配置概览">
-            <div class="pa-4">
-                <ConfigurationOverview/>
+        <MudTabPanel Text="配置概览" Icon="@Icons.Material.Filled.Assessment">
+            <div class="tab-content-panel">
+                <ConfigurationOverview />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="调试视图">
-            <div class="pa-4">
-                <ConfigurationDebugView @ref="debugViewComponent"/>
+        <MudTabPanel Text="调试视图" Icon="@Icons.Material.Filled.BugReport">
+            <div class="tab-content-panel">
+                <ConfigurationDebugView @ref="debugViewComponent" />
             </div>
         </MudTabPanel>
 
-        <MudTabPanel Text="配置提供者">
-            <div class="pa-4">
-                <ConfigurationProviderView @ref="providerViewComponent"/>
+        <MudTabPanel Text="配置提供者" Icon="@Icons.Material.Filled.Extension">
+            <div class="tab-content-panel">
+                <ConfigurationProviderView @ref="providerViewComponent" />
             </div>
         </MudTabPanel>
     </MudTabs>
@@ -83,34 +93,31 @@
     public const string PAGE_URL = "/configuration-dashboard";
 
     private List<DtoDomainGroup>? configStatus;
-    private bool isLoading = false;
-    private ConfigurationUIService? configurationUIService;
+    private bool isLoading;
     private int activeTabIndex = 0;
-
-    // Component references
     private ConfigurationDebugView? debugViewComponent;
     private ConfigurationProviderView? providerViewComponent;
+    private string DashboardTitle => Options.Value.IsCentreServer ? "配置中心面板" : "配置客户端面板";
+    private string DashboardDescription => Options.Value.IsCentreServer
+        ? "集中查看配置状态、变更历史、配置概览、调试视图和提供者信息。"
+        : "查看客户端配置状态、变更历史、配置概览、调试视图和提供者信息。";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            configurationUIService = ServiceProvider.GetRequiredService<ConfigurationUIService>();
-            if (configurationUIService != null)
-            {
-                await LoadConfigStatusAsync();
-            }
+            await LoadConfigStatusAsync();
         }
     }
 
     private async Task LoadConfigStatusAsync()
     {
-        if (configurationUIService == null) return;
-
         isLoading = true;
         StateHasChanged();
 
-        if ((await configurationUIService.GetConfigsAsync()).IsFailed(out var error, out var data))
+        await Task.Yield();
+
+        if ((await ConfigurationUIService.GetConfigsAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
         }
@@ -125,9 +132,7 @@
 
     private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
     {
-        if (configurationUIService == null) return;
-
-        if ((await configurationUIService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        if ((await ConfigurationUIService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
         {
             Snackbar.Add($"配置更新失败: {error}", Severity.Error);
         }
@@ -140,21 +145,15 @@
     
     private async Task OnTabChangedAsync()
     {
-        // Lazy load when switching to new tabs
-        switch (activeTabIndex)
+        if (activeTabIndex == 3 && debugViewComponent is not null)
         {
-            case 3: // 调试视图
-                if (debugViewComponent != null)
-                {
-                    await debugViewComponent.LoadDebugViewAsync();
-                }
-                break;
-            case 4: // 配置提供者
-                if (providerViewComponent != null)
-                {
-                    await providerViewComponent.LoadProvidersAsync();
-                }
-                break;
+            await debugViewComponent.LoadDebugViewAsync();
+            return;
+        }
+
+        if (activeTabIndex == 4 && providerViewComponent is not null)
+        {
+            await providerViewComponent.LoadProvidersAsync();
         }
     }
 }

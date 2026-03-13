@@ -1,0 +1,23 @@
+.framework-monitor-page {
+    width: 100%;
+}
+
+.framework-monitor-page ::deep .framework-monitor-panel-card,
+.framework-monitor-page ::deep .framework-monitor-panel-card:hover,
+.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within {
+    transform: none !important;
+    box-shadow: var(--mud-elevation-2) !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+.framework-monitor-page ::deep .framework-monitor-panel-card::before,
+.framework-monitor-page ::deep .framework-monitor-panel-card::after,
+.framework-monitor-page ::deep .framework-monitor-panel-card:hover::before,
+.framework-monitor-page ::deep .framework-monitor-panel-card:hover::after,
+.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within::before,
+.framework-monitor-page ::deep .framework-monitor-panel-card:focus-within::after {
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+}

@@ -12,14 +12,17 @@
 
 <PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudText Typo="Typo.h4" Class="mb-4">@L["Dashboard:Title"]</MudText>
+<MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
+    <MudPaper Class="pa-6 mb-6" Elevation="2">
+        <MudText Typo="Typo.h3">@L["Dashboard:Title"]</MudText>
+    </MudPaper>
 
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary"
-             @bind-ActivePanelIndex="activeTabIndex"
-             @bind-ActivePanelIndex:after="OnTabChangedAsync">
+    <MudTabs Elevation="4"
+             Rounded="true"
+             ApplyEffectsToContainer="true"
+             Class="mb-6">
         <MudTabPanel Text="@L["Dashboard:Tabs:ProviderOverview"]" Icon="@Icons.Material.Filled.Hub">
-            <div class="pa-4">
+            <div class="tab-content-panel">
                 <StateStoreProviderList Providers="providers"
                                         OnRefresh="LoadProvidersAsync"
                                         IsLoading="isLoading" />
@@ -27,7 +30,7 @@
         </MudTabPanel>
 
         <MudTabPanel Text="@L["Dashboard:Tabs:KeyBrowser"]" Icon="@Icons.Material.Filled.Key">
-            <div class="pa-4">
+            <div class="tab-content-panel">
                 @if (providers.Any())
                 {
                     <StateStoreKeyExplorer Providers="providers"
@@ -49,7 +52,6 @@
 
     private List<StateStoreProviderInfo> providers = [];
     private bool isLoading = false;
-    private int activeTabIndex = 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -64,7 +66,7 @@
         isLoading = true;
         StateHasChanged();
 
-        await Task.Yield(); // 确保 UI 更新
+        await Task.Yield();
 
         if (StateStoreService.GetRegisteredProviders().IsFailed(out var error, out var data))
         {
@@ -77,10 +79,5 @@
 
         isLoading = false;
         StateHasChanged();
-    }
-
-    private Task OnTabChangedAsync()
-    {
-        return Task.CompletedTask;
     }
 }

@@ -1,0 +1,27 @@
+.tab-content-panel {
+    padding: 24px;
+    min-height: 500px;
+}
+
+.loading-state {
+    min-height: 320px;
+}
+
+::deep .mud-tabs .mud-tab-panel {
+    padding: 0;
+}
+
+@media (max-width: 960px) {
+    .ma-4 {
+        margin: 8px !important;
+    }
+
+    .pa-6 {
+        padding: 16px !important;
+    }
+
+    .tab-content-panel {
+        min-height: auto;
+        padding: 16px;
+    }
+}
