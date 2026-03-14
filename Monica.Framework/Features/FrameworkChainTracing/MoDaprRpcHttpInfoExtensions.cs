@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
@@ -46,37 +45,36 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
 
         if (context.Request.Body.CanRead)
         {
-            //// Leave stream open so next middleware can read it
-            using var reader = new StreamReader(
-                context.Request.Body,
-                Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: false,
-                bufferSize: 512, leaveOpen: true);
-            var requestBody = await reader.ReadToEndAsync();
-            //// Reset stream position, so next middleware can read it
-
-            context.Request.Body.Position = 0;
             try
             {
-                if (JsonSerializer.Deserialize<MoRpcRequest>(context.Request.Body, jsonOption.GlobalOptions) is {Headers.Count: > 0} request)
-                {
-                    foreach (var (key, value) in request.Headers.Where(p=>p.Key.StartsWith("X-")))
-                    {
+                // //// Leave stream open so next middleware can read it
+                // using var reader = new StreamReader(
+                //     context.Request.Body,
+                //     Encoding.UTF8,
+                //     detectEncodingFromByteOrderMarks: false,
+                //     bufferSize: 512, leaveOpen: true);
+                // var requestBody = await reader.ReadToEndAsync();
+                // //// Reset stream position, so next middleware can read it
+                context.Request.Body.Position = 0;
 
+                if (JsonSerializer.Deserialize<MoRpcRequest>(context.Request.Body, jsonOption.GlobalOptions) is { Headers.Count: > 0 } request)
+                {
+                    foreach (var (key, value) in request.Headers.Where(p => p.Key.StartsWith("X-")))
+                    {
                         if (!context.Request.Headers.ContainsKey(key))
                         {
-                            context.Request.Headers.Add(key, value);
+                            context.Request.Headers.Append(key, value);
                         }
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                
             }
-
-
-            context.Request.Body.Position = 0;
+            finally
+            {
+                context.Request.Body.Position = 0;
+            }
         }
 
 

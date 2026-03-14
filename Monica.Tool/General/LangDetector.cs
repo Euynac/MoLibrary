@@ -10,14 +10,14 @@ public class LangDetector
 {
     public class LangOption
     {
-        public string pattern { get; set; }
+        public string pattern { get; set; } = string.Empty;
         public int points { get; set; }
         public bool nearTop { get; set; }
     }
 
     public class Root
     {
-        public Dictionary<string, List<LangOption>> Languages;
+        public Dictionary<string, List<LangOption>> Languages { get; set; } = [];
     }
 
     public enum SupportedLanguages
@@ -83,7 +83,8 @@ public class LangDetector
     }
     public List<ScoresResult> GetLangScores(string snippet)
     {
-        var languages = JsonSerializer.Deserialize<Dictionary<string, List<LangOption>>>(JsonConfig);
+        var languages = JsonSerializer.Deserialize<Dictionary<string, List<LangOption>>>(JsonConfig)
+            ?? throw new InvalidOperationException("Failed to load language detector configuration.");
         var linesOfCode = snippet.RegexReplace("\r\n?", "\n").RegexReplace("\n{2,}", "\n").Split('\n');
 
         bool NearTop(int index)

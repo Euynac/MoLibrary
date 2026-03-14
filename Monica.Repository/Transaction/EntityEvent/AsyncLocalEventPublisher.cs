@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoMapper;
 using Monica.EventBus.Abstractions;
@@ -83,15 +82,11 @@ public interface IAsyncLocalEventStore
 /// <summary>
 /// Used to trigger entity change events.
 /// </summary>
-/// <summary>
-/// Used to trigger entity change events.
-/// </summary>
 public class AsyncLocalEventPublisher(
     IMoMapper entityToEtoMapper,
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
     IMoLocalEventBus localEventBus,
     IMoDistributedEventBus distributedEventBus,
-    ILogger<AsyncLocalEventPublisher> logger,
     IAsyncLocalEventStore bufferStore,
     IEnumerable<IEntityEventPublishSwitch>? publishSwitches) : IAsyncLocalEventPublisher
 {

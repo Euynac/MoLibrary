@@ -69,13 +69,13 @@
                                          Variant="Variant.Outlined"
                                          ReadOnly="true" />
                             
-                            <MudTextField @bind-Value="_eventContent" 
-                                         Label="事件内容 (JSON)" 
-                                         Variant="Variant.Outlined"
-                                         Lines="@GetJsonLines()"
-                                         AutoGrow="true"
-                                         MaxLines="30"
-                                         Placeholder="请输入事件的JSON数据..." />
+                             <MudTextField @bind-Value="_eventContent" 
+                                          Label="事件内容 (JSON)" 
+                                          Variant="Variant.Outlined"
+                                          Lines="@GetJsonLines()"
+                                          Sizing="InputSizing.Auto"
+                                          MaxLines="30"
+                                          Placeholder="请输入事件的JSON数据..." />
                             
                             <MudButton Variant="Variant.Filled" 
                                       Color="Color.Primary" 

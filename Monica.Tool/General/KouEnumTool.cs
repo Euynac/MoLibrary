@@ -97,13 +97,15 @@ public static class KouEnumTool
 
     private static Dictionary<string, Enum> GetDict(Type type)
     {
-        if (!_enumCache.TryGetValue(type, out Dictionary<string, Enum> enumDict))
+        if (_enumCache.TryGetValue(type, out var enumDict))
         {
-            CreateCache(type);//如果无缓存，自动创建该Enum缓存
-            _enumCache.TryGetValue(type, out enumDict);
+            return enumDict;
         }
 
-        return enumDict!;
+        CreateCache(type);//如果无缓存，自动创建该Enum缓存
+        return _enumCache.TryGetValue(type, out enumDict)
+            ? enumDict
+            : throw new InvalidOperationException($"Failed to create enum cache for type {type.FullName}.");
     }
 
     /// <summary>

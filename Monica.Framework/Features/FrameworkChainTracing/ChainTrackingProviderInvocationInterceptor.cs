@@ -39,14 +39,12 @@ public record InvocationInfo(MethodInfo MethodInfo)
 /// </summary>
 /// <param name="chainTracing">调用链追踪服务</param>
 /// <param name="timekeeperFactory">计时器工厂</param>
-/// <param name="exceptionHandler">异常处理器</param>
 /// https://kozmic.net/dynamic-proxy-tutorial/
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
 public class ChainTrackingProviderInvocationInterceptor(
     IMoChainTracing chainTracing,
-    IMoTimekeeperFactory timekeeperFactory,
-    IMoExceptionHandler exceptionHandler) : MoInterceptor
+    IMoTimekeeperFactory timekeeperFactory) : MoInterceptor
 {
     /// <summary>
     /// 判断是否应该记录调用链
@@ -151,37 +149,6 @@ public class ChainTrackingProviderInvocationInterceptor(
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 
             throw;
-            //if (CreateRes(invocation.Method.ReturnType) is IMoResponse exRes)
-            //{
-            //    var res = await exceptionHandler.TryHandleWithCurrentHttpContextAsync(ex, CancellationToken.None);
-            //    exRes.ExtraInfo = res.ExtraInfo;
-            //    exRes.Message = res.Message;
-            //    exRes.Code = res.Code;
-            //    invocation.ReturnValue = exRes;
-            //}
-            //else
-            //{
-            //    throw;
-            //}
-        }
-    }
-
-    private static object? CreateRes(Type type)
-    {
-        while (true)
-        {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
-            {
-                type = type.GetGenericArguments()[0];
-                continue;
-            }
-
-            if (type.IsImplementInterface(typeof(IMoResponse)) && type.CanCreateInstanceUsingParameterlessConstructor())
-            {
-                return Activator.CreateInstance(type);
-            }
-
-            return null;
         }
     }
 }

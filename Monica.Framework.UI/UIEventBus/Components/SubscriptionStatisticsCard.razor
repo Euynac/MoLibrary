@@ -91,7 +91,7 @@
                 <MudCardContent>
                     @if (Statistics.TopEventTypes.Any())
                     {
-                        <MudList T="string" Clickable="true" Dense="true">
+                        <MudList T="string" Dense="true">
                             @foreach (var eventType in Statistics.TopEventTypes)
                             {
                                 <MudListItem T="string" OnClick="() => OnEventTypeClick.InvokeAsync(eventType.EventType)" Style="cursor: pointer;">
@@ -126,7 +126,7 @@
                 <MudCardContent>
                     @if (Statistics.TopTopics.Any())
                     {
-                        <MudList T="string" Clickable="true" Dense="true">
+                        <MudList T="string" Dense="true">
                             @foreach (var topic in Statistics.TopTopics)
                             {
                                 <MudListItem T="string" OnClick="() => OnTopicClick.InvokeAsync(topic.TopicName)" Style="cursor: pointer;">

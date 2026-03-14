@@ -31,7 +31,7 @@ namespace Monica.Office.Excel.Attributes
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
-        public string FontName { get; set; }
+        public string? FontName { get; set; }
         /// <summary>
         /// 字体高
         /// <para>NPOI</para>

@@ -11,7 +11,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 工作表名称
         /// </summary>
-        public string SheetName { get; set; }
+        public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
         /// 工作表编号
@@ -22,12 +22,12 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 总数据条数
         /// </summary>
-        public int TotalCount => Rows?.Count ?? 0;
+        public int TotalCount => Rows.Count;
 
         /// <summary>
         /// 无效数据数
         /// </summary>
-        public int InvalidCount => Rows?.Where(a => !a.IsValid).Count() ?? 0;
+        public int InvalidCount => Rows.Count(a => !a.IsValid);
 
         /// <summary>
         /// 有效数据数
@@ -37,7 +37,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 数据集合
         /// </summary>
-        public List<ExcelImportRowInfo<T>> Rows { get; set; }
+        public List<ExcelImportRowInfo<T>> Rows { get; set; } = [];
     }
 
     /// <summary>
@@ -49,7 +49,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 工作表名称
         /// </summary>
-        public string SheetName { get; set; }
+        public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
         /// 工作表编号
@@ -60,7 +60,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 行数据
         /// </summary>
-        public T Row { get; set; }
+        public T Row { get; set; } = new();
 
         /// <summary>
         /// 行编号
@@ -76,6 +76,6 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 错误信息（当<see cref="IsValid"/>=false 时才有）
         /// </summary>
-        public List<ValidationResult> Errors { get; set; }
+        public List<ValidationResult> Errors { get; set; } = [];
     }
 }

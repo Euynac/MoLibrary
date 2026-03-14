@@ -9,9 +9,10 @@ using Monica.Tool.Extensions;
 namespace Monica.DomainDrivenDesign.AutoController.Features;
 
 /// <summary>
-/// 用于判断哪些需要自动注册为CRUD Controller
+/// Determines which application services should be exposed as generated CRUD controllers.
 /// </summary>
-/// <param name="logger"></param>
+/// <param name="logger">Logger used to report controller registration decisions.</param>
+/// <param name="options">CRUD controller options.</param>
 public class MoConventionalCrudControllerFeatureProvider(ILogger<MoConventionalCrudControllerFeatureProvider> logger, IOptions<MoCrudControllerOption> options) : ControllerFeatureProvider
 {
     //private static int SearchTimes = 0;

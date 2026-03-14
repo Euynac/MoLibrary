@@ -110,7 +110,7 @@
         <div class="edit-overlay">
             <MudTextField T="string" @bind-Value="_editContent"
                           Variant="Variant.Outlined"
-                          AutoGrow="true" Lines="3" MaxLines="10"
+                          Sizing="InputSizing.Auto" Lines="3" MaxLines="10"
                           Class="edit-input" />
             <div class="edit-buttons">
                 <MudButton Variant="Variant.Text" OnClick="@HandleCancelEdit">

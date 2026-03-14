@@ -54,7 +54,7 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor MissingHttpMethodAttribute = new DiagnosticDescriptor(
         id: "AC0006",
         title: "Missing HTTP method attribute",
-        messageFormat: "AutoController generator: Method '{0}' in class '{1}' requires an HTTP method attribute ([HttpGet], [HttpPost], etc.) or follow CQRS naming convention (Query*/Command* prefix).",
+        messageFormat: "AutoController generator: Method '{0}' in class '{1}' requires an HTTP method attribute ([HttpGet], [HttpPost], etc.) or follow CQRS naming convention (Query*/Command* prefix)",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,

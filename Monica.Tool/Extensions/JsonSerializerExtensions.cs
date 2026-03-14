@@ -70,21 +70,33 @@ public static class JsonSerializerExtensions
         }
 
         var propertyType = propertyInfo.PropertyType;
-        object parsedValue;
+        object? parsedValue;
 
-        if (propertyType.IsValueType || propertyType == typeof(string))
+        if (updatedProperty.Value.ValueKind == JsonValueKind.Null)
+        {
+            parsedValue = null;
+        }
+        else if (propertyType.IsValueType || propertyType == typeof(string))
         {
             parsedValue = JsonSerializer.Deserialize(
                 updatedProperty.Value.GetRawText(),
-                propertyType)!;
+                propertyType);
         }
         else
         {
-            parsedValue = propertyInfo.GetValue(target);
-            PopulateObject(
-                parsedValue,
-                updatedProperty.Value.GetRawText(),
-                propertyType);
+            var existingValue = propertyInfo.GetValue(target);
+            if (existingValue is null)
+            {
+                parsedValue = JsonSerializer.Deserialize(updatedProperty.Value.GetRawText(), propertyType);
+            }
+            else
+            {
+                PopulateObject(
+                    existingValue,
+                    updatedProperty.Value.GetRawText(),
+                    propertyType);
+                parsedValue = existingValue;
+            }
         }
 
         propertyInfo.SetValue(target, parsedValue);

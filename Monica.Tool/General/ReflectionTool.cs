@@ -66,9 +66,9 @@ public static class ReflectionTool
     /// <param name="instance">类的实例</param>
     /// <param name="toLowerCase">返回的属性名是否转小写</param>
     /// <returns></returns>
-    public static Dictionary<string, KeyValuePair<Type, object>> GetAllPropertyInfo<T>(T instance, bool toLowerCase = false) where T : class
+    public static Dictionary<string, KeyValuePair<Type, object?>> GetAllPropertyInfo<T>(T instance, bool toLowerCase = false) where T : class
     {
-        var propertyInfoDict = new Dictionary<string, KeyValuePair<Type, object>>();
+        var propertyInfoDict = new Dictionary<string, KeyValuePair<Type, object?>>();
         var type = typeof(T);
         foreach (var propertyInfo in type.GetProperties())
         {
@@ -78,7 +78,7 @@ public static class ReflectionTool
             var propertyName = toLowerCase ? propertyInfo.Name.ToLower() : propertyInfo.Name;
             //获取属性值：
             var propertyValue = propertyInfo.GetValue(instance);
-            var propertyPair = new KeyValuePair<Type, object>(propertyType, propertyValue);
+            var propertyPair = new KeyValuePair<Type, object?>(propertyType, propertyValue);
             propertyInfoDict.Add(propertyName, propertyPair);
         }
         return propertyInfoDict;

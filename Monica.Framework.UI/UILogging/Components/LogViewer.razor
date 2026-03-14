@@ -49,14 +49,16 @@
                                    Variant="Variant.Filled"
                                    OnClick="GoToPreviousMatch"
                                    Disabled="@(_totalMatches == 0)"
-                                   Title="上一个匹配项" />
+                                   title="上一个匹配项"
+                                   aria-label="上一个匹配项" />
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
                                    Size="Size.Small"
                                    Color="Color.Primary"
                                    Variant="Variant.Filled"
                                    OnClick="GoToNextMatch"
                                    Disabled="@(_totalMatches == 0)"
-                                   Title="下一个匹配项" />
+                                   title="下一个匹配项"
+                                   aria-label="下一个匹配项" />
                 </MudStack>
             </MudStack>
         </div>
@@ -303,13 +305,13 @@
             .AddItem("显示上下文", Icons.Material.Filled.Article, line => OnShowContextClickedAsync(line, _selectedLineIndex))
             .AddDivider()
             .AddSubMenu("复制", Icons.Material.Filled.ContentCopy, builder => builder
-                .AddItem("复制原始日志", Icons.Material.Filled.ContentCopy, async item => await CopyToClipboardAsync(item, LogCopyFormat.Raw))
-                .AddItem("仅复制消息", Icons.Material.Filled.Subject, async item => await CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
-                .AddItem("带时间戳复制", Icons.Material.Filled.AccessTime, async item => await CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
-                .AddItem("带行号复制", Icons.Material.Filled.Numbers, async item => await CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
+                .AddItem("复制原始日志", Icons.Material.Filled.ContentCopy, item => CopyToClipboardAsync(item, LogCopyFormat.Raw))
+                .AddItem("仅复制消息", Icons.Material.Filled.Subject, item => CopyToClipboardAsync(item, LogCopyFormat.MessageOnly))
+                .AddItem("带时间戳复制", Icons.Material.Filled.AccessTime, item => CopyToClipboardAsync(item, LogCopyFormat.WithTimestamp))
+                .AddItem("带行号复制", Icons.Material.Filled.Numbers, item => CopyToClipboardAsync(item, LogCopyFormat.WithLineNumber)))
             .AddSubMenu("导航", Icons.Material.Filled.Navigation, builder => builder
-                .AddItem("跳转到顶部", Icons.Material.Filled.ArrowUpward, async _ => await ScrollToTopAsync())
-                .AddItem("跳转到底部", Icons.Material.Filled.ArrowDownward, async _ => await ScrollToBottomAsync()))
+                .AddItem("跳转到顶部", Icons.Material.Filled.ArrowUpward, _ => ScrollToTopAsync())
+                .AddItem("跳转到底部", Icons.Material.Filled.ArrowDownward, _ => ScrollToBottomAsync()))
             .Build();
     }
 
@@ -342,8 +344,13 @@
         return Task.CompletedTask;
     }
 
-    private async Task OnShowLineInfoAsync(LogLineViewModel line)
+    private async Task OnShowLineInfoAsync(LogLineViewModel? line)
     {
+        if (line is null)
+        {
+            return;
+        }
+
         var parameters = new DialogParameters<LogLineInfoDialog>
         {
             { x => x.Line, line }
@@ -359,16 +366,21 @@
         await DialogService.ShowAsync<LogLineInfoDialog>("日志行信息", parameters, options);
     }
 
-    private async Task OnShowContextClickedAsync(LogLineViewModel line, int? lineIndex)
+    private async Task OnShowContextClickedAsync(LogLineViewModel? line, int? lineIndex)
     {
-        if (OnShowContext.HasDelegate && lineIndex.HasValue)
+        if (line is not null && OnShowContext.HasDelegate && lineIndex.HasValue)
         {
             await OnShowContext.InvokeAsync((line, lineIndex.Value));
         }
     }
 
-    private async Task CopyToClipboardAsync(LogLineViewModel line, LogCopyFormat format)
+    private async Task CopyToClipboardAsync(LogLineViewModel? line, LogCopyFormat format)
     {
+        if (line is null)
+        {
+            return;
+        }
+
         var text = line.GetCopyText(format);
         var success = await JsRuntime.InvokeAsync<bool>("MoLogging.copyToClipboard", text);
 
@@ -378,18 +390,18 @@
         }
     }
 
-    private async Task OnFilterBySeverityAsync(LogLineViewModel line)
+    private async Task OnFilterBySeverityAsync(LogLineViewModel? line)
     {
-        if (OnApplyFilter.HasDelegate)
+        if (line is not null && OnApplyFilter.HasDelegate)
         {
             var keyword = line.LevelText;
             await OnApplyFilter.InvokeAsync((line, keyword));
         }
     }
 
-    private async Task OnFindSelectedTextAsync(LogLineViewModel line)
+    private async Task OnFindSelectedTextAsync(LogLineViewModel? line)
     {
-        if (!OnApplyFilter.HasDelegate)
+        if (line is null || !OnApplyFilter.HasDelegate)
         {
             return;
         }

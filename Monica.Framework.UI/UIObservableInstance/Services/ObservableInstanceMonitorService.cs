@@ -193,8 +193,8 @@ public sealed class ObservableInstanceMonitorService(
             if (filter.ShowCriticalErrorOnly)
             {
                 viewModels = viewModels.Where(vm =>
-                    vm.CurrentLogLevel == Microsoft.Extensions.Logging.LogLevel.Critical ||
-                    vm.CurrentLogLevel == Microsoft.Extensions.Logging.LogLevel.Error);
+                    vm.CurrentLogLevel == LogLevel.Critical ||
+                    vm.CurrentLogLevel == LogLevel.Error);
             }
 
             // Apply quick filter: Unhealthy only

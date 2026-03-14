@@ -10,7 +10,7 @@ namespace Monica.Office.Excel.Models
         /// <returns></returns>
         public static string? GetErrorMessage<T>(this ExcelImportRowInfo<T>? output) where T : class, new()
         {
-            if (output?.Errors == null)
+            if (output == null || output.Errors.Count == 0)
             {
                 return null;
             }
@@ -240,7 +240,7 @@ namespace Monica.Office.Excel.Models
         /// <returns></returns>
         private static IEnumerable<T>? GetData<T>(this IEnumerable<ExcelImportRowInfo<T>> output, bool? isValid) where T : class, new()
         {
-            return output.Select(a => a?.GetData(isValid)).Where(a => a != null).Select(a => a);
+            return output.Select(a => a.GetData(isValid)).OfType<T>();
         }
         /// <summary>
         /// 获取无效数据

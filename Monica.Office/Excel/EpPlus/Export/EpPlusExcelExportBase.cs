@@ -57,13 +57,13 @@ namespace Monica.Office.Excel.EpPlus.Export
         protected override ExcelStyle CreateHeaderStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
             HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
         {
-            return null;
+            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetHeaderCellStyleAndFont(style, styleAttr, fontAttr));
         }
 
         protected override ExcelStyle CreateDataStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
             DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
         {
-            return null;
+            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetDataCellStyleAndFont(style, styleAttr, fontAttr));
         }
 
         protected override void SetHeaderCellStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell,
@@ -110,6 +110,13 @@ namespace Monica.Office.Excel.EpPlus.Export
         protected override byte[] GetAsByteArray(ExcelWorkbook workbook, ExcelWorksheet sheet)
         {
             return epPlusExcelHandle.GetAsByteArray(workbook, sheet);
+        }
+
+        private static ExcelStyle CreateStyle(ExcelWorkbook workbook, Action<ExcelStyle> configure)
+        {
+            var namedStyle = workbook.Styles.CreateNamedStyle(Guid.NewGuid().ToString("N"));
+            configure(namedStyle.Style);
+            return namedStyle.Style;
         }
     }
 }

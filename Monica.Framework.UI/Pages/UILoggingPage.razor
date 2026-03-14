@@ -31,7 +31,7 @@
     else
     {
         <div class="page-content">
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="tab-content">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="tab-content">
                 <MudTabPanel Text="实时日志" Icon="@Icons.Material.Filled.Timeline">
                     <div class="realtime-log-panel">
                         @if (!_logFileExists)
@@ -64,7 +64,8 @@
                                                    Size="Size.Small"
                                                    Color="Color.Primary"
                                                    OnClick="OpenFileSwitchDialog"
-                                                   Title="切换日志文件" />
+                                                   title="切换日志文件"
+                                                   aria-label="切换日志文件" />
                                 </MudStack>
                                 <MudDivider Vertical="true" FlexItem="true" />
                                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
@@ -176,7 +177,7 @@
         }
         else
         {
-            <MudList T="LogFileDescriptor" Clickable="true" @bind-SelectedValue="_selectedSwitchFile" Dense="true" Class="file-list">
+            <MudList T="LogFileDescriptor" @bind-SelectedValue="_selectedSwitchFile" Dense="true" Class="file-list">
                 @foreach (var file in _logFiles)
                 {
                     <MudListItem T="LogFileDescriptor" Value="file" Class="@(file == _selectedSwitchFile ? "selected-file" : "")">

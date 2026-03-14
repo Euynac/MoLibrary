@@ -10,7 +10,7 @@ namespace Monica.Office.Excel.Npoi.Import
     /// </remarks>
     public class NpoiExcelImportProvider(INpoiExcelHandle npoiExcelHandle) : ExcelImportManager
     {
-        protected override List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions> optionAction)
+        protected override List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions>? optionAction)
         {
             var import = new NpoiExcelImportBase(npoiExcelHandle);
 

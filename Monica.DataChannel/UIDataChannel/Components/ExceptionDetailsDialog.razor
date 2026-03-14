@@ -37,7 +37,7 @@
                 <!-- 异常列表 -->
                 @if (ExceptionInfo.Exceptions.Any())
                 {
-                    <MudDataGrid Items="ExceptionInfo.Exceptions" Filterable="true" Sortable="true" 
+                    <MudDataGrid Items="ExceptionInfo.Exceptions" Filterable="true" SortMode="SortMode.Multiple" 
                                Hover="true" Dense="true" Class="exception-table-container"
                                ReadOnly="true" EditMode="DataGridEditMode.Cell">
                         <Columns>

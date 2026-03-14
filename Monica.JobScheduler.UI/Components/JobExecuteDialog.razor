@@ -46,7 +46,7 @@
                                       Label="@L["Dialogs:JobExecute:JsonArgs"]"
                                       Variant="Variant.Outlined"
                                       Lines="12"
-                                      AutoGrow="true"
+                                      Sizing="InputSizing.Auto"
                                       Immediate="true"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="ValidateJson"
@@ -175,7 +175,7 @@
         if (result.IsFailed(out var error))
         {
             _hasValidationError = true;
-            _validationError = error.Message;
+            _validationError = error.Message ?? string.Empty;
             _deserializedArgs = null;
         }
         else

@@ -184,10 +184,11 @@ public static class IEnumerableExtensions
         List<Dictionary<string, string>> result = new();
         foreach (var item in list)
         {
+            ArgumentNullException.ThrowIfNull(item);
             Dictionary<string, string> pair = new();
             foreach (var propertyInfo in item.GetType().GetProperties())
             {
-                if (propertyInfo != null && propertyInfo.GetCustomAttribute(typeof(NoDisplayAttribute)) == null)
+                if (propertyInfo.GetCustomAttribute(typeof(NoDisplayAttribute)) == null)
                 {
                     var value = propertyInfo.GetValue(item);
                     if (value == null)
@@ -450,7 +451,7 @@ public static class IEnumerableExtensions
         if (dict.IsNullOrEmptySet()) return false;
         foreach (var keyValuePair in dict)
         {
-            if (keyValuePair.Value.Equals(value))
+            if (EqualityComparer<TValue>.Default.Equals(keyValuePair.Value, value))
             {
                 key.Add(keyValuePair.Key);
             }

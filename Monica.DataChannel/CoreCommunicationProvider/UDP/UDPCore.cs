@@ -28,7 +28,6 @@ public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : Communi
             _udpClient = new UdpClient(endPoint);
             await Task.Factory.StartNew(async ()=>
             {
-                IPEndPoint? remote = null;
                 while (true)
                 {
                     var bytes = await _udpClient.ReceiveAsync();

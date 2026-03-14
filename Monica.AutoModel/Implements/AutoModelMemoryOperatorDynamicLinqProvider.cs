@@ -13,10 +13,7 @@ namespace Monica.AutoModel.Implements;
 public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOperatorBase<TModel>, IAutoModelMemoryOperator<TModel>
     where TModel : class
 {
-    private readonly ParsingConfig _config = new()
-    {
-        CustomTypeProvider = new LinqToObjectCustomProvider()
-    };
+    private readonly ParsingConfig _config = CreateParsingConfig();
 
     private readonly IAutoModelExpressionNormalizer<TModel> _normalizer;
 
@@ -74,9 +71,16 @@ public class AutoModelMemoryOperatorDynamicLinqProvider<TModel> : AutoModelOpera
         dynamic func = DynamicExpressionParser.ParseLambda(_config, true, typeof(TModel), null, selector, null).Compile();
         return Enumerable.Select(queryable, func);
     }
+
+    private static ParsingConfig CreateParsingConfig()
+    {
+        var config = new ParsingConfig();
+        config.CustomTypeProvider = new LinqToObjectCustomProvider(config);
+        return config;
+    }
 }
 
-file class LinqToObjectCustomProvider : DefaultDynamicLinqCustomTypeProvider
+file class LinqToObjectCustomProvider(ParsingConfig config) : DefaultDynamicLinqCustomTypeProvider(config, [], true)
 {
     public override HashSet<Type> GetCustomTypes()
     {

@@ -28,7 +28,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="row">当前行编号（起始下标：1）</param>
         /// <param name="column">当前列编号（起始下标：1）</param>
         /// <returns></returns>
-        object GetMergedCellValue(ExcelWorksheet sheet, int row, int column);
+        object? GetMergedCellValue(ExcelWorksheet sheet, int row, int column);
 
         /// <summary>
         /// 获取合并单元格的值
@@ -36,7 +36,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="sheet">工作表</param>
         /// <param name="cell">单元格</param>
         /// <returns></returns>
-        object GetMergedCellValue(ExcelWorksheet sheet, ExcelRange cell);
+        object? GetMergedCellValue(ExcelWorksheet sheet, ExcelRange cell);
 
         /// <summary>
         /// 转换列值
@@ -46,7 +46,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="column">当前列（起始下标：1）</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        object ConverterCellValue(ExcelWorksheet sheet, int row, int column, Type valueType);
+        object? ConverterCellValue(ExcelWorksheet sheet, int row, int column, Type valueType);
 
         /// <summary>
         /// 转换列值
@@ -55,7 +55,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="cell">单元格</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        object ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType);
+        object? ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType);
 
         /// <summary>
         /// 单列设置列宽（该方法必须在创建列后才能设置，不能在创建列前设置；列宽自动调整，必须有列数据才能处理））

@@ -57,7 +57,7 @@
                 </MudAlert>
             }
 
-            <MudExpansionPanels @ref="expansionPanels" Class="mb-4" MultiExpansion="true">
+            <MudExpansionPanels Class="mb-4" MultiExpansion="true">
                 @for (int i = 0; i < FilteredProviderGroups.Count; i++)
                 {
                     var group = FilteredProviderGroups[i];
@@ -81,7 +81,7 @@
                                     <MudCardContent>
                                         @if (provider.ConfigurationData.Any())
                                         {
-                                            <MudTable T="KeyValuePair<string, string?>" Items="provider.ConfigurationData" Dense="true" Hover="true" RowsPerPage="20">
+                                            <MudTable T="ConfigurationEntry" Items="@GetConfigurationEntries(provider)" Dense="true" Hover="true" RowsPerPage="20">
                                                 <HeaderContent>
                                                     <MudTh>配置键</MudTh>
                                                     <MudTh>配置值</MudTh>
@@ -91,7 +91,7 @@
                                                         <MudText Typo="Typo.body2" Style="font-family: monospace;">@HighlightSearchText(context.Key)</MudText>
                                                     </MudTd>
                                                     <MudTd DataLabel="配置值">
-                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@HighlightSearchText(context.Value ?? "null")</MudText>
+                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@HighlightSearchText(context.Value)</MudText>
                                                     </MudTd>
                                                 </RowTemplate>
                                                 <PagerContent>
@@ -124,7 +124,7 @@
                 </MudText>
             </MudStack>
         }
-        else if (providerGroups != null && !providerGroups.Any())
+        else if (!providerGroups.Any())
         {
             <MudAlert Severity="Severity.Info">暂无配置提供者数据，请检查配置模块是否正确初始化</MudAlert>
         }
@@ -136,21 +136,21 @@
 </MudCard>
 
 @code {
-    private List<DtoConfigurationProviderGroup>? providerGroups;
+    private List<DtoConfigurationProviderGroup> providerGroups = [];
     private bool isLoading = false;
-    private MudExpansionPanels? expansionPanels;
     private Dictionary<int, bool> expandedStates = new();
     private string searchText = string.Empty;
 
     private List<DtoConfigurationProviderGroup> FilteredProviderGroups =>
         string.IsNullOrWhiteSpace(searchText)
-            ? (providerGroups ?? new List<DtoConfigurationProviderGroup>())
+            ? providerGroups
             : FilterProviderGroups();
+
+    private static IEnumerable<ConfigurationEntry> GetConfigurationEntries(DtoConfigurationProvider provider) =>
+        provider.ConfigurationData.Select(pair => new ConfigurationEntry(pair.Key, pair.Value ?? "null"));
 
     private List<DtoConfigurationProviderGroup> FilterProviderGroups()
     {
-        if (providerGroups == null) return new List<DtoConfigurationProviderGroup>();
-
         var keyword = searchText.Trim();
         var filteredGroups = new List<DtoConfigurationProviderGroup>();
 
@@ -198,6 +198,8 @@
 
         return filteredGroups;
     }
+
+    private sealed record ConfigurationEntry(string Key, string Value);
 
     private void OnSearchChanged()
     {

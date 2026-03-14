@@ -17,6 +17,6 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 列属性信息
         /// </summary>
-        public PropertyInfo PropertyInfo { get; set; }
+        public required PropertyInfo PropertyInfo { get; set; }
     }
 }

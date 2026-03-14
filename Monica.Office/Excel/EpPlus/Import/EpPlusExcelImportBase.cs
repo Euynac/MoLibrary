@@ -75,7 +75,7 @@ namespace Monica.Office.Excel.EpPlus.Import
         }
 
 
-        protected override object ConvertCellValue(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRow dataRow, int columnIndex, PropertyInfo property)
+        protected override object? ConvertCellValue(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRow dataRow, int columnIndex, PropertyInfo property)
         {
             return epPlusExcelHandle.ConverterCellValue(worksheet, dataRow.Row, columnIndex, property.PropertyType);
         }

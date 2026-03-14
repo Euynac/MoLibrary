@@ -37,10 +37,10 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     {
         if (memoryCache.TryGetValue(key, out var entry) && entry is IStateEntry {Value: T value})
         {
-            return Task.FromResult(value);
+            return Task.FromResult<T?>(value);
         }
 
-        return Task.FromResult(default(T));
+        return Task.FromResult<T?>(default);
     }
 
     public override Task SaveStateAsync<T>(string key, T value, CancellationToken cancellationToken = default, TimeSpan? ttl = null)

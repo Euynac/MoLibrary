@@ -12,7 +12,6 @@ namespace Monica.JobScheduler.UI.Services;
 /// </summary>
 public class JobAnalyticsService(
     IMoJobMetadataRepository metadataRepository,
-    IJobDefinitionCacheService cacheService,
     ILogger<JobAnalyticsService> logger)
 {
     private static DateTime GetTimeBucket(DateTime timestamp, TimeGranularity granularity)

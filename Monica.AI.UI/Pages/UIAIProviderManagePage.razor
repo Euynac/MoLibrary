@@ -253,7 +253,7 @@
             new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
 
         var result = await dialog.Result;
-        if (result.Canceled)
+        if (result is not { Canceled: false })
         {
             return;
         }

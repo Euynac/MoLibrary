@@ -8,7 +8,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 显示的表头名称
         /// </summary>
-        public string HeaderName { get; set; }
+        public string HeaderName { get; set; } = string.Empty;
 
         /// <summary>
         /// 构造

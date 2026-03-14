@@ -155,7 +155,7 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         {
             return await base.GetAsync(id);
         }
-        catch (EntityNotFoundException e)
+        catch (EntityNotFoundException)
         {
             return ResEntityNotFound(id!.ToString()!);
         }

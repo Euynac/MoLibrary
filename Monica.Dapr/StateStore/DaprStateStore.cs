@@ -32,7 +32,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         {
             var queryBuilder = new QueryBuilder<T>();
             var finished = query.Invoke(queryBuilder);
-            queryStr = finished.ToString();
+            queryStr = finished.ToString() ?? throw new InvalidOperationException("State query builder returned a null query string.");
             var response =
                 await dapr.QueryStateAsync<T>(StateStoreName, queryStr, cancellationToken: cancellationToken);
             return response.Results.ToDictionary(p => p.Key, item => item.Data);
@@ -146,7 +146,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         try
         {
             await dapr.DeleteBulkStateAsync(StateStoreName,
-                keys.Select(p => new BulkDeleteStateItem(p, null)).ToList(), cancellationToken);
+                keys.Select(p => new BulkDeleteStateItem(p, string.Empty)).ToList(), cancellationToken);
         }
         catch (Exception e)
         {
@@ -257,7 +257,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
                 item.Key,
                 item.Value,
                 string.Empty,
-                null,
+                new StateOptions(),
                 metadata)).ToList();
 
             await dapr.SaveBulkStateAsync(StateStoreName, saveItems, cancellationToken);

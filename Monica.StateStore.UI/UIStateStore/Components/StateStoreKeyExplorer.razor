@@ -409,7 +409,7 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message], Severity.Error);
+                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message ?? string.Empty], Severity.Error);
             }
             else
             {
@@ -439,7 +439,7 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add(L["KeyExplorer:Messages:BatchDeleteFailed", error.Message], Severity.Error);
+                Snackbar.Add(L["KeyExplorer:Messages:BatchDeleteFailed", error.Message ?? string.Empty], Severity.Error);
             }
             else
             {

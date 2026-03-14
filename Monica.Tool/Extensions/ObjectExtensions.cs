@@ -255,7 +255,7 @@ public static partial class ObjectExtensions
         return predicates.All(p => p.Invoke(obj));
     }
 
-    public static bool Each<T>(this T tuples, Func<dynamic, bool> predicate) where T : ITuple
+    public static bool Each<T>(this T tuples, Func<object?, bool> predicate) where T : ITuple
     {
         var result = true;
         for (var i = 0; i < tuples.Length; i++)

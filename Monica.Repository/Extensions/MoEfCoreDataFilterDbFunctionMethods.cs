@@ -32,7 +32,7 @@ public static class MoEfCoreDataFilterDbFunctionMethods
                 return new SqlBinaryExpression(
                     ExpressionType.Equal,
                     isDeleted,
-                    new SqlConstantExpression(Expression.Constant(false), boolParam.TypeMapping),
+                    new SqlConstantExpression(false, boolParam.Type, boolParam.TypeMapping),
                     boolParam.Type,
                     boolParam.TypeMapping);
             });

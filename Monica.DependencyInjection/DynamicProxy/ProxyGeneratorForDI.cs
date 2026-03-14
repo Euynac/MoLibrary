@@ -6,7 +6,6 @@ namespace Monica.DependencyInjection.DynamicProxy;
 /// <summary>
 /// A proxy generator that integrates with Dependency Injection (DI) to create class proxies.
 /// </summary>
-[CLSCompliant(true)]
 public class ProxyGeneratorWithDI : ProxyGenerator
 {
     /// <summary>

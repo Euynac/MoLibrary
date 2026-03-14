@@ -77,7 +77,7 @@ namespace Monica.Office.Excel.Npoi.Import
             return worksheet.GetRow(rowIndex);
         }
 
-        protected override object ConvertCellValue(IWorkbook workbook, ISheet worksheet, IRow dataRow, int columnIndex, PropertyInfo property)
+        protected override object? ConvertCellValue(IWorkbook workbook, ISheet worksheet, IRow dataRow, int columnIndex, PropertyInfo property)
         {
             return _npoiExcelHandle.ConverterCellValue(dataRow, columnIndex, property.PropertyType);
         }

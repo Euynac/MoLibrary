@@ -235,7 +235,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Maps log level to MudBlazor color
     /// </summary>
-    private static Color MapLogLevelToColor(Microsoft.Extensions.Logging.LogLevel? level) =>
+    private static Color MapLogLevelToColor(LogLevel? level) =>
         level switch
         {
             Microsoft.Extensions.Logging.LogLevel.Trace => Color.Default,
@@ -250,7 +250,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Maps log level to CSS variable color
     /// </summary>
-    private static string MapLogLevelToCssColor(Microsoft.Extensions.Logging.LogLevel? level) =>
+    private static string MapLogLevelToCssColor(LogLevel? level) =>
         level switch
         {
             Microsoft.Extensions.Logging.LogLevel.Trace => "var(--mud-palette-text-secondary)",
@@ -265,7 +265,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Maps log level to icon
     /// </summary>
-    private static string MapLogLevelToIcon(Microsoft.Extensions.Logging.LogLevel? level) =>
+    private static string MapLogLevelToIcon(LogLevel? level) =>
         level switch
         {
             Microsoft.Extensions.Logging.LogLevel.Trace => Icons.Material.Filled.Code,

@@ -5,39 +5,36 @@
             <MudText Typo="Typo.h6" Class="mb-3">趋势统计</MudText>
             @if (TrendData?.DataPoints.Count > 0)
             {
-            <MudGrid Spacing="2">
-                <MudItem xs="6" md="3">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h5" Color="Color.Primary">@TrendData.AverageHeapSizeMB.ToString("F1")MB
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">平均堆大小</MudText>
-                    </div>
-                </MudItem>
-                <MudItem xs="6" md="3">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h5" Color="Color.Warning">@TrendData.MaxHeapSizeMB.ToString("F1")MB
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">最大堆大小</MudText>
-                    </div>
-                </MudItem>
-                <MudItem xs="6" md="3">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h5"
-                                 Color="Color.Info">@FormatBytesPerSec(TrendData.AverageAllocationRate)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">平均分配速率</MudText>
-                    </div>
-                </MudItem>
-                <MudItem xs="6" md="3">
-                    <div class="text-center">
-                        <MudText Typo="Typo.h5" Color="Color.Success">@TrendData.DataPoints.Count</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">数据点</MudText>
-                    </div>
-                </MudItem>
-            </MudGrid>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6" md="3">
+                        <div class="text-center">
+                            <MudText Typo="Typo.h5" Color="Color.Primary">@TrendData.AverageHeapSizeMB.ToString("F1")MB</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">平均堆大小</MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <div class="text-center">
+                            <MudText Typo="Typo.h5" Color="Color.Warning">@TrendData.MaxHeapSizeMB.ToString("F1")MB</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">最大堆大小</MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <div class="text-center">
+                            <MudText Typo="Typo.h5" Color="Color.Info">@FormatBytesPerSec(TrendData.AverageAllocationRate)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">平均分配速率</MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <div class="text-center">
+                            <MudText Typo="Typo.h5" Color="Color.Success">@TrendData.DataPoints.Count</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">数据点</MudText>
+                        </div>
+                    </MudItem>
+                </MudGrid>
             }
             else if (!IsLoading)
             {
-            <MudAlert Severity="Severity.Info">暂无趋势数据，请等待数据采集...</MudAlert>
+                <MudAlert Severity="Severity.Info">暂无趋势数据，请等待数据采集...</MudAlert>
             }
         </MudPaper>
     </MudItem>
@@ -48,18 +45,18 @@
             <MudText Typo="Typo.h6" Class="mb-3">堆大小趋势 (MB)</MudText>
             @if (TrendData?.DataPoints.Count > 1)
             {
-            <div class="chart-container">
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@heapSizeSeries"
-                          XAxisLabels="@timeLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@heapChartOptions"/>
-            </div>
+                <div class="chart-container">
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@heapSizeSeries"
+                              ChartLabels="@timeLabels"
+                              Width="100%"
+                              Height="300px"
+                              ChartOptions="@heapChartOptions" />
+                </div>
             }
             else
             {
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px"/>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
             }
         </MudPaper>
     </MudItem>
@@ -70,18 +67,18 @@
             <MudText Typo="Typo.h6" Class="mb-3">分配速率趋势 (MB/s)</MudText>
             @if (TrendData?.DataPoints.Count > 1)
             {
-            <div class="chart-container">
-                <MudChart ChartType="ChartType.Line"
-                          ChartSeries="@allocationSeries"
-                          XAxisLabels="@timeLabels"
-                          Width="100%"
-                          Height="300px"
-                          ChartOptions="@allocChartOptions"/>
-            </div>
+                <div class="chart-container">
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@allocationSeries"
+                              ChartLabels="@timeLabels"
+                              Width="100%"
+                              Height="300px"
+                              ChartOptions="@allocChartOptions" />
+                </div>
             }
             else
             {
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px"/>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
             }
         </MudPaper>
     </MudItem>
@@ -92,26 +89,26 @@
             <MudText Typo="Typo.h6" Class="mb-3">各代堆大小分布 (最新)</MudText>
             @if (TrendData?.DataPoints.Count > 0)
             {
-            var latest = TrendData.DataPoints[^1];
-            var genData = new double[]
-            {
-            latest.Gen0SizeBytes / 1024 / 1024,
-            latest.Gen1SizeBytes / 1024 / 1024,
-            latest.Gen2SizeBytes / 1024 / 1024,
-            latest.LohSizeBytes / 1024 / 1024
-            };
-            var genLabels = new string[] { "Gen 0", "Gen 1", "Gen 2", "LOH" };
+                var latest = TrendData.DataPoints[^1];
+                var genData = new double[]
+                {
+                    latest.Gen0SizeBytes / 1024 / 1024,
+                    latest.Gen1SizeBytes / 1024 / 1024,
+                    latest.Gen2SizeBytes / 1024 / 1024,
+                    latest.LohSizeBytes / 1024 / 1024
+                };
+                var genLabels = new[] { "Gen 0", "Gen 1", "Gen 2", "LOH" };
 
-            <MudChart ChartType="ChartType.Bar"
-                      ChartSeries="@(new List<ChartSeries<double>> { new() { Name = "大小 (MB)", Data = genData } })"
-                      XAxisLabels="@genLabels"
-                      Width="100%"
-                      Height="250px"
-                      ChartOptions="@genChartOptions"/>
+                <MudChart ChartType="ChartType.Bar"
+                          ChartSeries="@(new List<ChartSeries<double>> { new() { Name = "大小 (MB)", Data = genData } })"
+                          ChartLabels="@genLabels"
+                          Width="100%"
+                          Height="250px"
+                          ChartOptions="@genChartOptions" />
             }
             else
             {
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="250px"/>
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="250px" />
             }
         </MudPaper>
     </MudItem>
@@ -122,108 +119,123 @@
             <MudText Typo="Typo.h6" Class="mb-3">最近数据点</MudText>
             @if (TrendData?.DataPoints.Count > 0)
             {
-            <MudSimpleTable Dense="true" Hover="true" FixedHeader="true" Style="max-height: 300px; overflow-y: auto;">
-                <thead>
-                <tr>
-                    <th>时间</th>
-                    <th>堆大小</th>
-                    <th>分配速率</th>
-                    <th>GC 时间%</th>
-                    <th>碎片化%</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var point in TrendData.DataPoints.TakeLast(20).Reverse())
-                {
-                <tr>
-                    <td>@point.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
-                    <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
-                    <td>@FormatBytesPerSec(point.AllocationRateBps)</td>
-                    <td>
+                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true" Style="max-height: 300px; overflow-y: auto;">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>堆大小</th>
+                            <th>分配速率</th>
+                            <th>GC 时间%</th>
+                            <th>碎片化%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var point in TrendData.DataPoints.TakeLast(20).Reverse())
+                        {
+                            <tr>
+                                <td>@point.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
+                                <td>@FormatBytesPerSec(point.AllocationRateBps)</td>
+                                <td>
                                     <span class="@GetTimeInGcClass(point.TimeInGcPercent)">
                                         @point.TimeInGcPercent.ToString("F1")%
                                     </span>
-                    </td>
-                    <td>@point.GcFragmentation.ToString("F1")%</td>
-                </tr>
-                }
-                </tbody>
-            </MudSimpleTable>
+                                </td>
+                                <td>@point.GcFragmentation.ToString("F1")%</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
             }
             else
             {
-            <MudAlert Severity="Severity.Info">暂无数据</MudAlert>
+                <MudAlert Severity="Severity.Info">暂无数据</MudAlert>
             }
         </MudPaper>
     </MudItem>
 </MudGrid>
 
 @code {
-[Parameter] public MemoryTrendData? TrendData { get; set; }
-[Parameter] public bool IsLoading { get; set; }
+    [Parameter] public MemoryTrendData? TrendData { get; set; }
 
-private List<ChartSeries<double>> heapSizeSeries = [];
-private List<ChartSeries<double>> allocationSeries = [];
-private string[] timeLabels = [];
+    [Parameter] public bool IsLoading { get; set; }
 
-private ChartOptions heapChartOptions = new();
+    private List<ChartSeries<double>> heapSizeSeries = [];
+    private List<ChartSeries<double>> allocationSeries = [];
+    private string[] timeLabels = [];
 
-private ChartOptions allocChartOptions = new();
+    private ChartOptions heapChartOptions = new();
+    private ChartOptions allocChartOptions = new();
+    private ChartOptions genChartOptions = new();
 
-private ChartOptions genChartOptions = new();
+    protected override void OnParametersSet()
+    {
+        UpdateChartData();
+    }
 
-protected override void OnParametersSet()
-{
-UpdateChartData();
-}
+    private void UpdateChartData()
+    {
+        if (TrendData?.DataPoints == null || TrendData.DataPoints.Count < 2)
+        {
+            return;
+        }
 
-private void UpdateChartData()
-{
-if (TrendData?.DataPoints == null || TrendData.DataPoints.Count < 2)
-return;
+        // 采样以减少图表数据点 (最多显示 50 个点)
+        var step = Math.Max(1, TrendData.DataPoints.Count / 50);
+        var sampledData = TrendData.DataPoints
+            .Where((_, i) => i % step == 0 || i == TrendData.DataPoints.Count - 1)
+            .ToList();
 
-// 采样以减少图表数据点 (最多显示 50 个点)
-var step = Math.Max(1, TrendData.DataPoints.Count / 50);
-var sampledData = TrendData.DataPoints
-.Where((_, i) => i % step == 0 || i == TrendData.DataPoints.Count - 1)
-.ToList();
+        timeLabels = sampledData
+            .Select(p => p.Timestamp.ToLocalTime().ToString("HH:mm"))
+            .ToArray();
 
-timeLabels = sampledData
-.Select(p => p.Timestamp.ToLocalTime().ToString("HH:mm"))
-.ToArray();
+        heapSizeSeries =
+        [
+            new ChartSeries<double>
+            {
+                Name = "堆大小",
+                Data = sampledData.Select(p => p.GcHeapSizeMB).ToArray()
+            }
+        ];
 
-heapSizeSeries =
-[
-new ChartSeries<double>
-{
-Name = "堆大小",
-Data = sampledData.Select(p => p.GcHeapSizeMB).ToArray()
-}
-];
+        allocationSeries =
+        [
+            new ChartSeries<double>
+            {
+                Name = "分配速率",
+                Data = sampledData.Select(p => p.AllocationRateBps / 1024 / 1024).ToArray()
+            }
+        ];
+    }
 
-allocationSeries =
-[
-new ChartSeries<double>
-{
-Name = "分配速率",
-Data = sampledData.Select(p => p.AllocationRateBps / 1024 / 1024).ToArray()
-}
-];
-}
+    private static string FormatBytesPerSec(double bytesPerSec)
+    {
+        if (bytesPerSec < 1024)
+        {
+            return $"{bytesPerSec:F0} B/s";
+        }
 
-private static string FormatBytesPerSec(double bytesPerSec)
-{
-if (bytesPerSec < 1024)
-return $"{bytesPerSec:F0} B/s";
-if (bytesPerSec < 1024 * 1024)
-return $"{bytesPerSec / 1024:F1} KB/s";
-return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
-}
+        if (bytesPerSec < 1024 * 1024)
+        {
+            return $"{bytesPerSec / 1024:F1} KB/s";
+        }
 
-private static string GetTimeInGcClass(double percent)
-{
-if (percent < 5) return "";
-if (percent < 15) return "mud-warning-text";
-return "mud-error-text";
-}
+        return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
+    }
+
+    private static string GetTimeInGcClass(double percent)
+    {
+        if (percent < 5)
+        {
+            return string.Empty;
+        }
+
+        if (percent < 15)
+        {
+            return "mud-warning-text";
+        }
+
+        return "mud-error-text";
+    }
 }

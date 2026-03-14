@@ -173,7 +173,7 @@ public class CronExpressionService(
             var validation = ValidateExpression(expression, format);
             if (validation.IsFailed(out var error))
             {
-                return Res.Fail(localizer["Services:Errors:GeneratedExpressionInvalid", error.Message]);
+                return Res.Fail(localizer["Services:Errors:GeneratedExpressionInvalid", error.Message ?? string.Empty]);
             }
 
             return Res.Ok<string>(expression);
@@ -197,7 +197,7 @@ public class CronExpressionService(
         var validation = ValidateExpression(expression, fromFormat);
         if (validation.IsFailed(out var error))
         {
-            return Res.Fail(localizer["Services:Errors:SourceExpressionInvalid", error.Message]);
+            return Res.Fail(localizer["Services:Errors:SourceExpressionInvalid", error.Message ?? string.Empty]);
         }
 
         try

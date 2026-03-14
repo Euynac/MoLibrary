@@ -16,11 +16,7 @@ namespace Monica.AutoModel.Implements;
 public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpressionNormalizer<TModel> normalizer, IOptions<AutoModelExpressionOptions> options) : AutoModelOperatorBase<TModel>(normalizer, options), IAutoModelDbOperator<TModel>
     where TModel : class
 {
-    private readonly ParsingConfig _config = new()
-    {
-        CustomTypeProvider = new LinqToSqlCustomProvider(),
-        AllowEqualsAndToStringMethodsOnObject = true //v1.6.0修复安全问题后需要设置该配置
-    };
+    private readonly ParsingConfig _config = CreateParsingConfig();
 
     private readonly IAutoModelExpressionNormalizer<TModel> _normalizer = normalizer;
 
@@ -69,10 +65,20 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
     {
         return queryable.Select(_normalizer.NormalizeSelectColumns(selectExceptColumns, true));
     }
+
+    private static ParsingConfig CreateParsingConfig()
+    {
+        var config = new ParsingConfig
+        {
+            AllowEqualsAndToStringMethodsOnObject = true //v1.6.0修复安全问题后需要设置该配置
+        };
+        config.CustomTypeProvider = new LinqToSqlCustomProvider(config);
+        return config;
+    }
 }
 
 
-file class LinqToSqlCustomProvider : DefaultDynamicLinqCustomTypeProvider
+file class LinqToSqlCustomProvider(ParsingConfig config) : DefaultDynamicLinqCustomTypeProvider(config, [], true)
 {
     public override HashSet<Type> GetCustomTypes()
     {

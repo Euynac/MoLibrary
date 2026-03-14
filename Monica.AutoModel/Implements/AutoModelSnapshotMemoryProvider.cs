@@ -161,7 +161,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                                 technicalDetail: $"类型: {table.FullTypeName}, 冲突字段: {field.ReflectionName}, 激活名: {name}, 已存在: {fieldDictionary[name].ReflectionName}");
                     }
                 }
-                catch (AutoModelSnapshotNotSupportTypeException ex)
+                catch (AutoModelSnapshotNotSupportTypeException)
                 {
                     var declaringTypeName = p.DeclaringType?.GetCleanFullName() ?? "Unknown";
                     var propertyTypeName = p.PropertyType.GetCleanFullName();

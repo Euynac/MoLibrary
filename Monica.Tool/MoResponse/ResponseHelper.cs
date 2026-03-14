@@ -236,7 +236,7 @@ public static class ResponseHelper
     /// <returns></returns>
     public static Res<List<T>> ToBulkRes<T>(this IEnumerable<Res<T>> responses)
     {
-        var list = new List<T>();
+        var list = new List<T?>();
         var result = new Res<List<T>>()
         {
             Code = ResponseCode.Ok,
@@ -263,7 +263,7 @@ public static class ResponseHelper
         }
 
         result.Message = sb.ToString().TrimEnd();
-        result.Data = list;
+        result.Data = list.Cast<T>().ToList();
         return result;
     }
 

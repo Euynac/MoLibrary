@@ -9,16 +9,18 @@ namespace Monica.DataChannel.CoreCommunicationProvider.ActiveMQ;
 public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> logger) : CommunicationCore<MetadataForActiveMQ>(metadata)
 {
     private ISession? session;
-    private IMessageProducer producer;
+    private IMessageProducer? producer;
 
     public override async Task ReceiveDataAsync(DataContext data)
     {
-        if (session != null && producer != null)
+        if (session is null || producer is null)
         {
-            ITextMessage msg = await session.CreateTextMessageAsync(data.Data?.ToString());
-            msg.Properties.SetString("Type", data.DataType?.Name); //设置消息种类
-            await producer.SendAsync(msg);
+            return;
         }
+
+        ITextMessage msg = await session.CreateTextMessageAsync(data.Data?.ToString());
+        msg.Properties.SetString("Type", data.DataType?.Name); //设置消息种类
+        await producer.SendAsync(msg);
     }
 
     public override async Task InitAsync(CancellationToken cancellationToken = default)

@@ -35,13 +35,13 @@ public static class KouStringTool
     public static bool TryToEnum<T>(string str, out T enumResult, bool supportNumeric = false) where T : struct, Enum
     {
         enumResult = default;
-        var success = TryToEnum(str, typeof(T), out var result);
-        if (success)
+        if (TryToEnum(str, typeof(T), out var result, supportNumeric) && result is T typedResult)
         {
-            enumResult = (T)result;
+            enumResult = typedResult;
+            return true;
         }
 
-        return success;
+        return false;
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public static class KouStringTool
     /// <param name="enumResult"></param>
     /// <param name="supportNumeric"></param>
     /// <returns></returns>
-    public static bool TryToEnum(string str, Type enumType, out object enumResult, bool supportNumeric = false)
+    public static bool TryToEnum(string str, Type enumType, out object? enumResult, bool supportNumeric = false)
     {
         enumResult = null;
         if (str.IsNullOrEmpty()) return false;

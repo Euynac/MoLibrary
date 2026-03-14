@@ -106,12 +106,14 @@
                                   Size="Size.Small"
                                   Color="Color.Info"
                                   OnClick="() => OnRowClick.InvokeAsync(context)"
-                                  Title="查看详情" />
+                                  title="查看详情"
+                                  aria-label="查看详情" />
                     <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
                                   Size="Size.Small"
                                   Color="Color.Warning"
                                   OnClick="() => OnClearHistory.InvokeAsync(context)"
-                                  Title="清除历史" />
+                                  title="清除历史"
+                                  aria-label="清除历史" />
                 </MudTd>
             }
         </RowTemplate>

@@ -33,13 +33,13 @@ namespace Monica.Office.Excel.Attributes
         /// 将统计展示到某个属性列上
         /// <para>若不指定，则在当前属性列展示</para>
         /// </summary>
-        public string ShowOnColumnPropertyName { get; set; }
+        public string? ShowOnColumnPropertyName { get; set; }
 
         /// <summary>
         /// 单位
         /// <para>自动拼接到 <see cref="Label"/> 后的括号中 </para>
         /// </summary>
-        public string Unit { get; set; }
+        public string? Unit { get; set; }
 
         /// <summary>
         /// 向下偏移行数（默认：1）

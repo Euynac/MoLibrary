@@ -417,21 +417,10 @@ internal static class HandlerCandidateExtractor
     {
         // Collect original using directives from the candidate's file
         var root = (CompilationUnitSyntax)classDeclaration.SyntaxTree.GetRoot();
-        var originalUsings = root.Usings.Select(u =>
-        {
-            // Handle using alias: using Alias = Namespace.Type;
-            if (u.Alias != null)
-            {
-                return $"{u.Alias} {u.Name}";
-            }
-            // Handle using static: using static Namespace.Type;
-            if (u.StaticKeyword.IsKind(SyntaxKind.StaticKeyword))
-            {
-                return $"static {u.Name}";
-            }
-            // Handle normal using: using Namespace;
-            return u.Name.ToString();
-        }).ToArray();
+        var originalUsings = root.Usings
+            .Select(GetUsingDirectiveText)
+            .OfType<string>()
+            .ToArray();
 
         // Capture the candidate's own namespace
         var candidateNamespace = string.Empty;
@@ -498,10 +487,7 @@ internal static class HandlerCandidateExtractor
         // Handle generic types (e.g., Res<ResponseType>)
         if (typeSymbol is INamedTypeSymbol namedType)
         {
-            // Add the namespace of the outer type
-            var ns = namedType.ContainingNamespace?.ToDisplayString();
-            if (!string.IsNullOrEmpty(ns))
-                namespaces.Add(ns);
+            TryAddNamespace(namedType.ContainingNamespace, namespaces);
 
             // Process generic type arguments recursively
             if (namedType.IsGenericType)
@@ -514,9 +500,7 @@ internal static class HandlerCandidateExtractor
         }
         else
         {
-            var ns = typeSymbol.ContainingNamespace?.ToDisplayString();
-            if (!string.IsNullOrEmpty(ns))
-                namespaces.Add(ns);
+            TryAddNamespace(typeSymbol.ContainingNamespace, namespaces);
         }
     }
 
@@ -525,11 +509,7 @@ internal static class HandlerCandidateExtractor
     /// </summary>
     private static void CollectNamespacesFromTypeSymbol(ITypeSymbol typeSymbol, HashSet<string> namespaces)
     {
-        if (typeSymbol == null) return;
-
-        var ns = typeSymbol.ContainingNamespace?.ToDisplayString();
-        if (!string.IsNullOrEmpty(ns))
-            namespaces.Add(ns);
+        TryAddNamespace(typeSymbol.ContainingNamespace, namespaces);
 
         // Handle nested generic types
         if (typeSymbol is INamedTypeSymbol namedType && namedType.IsGenericType)
@@ -539,5 +519,35 @@ internal static class HandlerCandidateExtractor
                 CollectNamespacesFromTypeSymbol(typeArg, namespaces);
             }
         }
+    }
+
+    private static string? GetUsingDirectiveText(UsingDirectiveSyntax usingDirective)
+    {
+        if (usingDirective.Name is null)
+        {
+            return null;
+        }
+
+        if (usingDirective.Alias != null)
+        {
+            return $"{usingDirective.Alias} {usingDirective.Name}";
+        }
+
+        if (usingDirective.StaticKeyword.IsKind(SyntaxKind.StaticKeyword))
+        {
+            return $"static {usingDirective.Name}";
+        }
+
+        return usingDirective.Name.ToString();
+    }
+
+    private static void TryAddNamespace(INamespaceSymbol? namespaceSymbol, HashSet<string> namespaces)
+    {
+        if (namespaceSymbol is null || namespaceSymbol.IsGlobalNamespace)
+        {
+            return;
+        }
+
+        namespaces.Add(namespaceSymbol.ToDisplayString());
     }
 }

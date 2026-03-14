@@ -105,16 +105,16 @@
                   RowsPerPage="@_pageSize"
                   Hover="true"
                   Striped="true"
-                  Elevation="2"
-                  SortMode="SortMode.Single">
+                  Elevation="2">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">@L["JobInstances:TableHeader:InstanceList"]</MudText>
                 <MudSpacer />
-                <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
-                               Color="Color.Warning"
-                               OnClick="HandleCleanupHistoryAsync"
-                               Disabled="@_isCleaningUp"
-                               Title="@L["JobInstances:Actions:CleanupHistory"]" />
+                <MudTooltip Text="@L["JobInstances:Actions:CleanupHistory"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
+                                   Color="Color.Warning"
+                                   OnClick="HandleCleanupHistoryAsync"
+                                   Disabled="@_isCleaningUp" />
+                </MudTooltip>
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="RefreshAsync" />

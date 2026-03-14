@@ -43,7 +43,7 @@ namespace Monica.Office.Excel.Npoi
         {
             try
             {
-                var workbook = WorkbookFactory.Create(fileStream); ;
+                var workbook = WorkbookFactory.Create(fileStream);
 
                 //try
                 //{
@@ -78,7 +78,6 @@ namespace Monica.Office.Excel.Npoi
             if (cell?.IsMergedCell == true)
             {
                 // 得到一个sheet中有多少个合并单元格
-                var sheetMergerCount = sheet.NumMergedRegions;
                 for (var i = 0; i < sheet.NumMergedRegions; i++)
                 {
                     // 得出具体的合并单元格
@@ -88,7 +87,7 @@ namespace Monica.Office.Excel.Npoi
                     {
                         if (cell.RowIndex <= ca.LastRow && cell.RowIndex >= ca.FirstRow)
                         {
-                            return new ExcelCellMergedInfo(cell, true, ca);
+                            return new ExcelCellMergedInfo(cell, ca);
                         }
                     }
                 }
@@ -102,7 +101,7 @@ namespace Monica.Office.Excel.Npoi
         /// </summary>
         /// <param name="cell">单元格</param>
         /// <returns></returns>
-        public virtual object GetCellValue(ICell? cell)
+        public virtual object? GetCellValue(ICell? cell)
         {
             if (cell == null)
             {
@@ -111,7 +110,7 @@ namespace Monica.Office.Excel.Npoi
 
             try
             {
-                object value = null;
+                object? value = null;
                 switch (cell.CellType)
                 {
                     case CellType.Blank: //空值 3
@@ -175,13 +174,13 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="formulaValue"></param>
         /// <param name="cell"></param>
         /// <returns></returns>
-        public virtual object GetCellValue(CellValue? formulaValue, ICell? cell)
+        public virtual object? GetCellValue(CellValue? formulaValue, ICell? cell)
         {
             if (formulaValue == null || cell == null)
             {
                 return formulaValue;
             }
-            object value = null;
+            object? value = null;
             switch (formulaValue.CellType)
             {
                 case CellType.Blank:
@@ -233,13 +232,13 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="sheet">sheet表</param>
         /// <param name="cell">单元格</param>
         /// <returns>若是合并的单元格：返回合并区域的第一个值。若是非合并单元格：返回当前表格的值</returns>
-        public virtual object GetMergedCellValue(ISheet sheet, ICell cell)
+        public virtual object? GetMergedCellValue(ISheet sheet, ICell cell)
         {
             var info = GetCellMergedInfo(sheet, cell);
-            if (info.IsMergedRegion)
+            if (info.IsMergedRegion && info.CellRangeAddress is { } cellRangeAddress)
             {
-                var fRow = sheet.GetRow(info.CellRangeAddress.FirstRow);
-                var fCell = fRow.GetCell(info.CellRangeAddress.FirstColumn);
+                var fRow = sheet.GetRow(cellRangeAddress.FirstRow);
+                var fCell = fRow?.GetCell(cellRangeAddress.FirstColumn);
                 return GetCellValue(fCell);
             }
             return GetCellValue(cell);
@@ -284,7 +283,7 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="columnIndex">当前列下标,起始0</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        public virtual object ConverterCellValue(IRow? row, int columnIndex, Type valueType)
+        public virtual object? ConverterCellValue(IRow? row, int columnIndex, Type valueType)
         {
             var cell = row?.GetCell(columnIndex);
             if (cell == null)
@@ -293,22 +292,7 @@ namespace Monica.Office.Excel.Npoi
             }
 
             var cellValue = GetMergedCellValue(cell.Sheet, cell);
-
-            if (string.IsNullOrWhiteSpace(cellValue?.ToString()))
-            {
-                return cellValue;
-            }
-
-            if (valueType.IsDateTime())
-            {
-                cellValue = cellValue.GetTypedCellValue<DateTime>();
-            }
-            else if (valueType.IsTimeSpan())
-            {
-                cellValue = cellValue.GetTypedCellValue<TimeSpan>();
-            }
-
-            return TypeDescriptor.GetConverter(valueType).ConvertFromInvariantString(cellValue.ToString());
+            return cellValue.ConvertExcelCellValue(valueType);
         }
 
         /// <summary>
@@ -497,28 +481,20 @@ namespace Monica.Office.Excel.Npoi
         /// <summary>
         /// 是否合并区域
         /// </summary>
-        public bool IsMergedRegion { get; set; }
+        public bool IsMergedRegion { get; }
         /// <summary>
         /// 单元格范围
         /// </summary>
-        public CellRangeAddress CellRangeAddress { get; set; }
+        public CellRangeAddress? CellRangeAddress { get; }
         /// <summary>
         /// 单元格
         /// </summary>
-        public ICell ICell { get; set; }
+        public ICell? ICell { get; }
 
         /// <summary>
         /// 构造
         /// </summary>
-        public ExcelCellMergedInfo()
-        {
-            IsMergedRegion = false;
-            CellRangeAddress = null;
-        }
-        /// <summary>
-        /// 构造
-        /// </summary>
-        public ExcelCellMergedInfo(ICell cell) : this()
+        public ExcelCellMergedInfo(ICell? cell)
         {
             ICell = cell;
         }
@@ -527,12 +503,11 @@ namespace Monica.Office.Excel.Npoi
         /// 构造
         /// </summary>
         /// <param name="cell"></param>
-        /// <param name="isMergedRegion"></param>
         /// <param name="cellRangeAddress"></param>
-        public ExcelCellMergedInfo(ICell cell, bool isMergedRegion, CellRangeAddress cellRangeAddress)
+        public ExcelCellMergedInfo(ICell cell, CellRangeAddress cellRangeAddress)
         {
             ICell = cell;
-            IsMergedRegion = isMergedRegion;
+            IsMergedRegion = true;
             CellRangeAddress = cellRangeAddress;
         }
     }

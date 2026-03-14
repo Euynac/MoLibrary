@@ -25,16 +25,14 @@
             @if (Providers.Any())
             {
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="EventBusProviderInfo?"
-                              Label="Provider"
-                              @bind-Value="Filter!.SelectedProvider"
-                              Clearable="true"
-                              OnClearButtonClick="@(() => ApplyFilterAsync())"
-                              OnClose="@(() => ApplyFilterAsync())"
-                              ToStringFunc="@(p => p == null ? "" : $"{p.DisplayName} ({p.ProviderTypeName})")">
+                    <MudSelect T="string"
+                               Label="Provider"
+                               @bind-Value="SelectedProviderId"
+                               OpenChanged="ApplyFilterOnSelectClosedAsync">
+                        <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
                         @foreach (var provider in Providers)
                         {
-                            <MudSelectItem T="EventBusProviderInfo?" Value="@provider">
+                            <MudSelectItem T="string" Value="@provider.UniqueId">
                                 @provider.DisplayName (@provider.ProviderTypeName, @(provider.IsDistributed ? "分布式" : "本地"))
                             </MudSelectItem>
                         }
@@ -44,42 +42,39 @@
 
             <!-- 状态过滤 -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="SubscriptionState?"
+                <MudSelect T="string"
                           Label="状态"
-                          @bind-Value="Filter!.State"
-                          Clearable="true"
-                          OnClearButtonClick="@(() => ApplyFilterAsync())"
-                          OnClose="@(() => ApplyFilterAsync())">
-                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Active)">活跃</MudSelectItem>
-                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Pending)">待激活</MudSelectItem>
-                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Inactive)">未激活</MudSelectItem>
-                    <MudSelectItem T="SubscriptionState?" Value="@(SubscriptionState.Disposed)">已释放</MudSelectItem>
+                          @bind-Value="SelectedState"
+                          OpenChanged="ApplyFilterOnSelectClosedAsync">
+                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Active)">活跃</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Pending)">待激活</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Inactive)">未激活</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Disposed)">已释放</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
             <!-- 范围过滤 -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="SubscriptionScope?"
+                <MudSelect T="string"
                           Label="范围"
-                          @bind-Value="Filter!.Scope"
-                          Clearable="true"
-                          OnClearButtonClick="@(() => ApplyFilterAsync())"
-                          OnClose="@(() => ApplyFilterAsync())">
-                    <MudSelectItem T="SubscriptionScope?" Value="@(SubscriptionScope.Local)">本地</MudSelectItem>
-                    <MudSelectItem T="SubscriptionScope?" Value="@(SubscriptionScope.Distributed)">分布式</MudSelectItem>
+                          @bind-Value="SelectedScope"
+                          OpenChanged="ApplyFilterOnSelectClosedAsync">
+                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionScope.Local)">本地</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(SubscriptionScope.Distributed)">分布式</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
             <!-- 自动发现过滤 -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
-                <MudSelect T="bool?"
+                <MudSelect T="string"
                           Label="发现方式"
-                          @bind-Value="Filter!.IsAutoDiscovered"
-                          Clearable="true"
-                          OnClearButtonClick="@(() => ApplyFilterAsync())"
-                          OnClose="@(() => ApplyFilterAsync())">
-                    <MudSelectItem T="bool?" Value="@(true)">自动发现</MudSelectItem>
-                    <MudSelectItem T="bool?" Value="@(false)">手动订阅</MudSelectItem>
+                          @bind-Value="SelectedDiscoveryMode"
+                          OpenChanged="ApplyFilterOnSelectClosedAsync">
+                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
+                    <MudSelectItem T="string" Value="@AutoDiscoveredSelectionValue">自动发现</MudSelectItem>
+                    <MudSelectItem T="string" Value="@ManualSelectionValue">手动订阅</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
@@ -111,6 +106,10 @@
 </MudPaper>
 
 @code {
+    private const string AllSelectionValue = "__all__";
+    private const string AutoDiscoveredSelectionValue = "__auto__";
+    private const string ManualSelectionValue = "__manual__";
+
     [Parameter]
     public SubscriptionFilter? Filter { get; set; }
 
@@ -120,9 +119,86 @@
     [Parameter]
     public List<EventBusProviderInfo> Providers { get; set; } = [];
 
+    private string SelectedProviderId
+    {
+        get => Filter?.SelectedProvider?.UniqueId ?? AllSelectionValue;
+        set
+        {
+            if (Filter is null)
+            {
+                return;
+            }
+
+            Filter.SelectedProvider = value == AllSelectionValue
+                ? null
+                : Providers.FirstOrDefault(provider => provider.UniqueId == value);
+        }
+    }
+
+    private string SelectedState
+    {
+        get => Filter?.State?.ToString() ?? AllSelectionValue;
+        set
+        {
+            if (Filter is null)
+            {
+                return;
+            }
+
+            Filter.State = Enum.TryParse<SubscriptionState>(value, out var state)
+                ? state
+                : null;
+        }
+    }
+
+    private string SelectedScope
+    {
+        get => Filter?.Scope?.ToString() ?? AllSelectionValue;
+        set
+        {
+            if (Filter is null)
+            {
+                return;
+            }
+
+            Filter.Scope = Enum.TryParse<SubscriptionScope>(value, out var scope)
+                ? scope
+                : null;
+        }
+    }
+
+    private string SelectedDiscoveryMode
+    {
+        get => Filter?.IsAutoDiscovered switch
+        {
+            true => AutoDiscoveredSelectionValue,
+            false => ManualSelectionValue,
+            _ => AllSelectionValue
+        };
+        set
+        {
+            if (Filter is null)
+            {
+                return;
+            }
+
+            Filter.IsAutoDiscovered = value switch
+            {
+                AutoDiscoveredSelectionValue => true,
+                ManualSelectionValue => false,
+                _ => null
+            };
+        }
+    }
+
     private async Task ApplyFilterAsync()
     {
         await OnFilterChanged.InvokeAsync();
+    }
+
+    private Task ApplyFilterOnSelectClosedAsync(bool isOpen)
+    {
+        return isOpen ? Task.CompletedTask : ApplyFilterAsync();
     }
 
     private async Task ClearFilter()

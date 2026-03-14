@@ -72,8 +72,8 @@
         {
             var keyMatches = s.ServiceKey == provider.ServiceKey;
             var scopeMatches = provider.IsDistributed
-                ? s.Scope == Monica.EventBus.Models.SubscriptionScope.Distributed
-                : s.Scope == Monica.EventBus.Models.SubscriptionScope.Local;
+                ? s.Scope == EventBus.Models.SubscriptionScope.Distributed
+                : s.Scope == EventBus.Models.SubscriptionScope.Local;
             return keyMatches && scopeMatches;
         }).ToList();
 

@@ -68,8 +68,8 @@ public class NormalizedResult(string finalExpression, List<object?> @params, Tok
             new
             {
                 Index = $"@{i}",
-                Type = $"{p.GetType().Name}",
-                Value = $"{p.ToJsonString()}"
+                Type = p?.GetType().Name ?? "null",
+                Value = p?.ToJsonString() ?? "null"
             }).ToJsonString()}";
     }
 }

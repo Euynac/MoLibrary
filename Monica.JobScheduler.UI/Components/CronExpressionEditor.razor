@@ -124,7 +124,7 @@
                                                      Min="0"
                                                      Max="59"
                                                      Variant="Variant.Outlined"
-                                                     Dense="true" />
+                                                     Margin="Margin.Dense" />
                                 </MudItem>
                             }
                             <MudItem xs="6" sm="4">
@@ -134,7 +134,7 @@
                                                  Min="0"
                                                  Max="59"
                                                  Variant="Variant.Outlined"
-                                                 Dense="true" />
+                                                 Margin="Margin.Dense" />
                             </MudItem>
                             <MudItem xs="6" sm="4">
                                 <MudNumericField @bind-Value="@_simpleSettings.Hour"
@@ -143,7 +143,7 @@
                                                  Min="0"
                                                  Max="23"
                                                  Variant="Variant.Outlined"
-                                                 Dense="true" />
+                                                 Margin="Margin.Dense" />
                             </MudItem>
                             @if (_simpleSettings.Type == SimpleSettingsType.EveryWeek)
                             {
@@ -153,7 +153,7 @@
                                                   Label="星期"
                                                   HelperText="0-6 (0=周日)"
                                                   Variant="Variant.Outlined"
-                                                  Dense="true" />
+                                                  Margin="Margin.Dense" />
                                 </MudItem>
                             }
                             @if (_simpleSettings.Type == SimpleSettingsType.EveryMonth)
@@ -164,7 +164,7 @@
                                                   Label="日期"
                                                   HelperText="1-31"
                                                   Variant="Variant.Outlined"
-                                                  Dense="true" />
+                                                  Margin="Margin.Dense" />
                                 </MudItem>
                             }
                             @if (_simpleSettings.Type == SimpleSettingsType.Custom)
@@ -174,21 +174,21 @@
                                                   T="string"
                                                   Label="日"
                                                   Variant="Variant.Outlined"
-                                                  Dense="true" />
+                                                  Margin="Margin.Dense" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
                                     <MudTextField @bind-Value="@_simpleSettings.Month"
                                                   T="string"
                                                   Label="月"
                                                   Variant="Variant.Outlined"
-                                                  Dense="true" />
+                                                  Margin="Margin.Dense" />
                                 </MudItem>
                                 <MudItem xs="12" sm="4">
                                     <MudTextField @bind-Value="@_simpleSettings.DayOfWeek"
                                                   T="string"
                                                   Label="周"
                                                   Variant="Variant.Outlined"
-                                                  Dense="true" />
+                                                  Margin="Margin.Dense" />
                                 </MudItem>
                             }
                         </MudGrid>
@@ -254,7 +254,7 @@
                 <MudText Typo="Typo.body2" Class="mb-2">
                     <strong>特殊字符说明：</strong>
                 </MudText>
-                <MudList T="string" Dense="true" DisablePadding="true">
+                <MudList T="string" Dense="true" Padding="false">
                     <MudListItem T="string">
                         <MudText Typo="Typo.body2">
                             <code>*</code> - 所有值
@@ -287,7 +287,7 @@
                 <MudText Typo="Typo.body2" Class="mb-2">
                     <strong>示例：</strong>
                 </MudText>
-                <MudList T="string" Dense="true" DisablePadding="true">
+                <MudList T="string" Dense="true" Padding="false">
                     @if (_format == CronFormat.Quartz)
                     {
                         <MudListItem T="string">

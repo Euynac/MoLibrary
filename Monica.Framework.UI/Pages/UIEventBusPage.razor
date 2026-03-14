@@ -65,7 +65,7 @@
                                     </MudChip>
                                 </MudStack>
 
-                                <MudList T="string" Clickable="false" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                                <MudList T="string" ReadOnly="true" Dense="true" Style="max-height: 400px; overflow-y: auto;">
                                     @foreach (var change in _recentChanges.Take(20))
                                     {
                                         <MudListItem T="string">

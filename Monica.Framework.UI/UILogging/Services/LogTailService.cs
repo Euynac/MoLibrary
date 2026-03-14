@@ -114,11 +114,11 @@ public sealed class LogTailService(
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
             long currentLine = 1;
-            while (!reader.EndOfStream && currentLine <= endLineNumber)
+            while (currentLine <= endLineNumber)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var line = await reader.ReadLineAsync();
-                if (line == null)
+                if (line is null)
                 {
                     break;
                 }
@@ -170,11 +170,11 @@ public sealed class LogTailService(
             await using var stream = new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
-            while (!reader.EndOfStream)
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var line = await reader.ReadLineAsync();
-                if (line == null)
+                if (line is null)
                 {
                     break;
                 }
@@ -287,12 +287,11 @@ public sealed class LogTailService(
         stream.Seek(startPosition, SeekOrigin.Begin);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        string? line;
-        while (!reader.EndOfStream)
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            line = await reader.ReadLineAsync();
-            if (line == null)
+            var line = await reader.ReadLineAsync();
+            if (line is null)
             {
                 break;
             }

@@ -221,16 +221,16 @@ namespace Monica.Office.Excel
                 if (entity != null)
                 {
                     //验证数据
-                    var valid = ExcelHelper.GetValidationResult(entity);
+                    var errors = ExcelHelper.GetValidationResult(entity) ?? [];
 
                     var rowInfo = new ExcelImportRowInfo<TImportDto>
                     {
                         SheetName = headerCellInfo.SheetName,
                         SheetIndex = headerCellInfo.SheetIndex,
                         Row = entity,
-                        Errors = valid,
+                        Errors = errors,
                         RowNum = i + 1,
-                        IsValid = valid == null
+                        IsValid = errors.Count == 0
                     };
 
                     rows.Add(rowInfo);
@@ -453,7 +453,7 @@ namespace Monica.Office.Excel
         /// <param name="columnIndex">列下标（起始下标：原值）</param>
         /// <param name="property">表头对应的 TImportDto 字段属性</param>
         /// <returns></returns>
-        protected abstract object ConvertCellValue(TWorkbook workbook, TSheet worksheet, TRow dataRow, int columnIndex, PropertyInfo property);
+        protected abstract object? ConvertCellValue(TWorkbook workbook, TSheet worksheet, TRow dataRow, int columnIndex, PropertyInfo property);
 
         /// <summary>
         /// 获取单元格地址，如 A1【步骤 10】

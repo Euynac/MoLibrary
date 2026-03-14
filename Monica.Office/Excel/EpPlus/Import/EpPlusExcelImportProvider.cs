@@ -10,7 +10,7 @@ namespace Monica.Office.Excel.EpPlus.Import
     /// </remarks>
     public class EpPlusExcelImportProvider(IEpPlusExcelHandle epPlusExcelHandle) : ExcelImportManager
     {
-        protected override List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions> optionAction)
+        protected override List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions>? optionAction)
         {
             var import = new EpPlusExcelImportBase(epPlusExcelHandle);
 

@@ -64,11 +64,12 @@ public class WebTool
     public static string StringHash(string str, HashAlgorithmName? hashAlgorithm = null)
     {
         if (string.IsNullOrEmpty(str)) return "";
-        hashAlgorithm ??= HashAlgorithmName.MD5;
+        var resolvedHashAlgorithm = hashAlgorithm ?? HashAlgorithmName.MD5;
         var sb = new StringBuilder();
-        using var hash = HashAlgorithm.Create(hashAlgorithm.ToString())!;
         var enc = Encoding.UTF8;
-        var result = hash.ComputeHash(enc.GetBytes(str));
+        using var hash = IncrementalHash.CreateHash(resolvedHashAlgorithm);
+        hash.AppendData(enc.GetBytes(str));
+        var result = hash.GetHashAndReset();
         foreach (var b in result)
             sb.Append(b.ToString("x2"));
         return sb.ToString();

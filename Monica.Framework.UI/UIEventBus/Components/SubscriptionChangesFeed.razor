@@ -17,7 +17,7 @@
 
         @if (Changes.Any())
         {
-            <MudList T="string" Clickable="false" Dense="true" Style="@($"max-height: {MaxHeight}px; overflow-y: auto;")">
+            <MudList T="string" ReadOnly="true" Dense="true" Style="@($"max-height: {MaxHeight}px; overflow-y: auto;")">
                 @foreach (var change in Changes.Take(MaxItems))
                 {
                     <MudListItem T="string" Class="change-feed-item">

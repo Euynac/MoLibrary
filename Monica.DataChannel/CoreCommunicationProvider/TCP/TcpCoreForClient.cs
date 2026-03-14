@@ -6,15 +6,12 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
 {
     public class TcpCoreForClient(MetadataForTcpClient metadata , ILogger<TcpCoreForClient> logger, IDataChannelManager manager) : CommunicationCore<MetadataForTcpClient>(metadata)
     {
-        private TcpClientExtends client;
+        private TcpClientExtends? client;
 
+        public override Task ReceiveDataAsync(DataContext data) =>
+            GetClient().SendMsg(data.Data?.ToString(), logger, manager);
 
-        public override async Task ReceiveDataAsync(DataContext data)
-        {
-          await  client.SendMsg(data.Data.ToString() ,logger,manager);
-         }
-
-        public override async Task InitAsync(CancellationToken cancellationToken = default)
+        public override Task InitAsync(CancellationToken cancellationToken = default)
         {
             var tcpClientExtends = new TcpClientExtends();
             client = tcpClientExtends;
@@ -23,9 +20,9 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
                 SendData(e);
             };
             client.Init(metadata, logger);
-           
-            
+            return Task.CompletedTask;
         }
+
         public override  EConnectionDirection SupportedConnectionDirection()
         {
             return EConnectionDirection.InputAndOutput;
@@ -33,8 +30,11 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
 
         public override Task DisposeAsync(CancellationToken cancellationToken = default)
         {
-            client.Dispose();
-            return base.DisposeAsync();
+            client?.Dispose();
+            return base.DisposeAsync(cancellationToken);
         }
+
+        private TcpClientExtends GetClient() =>
+            client ?? throw new InvalidOperationException("TCP client is not initialized.");
     }
 }

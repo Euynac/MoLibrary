@@ -70,7 +70,7 @@
             <MudItem xs="12" md="8">
                 <MudPaper Class="pa-4">
                     <MudStack Spacing="3">
-                        <MudTabs Elevation="0" Rounded="true" PanelClass="pa-0">
+                        <MudTabs Elevation="0" Rounded="true" TabPanelsClass="pa-0">
                             <MudTabPanel Text="@($"本域服务 ({GetOwnedServicesCount()})")">
                                 <MudStack Spacing="3" Class="mt-3">
                                     @if (_isLoading)
@@ -149,17 +149,6 @@ else
         </MudText>
     </MudPaper>
 }
-
-<style>
-    .service-card {
-        transition: transform 0.1s, box-shadow 0.1s;
-    }
-    
-    .service-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-    }
-</style>
 
 @code {
     [Parameter] public required string DomainName { get; set; }

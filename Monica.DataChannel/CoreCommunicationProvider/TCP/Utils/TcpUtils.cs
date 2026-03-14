@@ -108,6 +108,11 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
         public static async Task DecideClient(TcpClientExtends clientExtends, bool isServer = false)
         {
             if (!switchoverFlag) return;
+            var connectionName = clientExtends.ConnectionName;
+            if (string.IsNullOrEmpty(connectionName))
+            {
+                return;
+            }
 
             lock (_lockObject)
             {
@@ -139,20 +144,20 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
                     }
                 }
 
-                if (standbyKeys.Contains(clientExtends.ConnectionName))
+                if (standbyKeys.Contains(connectionName))
                 {
 
                     UpdateClient(clientExtends, clientExtends.Connected, isServer).Await();
-                    standbyKeys.Remove(clientExtends.ConnectionName);
+                    standbyKeys.Remove(connectionName);
                     number++;
 
 
                 }
                 else
-               if (mainKeys.Contains(clientExtends.ConnectionName))
+               if (mainKeys.Contains(connectionName))
                 {
                     UpdateClient(clientExtends, false, isServer).Await();
-                    mainKeys.Remove(clientExtends.ConnectionName);
+                    mainKeys.Remove(connectionName);
                     number++;
 
 
@@ -176,20 +181,26 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
             for (int i = 0; i<channels.Count; i++)
             {
                 var connectedExtend = new ConnectedExtend();
-                var values = channels.ElementAtOrDefault(i).Trim().Split(",", StringSplitOptions.RemoveEmptyEntries);
+                var channel = channels.ElementAtOrDefault(i)
+                    ?? throw new InvalidOperationException($"Channel configuration at index {i} is missing.");
+                var values = channel.Trim().Split(",", StringSplitOptions.RemoveEmptyEntries);
                 var addressValue = validaddress[i].Split(":");
-                IPAddress[] address = null;
-                if (addressValue.ElementAtOrDefault(0)  == "0.0.0.0")
+                var hostNameOrAddress = addressValue.ElementAtOrDefault(0)
+                    ?? throw new InvalidOperationException($"Address configuration at index {i} is missing a host.");
+                IPAddress[] address;
+                if (hostNameOrAddress == "0.0.0.0")
                 {
                     address  = [IPAddress.Any];
                 }
                 else
                 {
-                    address = Dns.GetHostAddresses(addressValue.ElementAtOrDefault(0));
+                    address = Dns.GetHostAddresses(hostNameOrAddress);
                 }
 
-                string hostname = address.ElementAtOrDefault(0).ToString();
-                int port = int.Parse(addressValue.ElementAtOrDefault(1));
+                string hostname = address.ElementAtOrDefault(0)?.ToString() ?? hostNameOrAddress;
+                var portText = addressValue.ElementAtOrDefault(1)
+                    ?? throw new InvalidOperationException($"Address configuration at index {i} is missing a port.");
+                int port = int.Parse(portText);
                 connectedExtend.address =  new Tuple<string, int>(hostname, port);
                 connectedExtend.IsMainConnected = values.ElementAtOrDefault(2) == "1" ? true : false;
                 var extend = $"{values.ElementAtOrDefault(1)}{values.ElementAtOrDefault(2)}";
@@ -213,11 +224,14 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
         }
 
 
-        private async static Task Receive(TcpClientExtends? clientExtends, ILogger logger, string? connectionName, CancellationToken cancellation, bool isServer = false, TcpReceiveEventHander hander = null)
+        private async static Task Receive(TcpClientExtends? clientExtends, ILogger logger, string? connectionName, CancellationToken cancellation, bool isServer = false, TcpReceiveEventHander? hander = null)
         {
+            if (clientExtends?.Client?.Client is not Socket client)
+            {
+                return;
+            }
 
-            var client = clientExtends.Client.Client;
-            var recvBytes = new byte[0];
+            var recvBytes = Array.Empty<byte>();
             var bytesRead = 0;
 
             try
@@ -256,7 +270,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
                         }
                         else
                         {
-                            var remoteEndPoint = clientExtends.Client.Client.LocalEndPoint;
+                            var remoteEndPoint = client.LocalEndPoint;
                             logger.LogInformation($"备用线程：{remoteEndPoint}");
                             logger.LogInformation($"备用线程：{connectionName} 接收的消息 {Encoding.UTF8.GetString(recvBytes, 0, bytesRead).Trim()}");
                             return;
@@ -307,7 +321,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
 
 
 
-        public static async Task ServerReceive(TcpClientExtends? clientExtends, ILogger logger, string key, TcpReceiveEventHander hander, CancellationToken cancellation)
+        public static async Task ServerReceive(TcpClientExtends? clientExtends, ILogger logger, string key, TcpReceiveEventHander? hander, CancellationToken cancellation)
         {
 
             while (clientExtends?.Connected == true)
@@ -328,13 +342,26 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
         /// <returns></returns>
         public static async Task ServerSendSHBT(TcpClientExtends? tcpClientExtends, ILogger logger, TimeSpan? sendTime, string key)
         {
-            if (tcpClientExtends?.LastSendMsgTime == null)
+            if (tcpClientExtends is null || sendTime is null)
+            {
+                return;
+            }
+
+            if (tcpClientExtends.LastSendMsgTime == null)
             {
                 tcpClientExtends.LastSendMsgTime = DateTime.Now;
             }
-            while (tcpClientExtends?.Connected == true)
+
+            while (tcpClientExtends.Connected)
             {
-                if (DateTime.Now - tcpClientExtends.LastSendMsgTime >= sendTime)
+                var lastSendMsgTime = tcpClientExtends.LastSendMsgTime;
+                if (lastSendMsgTime is null)
+                {
+                    tcpClientExtends.LastSendMsgTime = DateTime.Now;
+                    continue;
+                }
+
+                if (DateTime.Now - lastSendMsgTime.Value >= sendTime.Value)
                 {
                    await tcpClientExtends.SendMsg(await SHBT(), logger, null);
                 }

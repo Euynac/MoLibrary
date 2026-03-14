@@ -132,7 +132,6 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                     else if (Option.UseGrpc)
                     {
                         throw new NotImplementedException("Grpc is not supported now!");
-                        continue;
                     }
                     else
                     {

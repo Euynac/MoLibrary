@@ -102,9 +102,8 @@
         <MudTabs @bind-ActivePanelIndex="_activeTabIndex"
                  Elevation="2"
                  Rounded="true"
-                 ApplyEffectsToContainer="true"
-                 PanelClass="pa-6">
-            <MudTabPanel Text="@L["JobDefinitions:Tabs:RecurringJob"]" Icon="@Icons.Material.Filled.Schedule">
+                 ApplyEffectsToContainer="true">
+            <MudTabPanel Text="@L["JobDefinitions:Tabs:RecurringJob"]" Icon="@Icons.Material.Filled.Schedule" PanelClass="pa-6">
             <MudTable @ref="_recurringTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadRecurringJobsAsync"
@@ -114,8 +113,7 @@
                       SelectOnRowClick="false"
                       Hover="true"
                       Striped="true"
-                      Elevation="0"
-                      SortMode="SortMode.Single">
+                      Elevation="0">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">@L["JobDefinitions:Tabs:RecurringJob"]</MudText>
                     <MudSpacer />
@@ -215,15 +213,14 @@
             </MudTable>
         </MudTabPanel>
 
-        <MudTabPanel Text="@L["JobDefinitions:Tabs:TriggerJob"]" Icon="@Icons.Material.Filled.TouchApp">
+        <MudTabPanel Text="@L["JobDefinitions:Tabs:TriggerJob"]" Icon="@Icons.Material.Filled.TouchApp" PanelClass="pa-6">
             <MudTable @ref="_triggerTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadTriggerJobsAsync"
                       RowsPerPage="@_triggerPageSize"
                       Hover="true"
                       Striped="true"
-                      Elevation="0"
-                      SortMode="SortMode.Single">
+                      Elevation="0">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">@L["JobDefinitions:Tabs:TriggerJob"]</MudText>
                     <MudSpacer />
@@ -711,7 +708,7 @@
 
         var confirmResult = await confirmDialog.Result;
 
-        if (confirmResult.Canceled)
+        if (confirmResult is not { Canceled: false })
             return;
 
         // Execute batch operation

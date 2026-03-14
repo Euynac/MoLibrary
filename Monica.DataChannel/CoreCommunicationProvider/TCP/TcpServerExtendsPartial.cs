@@ -10,34 +10,39 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
     {
         private CancellationTokenSource? _source;
         private CancellationToken cancellation;
+
         public async void Init(MetadataForTcpServer metadata, ILogger logger)
         {
             _source = new CancellationTokenSource();
+            cancellation = _source.Token;
 
             while (metadata.IsServer)
             {
-
                 var keyValue = metadata.ServerAddress.Value;
-                string host = keyValue!.address!.Item1;
-                int port = keyValue!.address.Item2;
+                var addressInfo = keyValue.address ?? throw new InvalidOperationException("TCP server address is not configured.");
+                string host = addressInfo.Item1;
+                int port = addressInfo.Item2;
                 await GetTcpServer(metadata.ServerAddress.Key, port, host, logger);
 
-                var client = await Server!.AcceptTcpClientAsync();
+                var server = Server ?? throw new InvalidOperationException("TCP server listener is not initialized.");
+                var client = await server.AcceptTcpClientAsync();
                 logger.LogInformation("客户端连接成功");
-                var remoteEndPoint = (IPEndPoint) client.Client.RemoteEndPoint!;
+                var remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint!;
                 var address = remoteEndPoint.Address.ToString();
                 var lastIndex = address.LastIndexOf(".");
 
                 if (lastIndex != -1)
                 {
-                    var key = address.Substring(0, (int) lastIndex!);
+                    var key = address.Substring(0, lastIndex);
                     var tcpClientExtends = new TcpClientExtends();
                     tcpClientExtends.Client = client;
                     tcpClientExtends.Connected = true;
                     var keys = TcpUtils.clients.Keys.ToList();
-                   if (keys.Contains(key))
+                    var connectionName = $"{address}:{remoteEndPoint.Port}";
+
+                    if (keys.Contains(key))
                     {
-                        tcpClientExtends.ConnectionName = $"{address}:{remoteEndPoint?.Port}";
+                        tcpClientExtends.ConnectionName = connectionName;
                         var addressKey = keys.Where(p => p.Contains(key)).Single();
                         if (TcpUtils.ServerMainConnect.TryGetValue($"{addressKey}", out var b))
                         {
@@ -45,35 +50,27 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
                         }
                         else
                         {
-                            TcpUtils.ServerMainConnect.TryAdd($"{address}:{remoteEndPoint?.Port}", false);
+                            TcpUtils.ServerMainConnect.TryAdd(connectionName, false);
                         }
 
-                        TcpUtils.clients.TryAdd($"{address}:{remoteEndPoint?.Port}", tcpClientExtends);
+                        TcpUtils.clients.TryAdd(connectionName, tcpClientExtends);
                     }
                     else
                     {
-                        //if (TcpUtils.clients.IsNullOrEmpty())
-                        //{
-
-                        //    TcpUtils.ServerMainConnect.TryAdd($"{address}:{remoteEndPoint?.Port}", true);
-                        //    tcpClientExtends.IsMainThread = true;
-                        //}
-                        //else
-                        //{
-                        //    TcpUtils.ServerMainConnect.TryAdd($"{address}:{remoteEndPoint?.Port}", false);
-                        //    tcpClientExtends.IsMainThread = false;
-                        //}
-                        TcpUtils.ServerMainConnect.TryAdd($"{address}:{remoteEndPoint?.Port}", true);
+                        TcpUtils.ServerMainConnect.TryAdd(connectionName, true);
                         tcpClientExtends.IsMainThread = true;
-                        tcpClientExtends.ConnectionName = $"{address}:{remoteEndPoint?.Port}";
-                        TcpUtils.clients.TryAdd($"{address}:{remoteEndPoint?.Port}", tcpClientExtends);
-
+                        tcpClientExtends.ConnectionName = connectionName;
+                        TcpUtils.clients.TryAdd(connectionName, tcpClientExtends);
                     }
-                    Task.Factory.StartNew(() => TcpUtils.ServerReceive(tcpClientExtends, logger, $"{address}:{remoteEndPoint?.Port}", ReceivedMsgEvent,cancellation));
-                  
-                    //心跳机制
-                    Task.Factory.StartNew(() => TcpUtils.ServerSendSHBT(tcpClientExtends, logger, metadata.SendTime , $"{address}:{remoteEndPoint?.Port}"));
 
+                    _ = Task.Run(
+                        () => TcpUtils.ServerReceive(tcpClientExtends, logger, connectionName, ReceivedMsgEvent, cancellation),
+                        cancellation);
+
+                    //心跳机制
+                    _ = Task.Run(
+                        () => TcpUtils.ServerSendSHBT(tcpClientExtends, logger, metadata.SendTime, connectionName),
+                        cancellation);
 
                 }
                 else
@@ -92,40 +89,38 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
         {
             try
             {
-
-                if (TcpUtils.servers.Keys.Contains(jobKey))
+                if (TcpUtils.servers.TryGetValue(jobKey, out var existingServer))
                 {
-                    TcpUtils.servers[jobKey].Server!.Stop();
+                    existingServer.Server?.Stop();
                     Server = new TcpListener(IPAddress.Parse(host), port);
                     Server.Start();
-                    logger!.LogInformation($"{jobKey}相关任务与{host}:{port}重建并等待连接...");
+                    logger.LogInformation("{JobKey}相关任务与{Host}:{Port}重建并等待连接...", jobKey, host, port);
                     TcpUtils.servers[jobKey] = this;
                 }
                 else
                 {
-
-                    Server = new TcpListener(IPAddress.Parse(host), port); ;
+                    Server = new TcpListener(IPAddress.Parse(host), port);
                     TcpUtils.servers.TryAdd(jobKey, this);
-                    logger!.LogInformation($"{jobKey}相关任务与{host}:{port}等待连接...");
+                    logger.LogInformation("{JobKey}相关任务与{Host}:{Port}等待连接...", jobKey, host, port);
                 }
 
             }
             catch (ArgumentNullException e)
             {
-                logger!.LogError("ArgumentNullException: {0}", e);
-                throw e;
+                logger.LogError(e, "ArgumentNullException");
+                throw;
             }
             catch (SocketException e)
             {
-                logger!.LogError("SocketException: {0}", e.Message);
-                throw e;
+                logger.LogError(e, "SocketException");
+                throw;
             }
             catch (NullReferenceException e)
             {
-                logger!.LogError("NullReferenceException: {0}", e.Message);
-                throw e;
+                logger.LogError(e, "NullReferenceException");
+                throw;
             }
-           
+
             Server.Start();
 
         }

@@ -14,7 +14,7 @@ public class AutoField
     /// <summary>
     /// 字段激活名
     /// </summary>
-    public HashSet<string> ActivateNames { get; set; }
+    public HashSet<string> ActivateNames { get; set; } = [];
 
     #region Navigation
 

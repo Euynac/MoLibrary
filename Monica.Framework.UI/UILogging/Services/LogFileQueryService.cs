@@ -104,12 +104,12 @@ public sealed class LogFileQueryService(
             await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var reader = new StreamReader(stream, Encoding.UTF8);
 
-            while (!reader.EndOfStream && currentLineNumber <= endLine)
+            while (currentLineNumber <= endLine)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var rawLine = await reader.ReadLineAsync();
-                if (rawLine == null)
+                if (rawLine is null)
                 {
                     break;
                 }

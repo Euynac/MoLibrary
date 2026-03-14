@@ -8,8 +8,7 @@
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       OnKeyDown="HandleKeyDown"
-                      Class="log-filter-panel__input"
-                      ResetValueOnEmptyText="true" />
+                      Class="log-filter-panel__input" />
 
         <MudSwitch T="bool" Value="@_onlyCapture" ValueChanged="OnOnlyCaptureChanged" Color="Color.Primary">仅捕获匹配</MudSwitch>
 
@@ -59,8 +58,9 @@
 
     private Task OnKeywordChanged(string? value)
     {
-        _keyword = value;
-        return KeywordChanged.InvokeAsync(value);
+        var normalizedValue = string.IsNullOrEmpty(value) ? null : value;
+        _keyword = normalizedValue;
+        return KeywordChanged.InvokeAsync(normalizedValue);
     }
 
     private Task OnOnlyCaptureChanged(bool value)

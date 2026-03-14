@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
 using Monica.DomainDrivenDesign.AutoController.Extensions;
 using Monica.DomainDrivenDesign.AutoCrud;
 using Monica.Tool.Extensions;
@@ -10,8 +9,7 @@ using Monica.Tool.MoResponse;
 namespace Monica.DomainDrivenDesign.AutoController.Features;
 
 //仅需注册，ASP.NET Core会自动发现所有已注册的Provider进行处理。
-public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider,
-        IOptions<MvcOptions> mvcOptionsAccessor)
+public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider)
     : IApiDescriptionProvider
 {
     public void OnProvidersExecuted(ApiDescriptionProviderContext context)

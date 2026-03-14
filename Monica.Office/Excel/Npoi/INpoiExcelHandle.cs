@@ -27,14 +27,14 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="sheet">sheet表</param>
         /// <param name="cell">单元格</param>
         /// <returns>MergedInfo</returns>
-        ExcelCellMergedInfo GetCellMergedInfo(ISheet sheet, ICell cell);
+        ExcelCellMergedInfo GetCellMergedInfo(ISheet sheet, ICell? cell);
 
         /// <summary>
         /// 获取单元格的值
         /// </summary>
         /// <param name="cell">单元格</param>
         /// <returns></returns>
-        object GetCellValue(ICell cell);
+        object? GetCellValue(ICell? cell);
 
         /// <summary>
         /// 得到公式单元格的值
@@ -42,7 +42,7 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="formulaValue"></param>
         /// <param name="cell"></param>
         /// <returns></returns>
-        object GetCellValue(CellValue formulaValue, ICell cell);
+        object? GetCellValue(CellValue? formulaValue, ICell? cell);
 
         /// <summary>
         /// 获取所在合并的单元格区域的值
@@ -50,7 +50,7 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="sheet">sheet表</param>
         /// <param name="cell">单元格</param>
         /// <returns>若是合并的单元格：返回合并区域的第一个值。若是非合并单元格：返回当前表格的值</returns>
-        object GetMergedCellValue(ISheet sheet, ICell cell);
+        object? GetMergedCellValue(ISheet sheet, ICell cell);
 
         /// <summary>
         /// 获取单元格值的默认格式
@@ -68,7 +68,7 @@ namespace Monica.Office.Excel.Npoi
         /// <param name="columnIndex">当前列下标,起始0</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        object ConverterCellValue(IRow row, int columnIndex, Type valueType);
+        object? ConverterCellValue(IRow? row, int columnIndex, Type valueType);
 
         /// <summary>
         /// 获取默认的单元格样式

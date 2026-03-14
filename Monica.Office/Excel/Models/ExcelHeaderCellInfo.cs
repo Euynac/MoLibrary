@@ -30,7 +30,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 工作表名称
         /// </summary>
-        public string SheetName { get; set; }
+        public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
         /// 工作表下标（起始：0）
@@ -40,14 +40,13 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 表头单元格集合
         /// </summary>
-        public List<T> HeaderCells { get; set; }
+        public List<T> HeaderCells { get; set; } = [];
 
         /// <summary>
         /// 构造
         /// </summary>
         public ExcelHeaderCellInfo()
         {
-            HeaderCells = [];
         }
 
         /// <summary>
@@ -76,7 +75,7 @@ namespace Monica.Office.Excel.Models
         /// <summary>
         /// 表头名称
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// 行下标（起始：原值）

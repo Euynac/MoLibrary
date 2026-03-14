@@ -14,7 +14,7 @@
                      Items="@Subscriptions"
                      Dense="true"
                      Hover="true"
-                     OnRowClick="async (args) => await OnSubscriptionClick(args.Item)"
+                     OnRowClick="HandleSubscriptionRowClickAsync"
                      Style="cursor: pointer;">
                 <HeaderContent>
                     <MudTh>事件类型</MudTh>
@@ -70,6 +70,11 @@
 
     [Parameter]
     public EventCallback<SubscriptionViewModel> OnSubscriptionSelected { get; set; }
+
+    private Task HandleSubscriptionRowClickAsync(TableRowClickEventArgs<SubscriptionViewModel> args)
+    {
+        return args.Item is null ? Task.CompletedTask : OnSubscriptionClick(args.Item);
+    }
 
     private async Task OnSubscriptionClick(SubscriptionViewModel subscription)
     {

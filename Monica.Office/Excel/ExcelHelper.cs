@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Monica.Office.Excel.Attributes;
@@ -224,6 +225,32 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
+        /// 转换单元格值
+        /// </summary>
+        /// <param name="cellValue"></param>
+        /// <param name="valueType"></param>
+        /// <returns></returns>
+        public static object? ConvertExcelCellValue(this object? cellValue, Type valueType)
+        {
+            if (string.IsNullOrWhiteSpace(cellValue?.ToString()))
+            {
+                return cellValue;
+            }
+
+            if (valueType.IsDateTime())
+            {
+                cellValue = cellValue.GetTypedCellValue<DateTime>();
+            }
+            else if (valueType.IsTimeSpan())
+            {
+                cellValue = cellValue.GetTypedCellValue<TimeSpan>();
+            }
+
+            var text = cellValue?.ToString();
+            return text == null ? cellValue : TypeDescriptor.GetConverter(valueType).ConvertFromInvariantString(text);
+        }
+
+        /// <summary>
         /// 获取单元格值
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -251,7 +278,7 @@ namespace Monica.Office.Excel
                 if (type1 == typeof(TimeSpan))
                     return (T)(ValueType)new DateTime(((TimeSpan)value).Ticks);
                 if (type1 == typeof(string))
-                    return (T)(ValueType)DateTime.Parse(value.ToString());
+                    return (T)(ValueType)DateTime.Parse((string)value);
             }
             else if (conversionType == typeof(TimeSpan))
             {
@@ -260,7 +287,7 @@ namespace Monica.Office.Excel
                 if (type1 == typeof(DateTime))
                     return (T)(ValueType)new TimeSpan(((DateTime)value).Ticks);
                 if (type1 == typeof(string))
-                    return (T)(ValueType)TimeSpan.Parse(value.ToString());
+                    return (T)(ValueType)TimeSpan.Parse((string)value);
             }
             return (T)Convert.ChangeType(value, conversionType);
         }

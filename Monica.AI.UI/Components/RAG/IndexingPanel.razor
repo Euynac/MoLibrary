@@ -67,14 +67,15 @@
 
     <MudFileUpload T="IBrowserFile" Accept=".md,.txt,.markdown"
                    FilesChanged="HandleFileSelected" MaximumFileCount="1">
-        <ActivatorContent>
+        <CustomContent Context="upload">
             <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.UploadFile"
+                       OnClick="@upload.OpenFilePickerAsync"
                        FullWidth="true"
                        Disabled="@(IsIndexing || string.IsNullOrEmpty(_uploadKbId))">
                 @(_uploadFileName ?? L["RAG:Indexing:ChooseFile"])
             </MudButton>
-        </ActivatorContent>
+        </CustomContent>
     </MudFileUpload>
 </div>
 

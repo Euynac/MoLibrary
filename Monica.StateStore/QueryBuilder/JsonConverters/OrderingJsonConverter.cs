@@ -13,7 +13,7 @@ namespace Monica.StateStore.QueryBuilder.JsonConverters;
 /// </summary>
 internal sealed class OrderingJsonConverter : JsonConverter<Ordering>
 {
-    /// <summary>Reads and converts the JSON to type <typeparamref name="T" />.</summary>
+    /// <summary>Reads and converts the JSON to an <see cref="Ordering" /> value.</summary>
     /// <param name="reader">The reader.</param>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>

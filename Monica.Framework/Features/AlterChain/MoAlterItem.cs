@@ -111,7 +111,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     /// 变更来源
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public TEnumAlterSource Source { get; set; }
+    public TEnumAlterSource Source { get; set; } = default!;
     /// <summary>
     /// 变更来源名
     /// </summary>

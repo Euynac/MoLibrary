@@ -15,7 +15,7 @@ public class MoCrudDisableDto
 /// </summary>
 public class MoCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 {
-    public List<TKey> Ids { get; set; }
+    public List<TKey> Ids { get; set; } = [];
 }
 
 

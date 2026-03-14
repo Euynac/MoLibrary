@@ -142,7 +142,7 @@ namespace Monica.Office.Excel
         /// <param name="fileStream"></param>
         /// <param name="optionAction"></param>
         /// <returns></returns>
-        protected abstract List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions> optionAction) where TImportDto : class, new();
+        protected abstract List<ExcelSheetDataOutput<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions>? optionAction) where TImportDto : class, new();
 
     }
 }

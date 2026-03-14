@@ -54,7 +54,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="rowIndex">当前行编号（起始下标：1）</param>
         /// <param name="columnIndex">当前列编号（起始下标：1）</param>
         /// <returns></returns>
-        public virtual object GetMergedCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex)
+        public virtual object? GetMergedCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex)
         {
             var cell = sheet.Cells[rowIndex, columnIndex];
             return GetMergedCellValue(sheet, cell);
@@ -66,7 +66,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="sheet">工作表</param>
         /// <param name="cell">单元格</param>
         /// <returns></returns>
-        public virtual object GetMergedCellValue(ExcelWorksheet sheet, ExcelRange cell)
+        public virtual object? GetMergedCellValue(ExcelWorksheet sheet, ExcelRange cell)
         {
             var address = sheet.MergedCells[cell.Start.Row, cell.Start.Column];
             if (address != null)
@@ -85,7 +85,7 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="columnIndex">当前列编号（起始下标：1）</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        public virtual object ConverterCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex, Type valueType)
+        public virtual object? ConverterCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex, Type valueType)
         {
             var cell = sheet.Cells[rowIndex, columnIndex];
             return ConverterCellValue(sheet, cell, valueType);
@@ -98,22 +98,10 @@ namespace Monica.Office.Excel.EpPlus
         /// <param name="cell">单元格</param>
         /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
         /// <returns></returns>
-        public virtual object ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType)
+        public virtual object? ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType)
         {
             var cellValue = GetMergedCellValue(sheet, cell);
-            if (string.IsNullOrWhiteSpace(cellValue?.ToString()))
-            {
-                return cellValue;
-            }
-            if (valueType.IsDateTime())
-            {
-                cellValue = cellValue.GetTypedCellValue<DateTime>();
-            }
-            else if (valueType.IsTimeSpan())
-            {
-                cellValue = cellValue.GetTypedCellValue<TimeSpan>();
-            }
-            return TypeDescriptor.GetConverter(valueType).ConvertFromInvariantString(cellValue.ToString());
+            return cellValue.ConvertExcelCellValue(valueType);
         }
 
         /// <summary>

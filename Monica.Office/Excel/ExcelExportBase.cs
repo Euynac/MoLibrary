@@ -678,12 +678,13 @@ namespace Monica.Office.Excel
                 var fxAttrs = p.GetCustomAttributes<ColumnStatsAttribute>();
                 foreach (var fxAttr in fxAttrs)
                 {
-                    if (!string.IsNullOrWhiteSpace(fxAttr.ShowOnColumnPropertyName) && !properties.Contains(fxAttr.ShowOnColumnPropertyName))
+                    var targetPropertyName = fxAttr.ShowOnColumnPropertyName;
+                    if (!string.IsNullOrWhiteSpace(targetPropertyName) && !properties.Contains(targetPropertyName))
                     {
-                        throw new Exception($"特性【{nameof(ColumnStatsAttribute)}】上指定的属性【{fxAttr.ShowOnColumnPropertyName}】在类【{typeof(TExportDto).Name}】中未找到");
+                        throw new Exception($"特性【{nameof(ColumnStatsAttribute)}】上指定的属性【{targetPropertyName}】在类【{typeof(TExportDto).Name}】中未找到");
                     }
 
-                    var pIndex = pNames.IndexOf(fxAttr.ShowOnColumnPropertyName);
+                    var pIndex = string.IsNullOrWhiteSpace(targetPropertyName) ? -1 : pNames.IndexOf(targetPropertyName);
                     var pRowIndex = nextRowIndex + fxAttr.OffsetRow;
                     var pColumnIndex = pIndex == -1 ? columnIndex : pIndex;
                  
@@ -745,45 +746,16 @@ namespace Monica.Office.Excel
             var startAddress = GetCellAddress(workbook, worksheet, fromRowIndex, fromColumnIndex);
             var endAddress = GetCellAddress(workbook, worksheet, toRowIndex, toColumnIndex);
 
-            string formula = null;
-
-            switch (functionEnum)
+            return functionEnum switch
             {
-                case FunctionEnum.None:
-                    {
-                        formula = null;
-                        break;
-                    }
-                case FunctionEnum.Sum:
-                    {
-                        formula = $"SUM({startAddress}:{endAddress})";
-                        break;
-                    }
-                case FunctionEnum.Avg:
-                    {
-                        formula = $"AVERAGE({startAddress}:{endAddress})";
-                        break;
-                    }
-                case FunctionEnum.Count:
-                    {
-                        formula = $"COUNT({startAddress}:{endAddress})";
-                        break;
-                    }
-                case FunctionEnum.Max:
-                    {
-                        formula = $"MAX({startAddress}:{endAddress})";
-                        break;
-                    }
-                case FunctionEnum.Min:
-                    {
-                        formula = $"MIN({startAddress}:{endAddress})";
-                        break;
-                    }
-                default:
-                    throw new Exception($"函数类型值【{functionEnum}】还未设置公式");
-            }
-
-            return formula;
+                FunctionEnum.Sum => $"SUM({startAddress}:{endAddress})",
+                FunctionEnum.Avg => $"AVERAGE({startAddress}:{endAddress})",
+                FunctionEnum.Count => $"COUNT({startAddress}:{endAddress})",
+                FunctionEnum.Max => $"MAX({startAddress}:{endAddress})",
+                FunctionEnum.Min => $"MIN({startAddress}:{endAddress})",
+                FunctionEnum.None => throw new InvalidOperationException("FunctionEnum.None does not have a formula."),
+                _ => throw new Exception($"函数类型值【{functionEnum}】还未设置公式")
+            };
         }
 
 

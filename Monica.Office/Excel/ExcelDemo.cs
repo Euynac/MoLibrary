@@ -45,7 +45,7 @@ namespace Monica.Office.Excel
                 //检查错误并抛出异常
                 data.CheckError();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //返回错误信息： e.Message
             }
@@ -60,18 +60,19 @@ namespace Monica.Office.Excel
             {
                 var list = new List<ExportTest>();
                 var now = DateTime.Now.Date;
+                var random = new Random();
                 for (var i = 0; i < 11; i++)
                 {
                     list.Add(new ExportTest
                     {
-                        Name = "张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三" + new Random().Next(1, 3),
-                        Name1 = "张三" + new Random().Next(1, 3),
-                        Name11 = "张三" + new Random().Next(1, 3),
-                        Age = new Random().Next(10, 50),
-                        Score = new Random().Next(1000, 5000),
-                        Edu = (TestEnum)new Random().Next(1, 4),
-                        Date = now.AddDays(new Random().Next(1, 3)),
-                        Date1 = now.AddDays(new Random().Next(1, 3))
+                        Name = "张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三张三" + random.Next(1, 3),
+                        Name1 = "张三" + random.Next(1, 3),
+                        Name11 = "张三" + random.Next(1, 3),
+                        Age = random.Next(10, 50),
+                        Score = random.Next(1000, 5000),
+                        Edu = (TestEnum)random.Next(1, 4),
+                        Date = now.AddDays(random.Next(1, 3)),
+                        Date1 = now.AddDays(random.Next(1, 3))
                     });
                 }
                 var bytes = await excelExportManager.ExportAsync(list, opt =>
@@ -82,7 +83,7 @@ namespace Monica.Office.Excel
 
                 return bytes;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //返回错误信息： e.Message
                 throw;
@@ -100,14 +101,14 @@ namespace Monica.Office.Excel
             [Display(Name = "姓名")]
             [Required(ErrorMessage = "{0}不能为空")]
             [StringLength(4, ErrorMessage = "{0}最大长度为{1}")]
-            public virtual string Name { get; set; }
+            public virtual string? Name { get; set; }
 
             /// <summary>
             /// 手机号
             /// </summary>
             [Display(Name = "手机号")]
             [RegularExpression(@"^1[3456789]\d{9}$", ErrorMessage = "{0}格式错误")]
-            public virtual string Phone { get; set; }
+            public virtual string? Phone { get; set; }
 
             /// <summary>
             /// 年龄
@@ -150,12 +151,12 @@ namespace Monica.Office.Excel
             /// </summary>
             [Display(Name = "学历文本")]
             [IgnoreColumn]
-            public virtual string EduText => typeof(TestEnum).GetField(Edu.ToString())?.Name;
+            public virtual string? EduText => Edu?.ToString();
 
             /// <summary>
             /// 无 DisplayName
             /// </summary>
-            public virtual string NoDisplayName { get; set; }
+            public virtual string? NoDisplayName { get; set; }
         }
 
         public enum TestEnum
@@ -184,7 +185,7 @@ namespace Monica.Office.Excel
             [DataStyle(WrapText = true, FillPattern = (short)FillPattern.SolidForeground, FillForegroundColor = HSSFColor.Green.Index)]
             [DataFont(Color = 10)]
             [MergeRow]
-            public virtual string Name { get; set; }
+            public virtual string? Name { get; set; }
 
             /// <summary>
             /// 姓名1
@@ -192,14 +193,14 @@ namespace Monica.Office.Excel
             [Display(Name = "姓名1")]
             [HeaderStyle(ColumnSize = 40)]
             [DataFont(FontHeightInPoints = 15)]
-            public virtual string Name1 { get; set; }
+            public virtual string? Name1 { get; set; }
 
             /// <summary>
             /// 姓名2
             /// </summary>
             [Display(Name = "姓名11")]
             [DataFont(FontHeightInPoints = 18)]
-            public virtual string Name11 { get; set; }
+            public virtual string? Name11 { get; set; }
 
             /// <summary>
             /// 日期
@@ -250,7 +251,7 @@ namespace Monica.Office.Excel
             /// 学历文本
             /// </summary>
             [Display(Name = "学历文本")]
-            public virtual string EduText => Edu?.ToString();
+            public virtual string? EduText => Edu?.ToString();
 
             /// <summary>
             /// 时间
