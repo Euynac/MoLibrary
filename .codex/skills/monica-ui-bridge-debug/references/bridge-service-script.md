@@ -6,6 +6,49 @@ Use `scripts/bridge_service.py` to standardize Monica bridge-service startup acr
 
 ## Commands
 
+### `start`
+
+Launch the bridge service in the background, wait for readiness by default, and leave it running.
+
+Use this command for single-agent or single-terminal workflows where `run` would otherwise block the session.
+
+Required arguments:
+
+- `--project-dir`
+- `--service-url`
+- `--task-dir`
+
+Optional arguments:
+
+- `--project-file`
+- `--log-name`
+- `--ready-name`
+- `--report-name`
+- `--home-path`
+- `--file-lock-retries`
+- `--timeout`
+- `--poll-seconds`
+- `--strict-marker`
+- `--no-wait`
+- `--launch-name`
+- `--runner-stdout-name`
+- `--runner-stderr-name`
+
+Artifacts written to the task folder by default:
+
+- `app-run.log`
+- `bridge-ready.json`
+- `bridge-ready-report.json`
+- `bridge-launch.json`
+- `bridge-run.stdout.log`
+- `bridge-run.stderr.log`
+
+Calling `start` again on the same task folder restarts the bridge:
+
+1. Stop the previous detached runner when `bridge-launch.json` exists
+2. Spawn a new detached `run`
+3. Wait for readiness unless `--no-wait` is provided
+
 ### `run`
 
 Launch the bridge service in the foreground after cleanup and keep the process attached.
@@ -58,6 +101,17 @@ When `--service-url` uses a non-loopback IP address, the script keeps the extern
 
 - Worker A: `python scripts/bridge_service.py run ...`
 - Worker B: `python scripts/bridge_service.py wait-ready ...` and then Playwright capture
+
+## Recommended single-agent command
+
+When sub-agents are not being used, prefer:
+
+```bash
+python scripts/bridge_service.py start \
+  --project-dir "<bridge-project-dir>" \
+  --service-url "<bridge-service-url>" \
+  --task-dir "<task-folder>"
+```
 
 ## Exit codes
 

@@ -29,6 +29,9 @@ FILE_LOCK_MARKERS = (
 DEFAULT_LOG_NAME = "app-run.log"
 DEFAULT_READY_NAME = "bridge-ready.json"
 DEFAULT_REPORT_NAME = "bridge-ready-report.json"
+DEFAULT_LAUNCH_NAME = "bridge-launch.json"
+DEFAULT_RUNNER_STDOUT_NAME = "bridge-run.stdout.log"
+DEFAULT_RUNNER_STDERR_NAME = "bridge-run.stderr.log"
 DEFAULT_HOME_PATH = "/home"
 SCRIPT_MARKER = "[bridge-service]"
 
@@ -232,6 +235,15 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def read_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 def collect_unix_named_pids(project_name: str) -> set[int]:
     if not running_in_posix():
         return set()
@@ -331,7 +343,9 @@ def collect_windows_named_pids(project_name: str, cmd_exe: str) -> set[int]:
         if image_name != project_image:
             continue
         if pid_text.isdigit():
-            pids.add(int(pid_text))
+            pid = int(pid_text)
+            if pid > 0:
+                pids.add(pid)
     return pids
 
 
@@ -352,7 +366,9 @@ def collect_windows_port_pids(port: int, cmd_exe: str) -> set[int]:
         if state.upper() not in {"LISTENING", "ESTABLISHED", "TIME_WAIT", "CLOSE_WAIT"}:
             continue
         if pid_text.isdigit():
-            pids.add(int(pid_text))
+            pid = int(pid_text)
+            if pid > 0:
+                pids.add(pid)
     return pids
 
 
@@ -381,6 +397,43 @@ def cleanup_bridge_processes(context: BridgeContext) -> dict:
     }
 
 
+def terminate_pid_tree(pid: int) -> None:
+    if pid <= 0:
+        return
+    if is_windows() or is_wsl():
+        cmd_exe = locate_windows_cmd()
+        if cmd_exe:
+            run_command([cmd_exe, "/c", f"taskkill /PID {pid} /T /F"])
+        return
+
+    try:
+        os.killpg(pid, signal.SIGTERM)
+        time.sleep(0.2)
+    except (ProcessLookupError, PermissionError):
+        return
+    except Exception:
+        terminate_posix_pid(pid)
+        return
+
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        return
+
+
+def stop_previous_launcher(launch_path: Path) -> dict | None:
+    payload = read_json(launch_path)
+    raw_pid = payload.get("launcher_pid")
+    pid = raw_pid if isinstance(raw_pid, int) else int(raw_pid) if isinstance(raw_pid, str) and raw_pid.isdigit() else None
+    if pid is None:
+        return None
+    terminate_pid_tree(pid)
+    return {
+        "launcher_pid": pid,
+        "launch_path": str(launch_path),
+    }
+
+
 def build_dotnet_command(context: BridgeContext) -> list[str]:
     command = [
         "dotnet",
@@ -391,6 +444,71 @@ def build_dotnet_command(context: BridgeContext) -> list[str]:
     if context.bind_url:
         command.extend(["--", "--urls", context.bind_url])
     return command
+
+
+def build_detached_run_command(context: BridgeContext, args: argparse.Namespace) -> list[str]:
+    command = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "run",
+        "--project-dir",
+        str(context.project_dir),
+        "--project-file",
+        str(context.project_file),
+        "--service-url",
+        context.service_url,
+        "--task-dir",
+        str(context.task_dir),
+        "--log-name",
+        args.log_name,
+        "--ready-name",
+        args.ready_name,
+        "--report-name",
+        args.report_name,
+        "--home-path",
+        args.home_path,
+        "--file-lock-retries",
+        str(args.file_lock_retries),
+    ]
+    return command
+
+
+def spawn_detached_run_process(
+    command: list[str],
+    cwd: Path,
+    stdout_path: Path,
+    stderr_path: Path,
+) -> subprocess.Popen[str]:
+    ensure_directory(stdout_path.parent)
+    ensure_directory(stderr_path.parent)
+    stdout_stream = stdout_path.open("w", encoding="utf-8")
+    stderr_stream = stderr_path.open("w", encoding="utf-8")
+
+    kwargs: dict = {
+        "cwd": str(cwd),
+        "stdin": subprocess.DEVNULL,
+        "stdout": stdout_stream,
+        "stderr": stderr_stream,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "bufsize": 1,
+        "close_fds": True,
+    }
+    if is_windows() or is_wsl():
+        kwargs["creationflags"] = (
+            getattr(subprocess, "DETACHED_PROCESS", 0)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
+    else:
+        kwargs["start_new_session"] = True
+
+    try:
+        return subprocess.Popen(command, **kwargs)
+    finally:
+        stdout_stream.close()
+        stderr_stream.close()
 
 
 def make_ready_payload(context: BridgeContext, observed_url: str, process: subprocess.Popen[str]) -> dict:
@@ -644,6 +762,61 @@ def command_run(args: argparse.Namespace) -> int:
     return stream_run(context, retry_limit=args.file_lock_retries)
 
 
+def command_start(args: argparse.Namespace) -> int:
+    context = build_context(args)
+    launch_path = resolve_output_path(context.task_dir, args.launch_name)
+    runner_stdout_path = resolve_output_path(context.task_dir, args.runner_stdout_name)
+    runner_stderr_path = resolve_output_path(context.task_dir, args.runner_stderr_name)
+
+    previous_launcher = stop_previous_launcher(launch_path)
+    if previous_launcher:
+        print_info(
+            "Stopped previous detached bridge runner: "
+            + json.dumps(previous_launcher, ensure_ascii=False)
+        )
+
+    command = build_detached_run_command(context, args)
+    process = spawn_detached_run_process(
+        command=command,
+        cwd=context.project_dir,
+        stdout_path=runner_stdout_path,
+        stderr_path=runner_stderr_path,
+    )
+
+    launch_payload = {
+        "status": "started",
+        "timestamp": now_iso(),
+        "launcher_pid": process.pid,
+        "project_name": context.project_name,
+        "project_dir": str(context.project_dir),
+        "project_file": str(context.project_file),
+        "task_dir": str(context.task_dir),
+        "service_url": context.service_url,
+        "bind_url": context.bind_url,
+        "home_url": context.home_url,
+        "ready_path": str(context.ready_path),
+        "report_path": str(context.report_path),
+        "log_path": str(context.log_path),
+        "runner_stdout_path": str(runner_stdout_path),
+        "runner_stderr_path": str(runner_stderr_path),
+        "command": command,
+        "previous_launcher": previous_launcher,
+    }
+    write_json(launch_path, launch_payload)
+    print_info(f"Started detached bridge runner with PID {process.pid}")
+    print_info(f"Wrote detached launch metadata to {launch_path}")
+
+    if args.no_wait:
+        return 0
+
+    return wait_ready(
+        context,
+        timeout_seconds=args.timeout,
+        poll_seconds=args.poll_seconds,
+        strict_marker=args.strict_marker,
+    )
+
+
 def command_wait_ready(args: argparse.Namespace) -> int:
     context = build_context(args)
     return wait_ready(
@@ -700,6 +873,51 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of automatic retries when MSB3026 or another file-lock marker appears. Default: 1",
     )
     run_parser.set_defaults(func=command_run)
+
+    start_parser = subparsers.add_parser(
+        "start",
+        help="Start the bridge service in the background, wait for readiness by default, and leave it running.",
+    )
+    add_shared_run_arguments(start_parser, include_project=True)
+    start_parser.add_argument(
+        "--file-lock-retries",
+        type=int,
+        default=1,
+        help="Number of automatic retries when MSB3026 or another file-lock marker appears. Default: 1",
+    )
+    start_parser.add_argument("--timeout", type=int, default=120, help="Maximum wait time in seconds. Default: 120")
+    start_parser.add_argument(
+        "--poll-seconds",
+        type=float,
+        default=2.0,
+        help="Polling interval in seconds. Default: 2.0",
+    )
+    start_parser.add_argument(
+        "--strict-marker",
+        action="store_true",
+        help="Fail when /home becomes reachable but no listening marker is observed.",
+    )
+    start_parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Return immediately after spawning the background runner instead of waiting for readiness.",
+    )
+    start_parser.add_argument(
+        "--launch-name",
+        default=DEFAULT_LAUNCH_NAME,
+        help=f"Detached launch metadata file name or absolute path. Default: {DEFAULT_LAUNCH_NAME}",
+    )
+    start_parser.add_argument(
+        "--runner-stdout-name",
+        default=DEFAULT_RUNNER_STDOUT_NAME,
+        help=f"Background runner stdout file name or absolute path. Default: {DEFAULT_RUNNER_STDOUT_NAME}",
+    )
+    start_parser.add_argument(
+        "--runner-stderr-name",
+        default=DEFAULT_RUNNER_STDERR_NAME,
+        help=f"Background runner stderr file name or absolute path. Default: {DEFAULT_RUNNER_STDERR_NAME}",
+    )
+    start_parser.set_defaults(func=command_start)
 
     wait_parser = subparsers.add_parser(
         "wait-ready",
