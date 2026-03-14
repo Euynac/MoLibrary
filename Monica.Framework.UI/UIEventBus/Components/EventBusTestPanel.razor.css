@@ -1,6 +1,3 @@
-.test-panel-wrapper {
-    padding: 1rem;
-}
 
 /* 使用 ::deep 穿透 MudBlazor 组件样式 */
 .publish-section-wrapper ::deep .mud-paper {

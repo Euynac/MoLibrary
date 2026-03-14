@@ -1,5 +1,9 @@
 /* 使用MudBlazor CSS变量 */
 
+.ui-event-bus-tabs ::deep .ui-event-bus-tab-panels {
+    padding: 24px;
+}
+
 .subscription-table-wrapper ::deep .mud-table-row:hover {
     background-color: var(--mud-palette-action-default-hover);
     cursor: pointer;

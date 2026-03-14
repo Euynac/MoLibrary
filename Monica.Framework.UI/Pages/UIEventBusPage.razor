@@ -44,75 +44,77 @@
     else
     {
         <!-- Tabs -->
-        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
-            <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
-                <SubscriptionStatisticsCard Statistics="_statistics"
-                                           OnEventTypeClick="ShowSubscriptionsByEventTypeAsync"
-                                           OnTopicClick="ShowSubscriptionsByTopicAsync" />
+        <div class="ui-event-bus-tabs">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="ui-event-bus-tab-panels">
+                <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
+                    <SubscriptionStatisticsCard Statistics="_statistics"
+                                               OnEventTypeClick="ShowSubscriptionsByEventTypeAsync"
+                                               OnTopicClick="ShowSubscriptionsByTopicAsync" />
 
-                @if (_recentChanges.Any())
-                {
-                    <MudPaper Class="pa-4" Elevation="2">
-                        <MudStack Spacing="2">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@Icons.Material.Filled.Update" Color="Color.Info" />
-                                    <MudText Typo="Typo.h6">最近变更</MudText>
+                    @if (_recentChanges.Any())
+                    {
+                        <MudPaper Class="pa-4" Elevation="2">
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Update" Color="Color.Info" />
+                                        <MudText Typo="Typo.h6">最近变更</MudText>
+                                    </MudStack>
+                                    <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                                        @_recentChanges.Count 条
+                                    </MudChip>
                                 </MudStack>
-                                <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                                    @_recentChanges.Count 条
-                                </MudChip>
-                            </MudStack>
 
-                            <MudList T="string" Clickable="false" Dense="true" Style="max-height: 400px; overflow-y: auto;">
-                                @foreach (var change in _recentChanges.Take(20))
-                                {
-                                    <MudListItem T="string">
-                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                <MudIcon Icon="@change.ChangeTypeIcon" Color="@change.ChangeTypeColor" Size="Size.Small" />
-                                                <MudChip T="string" Color="@change.ChangeTypeColor" Size="Size.Small">
-                                                    @change.ChangeTypeDisplay
+                                <MudList T="string" Clickable="false" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                                    @foreach (var change in _recentChanges.Take(20))
+                                    {
+                                        <MudListItem T="string">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                    <MudIcon Icon="@change.ChangeTypeIcon" Color="@change.ChangeTypeColor" Size="Size.Small" />
+                                                    <MudChip T="string" Color="@change.ChangeTypeColor" Size="Size.Small">
+                                                        @change.ChangeTypeDisplay
+                                                    </MudChip>
+                                                    <MudText Typo="Typo.body2">@change.Subscription.EventTypeShortName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@change.TimestampDisplay</MudText>
+                                                </MudStack>
+                                                <MudChip T="string" Color="@change.Subscription.ScopeColor" Size="Size.Small">
+                                                    @change.Subscription.ScopeDisplay
                                                 </MudChip>
-                                                <MudText Typo="Typo.body2">@change.Subscription.EventTypeShortName</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@change.TimestampDisplay</MudText>
                                             </MudStack>
-                                            <MudChip T="string" Color="@change.Subscription.ScopeColor" Size="Size.Small">
-                                                @change.Subscription.ScopeDisplay
-                                            </MudChip>
-                                        </MudStack>
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        </MudStack>
-                    </MudPaper>
-                }
-            </MudTabPanel>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
 
-            <MudTabPanel Text="Provider" Icon="@Icons.Material.Filled.Hub" BadgeData="@_providers.Count.ToString()" BadgeColor="Color.Primary">
-                <EventBusProviderList Providers="_providers"
-                                     AllSubscriptions="_subscriptions"
-                                     IsLoading="_loading"
-                                     OnRefresh="RefreshProvidersAsync" />
-            </MudTabPanel>
+                <MudTabPanel Text="Provider" Icon="@Icons.Material.Filled.Hub" BadgeData="@_providers.Count.ToString()" BadgeColor="Color.Primary">
+                    <EventBusProviderList Providers="_providers"
+                                         AllSubscriptions="_subscriptions"
+                                         IsLoading="_loading"
+                                         OnRefresh="RefreshProvidersAsync" />
+                </MudTabPanel>
 
-            <MudTabPanel Text="订阅浏览" Icon="@Icons.Material.Filled.List">
-                <SubscriptionFilterPanel Filter="_filter"
-                                        Providers="_providers"
-                                        OnFilterChanged="ApplyFilterAsync" />
+                <MudTabPanel Text="订阅浏览" Icon="@Icons.Material.Filled.List">
+                    <SubscriptionFilterPanel Filter="_filter"
+                                            Providers="_providers"
+                                            OnFilterChanged="ApplyFilterAsync" />
 
-                <SubscriptionTable Subscriptions="_displayedSubscriptions"
-                                  Loading="_loading"
-                                  OnRowClick="ShowSubscriptionDetail"
-                                  OnActivate="ActivateSubscriptionAsync"
-                                  OnDeactivate="DeactivateSubscriptionAsync"
-                                  OnUnsubscribe="UnsubscribeWithConfirmAsync" />
-            </MudTabPanel>
+                    <SubscriptionTable Subscriptions="_displayedSubscriptions"
+                                      Loading="_loading"
+                                      OnRowClick="ShowSubscriptionDetail"
+                                      OnActivate="ActivateSubscriptionAsync"
+                                      OnDeactivate="DeactivateSubscriptionAsync"
+                                      OnUnsubscribe="UnsubscribeWithConfirmAsync" />
+                </MudTabPanel>
 
-            <MudTabPanel Text="测试工具" Icon="@Icons.Material.Filled.Science">
-                <EventBusTestPanel />
-            </MudTabPanel>
-        </MudTabs>
+                <MudTabPanel Text="测试工具" Icon="@Icons.Material.Filled.Science">
+                    <EventBusTestPanel />
+                </MudTabPanel>
+            </MudTabs>
+        </div>
     }
 </MudContainer>
 
