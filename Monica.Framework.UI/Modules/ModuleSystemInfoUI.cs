@@ -20,7 +20,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 SystemInfoUI 模块
+        /// Configures the SystemInfoUI module.
         /// </summary>
         public static ModuleSystemInfoUIGuide AddSystemInfoUI(Action<ModuleSystemInfoUIOption>? action = null)
         {
@@ -30,7 +30,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
 }
 
 /// <summary>
-/// 系统信息UI模块
+/// System information UI module.
 /// </summary>
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     : MoModuleWithDependencies<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
@@ -82,21 +82,22 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 }
 
 /// <summary>
-/// SystemInfoUI模块向导
+/// SystemInfoUI module guide.
 /// </summary>
 public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
 {
     /// <summary>
-    /// 添加自定义快捷链接到系统信息页面
+    /// Adds a custom shortcut link to the system information page.
     /// </summary>
-    /// <param name="name">链接显示名称</param>
-    /// <param name="url">链接URL（支持相对路径如 "/swagger" 或绝对URL如 "https://example.com"）</param>
-    /// <param name="icon">MudBlazor Material Icon 字符串（默认为链接图标）</param>
-    /// <param name="description">链接描述/提示文本</param>
-    /// <param name="category">分类/分组名称（相同分类的链接会分组显示）</param>
-    /// <param name="order">显示顺序（数字越小越靠前，默认为0）</param>
-    /// <param name="target">链接打开方式（默认 _blank 新标签页）</param>
-    /// <returns></returns>
+    /// <param name="name">Display name of the link.</param>
+    /// <param name="url">Link URL. Supports relative paths such as "/swagger" and absolute URLs.</param>
+    /// <param name="icon">MudBlazor Material icon string. Defaults to the generic link icon.</param>
+    /// <param name="description">Optional description shown under the link.</param>
+    /// <param name="category">Optional grouping label used to organize shortcuts.</param>
+    /// <param name="order">Display order. Smaller values are shown first.</param>
+    /// <param name="target">Target behavior used by the generated anchor element.</param>
+    /// <param name="userName">Optional user name shown for quick copy.</param>
+    /// <param name="password">Optional password exposed only through a copy action.</param>
     public ModuleSystemInfoUIGuide AddCustomLink(
         string name,
         string url,
@@ -104,7 +105,9 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
         string? description = null,
         string? category = null,
         int order = 0,
-        string target = "_blank")
+        SystemInfoCustomLinkTarget target = SystemInfoCustomLinkTarget.NewTab,
+        string? userName = null,
+        string? password = null)
     {
         ConfigureModuleOption(option =>
         {
@@ -116,7 +119,9 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
                 Description = description,
                 Category = category,
                 Order = order,
-                Target = target
+                Target = target,
+                UserName = userName,
+                Password = password
             });
         }, secondKey: name);
 
@@ -125,17 +130,17 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
 }
 
 /// <summary>
-/// SystemInfoUI模块选项
+/// SystemInfoUI module options.
 /// </summary>
 public class ModuleSystemInfoUIOption : MoModuleOptionWithMinimalApi<ModuleSystemInfoUI>
 {
     /// <summary>
-    /// 是否禁用系统信息页面
+    /// Gets or sets a value indicating whether the system information page is disabled.
     /// </summary>
     public bool DisableUISystemInfoPage { get; set; }
 
     /// <summary>
-    /// 自定义快捷链接列表，显示在系统信息页面卡片中
+    /// Gets the custom shortcut links displayed on the system information page.
     /// </summary>
     public List<SystemInfoCustomLink> CustomLinks { get; set; } = new();
 } 

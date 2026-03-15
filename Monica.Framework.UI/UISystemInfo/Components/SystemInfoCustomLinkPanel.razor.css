@@ -1,0 +1,113 @@
+.system-info-custom-links-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.system-info-custom-links-card__content {
+    flex: 1;
+    padding-top: 8px;
+}
+
+.system-info-custom-links {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.system-info-custom-links__group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+}
+
+.system-info-custom-links__group--untitled {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+}
+
+.system-info-custom-links__group-title {
+    margin: 0;
+}
+
+.system-info-custom-links__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 10px;
+}
+
+.system-info-custom-link-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.system-info-custom-link-row:hover {
+    background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.system-info-custom-link-row__content {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.system-info-custom-link-row__name {
+    word-break: break-word;
+}
+
+.system-info-custom-link-row__description {
+    color: var(--mud-palette-text-secondary);
+    margin-left: 28px;
+}
+
+.system-info-custom-link-row__credentials {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px 10px;
+    min-width: fit-content;
+}
+
+.system-info-custom-link-row__credential {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+}
+
+.system-info-custom-link-row__credential-text {
+    max-width: 180px;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+@media (max-width: 960px) {
+    .system-info-custom-links__items {
+        grid-template-columns: 1fr;
+    }
+
+    .system-info-custom-link-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .system-info-custom-link-row__credentials {
+        justify-content: flex-start;
+    }
+}

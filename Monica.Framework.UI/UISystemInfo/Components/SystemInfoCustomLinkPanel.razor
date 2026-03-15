@@ -1,0 +1,147 @@
+@using Monica.Framework.UI.UISystemInfo.Models
+@using Monica.Tool.Extensions
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+@{
+    var linkGroups = BuildVisibleGroups();
+    var visibleLinkCount = linkGroups.Sum(group => group.Links.Count);
+}
+
+@if (visibleLinkCount > 0)
+{
+    <MudCard Class="system-info-custom-links-card" Elevation="2">
+        <MudCardHeader Class="pb-2">
+            <CardHeaderContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Style="font-weight: 500;">快捷链接</MudText>
+                    </MudStack>
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Primary">
+                        @visibleLinkCount.ToString()
+                    </MudChip>
+                </MudStack>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent Class="system-info-custom-links-card__content">
+            <div class="system-info-custom-links">
+                @foreach (var group in linkGroups)
+                {
+                    <section class="system-info-custom-links__group @(group.HasTitle ? null : "system-info-custom-links__group--untitled")">
+                        @if (group.HasTitle)
+                        {
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="system-info-custom-links__group-title">
+                                <strong>@group.Title</strong>
+                            </MudText>
+                        }
+
+                        <div class="system-info-custom-links__items">
+                            @foreach (var link in group.Links)
+                            {
+                                <div class="system-info-custom-link-row">
+                                    <div class="system-info-custom-link-row__content">
+                                        <MudLink Href="@link.Url"
+                                                 Target="@(link.Target.GetDescription() ?? "_blank")"
+                                                 Typo="Typo.body2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
+                                                <span class="system-info-custom-link-row__name">@link.Name</span>
+                                            </MudStack>
+                                        </MudLink>
+
+                                        @if (!string.IsNullOrWhiteSpace(link.Description))
+                                        {
+                                            <MudText Typo="Typo.caption" Class="system-info-custom-link-row__description">
+                                                @link.Description
+                                            </MudText>
+                                        }
+                                    </div>
+
+                                    @if (link.HasCredentials)
+                                    {
+                                        <div class="system-info-custom-link-row__credentials">
+                                            @if (link.HasUserName)
+                                            {
+                                                <div class="system-info-custom-link-row__credential">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Primary" />
+                                                    <span class="system-info-custom-link-row__credential-text">@link.UserName</span>
+                                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Primary"
+                                                                   title="复制用户名"
+                                                                   aria-label="复制用户名"
+                                                                   OnClick="@(() => CopyValueAsync(link.UserName!, "已复制用户名", "复制用户名失败"))" />
+                                                </div>
+                                            }
+
+                                            @if (link.HasPassword)
+                                            {
+                                                <div class="system-info-custom-link-row__credential">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Secondary" />
+                                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                                   Size="Size.Small"
+                                                                   Color="Color.Secondary"
+                                                                   title="复制密码"
+                                                                   aria-label="复制密码"
+                                                                   OnClick="@(() => CopyValueAsync(link.Password!, "已复制密码", "复制密码失败"))" />
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyCollection<SystemInfoCustomLink>? Links { get; set; }
+
+    private IReadOnlyList<SystemInfoCustomLinkGroup> BuildVisibleGroups()
+    {
+        var visibleLinks = Links?
+            .Where(link => link.Enabled)
+            .OrderBy(link => link.Order)
+            .ThenBy(link => link.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
+
+        if (visibleLinks.Count == 0)
+        {
+            return [];
+        }
+
+        return visibleLinks
+            .GroupBy(link => NormalizeCategory(link.Category))
+            .Select(group => new SystemInfoCustomLinkGroup(group.Key, group.ToList()))
+            .ToList();
+    }
+
+    private static string? NormalizeCategory(string? category)
+    {
+        return string.IsNullOrWhiteSpace(category)
+            ? null
+            : category.Trim();
+    }
+
+    private async Task CopyValueAsync(string value, string successMessage, string failureMessage)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
+            Snackbar.Add(successMessage, Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{failureMessage}: {ex.Message}", Severity.Error);
+        }
+    }
+}

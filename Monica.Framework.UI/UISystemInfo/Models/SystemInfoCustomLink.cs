@@ -1,47 +1,72 @@
 namespace Monica.Framework.UI.UISystemInfo.Models;
 
 /// <summary>
-/// 系统信息页面自定义快捷链接
+/// Represents a custom shortcut link shown on the system information page.
 /// </summary>
 public record SystemInfoCustomLink
 {
     /// <summary>
-    /// 链接显示名称
+    /// Gets the display name of the link.
     /// </summary>
     public required string Name { get; init; }
 
     /// <summary>
-    /// 链接URL（支持相对路径和绝对URL）
+    /// Gets the link URL. Supports relative and absolute URLs.
     /// </summary>
     public required string Url { get; init; }
 
     /// <summary>
-    /// MudBlazor Material Icon 名称（例如: Icons.Material.Filled.Dashboard）
+    /// Gets the MudBlazor Material icon name.
     /// </summary>
     public string Icon { get; init; } = MudBlazor.Icons.Material.Filled.Link;
 
     /// <summary>
-    /// 链接描述/提示文本
+    /// Gets the optional description shown under the link.
     /// </summary>
     public string? Description { get; init; }
 
     /// <summary>
-    /// 分类/分组名称（相同 Category 的链接会分组显示）
+    /// Gets the optional category used to group links together.
     /// </summary>
     public string? Category { get; init; }
 
     /// <summary>
-    /// 显示顺序（数字越小越靠前，默认为0）
+    /// Gets the display order. Smaller values appear first.
     /// </summary>
     public int Order { get; init; } = 0;
 
     /// <summary>
-    /// 是否启用（默认为 true）
+    /// Gets a value indicating whether the link is enabled.
     /// </summary>
     public bool Enabled { get; init; } = true;
 
     /// <summary>
-    /// 链接打开方式（默认 _blank 新标签页打开）
+    /// Gets the target behavior used to render the anchor element.
     /// </summary>
-    public string Target { get; init; } = "_blank";
+    public SystemInfoCustomLinkTarget Target { get; init; } = SystemInfoCustomLinkTarget.NewTab;
+
+    /// <summary>
+    /// Gets the optional user name shown for quick copy.
+    /// </summary>
+    public string? UserName { get; init; }
+
+    /// <summary>
+    /// Gets the optional password exposed only through a copy action.
+    /// </summary>
+    public string? Password { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the link has a visible user name.
+    /// </summary>
+    public bool HasUserName => !string.IsNullOrWhiteSpace(UserName);
+
+    /// <summary>
+    /// Gets a value indicating whether the link has a password copy action.
+    /// </summary>
+    public bool HasPassword => !string.IsNullOrWhiteSpace(Password);
+
+    /// <summary>
+    /// Gets a value indicating whether any credential-related UI should be shown.
+    /// </summary>
+    public bool HasCredentials => HasUserName || HasPassword;
 }

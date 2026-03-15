@@ -1,4 +1,5 @@
 @attribute [Route(PAGE_URL)]
+@using Monica.Framework.UI.UISystemInfo.Components
 @using Monica.Framework.UI.UISystemInfo.Services
 @using Monica.Framework.UI.UISystemInfo.Models
 @using Monica.Tool.Extensions
@@ -12,7 +13,7 @@
 <PageTitle>系统信息</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- 标题栏 -->
+    <!-- Header -->
     <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #6A1B9A 30%, #9C27B0 90%); color: white;">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -42,7 +43,14 @@
     else if (_systemInfo != null)
     {
         <MudGrid Spacing="3">
-            <!-- 基本信息卡片 -->
+            @if (SystemInfoUIOptions.Value.CustomLinks.Any(link => link.Enabled))
+            {
+                <MudItem xs="12">
+                    <SystemInfoCustomLinkPanel Links="@SystemInfoUIOptions.Value.CustomLinks" />
+                </MudItem>
+            }
+
+            <!-- Basic information card -->
             <MudItem xs="12" md="6" lg="4">
                 <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
                     <MudCardHeader Class="pb-2">
@@ -98,7 +106,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 环境信息卡片 -->
+            <!-- Environment information card -->
             @if (_systemInfo.EnvironmentInfo != null)
             {
                 <MudItem xs="12" md="6" lg="4">
@@ -144,10 +152,10 @@
                                 <MudText Class="ml-6" Style="color: #666;">@FormatBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
                             </MudStack>
                         </MudCardContent>
-                    </MudCard>
-                </MudItem>
+                        </MudCard>
+                    </MudItem>
 
-                <!-- 文件信息卡片 -->
+                <!-- File information card -->
                 @if (_systemInfo.FileInfo != null)
                 {
                     <MudItem xs="12" md="6" lg="4">
@@ -197,7 +205,7 @@
                     </MudItem>
                 }
 
-                <!-- 系统详细信息卡片 -->
+                <!-- System details card -->
                 <MudItem xs="12" md="6" lg="4">
                     <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
                         <MudCardHeader Class="pb-2">
@@ -241,101 +249,8 @@
                                 <MudText Class="ml-6" Style="color: #666;">@(_systemInfo.EnvironmentInfo.UserInteractive ? "是" : "否")</MudText>
                             </MudStack>
                         </MudCardContent>
-                    </MudCard>
-                </MudItem>
-            }
-
-            @* 快捷链接卡片 *@
-            @{
-                var customLinks = SystemInfoUIOptions.Value.CustomLinks
-                    .Where(l => l.Enabled)
-                    .OrderBy(l => l.Order)
-                    .ThenBy(l => l.Name)
-                    .ToList();
-
-                if (customLinks.Any())
-                {
-                    <MudItem xs="12" md="6" lg="4">
-                        <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
-                            <MudCardHeader Class="pb-2">
-                                <CardHeaderContent>
-                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
-                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">快捷链接</MudText>
-                                    </MudStack>
-                                </CardHeaderContent>
-                            </MudCardHeader>
-                            <MudCardContent Style="flex: 1; padding-top: 8px;">
-                                @if (customLinks.Any(l => !string.IsNullOrEmpty(l.Category)))
-                                {
-                                    @* 分组显示 *@
-                                    var groupedLinks = customLinks
-                                        .GroupBy(l => l.Category ?? "其他")
-                                        .OrderBy(g => g.Key);
-
-                                    <MudStack Spacing="3">
-                                        @foreach (var group in groupedLinks)
-                                        {
-                                            <div class="custom-link-group">
-                                                <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2 custom-link-category-title">
-                                                    <strong>@group.Key</strong>
-                                                </MudText>
-                                                <MudStack Spacing="2">
-                                                    @foreach (var link in group)
-                                                    {
-                                                        <div class="custom-link-item">
-                                                            <MudLink Href="@link.Url"
-                                                                    Target="@link.Target"
-                                                                    Typo="Typo.body2"
-                                                                    Class="custom-link">
-                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                                    <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
-                                                                    <MudText>@link.Name</MudText>
-                                                                </MudStack>
-                                                            </MudLink>
-                                                            @if (!string.IsNullOrEmpty(link.Description))
-                                                            {
-                                                                <MudText Typo="Typo.caption" Style="color: #888; margin-left: 32px;">
-                                                                    @link.Description
-                                                                </MudText>
-                                                            }
-                                                        </div>
-                                                    }
-                                                </MudStack>
-                                            </div>
-                                        }
-                                    </MudStack>
-                                }
-                                else
-                                {
-                                    @* 无分组显示 *@
-                                    <MudStack Spacing="2">
-                                        @foreach (var link in customLinks)
-                                        {
-                                            <div class="custom-link-item">
-                                                <MudLink Href="@link.Url"
-                                                        Target="@link.Target"
-                                                        Typo="Typo.body2"
-                                                        Class="custom-link">
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                        <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
-                                                        <MudText>@link.Name</MudText>
-                                                    </MudStack>
-                                                </MudLink>
-                                                @if (!string.IsNullOrEmpty(link.Description))
-                                                {
-                                                    <MudText Typo="Typo.caption" Style="color: #888; margin-left: 32px;">
-                                                        @link.Description
-                                                    </MudText>
-                                                }
-                                            </div>
-                                        }
-                                    </MudStack>
-                                }
-                            </MudCardContent>
                         </MudCard>
                     </MudItem>
-                }
             }
         </MudGrid>
     }
@@ -379,7 +294,6 @@
             {
                 _systemInfo = data;
             }
-            
         }
         catch (Exception ex)
         {
