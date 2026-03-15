@@ -220,6 +220,7 @@
                                 </TemplateColumn>
                                 <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
                                 <PropertyColumn Property="x => x.Location" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Location"]" />
+                                <PropertyColumn Property="x => x.LoadError" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]" />
                             </Columns>
                         </MudDataGrid>
                     </MudCardContent>
@@ -282,6 +283,7 @@
                                 </TemplateColumn>
                                 <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
                                 <PropertyColumn Property="x => x.Location" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Location"]" />
+                                <PropertyColumn Property="x => x.LoadError" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]" />
                             </Columns>
                             <PagerContent>
                                 <MudDataGridPager T="TypeFinderAssemblyInfo" PageSizeOptions="@GridPageSizeOptions" />
@@ -409,11 +411,16 @@
 
     private IReadOnlyList<StatusIcon> GetScanAssemblyStatusIcons(TypeFinderAssemblyInfo assembly)
     {
-        var statusIcons = new List<StatusIcon>(1);
+        var statusIcons = new List<StatusIcon>(2);
 
         if (assembly.IsEntryAssembly)
         {
             statusIcons.Add(CreateEntryAssemblyStatusIcon());
+        }
+
+        if (!string.IsNullOrWhiteSpace(assembly.LoadError))
+        {
+            statusIcons.Add(CreateLoadErrorStatusIcon(assembly.LoadError));
         }
 
         return statusIcons;
@@ -433,6 +440,11 @@
             statusIcons.Add(CreateInScanSetStatusIcon());
         }
 
+        if (!string.IsNullOrWhiteSpace(assembly.LoadError))
+        {
+            statusIcons.Add(CreateLoadErrorStatusIcon(assembly.LoadError));
+        }
+
         return statusIcons;
     }
 
@@ -450,6 +462,11 @@
             statusIcons.Add(CreateInScanSetStatusIcon());
         }
 
+        if (!string.IsNullOrWhiteSpace(assembly.LoadError))
+        {
+            statusIcons.Add(CreateLoadErrorStatusIcon(assembly.LoadError));
+        }
+
         return statusIcons;
     }
 
@@ -462,6 +479,11 @@
         if (library.IsInScanSet)
         {
             statusIcons.Add(CreateInScanSetStatusIcon());
+        }
+
+        if (!string.IsNullOrWhiteSpace(library.LoadError))
+        {
+            statusIcons.Add(CreateLoadErrorStatusIcon(library.LoadError));
         }
 
         return statusIcons;
@@ -557,6 +579,14 @@
     private StatusIcon CreateNotLoadedStatusIcon()
     {
         return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:NotLoaded"], Icons.Material.Filled.RemoveCircle, Color.Default);
+    }
+
+    private StatusIcon CreateLoadErrorStatusIcon(string loadError)
+    {
+        return new StatusIcon(
+            $"{L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]}: {loadError}",
+            Icons.Material.Filled.WarningAmber,
+            Color.Warning);
     }
 
     private sealed record StatusIcon(string Text, string Icon, Color Color);

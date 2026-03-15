@@ -19,8 +19,8 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
 
     private bool _assemblyListLoaded;
     private readonly List<Assembly> _assemblies = [];
-    private IReadOnlyDictionary<string, TypeFinderAssemblyLoadFailure> _assemblyLoadFailures =
-        new Dictionary<string, TypeFinderAssemblyLoadFailure>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TypeFinderAssemblyLoadFailure> _assemblyLoadFailures =
+        new(StringComparer.OrdinalIgnoreCase);
 
     #endregion
   
@@ -35,7 +35,7 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
             return;
 
         var scan = new TypeFinderAssemblyResolver(options, Logger).Resolve();
-        _assemblyLoadFailures = scan.FailedLoads;
+        MergeAssemblyLoadFailures(scan.FailedLoads.Values);
         _assemblies.AddRange(scan.Assemblies);
 
         Logger?.LogInformation(
@@ -87,16 +87,15 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
                 // 当程序集引用的其他程序集无法加载时，仍然返回能够加载的类型
                 types = ex.Types.Where(t => t != null).ToArray()!;
 
-                // 记录加载异常的详细信息
-                if (Logger != null && ex.LoaderExceptions.Length > 0)
+                var loadFailure = TypeFinderAssemblyLoadFailure.CreateTypeScanFailure(assembly, ex);
+                if (loadFailure != null)
                 {
-                    var exceptionMessages = ex.LoaderExceptions
-                        .Where(e => e != null)
-                        .Select(e => e!.Message)
-                        .Distinct();
-                    Logger.LogWarning("程序集 {AssemblyName} 部分类型加载失败: {Exceptions}",
-                        assembly.GetName().Name,
-                        string.Join("; ", exceptionMessages));
+                    _assemblyLoadFailures[loadFailure.Name] = loadFailure;
+
+                    Logger?.LogWarning(
+                        "程序集 {AssemblyName} 部分类型加载失败: {Exceptions}",
+                        loadFailure.Name,
+                        loadFailure.ErrorMessage);
                 }
             }
 
@@ -108,4 +107,12 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     }
 
     #endregion
+
+    private void MergeAssemblyLoadFailures(IEnumerable<TypeFinderAssemblyLoadFailure> failures)
+    {
+        foreach (var failure in failures)
+        {
+            _assemblyLoadFailures[failure.Name] = failure;
+        }
+    }
 } 

@@ -10,6 +10,12 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
     public TypeFinderAssemblyAnalysis Build()
     {
         var plan = new TypeFinderAssemblyPlanBuilder(options).Build();
+        var resolutionFailures = failedLoads.Values
+            .Where(static failure => failure.Stage == TypeFinderAssemblyLoadFailureStage.Resolution)
+            .ToDictionary(static failure => failure.Name, static failure => failure, StringComparer.OrdinalIgnoreCase);
+        var typeScanFailures = failedLoads.Values
+            .Where(static failure => failure.Stage == TypeFinderAssemblyLoadFailureStage.TypeScan)
+            .ToDictionary(static failure => failure.Name, static failure => failure, StringComparer.OrdinalIgnoreCase);
         var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
         var loadedByName = loadedAssemblies
             .Where(static assembly => !string.IsNullOrWhiteSpace(assembly.GetName().Name))
@@ -26,7 +32,8 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             .Select(assembly => CreateAssemblyInfo(
                 assembly,
                 scanAssemblyNames.Contains(assembly.GetName().Name ?? string.Empty),
-                assembly == plan.EntryAssembly))
+                assembly == plan.EntryAssembly,
+                GetLoadError(assembly.GetName().Name, typeScanFailures)))
             .ToList();
 
         var scanInfos = scanAssemblies
@@ -34,7 +41,8 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             .Select(assembly => CreateAssemblyInfo(
                 assembly,
                 isInScanSet: true,
-                isEntryAssembly: assembly == plan.EntryAssembly))
+                isEntryAssembly: assembly == plan.EntryAssembly,
+                loadError: GetLoadError(assembly.GetName().Name, typeScanFailures)))
             .ToList();
 
         var manualAssemblies = options.AdditionalAssemblies
@@ -57,7 +65,7 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
                 Version = reference.Version?.ToString(),
                 IsLoaded = loadedByName.ContainsKey(reference.Name ?? string.Empty),
                 IsInScanSet = scanAssemblyNames.Contains(reference.Name ?? string.Empty),
-                LoadError = failedLoads.GetValueOrDefault(reference.Name ?? string.Empty)?.ErrorMessage
+                LoadError = GetLoadError(reference.Name, resolutionFailures)
             })
             .ToList();
 
@@ -76,7 +84,7 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
                 IsInScanSet = scanAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty),
                 RuntimeDllPath = descriptor.RuntimeDllPath,
                 RuntimeDllExists = descriptor.RuntimeDllExists,
-                LoadError = failedLoads.GetValueOrDefault(descriptor.AssemblyName.Name ?? string.Empty)?.ErrorMessage
+                LoadError = GetLoadError(descriptor.AssemblyName.Name, resolutionFailures)
             })
             .ToList();
 
@@ -85,7 +93,8 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             EntryAssembly = CreateAssemblyInfo(
                 plan.EntryAssembly,
                 scanAssemblyNames.Contains(plan.EntryAssembly.GetName().Name ?? string.Empty),
-                isEntryAssembly: true),
+                isEntryAssembly: true,
+                loadError: GetLoadError(plan.EntryAssembly.GetName().Name, typeScanFailures)),
             Configuration = new TypeFinderConfigurationInfo
             {
                 UseDefaultProjectAssemblies = options.UseDefaultProjectAssemblies,
@@ -102,7 +111,11 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
         };
     }
 
-    private static TypeFinderAssemblyInfo CreateAssemblyInfo(Assembly assembly, bool isInScanSet, bool isEntryAssembly)
+    private static TypeFinderAssemblyInfo CreateAssemblyInfo(
+        Assembly assembly,
+        bool isInScanSet,
+        bool isEntryAssembly,
+        string? loadError)
     {
         var assemblyName = assembly.GetName();
         return new TypeFinderAssemblyInfo
@@ -114,8 +127,21 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             IsLoaded = true,
             IsInScanSet = isInScanSet,
             IsEntryAssembly = isEntryAssembly,
-            IsDynamic = assembly.IsDynamic
+            IsDynamic = assembly.IsDynamic,
+            LoadError = loadError
         };
+    }
+
+    private static string? GetLoadError(
+        string? assemblyName,
+        IReadOnlyDictionary<string, TypeFinderAssemblyLoadFailure> failedLoads)
+    {
+        if (string.IsNullOrWhiteSpace(assemblyName))
+        {
+            return null;
+        }
+
+        return failedLoads.GetValueOrDefault(assemblyName)?.ErrorMessage;
     }
 
     private static string? ResolveDependencyLibraryVersion(

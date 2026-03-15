@@ -38,10 +38,7 @@ internal sealed class TypeFinderAssemblyResolver(ModuleCoreOptionTypeFinder opti
             }
             catch (Exception exception)
             {
-                failedLoads[simpleName] = new TypeFinderAssemblyLoadFailure(
-                    simpleName,
-                    assemblyName.FullName ?? simpleName,
-                    exception.Message);
+                failedLoads[simpleName] = TypeFinderAssemblyLoadFailure.CreateResolutionFailure(assemblyName, exception);
 
                 logger?.LogWarning(
                     exception,
@@ -281,13 +278,57 @@ internal sealed class TypeFinderDependencyLibraryDescriptor(string libraryName, 
     public bool RuntimeDllExists => File.Exists(RuntimeDllPath);
 }
 
-internal sealed class TypeFinderAssemblyLoadFailure(string name, string fullName, string errorMessage)
+internal enum TypeFinderAssemblyLoadFailureStage
+{
+    Resolution,
+    TypeScan
+}
+
+internal sealed class TypeFinderAssemblyLoadFailure(
+    string name,
+    string fullName,
+    string errorMessage,
+    TypeFinderAssemblyLoadFailureStage stage)
 {
     public string Name { get; } = name;
 
     public string FullName { get; } = fullName;
 
     public string ErrorMessage { get; } = errorMessage;
+
+    public TypeFinderAssemblyLoadFailureStage Stage { get; } = stage;
+
+    public static TypeFinderAssemblyLoadFailure CreateResolutionFailure(AssemblyName assemblyName, Exception exception)
+    {
+        var simpleName = assemblyName.Name ?? assemblyName.FullName ?? string.Empty;
+        return new TypeFinderAssemblyLoadFailure(
+            simpleName,
+            assemblyName.FullName ?? simpleName,
+            exception.Message,
+            TypeFinderAssemblyLoadFailureStage.Resolution);
+    }
+
+    public static TypeFinderAssemblyLoadFailure? CreateTypeScanFailure(Assembly assembly, ReflectionTypeLoadException exception)
+    {
+        var messages = exception.LoaderExceptions
+            .Where(loaderException => loaderException != null)
+            .Select(loaderException => loaderException!.Message)
+            .Distinct()
+            .ToArray();
+
+        if (messages.Length == 0)
+        {
+            return null;
+        }
+
+        var assemblyName = assembly.GetName();
+        var simpleName = assemblyName.Name ?? assembly.FullName ?? string.Empty;
+        return new TypeFinderAssemblyLoadFailure(
+            simpleName,
+            assembly.FullName ?? simpleName,
+            string.Join("; ", messages),
+            TypeFinderAssemblyLoadFailureStage.TypeScan);
+    }
 }
 
 internal sealed class TypeFinderAssemblyScan

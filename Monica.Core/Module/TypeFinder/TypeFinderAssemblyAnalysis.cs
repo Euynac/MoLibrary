@@ -121,6 +121,11 @@ public sealed class TypeFinderAssemblyInfo
     /// Gets a value indicating whether the assembly is dynamic.
     /// </summary>
     public bool IsDynamic { get; init; }
+
+    /// <summary>
+    /// Gets the type-load error observed while scanning this assembly, when available.
+    /// </summary>
+    public string? LoadError { get; init; }
 }
 
 /// <summary>
