@@ -326,6 +326,7 @@
         "FullName": "完整名称",
         "LibraryName": "库名称",
         "LibraryType": "库类型",
+        "LibraryVersion": "包/库版本",
         "RuntimeDll": "运行时 DLL",
         "RuntimeDllPath": "运行时 DLL 路径",
         "LoadError": "加载错误"

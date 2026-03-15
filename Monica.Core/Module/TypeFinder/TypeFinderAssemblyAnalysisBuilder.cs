@@ -73,18 +73,25 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             .OrderByDescending(static descriptor => descriptor.IsProject)
             .ThenBy(static descriptor => descriptor.LibraryName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(static descriptor => descriptor.AssemblyName.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(descriptor => new TypeFinderDependencyLibraryInfo
+            .Select(descriptor =>
             {
-                LibraryName = descriptor.LibraryName,
-                LibraryType = descriptor.LibraryType,
-                IsProject = descriptor.IsProject,
-                AssemblyName = descriptor.AssemblyName.Name ?? descriptor.LibraryName,
-                AssemblyVersion = ResolveDependencyLibraryVersion(descriptor, loadedByName),
-                IsLoaded = loadedByName.ContainsKey(descriptor.AssemblyName.Name ?? string.Empty),
-                IsInScanSet = scanAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty),
-                RuntimeDllPath = descriptor.RuntimeDllPath,
-                RuntimeDllExists = descriptor.RuntimeDllExists,
-                LoadError = GetLoadError(descriptor.AssemblyName.Name, resolutionFailures)
+                var rawAssemblyVersion = ResolveRawDependencyAssemblyVersion(descriptor, loadedByName);
+
+                return new TypeFinderDependencyLibraryInfo
+                {
+                    LibraryName = descriptor.LibraryName,
+                    LibraryType = descriptor.LibraryType,
+                    IsProject = descriptor.IsProject,
+                    AssemblyName = descriptor.AssemblyName.Name ?? descriptor.LibraryName,
+                    AssemblyVersion = ResolveDisplayedDependencyLibraryVersion(rawAssemblyVersion, descriptor),
+                    RawAssemblyVersion = rawAssemblyVersion,
+                    LibraryVersion = descriptor.LibraryVersion,
+                    IsLoaded = loadedByName.ContainsKey(descriptor.AssemblyName.Name ?? string.Empty),
+                    IsInScanSet = scanAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty),
+                    RuntimeDllPath = descriptor.RuntimeDllPath,
+                    RuntimeDllExists = descriptor.RuntimeDllExists,
+                    LoadError = GetLoadError(descriptor.AssemblyName.Name, resolutionFailures)
+                };
             })
             .ToList();
 
@@ -144,7 +151,7 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
         return failedLoads.GetValueOrDefault(assemblyName)?.ErrorMessage;
     }
 
-    private static string? ResolveDependencyLibraryVersion(
+    private static string? ResolveRawDependencyAssemblyVersion(
         TypeFinderDependencyLibraryDescriptor descriptor,
         IReadOnlyDictionary<string, Assembly> loadedByName)
     {
@@ -153,11 +160,17 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             && loadedByName.TryGetValue(assemblyName, out var loadedAssembly))
         {
             return loadedAssembly.GetName().Version?.ToString()
-                   ?? descriptor.AssemblyName.Version?.ToString()
-                   ?? descriptor.LibraryVersion;
+                   ?? descriptor.AssemblyName.Version?.ToString();
         }
 
-        return descriptor.AssemblyName.Version?.ToString()
+        return descriptor.AssemblyName.Version?.ToString();
+    }
+
+    private static string? ResolveDisplayedDependencyLibraryVersion(
+        string? rawAssemblyVersion,
+        TypeFinderDependencyLibraryDescriptor descriptor)
+    {
+        return rawAssemblyVersion
                ?? descriptor.LibraryVersion;
     }
 

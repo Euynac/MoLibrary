@@ -358,7 +358,7 @@
                                                 HeaderClass="dependency-version-column"
                                                 CellClass="dependency-version-column">
                                     <CellTemplate>
-                                        @GetTextOrUnavailable(context.Item.AssemblyVersion)
+                                        @RenderDependencyLibraryVersionCell(context.Item)
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <TemplateColumn T="TypeFinderDependencyLibraryInfo"
@@ -554,6 +554,137 @@
             </MudTooltip>
             <span class="status-text-value" title="@displayPath" aria-label="@displayPath">@displayPath</span>
         </div>;
+    }
+
+    private RenderFragment RenderDependencyLibraryVersionCell(TypeFinderDependencyLibraryInfo library)
+    {
+        var displayVersion = GetTextOrUnavailable(library.AssemblyVersion);
+        var libraryVersionTooltip = GetDependencyLibraryVersionTooltip(library);
+
+        return @<div class="status-text-cell">
+            @if (libraryVersionTooltip != null)
+            {
+                <MudTooltip Text="@libraryVersionTooltip" Placement="Placement.Top">
+                    <span class="status-icon-trigger" tabindex="0" aria-label="@libraryVersionTooltip">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                    </span>
+                </MudTooltip>
+            }
+            <span class="status-text-value" title="@displayVersion" aria-label="@displayVersion">@displayVersion</span>
+        </div>;
+    }
+
+    private string? GetDependencyLibraryVersionTooltip(TypeFinderDependencyLibraryInfo library)
+    {
+        var libraryVersion = library.LibraryVersion?.Trim();
+        if (string.IsNullOrWhiteSpace(libraryVersion))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(library.RawAssemblyVersion))
+        {
+            return HasVersionMetadata(libraryVersion)
+                ? $"{L["ModuleSystem:AssemblyAnalysis:Columns:LibraryVersion"]}: {libraryVersion}"
+                : null;
+        }
+
+        if (AreEquivalentVersionStrings(library.RawAssemblyVersion, libraryVersion))
+        {
+            return null;
+        }
+
+        return $"{L["ModuleSystem:AssemblyAnalysis:Columns:LibraryVersion"]}: {libraryVersion}";
+    }
+
+    private static bool AreEquivalentVersionStrings(string left, string right)
+    {
+        var normalizedLeft = left.Trim();
+        var normalizedRight = right.Trim();
+
+        if (string.Equals(normalizedLeft, normalizedRight, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!TryParseComparableVersion(normalizedLeft, out var leftComponents, out var leftSuffix)
+            || !TryParseComparableVersion(normalizedRight, out var rightComponents, out var rightSuffix))
+        {
+            return false;
+        }
+
+        if (!string.Equals(leftSuffix, rightSuffix, StringComparison.OrdinalIgnoreCase)
+            || leftComponents.Count != rightComponents.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < leftComponents.Count; index++)
+        {
+            if (leftComponents[index] != rightComponents[index])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryParseComparableVersion(
+        string version,
+        out List<int> components,
+        out string suffix)
+    {
+        components = [];
+        suffix = string.Empty;
+
+        var numericPartLength = 0;
+        while (numericPartLength < version.Length
+               && (char.IsDigit(version[numericPartLength]) || version[numericPartLength] == '.'))
+        {
+            numericPartLength++;
+        }
+
+        if (numericPartLength == 0)
+        {
+            return false;
+        }
+
+        var numericPart = version[..numericPartLength];
+        if (numericPart.EndsWith(".", StringComparison.Ordinal)
+            || numericPart.Contains("..", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (var componentText in numericPart.Split('.', StringSplitOptions.TrimEntries))
+        {
+            if (!int.TryParse(componentText, out var component))
+            {
+                return false;
+            }
+
+            components.Add(component);
+        }
+
+        if (components.Count == 0)
+        {
+            return false;
+        }
+
+        while (components.Count > 2 && components[^1] == 0)
+        {
+            components.RemoveAt(components.Count - 1);
+        }
+
+        suffix = version[numericPartLength..].Trim();
+        return true;
+    }
+
+    private static bool HasVersionMetadata(string version)
+    {
+        var normalizedVersion = version.Trim();
+        return normalizedVersion.Any(static character => !char.IsDigit(character) && character != '.');
     }
 
     private StatusIcon CreateEntryAssemblyStatusIcon()

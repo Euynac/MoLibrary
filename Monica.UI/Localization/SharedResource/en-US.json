@@ -326,6 +326,7 @@
         "FullName": "Full Name",
         "LibraryName": "Library Name",
         "LibraryType": "Library Type",
+        "LibraryVersion": "Package/Library Version",
         "RuntimeDll": "Runtime DLL",
         "RuntimeDllPath": "Runtime DLL Path",
         "LoadError": "Load Error"

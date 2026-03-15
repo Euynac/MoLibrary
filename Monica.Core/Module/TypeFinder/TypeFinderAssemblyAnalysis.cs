@@ -237,9 +237,19 @@ public sealed class TypeFinderDependencyLibraryInfo
     public string AssemblyName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the assembly version.
+    /// Gets the visible dependency version shown to the user.
     /// </summary>
     public string? AssemblyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the raw assembly version before any fallback to DependencyContext package metadata.
+    /// </summary>
+    public string? RawAssemblyVersion { get; init; }
+
+    /// <summary>
+    /// Gets the package or library version reported by DependencyContext.
+    /// </summary>
+    public string? LibraryVersion { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the assembly is already loaded.

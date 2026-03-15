@@ -79,22 +79,29 @@
     gap: 8px;
     min-width: 0;
     width: 100%;
+    min-height: 1.5rem;
 }
 
 .assembly-name-text {
-    display: block;
+    display: flex;
+    align-items: center;
+    align-self: center;
     flex: 1 1 auto;
+    min-height: 1.5rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.25rem;
 }
 
 .inline-status-icon-list {
     display: inline-flex;
     align-items: center;
+    align-self: center;
     gap: 4px;
     flex: 0 0 auto;
+    min-height: 1.5rem;
 }
 
 .status-text-cell {
@@ -103,26 +110,34 @@
     gap: 8px;
     min-width: 0;
     width: 100%;
+    min-height: 1.5rem;
 }
 
 .status-text-value {
-    display: block;
+    display: flex;
+    align-items: center;
+    align-self: center;
     flex: 1 1 auto;
+    min-height: 1.5rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.25rem;
 }
 
 .status-icon-trigger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     line-height: 1;
     cursor: help;
+    min-height: 1.5rem;
 }
 
 .status-icon-trigger ::deep .mud-icon-root {
+    display: block;
     font-size: 1rem;
 }
 
@@ -131,6 +146,11 @@
     white-space: nowrap;
     word-break: normal;
     overflow-wrap: normal;
+}
+
+::deep .mud-data-grid-cell,
+::deep .mud-table-body .mud-table-cell {
+    vertical-align: middle;
 }
 
 ::deep th.dependency-library-name-column,
