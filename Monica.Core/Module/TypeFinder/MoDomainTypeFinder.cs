@@ -19,7 +19,8 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
 
     private bool _assemblyListLoaded;
     private readonly List<Assembly> _assemblies = [];
-    private TypeFinderAssemblyAnalysis? _assemblyAnalysis;
+    private IReadOnlyDictionary<string, TypeFinderAssemblyLoadFailure> _assemblyLoadFailures =
+        new Dictionary<string, TypeFinderAssemblyLoadFailure>(StringComparer.OrdinalIgnoreCase);
 
     #endregion
   
@@ -33,9 +34,9 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
         if (_assemblyListLoaded)
             return;
 
-        var resolution = new TypeFinderAssemblyResolver(options).Resolve();
-        _assemblyAnalysis = resolution.Analysis;
-        _assemblies.AddRange(resolution.Assemblies);
+        var scan = new TypeFinderAssemblyResolver(options, Logger).Resolve();
+        _assemblyLoadFailures = scan.FailedLoads;
+        _assemblies.AddRange(scan.Assemblies);
 
         Logger?.LogInformation(
             "Module system will scan the following assemblies:{Assemblies}",
@@ -61,7 +62,7 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
     {
         LoadAssemblies();
-        return _assemblyAnalysis ?? new TypeFinderAssemblyAnalysis();
+        return new TypeFinderAssemblyAnalysisBuilder(options, _assemblies, _assemblyLoadFailures).Build();
     }
 
     public ModuleCoreOptionTypeFinder Options => options;

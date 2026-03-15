@@ -23,7 +23,12 @@
         </MudText>
     </MudPaper>
 
-    <MudTabs Elevation="4" Rounded="true" ApplyEffectsToContainer="true" Class="mb-6">
+    <MudTabs ActivePanelIndex="@activeTabIndex"
+             ActivePanelIndexChanged="@OnActivePanelIndexChanged"
+             Elevation="4"
+             Rounded="true"
+             ApplyEffectsToContainer="true"
+             Class="mb-6">
         <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
             <div class="tab-content-panel">
                 <SystemOverview SystemStatus="systemStatus" />
@@ -79,8 +84,9 @@
     private ModuleDependencyGraph? dependencyGraph;
     private ModuleDetailInfo? selectedModuleDetail;
     private bool showModuleDetail = false;
+    private int activeTabIndex;
 
-
+    private const int AssemblyAnalysisTabIndex = 4;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -93,7 +99,7 @@
     /// 刷新数据
     /// </summary>
     /// <returns></returns>
-    private async Task RefreshData()
+    private Task RefreshData()
     {
         try
         {
@@ -101,8 +107,8 @@
             systemPerformance = StatusService.GetSystemPerformance();
             healthCheck = StatusService.GetHealthCheck();
             registrationInfo = StatusService.GetRegistrationInfo();
-            assemblyAnalysis = StatusService.GetAssemblyAnalysis();
             dependencyGraph = StatusService.GetDependencyGraph();
+            assemblyAnalysis = null;
 
             SnackBar.Add(L["ModuleSystem:Dashboard:Messages:DataRefreshed"], Severity.Success);
         }
@@ -110,6 +116,40 @@
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
         }
+
+        if (activeTabIndex == AssemblyAnalysisTabIndex)
+        {
+            return LoadAssemblyAnalysis();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnActivePanelIndexChanged(int tabIndex)
+    {
+        activeTabIndex = tabIndex;
+        return tabIndex == AssemblyAnalysisTabIndex
+            ? LoadAssemblyAnalysis()
+            : Task.CompletedTask;
+    }
+
+    private Task LoadAssemblyAnalysis()
+    {
+        if (assemblyAnalysis != null)
+        {
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            assemblyAnalysis = StatusService.GetAssemblyAnalysis();
+        }
+        catch (Exception ex)
+        {
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -117,7 +157,7 @@
     /// </summary>
     /// <param name="moduleKey">模块键</param>
     /// <returns></returns>
-    private async Task ViewModuleDetail(ModuleKey moduleKey)
+    private Task ViewModuleDetail(ModuleKey moduleKey)
     {
         try
         {
@@ -135,5 +175,7 @@
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {ex.Message}", Severity.Error);
         }
+
+        return Task.CompletedTask;
     }
 } 

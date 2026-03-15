@@ -199,6 +199,11 @@ public sealed class TypeFinderReferencedAssemblyInfo
     /// Gets a value indicating whether the referenced assembly is part of the final scan set.
     /// </summary>
     public bool IsInScanSet { get; init; }
+
+    /// <summary>
+    /// Gets the load error observed while resolving the assembly, when available.
+    /// </summary>
+    public string? LoadError { get; init; }
 }
 
 /// <summary>
