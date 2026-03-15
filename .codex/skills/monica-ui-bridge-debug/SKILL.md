@@ -1,6 +1,6 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, usually through a single-agent `bridge_service.py run` plus `wait-ready` workflow, then capture browser artifacts with Playwright and implement Monica UI fixes under $mo-ui-development. Use $subagent-progress-report only when optional delegation is actually needed.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $mo-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
 ---
 
 # Monica UI Bridge Debug
@@ -9,10 +9,10 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 
 ## Required companion skills
 
-- Use `$planning-with-files` for every multi-step task and store artifacts in the new task folder.
+- Use `$planning-with-files` to create a new task folder for every bridge run.
 - Use `$mo-ui-development` for every Monica Blazor UI implementation or style change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
-- Use `$subagent-progress-report` only when you intentionally choose a delegated multi-agent workflow.
+- Use `$subagent-progress-report` whenever the selected workflow is delegated sub-agent mode.
 
 ## Required user inputs
 
@@ -25,6 +25,34 @@ Request these inputs before bridge-based UI testing starts:
 
 Do not hardcode any bridge project path or service URL inside the workflow.
 
+## Select execution mode first
+
+Choose the workflow before launching the bridge service.
+
+### Simple mode
+
+Use simple mode when the task is narrow, the expected fix is localized, or the user explicitly asks for simple mode.
+
+Rules:
+
+- Run only the requirement-folder setup script from `$planning-with-files`.
+- Do not run the `$planning-with-files` session initialization script.
+- Do not create `task_plan.md`, `findings.md`, or `progress.md`.
+- Do not use sub-agents.
+- Store bridge logs, screenshots, snapshots, and readiness artifacts in the created task folder.
+
+### Delegated sub-agent mode
+
+Use delegated sub-agent mode when the task is complex, spans multiple debug or verification loops, benefits from parallel long-running work, or the user explicitly asks for sub-agent mode.
+
+Rules:
+
+- Use `$subagent-progress-report` without exception.
+- Act only as the orchestrator. Collect inputs, decide the workflow, ask the user for design confirmation, initialize coordination folders, supervise sub-agents, and summarize results.
+- Delegate concrete bridge testing, Playwright capture, debugging, implementation, and verification to sub-agents through the runtime's SubAgent features.
+- Keep bridge artifacts in the task folder and sub-agent coordination logs in `.tmp/<timestamp>-agent-session/`.
+- Do not silently downgrade to simple mode when the user asked for sub-agent mode.
+
 ## Mandatory Monica UI rule handoff
 
 Before editing Monica UI files, also apply `$mo-ui-development`:
@@ -35,22 +63,47 @@ python scripts/check_mudblazor_source.py
 
 If the source check fails, stop implementation and ask the user to provide the required MudBlazor source.
 
+## Ask for design confirmation early
+
+If a meaningful design choice needs user confirmation, ask as soon as the decision becomes clear.
+
+- Provide a small set of concrete options and the main tradeoff for each option.
+- Pause before implementation if the choice changes architecture, UX, component structure, or shared patterns in a non-obvious way.
+
 ## Quick start
 
-1. Create a planning task folder with `$planning-with-files`.
-2. Place all screenshots, snapshots, bridge logs, and readiness files in that task folder.
-3. Launch the bridge service with `scripts/bridge_service.py run`.
-4. Wait for readiness with `scripts/bridge_service.py wait-ready`.
-5. Open the full page URL with `$playwright-cli` and capture artifacts.
-6. Implement Monica UI changes under `$mo-ui-development` rules.
-7. Restart the bridge service with the same script when verification requires a rebuild.
-8. Leave the bridge service running after success so the user can inspect it.
+### Simple mode
+
+1. Collect the required inputs.
+2. Create the task folder with the `$planning-with-files` setup script only.
+3. Place screenshots, snapshots, bridge logs, and readiness files in that task folder.
+4. Launch the bridge service with `scripts/bridge_service.py run`.
+5. Wait for readiness with `scripts/bridge_service.py wait-ready`.
+6. Open the full page URL with `$playwright-cli` and capture artifacts.
+7. Implement Monica UI changes under `$mo-ui-development` rules.
+8. Restart the bridge service with the same script when verification requires a rebuild.
+9. Leave the bridge service running after success so the user can inspect it.
+
+### Delegated sub-agent mode
+
+1. Collect the required inputs and ask for any blocking design decision immediately.
+2. Create the task folder with the `$planning-with-files` setup script.
+3. Initialize one shared session root with `$subagent-progress-report`.
+4. Spawn sub-agents with explicit ownership for bridge testing, debugging, implementation, or verification.
+5. Bootstrap-check every sub-agent before trusting its progress.
+6. Supervise sub-agent logs and keep the main agent out of direct implementation work.
+7. Keep the bridge service running after successful verification unless the user asks otherwise.
 
 ## Workflow
 
 ### 1. Planning and task folder
 
-Create the task folder first with `$planning-with-files`. Save these artifacts there:
+Create the task folder first with the setup script from `$planning-with-files`.
+
+- In simple mode, stop after the folder is created. Do not create the three planning files.
+- In delegated sub-agent mode, create additional planning files only when the user explicitly wants file-based planning or the orchestration genuinely needs persistent high-level notes.
+
+Save these artifacts in the task folder:
 
 - `app-run.log`
 - `bridge-ready.json`
@@ -61,7 +114,7 @@ Create the task folder first with `$planning-with-files`. Save these artifacts t
 
 ### 2. Default execution model
 
-Prefer a single-agent flow:
+Prefer simple mode by default for narrow bridge tasks:
 
 1. Run `bridge_service.py run`
 2. Run `bridge_service.py wait-ready`
@@ -70,9 +123,20 @@ Prefer a single-agent flow:
 
 `run` now starts the bridge service in the background by default and returns immediately, so the same agent can continue with `wait-ready`.
 
-Only switch to `$subagent-progress-report` when you explicitly want a delegated multi-agent workflow for independent long-running tasks.
+Switch to delegated sub-agent mode when the task is complex or the user requests it. In that mode, the main agent only coordinates and the sub-agents perform the concrete bridge, debug, and implementation work.
 
-### 3. Bridge service startup script
+### 3. Delegated sub-agent orchestration
+
+When delegated sub-agent mode is selected:
+
+1. Use `$subagent-progress-report` in Main-Agent mode.
+2. Create one shared session root and reuse it for the whole run.
+3. Give each sub-agent a stable ownership boundary and require `$subagent-progress-report` in Sub-Agent mode.
+4. Run the bootstrap check after every delegation before trusting the child.
+5. Read the newest `agent.log` entries first and respond to `blocked` or `needs input` immediately.
+6. Archive closed sub-agents when their work is complete so future scans stay clean.
+
+### 4. Bridge service startup script
 
 Use the bundled Python script instead of ad-hoc shell snippets.
 
@@ -106,7 +170,9 @@ python scripts/bridge_service.py run \
   --task-dir "<task-folder>"
 ```
 
-### 4. WSL NAT handling
+In delegated sub-agent mode, the sub-agent that owns bridge execution should run these commands.
+
+### 5. WSL NAT handling
 
 If the user provides a specific non-loopback IP such as `http://172.31.96.1:5092`, treat it as a WSL NAT-style access URL.
 
@@ -118,7 +184,7 @@ http://0.0.0.0:<port>
 
 and passes it to `dotnet run` as an application argument. The external URL used for browser access remains the user-provided service URL.
 
-### 5. What the startup script guarantees
+### 6. What the startup script guarantees
 
 `bridge_service.py` provides these behaviors:
 
@@ -136,7 +202,7 @@ and passes it to `dotnet run` as an application argument. The external URL used 
 
 If strict log-marker enforcement is required, add `--strict-marker` to `wait-ready`.
 
-### 6. Playwright capture workflow
+### 7. Playwright capture workflow
 
 After readiness succeeds, build the page URL from:
 
@@ -155,7 +221,17 @@ playwright-cli screenshot --filename="<task-folder>/page.png"
 
 If the global `playwright-cli` binary is unavailable, fall back to `npx playwright-cli`.
 
-### 7. Reporting UI errors
+### 8. Debug logging and log markers
+
+For difficult problems, let the delegated sub-agent add focused debug output and log search markers.
+
+- Use a unique marker string for each investigation attempt, for example `[bridge-marker:<short-id>]`.
+- Write the marker, approximate timestamp, page route, and investigation goal into the sub-agent's `agent.log` before reproducing the issue.
+- Search `app-run.log` by marker first, then narrow by timestamp if needed.
+- Keep debug logging scoped to the suspected path and remove temporary logs after verification unless the user asks to keep them.
+- Assume service logs can become very large. Use markers to make retrieval practical instead of scanning the whole log repeatedly.
+
+### 9. Reporting UI errors
 
 Do not claim a runtime UI error unless one of these is true:
 
@@ -175,7 +251,10 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 ## Quick checklist
 
 - [ ] Collect bridge project directory and bridge service URL from the user
+- [ ] Select simple mode or delegated sub-agent mode before launch
 - [ ] Create a new task folder with `$planning-with-files`
+- [ ] Skip the three planning files in simple mode
+- [ ] Use `$subagent-progress-report` in delegated sub-agent mode
 - [ ] Run `$mo-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright
