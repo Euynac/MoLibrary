@@ -39,8 +39,8 @@ If the source check fails, stop implementation and ask the user to provide the r
 
 1. Create a planning task folder with `$planning-with-files`.
 2. Place all screenshots, snapshots, bridge logs, and readiness files in that task folder.
-3. Launch the bridge service with `scripts/bridge_service.py start` for single-agent work, or `scripts/bridge_service.py run` when a dedicated worker or sub-agent can stay attached.
-4. If you used `run`, wait for readiness with `scripts/bridge_service.py wait-ready`. `start` already waits by default.
+3. Launch the bridge service with `scripts/bridge_service.py run`.
+4. Wait for readiness with `scripts/bridge_service.py wait-ready`.
 5. Open the full page URL with `$playwright-cli` and capture artifacts.
 6. Implement Monica UI changes under `$mo-ui-development` rules.
 7. Restart the bridge service with the same script when verification requires a rebuild.
@@ -70,17 +70,6 @@ Keep the main agent as the orchestrator. Do not let the main agent directly perf
 ### 3. Bridge service startup script
 
 Use the bundled Python script instead of ad-hoc shell snippets.
-
-Single-agent or single-terminal launch:
-
-```bash
-python scripts/bridge_service.py start \
-  --project-dir "<bridge-project-dir>" \
-  --service-url "<bridge-service-url>" \
-  --task-dir "<task-folder>"
-```
-
-Calling `start` again with the same task folder should stop the previous detached launcher and start a fresh bridge run.
 
 Foreground launch:
 
@@ -129,7 +118,6 @@ and passes it to `dotnet run` as an application argument. The external URL used 
 - Cross-platform Python implementation for Windows, WSL, and Linux workflows
 - Residual process cleanup before launch
 - Extra Windows-side cleanup when running inside WSL
-- Detached single-agent startup via `start`, including restart when the same task folder is reused
 - Foreground `dotnet run` with live log mirroring into `app-run.log`
 - Automatic retry when MSBuild reports file-lock markers such as `MSB3026`
 - `bridge-ready.json` creation when a listening marker is observed
@@ -172,14 +160,14 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 
 ## Scripts
 
-- `scripts/bridge_service.py` - cross-platform bridge cleanup, detached or foreground launch, and readiness checks
+- `scripts/bridge_service.py` - cross-platform bridge cleanup, foreground launch, and readiness checks
 
 ## Quick checklist
 
 - [ ] Collect bridge project directory and bridge service URL from the user
 - [ ] Create a new task folder with `$planning-with-files`
 - [ ] Run `$mo-ui-development` source check before UI edits
-- [ ] Use `bridge_service.py start` for single-agent launches or `bridge_service.py run` for attached-worker launches
-- [ ] If using `run`, call `bridge_service.py wait-ready` before opening Playwright
+- [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
+- [ ] Use `bridge_service.py wait-ready` before opening Playwright
 - [ ] Save screenshots and snapshots inside the task folder
 - [ ] Keep the bridge service running after successful verification
