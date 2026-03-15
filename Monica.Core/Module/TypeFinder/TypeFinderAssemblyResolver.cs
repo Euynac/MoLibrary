@@ -218,6 +218,7 @@ internal sealed class TypeFinderAssemblyPlanBuilder(ModuleCoreOptionTypeFinder o
                 return assemblyNames.Select(assemblyName => new TypeFinderDependencyLibraryDescriptor(
                     library.Name,
                     library.Type,
+                    library.Version,
                     assemblyName));
             })
             .ToList();
@@ -263,11 +264,13 @@ internal sealed class TypeFinderAssemblyPlan
     public required IReadOnlyList<TypeFinderPatternMatchInfo> ExcludePatternMatches { get; init; }
 }
 
-internal sealed class TypeFinderDependencyLibraryDescriptor(string libraryName, string libraryType, AssemblyName assemblyName)
+internal sealed class TypeFinderDependencyLibraryDescriptor(string libraryName, string libraryType, string? libraryVersion, AssemblyName assemblyName)
 {
     public string LibraryName { get; } = libraryName;
 
     public string LibraryType { get; } = libraryType;
+
+    public string? LibraryVersion { get; } = libraryVersion;
 
     public bool IsProject => string.Equals(LibraryType, "project", StringComparison.OrdinalIgnoreCase);
 

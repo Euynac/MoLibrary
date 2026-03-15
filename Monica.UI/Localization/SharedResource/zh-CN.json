@@ -309,14 +309,20 @@
       "DependencyLibraries": {
         "Title": "DependencyContext 依赖清单"
       },
+      "Help": {
+        "Configuration": "显示生成当前程序集分析快照时记录的类型查找器标准化配置值。",
+        "PatternEffects": "显示已配置的 Add 与 Exclude 模式如何匹配候选程序集，并如何改变最终扫描集合。",
+        "ScanAssemblies": "显示类型查找器在应用默认项目程序集、精确添加项和模式规则后最终会扫描的程序集集合。",
+        "ManualAssemblies": "显示通过类型查找器选项中的精确程序集列表显式添加的程序集。",
+        "LoadedAssemblies": "显示创建当前快照时已加载到当前 AppDomain 的程序集。",
+        "ReferencedAssemblies": "显示入口程序集元数据中声明的静态程序集引用。",
+        "DependencyLibraries": "显示由 DependencyContext 提供的库信息，包括运行时 DLL 可用性和加载结果。"
+      },
       "Columns": {
         "AssemblyName": "程序集名称",
         "Version": "版本",
-        "EntryAssembly": "入口程序集",
         "Location": "位置",
-        "Dynamic": "动态程序集",
         "ScanStatus": "扫描状态",
-        "LoadedStatus": "加载状态",
         "FullName": "完整名称",
         "LibraryName": "库名称",
         "LibraryType": "库类型",
@@ -328,11 +334,9 @@
         "Enabled": "启用",
         "Disabled": "禁用",
         "EntryAssembly": "入口",
-        "No": "否",
         "InScanSet": "已扫描",
         "NotInScanSet": "未扫描",
         "Dynamic": "动态",
-        "Static": "静态",
         "Loaded": "已加载",
         "NotLoaded": "未加载",
         "Exists": "存在",

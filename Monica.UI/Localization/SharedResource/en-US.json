@@ -309,14 +309,20 @@
       "DependencyLibraries": {
         "Title": "Dependency Context Libraries"
       },
+      "Help": {
+        "Configuration": "Normalized type finder option values captured when this assembly analysis snapshot was generated.",
+        "PatternEffects": "Shows how configured add and exclude patterns matched candidate assemblies and changed the final scan set.",
+        "ScanAssemblies": "The final assembly set the type finder will scan after applying default project assemblies, exact additions, and pattern rules.",
+        "ManualAssemblies": "Assemblies explicitly added through the type finder option's exact assembly list.",
+        "LoadedAssemblies": "Assemblies loaded in the current AppDomain when this snapshot was created.",
+        "ReferencedAssemblies": "Static assembly references declared by the entry assembly metadata.",
+        "DependencyLibraries": "Libraries reported by DependencyContext, including runtime DLL availability and load results."
+      },
       "Columns": {
         "AssemblyName": "Assembly Name",
         "Version": "Version",
-        "EntryAssembly": "Entry Assembly",
         "Location": "Location",
-        "Dynamic": "Dynamic",
         "ScanStatus": "Scan Status",
-        "LoadedStatus": "Loaded Status",
         "FullName": "Full Name",
         "LibraryName": "Library Name",
         "LibraryType": "Library Type",
@@ -328,11 +334,9 @@
         "Enabled": "Enabled",
         "Disabled": "Disabled",
         "EntryAssembly": "Entry",
-        "No": "No",
         "InScanSet": "In Scan Set",
         "NotInScanSet": "Not In Scan Set",
         "Dynamic": "Dynamic",
-        "Static": "Static",
         "Loaded": "Loaded",
         "NotLoaded": "Not Loaded",
         "Exists": "Exists",

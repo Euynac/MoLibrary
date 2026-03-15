@@ -36,12 +36,131 @@
     gap: 16px;
 }
 
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.section-title-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.section-title-text ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.section-help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    cursor: help;
+    line-height: 1;
+}
+
+.section-help-icon ::deep .mud-icon-root {
+    font-size: 1rem;
+}
+
 .grid-card-content {
     padding: 0;
 }
 
 .value-text {
     word-break: break-word;
+}
+
+.assembly-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
+.assembly-name-text {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inline-status-icon-list {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.status-text-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
+.status-text-value {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-icon-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    cursor: help;
+}
+
+.status-icon-trigger ::deep .mud-icon-root {
+    font-size: 1rem;
+}
+
+::deep .mud-data-grid-header .mud-table-cell,
+::deep .mud-table-head .mud-table-cell {
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+::deep th.dependency-library-name-column,
+::deep td.dependency-library-name-column {
+    min-width: 10rem;
+}
+
+::deep th.dependency-library-type-column,
+::deep td.dependency-library-type-column {
+    min-width: 8rem;
+}
+
+::deep th.dependency-assembly-name-column,
+::deep td.dependency-assembly-name-column {
+    min-width: 14rem;
+}
+
+::deep th.dependency-version-column,
+::deep td.dependency-version-column {
+    min-width: 7rem;
+}
+
+::deep th.dependency-runtime-path-column,
+::deep td.dependency-runtime-path-column {
+    min-width: 18rem;
+}
+
+::deep th.dependency-load-error-column,
+::deep td.dependency-load-error-column {
+    min-width: 14rem;
 }
 
 .empty-state {
@@ -66,6 +185,10 @@
 ::deep .mud-data-grid-header,
 ::deep .mud-table-head {
     background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
+}
+
+::deep .mud-table-pagination-toolbar {
+    padding-inline: 16px;
 }
 
 @media (max-width: 960px) {

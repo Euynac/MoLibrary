@@ -21,8 +21,8 @@
                 <MudCard Class="modern-card summary-card">
                     <MudCardContent Class="pa-4">
                         <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@L["ModuleSystem:AssemblyAnalysis:Summary:EntryAssembly"]</MudText>
-                        <MudText Typo="Typo.h6">@(AssemblyAnalysisData.EntryAssembly?.Name ?? L["ModuleSystem:AssemblyAnalysis:Common:Unavailable"])</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetVersionText(AssemblyAnalysisData.EntryAssembly?.Version)</MudText>
+                        <MudText Typo="Typo.h6">@GetTextOrUnavailable(AssemblyAnalysisData.EntryAssembly?.Name)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetTextOrUnavailable(AssemblyAnalysisData.EntryAssembly?.Version)</MudText>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -71,10 +71,7 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:Configuration:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Tune, L["ModuleSystem:AssemblyAnalysis:Configuration:Title"], L["ModuleSystem:AssemblyAnalysis:Help:Configuration"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="pa-4">
@@ -131,7 +128,7 @@
 
                             <div class="info-group">
                                 <MudText Typo="Typo.subtitle2">@L["ModuleSystem:AssemblyAnalysis:Configuration:EntryAssemblyLocation"]</MudText>
-                                <MudText Typo="Typo.body2" Class="value-text">@GetLocationText(AssemblyAnalysisData.EntryAssembly?.Location)</MudText>
+                                <MudText Typo="Typo.body2" Class="value-text">@GetTextOrUnavailable(AssemblyAnalysisData.EntryAssembly?.Location)</MudText>
                             </div>
                         </MudStack>
                     </MudCardContent>
@@ -142,10 +139,7 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Rule" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Rule, L["ModuleSystem:AssemblyAnalysis:PatternEffects:Title"], L["ModuleSystem:AssemblyAnalysis:Help:PatternEffects"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="pa-4 pattern-content">
@@ -154,7 +148,7 @@
                                 <MudText Typo="Typo.subtitle1" Class="mb-2">@L["ModuleSystem:AssemblyAnalysis:PatternEffects:AddPatterns"]</MudText>
                                 @if (AssemblyAnalysisData.AddPatternMatches.Count > 0)
                                 {
-                                    <MudTable T="TypeFinderPatternMatchInfo" Items="AssemblyAnalysisData.AddPatternMatches" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                                    <MudTable T="TypeFinderPatternMatchInfo" Items="AssemblyAnalysisData.AddPatternMatches" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" RowsPerPage="@DefaultTableRowsPerPage">
                                         <HeaderContent>
                                             <MudTh>@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Pattern"]</MudTh>
                                             <MudTh>@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Matches"]</MudTh>
@@ -165,6 +159,9 @@
                                             <MudTd DataLabel="@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Matches"]" Class="value-text">@JoinOrNone(context.MatchedAssemblyNames)</MudTd>
                                             <MudTd DataLabel="@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Affected"]" Class="value-text">@JoinOrNone(context.AffectedAssemblyNames)</MudTd>
                                         </RowTemplate>
+                                        <PagerContent>
+                                            <MudTablePager PageSizeOptions="@TablePageSizeOptions" />
+                                        </PagerContent>
                                     </MudTable>
                                 }
                                 else
@@ -177,7 +174,7 @@
                                 <MudText Typo="Typo.subtitle1" Class="mb-2">@L["ModuleSystem:AssemblyAnalysis:PatternEffects:ExcludePatterns"]</MudText>
                                 @if (AssemblyAnalysisData.ExcludePatternMatches.Count > 0)
                                 {
-                                    <MudTable T="TypeFinderPatternMatchInfo" Items="AssemblyAnalysisData.ExcludePatternMatches" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                                    <MudTable T="TypeFinderPatternMatchInfo" Items="AssemblyAnalysisData.ExcludePatternMatches" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" RowsPerPage="@DefaultTableRowsPerPage">
                                         <HeaderContent>
                                             <MudTh>@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Pattern"]</MudTh>
                                             <MudTh>@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Matches"]</MudTh>
@@ -188,6 +185,9 @@
                                             <MudTd DataLabel="@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Matches"]" Class="value-text">@JoinOrNone(context.MatchedAssemblyNames)</MudTd>
                                             <MudTd DataLabel="@L["ModuleSystem:AssemblyAnalysis:PatternEffects:Affected"]" Class="value-text">@JoinOrNone(context.AffectedAssemblyNames)</MudTd>
                                         </RowTemplate>
+                                        <PagerContent>
+                                            <MudTablePager PageSizeOptions="@TablePageSizeOptions" />
+                                        </PagerContent>
                                     </MudTable>
                                 }
                                 else
@@ -204,24 +204,21 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:ScanAssemblies:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Search, L["ModuleSystem:AssemblyAnalysis:ScanAssemblies:Title"], L["ModuleSystem:AssemblyAnalysis:Help:ScanAssemblies"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="grid-card-content">
                         <MudDataGrid T="TypeFinderAssemblyInfo" Items="AssemblyAnalysisData.ScanAssemblies" Dense="true" Filterable="true" Hideable="true">
                             <Columns>
-                                <PropertyColumn Property="x => x.Name" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]" />
-                                <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
-                                <TemplateColumn T="TypeFinderAssemblyInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:EntryAssembly"]">
+                                <TemplateColumn T="TypeFinderAssemblyInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.Name)">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsEntryAssembly ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsEntryAssembly ? L["ModuleSystem:AssemblyAnalysis:States:EntryAssembly"] : L["ModuleSystem:AssemblyAnalysis:States:No"])
-                                        </MudChip>
+                                        @RenderAssemblyNameCell(context.Item.Name, GetScanAssemblyStatusIcons(context.Item))
                                     </CellTemplate>
                                 </TemplateColumn>
+                                <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
                                 <PropertyColumn Property="x => x.Location" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Location"]" />
                             </Columns>
                         </MudDataGrid>
@@ -233,10 +230,7 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:ManualAssemblies:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Inventory2, L["ModuleSystem:AssemblyAnalysis:ManualAssemblies:Title"], L["ModuleSystem:AssemblyAnalysis:Help:ManualAssemblies"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="grid-card-content">
@@ -272,33 +266,26 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:LoadedAssemblies:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Memory, L["ModuleSystem:AssemblyAnalysis:LoadedAssemblies:Title"], L["ModuleSystem:AssemblyAnalysis:Help:LoadedAssemblies"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="grid-card-content">
-                        <MudDataGrid T="TypeFinderAssemblyInfo" Items="AssemblyAnalysisData.LoadedAssemblies" Dense="true" Filterable="true" Hideable="true">
+                        <MudDataGrid T="TypeFinderAssemblyInfo" Items="AssemblyAnalysisData.LoadedAssemblies" Dense="true" Filterable="true" Hideable="true" RowsPerPage="@DefaultGridRowsPerPage">
                             <Columns>
-                                <PropertyColumn Property="x => x.Name" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]" />
+                                <TemplateColumn T="TypeFinderAssemblyInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.Name)">
+                                    <CellTemplate>
+                                        @RenderAssemblyNameCell(context.Item.Name, GetLoadedAssemblyStatusIcons(context.Item))
+                                    </CellTemplate>
+                                </TemplateColumn>
                                 <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
-                                <TemplateColumn T="TypeFinderAssemblyInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Dynamic"]">
-                                    <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsDynamic ? Color.Warning : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsDynamic ? L["ModuleSystem:AssemblyAnalysis:States:Dynamic"] : L["ModuleSystem:AssemblyAnalysis:States:Static"])
-                                        </MudChip>
-                                    </CellTemplate>
-                                </TemplateColumn>
-                                <TemplateColumn T="TypeFinderAssemblyInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:ScanStatus"]">
-                                    <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsInScanSet ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsInScanSet ? L["ModuleSystem:AssemblyAnalysis:States:InScanSet"] : L["ModuleSystem:AssemblyAnalysis:States:NotInScanSet"])
-                                        </MudChip>
-                                    </CellTemplate>
-                                </TemplateColumn>
                                 <PropertyColumn Property="x => x.Location" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Location"]" />
                             </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="TypeFinderAssemblyInfo" PageSizeOptions="@GridPageSizeOptions" />
+                            </PagerContent>
                         </MudDataGrid>
                     </MudCardContent>
                 </MudCard>
@@ -308,34 +295,27 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:ReferencedAssemblies:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.Link, L["ModuleSystem:AssemblyAnalysis:ReferencedAssemblies:Title"], L["ModuleSystem:AssemblyAnalysis:Help:ReferencedAssemblies"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="grid-card-content">
-                        <MudDataGrid T="TypeFinderReferencedAssemblyInfo" Items="AssemblyAnalysisData.ReferencedAssemblies" Dense="true" Filterable="true" Hideable="true">
+                        <MudDataGrid T="TypeFinderReferencedAssemblyInfo" Items="AssemblyAnalysisData.ReferencedAssemblies" Dense="true" Filterable="true" Hideable="true" RowsPerPage="@DefaultGridRowsPerPage">
                             <Columns>
-                                <PropertyColumn Property="x => x.Name" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]" />
+                                <TemplateColumn T="TypeFinderReferencedAssemblyInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.Name)">
+                                    <CellTemplate>
+                                        @RenderAssemblyNameCell(context.Item.Name, GetReferencedAssemblyStatusIcons(context.Item))
+                                    </CellTemplate>
+                                </TemplateColumn>
                                 <PropertyColumn Property="x => x.Version" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
-                                <TemplateColumn T="TypeFinderReferencedAssemblyInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadedStatus"]">
-                                    <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsLoaded ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsLoaded ? L["ModuleSystem:AssemblyAnalysis:States:Loaded"] : L["ModuleSystem:AssemblyAnalysis:States:NotLoaded"])
-                                        </MudChip>
-                                    </CellTemplate>
-                                </TemplateColumn>
-                                <TemplateColumn T="TypeFinderReferencedAssemblyInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:ScanStatus"]">
-                                    <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsInScanSet ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsInScanSet ? L["ModuleSystem:AssemblyAnalysis:States:InScanSet"] : L["ModuleSystem:AssemblyAnalysis:States:NotInScanSet"])
-                                        </MudChip>
-                                    </CellTemplate>
-                                </TemplateColumn>
                                 <PropertyColumn Property="x => x.FullName" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:FullName"]" />
                                 <PropertyColumn Property="x => x.LoadError" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]" />
                             </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="TypeFinderReferencedAssemblyInfo" PageSizeOptions="@GridPageSizeOptions" />
+                            </PagerContent>
                         </MudDataGrid>
                     </MudCardContent>
                 </MudCard>
@@ -345,43 +325,58 @@
                 <MudCard Class="modern-card detail-card">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.LibraryBooks" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:AssemblyAnalysis:DependencyLibraries:Title"]</MudText>
-                            </div>
+                            @RenderSectionTitle(Icons.Material.Filled.LibraryBooks, L["ModuleSystem:AssemblyAnalysis:DependencyLibraries:Title"], L["ModuleSystem:AssemblyAnalysis:Help:DependencyLibraries"])
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent Class="grid-card-content">
-                        <MudDataGrid T="TypeFinderDependencyLibraryInfo" Items="AssemblyAnalysisData.DependencyLibraries" Dense="true" Filterable="true" Hideable="true">
+                        <MudDataGrid T="TypeFinderDependencyLibraryInfo" Items="AssemblyAnalysisData.DependencyLibraries" Dense="true" Filterable="true" Hideable="true" RowsPerPage="@DefaultGridRowsPerPage">
                             <Columns>
-                                <PropertyColumn Property="x => x.LibraryName" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LibraryName"]" />
-                                <PropertyColumn Property="x => x.LibraryType" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LibraryType"]" />
-                                <PropertyColumn Property="x => x.AssemblyName" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]" />
-                                <PropertyColumn Property="x => x.AssemblyVersion" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]" />
-                                <TemplateColumn T="TypeFinderDependencyLibraryInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadedStatus"]">
+                                <PropertyColumn Property="x => x.LibraryName"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LibraryName"]"
+                                                HeaderClass="dependency-library-name-column"
+                                                CellClass="dependency-library-name-column" />
+                                <PropertyColumn Property="x => x.LibraryType"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LibraryType"]"
+                                                HeaderClass="dependency-library-type-column"
+                                                CellClass="dependency-library-type-column" />
+                                <TemplateColumn T="TypeFinderDependencyLibraryInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:AssemblyName"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.AssemblyName)"
+                                                HeaderClass="dependency-assembly-name-column"
+                                                CellClass="dependency-assembly-name-column">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsLoaded ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsLoaded ? L["ModuleSystem:AssemblyAnalysis:States:Loaded"] : L["ModuleSystem:AssemblyAnalysis:States:NotLoaded"])
-                                        </MudChip>
+                                        @RenderAssemblyNameCell(context.Item.AssemblyName, GetDependencyLibraryStatusIcons(context.Item))
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn T="TypeFinderDependencyLibraryInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:ScanStatus"]">
+                                <TemplateColumn T="TypeFinderDependencyLibraryInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:Version"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.AssemblyVersion)"
+                                                HeaderClass="dependency-version-column"
+                                                CellClass="dependency-version-column">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.IsInScanSet ? Color.Success : Color.Default)" Size="Size.Small">
-                                            @(context.Item.IsInScanSet ? L["ModuleSystem:AssemblyAnalysis:States:InScanSet"] : L["ModuleSystem:AssemblyAnalysis:States:NotInScanSet"])
-                                        </MudChip>
+                                        @GetTextOrUnavailable(context.Item.AssemblyVersion)
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <TemplateColumn T="TypeFinderDependencyLibraryInfo" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:RuntimeDll"]">
+                                <TemplateColumn T="TypeFinderDependencyLibraryInfo"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:RuntimeDllPath"]"
+                                                Sortable="true"
+                                                SortBy="@(x => x.RuntimeDllPath)"
+                                                HeaderClass="dependency-runtime-path-column"
+                                                CellClass="dependency-runtime-path-column">
                                     <CellTemplate>
-                                        <MudChip T="string" Color="@(context.Item.RuntimeDllExists ? Color.Success : Color.Error)" Size="Size.Small">
-                                            @(context.Item.RuntimeDllExists ? L["ModuleSystem:AssemblyAnalysis:States:Exists"] : L["ModuleSystem:AssemblyAnalysis:States:Missing"])
-                                        </MudChip>
+                                        @RenderRuntimeDllPathCell(context.Item)
                                     </CellTemplate>
                                 </TemplateColumn>
-                                <PropertyColumn Property="x => x.RuntimeDllPath" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:RuntimeDllPath"]" />
-                                <PropertyColumn Property="x => x.LoadError" Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]" />
+                                <PropertyColumn Property="x => x.LoadError"
+                                                Title="@L["ModuleSystem:AssemblyAnalysis:Columns:LoadError"]"
+                                                HeaderClass="dependency-load-error-column"
+                                                CellClass="dependency-load-error-column" />
                             </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="TypeFinderDependencyLibraryInfo" PageSizeOptions="@GridPageSizeOptions" />
+                            </PagerContent>
                         </MudDataGrid>
                     </MudCardContent>
                 </MudCard>
@@ -391,6 +386,11 @@
 </div>
 
 @code {
+    private const int DefaultGridRowsPerPage = 10;
+    private const int DefaultTableRowsPerPage = 5;
+    private static readonly int[] GridPageSizeOptions = new[] { 10, 25, 50 };
+    private static readonly int[] TablePageSizeOptions = new[] { 5, 10, 25 };
+
     [Parameter] public TypeFinderAssemblyAnalysis? AssemblyAnalysisData { get; set; }
 
     private string JoinOrNone(IReadOnlyCollection<string> values)
@@ -400,18 +400,71 @@
             : L["ModuleSystem:AssemblyAnalysis:Common:None"];
     }
 
-    private string GetVersionText(string? version)
+    private string GetTextOrUnavailable(string? value)
     {
-        return string.IsNullOrWhiteSpace(version)
+        return string.IsNullOrWhiteSpace(value)
             ? L["ModuleSystem:AssemblyAnalysis:Common:Unavailable"]
-            : version;
+            : value;
     }
 
-    private string GetLocationText(string? location)
+    private IReadOnlyList<StatusIcon> GetScanAssemblyStatusIcons(TypeFinderAssemblyInfo assembly)
     {
-        return string.IsNullOrWhiteSpace(location)
-            ? L["ModuleSystem:AssemblyAnalysis:Common:Unavailable"]
-            : location;
+        var statusIcons = new List<StatusIcon>(1);
+
+        if (assembly.IsEntryAssembly)
+        {
+            statusIcons.Add(CreateEntryAssemblyStatusIcon());
+        }
+
+        return statusIcons;
+    }
+
+    private IReadOnlyList<StatusIcon> GetLoadedAssemblyStatusIcons(TypeFinderAssemblyInfo assembly)
+    {
+        var statusIcons = new List<StatusIcon>(2);
+
+        if (assembly.IsDynamic)
+        {
+            statusIcons.Add(CreateDynamicAssemblyStatusIcon());
+        }
+
+        if (assembly.IsInScanSet)
+        {
+            statusIcons.Add(CreateInScanSetStatusIcon());
+        }
+
+        return statusIcons;
+    }
+
+    private IReadOnlyList<StatusIcon> GetReferencedAssemblyStatusIcons(TypeFinderReferencedAssemblyInfo assembly)
+    {
+        var statusIcons = new List<StatusIcon>(2);
+
+        if (!assembly.IsLoaded)
+        {
+            statusIcons.Add(CreateNotLoadedStatusIcon());
+        }
+
+        if (assembly.IsInScanSet)
+        {
+            statusIcons.Add(CreateInScanSetStatusIcon());
+        }
+
+        return statusIcons;
+    }
+
+    private IReadOnlyList<StatusIcon> GetDependencyLibraryStatusIcons(TypeFinderDependencyLibraryInfo library)
+    {
+        var statusIcons = new List<StatusIcon>(2);
+
+        statusIcons.Add(library.IsLoaded ? CreateLoadedStatusIcon() : CreateNotLoadedStatusIcon());
+
+        if (library.IsInScanSet)
+        {
+            statusIcons.Add(CreateInScanSetStatusIcon());
+        }
+
+        return statusIcons;
     }
 
     private int GetMissingDllCount()
@@ -423,4 +476,88 @@
     {
         return missingDllCount > 0 ? Color.Error : Color.Success;
     }
+
+    private RenderFragment RenderSectionTitle(string icon, string title, string helpText) => @<div class="section-title">
+        <MudIcon Icon="@icon" Color="Color.Primary" />
+        <span class="section-title-text">
+            <MudText Typo="Typo.h6">@title</MudText>
+        </span>
+        <MudTooltip Text="@helpText" Placement="Placement.Right">
+            <span class="section-help-icon" tabindex="0">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+            </span>
+        </MudTooltip>
+    </div>;
+
+    private RenderFragment RenderAssemblyNameCell(string? name, IReadOnlyList<StatusIcon> statusIcons)
+    {
+        var displayName = GetTextOrUnavailable(name);
+
+        return @<div class="assembly-name-cell">
+            <span class="assembly-name-text" title="@displayName" aria-label="@displayName">@displayName</span>
+            @if (statusIcons.Count > 0)
+            {
+                <div class="inline-status-icon-list">
+                    @foreach (var statusIcon in statusIcons)
+                    {
+                        <MudTooltip Text="@statusIcon.Text" Placement="Placement.Top">
+                            <span class="status-icon-trigger" tabindex="0" aria-label="@statusIcon.Text">
+                                <MudIcon Icon="@statusIcon.Icon" Color="@statusIcon.Color" Size="Size.Small" />
+                            </span>
+                        </MudTooltip>
+                    }
+                </div>
+            }
+        </div>;
+    }
+
+    private RenderFragment RenderRuntimeDllPathCell(TypeFinderDependencyLibraryInfo library)
+    {
+        var displayPath = GetTextOrUnavailable(library.RuntimeDllPath);
+        var runtimeIcon = library.RuntimeDllExists
+            ? new StatusIcon(
+                $"{L["ModuleSystem:AssemblyAnalysis:Columns:RuntimeDll"]}: {L["ModuleSystem:AssemblyAnalysis:States:Exists"]}",
+                Icons.Material.Filled.InsertDriveFile,
+                Color.Success)
+            : new StatusIcon(
+                $"{L["ModuleSystem:AssemblyAnalysis:Columns:RuntimeDll"]}: {L["ModuleSystem:AssemblyAnalysis:States:Missing"]}",
+                Icons.Material.Filled.HideSource,
+                Color.Error);
+
+        return @<div class="status-text-cell">
+            <MudTooltip Text="@runtimeIcon.Text" Placement="Placement.Top">
+                <span class="status-icon-trigger" tabindex="0" aria-label="@runtimeIcon.Text">
+                    <MudIcon Icon="@runtimeIcon.Icon" Color="@runtimeIcon.Color" Size="Size.Small" />
+                </span>
+            </MudTooltip>
+            <span class="status-text-value" title="@displayPath" aria-label="@displayPath">@displayPath</span>
+        </div>;
+    }
+
+    private StatusIcon CreateEntryAssemblyStatusIcon()
+    {
+        return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:EntryAssembly"], Icons.Material.Filled.Adjust, Color.Primary);
+    }
+
+    private StatusIcon CreateDynamicAssemblyStatusIcon()
+    {
+        return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:Dynamic"], Icons.Material.Filled.DynamicFeed, Color.Warning);
+    }
+
+    private StatusIcon CreateInScanSetStatusIcon()
+    {
+        return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:InScanSet"], Icons.Material.Filled.CheckCircle, Color.Success);
+    }
+
+    private StatusIcon CreateLoadedStatusIcon()
+    {
+        return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:Loaded"], Icons.Material.Filled.Memory, Color.Info);
+    }
+
+    private StatusIcon CreateNotLoadedStatusIcon()
+    {
+        return new StatusIcon(L["ModuleSystem:AssemblyAnalysis:States:NotLoaded"], Icons.Material.Filled.RemoveCircle, Color.Default);
+    }
+
+    private sealed record StatusIcon(string Text, string Icon, Color Color);
 }

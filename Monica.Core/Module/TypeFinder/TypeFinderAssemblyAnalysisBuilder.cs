@@ -71,7 +71,7 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
                 LibraryType = descriptor.LibraryType,
                 IsProject = descriptor.IsProject,
                 AssemblyName = descriptor.AssemblyName.Name ?? descriptor.LibraryName,
-                AssemblyVersion = descriptor.AssemblyName.Version?.ToString(),
+                AssemblyVersion = ResolveDependencyLibraryVersion(descriptor, loadedByName),
                 IsLoaded = loadedByName.ContainsKey(descriptor.AssemblyName.Name ?? string.Empty),
                 IsInScanSet = scanAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty),
                 RuntimeDllPath = descriptor.RuntimeDllPath,
@@ -116,6 +116,23 @@ internal sealed class TypeFinderAssemblyAnalysisBuilder(
             IsEntryAssembly = isEntryAssembly,
             IsDynamic = assembly.IsDynamic
         };
+    }
+
+    private static string? ResolveDependencyLibraryVersion(
+        TypeFinderDependencyLibraryDescriptor descriptor,
+        IReadOnlyDictionary<string, Assembly> loadedByName)
+    {
+        var assemblyName = descriptor.AssemblyName.Name ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(assemblyName)
+            && loadedByName.TryGetValue(assemblyName, out var loadedAssembly))
+        {
+            return loadedAssembly.GetName().Version?.ToString()
+                   ?? descriptor.AssemblyName.Version?.ToString()
+                   ?? descriptor.LibraryVersion;
+        }
+
+        return descriptor.AssemblyName.Version?.ToString()
+               ?? descriptor.LibraryVersion;
     }
 
     private static string? TryGetAssemblyLocation(Assembly assembly)
