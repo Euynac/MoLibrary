@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

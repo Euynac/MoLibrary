@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.JobScheduler.Helpers;
 using Monica.Core.Module.Interfaces;

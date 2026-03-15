@@ -7,6 +7,7 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Monica.Core;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoLogProvider;
 using Monica.Core.Module;

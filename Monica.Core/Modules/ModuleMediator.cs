@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;

@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Module;
 using Monica.Core.Module.BuilderWrapper;
 using Monica.Core.Module.TypeFinder;
 
-namespace Monica.Core.Module;
+namespace Monica.Core;
 
 public static class Mo
 {

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.Features.ObservableInstance;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Authorization;
 using Monica.Authority.Implements.Authorization;
+using Monica.Core;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

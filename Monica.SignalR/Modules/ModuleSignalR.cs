@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Authority.Security;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.GlobalJson;
 using Monica.Core.Module;

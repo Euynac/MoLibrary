@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Monica.Core;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

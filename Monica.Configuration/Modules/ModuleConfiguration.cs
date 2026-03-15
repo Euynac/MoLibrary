@@ -9,6 +9,7 @@ using Monica.Configuration.Implements;
 using Monica.Configuration.Interfaces;
 using Monica.Configuration.Model;
 using Monica.Configuration.Providers;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;

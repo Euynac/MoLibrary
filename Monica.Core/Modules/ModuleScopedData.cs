@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.Features.MoScopedData;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

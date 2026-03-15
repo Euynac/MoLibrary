@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;

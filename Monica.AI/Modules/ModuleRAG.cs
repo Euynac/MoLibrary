@@ -8,6 +8,7 @@ using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoXmlDocumentation;
 using Monica.Core.Module;

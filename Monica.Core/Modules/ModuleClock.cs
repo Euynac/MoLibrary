@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Monica.Core;
 using Monica.Core.Features.MoClock;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

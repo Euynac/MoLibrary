@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Dashboard.Interfaces;
 using Monica.Core.Module.Dashboard;

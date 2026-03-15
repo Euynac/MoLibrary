@@ -8,6 +8,7 @@ using Monica.AI.Providers.Anthropic;
 using Monica.AI.Providers.Fake;
 using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
+using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;

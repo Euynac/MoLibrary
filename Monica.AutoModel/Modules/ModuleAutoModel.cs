@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Implements;
 using Monica.AutoModel.Interfaces;
+using Monica.Core;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

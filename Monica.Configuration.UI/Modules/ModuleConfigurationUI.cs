@@ -9,6 +9,7 @@ using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
 using Monica.Configuration.UI.Pages;
 using Monica.Configuration.UI.Services;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;

@@ -2,6 +2,7 @@ using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
 using Monica.Core.GlobalJson;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
