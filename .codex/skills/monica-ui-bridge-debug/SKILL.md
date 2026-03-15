@@ -1,6 +1,6 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, wait for readiness, capture browser artifacts with Playwright, and implement UI fixes while following $mo-ui-development and delegated execution with $subagent-progress-report.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, usually through a single-agent `bridge_service.py run` plus `wait-ready` workflow, then capture browser artifacts with Playwright and implement Monica UI fixes under $mo-ui-development. Use $subagent-progress-report only when optional delegation is actually needed.
 ---
 
 # Monica UI Bridge Debug
@@ -12,7 +12,7 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 - Use `$planning-with-files` for every multi-step task and store artifacts in the new task folder.
 - Use `$mo-ui-development` for every Monica Blazor UI implementation or style change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
-- Use `$subagent-progress-report` when the runtime supports sub-agents and the main agent should orchestrate instead of executing concrete browser/service steps itself.
+- Use `$subagent-progress-report` only when you intentionally choose a delegated multi-agent workflow.
 
 ## Required user inputs
 
@@ -55,29 +55,46 @@ Create the task folder first with `$planning-with-files`. Save these artifacts t
 - `app-run.log`
 - `bridge-ready.json`
 - `bridge-ready-report.json`
+- `bridge-process.json`
 - Playwright screenshots and snapshots
 - Any additional debug notes
 
-### 2. Recommended delegation model
+### 2. Default execution model
 
-When sub-agents are available, prefer two workers under `$subagent-progress-report`:
+Prefer a single-agent flow:
 
-- **Launch worker**: runs `bridge_service.py run` and stays attached to the foreground process
-- **Capture/fix worker**: runs `bridge_service.py wait-ready`, then uses `$playwright-cli`, then performs the UI fix
+1. Run `bridge_service.py run`
+2. Run `bridge_service.py wait-ready`
+3. Use `$playwright-cli`
+4. Implement or verify the Monica UI change
 
-Keep the main agent as the orchestrator. Do not let the main agent directly perform the concrete launch/browser work when delegated execution is available.
+`run` now starts the bridge service in the background by default and returns immediately, so the same agent can continue with `wait-ready`.
+
+Only switch to `$subagent-progress-report` when you explicitly want one worker to keep a foreground session open or when long-running browser work and service work must progress independently.
 
 ### 3. Bridge service startup script
 
 Use the bundled Python script instead of ad-hoc shell snippets.
 
-Foreground launch:
+Background launch:
 
 ```bash
 python scripts/bridge_service.py run \
   --project-dir "<bridge-project-dir>" \
   --service-url "<bridge-service-url>" \
   --task-dir "<task-folder>"
+```
+
+This is the default and recommended mode. It returns after the detached runner starts.
+
+Optional foreground launch when you intentionally want live attached logs in the current shell:
+
+```bash
+python scripts/bridge_service.py run \
+  --project-dir "<bridge-project-dir>" \
+  --service-url "<bridge-service-url>" \
+  --task-dir "<task-folder>" \
+  --foreground
 ```
 
 Readiness wait:
@@ -118,7 +135,11 @@ and passes it to `dotnet run` as an application argument. The external URL used 
 - Cross-platform Python implementation for Windows, WSL, and Linux workflows
 - Residual process cleanup before launch
 - Extra Windows-side cleanup when running inside WSL
-- Foreground `dotnet run` with live log mirroring into `app-run.log`
+- Task-folder artifact reset before each new detached launch
+- Background `run` mode for the normal single-agent workflow
+- Optional foreground `run --foreground` mode for live attached logs
+- Internal state tracking in `bridge-process.json`
+- Foreground `dotnet run` worker with live log mirroring into `app-run.log`
 - Automatic retry when MSBuild reports file-lock markers such as `MSB3026`
 - `bridge-ready.json` creation when a listening marker is observed
 - `bridge-ready-report.json` creation when readiness checks finish

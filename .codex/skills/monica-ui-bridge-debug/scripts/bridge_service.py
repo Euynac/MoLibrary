@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TextIO
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
@@ -29,6 +29,7 @@ FILE_LOCK_MARKERS = (
 DEFAULT_LOG_NAME = "app-run.log"
 DEFAULT_READY_NAME = "bridge-ready.json"
 DEFAULT_REPORT_NAME = "bridge-ready-report.json"
+DEFAULT_STATE_NAME = "bridge-process.json"
 DEFAULT_HOME_PATH = "/home"
 SCRIPT_MARKER = "[bridge-service]"
 
@@ -42,6 +43,7 @@ class BridgeContext:
     log_path: Path
     ready_path: Path
     report_path: Path
+    state_path: Path
     service_url: str
     bind_url: str | None
     expected_listen_urls: list[str]
@@ -178,7 +180,16 @@ def dotnet_prefers_windows_paths() -> bool:
     if not is_wsl():
         return False
     dotnet_path = shutil.which("dotnet") or ""
-    return dotnet_path.lower().endswith(".exe")
+    if not dotnet_path:
+        return False
+
+    candidates = [dotnet_path]
+    try:
+        candidates.append(str(Path(dotnet_path).resolve()))
+    except OSError:
+        pass
+
+    return any(candidate.lower().endswith(".exe") for candidate in candidates)
 
 
 def convert_to_dotnet_path(path: Path) -> str:
@@ -200,6 +211,7 @@ def build_context(args: argparse.Namespace) -> BridgeContext:
     log_path = resolve_output_path(task_dir, getattr(args, "log_name", DEFAULT_LOG_NAME))
     ready_path = resolve_output_path(task_dir, getattr(args, "ready_name", DEFAULT_READY_NAME))
     report_path = resolve_output_path(task_dir, getattr(args, "report_name", DEFAULT_REPORT_NAME))
+    state_path = resolve_output_path(task_dir, getattr(args, "state_name", DEFAULT_STATE_NAME))
     service_url = normalize_base_service_url(args.service_url)
     bind_url = build_bind_url(service_url)
     expected_listen_urls = [service_url]
@@ -215,6 +227,7 @@ def build_context(args: argparse.Namespace) -> BridgeContext:
         log_path=log_path,
         ready_path=ready_path,
         report_path=report_path,
+        state_path=state_path,
         service_url=service_url,
         bind_url=bind_url,
         expected_listen_urls=expected_listen_urls,
@@ -230,6 +243,92 @@ def print_info(message: str) -> None:
 def write_json(path: Path, payload: dict) -> None:
     ensure_directory(path.parent)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def read_json_file(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def build_state_payload(context: BridgeContext, status: str, **extra: object) -> dict:
+    payload = {
+        "status": status,
+        "timestamp": now_iso(),
+        "project_name": context.project_name,
+        "project_dir": str(context.project_dir),
+        "project_file": str(context.project_file),
+        "task_dir": str(context.task_dir),
+        "log_path": str(context.log_path),
+        "ready_path": str(context.ready_path),
+        "report_path": str(context.report_path),
+        "state_path": str(context.state_path),
+        "service_url": context.service_url,
+        "bind_url": context.bind_url,
+        "home_url": context.home_url,
+        "expected_listen_urls": context.expected_listen_urls,
+        "runner_pid": os.getpid(),
+    }
+    payload.update(extra)
+    return payload
+
+
+def write_state(context: BridgeContext, status: str, **extra: object) -> None:
+    write_json(context.state_path, build_state_payload(context, status, **extra))
+
+
+def write_runtime_message(message: str, log_stream: TextIO | None = None) -> None:
+    print_info(message)
+    if log_stream is None:
+        return
+    log_stream.write(f"{SCRIPT_MARKER} {message}\n")
+    log_stream.flush()
+
+
+def safe_parse_pid(value: object) -> int | None:
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def extract_endpoint_port(value: str) -> int | None:
+    match = re.search(r":(\d+)$", value.strip())
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def endpoint_matches_port(value: str, port: int) -> bool:
+    return extract_endpoint_port(value) == port
+
+
+def windows_process_exists(pid: int, cmd_exe: str) -> bool:
+    result = run_command([cmd_exe, "/c", f'tasklist /FI "PID eq {pid}" /FO CSV /NH'])
+    if result.returncode != 0:
+        return False
+    for row in parse_tasklist_rows(result.stdout):
+        parsed_pid = safe_parse_pid(row["pid"])
+        if parsed_pid == pid:
+            return True
+    return False
+
+
+def process_exists(pid: int) -> bool:
+    if is_windows():
+        cmd_exe = locate_windows_cmd()
+        if cmd_exe:
+            return windows_process_exists(pid, cmd_exe)
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
 
 
 def collect_unix_named_pids(project_name: str) -> set[int]:
@@ -278,12 +377,62 @@ def collect_unix_port_pids(port: int) -> set[int]:
         result = run_command(["ss", "-ltnp"])
         pids: set[int] = set()
         if result.returncode == 0:
-            marker = f":{port}"
             for line in result.stdout.splitlines():
-                if marker not in line:
+                tokens = line.split()
+                if len(tokens) < 4:
+                    continue
+                if not endpoint_matches_port(tokens[3], port):
                     continue
                 for match in re.finditer(r"pid=(\d+)", line):
                     pids.add(int(match.group(1)))
+        return pids
+
+    return set()
+
+
+def collect_unix_listening_pids(port: int) -> set[int]:
+    if not running_in_posix():
+        return set()
+
+    if shutil.which("lsof"):
+        result = run_command(["lsof", "-nP", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"])
+        pids: set[int] = set()
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line.isdigit():
+                    pids.add(int(line))
+            if pids:
+                return pids
+
+    if shutil.which("ss"):
+        result = run_command(["ss", "-ltnp"])
+        pids: set[int] = set()
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                tokens = line.split()
+                if len(tokens) < 4:
+                    continue
+                if not endpoint_matches_port(tokens[3], port):
+                    continue
+                for match in re.finditer(r"pid=(\d+)", line):
+                    pids.add(int(match.group(1)))
+            if pids:
+                return pids
+
+    if shutil.which("netstat"):
+        result = run_command(["netstat", "-ltnp"])
+        pids: set[int] = set()
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                tokens = line.split()
+                if len(tokens) < 7:
+                    continue
+                if not endpoint_matches_port(tokens[3], port):
+                    continue
+                pid = safe_parse_pid(tokens[6].split("/", 1)[0])
+                if pid:
+                    pids.add(pid)
         return pids
 
     return set()
@@ -335,11 +484,12 @@ def collect_windows_named_pids(project_name: str, cmd_exe: str) -> set[int]:
     return pids
 
 
-def collect_windows_port_pids(port: int, cmd_exe: str) -> set[int]:
-    result = run_command([cmd_exe, "/c", f"netstat -ano -p tcp | findstr :{port}"])
+def collect_windows_port_pids(port: int, cmd_exe: str, allowed_states: set[str] | None = None) -> set[int]:
+    result = run_command([cmd_exe, "/c", "netstat -ano -p tcp"])
     if result.returncode not in {0, 1}:
         return set()
     pids: set[int] = set()
+    normalized_states = {state.upper() for state in allowed_states} if allowed_states else None
     for line in result.stdout.splitlines():
         tokens = line.split()
         if len(tokens) < 5:
@@ -347,17 +497,64 @@ def collect_windows_port_pids(port: int, cmd_exe: str) -> set[int]:
         local_address = tokens[1]
         state = tokens[3] if len(tokens) > 4 else ""
         pid_text = tokens[-1]
-        if f":{port}" not in local_address:
+        if not endpoint_matches_port(local_address, port):
             continue
-        if state.upper() not in {"LISTENING", "ESTABLISHED", "TIME_WAIT", "CLOSE_WAIT"}:
+        if normalized_states is not None and state.upper() not in normalized_states:
             continue
-        if pid_text.isdigit():
+        if normalized_states is None and state.upper() not in {"LISTENING", "ESTABLISHED", "TIME_WAIT", "CLOSE_WAIT"}:
+            continue
+        if pid_text.isdigit() and int(pid_text) > 0:
             pids.add(int(pid_text))
     return pids
 
 
+def collect_windows_listening_pids(port: int, cmd_exe: str) -> set[int]:
+    return collect_windows_port_pids(port, cmd_exe, allowed_states={"LISTENING"})
+
+
 def terminate_windows_pid(pid: int, cmd_exe: str) -> None:
     run_command([cmd_exe, "/c", f"taskkill /PID {pid} /F"])
+
+
+def terminate_recorded_pid(pid: int) -> bool:
+    if pid <= 0 or pid == os.getpid():
+        return False
+    if running_in_posix():
+        if not process_exists(pid):
+            return False
+        terminate_posix_pid(pid)
+        return not process_exists(pid)
+    if is_windows():
+        cmd_exe = locate_windows_cmd()
+        if cmd_exe:
+            if not windows_process_exists(pid, cmd_exe):
+                return False
+            terminate_windows_pid(pid, cmd_exe)
+            return not windows_process_exists(pid, cmd_exe)
+    return False
+
+
+def cleanup_recorded_state_processes(context: BridgeContext) -> dict:
+    state_payload = read_json_file(context.state_path)
+    recorded_pids = {
+        pid
+        for pid in (
+            safe_parse_pid(state_payload.get("runner_pid")),
+            safe_parse_pid(state_payload.get("child_pid")),
+            safe_parse_pid(state_payload.get("listener_pid")),
+        )
+        if pid and pid != os.getpid()
+    }
+    killed_pids: list[int] = []
+    for pid in sorted(recorded_pids):
+        if terminate_recorded_pid(pid):
+            killed_pids.append(pid)
+    return {
+        "state_file": str(context.state_path),
+        "state_status": state_payload.get("status"),
+        "recorded_pids": sorted(recorded_pids),
+        "killed_pids": killed_pids,
+    }
 
 
 def cleanup_windows_side(project_name: str, port: int) -> dict:
@@ -376,6 +573,7 @@ def cleanup_bridge_processes(context: BridgeContext) -> dict:
         "project_name": context.project_name,
         "service_url": context.service_url,
         "port": context.port,
+        "recorded_state": cleanup_recorded_state_processes(context),
         "posix": cleanup_posix_side(context.project_name, context.port) if running_in_posix() else None,
         "windows": cleanup_windows_side(context.project_name, context.port) if (is_windows() or is_wsl()) else None,
     }
@@ -393,7 +591,49 @@ def build_dotnet_command(context: BridgeContext) -> list[str]:
     return command
 
 
-def make_ready_payload(context: BridgeContext, observed_url: str, process: subprocess.Popen[str]) -> dict:
+def collect_runtime_listener_pids(port: int) -> set[int]:
+    if is_wsl():
+        cmd_exe = locate_windows_cmd()
+        windows_pids = collect_windows_listening_pids(port, cmd_exe) if cmd_exe else set()
+        return windows_pids or collect_unix_listening_pids(port)
+    if is_windows():
+        cmd_exe = locate_windows_cmd()
+        return collect_windows_listening_pids(port, cmd_exe) if cmd_exe else set()
+    if running_in_posix():
+        return collect_unix_listening_pids(port)
+    return set()
+
+
+def resolve_listener_pid(
+    context: BridgeContext,
+    process: subprocess.Popen[str],
+    timeout_seconds: float = 5.0,
+    poll_seconds: float = 0.25,
+) -> tuple[int, str]:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() <= deadline:
+        candidate_pids = sorted(
+            pid
+            for pid in collect_runtime_listener_pids(context.port)
+            if pid > 0 and pid != os.getpid()
+        )
+        if candidate_pids:
+            if process.pid in candidate_pids:
+                return process.pid, "port-listener"
+            return candidate_pids[0], "port-listener"
+        if process.poll() is not None:
+            break
+        time.sleep(poll_seconds)
+    return process.pid, "process-fallback"
+
+
+def make_ready_payload(
+    context: BridgeContext,
+    observed_url: str,
+    process: subprocess.Popen[str],
+    listener_pid: int,
+    listener_pid_source: str,
+) -> dict:
     return {
         "status": "ready",
         "timestamp": now_iso(),
@@ -406,7 +646,10 @@ def make_ready_payload(context: BridgeContext, observed_url: str, process: subpr
         "observed_listen_url": observed_url,
         "expected_listen_urls": context.expected_listen_urls,
         "home_url": context.home_url,
-        "pid": process.pid,
+        "pid": listener_pid,
+        "child_pid": process.pid,
+        "listener_pid": listener_pid,
+        "listener_pid_source": listener_pid_source,
     }
 
 
@@ -435,29 +678,57 @@ def extract_listening_url(line: str) -> str | None:
     return match.group(1).rstrip()
 
 
-def remove_old_artifacts(context: BridgeContext) -> None:
-    for path in (context.log_path, context.ready_path, context.report_path):
-        if path.exists():
+def unlink_with_retries(path: Path, retries: int = 20, delay_seconds: float = 0.25) -> None:
+    for attempt in range(retries):
+        try:
             path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt == retries - 1:
+                raise
+            time.sleep(delay_seconds)
 
 
-def stream_run(context: BridgeContext, retry_limit: int) -> int:
-    remove_old_artifacts(context)
+def remove_old_artifacts(context: BridgeContext) -> None:
+    for path in (context.log_path, context.ready_path, context.report_path, context.state_path):
+        unlink_with_retries(path)
+
+
+def prepare_run(context: BridgeContext) -> dict:
     cleanup_details = cleanup_bridge_processes(context)
-    print_info(f"Cleanup summary: {json.dumps(cleanup_details, ensure_ascii=False)}")
+    remove_old_artifacts(context)
+    return cleanup_details
 
+
+def stream_run(context: BridgeContext, retry_limit: int, skip_cleanup: bool = False) -> int:
+    cleanup_details = prepare_run(context) if not skip_cleanup else {"skipped": True}
     attempt = 0
-    while True:
-        attempt += 1
-        command = build_dotnet_command(context)
-        print_info(f"Starting bridge service (attempt {attempt}): {' '.join(command)}")
-        ready_payload: dict | None = None
-        file_lock_detected = False
+    with context.log_path.open("w", encoding="utf-8") as log_stream:
+        if skip_cleanup:
+            write_runtime_message("Initial cleanup skipped because the detached launcher already prepared the task folder.", log_stream)
+        else:
+            write_runtime_message(f"Cleanup summary: {json.dumps(cleanup_details, ensure_ascii=False)}", log_stream)
 
-        with context.log_path.open("w", encoding="utf-8") as log_stream:
+        while True:
+            attempt += 1
+            command = build_dotnet_command(context)
+            write_state(
+                context,
+                "starting",
+                attempt=attempt,
+                retry_limit=retry_limit,
+                command=command,
+            )
+            write_runtime_message(f"Starting bridge service (attempt {attempt}): {' '.join(command)}", log_stream)
+            ready_payload: dict | None = None
+            file_lock_detected = False
+
             process = subprocess.Popen(
                 command,
                 cwd=str(context.project_dir),
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -466,6 +737,14 @@ def stream_run(context: BridgeContext, retry_limit: int) -> int:
                 bufsize=1,
             )
             assert process.stdout is not None
+            write_state(
+                context,
+                "starting",
+                attempt=attempt,
+                retry_limit=retry_limit,
+                command=command,
+                child_pid=process.pid,
+            )
 
             try:
                 for line in process.stdout:
@@ -476,38 +755,86 @@ def stream_run(context: BridgeContext, retry_limit: int) -> int:
 
                     observed = extract_listening_url(line)
                     if observed and observed in context.expected_listen_urls and ready_payload is None:
-                        ready_payload = make_ready_payload(context, observed, process)
+                        listener_pid, listener_pid_source = resolve_listener_pid(context, process)
+                        ready_payload = make_ready_payload(context, observed, process, listener_pid, listener_pid_source)
                         write_json(context.ready_path, ready_payload)
-                        print_info(f"Detected readiness marker: {observed}")
+                        write_state(
+                            context,
+                            "ready",
+                            attempt=attempt,
+                            retry_limit=retry_limit,
+                            command=command,
+                            child_pid=process.pid,
+                            listener_pid=listener_pid,
+                            listener_pid_source=listener_pid_source,
+                            observed_listen_url=observed,
+                            ready_path=str(context.ready_path),
+                        )
+                        write_runtime_message(f"Detected readiness marker: {observed}", log_stream)
 
                     if ready_payload is None and line_contains_file_lock(line):
                         file_lock_detected = True
-                        print_info("Detected file-lock/build-lock marker. Restarting after cleanup.")
+                        write_state(
+                            context,
+                            "restarting",
+                            attempt=attempt,
+                            retry_limit=retry_limit,
+                            command=command,
+                            child_pid=process.pid,
+                            reason="file-lock-detected",
+                        )
+                        write_runtime_message("Detected file-lock/build-lock marker. Restarting after cleanup.", log_stream)
                         process.kill()
                         break
             except KeyboardInterrupt:
-                print_info("Received interrupt. Stopping bridge service.")
+                write_runtime_message("Received interrupt. Stopping bridge service.", log_stream)
                 process.terminate()
                 process.wait(timeout=10)
+                write_state(
+                    context,
+                    "stopped",
+                    attempt=attempt,
+                    retry_limit=retry_limit,
+                    command=command,
+                    child_pid=process.pid,
+                    listener_pid=safe_parse_pid(ready_payload.get("listener_pid")) if ready_payload else None,
+                    listener_pid_source=ready_payload.get("listener_pid_source") if ready_payload else None,
+                    exit_code=130,
+                    interrupted=True,
+                )
                 raise
             finally:
                 exit_code = process.wait()
 
-        if ready_payload is not None:
-            write_json(context.ready_path, make_stopped_payload(context, ready_payload, exit_code))
+            if ready_payload is not None:
+                write_json(context.ready_path, make_stopped_payload(context, ready_payload, exit_code))
 
-        if file_lock_detected and attempt <= retry_limit:
-            cleanup_details = cleanup_bridge_processes(context)
-            print_info(f"Retry cleanup summary: {json.dumps(cleanup_details, ensure_ascii=False)}")
-            continue
+            write_state(
+                context,
+                "stopped",
+                attempt=attempt,
+                retry_limit=retry_limit,
+                command=command,
+                child_pid=process.pid,
+                listener_pid=safe_parse_pid(ready_payload.get("listener_pid")) if ready_payload else None,
+                listener_pid_source=ready_payload.get("listener_pid_source") if ready_payload else None,
+                exit_code=exit_code,
+                ready_observed=ready_payload is not None,
+                observed_listen_url=ready_payload.get("observed_listen_url") if ready_payload else None,
+            )
 
-        if file_lock_detected and attempt > retry_limit:
-            print_info("File-lock retries exhausted.")
-            return exit_code or 1
+            if file_lock_detected and attempt <= retry_limit:
+                cleanup_details = cleanup_bridge_processes(context)
+                write_runtime_message(f"Retry cleanup summary: {json.dumps(cleanup_details, ensure_ascii=False)}", log_stream)
+                continue
 
-        if exit_code != 0 and ready_payload is None:
-            print_info(f"Bridge service exited before readiness with code {exit_code}.")
-        return exit_code
+            if file_lock_detected and attempt > retry_limit:
+                write_runtime_message("File-lock retries exhausted.", log_stream)
+                return exit_code or 1
+
+            if exit_code != 0 and ready_payload is None:
+                write_runtime_message(f"Bridge service exited before readiness with code {exit_code}.", log_stream)
+            return exit_code
 
 
 def read_recent_log_content(path: Path, max_bytes: int = 128_000) -> str:
@@ -542,24 +869,60 @@ def write_wait_report(context: BridgeContext, payload: dict) -> None:
 
 def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float, strict_marker: bool) -> int:
     deadline = time.monotonic() + timeout_seconds
+    wait_started_epoch = time.time()
     consecutive_successes = 0
     last_http_status: int | None = None
     last_http_excerpt: str | None = None
     marker_seen = False
     observed_marker: str | None = None
     ready_file_seen = False
+    state_status: str | None = None
+    state_exit_code: int | None = None
+    runner_pid: int | None = None
+    child_pid: int | None = None
+    listener_pid: int | None = None
+    listener_pid_source: str | None = None
+    state_updated_during_wait = False
 
     while time.monotonic() <= deadline:
         if context.ready_path.exists():
             ready_file_seen = True
-            try:
-                ready_payload = json.loads(context.ready_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                ready_payload = {}
+            ready_payload = read_json_file(context.ready_path)
             observed = ready_payload.get("observed_listen_url")
             if isinstance(observed, str) and observed:
                 observed_marker = observed
                 marker_seen = True
+            ready_child_pid = safe_parse_pid(ready_payload.get("child_pid"))
+            if ready_child_pid:
+                child_pid = ready_child_pid
+            ready_listener_pid = safe_parse_pid(ready_payload.get("listener_pid")) or safe_parse_pid(ready_payload.get("pid"))
+            if ready_listener_pid:
+                listener_pid = ready_listener_pid
+            ready_listener_pid_source = ready_payload.get("listener_pid_source")
+            if isinstance(ready_listener_pid_source, str) and ready_listener_pid_source:
+                listener_pid_source = ready_listener_pid_source
+
+        if context.state_path.exists():
+            try:
+                state_updated_during_wait = context.state_path.stat().st_mtime >= wait_started_epoch - 1
+            except FileNotFoundError:
+                state_updated_during_wait = False
+            state_payload = read_json_file(context.state_path)
+            status_value = state_payload.get("status")
+            state_status = status_value if isinstance(status_value, str) else None
+            state_exit_code = safe_parse_pid(state_payload.get("exit_code"))
+            parsed_runner_pid = safe_parse_pid(state_payload.get("runner_pid"))
+            if parsed_runner_pid:
+                runner_pid = parsed_runner_pid
+            parsed_child_pid = safe_parse_pid(state_payload.get("child_pid"))
+            if parsed_child_pid:
+                child_pid = parsed_child_pid
+            parsed_listener_pid = safe_parse_pid(state_payload.get("listener_pid"))
+            if parsed_listener_pid:
+                listener_pid = parsed_listener_pid
+            parsed_listener_pid_source = state_payload.get("listener_pid_source")
+            if isinstance(parsed_listener_pid_source, str) and parsed_listener_pid_source:
+                listener_pid_source = parsed_listener_pid_source
 
         if not marker_seen:
             log_content = read_recent_log_content(context.log_path)
@@ -588,6 +951,12 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     "ready_file_seen": ready_file_seen,
                     "consecutive_home_successes": consecutive_successes,
                     "last_http_status": last_http_status,
+                    "state_status": state_status,
+                    "state_exit_code": state_exit_code,
+                    "runner_pid": runner_pid,
+                    "child_pid": child_pid,
+                    "listener_pid": listener_pid,
+                    "listener_pid_source": listener_pid_source,
                 },
             )
             return 0
@@ -607,9 +976,46 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     "consecutive_home_successes": consecutive_successes,
                     "last_http_status": last_http_status,
                     "warning": "Home endpoint became reachable before a listening marker was observed.",
+                    "state_status": state_status,
+                    "state_exit_code": state_exit_code,
+                    "runner_pid": runner_pid,
+                    "child_pid": child_pid,
+                    "listener_pid": listener_pid,
+                    "listener_pid_source": listener_pid_source,
                 },
             )
             return 0
+
+        if (
+            state_updated_during_wait
+            and state_status in {"stopped", "failed"}
+            and consecutive_successes < 3
+        ):
+            write_wait_report(
+                context,
+                {
+                    "status": "blocked",
+                    "timestamp": now_iso(),
+                    "service_url": context.service_url,
+                    "bind_url": context.bind_url,
+                    "home_url": context.home_url,
+                    "marker_seen": marker_seen,
+                    "observed_marker": observed_marker,
+                    "ready_file_seen": ready_file_seen,
+                    "consecutive_home_successes": consecutive_successes,
+                    "last_http_status": last_http_status,
+                    "last_http_excerpt": last_http_excerpt,
+                    "strict_marker": strict_marker,
+                    "state_status": state_status,
+                    "state_exit_code": state_exit_code,
+                    "runner_pid": runner_pid,
+                    "child_pid": child_pid,
+                    "listener_pid": listener_pid,
+                    "listener_pid_source": listener_pid_source,
+                    "reason": "Bridge runner stopped before readiness completed.",
+                },
+            )
+            return 1
 
         time.sleep(poll_seconds)
 
@@ -628,6 +1034,12 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
             "last_http_status": last_http_status,
             "last_http_excerpt": last_http_excerpt,
             "strict_marker": strict_marker,
+            "state_status": state_status,
+            "state_exit_code": state_exit_code,
+            "runner_pid": runner_pid,
+            "child_pid": child_pid,
+            "listener_pid": listener_pid,
+            "listener_pid_source": listener_pid_source,
         },
     )
     return 1
@@ -639,9 +1051,85 @@ def command_cleanup(args: argparse.Namespace) -> int:
     return 0
 
 
+def build_background_command(context: BridgeContext, args: argparse.Namespace) -> list[str]:
+    return [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "serve",
+        "--project-dir",
+        str(context.project_dir),
+        "--project-file",
+        str(context.project_file),
+        "--service-url",
+        context.service_url,
+        "--task-dir",
+        str(context.task_dir),
+        "--log-name",
+        str(context.log_path),
+        "--ready-name",
+        str(context.ready_path),
+        "--report-name",
+        str(context.report_path),
+        "--state-name",
+        str(context.state_path),
+        "--home-path",
+        getattr(args, "home_path", DEFAULT_HOME_PATH),
+        "--file-lock-retries",
+        str(args.file_lock_retries),
+        "--skip-cleanup",
+    ]
+
+
+def spawn_background_run(context: BridgeContext, args: argparse.Namespace) -> int:
+    cleanup_details = prepare_run(context)
+    print_info(f"Cleanup summary: {json.dumps(cleanup_details, ensure_ascii=False)}")
+    command = build_background_command(context, args)
+    print_info(f"Starting detached bridge runner: {' '.join(command)}")
+
+    popen_kwargs = {
+        "cwd": str(context.project_dir),
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "close_fds": True,
+    }
+    if is_windows():
+        creationflags = 0
+        creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+        creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        process = subprocess.Popen(command, creationflags=creationflags, **popen_kwargs)
+    else:
+        process = subprocess.Popen(command, start_new_session=True, **popen_kwargs)
+
+    time.sleep(1.0)
+    exit_code = process.poll()
+    if exit_code is not None:
+        raise BridgeServiceError(
+            f"Detached bridge runner exited immediately with code {exit_code}. Inspect {context.log_path} for details."
+        )
+
+    print_info(
+        "Detached bridge runner started "
+        f"(pid {process.pid}). Run wait-ready next to confirm initialization."
+    )
+    return 0
+
+
+def command_serve(args: argparse.Namespace) -> int:
+    context = build_context(args)
+    return stream_run(
+        context,
+        retry_limit=args.file_lock_retries,
+        skip_cleanup=args.skip_cleanup,
+    )
+
+
 def command_run(args: argparse.Namespace) -> int:
     context = build_context(args)
-    return stream_run(context, retry_limit=args.file_lock_retries)
+    if args.foreground:
+        return stream_run(context, retry_limit=args.file_lock_retries)
+    return spawn_background_run(context, args)
 
 
 def command_wait_ready(args: argparse.Namespace) -> int:
@@ -675,6 +1163,11 @@ def add_shared_run_arguments(parser: argparse.ArgumentParser, include_project: b
         help=f"Readiness report file name or absolute path. Default: {DEFAULT_REPORT_NAME}",
     )
     parser.add_argument(
+        "--state-name",
+        default=DEFAULT_STATE_NAME,
+        help=f"Bridge process state file name or absolute path. Default: {DEFAULT_STATE_NAME}",
+    )
+    parser.add_argument(
         "--home-path",
         default=DEFAULT_HOME_PATH,
         help=f"Health page path checked by wait-ready. Default: {DEFAULT_HOME_PATH}",
@@ -691,7 +1184,10 @@ def build_parser() -> argparse.ArgumentParser:
     add_shared_run_arguments(cleanup_parser, include_project=True)
     cleanup_parser.set_defaults(func=command_cleanup)
 
-    run_parser = subparsers.add_parser("run", help="Clean residual processes and run the bridge service in the foreground.")
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Clean residual processes and start the bridge service in the background. Add --foreground to stay attached.",
+    )
     add_shared_run_arguments(run_parser, include_project=True)
     run_parser.add_argument(
         "--file-lock-retries",
@@ -699,7 +1195,30 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Number of automatic retries when MSB3026 or another file-lock marker appears. Default: 1",
     )
+    run_parser.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Keep the current shell attached and mirror live output instead of returning immediately.",
+    )
     run_parser.set_defaults(func=command_run)
+
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Internal foreground worker used by run after the detached launcher has prepared the task folder.",
+    )
+    add_shared_run_arguments(serve_parser, include_project=True)
+    serve_parser.add_argument(
+        "--file-lock-retries",
+        type=int,
+        default=1,
+        help="Number of automatic retries when MSB3026 or another file-lock marker appears. Default: 1",
+    )
+    serve_parser.add_argument(
+        "--skip-cleanup",
+        action="store_true",
+        help="Skip initial cleanup because the detached launcher already prepared the task folder.",
+    )
+    serve_parser.set_defaults(func=command_serve)
 
     wait_parser = subparsers.add_parser(
         "wait-ready",

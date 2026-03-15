@@ -8,7 +8,16 @@ Use `scripts/bridge_service.py` to standardize Monica bridge-service startup acr
 
 ### `run`
 
-Launch the bridge service in the foreground after cleanup and keep the process attached.
+Launch the bridge service after cleanup.
+
+Default behavior:
+
+- Start a detached background worker
+- Return immediately so the same agent can continue with `wait-ready`
+
+Optional behavior:
+
+- Add `--foreground` to keep the current shell attached and mirror live output
 
 Required arguments:
 
@@ -22,18 +31,38 @@ Optional arguments:
 - `--log-name`
 - `--ready-name`
 - `--report-name`
+- `--state-name`
 - `--home-path`
 - `--file-lock-retries`
+- `--foreground`
 
 Artifacts written to the task folder by default:
 
 - `app-run.log`
 - `bridge-ready.json`
 - `bridge-ready-report.json` (only when `wait-ready` is used)
+- `bridge-process.json`
+
+PID fields:
+
+- `bridge-ready.json` now records the actual listening process in `pid` and `listener_pid`
+- `bridge-ready.json` also keeps `child_pid` for the intermediate `dotnet run` process when one exists
+- `bridge-process.json` and `bridge-ready-report.json` include both `child_pid` and `listener_pid`
+- `listener_pid_source` shows whether the listener PID came from a port scan or a fallback to the launched process
+
+### `serve`
+
+Internal foreground worker used by `run` after the detached launcher prepares the task folder. Do not use this command in the normal skill workflow unless you are debugging the launcher itself.
 
 ### `cleanup`
 
 Run the cleanup logic without launching the service.
+
+Cleanup checks:
+
+- recorded bridge state in `bridge-process.json`
+- service process names and bound ports
+- Windows-side cleanup when available
 
 ### `wait-ready`
 
@@ -56,7 +85,15 @@ When `--service-url` uses a non-loopback IP address, the script keeps the extern
 
 ## Recommended sub-agent split
 
-- Worker A: `python scripts/bridge_service.py run ...`
+Single-agent execution is the default workflow:
+
+1. `python scripts/bridge_service.py run ...`
+2. `python scripts/bridge_service.py wait-ready ...`
+3. Playwright capture
+
+Optional delegated split when intentionally using sub-agents:
+
+- Worker A: `python scripts/bridge_service.py run --foreground ...`
 - Worker B: `python scripts/bridge_service.py wait-ready ...` and then Playwright capture
 
 ## Exit codes
