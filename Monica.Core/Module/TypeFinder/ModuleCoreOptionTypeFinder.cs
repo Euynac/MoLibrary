@@ -8,5 +8,5 @@ public class ModuleCoreOptionTypeFinder
     /// <summary>
     /// 相关程序集名称，用于筛选要加载的程序集
     /// </summary>
-    public string[] RelatedAssemblies { get; set; } = Array.Empty<string>();
+    public string[] RelatedAssemblies { get; set; } = [];
 } 

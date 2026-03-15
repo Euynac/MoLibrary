@@ -12,17 +12,10 @@ public static class Mo
     /// Initializes the Mo module system with Harmony patches for ASP.NET Core lifecycle interception.
     /// This should be called early in the application startup, typically before configuring services.
     /// </summary>
-    /// <param name="typeFinderConfigure">Optional configuration for the type finder.</param>
-    public static void Initialize(Action<ModuleCoreOptionTypeFinder>? typeFinderConfigure = null)
+    public static void Initialize()
     {
         // Initialize Harmony patches to intercept native ASP.NET Core methods
         HarmonyPatchManager.EnsurePatched();
-
-        // Configure the type finder if provided
-        if (typeFinderConfigure != null)
-        {
-            Options.ConfigTypeFinder(typeFinderConfigure);
-        }
     }
 
     /// <summary>
