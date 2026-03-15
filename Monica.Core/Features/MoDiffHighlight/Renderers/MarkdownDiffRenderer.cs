@@ -4,20 +4,20 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Renderers;
 
 /// <summary>
-/// Markdown 差异渲染器
+/// Markdown diff renderer.
 /// </summary>
 public class MarkdownDiffRenderer : IDiffHighlightRenderer
 {
     public EDiffOutputFormat SupportedFormat => EDiffOutputFormat.Markdown;
     
     /// <summary>
-    /// 渲染差异结果为 Markdown 格式
+    /// Renders diff lines as Markdown.
     /// </summary>
     public string Render(IEnumerable<DiffLine> lines, DiffHighlightStyle style)
     {
         var markdown = new StringBuilder();
         
-        // 添加代码块标记
+        // Use a diff fenced block so Markdown viewers can style the output.
         markdown.AppendLine("```diff");
         
         foreach (var line in lines)
@@ -31,7 +31,7 @@ public class MarkdownDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染单行差异
+    /// Renders a single diff line.
     /// </summary>
     public string RenderLine(DiffLine line, DiffHighlightStyle style)
     {
@@ -42,7 +42,7 @@ public class MarkdownDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行类型符号
+    /// Gets the display marker for a diff line type.
     /// </summary>
     private string GetLineTypeSymbol(EDiffLineType type)
     {
@@ -57,7 +57,7 @@ public class MarkdownDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行内容
+    /// Gets the visible content for a diff line.
     /// </summary>
     private string GetLineContent(DiffLine line)
     {

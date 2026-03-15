@@ -1,22 +1,22 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异输出格式
+/// Output formats supported by the diff renderer.
 /// </summary>
 public enum EDiffOutputFormat
 {
     /// <summary>
-    /// HTML格式（带样式，适合Web展示）
+    /// HTML output with styling for web display.
     /// </summary>
     Html,
     
     /// <summary>
-    /// Markdown格式（适合文档）
+    /// Markdown output suitable for documents.
     /// </summary>
     Markdown,
     
     /// <summary>
-    /// 纯文本格式（带标记）
+    /// Plain-text output with inline markers.
     /// </summary>
     PlainText
 }

@@ -4,89 +4,89 @@ using System.Xml.XPath;
 namespace Monica.Core.Features.MoXmlDocumentation;
 
 /// <summary>
-/// XML文档服务接口
+/// Provides access to XML documentation generated for assemblies.
 /// </summary>
 public interface IXmlDocumentationService
 {
     /// <summary>
-    /// 获取方法的XML文档信息
+    /// Gets XML documentation for a method.
     /// </summary>
-    /// <param name="method">方法信息</param>
-    /// <returns>XML文档信息</returns>
+    /// <param name="method">The method to inspect.</param>
+    /// <returns>The method documentation, or <see langword="null" /> when none is available.</returns>
     XmlMethodDocumentation? GetMethodDocumentation(MethodInfo method);
 
     /// <summary>
-    /// 获取类型的XML文档信息
+    /// Gets the summary documentation for a type.
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <returns>XML文档描述</returns>
+    /// <param name="type">The type to inspect.</param>
+    /// <returns>The type summary, or <see langword="null" /> when none is available.</returns>
     string? GetTypeDocumentation(Type type);
 
     /// <summary>
-    /// 清空缓存，释放内存
+    /// Clears the cached XML documents.
     /// </summary>
     void ClearCache();
 
     /// <summary>
-    /// 获取当前缓存的XML文档信息列表
+    /// Gets information about the currently cached XML documents.
     /// </summary>
-    /// <returns>缓存的XML文档信息</returns>
+    /// <returns>The cached XML document information.</returns>
     IReadOnlyList<XmlDocumentCacheInfo> GetCachedDocuments();
 }
 
 /// <summary>
-/// XML方法文档信息
+/// XML documentation extracted for a method.
 /// </summary>
 public class XmlMethodDocumentation
 {
     /// <summary>
-    /// 方法摘要
+    /// Method summary text.
     /// </summary>
     public string? Summary { get; set; }
 
     /// <summary>
-    /// 返回值描述
+    /// Return value description.
     /// </summary>
     public string? Returns { get; set; }
 
     /// <summary>
-    /// 备注
+    /// Remarks text.
     /// </summary>
     public string? Remarks { get; set; }
 
     /// <summary>
-    /// 参数描述字典
+    /// Parameter descriptions keyed by parameter name.
     /// </summary>
     public Dictionary<string, string> Parameters { get; set; } = new();
 
     /// <summary>
-    /// 异常描述字典
+    /// Exception descriptions keyed by exception type name.
     /// </summary>
     public Dictionary<string, string> Exceptions { get; set; } = new();
 }
 
 /// <summary>
-/// XML文档缓存信息
+/// Metadata about a cached XML document.
 /// </summary>
 public class XmlDocumentCacheInfo
 {
     /// <summary>
-    /// 程序集名称
+    /// Assembly name.
     /// </summary>
     public string AssemblyName { get; set; } = string.Empty;
 
     /// <summary>
-    /// XML文件路径
+    /// XML file path.
     /// </summary>
     public string XmlFilePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// XPath文档对象
+    /// Cached XPath document.
     /// </summary>
     public XPathDocument? Document { get; set; }
 
     /// <summary>
-    /// 缓存时间
+    /// Time when the document was cached.
     /// </summary>
     public DateTime CachedAt { get; set; }
 }

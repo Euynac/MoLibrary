@@ -18,7 +18,7 @@ public enum EMoModuleKey
     ConfigurationDashboard,
     RegisterCentre,
     /// <summary>
-    /// 服务调用模块
+    /// Service invocation module.
     /// </summary>
     ServiceInvocation,
     DataChannel,
@@ -29,7 +29,7 @@ public enum EMoModuleKey
     SignalR,
     StateStore,
     /// <summary>
-    /// Redis 状态存储模块
+    /// Redis state store module.
     /// </summary>
     RedisStateStore,
     Dapr,
@@ -43,7 +43,7 @@ public enum EMoModuleKey
     Mediator,
     Swagger,
     /// <summary>
-    /// Swagger UI 增强模块
+    /// Swagger UI enhancement module.
     /// </summary>
     SwaggerUI,
     Seeder,
@@ -54,33 +54,33 @@ public enum EMoModuleKey
     CancellationManager,
     ProgressBar,
     /// <summary>
-    /// 作业调度模块
+    /// Job scheduling module.
     /// </summary>
     MoScheduler,
     Profiling,
     /// <summary>
-    /// XML文档服务模块
+    /// XML documentation service module.
     /// </summary>
     XmlDocumentation,
     /// <summary>
-    /// 临时设置数据
+    /// Scoped temporary data module.
     /// </summary>
     ScopedData,
     Controllers,
     /// <summary>
-    /// 基本链路追踪模块
+    /// Basic chain tracing module.
     /// </summary>
     ChainTracing,
     /// <summary>
-    /// 框架链路追踪模块
+    /// Framework chain tracing module.
     /// </summary>
     FrameworkChainTracing,
     /// <summary>
-    /// 文本差异对比高亮模块
+    /// Text diff highlight module.
     /// </summary>
     DiffHighlight,
     /// <summary>
-    /// UI 核心模块，用于界面基础构建
+    /// Core UI module used as the foundation for UI features.
     /// </summary>
     UICore,
     FrameworkUI,
@@ -93,11 +93,11 @@ public enum EMoModuleKey
     RegisterCentreUI,
     FrameworkMonitorUI,
     /// <summary>
-    /// 文本差异对比高亮UI模块
+    /// Text diff highlight UI module.
     /// </summary>
     DiffHighlightUI,
     /// <summary>
-    /// 堆栈跟踪UI模块
+    /// Stack trace UI module.
     /// </summary>
     UIStackTrace,
     RpcClient,
@@ -105,49 +105,49 @@ public enum EMoModuleKey
     DaprProviderClientConnector,
     JobScheduler,
     /// <summary>
-    /// 作业调度 UI 模块
+    /// Job scheduling UI module.
     /// </summary>
     JobSchedulerUI,
     /// <summary>
-    /// 作业调度 EF Core 持久化模块
+    /// Job scheduling EF Core persistence module.
     /// </summary>
     JobSchedulerEfCore,
     LoggingUI,
     Clock,
     /// <summary>
-    /// 事件总线 UI 监控模块
+    /// Event bus UI monitoring module.
     /// </summary>
     EventBusUI,
     /// <summary>
-    /// 可观测实例模块
+    /// Observable instance module.
     /// </summary>
     ObservableInstance,
     /// <summary>
-    /// 可观测实例 UI 监控模块
+    /// Observable instance UI monitoring module.
     /// </summary>
     ObservableInstanceUI,
     /// <summary>
-    /// HostedService 可观测性模块
+    /// HostedService observability module.
     /// </summary>
     HostedService,
     /// <summary>
-    /// 状态存储 UI 管理模块
+    /// State store UI management module.
     /// </summary>
     StateStoreUI,
     /// <summary>
-    /// 性能分析 UI 模块
+    /// Profiling UI module.
     /// </summary>
     ProfilingUI,
     /// <summary>
-    /// 弹性策略模块 (Polly)
+    /// Resilience policy module (Polly).
     /// </summary>
     Resilience,
     /// <summary>
-    /// AI 模块 - 提供统一的 AI 服务抽象
+    /// AI module that provides a unified AI service abstraction.
     /// </summary>
     AI,
     /// <summary>
-    /// AI UI 模块 - 提供 AI 聊天界面
+    /// AI UI module that provides the AI chat experience.
     /// </summary>
     AIUI,
     /// <summary>

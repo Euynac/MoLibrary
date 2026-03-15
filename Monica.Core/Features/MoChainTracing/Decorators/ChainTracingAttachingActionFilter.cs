@@ -9,28 +9,28 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoChainTracing.Decorators;
 
 /// <summary>
-/// 自动将调用链信息附加到控制器返回的 IServiceResponse 中
+/// Attaches chain data to controller responses that implement <see cref="IMoResponse" />.
 /// </summary>
 public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOptions<ModuleChainTracingOption> options) : IActionFilter
 {
     public ModuleChainTracingOption Options { get; } = options.Value;
 
     /// <summary>
-    /// Action 执行前
+    /// Runs before the action executes.
     /// </summary>
-    /// <param name="context">Action 执行上下文</param>
+    /// <param name="context">The action execution context.</param>
     public void OnActionExecuting(ActionExecutingContext context)
     {
         
     }
 
     /// <summary>
-    /// Action 执行后
+    /// Runs after the action executes.
     /// </summary>
-    /// <param name="context">Action 执行上下文</param>
+    /// <param name="context">The action execution context.</param>
     public void OnActionExecuted(ActionExecutedContext context)
     {
-        // 检查返回结果
+        // Attach chain metadata only when the action returned IMoResponse.
         if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IMoResponse serviceResponse)
         {
             chain.MarkComplete();

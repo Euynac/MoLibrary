@@ -24,7 +24,7 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
     public async Task<Res> TryHandleAsync(HttpContext? httpContext, Exception exception,
         CancellationToken cancellationToken)
     {
-        // 展开包装异常并收集额外信息
+        // Unwrap wrapper exceptions first so packs handle the actual failure.
         var (actualException, extraInfoList) = UnwrapException(exception);
 
         foreach (var pack in packs)
@@ -73,7 +73,7 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
             }
         }
 
-        // 本地函数：将额外信息列表添加到响应对象中
+        // Attach all collected wrapper metadata to the outgoing response.
         T AppendExtraInfoList<T>(T res) where T : IMoResponse
         {
             foreach (var kvp in extraInfoList)
@@ -85,22 +85,22 @@ internal class MoExceptionHandler(ILogger<MoExceptionHandler> logger, IHttpConte
     }
 
     /// <summary>
-    /// 展开 MoWrapperException 并收集所有额外信息
+    /// Unwraps nested <see cref="MoWrapperException"/> instances and collects their extra metadata.
     /// </summary>
-    /// <param name="exception">原始异常</param>
-    /// <returns>实际异常和额外信息列表</returns>
+    /// <param name="exception">The original exception.</param>
+    /// <returns>The actual exception together with all collected extra info entries.</returns>
     private static (Exception ActualException, List<KeyValuePair<string, object?>> ExtraInfo) UnwrapException(Exception exception)
     {
         var extraInfoList = new List<KeyValuePair<string, object?>>();
         var currentException = exception;
 
-        // 迭代展开所有的 MoWrapperException
+        // Walk through every wrapper so the innermost exception becomes the one that gets handled.
         while (currentException is MoWrapperException wrapperException)
         {
-            // 收集额外信息
+            // Preserve wrapper metadata in the order it was encountered.
             extraInfoList.AddRange(wrapperException.ExtraInfo);
 
-            // 如果没有内部异常，则当前包装器就是实际异常（不推荐但要处理）
+            // If a wrapper has no inner exception, treat the wrapper itself as the actual exception.
             if (wrapperException.InnerException == null)
             {
                 break;

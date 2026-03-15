@@ -5,53 +5,53 @@ using Monica.Core.Module.TypeFinder;
 namespace Monica.Core.Module.Dashboard.Interfaces;
 
 /// <summary>
-/// 提供模块系统状态、性能、依赖关系等信息的服务接口。
-/// 用于支持界面展示和系统监控。
+/// Service interface that exposes module system status, performance, and dependency information.
+/// Intended for dashboards and operational monitoring.
 /// </summary>
 public interface IModuleSystemStatusService
 {
     /// <summary>
-    /// 获取模块系统的整体状态信息。
+    /// Gets the overall module system status.
     /// </summary>
-    /// <returns>模块系统状态信息</returns>
+    /// <returns>The system status.</returns>
     ModuleSystemStatus GetSystemStatus();
 
     /// <summary>
-    /// 获取模块系统的性能信息。
+    /// Gets module system performance information.
     /// </summary>
-    /// <returns>模块系统性能信息</returns>
+    /// <returns>The performance snapshot.</returns>
     ModuleSystemPerformance GetSystemPerformance();
 
     /// <summary>
-    /// 获取所有模块的注册和依赖关系信息。
+    /// Gets registration and dependency information for all modules.
     /// </summary>
-    /// <returns>模块注册信息列表</returns>
+    /// <returns>The registration information.</returns>
     ModuleRegistrationInfo GetRegistrationInfo();
 
     /// <summary>
-    /// 获取指定模块的详细信息。
+    /// Gets detailed information for a specific module.
     /// </summary>
-    /// <param name="moduleType">模块类型</param>
-    /// <returns>模块详细信息，如果模块不存在则返回null</returns>
+    /// <param name="moduleType">The module type.</param>
+    /// <returns>The module details, or `null` if the module does not exist.</returns>
     ModuleDetailInfo? GetModuleDetail(Type moduleType);
 
     /// <summary>
-    /// 获取指定模块的详细信息。
+    /// Gets detailed information for a specific module.
     /// </summary>
-    /// <param name="moduleKey">模块键</param>
-    /// <returns>模块详细信息，如果模块不存在则返回null</returns>
+    /// <param name="moduleKey">The module key.</param>
+    /// <returns>The module details, or `null` if the module does not exist.</returns>
     ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey);
 
     /// <summary>
-    /// 获取模块依赖关系图信息。
+    /// Gets the module dependency graph.
     /// </summary>
-    /// <returns>模块依赖关系图</returns>
+    /// <returns>The dependency graph.</returns>
     ModuleDependencyGraph GetDependencyGraph();
 
     /// <summary>
-    /// 获取模块系统的健康状态检查结果。
+    /// Gets the module system health check result.
     /// </summary>
-    /// <returns>健康状态检查结果</returns>
+    /// <returns>The health check result.</returns>
     ModuleSystemHealthCheck GetHealthCheck();
 
     /// <summary>

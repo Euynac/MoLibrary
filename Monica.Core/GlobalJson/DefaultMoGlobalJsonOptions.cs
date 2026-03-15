@@ -7,11 +7,11 @@ namespace Monica.Core.GlobalJson;
 public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
 {
     /// <summary>
-    /// 全局的Json设置。用于Mvc等
+    /// Gets or sets the shared JSON serializer options used by MVC and other global pipelines.
     /// </summary>
     public static JsonSerializerOptions GlobalJsonSerializerOptions { get; set; } = new();
     ///// <summary>
-    ///// 全局的后端Json设置。用于领域事件推送等。
+    ///// Shared backend JSON settings for scenarios such as domain-event publishing.
     ///// </summary>
     //internal static JsonSerializerOptions GlobalBackendJsonSerializerOptions { get; set; } = new()
     //{
@@ -28,11 +28,12 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
     public static readonly string OutputDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
     /// <summary>
-    /// 统一标准化从外部传入的时间
-    /// 巨坑：2024-08-08T03:27:05+08:00格式的 MVC序列化会自动转化为Kind为UTC的DateTime。
+    /// Normalizes <see cref="DateTime"/> values coming from external input.
+    /// MVC can deserialize values like <c>2024-08-08T03:27:05+08:00</c> into a UTC-kind <see cref="DateTime"/>,
+    /// so all inbound normalization is centralized here.
     /// </summary>
-    /// <param name="dateTime"></param>
-    /// <returns></returns>
+    /// <param name="dateTime">The inbound date-time value.</param>
+    /// <returns>The normalized date-time value.</returns>
     public static DateTime NormalizeInTime(DateTime dateTime)
     {
         return dateTime;
@@ -48,11 +49,11 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
     }
 
     /// <summary>
-    /// 统一标准化输出给外部的时间
+    /// Normalizes <see cref="DateTime"/> values before they are written to external output.
     /// </summary>
-    /// <param name="dateTime"></param>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
+    /// <param name="dateTime">The outbound date-time value.</param>
+    /// <returns>The normalized date-time value.</returns>
+    /// <exception cref="Exception">Thrown by the commented-out fallback conversion logic when enabled.</exception>
     public static DateTime NormalizeOutTime(DateTime dateTime)
     {
         return dateTime;
@@ -62,7 +63,7 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
         //}
         //catch (Exception e)
         //{
-        //    throw new Exception("代码不要使用DateTime.Now等会使得DateTime Kind变为Local的方法，会使得后端混乱，后端统一使用UTC", e);
+        //    throw new Exception("Avoid APIs such as DateTime.Now that produce DateTimeKind.Local. The backend standard is UTC.", e);
         //}
     }
 

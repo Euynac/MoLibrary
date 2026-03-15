@@ -26,8 +26,8 @@ public static class MoGlobalJsonExtensions
         if (extraOption.EnableGlobalEnumToString)
         {
             options.Converters.Add(new ExcludeTypesJsonConverterFactory(new JsonStringEnumConverter(),
-                [.. extraOption.EnumTypeToIgnore ?? []])); //全局枚举对String、int转换支持
-            //options.Converters.Add(new JsonStringEnumConverter()); //全局枚举对String、int转换支持
+                [.. extraOption.EnumTypeToIgnore ?? []])); // Enables global enum string/int conversion while allowing type exclusions.
+            //options.Converters.Add(new JsonStringEnumConverter()); // Enables global enum string/int conversion without exclusions.
         }
 
         options.DefaultIgnoreCondition = extraOption.DefaultIgnoreCondition;
@@ -39,7 +39,7 @@ public static class MoGlobalJsonExtensions
 
         options.PropertyNameCaseInsensitive = true;
 
-        //可以自动在string和long间转换？
+        // Allow numeric values to be read from string tokens.
         //options.NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString;
         options.NumberHandling = JsonNumberHandling.AllowReadingFromString;
 
@@ -48,7 +48,7 @@ public static class MoGlobalJsonExtensions
         options.DictionaryKeyPolicy = new JsonCamelCaseNamingPolicy();
         options.PropertyNamingPolicy = new JsonCamelCaseNamingPolicy();
 
-        //允许注释
+        // Allow JSON comments when needed.
         //options.ReadCommentHandling = JsonCommentHandling.Skip;
     }
     public static JsonSerializerOptions Clone(this JsonSerializerOptions target, Action<JsonSerializerOptions> optionAction)

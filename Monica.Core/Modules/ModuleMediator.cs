@@ -15,7 +15,7 @@ public static class ModuleMediatorBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Mediator 模块
+        /// Configures the Mediator module.
         /// </summary>
         public static ModuleMediatorGuide AddMediator(Action<ModuleMediatorOption>? action = null)
         {
@@ -33,7 +33,7 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        //TODO 优化为使用统一迭代方法
+        // TODO: move this into the shared business-type iteration pipeline.
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssemblyContaining<IMoResponse>();

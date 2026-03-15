@@ -1,47 +1,47 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异统计信息
+/// Aggregate statistics for a diff result.
 /// </summary>
 public class DiffStatistics
 {
     /// <summary>
-    /// 总修改数（新增 + 删除 + 修改）
+    /// Gets or sets the total number of changes, including adds, deletes, and modifications.
     /// </summary>
     public int TotalChanges { get; set; }
     
     /// <summary>
-    /// 新增行数
+    /// Gets or sets the number of added lines.
     /// </summary>
     public int AddedLines { get; set; }
     
     /// <summary>
-    /// 删除行数
+    /// Gets or sets the number of deleted lines.
     /// </summary>
     public int DeletedLines { get; set; }
     
     /// <summary>
-    /// 修改行数
+    /// Gets or sets the number of modified lines.
     /// </summary>
     public int ModifiedLines { get; set; }
     
     /// <summary>
-    /// 未变化行数
+    /// Gets or sets the number of unchanged lines.
     /// </summary>
     public int UnchangedLines { get; set; }
     
     /// <summary>
-    /// 总行数（原文本）
+    /// Gets or sets the total number of lines in the original text.
     /// </summary>
     public int TotalOldLines { get; set; }
     
     /// <summary>
-    /// 总行数（新文本）
+    /// Gets or sets the total number of lines in the updated text.
     /// </summary>
     public int TotalNewLines { get; set; }
     
     /// <summary>
-    /// 相似度百分比（0-100）
+    /// Gets the similarity percentage in the range 0 to 100.
     /// </summary>
     public double SimilarityPercentage => TotalOldLines == 0 ? 
         (TotalNewLines == 0 ? 100.0 : 0.0) : 

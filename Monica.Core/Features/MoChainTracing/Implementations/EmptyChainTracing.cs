@@ -4,31 +4,31 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 
 /// <summary>
-/// 空调用链追踪实现，用于禁用调用链追踪功能
+/// No-op chain tracing implementation used when tracing is disabled.
 /// </summary>
 /// <remarks>
-/// 采用空对象模式，所有方法都是无操作实现，不会产生任何调用链追踪信息
+/// Uses the Null Object pattern. All methods are safe no-ops and do not produce trace data.
 /// </remarks>
 public class EmptyChainTracing : IMoChainTracing
 {
     /// <summary>
-    /// 单例实例
+    /// Singleton instance.
     /// </summary>
     public static readonly EmptyChainTracing Instance = new();
 
     /// <summary>
-    /// 私有构造函数，确保单例
+    /// Prevents external construction.
     /// </summary>
     private EmptyChainTracing() { }
 
     /// <summary>
-    /// 开始一个新的调用链节点（无操作）
+    /// Starts a new trace node.
     /// </summary>
-    /// <param name="operation">操作名称</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <param name="type"></param>
-    /// <returns>空的调用链节点标识</returns>
+    /// <param name="operation">The operation name.</param>
+    /// <param name="handler">The handler name.</param>
+    /// <param name="extraInfo">Optional extra metadata.</param>
+    /// <param name="type">The traced operation type.</param>
+    /// <returns>An empty trace identifier.</returns>
     public string BeginTrace(string operation, string? handler, object? extraInfo = null,
         EChainTracingType type = EChainTracingType.Unknown)
     {
@@ -36,51 +36,48 @@ public class EmptyChainTracing : IMoChainTracing
     }
 
     /// <summary>
-    /// 完成一个调用链节点（无操作）
+    /// Completes a trace node.
     /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="result">调用结果描述</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="exception">异常信息</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="traceId">The trace identifier.</param>
+    /// <param name="result">A description of the result.</param>
+    /// <param name="success">Whether the operation succeeded.</param>
+    /// <param name="exception">The captured exception, if any.</param>
+    /// <param name="extraInfo">Optional completion metadata.</param>
     public void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null,
         object? extraInfo = null)
     {
-        // 无操作
     }
 
 
     /// <summary>
-    /// 记录简单的调用信息（无操作）
+    /// Records a one-shot trace entry.
     /// </summary>
-    /// <param name="operation">操作名称</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="result">调用结果</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <param name="type"></param>
+    /// <param name="operation">The operation name.</param>
+    /// <param name="handler">The handler name.</param>
+    /// <param name="success">Whether the operation succeeded.</param>
+    /// <param name="result">A description of the result.</param>
+    /// <param name="duration">The known execution duration.</param>
+    /// <param name="extraInfo">Optional extra metadata.</param>
+    /// <param name="type">The traced operation type.</param>
     public void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
         TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown)
     {
-        // 无操作
     }
 
     /// <summary>
-    /// 获取当前的调用链信息（始终返回 null）
+    /// Gets the current chain.
     /// </summary>
-    /// <returns>始终返回 null</returns>
+    /// <returns>Always <see langword="null" /> because tracing is disabled.</returns>
     public MoChainContext? GetCurrentChain()
     {
         return null;
     }
 
     /// <summary>
-    /// 合并远程调用链信息（无操作）
+    /// Merges chain data returned from a remote call.
     /// </summary>
-    /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteRes"></param>
-    /// <returns>始终返回 false</returns>
+    /// <param name="traceId">The local trace identifier.</param>
+    /// <param name="remoteRes">The remote response carrying chain metadata.</param>
     public void MergeRemoteChain(string traceId, IMoResponse remoteRes)
     {
     }

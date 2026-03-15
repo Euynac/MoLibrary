@@ -13,7 +13,7 @@ public static class ModuleObservableInstanceBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ObservableInstance 模块
+        /// Configures the ObservableInstance module.
         /// </summary>
         public static ModuleObservableInstanceGuide AddObservableInstance(Action<ModuleObservableInstanceOption>? action = null)
         {

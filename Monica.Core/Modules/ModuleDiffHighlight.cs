@@ -16,7 +16,7 @@ using Monica.Core.Module.Models;
 namespace Monica.Modules;
 
 /// <summary>
-/// 差异对比高亮模块
+/// Diff highlight module.
 /// </summary>
 public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
 {
@@ -26,24 +26,24 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     }
     
     /// <summary>
-    /// 配置服务
+    /// Configures services.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册核心服务
+        // Register core services.
         services.AddScoped<IMoDiffHighlight, DefaultDiffHighlight>();
         services.AddScoped<DiffHighlightService>();
         
-        // 注册算法
+        // Register diff algorithms.
         services.AddTransient<IDiffAlgorithm, SimpleMyersDiffAlgorithm>();
         
-        // 注册渲染器
+        // Register built-in renderers.
         services.AddTransient<HtmlDiffRenderer>();
         services.AddTransient<MarkdownDiffRenderer>();
         services.AddTransient<PlainTextDiffRenderer>();
         
-        // 注册自定义渲染器（如果有）
+        // Register a custom renderer when one is provided.
         if (option.CustomRendererFactory != null)
         {
             services.AddSingleton<IDiffHighlightRenderer>(provider => option.CustomRendererFactory());
@@ -52,16 +52,16 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
     }
     
     /// <summary>
-    /// 配置端点
+    /// Configures endpoints.
     /// </summary>
-    /// <param name="app">应用构建器</param>
+    /// <param name="app">The application builder.</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>
         {
             var tagName = option.GetApiGroupName();
 
-            // 文本差异对比端点
+            // Text diff endpoint.
             endpoints.MapPost("/diff-highlight", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
                 var result = await service.HighlightAsync(request.OldText, request.NewText, request.Options);
@@ -72,7 +72,7 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
             .WithSummary("执行文本差异对比并生成高亮结果")
             .WithDescription("比较两个文本并生成带高亮的差异结果，支持多种输出格式");
 
-            // 差异统计信息端点
+            // Diff statistics endpoint.
             endpoints.MapPost("/diff-highlight/statistics", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
                 var result = await service.GetStatisticsAsync(request.OldText, request.NewText, request.Options);
@@ -83,7 +83,7 @@ public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<Mo
             .WithSummary("获取文本差异统计信息")
             .WithDescription("获取两个文本之间的差异统计数据，如新增行数、删除行数等");
 
-            // 文本相同性检查端点
+            // Text identity check endpoint.
             endpoints.MapPost("/diff-highlight/identical", async (DiffHighlightRequest request, DiffHighlightService service) =>
             {
                 var result = await service.IsIdenticalAsync(request.OldText, request.NewText, request.Options);
@@ -102,7 +102,7 @@ public static class ModuleDiffHighlightBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DiffHighlight 模块
+        /// Configures the DiffHighlight module.
         /// </summary>
         public static ModuleDiffHighlightGuide AddDiffHighlight(Action<ModuleDiffHighlightOption>? action = null)
         {
@@ -112,28 +112,28 @@ public static class ModuleDiffHighlightBuilderExtensions
 }
 
 /// <summary>
-/// 差异对比请求模型
+/// Diff request model.
 /// </summary>
 public class DiffHighlightRequest
 {
     /// <summary>
-    /// 原始文本
+    /// Original text.
     /// </summary>
     public string OldText { get; set; } = string.Empty;
     
     /// <summary>
-    /// 新文本
+    /// Updated text.
     /// </summary>
     public string NewText { get; set; } = string.Empty;
     
     /// <summary>
-    /// 配置选项
+    /// Diff options.
     /// </summary>
     public DiffHighlightOptions? Options { get; set; }
 }
 
 /// <summary>
-/// 差异对比高亮模块配置引导
+/// Configuration guide for the diff highlight module.
 /// </summary>
 public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
 {
@@ -142,59 +142,59 @@ public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, Modul
 
 
 /// <summary>
-/// 差异对比高亮模块配置选项
+/// Configuration options for the diff highlight module.
 /// </summary>
 public class ModuleDiffHighlightOption : MoModuleOptionWithMinimalApi<ModuleDiffHighlight>
 {
     /// <summary>
-    /// 默认对比模式
+    /// Default diff mode.
     /// </summary>
     public EDiffHighlightMode DefaultMode { get; set; } = EDiffHighlightMode.Line;
 
     /// <summary>
-    /// 默认输出格式
+    /// Default output format.
     /// </summary>
     public EDiffOutputFormat DefaultOutputFormat { get; set; } = EDiffOutputFormat.Html;
 
     /// <summary>
-    /// 默认样式配置
+    /// Default style configuration.
     /// </summary>
     public DiffHighlightStyle DefaultStyle { get; set; } = new();
 
     /// <summary>
-    /// 是否忽略空白字符
+    /// Ignores whitespace.
     /// </summary>
     public bool IgnoreWhitespace { get; set; } = false;
 
     /// <summary>
-    /// 是否忽略大小写
+    /// Ignores character casing.
     /// </summary>
     public bool IgnoreCase { get; set; } = false;
 
     /// <summary>
-    /// 默认上下文行数
+    /// Default number of context lines.
     /// </summary>
     public int DefaultContextLines { get; set; } = 3;
 
     /// <summary>
-    /// 最大字符级差异长度
+    /// Maximum character-level diff length.
     /// </summary>
     public int MaxCharacterDiffLength { get; set; } = 1000;
 
     /// <summary>
-    /// 自定义渲染器工厂函数
+    /// Factory for a custom renderer.
     /// </summary>
     public Func<IDiffHighlightRenderer>? CustomRendererFactory { get; set; }
 
     /// <summary>
-    /// 是否启用性能监控
+    /// Enables performance monitoring.
     /// </summary>
     public bool EnablePerformanceMonitoring { get; set; } = true;
 
     /// <summary>
-    /// 获取默认配置选项
+    /// Builds the default runtime diff options.
     /// </summary>
-    /// <returns>默认配置选项</returns>
+    /// <returns>The default diff options.</returns>
     public DiffHighlightOptions GetDefaultOptions()
     {
         return new DiffHighlightOptions

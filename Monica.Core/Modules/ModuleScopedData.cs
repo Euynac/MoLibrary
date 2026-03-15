@@ -13,7 +13,7 @@ public static class ModuleScopedDataBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ScopedData 模块
+        /// Configures the ScopedData module.
         /// </summary>
         public static ModuleScopedDataGuide AddScopedData(Action<ModuleScopedDataOption>? action = null)
         {
@@ -23,27 +23,27 @@ public static class ModuleScopedDataBuilderExtensions
 }
 
 /// <summary>
-/// ScopedData模块，用于在Scoped生命周期内管理环境数据
+/// ScopedData module for managing contextual data within the scoped lifetime.
 /// </summary>
 public class ModuleScopedData(ModuleScopedDataOption option)
     : MoModule<ModuleScopedData, ModuleScopedDataOption, ModuleScopedDataGuide>(option)
 {
     /// <summary>
-    /// 配置服务注册
+    /// Configures service registrations.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册ScopedData服务为Scoped生命周期
+        // Register the default scoped data provider with scoped lifetime.
         services.AddScoped<IMoScopedData, MoScopedDataDefaultScopedProvider>();
         
         base.ConfigureServices(services);
     }
 
     /// <summary>
-    /// 获取当前模块枚举
+    /// Gets the module key for the current module.
     /// </summary>
-    /// <returns>模块枚举值</returns>
+    /// <returns>The module key.</returns>
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.ScopedData;
@@ -51,16 +51,16 @@ public class ModuleScopedData(ModuleScopedDataOption option)
 }
 
 /// <summary>
-/// ScopedData模块指导器
+/// Configuration guide for the ScopedData module.
 /// </summary>
 public class ModuleScopedDataGuide : MoModuleGuide<ModuleScopedData, ModuleScopedDataOption, ModuleScopedDataGuide>
 {
     /// <summary>
-    /// 注册指定键的环境数据服务
+    /// Registers a keyed scoped data service.
     /// </summary>
-    /// <typeparam name="T">环境数据实现类型，必须实现IMoScopedData接口</typeparam>
-    /// <param name="key">服务键</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    /// <typeparam name="T">Scoped data implementation type. Must implement <see cref="IMoScopedData"/>.</typeparam>
+    /// <param name="key">The service key.</param>
+    /// <returns>The current guide instance.</returns>
     public ModuleScopedDataGuide AddKeyedScopedData<T>(string key) where T : class, IMoScopedData
     {
         ConfigureServices(context =>
@@ -75,9 +75,9 @@ public class ModuleScopedDataGuide : MoModuleGuide<ModuleScopedData, ModuleScope
 }
 
 /// <summary>
-/// ScopedData模块配置选项
+/// Configuration options for the ScopedData module.
 /// </summary>
 public class ModuleScopedDataOption : MoModuleOption<ModuleScopedData>
 {
-    // 可以在这里添加特定的配置选项
+    // Add module-specific options here when needed.
 }

@@ -5,12 +5,12 @@ using Monica.Core.Features.MoLogProvider;
 namespace Monica.Core.Module.TypeFinder;
 
 /// <summary>
-/// 领域类型查找器，用于查找和筛选应用程序中的类型
+/// Type finder that discovers and filters application types.
 /// </summary>
 /// <remarks>
-/// 初始化领域类型查找器的新实例
+/// Initializes a new domain type finder.
 /// </remarks>
-/// <param name="options">类型查找器配置选项</param>
+/// <param name="options">The type finder options.</param>
 public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTypeFinder
 {
     public ILogger? Logger { get; set; } = LogProvider.For<MoDomainTypeFinder>(); 
@@ -27,7 +27,7 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     #region Utilities
 
     /// <summary>
-    /// 加载程序集列表
+    /// Loads the assembly list once.
     /// </summary>
     protected virtual void LoadAssemblies()
     {
@@ -49,9 +49,9 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     #region Methods
 
     /// <summary>
-    /// 获取所有相关程序集
+    /// Gets all related assemblies.
     /// </summary>
-    /// <returns>程序集集合</returns>
+    /// <returns>The related assemblies.</returns>
     public virtual IEnumerable<Assembly> GetAssemblies()
     {
         LoadAssemblies();
@@ -68,9 +68,9 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     public ModuleCoreOptionTypeFinder Options => options;
 
     /// <summary>
-    /// 获取相关程序集所有类型
+    /// Gets all types from the related assemblies.
     /// </summary>
-    /// <returns>所有类型的集合</returns>
+    /// <returns>The discovered types.</returns>
     public virtual IEnumerable<Type> GetTypes()
     {
         LoadAssemblies();
@@ -84,7 +84,7 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
             }
             catch (ReflectionTypeLoadException ex)
             {
-                // 当程序集引用的其他程序集无法加载时，仍然返回能够加载的类型
+                // Still return the types that were loaded successfully when referenced assemblies are missing.
                 types = ex.Types.Where(t => t != null).ToArray()!;
 
                 var loadFailure = TypeFinderAssemblyLoadFailure.CreateTypeScanFailure(assembly, ex);

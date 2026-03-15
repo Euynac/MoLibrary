@@ -1,88 +1,88 @@
 namespace Monica.Core.Module.Dashboard.Models;
 
 /// <summary>
-/// 表示模块系统的整体状态信息。
+/// Overall module system status.
 /// </summary>
 public class ModuleSystemStatus
 {
     /// <summary>
-    /// 系统是否已经启动完成
+    /// Indicates whether initialization has completed.
     /// </summary>
     public bool IsInitialized { get; set; }
 
     /// <summary>
-    /// 总的模块数量
+    /// Total number of modules.
     /// </summary>
     public int TotalModules { get; set; }
 
     /// <summary>
-    /// 启用的模块数量
+    /// Number of enabled modules.
     /// </summary>
     public int EnabledModules { get; set; }
 
     /// <summary>
-    /// 禁用的模块数量
+    /// Number of disabled modules.
     /// </summary>
     public int DisabledModules { get; set; }
 
     /// <summary>
-    /// 注册错误的模块数量
+    /// Number of modules with registration errors.
     /// </summary>
     public int ErrorModules { get; set; }
 
     /// <summary>
-    /// 系统总的初始化时间（毫秒）
+    /// Total system initialization time in milliseconds.
     /// </summary>
     public long TotalInitializationTimeMs { get; set; }
 
     /// <summary>
-    /// 系统启动时间
+    /// System start time.
     /// </summary>
     public DateTime? StartTime { get; set; }
 
     /// <summary>
-    /// 系统完成初始化时间
+    /// System initialization completion time.
     /// </summary>
     public DateTime? CompletionTime { get; set; }
 
     /// <summary>
-    /// 模块系统当前状态
+    /// Current module system state.
     /// </summary>
     public ModuleSystemState State { get; set; }
 
     /// <summary>
-    /// 是否存在循环依赖
+    /// Indicates whether circular dependencies exist.
     /// </summary>
     public bool HasCircularDependencies { get; set; }
 
     /// <summary>
-    /// 是否存在注册错误
+    /// Indicates whether registration errors exist.
     /// </summary>
     public bool HasRegistrationErrors { get; set; }
 }
 
 /// <summary>
-/// 模块系统状态枚举
+/// Module system states.
 /// </summary>
 public enum ModuleSystemState
 {
     /// <summary>
-    /// 未初始化
+    /// Not initialized.
     /// </summary>
     NotInitialized,
 
     /// <summary>
-    /// 初始化中
+    /// Initializing.
     /// </summary>
     Initializing,
 
     /// <summary>
-    /// 初始化完成
+    /// Initialized.
     /// </summary>
     Initialized,
 
     /// <summary>
-    /// 初始化失败
+    /// Failed.
     /// </summary>
     Failed
 } 

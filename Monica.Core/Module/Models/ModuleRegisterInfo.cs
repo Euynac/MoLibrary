@@ -8,60 +8,60 @@ using Monica.Tool.Extensions;
 namespace Monica.Core.Module.Models;
 
 /// <summary>
-/// 模块请求信息，用于存储模块的注册请求和配置信息。
+/// Stores module registration requests and configuration data.
 /// </summary>
 public class ModuleRegisterInfo(Type moduleType)
 {
     public Type ModuleType { get; } = moduleType;
 
     /// <summary>
-    /// 当前模块注册阶段
+    /// The current registration phase for the module.
     /// </summary>
     public EMoModuleConfigMethods ModulePhase { get; set; }
     
     /// <summary>
-    /// 模块注册顺序，数值越小越优先注册。用于控制模块按依赖关系的注册顺序。
+    /// Registration order for the module. Lower values are registered first to honor dependencies.
     /// </summary>
-    public int Order { get; set; } = 1000; // 默认值为1000，确保有依赖的模块可以设置更小的值
+    public int Order { get; set; } = 1000; // Default to 1000 so dependency-based ordering can move modules earlier.
     
     /// <summary>
-    /// 模块的注册请求列表。
+    /// The list of registration requests for the module.
     /// </summary>
     public List<ModuleRegisterRequest> RegisterRequests { get; set; } = [];
 
     /// <summary>
-    /// 待处理的配置操作字典，按配置类型和执行顺序排序。
+    /// Pending configuration actions grouped by option type and ordered by execution priority.
     /// </summary>
     private Dictionary<Type, SortedList<int, Action<object>>> PendingConfigActions { get; } = [];
 
     /// <summary>
-    /// 最终配置对象字典，按配置类型索引。
+    /// Finalized configuration objects indexed by option type.
     /// </summary>
     public Dictionary<Type, object> FinalConfigures { get; set; } = [];
 
     /// <summary>
-    /// 模块相关设置类型。
+    /// The primary module option type.
     /// </summary>
     public Type ModuleOptionType { get; set; } = null!;
 
     /// <summary>
-    /// 模块的选项实例，可以用于访问模块的配置信息。
-    /// 在初始化配置后可用。
+    /// The finalized module option instance.
+    /// Available after configuration initialization completes.
     /// </summary>
     public IMoModuleOption ModuleOption => (IMoModuleOption)FinalConfigures[ModuleOptionType];
     
     /// <summary>
-    /// 必须配置的方法键列表，若未配置则会抛出异常。
+    /// Required configuration method keys that must be provided.
     /// </summary>
     public List<string> RequiredConfigMethodKeys { get; set; } = [];
 
     /// <summary>
-    /// 模块注册的 Keyed 服务键集合，用于后续发现模块提供的 Keyed 服务。
+    /// Keyed service keys exposed by the module for later discovery.
     /// </summary>
     public HashSet<string> KeyedServiceKeys { get; } = [];
 
     /// <summary>
-    /// 模块单例，初始化模块配置阶段设置
+    /// The module singleton created during final configuration initialization.
     /// </summary>
     public MoModule? ModuleSingleton { get; internal set; }
 
@@ -82,9 +82,10 @@ public class ModuleRegisterInfo(Type moduleType)
     }
 
     /// <summary>
-    /// 创建当前情况下的模块配置对象，仅用于少数特殊情况。
+    /// Creates a module option instance based on the configuration actions known so far.
+    /// Intended only for exceptional cases during early registration.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The current module option instance.</returns>
     public object CreateCurrentModuleOption()
     {
         var currentModuleOption = Activator.CreateInstance(ModuleOptionType)!;
@@ -109,22 +110,22 @@ public class ModuleRegisterInfo(Type moduleType)
     {
         foreach (var configType in PendingConfigActions.Keys)
         {
-            // 创建配置类型的实例
+            // Create an instance for the configuration type.
             var configInstance = Activator.CreateInstance(configType);
             
             if (configInstance == null)
                 continue;
             
-            // 获取该类型的所有配置操作（已按优先级排序）
+            // Retrieve all actions for the type, already sorted by priority.
             var sortedActions = PendingConfigActions[configType];
             
-            // 按顺序应用所有配置操作到实例上
+            // Apply each configuration action in order.
             foreach (var action in sortedActions.Values)
             {
                 action.Invoke(configInstance);
             }
             
-            // 将最终配置保存到字典中
+            // Persist the finalized configuration instance.
             FinalConfigures[configType] = configInstance;
         }
 
@@ -145,28 +146,28 @@ public class ModuleRegisterInfo(Type moduleType)
         }
 
 
-        // 清空待处理的配置操作
+        // Clear the pending configuration actions once finalization is complete.
         PendingConfigActions.Clear();
     }
 
     /// <summary>
-    /// 绑定模块选项类型。
+    /// Binds the primary module option type.
     /// </summary>
-    /// <typeparam name="TOption">模块选项类型。</typeparam>
+    /// <typeparam name="TOption">The module option type.</typeparam>
     public void BindModuleOption<TOption>() where TOption : class, IMoModuleOption, new()
     {
         ModuleOptionType = typeof(TOption);
     }
 
     /// <summary>
-    /// 添加配置操作到待处理队列。
+    /// Adds a configuration action to the pending queue.
     /// </summary>
-    /// <typeparam name="TOption">模块选项类型。</typeparam>
-    /// <param name="order">配置操作执行顺序。</param>
-    /// <param name="optionAction">配置操作委托。</param>
-    /// <param name="guideFrom">配置来源模块。null 表示开发者直接配置。</param>
-    /// <param name="key"></param>
-    /// <param name="secondKey"></param>
+    /// <typeparam name="TOption">The option type being configured.</typeparam>
+    /// <param name="order">The execution order.</param>
+    /// <param name="optionAction">The configuration delegate.</param>
+    /// <param name="guideFrom">The source module for this configuration. `null` means direct developer configuration.</param>
+    /// <param name="key">The primary configuration method key.</param>
+    /// <param name="secondKey">The optional secondary key.</param>
     public void AddConfigureAction<TOption>(int order, Action<TOption> optionAction, ModuleKey? guideFrom,
         string? secondKey, string key) where TOption : class, IMoModuleOptionBase, new()
     {
@@ -178,7 +179,7 @@ public class ModuleRegisterInfo(Type moduleType)
                     context.Services!.Configure(optionAction);
                 },
                 RequestMethod = EMoModuleConfigMethods.ConfigureServices,
-                Order = guideFrom != null ? order - 1 : order, //来自模块级联注册的Option的优先级始终比用户Order低1
+                Order = guideFrom != null ? order - 1 : order, // Cascaded module option configuration always runs just before the user-specified order.
                 RequestFrom = guideFrom,
                 SourceDesc = $"ConfigOption<{typeof(TOption).Name}>"
             });
@@ -196,9 +197,9 @@ public class ModuleRegisterInfo(Type moduleType)
     }
 
     /// <summary>
-    /// 检查是否所有必须配置的方法键都已配置
+    /// Checks whether all required configuration method keys have been provided.
     /// </summary>
-    /// <returns>未配置的方法键列表，如果全部已配置则返回空列表</returns>
+    /// <returns>The missing required method keys, or an empty list if everything is configured.</returns>
     public List<string> GetMissingRequiredConfigMethodKeys()
     {
         if (RequiredConfigMethodKeys.Count == 0)

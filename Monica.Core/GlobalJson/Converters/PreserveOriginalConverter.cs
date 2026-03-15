@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.GlobalJson.Converters;
 
 /// <summary>
-/// 保留原始Json格式输出
+/// Writes object values by preserving their original JSON shape whenever possible.
 /// </summary>
 public class PreserveOriginalConverter : JsonConverter<object>
 {
@@ -29,7 +29,7 @@ public class PreserveOriginalConverter : JsonConverter<object>
 }
 
 /// <summary>
-/// 保留原始Json格式输出
+/// Writes typed values by preserving their original JSON shape whenever possible.
 /// </summary>
 public class PreserveOriginalConverter<T> : JsonConverter<T>
 {

@@ -1,63 +1,63 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异行信息
+/// Represents a single line in a diff result.
 /// </summary>
 public class DiffLine
 {
     /// <summary>
-    /// 差异类型
+    /// Gets or sets the diff line type.
     /// </summary>
     public EDiffLineType Type { get; set; }
     
     /// <summary>
-    /// 原始行内容
+    /// Gets or sets the original line content.
     /// </summary>
     public string OldContent { get; set; } = string.Empty;
     
     /// <summary>
-    /// 新行内容
+    /// Gets or sets the updated line content.
     /// </summary>
     public string NewContent { get; set; } = string.Empty;
     
     /// <summary>
-    /// 原始行号（从1开始，0表示不存在）
+    /// Gets or sets the original line number, where 0 means no source line exists.
     /// </summary>
     public int OldLineNumber { get; set; }
     
     /// <summary>
-    /// 新行号（从1开始，0表示不存在）
+    /// Gets or sets the updated line number, where 0 means no target line exists.
     /// </summary>
     public int NewLineNumber { get; set; }
     
     /// <summary>
-    /// 字符级差异信息（如果启用字符级对比）
+    /// Gets or sets the character-level diff ranges when enabled.
     /// </summary>
     public List<DiffCharacterRange>? CharacterDiffs { get; set; }
 }
 
 /// <summary>
-/// 字符差异范围
+/// Represents a character-level diff range.
 /// </summary>
 public class DiffCharacterRange
 {
     /// <summary>
-    /// 差异类型
+    /// Gets or sets the diff type for this range.
     /// </summary>
     public EDiffLineType Type { get; set; }
     
     /// <summary>
-    /// 起始位置
+    /// Gets or sets the zero-based start position.
     /// </summary>
     public int Start { get; set; }
     
     /// <summary>
-    /// 长度
+    /// Gets or sets the length of the range.
     /// </summary>
     public int Length { get; set; }
     
     /// <summary>
-    /// 内容
+    /// Gets or sets the affected content.
     /// </summary>
     public string Content { get; set; } = string.Empty;
 }

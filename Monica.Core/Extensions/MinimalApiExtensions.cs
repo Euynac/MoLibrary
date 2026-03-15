@@ -7,7 +7,8 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Extensions;
 
 /// <summary>
-/// 2024-10-25目前不支持全局Endpoint Filter设置，因此只能出此下策。 详见aspnetcore issues: #43237
+/// Provides a shared endpoint-filter workaround because ASP.NET Core does not support global endpoint filters yet.
+/// See aspnetcore issue <c>#43237</c>.
 /// </summary>
 public static class MinimalApiExtensions
 {
@@ -36,11 +37,11 @@ public static class MinimalApiExtensions
     }
 
     /// <summary>
-    /// 封装为Minimal API response
+    /// Wraps an <see cref="IMoResponse"/> as a Minimal API JSON result.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="response"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">The response type.</typeparam>
+    /// <param name="response">The Monica response instance.</param>
+    /// <returns>An <see cref="IResult"/> with the response payload and HTTP status code.</returns>
     public static IResult GetResponse<T>(this T response) where T : IMoResponse
     {
         return Results.Json(response, statusCode: (int?)response.GetHttpStatusCode());

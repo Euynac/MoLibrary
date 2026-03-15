@@ -7,33 +7,32 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoChainTracing.Decorators;
 
 /// <summary>
-/// 调用链追踪 Action Filter
+/// Action filter that wraps controller execution in chain tracing.
 /// </summary>
-/// <param name="chainTracing">调用链追踪服务</param>
-/// <param name="logger">日志记录器</param>
+/// <param name="chainTracing">The chain tracing service.</param>
+/// <param name="logger">The logger.</param>
 public class ChainTracingProviderController(IMoChainTracing chainTracing, ILogger<ChainTracingProviderController> logger) : IActionFilter
 {
 
     /// <summary>
-    /// Action 执行前
+    /// Runs before the action executes.
     /// </summary>
-    /// <param name="context">Action 执行上下文</param>
+    /// <param name="context">The action execution context.</param>
     public void OnActionExecuting(ActionExecutingContext context)
     {
         var controllerName = context.Controller.GetType().Name;
         var actionName = context.ActionDescriptor.DisplayName ?? context.ActionDescriptor.RouteValues["action"] ?? "Unknown";
         
-        // 记录控制器 Action 的开始
         var actionTraceId = chainTracing.BeginTrace(actionName, $"Controller({controllerName})");
 
-        // 将 TraceId 存储到 ActionContext 中，以便在 OnActionExecuted 中使用
+        // Store the trace id so the completion step can finish the same node.
         context.HttpContext.Items[nameof(ChainTracingProviderController)] = actionTraceId;
     }
 
     /// <summary>
-    /// Action 执行后
+    /// Runs after the action executes.
     /// </summary>
-    /// <param name="context">Action 执行上下文</param>
+    /// <param name="context">The action execution context.</param>
     public void OnActionExecuted(ActionExecutedContext context)
     {
         var actionTraceId = context.HttpContext.Items[nameof(ChainTracingProviderController)]?.ToString();
@@ -47,12 +46,12 @@ public class ChainTracingProviderController(IMoChainTracing chainTracing, ILogge
         {
             if (context.Exception != null)
             {
-                // 记录异常
+                // Complete the trace with exception details.
                 chainTracing.EndTrace(actionTraceId, $"Exception: {context.Exception.GetMessageRecursively()}", false, context.Exception);
             }
             else
             {
-                // 检查返回结果
+                // Derive a concise result description when the action returned IMoResponse.
                 var result = ChainTracingHelper.ExtractResult(context.Result);
                 if (result is IMoResponse response)
                 {

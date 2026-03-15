@@ -3,55 +3,53 @@ using Monica.Modules;
 namespace Monica.Core.Features.MoSnowflake;
 
 /// <summary>
-/// 雪花算法分布式id生成
+/// Distributed identifier generator based on the Snowflake algorithm.
 /// Twitter_Snowflake
-/// SnowFlake的结构如下(每部分用-分开):
+/// Snowflake layout, separated here with hyphens for readability:
 /// 0 - 0000000000 0000000000 0000000000 0000000000 0 - 00000 - 00000 - 000000000000
-/// 1位标识，由于long基本类型在Java中是带符号的，最高位是符号位，正数是0，负数是1，所以id一般是正数，最高位是0
-/// 41位时间截(毫秒级)，注意，41位时间截不是存储当前时间的时间截，而是存储时间截的差值（当前时间截 - 开始时间截)
-/// 得到的值），这里的的开始时间截，一般是我们的id生成器开始使用的时间，由我们程序来指定的（如下下面程序IdWorker类的startTime属性）。41位的时间截，可以使用69年，年T = (1L 《 41) / (1000L * 60 * 60 * 24 * 365) = 69
-/// 10位的数据机器位，可以部署在1024个节点，包括5位datacenterId和5位workerId
-/// 12位序列，毫秒内的计数，12位的计数顺序号支持每个节点每毫秒(同一机器，同一时间截)产生4096个ID序号
-/// 加起来刚好64位，为一个Long型
-/// SnowFlake的优点是，整体上按照时间自增排序，并且整个分布式系统内不会产生ID碰撞(由数据中心ID和机器ID作区分)，并且效率较高，经测试,SnowFlake每秒能够产生26万ID左右。
+/// The highest bit remains zero for positive <see cref="long" /> values.
+/// The next 41 bits store the timestamp offset in milliseconds from the configured epoch, which covers about 69 years.
+/// The next 10 bits store node information: 5 bits for the datacenter id and 5 bits for the worker id.
+/// The final 12 bits store the per-millisecond sequence, allowing up to 4096 identifiers per node per millisecond.
+/// This yields a 64-bit, time-ordered identifier with low collision risk across distributed nodes.
 /// </summary>
 public class Snowflake
 {
 
-    //开始时间截(2015-01-01)
+    // Custom epoch in milliseconds (2015-01-01).
     private readonly long _twepoch;
 
-    //机器id所占的位数(5)
+    // Number of bits assigned to the worker id.
     private readonly int _workerIdBits;
 
-    //数据标识id所占的位数(5)
+    // Number of bits assigned to the datacenter id.
     private readonly int _datacenterIdBits;
 
-    //序列在id中占的位数(1ms内的并发数)
+    // Number of bits assigned to the per-millisecond sequence.
     private readonly int _sequenceBits;
 
-    //机器ID向左移12位
+    // Left shift applied to the worker id.
     private readonly int _workerIdShift;
 
-    //数据标识id向左移17位(12+5)
+    // Left shift applied to the datacenter id.
     private readonly int _datacenterIdShift;
 
-    //时间截向左移22位(5+5+12)
+    // Left shift applied to the timestamp offset.
     private readonly int _timestampLeftShift;
 
-    // 生成序列的掩码，这里为4095 (0b111111111111=0xfff=4095)
+    // Bit mask for the sequence portion, for example 4095 when using 12 bits.
     private readonly long _sequenceMask;
 
-    // 工作机器ID(0~31)
+    // Worker id in the configured range.
     private readonly long _workerId;
 
-    //数据中心ID(0~31)
+    // Datacenter id in the configured range.
     private readonly long _datacenterId;
 
-    //毫秒内序列(0~4095)
+    // Sequence number within the current millisecond.
     private long sequence;
 
-    //上次生成ID的时间截
+    // Timestamp used for the previously generated id.
     private long lastTimestamp = -1L;
 
     private readonly object _sync = new();
@@ -88,7 +86,7 @@ public class Snowflake
 
 
     /// <summary>
-    /// 获得下一个ID (该方法是线程安全的)
+    /// Generates the next identifier.
     /// </summary>
     public long NextId()
     {
@@ -96,34 +94,34 @@ public class Snowflake
         {
             var timestamp = TimeGen();
 
-            //如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
+            // Reject clock rollback to preserve monotonic ids.
             if (timestamp < lastTimestamp)
             {
                 throw new InvalidTimeZoneException(
                     string.Format("Clock moved backwards.  Refusing to generate id for %d milliseconds", lastTimestamp - timestamp));
             }
 
-            //如果是同一时间生成的，则进行毫秒内序列
+            // Same millisecond: advance the in-memory sequence.
             if (lastTimestamp == timestamp)
             {
                 sequence = (sequence + 1) & _sequenceMask;
-                //毫秒内序列溢出
+                // Sequence overflow: wait for the next millisecond.
                 if (sequence == 0)
                 {
-                    //阻塞到下一个毫秒,获得新的时间戳
+                    // Block until a fresh timestamp is available.
                     timestamp = TilNextMillis(lastTimestamp);
                 }
             }
-            //时间戳改变，毫秒内序列重置
+            // New millisecond: reset the sequence.
             else
             {
                 sequence = 0L;
             }
 
-            //上次生成ID的时间截
+            // Persist the timestamp used for this id.
             lastTimestamp = timestamp;
 
-            //移位并通过或运算拼到一起组成64位的ID
+            // Assemble the final 64-bit id from the timestamp, datacenter, worker, and sequence parts.
             return ((timestamp - _twepoch) << _timestampLeftShift) //
                    | (_datacenterId << _datacenterIdShift) //
                    | (_workerId << _workerIdShift) //
@@ -135,7 +133,7 @@ public class Snowflake
 
 
     /// <summary>
-    /// 阻塞到下一个毫秒，直到获得新的时间戳
+    /// Blocks until the clock reaches the next millisecond.
     /// </summary>
     private long TilNextMillis(long lastTimestamp)
     {
@@ -148,7 +146,7 @@ public class Snowflake
     }
 
     /// <summary>
-    /// 返回以毫秒为单位的当前时间
+    /// Returns the current UTC time in milliseconds.
     /// </summary>
     protected long TimeGen()
     {

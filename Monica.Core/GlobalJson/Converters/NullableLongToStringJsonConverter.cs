@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.GlobalJson.Converters;
 
 /// <summary>
-/// long类型雪花ID精度损失问题，转string输出
+/// Serializes <see cref="long"/> values as strings to avoid precision loss for snowflake-style identifiers.
 /// </summary>
 public class NullableLongToStringJsonConverter : JsonConverter<long>
 {

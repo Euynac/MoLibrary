@@ -6,7 +6,7 @@ namespace Monica.Core.GlobalJson.Converters;
 
 public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
 {
-    //巨坑：需要使用HandleNull才会进入
+    // HandleNull must be enabled or null tokens never reach this converter.
     public override bool HandleNull => true;
 
     public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

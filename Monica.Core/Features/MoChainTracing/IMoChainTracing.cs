@@ -4,68 +4,68 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoChainTracing;
 
 /// <summary>
-/// 调用链追踪接口，用于记录应用层接口的调用链信息
+/// Defines call-chain tracing operations for application flows.
 /// </summary>
 public interface IMoChainTracing
 {
     /// <summary>
-    /// 开始一个新的调用链节点
+    /// Starts a new trace node.
     /// </summary>
-    /// <param name="operation">操作名称（如方法名、操作描述等）</param>
-    /// <param name="handler">处理者名称（如服务名、类名等）</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <param name="type"></param>
-    /// <returns>调用链节点标识，用于后续完成调用</returns>
+    /// <param name="operation">The operation name, such as a method or action description.</param>
+    /// <param name="handler">The handler name, such as a service or class name.</param>
+    /// <param name="extraInfo">Optional extra metadata captured at the start of the trace.</param>
+    /// <param name="type">The traced operation type.</param>
+    /// <returns>The trace identifier used to complete the node later.</returns>
     string BeginTrace(string operation, string? handler, object? extraInfo = null,
         EChainTracingType type = EChainTracingType.Unknown);
 
     /// <summary>
-    /// 完成一个调用链节点
+    /// Completes a trace node.
     /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="result">调用结果描述</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="exception">异常信息</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="traceId">The trace identifier.</param>
+    /// <param name="result">A description of the result.</param>
+    /// <param name="success">Whether the operation succeeded.</param>
+    /// <param name="exception">The captured exception, if any.</param>
+    /// <param name="extraInfo">Optional extra metadata captured at completion time.</param>
     void EndTrace(string traceId, string? result = null, bool success = true, Exception? exception = null,
         object? extraInfo = null);
 
     /// <summary>
-    /// 检查是否包含指定的调用链节点
+    /// Checks whether the current chain contains the specified trace node.
     /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <returns>是否包含</returns>
+    /// <param name="traceId">The trace identifier.</param>
+    /// <returns><see langword="true" /> when the node is tracked; otherwise, <see langword="false" />.</returns>
     bool ContainsTrace(string traceId);
 
     /// <summary>
-    /// 记录简单的调用信息（一次性记录，适用于简单调用）
+    /// Records a one-shot trace entry for simple operations.
     /// </summary>
-    /// <param name="operation">操作名称</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="result">调用结果</param>
-    /// <param name="duration">执行时间</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <param name="type"></param>
+    /// <param name="operation">The operation name.</param>
+    /// <param name="handler">The handler name.</param>
+    /// <param name="success">Whether the operation succeeded.</param>
+    /// <param name="result">A description of the result.</param>
+    /// <param name="duration">The known execution duration.</param>
+    /// <param name="extraInfo">Optional extra metadata.</param>
+    /// <param name="type">The traced operation type.</param>
     void RecordTrace(string operation, string? handler, bool success = true, string? result = null,
         TimeSpan? duration = null, object? extraInfo = null, EChainTracingType type = EChainTracingType.Unknown);
 
     /// <summary>
-    /// 获取当前的调用链信息
+    /// Gets the current call-chain context.
     /// </summary>
-    /// <returns>调用链信息，如果当前没有调用链则返回null</returns>
+    /// <returns>The current chain, or <see langword="null" /> when no chain exists.</returns>
     MoChainContext? GetCurrentChain();
 
     /// <summary>
-    /// 合并远程调用链信息
+    /// Merges chain data returned from a remote call.
     /// </summary>
-    /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteRes"></param>
-    /// <returns>是否成功合并</returns>
+    /// <param name="traceId">The local trace identifier that should receive the remote chain.</param>
+    /// <param name="remoteRes">The remote response carrying chain metadata.</param>
     void MergeRemoteChain(string traceId, IMoResponse remoteRes);
 
     /// <summary>
-    /// 一般用于 AsyncLocal 最外层初次赋值。但最好在最外层开启一个Chain。
+    /// Initializes the current <see cref="AsyncLocal{T}" /> context.
+    /// Prefer starting a chain explicitly at the outermost scope when possible.
     /// </summary>
     void Init();
 } 

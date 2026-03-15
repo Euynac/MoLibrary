@@ -13,7 +13,7 @@ public static class ModuleTimekeeperBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Timekeeper 模块
+        /// Configures the Timekeeper module.
         /// </summary>
         public static ModuleTimekeeperGuide AddTimekeeper(Action<ModuleTimekeeperOption>? action = null)
         {
@@ -23,7 +23,7 @@ public static class ModuleTimekeeperBuilderExtensions
 }
 
 /// <summary>
-/// Timekeeper模块
+/// Timekeeper module.
 /// </summary>
 public class ModuleTimekeeper(ModuleTimekeeperOption option)
     : MoModule<ModuleTimekeeper, ModuleTimekeeperOption, ModuleTimekeeperGuide>(option)
@@ -40,14 +40,14 @@ public class ModuleTimekeeper(ModuleTimekeeperOption option)
 }
 
 /// <summary>
-/// Timekeeper模块向导
+/// Configuration guide for the Timekeeper module.
 /// </summary>
 public class ModuleTimekeeperGuide : MoModuleGuide<ModuleTimekeeper, ModuleTimekeeperOption, ModuleTimekeeperGuide>
 {
 }
 
 /// <summary>
-/// Timekeeper模块选项
+/// Configuration options for the Timekeeper module.
 /// </summary>
 public class ModuleTimekeeperOption : MoModuleOption<ModuleTimekeeper>
 {

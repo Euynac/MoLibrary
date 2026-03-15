@@ -3,135 +3,135 @@ using Monica.Core.Module.Models;
 namespace Monica.Core.Module.Dashboard.Models;
 
 /// <summary>
-/// 表示模块系统的性能信息。
+/// Module system performance information.
 /// </summary>
 public class ModuleSystemPerformance
 {
     /// <summary>
-    /// 系统总的初始化时间（毫秒）
+    /// Total system initialization time in milliseconds.
     /// </summary>
     public long TotalSystemInitializationTimeMs { get; set; }
 
     /// <summary>
-    /// 各个阶段的性能信息
+    /// Performance for each system phase.
     /// </summary>
     public List<PhasePerformanceInfo> PhasePerformances { get; set; } = [];
 
     /// <summary>
-    /// 各个模块的性能信息
+    /// Performance for each module.
     /// </summary>
     public List<ModulePerformanceInfo> ModulePerformances { get; set; } = [];
 
     /// <summary>
-    /// 最慢的5个模块
+    /// Five slowest modules.
     /// </summary>
     public List<ModulePerformanceInfo> SlowestModules { get; set; } = [];
 
     /// <summary>
-    /// 各个配置方法阶段的统计信息
+    /// Statistics for each configuration phase.
     /// </summary>
     public List<ConfigMethodStatistics> ConfigMethodStatistics { get; set; } = [];
 
     /// <summary>
-    /// 所有系统阶段总耗时（毫秒）
+    /// Total duration of all system phases, in milliseconds.
     /// </summary>
     public long TotalSystemPhaseDurationMs { get; set; }
 
     /// <summary>
-    /// 所有模块阶段总耗时（毫秒）
+    /// Total duration of all module phases, in milliseconds.
     /// </summary>
     public long TotalModulePhaseDurationMs { get; set; }
 
     /// <summary>
-    /// 系统阶段数量
+    /// Number of system phases.
     /// </summary>
     public int SystemPhaseCount { get; set; }
 
     /// <summary>
-    /// 模块阶段执行总次数
+    /// Total number of module phase executions.
     /// </summary>
     public int TotalModulePhaseExecutions { get; set; }
 }
 
 /// <summary>
-/// 阶段性能信息
+/// Performance information for a single phase.
 /// </summary>
 public class PhasePerformanceInfo
 {
     /// <summary>
-    /// 阶段名称
+    /// Phase name.
     /// </summary>
     public string PhaseName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 阶段耗时（毫秒）
+    /// Phase duration in milliseconds.
     /// </summary>
     public long DurationMs { get; set; }
 
     /// <summary>
-    /// 阶段在初始化顺序中的位置
+    /// Phase order during initialization.
     /// </summary>
     public int Order { get; set; }
 }
 
 /// <summary>
-/// 模块性能信息
+/// Performance information for a single module.
 /// </summary>
 public class ModulePerformanceInfo
 {
     /// <summary>
-    /// 模块类型名称
+    /// Module type name.
     /// </summary>
     public string ModuleTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块键
+    /// Module key.
     /// </summary>
     public ModuleKey? ModuleKey { get; set; }
 
     /// <summary>
-    /// 模块总耗时（毫秒）
+    /// Total module duration in milliseconds.
     /// </summary>
     public long TotalDurationMs { get; set; }
 
     /// <summary>
-    /// 各个配置阶段的耗时
+    /// Duration for each configuration phase.
     /// </summary>
     public Dictionary<EMoModuleConfigMethods, long> PhaseDurations { get; set; } = [];
 }
 
 /// <summary>
-/// 配置方法统计信息
+/// Statistics for a configuration phase across modules.
 /// </summary>
 public class ConfigMethodStatistics
 {
     /// <summary>
-    /// 配置方法类型
+    /// Configuration phase.
     /// </summary>
     public EMoModuleConfigMethods ConfigMethod { get; set; }
 
     /// <summary>
-    /// 总耗时（毫秒）
+    /// Total duration in milliseconds.
     /// </summary>
     public long TotalDurationMs { get; set; }
 
     /// <summary>
-    /// 平均耗时（毫秒）
+    /// Average duration in milliseconds.
     /// </summary>
     public long AverageDurationMs { get; set; }
 
     /// <summary>
-    /// 执行此配置方法的模块数量
+    /// Number of modules that executed this phase.
     /// </summary>
     public int ModuleCount { get; set; }
 
     /// <summary>
-    /// 最慢的模块名称
+    /// Slowest module name.
     /// </summary>
     public string SlowestModuleName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 最慢的模块耗时（毫秒）
+    /// Slowest module duration in milliseconds.
     /// </summary>
     public long SlowestModuleDurationMs { get; set; }
 } 

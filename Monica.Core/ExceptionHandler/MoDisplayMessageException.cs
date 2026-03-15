@@ -4,35 +4,36 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.ExceptionHandler;
 
 /// <summary>
-/// 带用户友好消息的异常基类
-/// 用于分离前端显示消息和开发者调试信息
+/// Base exception type that carries a user-facing message.
+/// Use this to separate the message shown to end users from the technical detail used for diagnostics.
 /// </summary>
 /// <remarks>
-/// <para>DisplayMessage: 用户友好的错误消息，会设置到 Res.Message 中显示给前端用户</para>
-/// <para>TechnicalDetail: 技术细节信息，会设置到 Res.ExtraInfo["detail"] 中供开发者调试</para>
+/// <para><see cref="DisplayMessage"/> is written to <c>Res.Message</c> for UI display.</para>
+/// <para><see cref="TechnicalDetail"/> is written to <c>Res.ExtraInfo["detail"]</c> for diagnostics.</para>
 /// </remarks>
 public abstract class MoDisplayMessageException : Exception
 {
     /// <summary>
-    /// 用户友好的错误消息（显示给前端）
+    /// Gets the user-friendly message shown to the client.
     /// </summary>
     public string DisplayMessage { get; }
 
     /// <summary>
-    /// 技术细节（用于日志和调试，存入 ExtraInfo）
+    /// Gets the technical detail used for logging and diagnostics.
     /// </summary>
     public string? TechnicalDetail { get; }
 
     /// <summary>
-    /// 响应码（默认 BadRequest，子类可重写）
+    /// Gets the response code returned to the client.
+    /// Derived types can override the default <see cref="ResponseCode.BadRequest"/>.
     /// </summary>
     public virtual ResponseCode ResponseCode => ResponseCode.BadRequest;
 
     /// <summary>
-    /// 创建带用户友好消息的异常
+    /// Initializes a new exception with a user-facing message and optional technical detail.
     /// </summary>
-    /// <param name="displayMessage">用户友好的错误消息</param>
-    /// <param name="technicalDetail">技术细节（可选）</param>
+    /// <param name="displayMessage">The user-facing error message.</param>
+    /// <param name="technicalDetail">Optional technical detail for debugging.</param>
     protected MoDisplayMessageException(string displayMessage, string? technicalDetail = null)
         : base($"{displayMessage}{technicalDetail?.BeAfter(": ")}")
     {

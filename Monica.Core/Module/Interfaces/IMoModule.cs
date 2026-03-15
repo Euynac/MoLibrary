@@ -10,34 +10,33 @@ public interface IMoModuleStaticInfo
 }
 
 /// <summary>
-/// Monica模块接口
-/// 定义模块的配置和初始化方法
-/// 当任何一个模块的配置阶段返回错误时，该模块及其依赖项的配置将被中止
+/// Defines the module lifecycle hooks used during registration and initialization.
+/// If a module fails during configuration, that module and its dependents stop progressing through the pipeline.
 /// </summary>
 public interface IMoModule
 {
     /// <summary>
-    /// 配置WebApplicationBuilder
+    /// Configures the <see cref="WebApplicationBuilder"/>.
     /// </summary>
-    /// <param name="builder">WebApplicationBuilder实例</param>
+    /// <param name="builder">The application builder.</param>
     void ConfigureBuilder(WebApplicationBuilder builder);
 
     /// <summary>
-    /// 配置服务依赖注入
+    /// Configures service registrations.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     void ConfigureServices(IServiceCollection services);
 
     /// <summary>
-    /// 在执行遍历业务程序集类<see cref="IWantIterateBusinessTypes"/>后配置服务依赖注入
+    /// Configures services after <see cref="IWantIterateBusinessTypes"/> has processed business assembly types.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     void PostConfigureServices(IServiceCollection services);
 
     /// <summary>
-    /// 配置应用程序管道，注意是在UseRouting之前
+    /// Configures the application pipeline before `UseRouting`.
     /// </summary>
-    /// <param name="app"></param>
+    /// <param name="app">The application builder.</param>
     void ConfigureApplicationBuilder(IApplicationBuilder app);
 
     ModuleKey GetModuleKey();

@@ -5,17 +5,17 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoDiffHighlight;
 
 /// <summary>
-/// 差异对比高亮服务
+/// UI-facing service for diff highlighting operations.
 /// </summary>
 public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHighlightService> logger)
 {
     /// <summary>
-    /// 执行文本差异对比并返回高亮结果
+    /// Runs a text diff and returns the highlighted result.
     /// </summary>
-    /// <param name="oldText">原始文本</param>
-    /// <param name="newText">新文本</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>包含高亮结果的响应</returns>
+    /// <param name="oldText">The original text.</param>
+    /// <param name="newText">The updated text.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>A response containing the highlighted result.</returns>
     public async Task<Res<DiffHighlightResult>> HighlightAsync(string oldText, string newText, DiffHighlightOptions? options = null)
     {
         try
@@ -43,17 +43,17 @@ public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHi
     }
     
     /// <summary>
-    /// 执行文本差异对比并返回高亮结果（同步版本）
+    /// Runs a text diff synchronously and returns the highlighted result.
     /// </summary>
-    /// <param name="oldText">原始文本</param>
-    /// <param name="newText">新文本</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>包含高亮结果的响应</returns>
+    /// <param name="oldText">The original text.</param>
+    /// <param name="newText">The updated text.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>A response containing the highlighted result.</returns>
     public Res<DiffHighlightResult> Highlight(string oldText, string newText, DiffHighlightOptions? options = null)
     {
         try
         {
-            logger.LogDebug("执行文本差异对比（同步），oldText长度: {OldLength}, newText长度: {NewLength}", 
+            logger.LogDebug("执行文本差异对比（同步），oldText长度: {OldLength}, newText长度: {NewLength}",
                 oldText.Length, newText.Length);
             
             var result = diffHighlight.Highlight(oldText, newText, options);
@@ -76,12 +76,12 @@ public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHi
     }
     
     /// <summary>
-    /// 获取差异统计信息
+    /// Gets diff statistics without exposing the rendered content.
     /// </summary>
-    /// <param name="oldText">原始文本</param>
-    /// <param name="newText">新文本</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>包含统计信息的响应</returns>
+    /// <param name="oldText">The original text.</param>
+    /// <param name="newText">The updated text.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>A response containing the diff statistics.</returns>
     public async Task<Res<DiffStatistics>> GetStatisticsAsync(string oldText, string newText, DiffHighlightOptions? options = null)
     {
         try
@@ -101,12 +101,12 @@ public class DiffHighlightService(IMoDiffHighlight diffHighlight, ILogger<DiffHi
     }
     
     /// <summary>
-    /// 检查两个文本是否相同
+    /// Checks whether two texts produce any changes.
     /// </summary>
-    /// <param name="oldText">原始文本</param>
-    /// <param name="newText">新文本</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>是否相同</returns>
+    /// <param name="oldText">The original text.</param>
+    /// <param name="newText">The updated text.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>A response indicating whether the texts are identical.</returns>
     public async Task<Res<bool>> IsIdenticalAsync(string oldText, string newText, DiffHighlightOptions? options = null)
     {
         try

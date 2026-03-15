@@ -1,22 +1,22 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 统一视图显示模式
+/// Display modes for the unified diff view.
 /// </summary>
 public enum EDiffDisplayMode
 {
     /// <summary>
-    /// 比较模式 - 显示完整的差异对比
+    /// Shows the full comparison.
     /// </summary>
     Compare,
     
     /// <summary>
-    /// 新值模式 - 只显示新内容
+    /// Shows only the new content.
     /// </summary>
     NewOnly,
     
     /// <summary>
-    /// 旧值模式 - 只显示旧内容
+    /// Shows only the original content.
     /// </summary>
     OldOnly
 }

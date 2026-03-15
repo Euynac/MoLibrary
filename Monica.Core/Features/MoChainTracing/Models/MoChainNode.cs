@@ -3,31 +3,31 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.Features.MoChainTracing.Models;
 
 /// <summary>
-/// 调用链节点，表示一个具体的调用
+/// Represents a single node in a call chain.
 /// </summary>
 public class MoChainNode
 {
     /// <summary>
-    /// 当前节点所属调用链层级
+    /// Depth of the node within the chain.
     /// </summary>
     public int Deepth { get; set; }
     
     /// <summary>
-    /// 设置父节点
+    /// Sets the parent node and updates the depth.
     /// </summary>
-    /// <param name="parent"></param>
+    /// <param name="parent">The parent node.</param>
     public void SetParent(MoChainNode parent)
     {
         Deepth = parent.Deepth + 1;
         Parent = parent;
     }
-    #region 用于调用链合并等情况
+    #region Merge support
 
     private string[]? _exceptionMessage;
     private string? _duration;
     private EChainTracingType _type;
     /// <summary>
-    /// 更新子节点深度，且不超过深度限制，超过则丢弃
+    /// Recalculates descendant depths and prunes children beyond the depth limit.
     /// </summary>
     public void ReCalculateDepthAndClean(int currentDeepth, int maxChainDepth)
     {
@@ -53,7 +53,7 @@ public class MoChainNode
     #endregion
 
     /// <summary>
-    /// 调用链节点类型
+    /// Trace node category.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EChainTracingType Type
@@ -67,36 +67,36 @@ public class MoChainNode
     }
 
     /// <summary>
-    /// 调用链节点唯一标识
+    /// Unique identifier of the trace node.
     /// </summary>
     [JsonIgnore]
     public string TraceId { get; set; } = Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// 处理者名称（如服务名、类名等）
+    /// Handler name, such as a service or class name.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Handler { get; set; }
 
     /// <summary>
-    /// 操作名称（如方法名、操作描述等）
+    /// Operation name, such as a method or action description.
     /// </summary>
     public string Operation { get; set; } = string.Empty;
 
     /// <summary>
-    /// 开始时间
+    /// Time when the node started.
     /// </summary>
     [JsonIgnore]
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 结束时间
+    /// Time when the node completed.
     /// </summary>
     [JsonIgnore]
     public DateTime? EndTime { get; set; }
 
     /// <summary>
-    /// 执行时间（毫秒）
+    /// Duration of the node formatted in milliseconds.
     /// </summary>
     public string? Duration
     {
@@ -105,31 +105,31 @@ public class MoChainNode
     }
 
     /// <summary>
-    /// 调用结果描述
+    /// Description of the result.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Result { get; set; }
 
     /// <summary>
-    /// 是否成功
+    /// Indicates whether the call failed.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsFailed { get; set; }
 
     /// <summary>
-    /// 是否为远程调用
+    /// Indicates whether this node represents a remote call.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsRemoteCall { get; set; }
 
     /// <summary>
-    /// 异常信息
+    /// Captured exception.
     /// </summary>
     [JsonIgnore]
     public Exception? Exception { get; set; }
 
     /// <summary>
-    /// 异常信息的序列化表示
+    /// Serialized representation of the exception.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string[]? ExceptionMessage
@@ -139,31 +139,31 @@ public class MoChainNode
     }
 
     /// <summary>
-    /// 开始时的额外信息
+    /// Extra metadata captured when the node starts.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? StartExtraInfo { get; set; }
 
     /// <summary>
-    /// 结束时的额外信息
+    /// Extra metadata captured when the node ends.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? EndExtraInfo { get; set; }
 
     /// <summary>
-    /// 子调用链节点
+    /// Child trace nodes.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<MoChainNode>? Children { get; set; }
 
     /// <summary>
-    /// 父调用链节点
+    /// Parent trace node.
     /// </summary>
     [JsonIgnore]
     public MoChainNode? Parent { get; private set; }
 
     /// <summary>
-    /// 备注信息
+    /// Optional notes.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Remarks { get; set; }

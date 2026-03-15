@@ -3,7 +3,7 @@
 public interface IMoModuleOptionUseGlobalException
 {
     /// <summary>
-    /// 是否禁用全局异常处理器
+    /// Gets or sets whether the global exception handler is disabled for the module.
     /// </summary>
     bool DisableGlobalExceptionHandler { get; set; }
 }

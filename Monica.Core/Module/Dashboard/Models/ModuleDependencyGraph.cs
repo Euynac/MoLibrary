@@ -3,140 +3,140 @@ using Monica.Core.Module.Models;
 namespace Monica.Core.Module.Dashboard.Models;
 
 /// <summary>
-/// 表示模块依赖关系图信息。
+/// Represents the module dependency graph.
 /// </summary>
 public class ModuleDependencyGraph
 {
     /// <summary>
-    /// 图中的所有节点（模块）
+    /// All nodes in the graph.
     /// </summary>
     public List<ModuleDependencyNode> Nodes { get; set; } = [];
 
     /// <summary>
-    /// 图中的所有边（依赖关系）
+    /// All dependency edges in the graph.
     /// </summary>
     public List<ModuleDependencyEdge> Edges { get; set; } = [];
 
     /// <summary>
-    /// 是否存在循环依赖
+    /// Indicates whether the graph contains circular dependencies.
     /// </summary>
     public bool HasCircularDependencies { get; set; }
 
     /// <summary>
-    /// 循环依赖路径（如果存在）
+    /// Circular dependency paths, if any.
     /// </summary>
     public List<List<ModuleKey>> CircularDependencyPaths { get; set; } = [];
 
     /// <summary>
-    /// 拓扑排序结果（依赖顺序）
+    /// Topological order of the modules when no cycle exists.
     /// </summary>
     public List<ModuleKey> TopologicalOrder { get; set; } = [];
 
     /// <summary>
-    /// 模块层级信息（根据依赖深度分层）
+    /// Module layers grouped by dependency depth.
     /// </summary>
     public Dictionary<int, List<ModuleKey>> ModuleLayers { get; set; } = [];
 }
 
 /// <summary>
-/// 模块依赖关系图中的节点
+/// Node in the module dependency graph.
 /// </summary>
 public class ModuleDependencyNode
 {
     /// <summary>
-    /// 模块键
+    /// Module key.
     /// </summary>
     public ModuleKey Module { get; set; }
 
     /// <summary>
-    /// 模块名称
+    /// Module display name.
     /// </summary>
     public string ModuleName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块类型名称
+    /// Module type name.
     /// </summary>
     public string ModuleTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 是否启用
+    /// Indicates whether the module is enabled.
     /// </summary>
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// 直接依赖的模块数量
+    /// Number of directly required modules.
     /// </summary>
     public int DirectDependencyCount { get; set; }
 
     /// <summary>
-    /// 所有依赖的模块数量（包括间接依赖）
+    /// Number of total dependencies, including transitive dependencies.
     /// </summary>
     public int TotalDependencyCount { get; set; }
 
     /// <summary>
-    /// 依赖此模块的模块数量
+    /// Number of modules that depend on this module.
     /// </summary>
     public int DependentModuleCount { get; set; }
 
     /// <summary>
-    /// 在依赖图中的层级（0表示没有依赖，数字越大表示依赖越多）
+    /// Layer in the dependency graph. `0` means no dependencies; larger values indicate deeper dependency chains.
     /// </summary>
     public int Layer { get; set; }
 
     /// <summary>
-    /// 是否是循环依赖的一部分
+    /// Indicates whether the node participates in a cycle.
     /// </summary>
     public bool IsPartOfCycle { get; set; }
 
     /// <summary>
-    /// 模块状态
+    /// Current module phase.
     /// </summary>
     public EMoModuleConfigMethods Status { get; set; }
 }
 
 /// <summary>
-/// 模块依赖关系图中的边
+/// Edge in the module dependency graph.
 /// </summary>
 public class ModuleDependencyEdge
 {
     /// <summary>
-    /// 源模块（依赖者）
+    /// Source module that depends on the target.
     /// </summary>
     public ModuleKey SourceModule { get; set; }
 
     /// <summary>
-    /// 目标模块（被依赖者）
+    /// Target module being depended on.
     /// </summary>
     public ModuleKey TargetModule { get; set; }
 
     /// <summary>
-    /// 依赖类型
+    /// Dependency kind.
     /// </summary>
     public DependencyType DependencyType { get; set; }
 
     /// <summary>
-    /// 是否是循环依赖的一部分
+    /// Indicates whether the edge participates in a cycle.
     /// </summary>
     public bool IsPartOfCycle { get; set; }
 }
 
 /// <summary>
-/// 依赖类型
+/// Kind of dependency represented by an edge.
 /// </summary>
 public enum DependencyType
 {
     /// <summary>
-    /// 直接依赖
+    /// Direct dependency.
     /// </summary>
     Direct,
 
     /// <summary>
-    /// 间接依赖（传递依赖）
+    /// Indirect or transitive dependency.
     /// </summary>
     Transitive,
 
     /// <summary>
-    /// 循环依赖
+    /// Circular dependency.
     /// </summary>
     Circular
 } 

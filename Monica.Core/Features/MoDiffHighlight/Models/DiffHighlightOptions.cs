@@ -1,42 +1,42 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异对比配置选项
+/// Configuration options for diff highlighting.
 /// </summary>
 public class DiffHighlightOptions
 {
     /// <summary>
-    /// 对比模式
+    /// Gets or sets the comparison mode.
     /// </summary>
     public EDiffHighlightMode Mode { get; set; } = EDiffHighlightMode.Line;
     
     /// <summary>
-    /// 输出格式
+    /// Gets or sets the output format.
     /// </summary>
     public EDiffOutputFormat OutputFormat { get; set; } = EDiffOutputFormat.Html;
     
     /// <summary>
-    /// 是否忽略空白字符
+    /// Gets or sets a value indicating whether whitespace should be ignored.
     /// </summary>
     public bool IgnoreWhitespace { get; set; } = false;
     
     /// <summary>
-    /// 是否忽略大小写
+    /// Gets or sets a value indicating whether casing should be ignored.
     /// </summary>
     public bool IgnoreCase { get; set; } = false;
     
     /// <summary>
-    /// 上下文行数（在变更前后显示多少行上下文）
+    /// Gets or sets how many surrounding context lines to keep near changes.
     /// </summary>
     public int ContextLines { get; set; } = 3;
     
     /// <summary>
-    /// 最大字符级差异长度（超过此长度将不进行字符级对比）
+    /// Gets or sets the maximum line length eligible for character-level diffing.
     /// </summary>
     public int MaxCharacterDiffLength { get; set; } = 1000;
     
     /// <summary>
-    /// 自定义样式配置
+    /// Gets or sets the optional custom style configuration.
     /// </summary>
     public DiffHighlightStyle? Style { get; set; }
 }

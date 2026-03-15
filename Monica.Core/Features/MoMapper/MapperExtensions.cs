@@ -10,14 +10,13 @@ namespace Monica.Core.Features.MoMapper;
 public static class MapperExtensions
 {
     /// <summary>
-    ///  展示Mapper的映射表达式
+    /// Writes the generated mapping expression for the provided source value.
     /// </summary>
-    /// <typeparam name="TDst"></typeparam>
-    /// <typeparam name="TSrc"></typeparam>
-    /// <param name="mapper"></param>
-    /// <param name="src"></param>
-    /// <param name="logger"></param>
-    /// <returns></returns>
+    /// <typeparam name="TSrc">The source type.</typeparam>
+    /// <typeparam name="TDst">The destination type.</typeparam>
+    /// <param name="mapper">The mapper instance.</param>
+    /// <param name="src">The source value used to build the mapping expression.</param>
+    /// <param name="logger">Optional logger used instead of the console.</param>
     public static void MapDebug<TSrc, TDst>(this IMapper mapper, TSrc src, ILogger? logger = null)
     {
         var script = src.BuildAdapter(mapper.Config).CreateMapExpression<TDst>().ToScript();

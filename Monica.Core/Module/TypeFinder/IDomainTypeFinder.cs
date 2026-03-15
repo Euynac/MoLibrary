@@ -3,20 +3,21 @@ using System.Reflection;
 namespace Monica.Core.Module.TypeFinder;
 
 /// <summary>
-/// 定义类型查找器接口，用于在相关程序集中查找类型。一般用于业务程序集中类型的自动注册。
+/// Defines a type finder used to discover types from related assemblies.
+/// Typically used for automatic registration against business assemblies.
 /// </summary>
 public interface IDomainTypeFinder
 {
     /// <summary>
-    /// 查找所有类型
+    /// Finds all discovered types.
     /// </summary>
-    /// <returns>所有找到的类型集合</returns>
+    /// <returns>The discovered types.</returns>
     IEnumerable<Type> GetTypes();
 
     /// <summary>
-    /// 获取所有相关程序集
+    /// Gets all related assemblies.
     /// </summary>
-    /// <returns>相关程序集集合</returns>
+    /// <returns>The related assemblies.</returns>
     IEnumerable<Assembly> GetAssemblies();
 
     /// <summary>
@@ -25,8 +26,8 @@ public interface IDomainTypeFinder
     TypeFinderAssemblyAnalysis GetAssemblyAnalysis();
     
     /// <summary>
-    /// 类型查找器配置选项
+    /// Type finder configuration options.
     /// </summary>
-    /// <returns>配置选项</returns>
+    /// <returns>The configuration options.</returns>
     ModuleCoreOptionTypeFinder Options { get; }
 } 

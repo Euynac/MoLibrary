@@ -9,15 +9,15 @@ using Monica.Tool.Extensions;
 namespace Monica.Core.Module.Dashboard;
 
 /// <summary>
-/// 模块系统状态服务的实现类。
-/// 提供模块系统状态、性能、依赖关系等信息，用于支持界面展示和系统监控。
+/// Default implementation of <see cref="IModuleSystemStatusService"/>.
+/// Provides status, performance, and dependency information for dashboards and monitoring.
 /// </summary>
 public class ModuleSystemStatusService : IModuleSystemStatusService
 {
     /// <summary>
-    /// 获取模块系统的整体状态信息。
+    /// Gets the overall module system status.
     /// </summary>
-    /// <returns>模块系统状态信息</returns>
+    /// <returns>The system status.</returns>
     public ModuleSystemStatus GetSystemStatus()
     {
         var enabledModules = MoModuleRegisterCentre.ModuleSnapshots.Count;
@@ -45,9 +45,9 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取模块系统的性能信息。
+    /// Gets module system performance information.
     /// </summary>
-    /// <returns>模块系统性能信息</returns>
+    /// <returns>The performance snapshot.</returns>
     public ModuleSystemPerformance GetSystemPerformance()
     {
         var phaseDurations = ModuleProfiler.GetPhaseDurations();
@@ -108,16 +108,16 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取所有模块的注册和依赖关系信息。
+    /// Gets registration and dependency information for all modules.
     /// </summary>
-    /// <returns>模块注册信息列表</returns>
+    /// <returns>The registration information.</returns>
     public ModuleRegistrationInfo GetRegistrationInfo()
     {
         var enabledModules = new List<ModuleBasicInfo>();
         var disabledModules = new List<ModuleBasicInfo>();
         var modulesByOrder = new Dictionary<int, ModuleBasicInfo>();
 
-        // 处理启用的模块
+        // Build the enabled-module list from runtime snapshots.
         foreach (var snapshot in MoModuleRegisterCentre.ModuleSnapshots.OrderBy(s => s.RegisterInfo.Order))
         {
             var basicInfo = CreateModuleBasicInfo(snapshot);
@@ -125,7 +125,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             modulesByOrder[basicInfo.Order] = basicInfo;
         }
 
-        // 处理禁用的模块
+        // Build the disabled-module list from the module manager.
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
         foreach (var moduleType in disabledModuleTypes)
         {
@@ -136,7 +136,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
                 ModuleTypeName = moduleType.Name,
                 ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
                 ModuleKey = moduleKey.Value != null ? moduleKey : throw new Exception($"Can not get module key from module type {moduleType.GetCleanFullName()}"),
-                Order = int.MaxValue, // 禁用模块没有顺序
+                Order = int.MaxValue, // Disabled modules do not participate in registration ordering.
                 Status = EMoModuleConfigMethods.Disabled,
                 Dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
                     ? [.. deps]
@@ -174,10 +174,10 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取指定模块的详细信息。
+    /// Gets detailed information for a specific module.
     /// </summary>
-    /// <param name="moduleType">模块类型</param>
-    /// <returns>模块详细信息，如果模块不存在则返回null</returns>
+    /// <param name="moduleType">The module type.</param>
+    /// <returns>The module details, or `null` if the module does not exist.</returns>
     public ModuleDetailInfo? GetModuleDetail(Type moduleType)
     {
         var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleType == moduleType);
@@ -190,10 +190,10 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取指定模块的详细信息。
+    /// Gets detailed information for a specific module.
     /// </summary>
-    /// <param name="moduleKey">模块键</param>
-    /// <returns>模块详细信息，如果模块不存在则返回null</returns>
+    /// <param name="moduleKey">The module key.</param>
+    /// <returns>The module details, or `null` if the module does not exist.</returns>
     public ModuleDetailInfo? GetModuleDetail(ModuleKey moduleKey)
     {
         var snapshot = MoModuleRegisterCentre.ModuleSnapshots.FirstOrDefault(s => s.ModuleKey == moduleKey);
@@ -206,16 +206,16 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取模块依赖关系图信息。
+    /// Gets the module dependency graph.
     /// </summary>
-    /// <returns>模块依赖关系图</returns>
+    /// <returns>The dependency graph.</returns>
     public ModuleDependencyGraph GetDependencyGraph()
     {
         var graph = ModuleAnalyser.CalculateCompleteModuleDependencyGraph();
         var nodes = new List<ModuleDependencyNode>();
         var edges = new List<ModuleDependencyEdge>();
 
-        // 创建节点
+        // Create graph nodes.
         foreach (var moduleKey in graph.Nodes)
         {
             var moduleType = ModuleAnalyser.ModuleKeyToTypeDict.GetValueOrDefault(moduleKey);
@@ -246,7 +246,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             });
         }
 
-        // 创建边
+        // Create graph edges.
         foreach (var (source, target) in graph.Edges)
         {
             var dependencyType = DetermineEdgeType(source, target);
@@ -278,31 +278,31 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     }
 
     /// <summary>
-    /// 获取模块系统的健康状态检查结果。
+    /// Gets the module system health check result.
     /// </summary>
-    /// <returns>健康状态检查结果</returns>
+    /// <returns>The health check result.</returns>
     public ModuleSystemHealthCheck GetHealthCheck()
     {
         var healthCheckItems = new List<HealthCheckItem>();
         var issues = new List<HealthIssue>();
         var recommendations = new List<string>();
 
-        // 检查系统初始化状态
+        // Check overall initialization state.
         healthCheckItems.Add(CheckSystemInitialization());
 
-        // 检查循环依赖
+        // Check for circular dependencies.
         healthCheckItems.Add(CheckCircularDependencies(issues));
 
-        // 检查模块错误
+        // Check for module registration errors.
         healthCheckItems.Add(CheckModuleErrors(issues));
 
-        // 检查性能问题
+        // Check for performance issues.
         healthCheckItems.Add(CheckPerformanceIssues(issues));
 
-        // 检查禁用模块
+        // Check for disabled modules.
         healthCheckItems.Add(CheckDisabledModules(issues));
 
-        // 生成建议
+        // Generate recommendations from the collected issues.
         GenerateRecommendations(issues, recommendations);
 
         var overallHealth = DetermineOverallHealth(healthCheckItems, issues);
@@ -329,7 +329,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         return Mo.Options.GlobalTypeFinder.GetAssemblyAnalysis();
     }
 
-    #region 私有帮助方法
+    #region Private Helpers
 
     private static ModuleSystemState DetermineSystemState(int enabledModules, int errorModules, bool hasCircularDependencies)
     {
@@ -423,13 +423,13 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var configInfo = new ModuleConfigInfo
         {
             IsDisabled = false,
-            ConfigurationItems = [], // 这里可能需要从实际的模块配置中获取
+            ConfigurationItems = [], // This may later be populated from concrete module configuration data.
             ConfiguredOptions = CreateConfiguredOptions(snapshot.RegisterInfo),
             RegisterRequestCount = snapshot.RegisterInfo.RegisterRequests.Count,
             HasCircularDependency = dependencyInfo.IsPartOfCycle
         };
 
-        var executionHistory = new List<ModulePhaseExecution>(); // 这里可能需要从实际的执行历史中获取
+        var executionHistory = new List<ModulePhaseExecution>(); // This may later be populated from concrete execution history.
 
         var errors = MoModuleRegisterCentre.ModuleRegisterErrors
             .Where(e => e.ModuleType == snapshot.ModuleType)
@@ -481,17 +481,17 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
 
     private static int CalculateModuleLayer(ModuleKey moduleKey)
     {
-        // 计算模块在依赖图中的层级
+        // Use dependency count as the graph layer.
         var dependencies = ModuleAnalyser.CalculateModuleDependencies(moduleKey);
         return dependencies.Count;
     }
 
     private static DependencyType DetermineEdgeType(ModuleKey source, ModuleKey target)
     {
-        // 检查是否是直接依赖
+        // Check whether the edge is a direct dependency.
         if (ModuleAnalyser.ModuleDependencyMap.TryGetValue(source, out var directDeps) && directDeps.Contains(target))
         {
-            // 检查是否是循环依赖的一部分
+            // Distinguish direct edges that also participate in a cycle.
             var cyclePath = ModuleAnalyser.FindCycleInvolvingModule(source);
             if (cyclePath.Contains(target))
             {
@@ -561,7 +561,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             Description = "Check if the module system has been properly initialized",
             Status = status,
             Details = details,
-            ExecutionTimeMs = 0 // 这是一个快速检查
+            ExecutionTimeMs = 0 // This check is effectively instantaneous.
         };
     }
 
@@ -591,7 +591,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             Description = "Check for circular dependencies in the module system",
             Status = status,
             Details = details,
-            ExecutionTimeMs = 1 // 快速检查
+            ExecutionTimeMs = 1 // Fast check.
         };
     }
 
@@ -636,7 +636,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var status = HealthStatus.Healthy;
         var details = $"Total initialization time: {totalInitTime}ms";
 
-        // 定义性能阈值
+        // Performance thresholds.
         const long slowInitThreshold = 5000; // 5秒
         const long verySlowModuleThreshold = 1000; // 1秒
 
@@ -788,7 +788,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var slowestModuleInitTime = slowestModule?.GetTotalDuration() ?? 0;
         var slowestModuleName = slowestModule?.ModuleType.Name;
 
-        // 计算效率评分（0-100），基于初始化时间和模块数量
+        // Calculate an efficiency score from 0-100 based on init time and module count.
         var efficiencyScore = CalculateEfficiencyScore(totalInitTime, moduleProfiles.Count);
 
         return new HealthPerformanceMetrics
@@ -798,7 +798,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             SlowestModuleName = slowestModuleName,
             TotalSystemInitTimeMs = totalInitTime,
             InitializationEfficiencyScore = efficiencyScore,
-            MemoryUsageBytes = GC.GetTotalMemory(false) // 当前内存使用量
+            MemoryUsageBytes = GC.GetTotalMemory(false) // Current memory usage.
         };
     }
 
@@ -806,7 +806,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     {
         if (moduleCount == 0) return 100;
 
-        // 基准：每个模块100ms，总时间不超过3秒认为是高效的
+        // Baseline: 100 ms per module, with 3 seconds as the minimum efficient total.
         var baselineTime = Math.Max(moduleCount * 100, 3000);
         
         if (totalInitTime <= baselineTime)
@@ -814,7 +814,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             return 100;
         }
 
-        // 线性减分，超出基准时间越多，分数越低
+        // Deduct points linearly once the baseline is exceeded.
         var score = Math.Max(0, 100 - (int)((totalInitTime - baselineTime) / 100));
         return Math.Min(100, score);
     }

@@ -7,28 +7,25 @@ namespace Monica.Core.Module.Interfaces;
 public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : IMoModule
 {
     /// <summary>
-    /// 一般用于模块注册期间日志
+    /// Logger used during module registration and initialization.
     /// </summary>
     public ILogger Logger { get; set; } = LogProvider.For<TModule>(Mo.Options.DefaultModuleLogLevel);
 
     /// <summary>
-    /// 如果模块注册出现异常则禁用Module，而不是抛出异常。
-    /// 当设置为 true 时，如果模块在注册过程中出现异常，系统将记录错误并禁用该模块，而不是抛出异常中断整个应用程序的启动。
-    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
+    /// Disables the module instead of throwing when registration fails.
+    /// When `true`, the system records the error and skips the module for the rest of the application lifetime.
     /// </summary>
     public bool? DisableModuleIfHasException { get; set; } 
 
     /// <summary>
-    /// 是否禁用当前模块。
-    /// 当设置为 true 时，该模块将不会被注册或初始化，在应用程序的整个生命周期中都会被跳过。
+    /// Gets whether the current module is disabled.
     /// </summary>
     public bool IsDisabled { get; private set; }
 
     /// <summary>
-    /// 手动禁用当前模块。
-    /// 被禁用的模块在应用程序的生命周期内将被完全跳过，不会调用其任何配置或初始化方法。
+    /// Disables the current module manually.
     /// </summary>
-    /// <param name="reason">禁用模块的原因，将被记录到日志中</param>
+    /// <param name="reason">The reason, which is written to the log.</param>
     public void DisableModule(string reason = "Manual disable")
     {
         if (!IsDisabled)

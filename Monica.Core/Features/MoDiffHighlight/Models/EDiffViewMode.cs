@@ -1,17 +1,17 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异视图模式
+/// View modes for presenting diff output.
 /// </summary>
 public enum EDiffViewMode
 {
     /// <summary>
-    /// 统一视图 - 单面板混合显示模式（类似GitHub Desktop）
+    /// A single-pane mixed view similar to GitHub Desktop.
     /// </summary>
     Unified,
     
     /// <summary>
-    /// 分割视图 - 双面板对比显示模式（类似VS Code）
+    /// A two-pane side-by-side view similar to VS Code.
     /// </summary>
     Split
 }

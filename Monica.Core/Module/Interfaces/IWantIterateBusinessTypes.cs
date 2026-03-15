@@ -3,9 +3,9 @@ namespace Monica.Core.Module.Interfaces;
 public interface IWantIterateBusinessTypes
 {
     /// <summary>
-    /// 迭代业务类型
+    /// Processes the discovered business types.
     /// </summary>
-    /// <param name="types"></param>
-    /// <returns></returns>
+    /// <param name="types">The current sequence of business types.</param>
+    /// <returns>The transformed sequence of business types.</returns>
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types);
 }

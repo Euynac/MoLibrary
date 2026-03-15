@@ -6,71 +6,72 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.Features.MoChainTracing.Models;
 
 /// <summary>
-/// 调用链上下文，用于存储整个调用链的信息
+/// Stores the state for a single call chain.
 /// </summary>
 public class MoChainContext
 {
     /// <summary>
-    /// 调用链识别关键字
+    /// Extra-info key used to store serialized chain data.
     /// </summary>
     public const string CHAIN_KEY = "chain";
     /// <summary>
-    /// 调用链的根节点
+    /// Root node of the chain.
     /// </summary>
     public MoChainNode? Root { get; set; }
 
     /// <summary>
-    /// 当前活跃的调用链节点
+    /// Stack of currently active nodes.
     /// </summary>
     [JsonIgnore]
     public Stack<MoChainNode> ActiveNodes { get; set; } = new();
 
     /// <summary>
-    /// 孤立节点，代表该调用链有异常某些操作未及时关闭或顺序不对
+    /// Nodes that became detached because the trace closed out of order.
     /// </summary>
     public List<MoChainNode>? IsolatedNodes { get; set; }
 
     /// <summary>
-    /// 调用链节点映射（用于快速查找）
+    /// Lookup table for trace nodes by identifier.
     /// </summary>
     [JsonIgnore]
     public ConcurrentDictionary<string, MoChainNode> NodeMap { get; set; } = new();
 
 
     /// <summary>
-    /// 调用链开始时间
+    /// Time when the chain started.
     /// </summary>
 
     [JsonIgnore]
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 调用链结束时间
+    /// Time when the chain completed.
     /// </summary>
     [JsonIgnore]
     public DateTime? EndTime { get; set; }
 
     /// <summary>
-    /// 其他信息
+    /// Additional metadata for the chain.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? OtherInfo { get; set; }
 
     /// <summary>
-    /// 某些操作很大量而且可能并发的情况，且本身不会有子操作，不应该加入活跃节点，可能导致无法合理关闭调用链，造成Json Cycle问题
+    /// Returns whether nodes of the specified type should stay on the active stack.
+    /// High-volume operations without child calls can skip stacking to avoid mismatched closure and JSON cycles.
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">The trace node type.</param>
+    /// <returns><see langword="true" /> when nodes of this type can participate in the active stack.</returns>
     public static bool CanHasChildrenOperation(EChainTracingType type)
     {
         return type != EChainTracingType.Database;
     }
 
     /// <summary>
-    /// 添加一个新的调用链节点
+    /// Adds a new node to the current chain.
     /// </summary>
-    /// <param name="node">调用链节点</param>
-    /// <param name="maxNodeCount">最大节点数量</param>
+    /// <param name="node">The node to add.</param>
+    /// <param name="maxNodeCount">The configured maximum node count.</param>
     public void AddNode(MoChainNode node, int maxNodeCount)
     {
         if (Root == null)
@@ -94,13 +95,13 @@ public class MoChainContext
     }
 
     /// <summary>
-    /// 完成一个调用链节点
+    /// Completes a node in the current chain.
     /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="result">调用结果</param>
-    /// <param name="success">是否成功</param>
-    /// <param name="exception">异常信息</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="traceId">The trace identifier.</param>
+    /// <param name="result">A description of the result.</param>
+    /// <param name="success">Whether the operation succeeded.</param>
+    /// <param name="exception">The captured exception, if any.</param>
+    /// <param name="extraInfo">Optional completion metadata.</param>
     public void CompleteNode(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null)
     {
         if (NodeMap.TryGetValue(traceId, out var node))
@@ -110,13 +111,13 @@ public class MoChainContext
             node.Exception = exception;
             node.EndExtraInfo = extraInfo;
 
-            // 如果有异常，自动设置为失败
+            // An exception always marks the node as failed.
             if (exception != null || !success)
             {
                 node.IsFailed = true;
             }
 
-            // 从活跃节点栈中移除
+            // Pop active nodes until the completed trace is found; earlier mismatches become isolated nodes.
             if (ActiveNodes.Count > 0)
             {
                 while (ActiveNodes.Pop() is { } topNode && topNode.TraceId != traceId)
@@ -129,7 +130,7 @@ public class MoChainContext
     }
 
     /// <summary>
-    /// 标记调用链结束
+    /// Marks the chain as completed.
     /// </summary>
     public void MarkComplete()
     {
@@ -137,9 +138,9 @@ public class MoChainContext
     }
 
     /// <summary>
-    /// 获取调用链的深度克隆
+    /// Creates a deep clone of the chain.
     /// </summary>
-    /// <returns>调用链的深度克隆</returns>
+    /// <returns>A deep clone of the current chain.</returns>
     public MoChainContext Clone()
     {
         var json = JsonSerializer.Serialize(this);
@@ -147,12 +148,12 @@ public class MoChainContext
     }
 
     /// <summary>
-    /// 合并远程调用链信息
+    /// Merges a remote chain beneath a local trace node.
     /// </summary>
-    /// <param name="traceId">当前调用链节点标识</param>
-    /// <param name="remoteChainNode">远程调用链节点</param>
-    /// <param name="maxChainDepth">最大调用链深度</param>
-    /// <returns>是否成功合并</returns>
+    /// <param name="traceId">The local trace identifier.</param>
+    /// <param name="remoteChainNode">The remote chain root node.</param>
+    /// <param name="maxChainDepth">The maximum allowed chain depth.</param>
+    /// <returns><see langword="true" /> when the merge succeeds; otherwise, <see langword="false" />.</returns>
     public bool MergeRemoteChain(string traceId, MoChainNode? remoteChainNode, int maxChainDepth)
     {
         if (remoteChainNode == null) return false;
@@ -161,7 +162,7 @@ public class MoChainContext
             return false;
         }
 
-        // 将远程调用链作为当前节点的子节点
+        // Attach the remote chain beneath the current node.
         currentNode.Children ??= [];
         currentNode.Children.Add(remoteChainNode);
         remoteChainNode.SetParent(currentNode);

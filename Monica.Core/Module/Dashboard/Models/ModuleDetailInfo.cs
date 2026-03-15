@@ -4,58 +4,58 @@ using Monica.Core.Module.Models;
 namespace Monica.Core.Module.Dashboard.Models;
 
 /// <summary>
-/// 表示单个模块的详细信息。
+/// Detailed information about a single module.
 /// </summary>
 public class ModuleDetailInfo
 {
     /// <summary>
-    /// 模块基本信息
+    /// Basic module information.
     /// </summary>
     public ModuleBasicInfo BasicInfo { get; set; } = new();
 
     /// <summary>
-    /// 模块性能信息
+    /// Module performance details.
     /// </summary>
     public ModulePerformanceInfo PerformanceInfo { get; set; } = new();
 
     /// <summary>
-    /// 模块依赖关系信息
+    /// Module dependency details.
     /// </summary>
     public ModuleDependencyInfo DependencyInfo { get; set; } = new();
 
     /// <summary>
-    /// 模块配置选项信息
+    /// Module configuration details.
     /// </summary>
     public ModuleConfigInfo ConfigInfo { get; set; } = new();
 
     /// <summary>
-    /// 模块执行历史
+    /// Module execution history.
     /// </summary>
     public List<ModulePhaseExecution> ExecutionHistory { get; set; } = [];
 
     /// <summary>
-    /// 模块错误信息（如果有）
+    /// Module errors, if any.
     /// </summary>
     public List<ModuleErrorInfo> Errors { get; set; } = [];
 }
 
 /// <summary>
-/// 模块配置信息
+/// Module configuration details.
 /// </summary>
 public class ModuleConfigInfo
 {
     /// <summary>
-    /// 模块是否被禁用
+    /// Indicates whether the module is disabled.
     /// </summary>
     public bool IsDisabled { get; set; }
 
     /// <summary>
-    /// 模块禁用原因
+    /// Reason the module was disabled.
     /// </summary>
     public string? DisabledReason { get; set; }
 
     /// <summary>
-    /// 模块配置项
+    /// Module configuration items.
     /// </summary>
     public Dictionary<string, object?> ConfigurationItems { get; set; } = [];
 
@@ -65,12 +65,12 @@ public class ModuleConfigInfo
     public List<ModuleConfiguredOption> ConfiguredOptions { get; set; } = [];
 
     /// <summary>
-    /// 模块注册请求数量
+    /// Number of module registration requests.
     /// </summary>
     public int RegisterRequestCount { get; set; }
 
     /// <summary>
-    /// 模块是否具有循环依赖
+    /// Indicates whether the module participates in a circular dependency.
     /// </summary>
     public bool HasCircularDependency { get; set; }
 }
@@ -97,99 +97,99 @@ public class ModuleConfiguredOption
 }
 
 /// <summary>
-/// 模块阶段执行信息
+/// Execution information for a module phase.
 /// </summary>
 public class ModulePhaseExecution
 {
     /// <summary>
-    /// 执行阶段
+    /// Executed phase.
     /// </summary>
     public EMoModuleConfigMethods Phase { get; set; }
 
     /// <summary>
-    /// 开始时间
+    /// Start time.
     /// </summary>
     public DateTime? StartTime { get; set; }
 
     /// <summary>
-    /// 结束时间
+    /// End time.
     /// </summary>
     public DateTime? EndTime { get; set; }
 
     /// <summary>
-    /// 执行耗时（毫秒）
+    /// Duration in milliseconds.
     /// </summary>
     public long DurationMs { get; set; }
 
     /// <summary>
-    /// 执行状态
+    /// Execution status.
     /// </summary>
     public PhaseExecutionStatus Status { get; set; }
 
     /// <summary>
-    /// 错误信息（如果有）
+    /// Error message, if any.
     /// </summary>
     public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
-/// 模块错误信息
+/// Module error information.
 /// </summary>
 public class ModuleErrorInfo
 {
     /// <summary>
-    /// 错误类型
+    /// Error type.
     /// </summary>
     public string ErrorType { get; set; } = string.Empty;
 
     /// <summary>
-    /// 错误消息
+    /// Error message.
     /// </summary>
     public string ErrorMessage { get; set; } = string.Empty;
 
     /// <summary>
-    /// 发生错误的阶段
+    /// Phase where the error occurred.
     /// </summary>
     public EMoModuleConfigMethods? Phase { get; set; }
 
     /// <summary>
-    /// 错误发生时间
+    /// Time when the error occurred.
     /// </summary>
     public DateTime ErrorTime { get; set; }
 
     /// <summary>
-    /// 错误堆栈信息
+    /// Error stack trace.
     /// </summary>
     public string? StackTrace { get; set; }
 }
 
 /// <summary>
-/// 阶段执行状态
+/// Phase execution status.
 /// </summary>
 public enum PhaseExecutionStatus
 {
     /// <summary>
-    /// 未开始
+    /// Not started.
     /// </summary>
     NotStarted,
 
     /// <summary>
-    /// 执行中
+    /// Running.
     /// </summary>
     Running,
 
     /// <summary>
-    /// 执行成功
+    /// Completed successfully.
     /// </summary>
     Completed,
 
     /// <summary>
-    /// 执行失败
+    /// Failed.
     /// </summary>
     Failed,
 
     /// <summary>
-    /// 被跳过
+    /// Skipped.
     /// </summary>
     Skipped
 } 

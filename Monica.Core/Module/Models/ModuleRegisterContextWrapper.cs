@@ -6,72 +6,72 @@ using Monica.Tool.Extensions;
 namespace Monica.Core.Module.Models;
 
 /// <summary>
-/// 模块注册上下文，用于处理模块注册过程中的服务配置
+/// Module registration context used while configuring services, builders, and endpoints.
 /// </summary>
-/// <param name="services">服务集合</param>
-/// <param name="applicationBuilder">应用构建器</param>
-/// <param name="webApplicationBuilder">Web应用构建器</param>
-/// <param name="moduleRegisterInfo">模块请求信息</param>
+/// <param name="services">The service collection.</param>
+/// <param name="applicationBuilder">The application builder.</param>
+/// <param name="webApplicationBuilder">The web application builder.</param>
+/// <param name="moduleRegisterInfo">The module registration information.</param>
 public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRegisterInfo moduleRegisterInfo)
 {
     /// <summary>
-    /// 服务集合
+    /// The service collection.
     /// </summary>
     public IServiceCollection? Services { get; init; } = services;
 
     /// <summary>
-    /// 应用构建器
+    /// The application builder.
     /// </summary>
     public IApplicationBuilder? ApplicationBuilder { get; init; } = applicationBuilder;
 
     /// <summary>
-    /// 应用
+    /// Gets the application as a <see cref="WebApplication"/> when the current builder supports it.
     /// </summary>
     public WebApplication? WebApplication => ApplicationBuilder == null ? null : ApplicationBuilder as WebApplication ?? throw new InvalidOperationException($"当前{nameof(ApplicationBuilder)}是{ApplicationBuilder.GetType().GetCleanFullName()}类型，而不是{nameof(WebApplication)}类型！");
     
     /// <summary>
-    /// 应用构建器
+    /// The web application builder.
     /// </summary>
     public WebApplicationBuilder? WebApplicationBuilder { get; init; } = webApplicationBuilder;
     
     /// <summary>
-    /// 模块请求信息
+    /// The module registration information.
     /// </summary>
     public ModuleRegisterInfo ModuleRegisterInfo { get; init; } = moduleRegisterInfo;
 
     /// <summary>
-    /// 当前模块相关模块设置
+    /// Finalized option objects for the current module.
     /// </summary>
     internal Dictionary<Type, object> Option  => ModuleRegisterInfo.FinalConfigures;
 }
 
 /// <summary>
-/// 泛型模块注册上下文，提供特定模块选项的访问
+/// Generic module registration context that exposes strongly typed module options.
 /// </summary>
-/// <typeparam name="TModuleOption">模块选项类型</typeparam>
+/// <typeparam name="TModuleOption">The module option type.</typeparam>
 public class ModuleRegisterContextWrapper<TModuleOption>(ModuleRegisterContext context)  where TModuleOption : IMoModuleOption
 {
     protected ModuleRegisterContext Context { get; init; } = context;
     /// <summary>
-    /// 获取当前模块的设置
+    /// Gets the current module option.
     /// </summary>
     public TModuleOption ModuleOption => (TModuleOption) Context.Option[typeof(TModuleOption)];
     
     /// <summary>
-    /// 获取模块额外选项，如果不存在则创建新实例
+    /// Gets an extra module option, creating a new instance when one is not configured.
     /// </summary>
-    /// <typeparam name="TModuleExtraOption">模块额外选项类型</typeparam>
-    /// <returns>模块额外选项实例</returns>
+    /// <typeparam name="TModuleExtraOption">The extra option type.</typeparam>
+    /// <returns>The extra option instance.</returns>
     public TModuleExtraOption GetModuleExtraOption<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOptionBase, new()
     {
         return GetModuleExtraOptionOrDefault<TModuleExtraOption>() ?? new TModuleExtraOption();
     }
     
     /// <summary>
-    /// 获取模块额外选项，如果不存在则返回默认值
+    /// Gets an extra module option or returns the default value when it is not configured.
     /// </summary>
-    /// <typeparam name="TModuleExtraOption">模块额外选项类型</typeparam>
-    /// <returns>模块额外选项实例或默认值</returns>
+    /// <typeparam name="TModuleExtraOption">The extra option type.</typeparam>
+    /// <returns>The configured extra option, or the default value.</returns>
     public TModuleExtraOption? GetModuleExtraOptionOrDefault<TModuleExtraOption>() where TModuleExtraOption : IMoModuleOptionBase, new()
     {
         if (Context.Option.TryGetValue(typeof(TModuleExtraOption), out var option))
@@ -109,13 +109,13 @@ public class ModuleRegisterRequest(string key)
     /// </summary>
     public string Key { get; set; } = key;
     /// <summary>
-    /// 请求来源模块。null 表示开发者直接配置。
+    /// Source module that issued the request. `null` means direct developer configuration.
     /// </summary>
     public ModuleKey? RequestFrom { get; set; }
     public EMoModuleConfigMethods? RequestMethod { get; set; }
     public int Order { get; set; }
     /// <summary>
-    /// 模块请求来源进一步描述
+    /// Additional description of the request source.
     /// </summary>
     public string? SourceDesc { get; set; }
 

@@ -5,10 +5,10 @@ namespace Monica.Core.Features.MoChainTracing;
 public static class ChainTracingHelper
 {
     /// <summary>
-    /// 获取响应类型名称
+    /// Gets the effective response type name.
     /// </summary>
-    /// <param name="type">返回类型</param>
-    /// <returns>响应类型名称</returns>
+    /// <param name="type">The declared return type.</param>
+    /// <returns>The innermost generic type name, or the type name itself.</returns>
     public static string GetResponseTypeName(Type type)
     {
         if (type.IsGenericType)
@@ -23,10 +23,10 @@ public static class ChainTracingHelper
         return type.Name;
     }
     /// <summary>
-    /// 从 ActionResult 中提取实际的结果对象
+    /// Extracts the underlying result object from an <see cref="IActionResult" />.
     /// </summary>
-    /// <param name="result">Action 结果</param>
-    /// <returns>实际的结果对象</returns>
+    /// <param name="result">The action result.</param>
+    /// <returns>The extracted payload, or the original result when no wrapper is recognized.</returns>
     public static object? ExtractResult(IActionResult? result)
     {
         return result switch

@@ -1,27 +1,27 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异行类型
+/// Line types that can appear in a diff.
 /// </summary>
 public enum EDiffLineType
 {
     /// <summary>
-    /// 未变化
+    /// The line is unchanged.
     /// </summary>
     Unchanged,
     
     /// <summary>
-    /// 新增
+    /// The line was added.
     /// </summary>
     Added,
     
     /// <summary>
-    /// 删除
+    /// The line was deleted.
     /// </summary>
     Deleted,
     
     /// <summary>
-    /// 修改
+    /// The line was modified.
     /// </summary>
     Modified
 }

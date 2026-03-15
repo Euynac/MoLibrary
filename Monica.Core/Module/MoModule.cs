@@ -36,8 +36,8 @@ public abstract class MoModule : IMoModule
 
 
 /// <summary>
-/// Monica模块抽象基类
-/// 提供IMonicaModule接口的默认实现
+/// Base abstract class for Monica modules.
+/// Provides the default implementation of <see cref="IMoModule"/>.
 /// </summary>
 public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleStaticInfo, IMoModuleGuideBridge
     where TModuleOption : MoModuleOption<TModuleSelf>, new() 
@@ -65,11 +65,11 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     }
 
     /// <summary>
-    /// 获取指定的任意模块配置选项
+    /// Gets a configured option object for another module.
     /// </summary>
-    /// <typeparam name="TSpecificModuleOption"></typeparam>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <typeparam name="TSpecificModuleOption">The option type to retrieve.</typeparam>
+    /// <returns>The configured option instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the option type cannot be resolved from a registered module.</exception>
     public TSpecificModuleOption GetOptions<TSpecificModuleOption>() where TSpecificModuleOption : IMoModuleOptionBase, new()
     {
         var optionInterface = typeof(TSpecificModuleOption)
@@ -92,7 +92,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     }
     internal override void ConvertToRegisterRequest()
     {
-        var guide = new TModuleGuide(); //TODO 这里并未能得到注册来源
+        var guide = new TModuleGuide(); // TODO: this path does not currently preserve the original registration source.
 
         guide.ConfigureBuilder(context =>
         {
@@ -155,7 +155,8 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
 public interface IWantDependsOnOtherModules
 {
     /// <summary>
-    /// 声明依赖的模块，并进行配置等。注意，在该方法中的Option不一定是最终的Option值，请谨慎在此方法中获取Option值。（目前仅能获取到开发者配置后的Option，无法合并其他模块自动注册期间设置的值）
+    /// Declares dependent modules and optionally configures them.
+    /// The option instance available here may not be final because automatically registered configuration from other modules has not been merged yet.
     /// </summary>
     public void ClaimDependencies();
 }

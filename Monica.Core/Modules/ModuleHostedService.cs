@@ -17,7 +17,7 @@ public static class ModuleHostedServiceBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 HostedService 模块
+        /// Configures the HostedService module.
         /// </summary>
         public static ModuleHostedServiceGuide AddHostedService(Action<ModuleHostedServiceOption>? action = null)
         {
@@ -27,8 +27,8 @@ public static class ModuleHostedServiceBuilderExtensions
 }
 
 /// <summary>
-/// HostedService 可观测性模块
-/// 提供统一的 HostedService 状态管理、异常池集成、心跳监控和集中管理功能
+/// HostedService observability module.
+/// Provides centralized HostedService state management, heartbeat monitoring, and coordination support.
 /// </summary>
 public class ModuleHostedService(ModuleHostedServiceOption option)
     : MoModuleWithDependencies<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)

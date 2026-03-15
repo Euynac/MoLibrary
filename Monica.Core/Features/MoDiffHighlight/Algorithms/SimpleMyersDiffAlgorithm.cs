@@ -3,12 +3,12 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Algorithms;
 
 /// <summary>
-/// Myers 差异算法实现
+/// Simplified diff implementation that uses LCS matching for line comparison.
 /// </summary>
 public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
 {
     /// <summary>
-    /// 计算两个文本的差异
+    /// Computes line-level differences between two texts.
     /// </summary>
     public List<DiffLine> ComputeDiff(string[] oldLines, string[] newLines, DiffHighlightOptions options)
     {
@@ -23,7 +23,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
         
         foreach (var (oldPos, newPos) in lcs)
         {
-            // 处理删除的行
+            // Emit deleted lines before the next shared line.
             while (oldIndex < oldPos)
             {
                 result.Add(new DiffLine
@@ -37,7 +37,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
                 oldIndex++;
             }
             
-            // 处理新增的行
+            // Emit added lines before the next shared line.
             while (newIndex < newPos)
             {
                 result.Add(new DiffLine
@@ -51,7 +51,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
                 newIndex++;
             }
             
-            // 处理相同的行
+            // Emit the shared line once both sequences realign.
             if (oldPos < oldLines.Length && newPos < newLines.Length)
             {
                 result.Add(new DiffLine
@@ -67,7 +67,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             }
         }
         
-        // 处理剩余的删除行
+        // Flush trailing deleted lines.
         while (oldIndex < oldLines.Length)
         {
             result.Add(new DiffLine
@@ -81,7 +81,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             oldIndex++;
         }
         
-        // 处理剩余的新增行
+        // Flush trailing added lines.
         while (newIndex < newLines.Length)
         {
             result.Add(new DiffLine
@@ -95,7 +95,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             newIndex++;
         }
         
-        // 添加字符级差异（如果启用）
+        // Collapse adjacent delete/add pairs into modified lines when requested.
         if (options.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed)
         {
             AddCharacterDiffs(result, options);
@@ -105,7 +105,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 计算字符级差异
+    /// Computes character-level differences between two strings.
     /// </summary>
     public List<DiffCharacterRange> ComputeCharacterDiff(string oldText, string newText, DiffHighlightOptions options)
     {
@@ -138,7 +138,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             return result;
         }
         
-        // 简化的字符级差异算法
+        // Use an LCS pass over characters to find inserted and deleted spans.
         var oldChars = oldText.ToCharArray();
         var newChars = newText.ToCharArray();
         var charLcs = ComputeCharacterLCS(oldChars, newChars);
@@ -148,7 +148,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
         
         foreach (var (oldCharPos, newCharPos) in charLcs)
         {
-            // 删除的字符
+            // Capture deleted character spans from the original text.
             if (oldPos < oldCharPos)
             {
                 result.Add(new DiffCharacterRange
@@ -160,7 +160,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
                 });
             }
             
-            // 新增的字符
+            // Capture added character spans from the updated text.
             if (newPos < newCharPos)
             {
                 result.Add(new DiffCharacterRange
@@ -180,7 +180,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 规范化行内容（处理忽略空白字符、忽略大小写等选项）
+    /// Normalizes lines according to whitespace and casing options.
     /// </summary>
     private string[] NormalizeLines(string[] lines, DiffHighlightOptions options)
     {
@@ -188,7 +188,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 规范化单行内容
+    /// Normalizes a single line before comparison.
     /// </summary>
     private string NormalizeLine(string line, DiffHighlightOptions options)
     {
@@ -208,7 +208,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 计算最长公共子序列 (LCS)
+    /// Computes the longest common subsequence (LCS) for two line arrays.
     /// </summary>
     private List<(int, int)> ComputeLCS(string[] oldLines, string[] newLines)
     {
@@ -216,7 +216,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
         int n = newLines.Length;
         var dp = new int[m + 1, n + 1];
         
-        // 动态规划计算 LCS 长度
+        // Build the dynamic-programming table for LCS lengths.
         for (int i = 1; i <= m; i++)
         {
             for (int j = 1; j <= n; j++)
@@ -232,7 +232,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
             }
         }
         
-        // 回溯构建 LCS 序列
+        // Backtrack through the table to reconstruct the shared sequence.
         var lcs = new List<(int, int)>();
         int x = m, y = n;
         
@@ -258,14 +258,15 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 计算字符级最长公共子序列
+    /// Computes the longest common subsequence for two character arrays.
     /// </summary>
     private List<(int, int)> ComputeCharacterLCS(char[] oldChars, char[] newChars)
     {
         int m = oldChars.Length;
         int n = newChars.Length;
         
-        if (m > 1000 || n > 1000) // 避免性能问题
+        // Skip quadratic character matching for very long lines.
+        if (m > 1000 || n > 1000)
             return new List<(int, int)>();
         
         var dp = new int[m + 1, n + 1];
@@ -310,7 +311,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 为修改的行添加字符级差异
+    /// Converts adjacent delete/add pairs into modified lines with character ranges.
     /// </summary>
     private void AddCharacterDiffs(List<DiffLine> lines, DiffHighlightOptions options)
     {
@@ -318,7 +319,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
         {
             var line = lines[i];
             
-            // 寻找可能的修改行对（一个删除行紧跟一个新增行）
+            // Treat a deleted line followed by an added line as a potential modification.
             if (line.Type == EDiffLineType.Deleted && 
                 i + 1 < lines.Count && 
                 lines[i + 1].Type == EDiffLineType.Added)
@@ -326,13 +327,13 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
                 var deletedLine = line;
                 var addedLine = lines[i + 1];
                 
-                // 如果行内容长度不超过限制，进行字符级对比
+                // Only run character comparison for lines within the configured limit.
                 if (deletedLine.OldContent.Length <= options.MaxCharacterDiffLength &&
                     addedLine.NewContent.Length <= options.MaxCharacterDiffLength)
                 {
                     var charDiffs = ComputeCharacterDiff(deletedLine.OldContent, addedLine.NewContent, options);
                     
-                    // 如果有字符级差异，标记为修改行
+                    // Merge the pair into one modified line when character deltas exist.
                     if (charDiffs.Any())
                     {
                         deletedLine.Type = EDiffLineType.Modified;
@@ -340,7 +341,7 @@ public class SimpleMyersDiffAlgorithm : IDiffAlgorithm
                         deletedLine.NewLineNumber = addedLine.NewLineNumber;
                         deletedLine.CharacterDiffs = charDiffs;
                         
-                        // 移除重复的新增行
+                        // Remove the added line because its content is now merged above.
                         lines.RemoveAt(i + 1);
                     }
                 }

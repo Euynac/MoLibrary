@@ -3,9 +3,9 @@ namespace Monica.Core.Features.MoSnowflake;
 public interface ISnowflakeGenerator
 {
     /// <summary>
-    /// 获取一个雪花ID
+    /// Generates a Snowflake identifier.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The generated identifier.</returns>
     public long GenerateSnowflakeId();
 }
 

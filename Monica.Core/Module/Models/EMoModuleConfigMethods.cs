@@ -1,7 +1,7 @@
 namespace Monica.Core.Module.Models;
 
 /// <summary>
-/// 模块构建顺序
+/// Module configuration phases.
 /// </summary>
 public enum EMoModuleConfigMethods
 {

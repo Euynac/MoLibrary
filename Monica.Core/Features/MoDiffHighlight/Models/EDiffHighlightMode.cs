@@ -1,22 +1,22 @@
 namespace Monica.Core.Features.MoDiffHighlight.Models;
 
 /// <summary>
-/// 差异对比模式
+/// Comparison modes supported by the diff highlighter.
 /// </summary>
 public enum EDiffHighlightMode
 {
     /// <summary>
-    /// 行级对比（默认）
+    /// Performs line-level comparison.
     /// </summary>
     Line,
     
     /// <summary>
-    /// 字符级对比
+    /// Performs character-level comparison.
     /// </summary>
     Character,
     
     /// <summary>
-    /// 混合模式（智能）
+    /// Uses a mixed strategy that combines line and character comparison.
     /// </summary>
     Mixed
 }

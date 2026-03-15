@@ -14,7 +14,7 @@ public static class ModuleControllersBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Controllers 模块
+        /// Configures the Controllers module.
         /// </summary>
         public static ModuleControllersGuide AddControllers(Action<ModuleControllersOption>? action = null)
         {

@@ -11,7 +11,7 @@ using Monica.Modules;
 
 
 /// <summary>
-/// 默认差异对比高亮实现
+/// Default implementation for text diff highlighting.
 /// </summary>
 public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions<ModuleDiffHighlightOption> options, IDiffAlgorithm algorithm) : IMoDiffHighlight
 {
@@ -19,7 +19,7 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     private IDiffHighlightRenderer _renderer = new HtmlDiffRenderer();
     
     /// <summary>
-    /// 执行文本对比并生成高亮结果（异步版本）
+    /// Generates a highlighted diff result asynchronously.
     /// </summary>
     public async Task<DiffHighlightResult> HighlightAsync(string oldText, string newText, DiffHighlightOptions? options = null)
     {
@@ -27,7 +27,7 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     }
     
     /// <summary>
-    /// 执行文本对比并生成高亮结果（同步版本）
+    /// Generates a highlighted diff result synchronously.
     /// </summary>
     public DiffHighlightResult Highlight(string oldText, string newText, DiffHighlightOptions? options = null)
     {
@@ -36,27 +36,23 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
         
         try
         {
-            logger.LogDebug("开始文本差异对比，oldText长度: {OldLength}, newText长度: {NewLength}", 
+            logger.LogDebug("开始文本差异对比，oldText长度: {OldLength}, newText长度: {NewLength}",
                 oldText?.Length ?? 0, newText?.Length ?? 0);
             
-            // 处理空值
+            // Normalize null inputs so the diff pipeline can assume non-null strings.
             oldText ??= string.Empty;
             newText ??= string.Empty;
             
-            // 分割文本为行
             var oldLines = SplitTextIntoLines(oldText);
             var newLines = SplitTextIntoLines(newText);
             
-            // 执行差异算法
             var diffLines = algorithm.ComputeDiff(oldLines, newLines, options);
             
-            // 计算统计信息
             var statistics = ComputeStatistics(diffLines, oldLines.Length, newLines.Length);
             
-            // 根据输出格式选择合适的渲染器
+            // Select the renderer that matches the requested output format.
             var renderer = GetRendererForFormat(options.OutputFormat);
             
-            // 渲染结果
             var style = options.Style ?? new DiffHighlightStyle();
             var highlightedContent = renderer.Render(diffLines, style);
             
@@ -71,7 +67,7 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
                 ProcessingTimeMs = stopwatch.ElapsedMilliseconds
             };
             
-            logger.LogDebug("文本差异对比完成，处理时间: {ProcessingTime}ms, 变更行数: {TotalChanges}", 
+            logger.LogDebug("文本差异对比完成，处理时间: {ProcessingTime}ms, 变更行数: {TotalChanges}",
                 result.ProcessingTimeMs, result.Statistics.TotalChanges);
             
             return result;
@@ -88,7 +84,7 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     }
     
     /// <summary>
-    /// 设置自定义渲染器
+    /// Sets a custom renderer.
     /// </summary>
     public void SetRenderer(IDiffHighlightRenderer renderer)
     {
@@ -97,7 +93,7 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     }
     
     /// <summary>
-    /// 设置自定义算法
+    /// Sets a custom diff algorithm.
     /// </summary>
     public void SetAlgorithm(IDiffAlgorithm customAlgorithm)
     {
@@ -106,19 +102,19 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     }
     
     /// <summary>
-    /// 将文本分割为行数组
+    /// Splits text into logical lines.
     /// </summary>
     private string[] SplitTextIntoLines(string text)
     {
         if (string.IsNullOrEmpty(text))
             return Array.Empty<string>();
         
-        // 处理不同的换行符
+        // Support Windows, Unix, and legacy Mac newline sequences.
         return text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     }
     
     /// <summary>
-    /// 计算差异统计信息
+    /// Builds summary statistics for the diff result.
     /// </summary>
     private DiffStatistics ComputeStatistics(List<DiffLine> diffLines, int totalOldLines, int totalNewLines)
     {
@@ -153,15 +149,15 @@ public class DefaultDiffHighlight(ILogger<DefaultDiffHighlight> logger, IOptions
     }
     
     /// <summary>
-    /// 根据输出格式获取对应的渲染器
+    /// Gets the renderer for the requested output format.
     /// </summary>
     private IDiffHighlightRenderer GetRendererForFormat(EDiffOutputFormat format)
     {
-        // 如果自定义渲染器支持指定格式，使用自定义渲染器
+        // Reuse the injected renderer when it supports the requested format.
         if (_renderer.SupportedFormat == format)
             return _renderer;
         
-        // 否则使用默认渲染器
+        // Otherwise fall back to the built-in renderer for that format.
         return format switch
         {
             EDiffOutputFormat.Html => new HtmlDiffRenderer(),

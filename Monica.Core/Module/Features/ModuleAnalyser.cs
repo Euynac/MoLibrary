@@ -53,26 +53,26 @@ public class ModuleAnalyser
     }
 
     /// <summary>
-    /// 刷新模块注册顺序，确保依赖的模块优先注册。
+    /// Refreshes module registration order so dependencies are registered first.
     /// </summary>
     public static void RefreshModuleOrders()
     {
-        // 获取拓扑排序的模块顺序
+        // Get modules in topological dependency order.
         var orderedModules = GetModulesInDependencyOrder();
         orderedModules.Reverse();
 
-        // 为每个模块分配Order值，依赖的模块获得更小的Order值
+        // Assign smaller order values to modules that other modules depend on.
         for (int i = 0; i < orderedModules.Count; i++)
         {
             var moduleKey = orderedModules[i];
 
-            // 查找对应的模块类型
+            // Resolve the module type for this key.
             if (ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType))
             {
-                // 查找模块注册上下文并更新Order
+                // Update the stored registration order.
                 if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo))
                 {
-                    // Order值从100开始，每个模块递增10，确保有足够的间隔
+                    // Start at 100 and leave gaps of 10 to make later adjustments easier.
                     requestInfo.Order = 100 + (i * 10);
                 }
             }
@@ -80,12 +80,12 @@ public class ModuleAnalyser
     }
 
     /// <summary>
-    /// 手动刷新所有已注册模块的注册顺序。
-    /// 通常在所有模块依赖关系建立完成后调用，确保模块按正确的依赖顺序注册。
+    /// Manually refreshes registration order for all registered modules.
+    /// Call this after dependency discovery completes so modules register in the correct dependency order.
     /// </summary>
     public static void RefreshAllModuleOrders()
     {
-        //// 检查是否有循环依赖
+        //// Check for circular dependencies.
         //if (HasCircularDependencies())
         //{
         //    throw new InvalidOperationException("检测到模块间存在循环依赖，无法确定正确的注册顺序。请检查模块依赖关系。");
@@ -315,9 +315,9 @@ public class ModuleAnalyser
     }
 
     /// <summary>
-    /// 获取所有已注册模块的当前注册顺序信息。
+    /// Gets the current registration order information for all registered modules.
     /// </summary>
-    /// <returns>包含模块类型、ModuleKey和注册顺序的字典</returns>
+    /// <returns>A dictionary containing the module type, module key, and registration order.</returns>
     public static Dictionary<Type, (ModuleKey? ModuleKey, int Order)> GetModuleRegistrationOrder()
     {
         var result = new Dictionary<Type, (ModuleKey?, int)>();
@@ -327,14 +327,14 @@ public class ModuleAnalyser
             var moduleType = kvp.Key;
             var requestInfo = kvp.Value;
 
-            // 查找对应的模块键
+            // Resolve the module key for this type.
             if (ModuleTypeToKeyMap.TryGetValue(moduleType, out var moduleKey))
             {
                 result[moduleType] = (moduleKey, requestInfo.Order);
             }
             else
             {
-                // 如果没有找到对应的键，返回null
+                // If the module key is unknown, keep the order and return `null` for the key.
                 result[moduleType] = (null, requestInfo.Order);
             }
         }
@@ -343,9 +343,9 @@ public class ModuleAnalyser
     }
 
     /// <summary>
-    /// 获取模块注册状况的格式化字符串，用于调试输出。
+    /// Builds a formatted registration summary string for debugging output.
     /// </summary>
-    /// <returns>包含模块注册状况、依赖关系、禁用状态和初始化耗时的格式化字符串</returns>
+    /// <returns>A formatted string containing registration state, dependencies, disabled modules, and initialization timings.</returns>
     public static string GetModuleRegistrationSummary()
     {
         var sb = new StringBuilder();
@@ -353,15 +353,15 @@ public class ModuleAnalyser
         sb.AppendLine("Module Registration Summary:");
         sb.AppendLine("=====================================");
 
-        // 从 ModuleSnapshots 获取信息并按 Order 排序（这些都是启用的模块）
+        // Enabled modules come from the runtime snapshots and are already initialized.
         var moduleInfos = MoModuleRegisterCentre.ModuleSnapshots
             .OrderBy(snapshot => snapshot.RegisterInfo.Order)
             .ToList();
 
-        // 从 ModuleManager 获取所有禁用的模块类型
+        // Pull disabled module types from the module manager.
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
 
-        // 显示启用的模块
+        // Render enabled modules.
         if (moduleInfos.Count > 0)
         {
             sb.AppendLine("Enabled Modules:");
@@ -374,17 +374,17 @@ public class ModuleAnalyser
                 var moduleTypeName = snapshot.ModuleType.Name;
                 var initDuration = snapshot.TotalInitializationDurationMs;
 
-                // 显示模块基本信息
+                // Basic module information.
                 var moduleKeyDisplay = moduleKey?.ToString() ?? "Unknown";
                 sb.AppendLine($"Order {order:D4}: {moduleKeyDisplay} ({moduleTypeName})");
 
-                // 显示依赖关系
+                // Dependency information.
                 if (moduleKey != null && ModuleDependencyMap.TryGetValue(moduleKey.Value, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
 
-                // 显示初始化耗时
+                // Initialization timing.
                 sb.AppendLine($"           Initialization Time: {initDuration}ms");
             }
         }
@@ -393,7 +393,7 @@ public class ModuleAnalyser
             sb.AppendLine("No enabled modules found.");
         }
 
-        // 显示禁用的模块
+        // Render disabled modules.
         if (disabledModuleTypes.Count > 0)
         {
             sb.AppendLine();
@@ -402,13 +402,13 @@ public class ModuleAnalyser
 
             foreach (var disabledModuleType in disabledModuleTypes)
             {
-                // 获取模块键
+                // Resolve the module key for display.
                 var moduleKey = ModuleTypeToKeyMap.GetValueOrDefault(disabledModuleType);
                 var moduleKeyDisplay = moduleKey.Value != null ? moduleKey.ToString() : disabledModuleType.Name;
 
                 sb.AppendLine($"{moduleKeyDisplay} ({disabledModuleType.Name}) [DISABLED]");
 
-                // 显示依赖关系（如果有的话）
+                // Dependency information, if any.
                 if (moduleKey.Value != null && ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
@@ -416,7 +416,7 @@ public class ModuleAnalyser
             }
         }
 
-        // 添加统计信息
+        // Append summary statistics.
         var totalEnabledModules = moduleInfos.Count;
         var totalDisabledModules = disabledModuleTypes.Count;
         var totalModules = totalEnabledModules + totalDisabledModules;
@@ -430,7 +430,7 @@ public class ModuleAnalyser
         sb.AppendLine($"  Disabled modules: {totalDisabledModules}");
         sb.AppendLine($"  Total initialization time: {totalInitTime}ms");
 
-        // 显示耗时最多的前5个模块（只显示启用的模块）
+        // Show the five slowest enabled modules.
         var slowestModules = moduleInfos
             .Where(s => s.TotalInitializationDurationMs > 0)
             .OrderByDescending(s => s.TotalInitializationDurationMs)

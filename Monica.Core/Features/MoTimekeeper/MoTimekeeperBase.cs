@@ -13,7 +13,7 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     protected bool Disposed;
     protected bool IsFinished;
     /// <summary>
-    /// 非常规的完成(从Dispose方法完成)，可能存在异常
+    /// Indicates the timekeeper finished via <see cref="Dispose" /> instead of a normal completion path.
     /// </summary>
     protected bool IsNotNormal;
     public bool EnableLogging { get; set; }
@@ -206,9 +206,9 @@ public abstract class MoTimekeeperBase(string key, ILogger logger) : IDisposable
     }
 
     /// <summary>
-    /// 获取ElapsedMilliseconds，例：10ms
+    /// Gets <see cref="Stopwatch.ElapsedMilliseconds" /> formatted as text, for example <c>10ms</c>.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The formatted elapsed time.</returns>
     public string GetElapsedMs()
     {
         return $"{Timer.ElapsedMilliseconds}ms";

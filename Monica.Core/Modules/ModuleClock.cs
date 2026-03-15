@@ -16,7 +16,7 @@ public static class ModuleClockBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Clock 模块
+        /// Configures the Clock module.
         /// </summary>
         public static ModuleClockGuide AddClock(Action<ModuleClockOption>? action = null)
         {

@@ -14,7 +14,7 @@ public static class ModuleSnowflakeIdBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 SnowflakeId 模块
+        /// Configures the SnowflakeId module.
         /// </summary>
         public static ModuleSnowflakeIdGuide AddSnowflakeId(Action<ModuleSnowflakeIdOption>? action = null)
         {
@@ -46,32 +46,32 @@ public class ModuleSnowflakeIdGuide : MoModuleGuide<ModuleSnowflakeId, ModuleSno
 public class ModuleSnowflakeIdOption : MoModuleOption<ModuleSnowflakeId>
 {
     /// <summary>
-    /// 开始时间截(2015-01-01)
+    /// Epoch start timestamp (2015-01-01).
     /// </summary>
     public long Twepoch { get; set; } = 1420041600000L;
 
     /// <summary>
-    /// 机器id所占的位数
+    /// Number of bits reserved for the worker id.
     /// </summary>
     public int WorkerIdBits { get; set; } = 5;
 
     /// <summary>
-    /// 数据标识id所占的位数
+    /// Number of bits reserved for the datacenter id.
     /// </summary>
     public int DatacenterIdBits { get; set; } = 5;
 
     /// <summary>
-    /// 序列在id中占的位数(1ms内的并发数)
+    /// Number of bits reserved for the per-millisecond sequence.
     /// </summary>
     public int SequenceBits { get; set; } = 12;
 
     /// <summary>
-    /// 机器id
+    /// Worker id.
     /// </summary>
     public long WorkerId { get; set; } = 0L;
 
     /// <summary>
-    /// 数据中心id
+    /// Datacenter id.
     /// </summary>
     public long DatacenterId { get; set; } = 0L;
 }

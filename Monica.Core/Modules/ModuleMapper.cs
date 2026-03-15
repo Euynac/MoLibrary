@@ -18,14 +18,14 @@ using Monica.Tool.MoResponse;
 namespace Monica.Modules;
 
 /// <summary>
-/// Mapper服务，实现核心业务逻辑
+/// Mapper service that exposes module status information.
 /// </summary>
 public class MapperService(ILogger<MapperService> logger)
 {
     /// <summary>
-    /// 获取Mapper状态信息
+    /// Gets mapper status information.
     /// </summary>
-    /// <returns>Mapper状态信息</returns>
+    /// <returns>The mapper status information.</returns>
     public async Task<Res<MapperStatusResponse>> GetMapperStatusAsync()
     {
         try
@@ -54,7 +54,7 @@ public class MapperService(ILogger<MapperService> logger)
 }
 
 /// <summary>
-/// Mapper状态响应
+/// Mapper status response.
 /// </summary>
 public class MapperStatusResponse
 {
@@ -63,7 +63,7 @@ public class MapperStatusResponse
 }
 
 /// <summary>
-/// Mapper信息
+/// Mapper information.
 /// </summary>
 public class MapperInfo
 {
@@ -77,7 +77,7 @@ public static class ModuleMapperBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Mapper 模块
+        /// Configures the Mapper module.
         /// </summary>
         public static ModuleMapperGuide AddMapper(Action<ModuleMapperOption>? action = null)
         {
@@ -167,12 +167,12 @@ public class ModuleMapperGuide : MoModuleGuide<ModuleMapper, ModuleMapperOption,
 public class ModuleMapperOption : MoModuleOptionWithMinimalApi<ModuleMapper>
 {
     /// <summary>
-    /// 启用对Mapper进行调试（暂时仅支持手动调试）
+    /// Enables mapper debugging. Currently this only supports manual debugging workflows.
     /// </summary>
     public bool DebugMapper { get; set; } = false;
 
     /// <summary>
-    /// 调试需要传入Mapper定义时涉及的基类或扩展方法相关定义的程序集
+    /// Assemblies that contain base types or extension methods required when debugging mapper definitions.
     /// </summary>
     public Assembly[]? DebuggerRelatedAssemblies { get; set; }
 }

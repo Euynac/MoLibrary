@@ -5,9 +5,10 @@ namespace Monica.Core.Extensions;
 public static class HttpContextExtensions
 {
     /// <summary>
-    /// 获取或获得默认当前Http请求上下文共享对象
+    /// Gets a request-scoped shared object from <see cref="HttpContext.Items"/>,
+    /// or stores and returns the provided default value when the entry does not exist.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The existing shared object or <paramref name="defaultValue"/>.</returns>
     public static T? GetOrDefault<T>(this HttpContext context, T? defaultValue = default) where T : class
     {
         if (context.Items.TryGetValue(typeof(T).Name, out var valueObject) && valueObject is T value)
@@ -20,20 +21,21 @@ public static class HttpContextExtensions
     }
 
     /// <summary>
-    /// 获取或新建当前Http请求上下文共享对象
+    /// Gets a request-scoped shared object from <see cref="HttpContext.Items"/>,
+    /// or creates and stores a new instance when none exists.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The existing or newly created shared object.</returns>
     public static T GetOrNew<T>(this HttpContext context) where T : class, new()
     {
         return GetOrDefault(context, new T())!;
     }
 
     /// <summary>
-    /// 设置当前Http请求上下文共享对象
+    /// Stores a request-scoped shared object in <see cref="HttpContext.Items"/>.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="context"></param>
-    /// <param name="value"></param>
+    /// <typeparam name="T">The shared object type.</typeparam>
+    /// <param name="context">The current HTTP context.</param>
+    /// <param name="value">The value to store.</param>
     public static void Set<T>(this HttpContext context, T value) where T : class
     {
         context.Items[typeof(T).Name] = value;

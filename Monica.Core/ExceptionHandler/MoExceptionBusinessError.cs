@@ -3,9 +3,9 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.ExceptionHandler;
 
 /// <summary>
-/// 业务异常，一般用于非<see cref="Res"/>类型返回值
+/// Represents a business exception that is typically used outside <see cref="Res"/>-based flows.
 /// </summary>
-/// TODO 禁用堆栈
+/// TODO: Consider suppressing stack traces for pure business errors.
 public class MoExceptionBusinessError(string? message) : Exception(message)
 {
     

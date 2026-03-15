@@ -5,7 +5,8 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.GlobalJson.Converters;
 
 /// <summary>
-/// 自定义日期时间JSON转换器，使用全局配置的日期时间格式进行序列化和反序列化
+/// JSON converter that serializes and deserializes <see cref="DateTime"/> values
+/// with the global Monica date-time formats.
 /// </summary>
 public class MoDateTimeJsonConverter : JsonConverter<DateTime>
 {
@@ -38,18 +39,18 @@ public class MoDateTimeJsonConverter : JsonConverter<DateTime>
 }
 
 /// <summary>
-/// 保持原始日期时间格式的JSON转换器，用于在全局使用MoDateTimeJsonConverter时，
-/// 对标记了此转换器的属性保持默认的DateTime序列化和反序列化方式
+/// JSON converter that preserves the default <see cref="DateTime"/> serialization behavior for marked properties,
+/// even when <see cref="MoDateTimeJsonConverter"/> is registered globally.
 /// </summary>
 public class PreserveOriginalDateTimeJsonConverter : JsonConverter<DateTime>
 {
     /// <summary>
-    /// 反序列化DateTime，使用默认的JSON反序列化逻辑
+    /// Deserializes a <see cref="DateTime"/> by using the default JSON parsing behavior.
     /// </summary>
-    /// <param name="reader">JSON读取器</param>
-    /// <param name="typeToConvert">要转换的类型</param>
-    /// <param name="options">JSON序列化选项</param>
-    /// <returns>反序列化后的DateTime</returns>
+    /// <param name="reader">The JSON reader.</param>
+    /// <param name="typeToConvert">The target type.</param>
+    /// <param name="options">The serializer options.</param>
+    /// <returns>The deserialized <see cref="DateTime"/>.</returns>
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.String)
@@ -65,13 +66,13 @@ public class PreserveOriginalDateTimeJsonConverter : JsonConverter<DateTime>
     }
 
     /// <summary>
-    /// 序列化DateTime，使用默认的JSON序列化格式
+    /// Serializes a <see cref="DateTime"/> by using the default round-trip JSON format.
     /// </summary>
-    /// <param name="writer">JSON写入器</param>
-    /// <param name="value">要序列化的DateTime值</param>
-    /// <param name="options">JSON序列化选项</param>
+    /// <param name="writer">The JSON writer.</param>
+    /// <param name="value">The date-time value to serialize.</param>
+    /// <param name="options">The serializer options.</param>
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(value.ToString("O")); // 使用ISO 8601格式
+        writer.WriteStringValue(value.ToString("O")); // Uses the ISO 8601 round-trip format.
     }
 }

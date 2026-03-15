@@ -1,67 +1,67 @@
 namespace Monica.Core.Features.MoChainTracing.Models;
 /// <summary>
-/// 调用链追踪类型枚举，用于标识调用链中不同类型的组件
+/// Identifies the kind of component represented by a trace node.
 /// </summary>
 public enum EChainTracingType
 {
     
     /// <summary>
-    /// 未知
+    /// Unknown trace type.
     /// </summary>
     Unknown = 0,
 
     /// <summary>
-    /// 控制器层，处理HTTP请求和响应
+    /// Controller layer that handles HTTP requests and responses.
     /// </summary>
     Controller,
     
     /// <summary>
-    /// 外部API调用，如第三方服务接口
+    /// External API call, such as a third-party service request.
     /// </summary>
     ExternalApi,
     
     /// <summary>
-    /// 远程服务调用，如RPC、MQ等
+    /// Remote service call, such as RPC or message-based integration.
     /// </summary>
     RemoteService,
     
     /// <summary>
-    /// 消息队列，如RabbitMQ、Kafka等
+    /// Message queue interaction, such as RabbitMQ or Kafka.
     /// </summary>
     MessageQueue,
     
     /// <summary>
-    /// 领域服务层，包含业务逻辑处理
+    /// Domain service layer that contains business logic.
     /// </summary>
     DomainService,
     
     /// <summary>
-    /// 应用服务层，协调业务流程
+    /// Application service layer that orchestrates workflows.
     /// </summary>
     ApplicationService,
     
     /// <summary>
-    /// 状态存储，如缓存、会话等
+    /// State storage, such as cache or session access.
     /// </summary>
     StateStore,
     
     /// <summary>
-    /// 数据库操作，包括查询和事务处理
+    /// Database activity, including queries and transactions.
     /// </summary>
     Database,
 
     /// <summary>
-    /// 仓储操作
+    /// Repository operation.
     /// </summary>
     Repository,
     
     /// <summary>
-    /// 文件操作，包括读写文件
+    /// File operation, including read and write work.
     /// </summary>
     File,
 
     /// <summary>
-    /// 其他，用于未分类的调用
+    /// Other uncategorized call.
     /// </summary>      
     Other,
 }

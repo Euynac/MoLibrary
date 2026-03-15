@@ -5,7 +5,7 @@ using Monica.Tool.MoResponse;
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 
 /// <summary>
-/// 调用链追踪作用域，实现 IDisposable 模式
+/// Disposable scope wrapper for chain tracing.
 /// </summary>
 public class ChainTracingScope : IDisposable
 {
@@ -13,13 +13,13 @@ public class ChainTracingScope : IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// 构造函数
+    /// Creates a new tracing scope and starts the trace immediately.
     /// </summary>
-    /// <param name="chainTracing">调用链追踪服务</param>
-    /// <param name="operation">操作名称</param>
-    /// <param name="handler">处理者名称</param>
-    /// <param name="extraInfo">额外信息</param>
-    /// <param name="type"></param>
+    /// <param name="chainTracing">The chain tracing service.</param>
+    /// <param name="operation">The operation name.</param>
+    /// <param name="handler">The handler name.</param>
+    /// <param name="extraInfo">Optional extra metadata.</param>
+    /// <param name="type">The traced operation type.</param>
     public ChainTracingScope(IMoChainTracing chainTracing, string operation, string? handler, object? extraInfo = null,
         EChainTracingType type = EChainTracingType.Unknown)
     {
@@ -28,15 +28,15 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
-    /// 调用链节点标识
+    /// Identifier of the trace node created for this scope.
     /// </summary>
     public string TraceId { get; }
 
     /// <summary>
-    /// 记录成功结果
+    /// Completes the scope as a success.
     /// </summary>
-    /// <param name="result">结果描述</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="result">Optional result description.</param>
+    /// <param name="extraInfo">Optional completion metadata.</param>
     public void EndWithSuccess(string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
@@ -47,10 +47,10 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
-    /// 记录失败结果
+    /// Completes the scope as a failure.
     /// </summary>
-    /// <param name="result">结果描述</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="result">Optional result description.</param>
+    /// <param name="extraInfo">Optional completion metadata.</param>
     public void EndWithFailure(string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
@@ -61,11 +61,11 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
-    /// 记录异常
+    /// Completes the scope with an exception.
     /// </summary>
-    /// <param name="exception">异常信息</param>
-    /// <param name="result">结果描述</param>
-    /// <param name="extraInfo">额外信息</param>
+    /// <param name="exception">The exception to record.</param>
+    /// <param name="result">Optional result description.</param>
+    /// <param name="extraInfo">Optional completion metadata.</param>
     public void EndWithException(Exception exception, string? result = null, object? extraInfo = null)
     {
         if (!_disposed)
@@ -76,9 +76,9 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
-    /// 合并远程调用链信息
+    /// Merges remote chain data into this scope.
     /// </summary>
-    /// <param name="remoteChainInfo">远程调用链信息</param>
+    /// <param name="remoteChainInfo">The remote response carrying chain metadata.</param>
     public void MergeRemoteChain(IMoResponse remoteChainInfo)
     {
         if (!_disposed)
@@ -88,7 +88,7 @@ public class ChainTracingScope : IDisposable
     }
 
     /// <summary>
-    /// 释放资源
+    /// Releases the scope.
     /// </summary>
     public void Dispose()
     {

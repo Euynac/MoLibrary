@@ -4,14 +4,14 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Renderers;
 
 /// <summary>
-/// 纯文本差异渲染器
+/// Plain-text diff renderer.
 /// </summary>
 public class PlainTextDiffRenderer : IDiffHighlightRenderer
 {
     public EDiffOutputFormat SupportedFormat => EDiffOutputFormat.PlainText;
     
     /// <summary>
-    /// 渲染差异结果为纯文本格式
+    /// Renders diff lines as plain text.
     /// </summary>
     public string Render(IEnumerable<DiffLine> lines, DiffHighlightStyle style)
     {
@@ -26,7 +26,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染单行差异
+    /// Renders a single diff line.
     /// </summary>
     public string RenderLine(DiffLine line, DiffHighlightStyle style)
     {
@@ -38,7 +38,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行类型符号
+    /// Gets the display marker for a diff line type.
     /// </summary>
     private string GetLineTypeSymbol(EDiffLineType type)
     {
@@ -53,7 +53,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行号信息
+    /// Gets the formatted line number pair for a diff line.
     /// </summary>
     private string GetLineNumbers(DiffLine line)
     {
@@ -64,7 +64,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行内容
+    /// Gets the visible content for a diff line.
     /// </summary>
     private string GetLineContent(DiffLine line)
     {
@@ -78,7 +78,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染修改行内容
+    /// Renders a modified line with inline add and delete markers.
     /// </summary>
     private string RenderModifiedContent(DiffLine line)
     {
@@ -90,7 +90,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
         var oldWithMarkers = new StringBuilder(line.OldContent);
         var newWithMarkers = new StringBuilder(line.NewContent);
         
-        // 在删除的字符前后添加标记
+        // Insert markers from the end so earlier indices stay valid.
         var deletedRanges = line.CharacterDiffs.Where(d => d.Type == EDiffLineType.Deleted).ToList();
         foreach (var range in deletedRanges.OrderByDescending(r => r.Start))
         {
@@ -98,7 +98,7 @@ public class PlainTextDiffRenderer : IDiffHighlightRenderer
             oldWithMarkers.Insert(range.Start, "[-");
         }
         
-        // 在新增的字符前后添加标记
+        // Insert added markers in reverse order for the same reason.
         var addedRanges = line.CharacterDiffs.Where(d => d.Type == EDiffLineType.Added).ToList();
         foreach (var range in addedRanges.OrderByDescending(r => r.Start))
         {

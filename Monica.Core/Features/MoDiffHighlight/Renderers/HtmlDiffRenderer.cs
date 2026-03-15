@@ -5,20 +5,20 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Renderers;
 
 /// <summary>
-/// HTML 差异渲染器（类似 GitHub 样式）
+/// HTML diff renderer with a GitHub-style table layout.
 /// </summary>
 public class HtmlDiffRenderer : IDiffHighlightRenderer
 {
     public EDiffOutputFormat SupportedFormat => EDiffOutputFormat.Html;
     
     /// <summary>
-    /// 渲染差异结果为 HTML 格式
+    /// Renders diff lines as HTML.
     /// </summary>
     public string Render(IEnumerable<DiffLine> lines, DiffHighlightStyle style)
     {
         var html = new StringBuilder();
         
-        // 添加容器开始标签和默认样式
+        // Open the container and optionally inject the built-in stylesheet.
         html.AppendLine($"<div class=\"{style.ContainerStyle}\">");
         
         if (style.IncludeDefaultCss)
@@ -26,7 +26,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
             html.AppendLine(GetDefaultCssStyles());
         }
         
-        // 添加表格结构
+        // Render the diff rows in a simple table layout.
         html.AppendLine("<table class=\"diff-table\">");
         
         foreach (var line in lines)
@@ -41,7 +41,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染单行差异
+    /// Renders a single diff line as a table row.
     /// </summary>
     public string RenderLine(DiffLine line, DiffHighlightStyle style)
     {
@@ -51,7 +51,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
         
         html.AppendLine($"<tr class=\"{lineClass}\">");
         
-        // 行号列
+        // Render old and new line numbers in separate columns.
         html.Append($"<td class=\"{style.LineNumberStyle} old-line-number\">");
         if (line.OldLineNumber > 0)
         {
@@ -66,10 +66,10 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
         }
         html.AppendLine("</td>");
         
-        // 符号列
+        // Render the diff marker column.
         html.AppendLine($"<td class=\"diff-symbol\">{lineTypeSymbol}</td>");
         
-        // 内容列
+        // Render the content column, including inline highlights for modifications.
         html.Append("<td class=\"diff-content\">");
         html.Append(RenderLineContent(line, style));
         html.AppendLine("</td>");
@@ -80,7 +80,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染行内容，包括字符级差异
+    /// Renders the visible content for a diff line.
     /// </summary>
     private string RenderLineContent(DiffLine line, DiffHighlightStyle style)
     {
@@ -106,7 +106,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 渲染修改行的内容，显示字符级差异
+    /// Renders a modified line with character-level highlights.
     /// </summary>
     private string RenderModifiedLineContent(DiffLine line, DiffHighlightStyle style)
     {
@@ -119,19 +119,19 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
         var newContent = line.NewContent;
         var oldContent = line.OldContent;
         
-        // 显示旧内容（删除部分）
+        // Render the old content with deleted segments emphasized.
         html.Append("<div class=\"diff-old-content\">");
         int oldPos = 0;
         
         foreach (var charDiff in line.CharacterDiffs.Where(d => d.Type == EDiffLineType.Deleted))
         {
-            // 添加未变化的部分
+            // Write unchanged text before the next deleted span.
             if (oldPos < charDiff.Start)
             {
                 html.Append(HttpUtility.HtmlEncode(oldContent.Substring(oldPos, charDiff.Start - oldPos)));
             }
             
-            // 添加删除的部分
+            // Highlight the deleted span.
             html.Append($"<span class=\"{style.DeletedCharacterStyle}\">");
             html.Append(HttpUtility.HtmlEncode(charDiff.Content));
             html.Append("</span>");
@@ -139,7 +139,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
             oldPos = charDiff.Start + charDiff.Length;
         }
         
-        // 添加剩余未变化的部分
+        // Append any unchanged suffix after the last deleted span.
         if (oldPos < oldContent.Length)
         {
             html.Append(HttpUtility.HtmlEncode(oldContent.Substring(oldPos)));
@@ -147,19 +147,19 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
         
         html.AppendLine("</div>");
         
-        // 显示新内容（新增部分）
+        // Render the new content with added segments emphasized.
         html.Append("<div class=\"diff-new-content\">");
         int newPos = 0;
         
         foreach (var charDiff in line.CharacterDiffs.Where(d => d.Type == EDiffLineType.Added))
         {
-            // 添加未变化的部分
+            // Write unchanged text before the next added span.
             if (newPos < charDiff.Start)
             {
                 html.Append(HttpUtility.HtmlEncode(newContent.Substring(newPos, charDiff.Start - newPos)));
             }
             
-            // 添加新增的部分
+            // Highlight the added span.
             html.Append($"<span class=\"{style.AddedCharacterStyle}\">");
             html.Append(HttpUtility.HtmlEncode(charDiff.Content));
             html.Append("</span>");
@@ -167,7 +167,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
             newPos = charDiff.Start + charDiff.Length;
         }
         
-        // 添加剩余未变化的部分
+        // Append any unchanged suffix after the last added span.
         if (newPos < newContent.Length)
         {
             html.Append(HttpUtility.HtmlEncode(newContent.Substring(newPos)));
@@ -179,7 +179,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行样式类名
+    /// Gets the CSS class for the current diff line type.
     /// </summary>
     private string GetLineStyleClass(EDiffLineType type, DiffHighlightStyle style)
     {
@@ -194,7 +194,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取行类型符号
+    /// Gets the display marker for a diff line type.
     /// </summary>
     private string GetLineTypeSymbol(EDiffLineType type)
     {
@@ -209,7 +209,7 @@ public class HtmlDiffRenderer : IDiffHighlightRenderer
     }
     
     /// <summary>
-    /// 获取默认 CSS 样式
+    /// Gets the built-in CSS used by the HTML renderer.
     /// </summary>
     private string GetDefaultCssStyles()
     {

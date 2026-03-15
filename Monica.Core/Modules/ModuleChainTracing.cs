@@ -15,7 +15,7 @@ public static class ModuleChainTracingBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ChainTracing 模块
+        /// Configures the ChainTracing module.
         /// </summary>
         public static ModuleChainTracingGuide AddChainTracing(Action<ModuleChainTracingOption>? action = null)
         {
@@ -25,9 +25,9 @@ public static class ModuleChainTracingBuilderExtensions
 }
 
 /// <summary>
-/// 调用链追踪模块
+/// Chain tracing module.
 /// </summary>
-/// <param name="option">模块配置选项</param>
+/// <param name="option">The module options.</param>
 public class ModuleChainTracing(ModuleChainTracingOption option)
     : MoModuleWithDependencies<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
@@ -71,7 +71,7 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
 }
 
 /// <summary>
-/// 调用链追踪模块指南
+/// Configuration guide for the chain tracing module.
 /// </summary>
 public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
 {
@@ -79,32 +79,32 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
 }
 
 /// <summary>
-/// 调用链追踪模块配置选项
+/// Configuration options for the chain tracing module.
 /// </summary>
 public class ModuleChainTracingOption : MoModuleOption<ModuleChainTracing>
 {
     /// <summary>
-    /// 是否启用调用链追踪
+    /// Enables chain tracing.
     /// </summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// 是否启用 Controller Tracing
+    /// Enables controller tracing.
     /// </summary>
     public bool EnableControllerTracing { get; set; } = true;
 
     /// <summary>
-    /// 是否启用将调用链信息附加到响应中
+    /// Enables attaching chain tracing information to responses.
     /// </summary>
     public bool EnableAttachToRes { get; set; } = true;
 
     /// <summary>
-    /// 最大调用链深度（防止无限递归）
+    /// Maximum chain depth to prevent unbounded recursion.
     /// </summary>
     public int MaxChainDepth { get; set; } = 50;
 
     /// <summary>
-    /// 最大节点数量（防止内存泄漏）
+    /// Maximum node count to avoid unbounded memory growth.
     /// </summary>
     public int MaxNodeCount { get; set; } = 1000;
 }

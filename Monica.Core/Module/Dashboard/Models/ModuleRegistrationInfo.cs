@@ -3,109 +3,109 @@ using Monica.Core.Module.Models;
 namespace Monica.Core.Module.Dashboard.Models;
 
 /// <summary>
-/// 表示模块注册信息。
+/// Module registration overview.
 /// </summary>
 public class ModuleRegistrationInfo
 {
     /// <summary>
-    /// 启用的模块列表
+    /// Enabled modules.
     /// </summary>
     public List<ModuleBasicInfo> EnabledModules { get; set; } = [];
 
     /// <summary>
-    /// 禁用的模块列表
+    /// Disabled modules.
     /// </summary>
     public List<ModuleBasicInfo> DisabledModules { get; set; } = [];
 
     /// <summary>
-    /// 模块注册顺序映射（按Order排序）
+    /// Module registration order map keyed by order.
     /// </summary>
     public Dictionary<int, ModuleBasicInfo> ModulesByOrder { get; set; } = [];
 
     /// <summary>
-    /// 注册统计信息
+    /// Registration statistics.
     /// </summary>
     public ModuleRegistrationStatistics Statistics { get; set; } = new();
 }
 
 /// <summary>
-/// 模块基本信息
+/// Basic module information.
 /// </summary>
 public class ModuleBasicInfo
 {
     /// <summary>
-    /// 模块类型名称
+    /// Module type name.
     /// </summary>
     public string ModuleTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块完整类型名称
+    /// Fully qualified module type name.
     /// </summary>
     public string ModuleFullTypeName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 模块键
+    /// Module key.
     /// </summary>
     public ModuleKey? ModuleKey { get; set; }
 
     /// <summary>
-    /// 注册顺序
+    /// Registration order.
     /// </summary>
     public int Order { get; set; }
 
     /// <summary>
-    /// 模块状态
+    /// Current module phase.
     /// </summary>
     public EMoModuleConfigMethods Status { get; set; }
 
     /// <summary>
-    /// 直接依赖的模块列表
+    /// Direct dependencies.
     /// </summary>
     public List<ModuleKey> Dependencies { get; set; } = [];
 
     /// <summary>
-    /// 初始化耗时（毫秒）
+    /// Initialization time in milliseconds.
     /// </summary>
     public long InitializationTimeMs { get; set; }
 
     /// <summary>
-    /// 是否是禁用状态
+    /// Indicates whether the module is disabled.
     /// </summary>
     public bool IsDisabled { get; set; }
 
     /// <summary>
-    /// 是否有注册错误
+    /// Indicates whether registration errors exist.
     /// </summary>
     public bool HasErrors { get; set; }
 }
 
 /// <summary>
-/// 模块注册统计信息
+/// Module registration statistics.
 /// </summary>
 public class ModuleRegistrationStatistics
 {
     /// <summary>
-    /// 总模块数量
+    /// Total module count.
     /// </summary>
     public int TotalModules { get; set; }
 
     /// <summary>
-    /// 启用的模块数量
+    /// Enabled module count.
     /// </summary>
     public int EnabledModules { get; set; }
 
     /// <summary>
-    /// 禁用的模块数量
+    /// Disabled module count.
     /// </summary>
     public int DisabledModules { get; set; }
 
     /// <summary>
-    /// 总初始化时间（毫秒）
+    /// Total initialization time in milliseconds.
     /// </summary>
     public long TotalInitializationTimeMs { get; set; }
 
     /// <summary>
-    /// 最慢的5个模块
+    /// Five slowest modules.
     /// </summary>
     public List<ModuleBasicInfo> SlowestModules { get; set; } = [];
 } 

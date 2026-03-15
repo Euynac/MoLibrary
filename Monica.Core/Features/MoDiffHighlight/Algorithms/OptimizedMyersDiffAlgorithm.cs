@@ -3,13 +3,13 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Algorithms;
 
 /// <summary>
-/// 优化的 Myers 差异算法实现
-/// 基于 Eugene W. Myers 的 "An O(ND) Difference Algorithm and Its Variations" 论文
+/// Optimized Myers diff implementation.
+/// Based on Eugene W. Myers' "An O(ND) Difference Algorithm and Its Variations".
 /// </summary>
 public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
 {
     /// <summary>
-    /// 计算两个文本的差异
+    /// Computes line-level differences between two texts.
     /// </summary>
     public List<DiffLine> ComputeDiff(string[] oldLines, string[] newLines, DiffHighlightOptions options)
     {
@@ -20,7 +20,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
         var editScript = ComputeMyersDiff(oldLinesNormalized, newLinesNormalized);
         result = ConvertEditScriptToDiffLines(editScript, oldLines, newLines);
         
-        // 添加字符级差异（如果启用）
+        // Collapse adjacent delete/add pairs into modified lines when requested.
         if (options.Mode is EDiffHighlightMode.Character or EDiffHighlightMode.Mixed)
         {
             AddCharacterDiffs(result, options);
@@ -30,31 +30,31 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 计算字符级差异 - 使用改进的算法
+    /// Computes character-level differences using a layered strategy.
     /// </summary>
     public List<DiffCharacterRange> ComputeCharacterDiff(string oldText, string newText, DiffHighlightOptions options)
     {
         if (string.IsNullOrEmpty(oldText) && string.IsNullOrEmpty(newText))
             return new List<DiffCharacterRange>();
         
-        // 优先使用词级差异
+        // Prefer word-level ranges when they produce a useful result.
         var wordDiffs = ComputeWordLevelDiff(oldText, newText, options);
         if (wordDiffs.Any())
             return wordDiffs;
         
-        // 回退到字符级差异
+        // Fall back to character-level ranges when word matching is not enough.
         return ComputeCharacterLevelDiff(oldText, newText, options);
     }
     
     /// <summary>
-    /// Myers 算法核心实现
+    /// Executes the core Myers line-diff algorithm.
     /// </summary>
     private List<EditOperation> ComputeMyersDiff(string[] oldLines, string[] newLines)
     {
         var n = oldLines.Length;
         var m = newLines.Length;
         
-        // 处理空数组的情况
+        // Handle empty inputs up front.
         if (n == 0 && m == 0)
         {
             return new List<EditOperation>();
@@ -123,7 +123,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 构建编辑脚本
+    /// Reconstructs the edit script from the recorded search trace.
     /// </summary>
     private List<EditOperation> BuildEditScript(List<Dictionary<int, int>> trace, string[] oldLines, string[] newLines, int d)
     {
@@ -138,7 +138,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
             
             if (depth == 0)
             {
-                // 处理起始点的对角线
+                // Walk the leading diagonal when the trace reaches the origin.
                 while (x > 0 && y > 0)
                 {
                     operations.Insert(0, new EditOperation { Type = EditType.Equal, OldIndex = x - 1, NewIndex = y - 1 });
@@ -163,7 +163,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
             var prevX = prevV.GetValueOrDefault(prevK, -1);
             var prevY = prevX - prevK;
             
-            // 先处理对角线移动（相等的元素）
+            // Consume diagonal moves first because they represent matching items.
             while (x > prevX && y > prevY && x > 0 && y > 0 && oldLines[x - 1].Equals(newLines[y - 1]))
             {
                 operations.Insert(0, new EditOperation { Type = EditType.Equal, OldIndex = x - 1, NewIndex = y - 1 });
@@ -171,16 +171,16 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
                 y--;
             }
             
-            // 处理插入或删除
+            // Then record the edit operation that moved into this diagonal.
             if (prevK == k + 1)
             {
-                // 从上面来的，是插入操作
+                // Moving down means the new text inserted an item.
                 operations.Insert(0, new EditOperation { Type = EditType.Insert, OldIndex = -1, NewIndex = y - 1 });
                 y--;
             }
             else
             {
-                // 从左边来的，是删除操作
+                // Moving right means the old text deleted an item.
                 operations.Insert(0, new EditOperation { Type = EditType.Delete, OldIndex = x - 1, NewIndex = -1 });
                 x--;
             }
@@ -190,7 +190,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 转换编辑脚本为DiffLine列表
+    /// Converts the edit script into <see cref="DiffLine"/> entries.
     /// </summary>
     private List<DiffLine> ConvertEditScriptToDiffLines(List<EditOperation> operations, string[] oldLines, string[] newLines)
     {
@@ -249,7 +249,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 词级差异算法
+    /// Computes word-level diff ranges.
     /// </summary>
     private List<DiffCharacterRange> ComputeWordLevelDiff(string oldText, string newText, DiffHighlightOptions options)
     {
@@ -261,13 +261,13 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 字符级差异算法（改进版）
+    /// Computes character-level diff ranges.
     /// </summary>
     private List<DiffCharacterRange> ComputeCharacterLevelDiff(string oldText, string newText, DiffHighlightOptions options)
     {
         if (oldText.Length > options.MaxCharacterDiffLength || newText.Length > options.MaxCharacterDiffLength)
         {
-            // 对于过长的文本，使用简化算法
+            // Long texts use a cheaper prefix/suffix scan to avoid expensive matching.
             return ComputeSimplifiedCharacterDiff(oldText, newText);
         }
         
@@ -279,7 +279,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 将文本分割为单词
+    /// Splits text into word and separator tokens.
     /// </summary>
     private string[] SplitIntoWords(string text)
     {
@@ -315,16 +315,15 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// Myers算法的词级版本
+    /// Runs Myers diff at word granularity.
     /// </summary>
     private List<EditOperation> ComputeMyersWordDiff(string[] oldWords, string[] newWords)
     {
-        // 使用与行级相同的Myers算法，但应用于单词
         return ComputeMyersGeneric(oldWords, newWords, (a, b) => a.Equals(b));
     }
     
     /// <summary>
-    /// Myers算法的字符级版本
+    /// Runs Myers diff at character granularity.
     /// </summary>
     private List<EditOperation> ComputeMyersCharDiff(string[] oldChars, string[] newChars)
     {
@@ -332,7 +331,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 通用的Myers算法实现
+    /// Shared Myers implementation for arbitrary token sequences.
     /// </summary>
     private List<EditOperation> ComputeMyersGeneric<T>(T[] oldItems, T[] newItems, Func<T, T, bool> equals)
     {
@@ -382,7 +381,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 构建通用编辑脚本
+    /// Reconstructs a generic edit script from the recorded trace.
     /// </summary>
     private List<EditOperation> BuildGenericEditScript(List<Dictionary<int, int>> trace, int n, int m, int d)
     {
@@ -435,7 +434,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 转换词级编辑脚本为字符范围
+    /// Converts word-level edits into character ranges.
     /// </summary>
     private List<DiffCharacterRange> ConvertWordEditScriptToCharacterRanges(List<EditOperation> operations, string oldText, string newText)
     {
@@ -485,7 +484,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 转换字符级编辑脚本为字符范围
+    /// Converts character-level edits into character ranges.
     /// </summary>
     private List<DiffCharacterRange> ConvertCharEditScriptToCharacterRanges(List<EditOperation> operations, string oldText, string newText)
     {
@@ -523,7 +522,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 简化的字符级差异算法（用于长文本）
+    /// Uses a simplified character diff for long texts.
     /// </summary>
     private List<DiffCharacterRange> ComputeSimplifiedCharacterDiff(string oldText, string newText)
     {
@@ -553,25 +552,22 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
             return result;
         }
         
-        // 简单的前缀/后缀匹配
+        // Find the unchanged prefix and suffix first, then mark the middle as changed.
         var prefixLength = 0;
         var suffixLength = 0;
         var minLength = Math.Min(oldText.Length, newText.Length);
         
-        // 找到共同前缀
         while (prefixLength < minLength && oldText[prefixLength] == newText[prefixLength])
         {
             prefixLength++;
         }
         
-        // 找到共同后缀
         while (suffixLength < minLength - prefixLength && 
                oldText[oldText.Length - 1 - suffixLength] == newText[newText.Length - 1 - suffixLength])
         {
             suffixLength++;
         }
         
-        // 中间部分作为差异
         if (prefixLength + suffixLength < oldText.Length)
         {
             result.Add(new DiffCharacterRange
@@ -598,7 +594,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 规范化行内容
+    /// Normalizes lines according to whitespace and casing options.
     /// </summary>
     private string[] NormalizeLines(string[] lines, DiffHighlightOptions options)
     {
@@ -606,7 +602,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 规范化单行内容
+    /// Normalizes a single line before comparison.
     /// </summary>
     private string NormalizeLine(string line, DiffHighlightOptions options)
     {
@@ -626,7 +622,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
     }
     
     /// <summary>
-    /// 为修改的行添加字符级差异
+    /// Converts adjacent delete/add pairs into modified lines with character ranges.
     /// </summary>
     private void AddCharacterDiffs(List<DiffLine> lines, DiffHighlightOptions options)
     {
@@ -634,7 +630,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
         {
             var line = lines[i];
             
-            // 寻找可能的修改行对
+            // Treat a deleted line followed by an added line as a potential modification.
             if (line.Type == EDiffLineType.Deleted && 
                 i + 1 < lines.Count && 
                 lines[i + 1].Type == EDiffLineType.Added)
@@ -659,7 +655,7 @@ public class OptimizedMyersDiffAlgorithm : IDiffAlgorithm
 }
 
 /// <summary>
-/// 编辑操作类型
+/// Represents the type of edit operation in a Myers edit script.
 /// </summary>
 public enum EditType
 {
@@ -669,7 +665,7 @@ public enum EditType
 }
 
 /// <summary>
-/// 编辑操作
+/// Represents a single edit operation in a Myers edit script.
 /// </summary>
 public class EditOperation
 {

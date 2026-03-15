@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.GlobalJson.Converters;
 
 /// <summary>
-/// 保留原始Json格式但Enum转字符串输出
+/// Preserves the original JSON shape while serializing enum values as strings.
 /// </summary>
 public class PreserveOriginalWithEnumStringConverter : JsonConverter<object>
 {

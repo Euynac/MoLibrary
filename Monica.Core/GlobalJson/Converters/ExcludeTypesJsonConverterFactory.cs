@@ -3,10 +3,11 @@ using System.Text.Json.Serialization;
 namespace Monica.Core.GlobalJson.Converters;
 
 /// <summary>
-/// 可用于添加了全局Enum string转换但某些类型不需要Enum转换的的情况
+/// Decorates another converter factory and skips conversion for explicitly ignored types.
+/// This is mainly used when global enum-to-string conversion is enabled but certain types must keep their default behavior.
 /// </summary>
-/// <param name="innerFactory"></param>
-/// <param name="ignoredTypes"></param>
+/// <param name="innerFactory">The inner converter factory.</param>
+/// <param name="ignoredTypes">The types that should bypass the inner converter.</param>
 public class ExcludeTypesJsonConverterFactory(JsonConverterFactory innerFactory, params Type[] ignoredTypes) : JsonConverterFactoryDecorator(innerFactory)
 {
     public HashSet<Type> IgnoredTypes { get; } = [.. ignoredTypes];

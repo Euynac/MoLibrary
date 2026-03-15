@@ -13,41 +13,41 @@ using Monica.Tool.Extensions;
 namespace Monica.Core.Module;
 
 /// <summary>
-/// 模块注册中心，用于控制模块注册生命周期并管理所有模块的配置和初始化。
+/// Central registry that drives the module registration lifecycle and manages module configuration and initialization.
 /// </summary>
 public static class MoModuleRegisterCentre
 {
     /// <summary>
-    /// 模块注册错误列表
+    /// Module registration errors.
     /// </summary>
     public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
     public static ILogger Logger { get; set; } = LogProvider.For(typeof(MoModuleRegisterCentre));
     /// <summary>
-    /// 静态构造函数，用于初始化事件监听。
+    /// Static constructor that wires the module lifecycle events.
     /// </summary>
     static MoModuleRegisterCentre()
     {
-        // 注册BeforeBuild事件处理程序，用于在构建应用程序前注册服务
+        // Register services before the application is built.
         WebApplicationBuilderExtensions.BeforeBuild += RegisterServices;
 
-        // 注册BeforeUseRouting事件处理程序，用于在路由中间件应用前执行操作
+        // Configure middleware that should run before `UseRouting`.
         WebApplicationBuilderExtensions.BeforeUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, false);
 
-        // 注册AfterUseRouting事件处理程序，用于在路由中间件应用后执行操作
+        // Configure middleware that should run after `UseRouting`.
         WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, true);
 
-        // 注册BeforeUseEndpoints事件处理程序，用于在Endpoints配置前执行操作
+        // Configure endpoints before the application reaches endpoint mapping.
         WebApplicationBuilderExtensions.BeginUseEndpoints += ConfigEndpoints;
     }
 
     /// <summary>
-    /// 模块快照列表，用于存储所有模块的快照信息。
+    /// Module snapshots captured after successful registration.
     /// </summary>
     public static List<ModuleSnapshot> ModuleSnapshots { get; } = [];
 
     /// <summary>
-    /// 模块注册请求信息字典，用于存储所有注册过的模块类型及其注册信息。
+    /// Registration information for every module type that has been registered.
     /// </summary>
     public static Dictionary<Type, ModuleRegisterInfo> ModuleRegisterContextDict { get; } = [];
 
@@ -63,10 +63,10 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 获取指定模块注册的所有 Keyed 服务键。
+    /// Gets all keyed service keys registered by the specified module.
     /// </summary>
-    /// <param name="moduleType">模块类型</param>
-    /// <returns>Keyed 服务键集合，若模块不存在则返回空集合</returns>
+    /// <param name="moduleType">The module type.</param>
+    /// <returns>The keyed service keys for the module, or an empty set if the module is unknown.</returns>
     public static IReadOnlySet<string> GetKeyedServiceKeys(Type moduleType)
     {
         return TryGetModuleRequestInfo(moduleType, out var info)
@@ -75,10 +75,10 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 添加模块注册上下文
+    /// Adds module registration information for a module type.
     /// </summary>
-    /// <param name="moduleType">模块类型</param>
-    /// <param name="registerInfo">模块请求信息</param>
+    /// <param name="moduleType">The module type.</param>
+    /// <param name="registerInfo">The registration information.</param>
     public static void AddModuleRegisterContext(Type moduleType, ModuleRegisterInfo registerInfo)
     {
         if (!ModuleRegisterContextDict.TryAdd(moduleType, registerInfo))
@@ -86,7 +86,7 @@ public static class MoModuleRegisterCentre
             throw new ModuleRegisterException($"模块类型 {moduleType.FullName} 已存在");
         }
 
-        // 如果是第一次添加模块，开始计时
+        // Start overall profiling when the first module is registered.
         if (ModuleRegisterContextDict.Count == 1)
         {
             ModuleProfiler.StartModuleSystem();
@@ -95,20 +95,21 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 注册当前注册的所有模块的服务。此方法应在builder.Build()之前调用。
+    /// Registers services for all currently registered modules.
+    /// This method must run before `builder.Build()`.
     /// </summary>
-    /// <param name="builder">WebApplicationBuilder实例。</param>
+    /// <param name="builder">The web application builder.</param>
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     internal static void RegisterServices(WebApplicationBuilder builder)
     {
         var services = builder.Services;
 
 
-        // 清空之前的错误记录
+        // Clear any error state from a previous registration run.
         ModuleRegisterErrors.Clear();
         
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
-        // 1. 初次遍历所有注册的模块，判断若模块有依赖项，处理依赖关系
+        // 1. First pass: let modules declare dependencies.
 
         while (ModuleRegisterContextDict.Where(p=>p.Value.ModulePhase == EMoModuleConfigMethods.None).ToList() is {Count: > 0} list)
         {
@@ -139,19 +140,19 @@ public static class MoModuleRegisterCentre
 
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ClaimDependencies));
 
-        // 1.1 在所有依赖关系建立完成后，刷新模块注册顺序
+        // 1.1 Refresh module ordering after all dependencies have been declared.
         ModuleAnalyser.RefreshAllModuleOrders();
 
         var snapshots = new List<ModuleSnapshot>();
 
-        // 2. 初始化模块配置
+        // 2. Materialize the final configuration objects for each module.
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.ClaimDependencies).OrderBy(p => p.Value.Order))
         {
             try
             {
                 info.StartModulePhase(EMoModuleConfigMethods.InitFinalConfigures);
-                // 初始化模块配置
+                // Finalize the module configuration objects.
                 info.InitFinalConfigures();
                 info.EndModulePhase(EMoModuleConfigMethods.InitFinalConfigures);
             }
@@ -162,18 +163,18 @@ public static class MoModuleRegisterCentre
             }
         }
         ModuleManager.Init();
-        // 2.1 检查模块是否满足必要配置要求
+        // 2.1 Validate required configuration for every initialized module.
         ModuleErrorUtil.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.InitFinalConfigures).ToDictionary());
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.InitFinalConfigures));
 
-        // 2.2 注册模块服务
+        // 2.2 Execute builder and service registrations.
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder) + nameof(EMoModuleConfigMethods.ConfigureServices));
         foreach (var (moduleType, info) in ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == EMoModuleConfigMethods.InitFinalConfigures).OrderBy(p => p.Value.Order))
         {
-            // 调用模块构建方法
+            // Run builder configuration first.
             info.StartModulePhase(EMoModuleConfigMethods.ConfigureBuilder);
 
-            // 执行额外的配置请求
+            // Execute queued builder configuration requests.
             foreach (var request in info.DeduplicateRequests(
                 info.RegisterRequests
                     .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureBuilder)
@@ -192,10 +193,10 @@ public static class MoModuleRegisterCentre
             info.EndModulePhase(EMoModuleConfigMethods.ConfigureBuilder);
 
 
-            // 调用模块注册方法
+            // Then run service registrations.
             info.StartModulePhase(EMoModuleConfigMethods.ConfigureServices);
 
-            // 执行额外的配置请求
+            // Execute queued service configuration requests.
             foreach (var request in info.DeduplicateRequests(
                 info.RegisterRequests
                     .Where(p => p.RequestMethod == EMoModuleConfigMethods.ConfigureServices)
@@ -217,7 +218,7 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.ConfigureBuilder) + nameof(EMoModuleConfigMethods.ConfigureServices));
 
 
-        // 3. 为需要遍历业务类型的模块提供支持
+        // 3. Allow modules to inspect and transform discovered business types.
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
         var businessTypes = Mo.Options.GlobalTypeFinder.GetTypes();
         var needToIterate = false;
@@ -242,12 +243,12 @@ public static class MoModuleRegisterCentre
         ModuleProfiler.StopPhase(nameof(EMoModuleConfigMethods.IterateBusinessTypes));
 
 
-        // 4. 执行模块的PostConfigureServices方法
+        // 4. Execute post-service configuration hooks.
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.PostConfigureServices));
         foreach (var module in snapshots)
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.PostConfigureServices);
-            // 执行额外的配置请求
+            // Execute queued post-configuration requests.
             foreach (var request in module.RegisterInfo.DeduplicateRequests(
                 module.RegisterInfo.RegisterRequests
                     .Where(p => p.RequestMethod == EMoModuleConfigMethods.PostConfigureServices)
@@ -271,18 +272,18 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 配置应用程序管道
+    /// Configures the application pipeline for the registered modules.
     /// </summary>
-    /// <param name="app">应用程序构建器。</param>
-    /// <param name="order">配置顺序。</param>
-    /// <param name="afterGivenOrder">是否在给定顺序之后配置。</param>
+    /// <param name="app">The application builder.</param>
+    /// <param name="order">The ordering split point.</param>
+    /// <param name="afterGivenOrder">Whether to configure items after the given order instead of before it.</param>
     internal static void ConfigApplicationPipeline(IApplicationBuilder app, int order, bool afterGivenOrder)
     {
         var phaseName = afterGivenOrder ? $"{nameof(ConfigApplicationPipeline)}_After_{order}" : $"{nameof(ConfigApplicationPipeline)}_Before_{order}";
         ModuleProfiler.StartPhase(phaseName);
 
         Func<ModuleRegisterRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
-        // 按优先级排序并配置应用程序构建器
+        // Execute application builder requests in priority order.
         foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase is EMoModuleConfigMethods.PostConfigureServices or EMoModuleConfigMethods.ConfigureApplicationBuilder))
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureApplicationBuilder);
@@ -311,14 +312,14 @@ public static class MoModuleRegisterCentre
     }
 
     /// <summary>
-    /// 配置端点路由构建器
+    /// Configures endpoints for the registered modules.
     /// </summary>
-    /// <param name="app">应用程序构建器。</param>
+    /// <param name="app">The application builder.</param>
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
         ModuleProfiler.StartPhase(nameof(EMoModuleConfigMethods.ConfigureEndpoints));
 
-        // 按优先级排序并配置端点路由构建器
+        // Execute endpoint configuration requests in priority order.
         foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase == EMoModuleConfigMethods.ConfigureApplicationBuilder))
         {
             module.RegisterInfo.StartModulePhase(EMoModuleConfigMethods.ConfigureEndpoints);

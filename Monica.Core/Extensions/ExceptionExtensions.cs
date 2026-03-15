@@ -8,10 +8,10 @@ namespace Monica.Core.Extensions;
 public static class ExceptionExtensions
 {
     /// <summary>
-    /// 递归获取异常信息
+    /// Builds a semicolon-separated message chain for the exception and all inner exceptions.
     /// </summary>
-    /// <param name="e"></param>
-    /// <returns></returns>
+    /// <param name="e">The root exception.</param>
+    /// <returns>A flattened exception message string.</returns>
     public static string GetMessageRecursively(this Exception e)
     {
         var curException = e;
@@ -27,8 +27,7 @@ public static class ExceptionExtensions
         }
         return sb.ToString();
     }
-
-
+    
     /// <summary>
     /// Uses <see cref="ExceptionDispatchInfo.Capture"/> method to re-throws exception
     /// while preserving stack trace.
@@ -53,8 +52,13 @@ public static class ExceptionExtensions
         logger?.LogError(innerException, msg);
         return new Exception(msg, innerException);
     }
-
-
+    
+    /// <summary>
+    /// Logs the exception and all items stored in <see cref="Exception.Data"/>.
+    /// </summary>
+    /// <param name="logger">The logger used to write the exception details.</param>
+    /// <param name="ex">The exception to log.</param>
+    /// <param name="level">The log level.</param>
     public static void LogException(this ILogger logger, Exception ex, LogLevel level = LogLevel.Error)
     {
         logger.Log(level, ex, ex.Message);

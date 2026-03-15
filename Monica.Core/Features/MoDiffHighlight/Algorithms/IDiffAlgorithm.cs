@@ -3,25 +3,25 @@ using Monica.Core.Features.MoDiffHighlight.Models;
 namespace Monica.Core.Features.MoDiffHighlight.Algorithms;
 
 /// <summary>
-/// 差异算法接口
+/// Defines the contract for diff algorithms.
 /// </summary>
 public interface IDiffAlgorithm
 {
     /// <summary>
-    /// 计算两个文本的差异
+    /// Computes line-level differences between two texts.
     /// </summary>
-    /// <param name="oldLines">原始文本行数组</param>
-    /// <param name="newLines">新文本行数组</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>差异行列表</returns>
+    /// <param name="oldLines">The original text split into lines.</param>
+    /// <param name="newLines">The updated text split into lines.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>The resulting diff lines.</returns>
     List<DiffLine> ComputeDiff(string[] oldLines, string[] newLines, DiffHighlightOptions options);
     
     /// <summary>
-    /// 计算字符级差异
+    /// Computes character-level differences between two strings.
     /// </summary>
-    /// <param name="oldText">原始文本</param>
-    /// <param name="newText">新文本</param>
-    /// <param name="options">配置选项</param>
-    /// <returns>字符差异范围列表</returns>
+    /// <param name="oldText">The original text.</param>
+    /// <param name="newText">The updated text.</param>
+    /// <param name="options">The diff options to apply.</param>
+    /// <returns>The character diff ranges.</returns>
     List<DiffCharacterRange> ComputeCharacterDiff(string oldText, string newText, DiffHighlightOptions options);
 }

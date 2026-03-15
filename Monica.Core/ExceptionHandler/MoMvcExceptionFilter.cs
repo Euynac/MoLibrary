@@ -4,7 +4,7 @@
 //
 // namespace Monica.Core.ExceptionHandler;
 //
-// //TODO 和GlobalExceptionHandler关系？是否多余？
+// // TODO: Re-evaluate whether this filter is still needed now that GlobalExceptionHandler exists.
 // public class MoMvcExceptionFilter : IAsyncExceptionFilter
 // {
 //     public virtual async Task OnExceptionAsync(ExceptionContext context)
@@ -39,7 +39,7 @@
 //         //    context.HttpContext.Response.StatusCode = (int)context
 //         //        .GetRequiredService<IHttpExceptionStatusCodeFinder>()
 //         //        .GetStatusCode(context.HttpContext, context.Exception);
-//         //    var res = Res.CreateError(remoteServiceErrorInfo, "接口出现异常",
+//         //    var res = Res.CreateError(remoteServiceErrorInfo, "The API request failed",
 //         //        ResponseCode.InternalError);
 //         //    context.Result = new ObjectResult(res);
 //         //    context.Exception = null!; //Handled!

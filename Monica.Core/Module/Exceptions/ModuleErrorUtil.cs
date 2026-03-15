@@ -13,7 +13,7 @@ public static class ModuleErrorUtil
 {
 
     /// <summary>
-    /// 模块注册错误列表
+    /// Module registration errors.
     /// </summary>
     public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
     /// <summary>

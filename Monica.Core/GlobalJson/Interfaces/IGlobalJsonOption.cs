@@ -6,15 +6,15 @@ namespace Monica.Core.GlobalJson.Interfaces;
 public interface IGlobalJsonOption
 {
     /// <summary>
-    /// 全局唯一Json序列化设置
+    /// Gets the shared JSON serializer options used by the application.
     /// </summary>
     public JsonSerializerOptions GlobalOptions { get; }
 
     /// <summary>
-    /// 使用当前全局JsonNamePolicy进行处理
+    /// Applies the current global JSON naming policy to the provided string.
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
+    /// <param name="str">The source string.</param>
+    /// <returns>The converted string, or <see langword="null"/> when <paramref name="str"/> is <see langword="null"/>.</returns>
     [return: NotNullIfNotNull("str")]
     public string? UsingJsonNamePolicy(string? str);
 }

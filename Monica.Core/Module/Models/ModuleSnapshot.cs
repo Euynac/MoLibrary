@@ -5,34 +5,34 @@ using Monica.Core.Module.Interfaces;
 namespace Monica.Core.Module.Models;
 
 /// <summary>
-/// 表示模块的快照信息，包含模块实例、请求信息和状态。
+/// Represents a module snapshot, including the module instance, registration info, and state.
 /// </summary>
-/// <param name="moduleInstance">模块实例</param>
-/// <param name="registerInfo">模块请求信息</param>
+/// <param name="moduleInstance">The module instance.</param>
+/// <param name="registerInfo">The registration information.</param>
 public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo registerInfo)
 {
     /// <summary>
-    /// 模块实例
+    /// The module instance.
     /// </summary>
     public IMoModule ModuleInstance { get; set; } = moduleInstance;
 
     /// <summary>
-    /// 模块请求信息
+    /// The module registration information.
     /// </summary>
     public ModuleRegisterInfo RegisterInfo { get; set; } = registerInfo;
 
     /// <summary>
-    /// 模块类型
+    /// The module type.
     /// </summary>
     public Type ModuleType { get; set; } = moduleInstance.GetType();
 
     /// <summary>
-    /// 获取模块对应的ModuleKey。对于未注册模块返回 null。
+    /// Gets the <see cref="ModuleKey"/> for the module. Returns `null` for unregistered modules.
     /// </summary>
     public ModuleKey? ModuleKey => ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(ModuleType);
 
     /// <summary>
-    /// 获取模块的总初始化耗时（毫秒）
+    /// Gets the total initialization duration for the module, in milliseconds.
     /// </summary>
     public long TotalInitializationDurationMs =>
         ModuleProfiler.GetModuleTotalDuration(ModuleType);
