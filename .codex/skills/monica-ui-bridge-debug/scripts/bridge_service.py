@@ -1127,8 +1127,6 @@ def command_serve(args: argparse.Namespace) -> int:
 
 def command_run(args: argparse.Namespace) -> int:
     context = build_context(args)
-    if args.foreground:
-        return stream_run(context, retry_limit=args.file_lock_retries)
     return spawn_background_run(context, args)
 
 
@@ -1186,7 +1184,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser(
         "run",
-        help="Clean residual processes and start the bridge service in the background. Add --foreground to stay attached.",
+        help="Clean residual processes and start the bridge service in the background.",
     )
     add_shared_run_arguments(run_parser, include_project=True)
     run_parser.add_argument(
@@ -1195,16 +1193,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Number of automatic retries when MSB3026 or another file-lock marker appears. Default: 1",
     )
-    run_parser.add_argument(
-        "--foreground",
-        action="store_true",
-        help="Keep the current shell attached and mirror live output instead of returning immediately.",
-    )
     run_parser.set_defaults(func=command_run)
 
     serve_parser = subparsers.add_parser(
         "serve",
-        help="Internal foreground worker used by run after the detached launcher has prepared the task folder.",
+        help="Internal worker used by run after the detached launcher has prepared the task folder.",
     )
     add_shared_run_arguments(serve_parser, include_project=True)
     serve_parser.add_argument(

@@ -15,10 +15,6 @@ Default behavior:
 - Start a detached background worker
 - Return immediately so the same agent can continue with `wait-ready`
 
-Optional behavior:
-
-- Add `--foreground` to keep the current shell attached and mirror live output
-
 Required arguments:
 
 - `--project-dir`
@@ -34,7 +30,6 @@ Optional arguments:
 - `--state-name`
 - `--home-path`
 - `--file-lock-retries`
-- `--foreground`
 
 Artifacts written to the task folder by default:
 
@@ -52,7 +47,7 @@ PID fields:
 
 ### `serve`
 
-Internal foreground worker used by `run` after the detached launcher prepares the task folder. Do not use this command in the normal skill workflow unless you are debugging the launcher itself.
+Internal worker used by `run` after the detached launcher prepares the task folder. Do not use this command in the normal skill workflow unless you are debugging the launcher itself.
 
 ### `cleanup`
 
@@ -91,14 +86,11 @@ Single-agent execution is the default workflow:
 2. `python scripts/bridge_service.py wait-ready ...`
 3. Playwright capture
 
-Optional delegated split when intentionally using sub-agents:
-
-- Worker A: `python scripts/bridge_service.py run --foreground ...`
-- Worker B: `python scripts/bridge_service.py wait-ready ...` and then Playwright capture
+Delegated split is usually unnecessary because `run` already returns immediately. If you still need parallel work, one worker can trigger `run` while another waits for readiness and captures browser artifacts.
 
 ## Exit codes
 
 - `0`: success, including `ready-with-warning`
-- `1`: blocked readiness or foreground process failure
+- `1`: blocked readiness or service startup failure
 - `2`: invalid arguments or environment
 - `130`: interrupted

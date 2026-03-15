@@ -70,13 +70,13 @@ Prefer a single-agent flow:
 
 `run` now starts the bridge service in the background by default and returns immediately, so the same agent can continue with `wait-ready`.
 
-Only switch to `$subagent-progress-report` when you explicitly want one worker to keep a foreground session open or when long-running browser work and service work must progress independently.
+Only switch to `$subagent-progress-report` when you explicitly want a delegated multi-agent workflow for independent long-running tasks.
 
 ### 3. Bridge service startup script
 
 Use the bundled Python script instead of ad-hoc shell snippets.
 
-Background launch:
+Launch:
 
 ```bash
 python scripts/bridge_service.py run \
@@ -86,16 +86,6 @@ python scripts/bridge_service.py run \
 ```
 
 This is the default and recommended mode. It returns after the detached runner starts.
-
-Optional foreground launch when you intentionally want live attached logs in the current shell:
-
-```bash
-python scripts/bridge_service.py run \
-  --project-dir "<bridge-project-dir>" \
-  --service-url "<bridge-service-url>" \
-  --task-dir "<task-folder>" \
-  --foreground
-```
 
 Readiness wait:
 
@@ -137,9 +127,8 @@ and passes it to `dotnet run` as an application argument. The external URL used 
 - Extra Windows-side cleanup when running inside WSL
 - Task-folder artifact reset before each new detached launch
 - Background `run` mode for the normal single-agent workflow
-- Optional foreground `run --foreground` mode for live attached logs
 - Internal state tracking in `bridge-process.json`
-- Foreground `dotnet run` worker with live log mirroring into `app-run.log`
+- Internal worker that runs `dotnet run` and mirrors output into `app-run.log`
 - Automatic retry when MSBuild reports file-lock markers such as `MSB3026`
 - `bridge-ready.json` creation when a listening marker is observed
 - `bridge-ready-report.json` creation when readiness checks finish
@@ -181,7 +170,7 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 
 ## Scripts
 
-- `scripts/bridge_service.py` - cross-platform bridge cleanup, foreground launch, and readiness checks
+- `scripts/bridge_service.py` - cross-platform bridge cleanup, detached launch, and readiness checks
 
 ## Quick checklist
 
