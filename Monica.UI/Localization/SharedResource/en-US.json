@@ -33,7 +33,8 @@
         "PerformanceMonitoring": "Performance Monitoring",
         "HealthCheck": "Health Check",
         "ModuleManagement": "Module Management",
-        "Dependencies": "Dependencies"
+        "Dependencies": "Dependencies",
+        "AssemblyAnalysis": "Assembly Analysis"
       },
       "Messages": {
         "DataRefreshed": "Data refreshed",
@@ -255,6 +256,91 @@
     "Common": {
       "Labels": {
         "Uncategorized": "Uncategorized"
+      }
+    },
+    "AssemblyAnalysis": {
+      "Loading": "Loading assembly analysis...",
+      "Summary": {
+        "EntryAssembly": "Entry Assembly",
+        "ScanAssemblies": "Scan Assemblies",
+        "AssembliesReadyForScanning": "Assemblies selected for type scanning",
+        "LoadedAssemblies": "Loaded Assemblies",
+        "AssembliesInCurrentDomain": "Assemblies currently loaded in AppDomain",
+        "DependencyLibraries": "Dependency Libraries",
+        "ProjectLibraries": "{0} project libraries in dependency context",
+        "MissingRuntimeDlls": "Missing Runtime DLLs",
+        "MissingDllHint": "Libraries without a DLL in the current runtime directory"
+      },
+      "Configuration": {
+        "Title": "Type Finder Configuration",
+        "GeneratedAt": "Snapshot generated at: {0}",
+        "DefaultProjectAssemblies": "Default project assemblies",
+        "AddPatterns": "Add patterns",
+        "ExcludePatterns": "Exclude patterns",
+        "NoAddPatterns": "No fuzzy add patterns configured",
+        "NoExcludePatterns": "No fuzzy exclude patterns configured",
+        "ManualAssemblies": "Manual exact assemblies",
+        "ManualAssemblyCount": "{0} exact assemblies configured",
+        "EntryAssemblyLocation": "Entry assembly location"
+      },
+      "PatternEffects": {
+        "Title": "Configured Pattern Effects",
+        "AddPatterns": "Add pattern results",
+        "ExcludePatterns": "Exclude pattern results",
+        "Pattern": "Pattern",
+        "Matches": "Matched assemblies",
+        "Affected": "Affected scan assemblies",
+        "NoAddPatternEffects": "No add patterns were configured.",
+        "NoExcludePatternEffects": "No exclude patterns were configured."
+      },
+      "ScanAssemblies": {
+        "Title": "Final Scan Assemblies"
+      },
+      "ManualAssemblies": {
+        "Title": "Manual Exact Assemblies",
+        "Empty": "No exact assemblies were configured manually."
+      },
+      "LoadedAssemblies": {
+        "Title": "AppDomain Loaded Assemblies"
+      },
+      "ReferencedAssemblies": {
+        "Title": "Entry Assembly References"
+      },
+      "DependencyLibraries": {
+        "Title": "Dependency Context Libraries"
+      },
+      "Columns": {
+        "AssemblyName": "Assembly Name",
+        "Version": "Version",
+        "EntryAssembly": "Entry Assembly",
+        "Location": "Location",
+        "Dynamic": "Dynamic",
+        "ScanStatus": "Scan Status",
+        "LoadedStatus": "Loaded Status",
+        "FullName": "Full Name",
+        "LibraryName": "Library Name",
+        "LibraryType": "Library Type",
+        "RuntimeDll": "Runtime DLL",
+        "RuntimeDllPath": "Runtime DLL Path",
+        "LoadError": "Load Error"
+      },
+      "States": {
+        "Enabled": "Enabled",
+        "Disabled": "Disabled",
+        "EntryAssembly": "Entry",
+        "No": "No",
+        "InScanSet": "In Scan Set",
+        "NotInScanSet": "Not In Scan Set",
+        "Dynamic": "Dynamic",
+        "Static": "Static",
+        "Loaded": "Loaded",
+        "NotLoaded": "Not Loaded",
+        "Exists": "Exists",
+        "Missing": "Missing"
+      },
+      "Common": {
+        "None": "None",
+        "Unavailable": "Unavailable"
       }
     }
   },

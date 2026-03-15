@@ -33,7 +33,8 @@
         "PerformanceMonitoring": "性能监控",
         "HealthCheck": "健康检查",
         "ModuleManagement": "模块管理",
-        "Dependencies": "依赖关系"
+        "Dependencies": "依赖关系",
+        "AssemblyAnalysis": "程序集分析"
       },
       "Messages": {
         "DataRefreshed": "数据已刷新",
@@ -255,6 +256,91 @@
     "Common": {
       "Labels": {
         "Uncategorized": "未分类"
+      }
+    },
+    "AssemblyAnalysis": {
+      "Loading": "正在加载程序集分析...",
+      "Summary": {
+        "EntryAssembly": "入口程序集",
+        "ScanAssemblies": "扫描程序集",
+        "AssembliesReadyForScanning": "已纳入类型扫描的程序集",
+        "LoadedAssemblies": "已加载程序集",
+        "AssembliesInCurrentDomain": "当前 AppDomain 中已加载的程序集",
+        "DependencyLibraries": "依赖清单库",
+        "ProjectLibraries": "依赖上下文中包含 {0} 个项目库",
+        "MissingRuntimeDlls": "缺失运行时 DLL",
+        "MissingDllHint": "当前运行目录下找不到 DLL 的库"
+      },
+      "Configuration": {
+        "Title": "类型查找器配置",
+        "GeneratedAt": "快照生成时间：{0}",
+        "DefaultProjectAssemblies": "默认项目程序集",
+        "AddPatterns": "Add 模式",
+        "ExcludePatterns": "Exclude 模式",
+        "NoAddPatterns": "未配置模糊 Add 模式",
+        "NoExcludePatterns": "未配置模糊 Exclude 模式",
+        "ManualAssemblies": "手动精确程序集",
+        "ManualAssemblyCount": "已配置 {0} 个精确程序集",
+        "EntryAssemblyLocation": "入口程序集位置"
+      },
+      "PatternEffects": {
+        "Title": "配置模式影响",
+        "AddPatterns": "Add 模式结果",
+        "ExcludePatterns": "Exclude 模式结果",
+        "Pattern": "模式",
+        "Matches": "匹配程序集",
+        "Affected": "影响的扫描程序集",
+        "NoAddPatternEffects": "未配置 Add 模式。",
+        "NoExcludePatternEffects": "未配置 Exclude 模式。"
+      },
+      "ScanAssemblies": {
+        "Title": "最终扫描程序集"
+      },
+      "ManualAssemblies": {
+        "Title": "手动精确程序集",
+        "Empty": "当前未手动配置精确程序集。"
+      },
+      "LoadedAssemblies": {
+        "Title": "AppDomain 已加载程序集"
+      },
+      "ReferencedAssemblies": {
+        "Title": "入口程序集静态引用"
+      },
+      "DependencyLibraries": {
+        "Title": "DependencyContext 依赖清单"
+      },
+      "Columns": {
+        "AssemblyName": "程序集名称",
+        "Version": "版本",
+        "EntryAssembly": "入口程序集",
+        "Location": "位置",
+        "Dynamic": "动态程序集",
+        "ScanStatus": "扫描状态",
+        "LoadedStatus": "加载状态",
+        "FullName": "完整名称",
+        "LibraryName": "库名称",
+        "LibraryType": "库类型",
+        "RuntimeDll": "运行时 DLL",
+        "RuntimeDllPath": "运行时 DLL 路径",
+        "LoadError": "加载错误"
+      },
+      "States": {
+        "Enabled": "启用",
+        "Disabled": "禁用",
+        "EntryAssembly": "入口",
+        "No": "否",
+        "InScanSet": "已扫描",
+        "NotInScanSet": "未扫描",
+        "Dynamic": "动态",
+        "Static": "静态",
+        "Loaded": "已加载",
+        "NotLoaded": "未加载",
+        "Exists": "存在",
+        "Missing": "缺失"
+      },
+      "Common": {
+        "None": "无",
+        "Unavailable": "不可用"
       }
     }
   },

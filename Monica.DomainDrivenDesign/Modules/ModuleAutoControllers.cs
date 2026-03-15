@@ -11,6 +11,7 @@ using Monica.DomainDrivenDesign.AutoController.Components;
 using Monica.DomainDrivenDesign.AutoController.Extensions;
 using Monica.DomainDrivenDesign.AutoController.Features;
 using Monica.DomainDrivenDesign.AutoController.Interfaces;
+using Monica.DomainDrivenDesign.AutoCrud;
 using Monica.DomainDrivenDesign.AutoController.Settings;
 
 // ReSharper disable once CheckNamespace
@@ -51,11 +52,22 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
         {
+            //if MVC controller discovery touches EFCore migration assemblies, it will cause missing design-time dependencies
             builder.ConfigureApplicationPartManager(manager =>
             {
                 var related = Mo.Options.GlobalTypeFinder.GetAssemblies()
-                    .Select(p => p.GetName().Name!)
-                    .ToHashSet();
+                    .Where(static assembly => !assembly.IsDynamic)
+                    .Select(static assembly => assembly.GetName().Name)
+                    .Where(static name => !string.IsNullOrWhiteSpace(name))
+                    .Select(static name => name!)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                related = Mo.Options.GlobalTypeFinder.GetTypes()
+                    .Where(static type => type is { IsClass: true, IsAbstract: false } && typeof(IMoCrudAppService).IsAssignableFrom(type))
+                    .Select(static type => type.Assembly.GetName().Name)
+                    .Where(name => !string.IsNullOrWhiteSpace(name) && related.Contains(name))
+                    .Select(static name => name!)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 if (related.Count > 0)
                 {
                     var partsToKeep = manager.ApplicationParts

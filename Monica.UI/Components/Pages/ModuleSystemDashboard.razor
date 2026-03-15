@@ -3,6 +3,7 @@
 @using Monica.Core.Module.Dashboard.Interfaces
 @using Monica.Core.Module.Dashboard.Models
 @using Monica.Core.Module.Models
+@using Monica.Core.Module.TypeFinder
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.Components
 @inject IModuleSystemStatusService StatusService
@@ -49,6 +50,12 @@
             </div>
         </MudTabPanel>
 
+        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:AssemblyAnalysis"]" Icon="@Icons.Material.Filled.Hub">
+            <div class="tab-content-panel">
+                <AssemblyAnalysis AssemblyAnalysisData="assemblyAnalysis" />
+            </div>
+        </MudTabPanel>
+
         <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
             <div class="tab-content-panel">
                 <DependencyGraph DependencyGraphData="dependencyGraph" />
@@ -68,6 +75,7 @@
     private ModuleSystemPerformance? systemPerformance;
     private ModuleSystemHealthCheck? healthCheck;
     private ModuleRegistrationInfo? registrationInfo;
+    private TypeFinderAssemblyAnalysis? assemblyAnalysis;
     private ModuleDependencyGraph? dependencyGraph;
     private ModuleDetailInfo? selectedModuleDetail;
     private bool showModuleDetail = false;
@@ -93,6 +101,7 @@
             systemPerformance = StatusService.GetSystemPerformance();
             healthCheck = StatusService.GetHealthCheck();
             registrationInfo = StatusService.GetRegistrationInfo();
+            assemblyAnalysis = StatusService.GetAssemblyAnalysis();
             dependencyGraph = StatusService.GetDependencyGraph();
 
             SnackBar.Add(L["ModuleSystem:Dashboard:Messages:DataRefreshed"], Severity.Success);

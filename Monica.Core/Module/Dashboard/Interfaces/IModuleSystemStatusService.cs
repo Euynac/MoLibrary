@@ -1,5 +1,6 @@
 using Monica.Core.Module.Dashboard.Models;
 using Monica.Core.Module.Models;
+using Monica.Core.Module.TypeFinder;
 
 namespace Monica.Core.Module.Dashboard.Interfaces;
 
@@ -53,4 +54,8 @@ public interface IModuleSystemStatusService
     /// <returns>健康状态检查结果</returns>
     ModuleSystemHealthCheck GetHealthCheck();
 
+    /// <summary>
+    /// Gets the current type-finder assembly analysis snapshot.
+    /// </summary>
+    TypeFinderAssemblyAnalysis GetAssemblyAnalysis();
 }

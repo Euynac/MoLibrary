@@ -18,6 +18,11 @@ public interface IDomainTypeFinder
     /// </summary>
     /// <returns>相关程序集集合</returns>
     IEnumerable<Assembly> GetAssemblies();
+
+    /// <summary>
+    /// Gets the current assembly analysis snapshot for the type finder.
+    /// </summary>
+    TypeFinderAssemblyAnalysis GetAssemblyAnalysis();
     
     /// <summary>
     /// 类型查找器配置选项

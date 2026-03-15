@@ -1,0 +1,76 @@
+.assembly-analysis-container {
+    width: 100%;
+}
+
+.summary-card {
+    height: 100%;
+}
+
+.detail-card {
+    height: 100%;
+}
+
+.loading-state {
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pattern-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.grid-card-content {
+    padding: 0;
+}
+
+.value-text {
+    word-break: break-word;
+}
+
+.empty-state {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.empty-state ::deep .mud-icon-root {
+    font-size: 3rem;
+}
+
+::deep .mud-table,
+::deep .mud-data-grid {
+    border-radius: 0 0 12px 12px;
+}
+
+::deep .mud-data-grid-header,
+::deep .mud-table-head {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
+}
+
+@media (max-width: 960px) {
+    .summary-card,
+    .detail-card {
+        height: auto;
+    }
+}

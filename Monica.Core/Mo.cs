@@ -57,14 +57,9 @@ public static class Mo
         public static bool? DefaultMinimalApiDisabled { get; set; }
         
         /// <summary>
-        /// 相关程序集名称，用于筛选要加载的程序集
-        /// </summary>
-        public static string[] RelatedAssemblies => GlobalTypeFinder.Options.RelatedAssemblies;
-        
-        /// <summary>
         /// 全局类型查找器
         /// </summary>
-        public static IDomainTypeFinder GlobalTypeFinder => _globalTypeFinder ?? new MoDomainTypeFinder(new ModuleCoreOptionTypeFinder());
+        public static IDomainTypeFinder GlobalTypeFinder => _globalTypeFinder ??= new MoDomainTypeFinder(new ModuleCoreOptionTypeFinder());
 
         private static IDomainTypeFinder? _globalTypeFinder;
         public static void ConfigTypeFinder(Action<ModuleCoreOptionTypeFinder>? configure = null)

@@ -1,7 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Features.MoLogProvider;
-using Monica.Tool.Extensions;
 
 namespace Monica.Core.Module.TypeFinder;
 
@@ -20,6 +19,7 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
 
     private bool _assemblyListLoaded;
     private readonly List<Assembly> _assemblies = [];
+    private TypeFinderAssemblyAnalysis? _assemblyAnalysis;
 
     #endregion
   
@@ -33,17 +33,13 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
         if (_assemblyListLoaded)
             return;
 
-        var entryAssembly = Assembly.GetEntryAssembly();
-        if (entryAssembly == null)
-            throw new InvalidOperationException("无法获取入口程序集");
+        var resolution = new TypeFinderAssemblyResolver(options).Resolve();
+        _assemblyAnalysis = resolution.Analysis;
+        _assemblies.AddRange(resolution.Assemblies);
 
-        // 获取相关程序集
-        var assemblies = entryAssembly.GetRelatedAssemblies(options.RelatedAssemblies);
-
-        _assemblies.AddRange(assemblies.ToList());
-
-
-        Logger?.LogInformation($"(入口程序集代码中未引用的程序集目前将被剪枝)模块系统遍历程序集：{_assemblies.Select(p => p.GetName().Name).OrderBy(p => p).StringJoin("\n")}");
+        Logger?.LogInformation(
+            "Module system will scan the following assemblies:{Assemblies}",
+            Environment.NewLine + string.Join(Environment.NewLine, _assemblies.Select(static assembly => assembly.GetName().Name).OrderBy(static name => name)));
 
         _assemblyListLoaded = true;
     }
@@ -59,6 +55,13 @@ public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTyp
     {
         LoadAssemblies();
         return _assemblies;
+    }
+
+    /// <inheritdoc />
+    public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
+    {
+        LoadAssemblies();
+        return _assemblyAnalysis ?? new TypeFinderAssemblyAnalysis();
     }
 
     public ModuleCoreOptionTypeFinder Options => options;

@@ -3,6 +3,7 @@ using Monica.Core.Module.Dashboard.Models;
 using Monica.Core.Module.Features;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.Core.Module.TypeFinder;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Module.Dashboard;
@@ -318,6 +319,14 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             Recommendations = recommendations,
             PerformanceMetrics = performanceMetrics
         };
+    }
+
+    /// <summary>
+    /// Gets the current type-finder assembly analysis snapshot.
+    /// </summary>
+    public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
+    {
+        return Mo.Options.GlobalTypeFinder.GetAssemblyAnalysis();
     }
 
     #region 私有帮助方法
