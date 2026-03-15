@@ -23,6 +23,8 @@ python <skill-dir>/scripts/init_subagent_session.py --session-root "<session-roo
 python <skill-dir>/scripts/write_agent_log.py --session-dir "<session-dir>" --message "Started <task>."
 ```
 
+Do not wait until you have a result. Bootstrap requires proof of life early.
+
 ## Own the child directory
 
 1. Keep progress-report artifacts, notes, and temporary outputs for the delegated task inside your child directory.
@@ -40,15 +42,36 @@ python <skill-dir>/scripts/write_agent_log.py --session-dir "<session-dir>" --me
 2. Log these events:
    - task start
    - major phase changes
+   - before a long-running command, browser step, or wait
+   - after that command, browser step, or wait completes
    - findings that may change the approach
+   - failed attempts and the next adjustment
    - blockers or questions for the main agent
+   - short heartbeat updates during longer investigation
    - completion
 3. Keep messages short and factual.
-4. If the main agent interrupts or nudges you, acknowledge it by writing a fresh log entry before resuming work.
-5. Before finishing, write a final entry that explicitly states `completed`, `blocked`, or `needs input`.
+4. Prefer over-logging to silence. If you are thinking, searching, or debugging for more than about `30-60s` without a concrete tool result, write a heartbeat log entry with:
+   - current hypothesis
+   - current or last checked artifact
+   - next action
+5. If the main agent interrupts or nudges you, acknowledge it by writing a fresh log entry before resuming work.
+6. Before finishing, write a final entry that explicitly states `completed`, `blocked`, or `needs input`.
+
+## Logging pattern
+
+Use a bias toward frequent short updates:
+
+1. Log when you start.
+2. Log before you run something that may take time.
+3. Log immediately after it returns with the result or failure.
+4. Log when you change direction.
+5. Log a heartbeat during extended analysis.
+6. Log the final state.
+
+Quiet periods should be exceptional. The main agent can tolerate temporary silence, but you should not rely on that tolerance as your normal workflow.
 
 ## Ownership rule
 
 1. Only the sub-agent writes `agent.log`.
 2. The main agent reads `agent.log` but must never edit it.
-3. Use fresh log entries to prove continued progress. A long silent period may trigger the main agent's patience-and-recovery flow.
+3. Use fresh log entries to prove continued progress. A long silent period may trigger the main agent's patience-and-recovery flow, so prefer visible heartbeat updates before it gets to that point.

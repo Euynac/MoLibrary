@@ -33,6 +33,11 @@ Do NOT act as the main orchestrator. You are not responsible for the overall pro
 ```
 
 6. Require the child to keep its progress-report artifacts inside its child directory. If the delegated task itself requires repository edits, let the child perform those edits normally while still keeping coordination artifacts in the child directory.
+7. Require the child to prefer active logging over silence:
+   - write the first non-empty log entry immediately
+   - log before and after long-running work
+   - log failures and next adjustments immediately
+   - add heartbeat updates during extended investigation
 
 ## Verify bootstrap
 
@@ -62,6 +67,7 @@ python <skill-dir>/scripts/collect_agent_status.py --session-root "<session-root
 5. If the child clearly drifts from scope, interrupt immediately with a precise correction.
 6. If the child is quiet after bootstrap, switch to [monitoring-and-recovery.md](monitoring-and-recovery.md). Do not close or redelegate before following that patience flow.
 7. If the log explicitly says `blocked` or `needs input`, respond directly instead of waiting through a quiet-period round.
+8. Silence is tolerable after bootstrap, but it is not the target behavior. Prefer children that keep emitting short factual progress updates.
 
 ## Close and archive
 
@@ -81,5 +87,6 @@ Use $subagent-progress-report in Sub-Agent mode.
 Your finalized session agent name is "<task-label>--<tool-nickname>".
 Use the provided session root, initialize your child folder there, keep coordination artifacts there,
 write your first non-empty agent.log entry immediately after initialization,
-and report progress by prepending entries to agent.log after each major phase.
+report progress by prepending entries to agent.log after each major phase,
+log before and after long-running work, and add heartbeat updates instead of going silent during extended investigation.
 ```

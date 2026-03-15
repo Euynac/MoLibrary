@@ -1,4 +1,4 @@
 interface:
   display_name: "Subagent Progress Report"
-  short_description: "Manage sub-agent bootstrap, logs, and recovery."
-  default_prompt: "Use $subagent-progress-report to coordinate sub-agent session folders, bootstrap checks, quiet-period waiting, and closed-agent archiving."
+  short_description: "Manage sub-agent bootstrap, active logs, and recovery."
+  default_prompt: "Use $subagent-progress-report to coordinate sub-agent session folders, require active progress logging, run bootstrap checks, handle quiet-period recovery, and archive closed agents."
