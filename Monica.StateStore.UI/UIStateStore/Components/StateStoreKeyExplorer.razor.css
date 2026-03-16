@@ -1,6 +1,6 @@
 .state-browser-workspace {
     display: grid;
-    grid-template-columns: 1fr 2fr 2fr;
+    grid-template-columns: 0.8fr 3fr 2fr;
     gap: 16px;
     height: 100%;
     min-height: 0;
