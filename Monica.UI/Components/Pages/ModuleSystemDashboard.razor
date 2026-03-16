@@ -29,7 +29,9 @@
                  Elevation="4"
                  Rounded="true"
                  ApplyEffectsToContainer="true"
-                 Class="mb-6">
+                 MinimumTabWidth="180px"
+                 TabButtonsClass="dashboard-tab-button"
+                 Class="mb-6 dashboard-tabs">
             <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
                 <div class="tab-content-panel">
                     <SystemOverview SystemStatus="systemStatus" HealthCheckData="healthCheck" />

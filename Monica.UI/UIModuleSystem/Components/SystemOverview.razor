@@ -10,131 +10,139 @@
         <MudGrid Spacing="4" Class="mb-4">
             <!-- 系统状态概览 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="status-card modern-card">
-                    <MudCardContent Class="pa-4">
-                        <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@GetStatusIcon(SystemStatus.State)"
-                                   Color="@GetStatusColor(SystemStatus.State)"
-                                   Size="Size.Large"
-                                   Class="mr-3" />
-                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:SystemStatus"]</MudText>
-                        </div>
-                        <div class="card-content">
-                            <MudText Typo="Typo.h4" Class="mb-3" Color="@GetStatusColor(SystemStatus.State)">
-                                @GetStatusText(SystemStatus.State)
-                            </MudText>
-                            <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
-                                             Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
-                                             Class="mb-2" 
-                                             Size="Size.Medium" />
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @(SystemStatus.IsInitialized ? L["ModuleSystem:SystemOverview:Messages:SystemInitialized"] : L["ModuleSystem:SystemOverview:Messages:SystemInitializing"])
-                            </MudText>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
+                <div class="overview-summary-item">
+                    <MudCard Class="status-card modern-card">
+                        <MudCardContent Class="pa-4">
+                            <div class="card-header d-flex align-center mb-4">
+                                <MudIcon Icon="@GetStatusIcon(SystemStatus.State)"
+                                       Color="@GetStatusColor(SystemStatus.State)"
+                                       Size="Size.Large"
+                                       Class="mr-3" />
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:SystemStatus"]</MudText>
+                            </div>
+                            <div class="card-content">
+                                <MudText Typo="Typo.h4" Class="mb-3" Color="@GetStatusColor(SystemStatus.State)">
+                                    @GetStatusText(SystemStatus.State)
+                                </MudText>
+                                <MudProgressLinear Color="@GetStatusColor(SystemStatus.State)" 
+                                                 Value="@(SystemStatus.IsInitialized ? 100 : 0)" 
+                                                 Class="mb-2" 
+                                                 Size="Size.Medium" />
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @(SystemStatus.IsInitialized ? L["ModuleSystem:SystemOverview:Messages:SystemInitialized"] : L["ModuleSystem:SystemOverview:Messages:SystemInitializing"])
+                                </MudText>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
             </MudItem>
 
             <!-- 模块统计 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="stats-card modern-card">
-                    <MudCardContent Class="pa-4">
-                        <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Apps"
-                                   Color="Color.Primary"
-                                   Size="Size.Large"
-                                   Class="mr-3" />
-                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:ModuleStatistics"]</MudText>
-                        </div>
-                        <div class="card-content">
-                            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-3">
-                                @SystemStatus.TotalModules
-                            </MudText>
-                            <MudStack Row="true" Spacing="1" Class="mb-2">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                    @SystemStatus.EnabledModules
-                                </MudChip>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">
-                                    <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" Class="mr-1" />
-                                    @SystemStatus.DisabledModules
-                                </MudChip>
-                            </MudStack>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @L["ModuleSystem:SystemOverview:Labels:TotalModules"]
-                            </MudText>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
+                <div class="overview-summary-item">
+                    <MudCard Class="stats-card modern-card">
+                        <MudCardContent Class="pa-4">
+                            <div class="card-header d-flex align-center mb-4">
+                                <MudIcon Icon="@Icons.Material.Filled.Apps"
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       Class="mr-3" />
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:ModuleStatistics"]</MudText>
+                            </div>
+                            <div class="card-content">
+                                <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-3">
+                                    @SystemStatus.TotalModules
+                                </MudText>
+                                <MudStack Row="true" Spacing="1" Class="mb-2">
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                        @SystemStatus.EnabledModules
+                                    </MudChip>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                        <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" Class="mr-1" />
+                                        @SystemStatus.DisabledModules
+                                    </MudChip>
+                                </MudStack>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @L["ModuleSystem:SystemOverview:Labels:TotalModules"]
+                                </MudText>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
             </MudItem>
 
             <!-- 初始化时间 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="performance-card modern-card">
-                    <MudCardContent Class="pa-4">
-                        <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer"
-                                   Color="Color.Warning"
-                                   Size="Size.Large"
-                                   Class="mr-3" />
-                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:InitializationTime"]</MudText>
-                        </div>
-                        <div class="card-content">
-                            <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-3">
-                                @(SystemStatus.TotalInitializationTimeMs)ms
-                            </MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                @L["ModuleSystem:SystemOverview:Labels:StartTime"]: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? L["ModuleSystem:SystemOverview:Labels:Unknown"])
-                            </MudText>
-                            <MudProgressLinear Color="Color.Warning" 
-                                             Value="@GetInitTimeProgress(SystemStatus.TotalInitializationTimeMs)" 
-                                             Class="mb-2"
-                                             Size="Size.Medium" />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @GetInitTimeDescription(SystemStatus.TotalInitializationTimeMs)
-                            </MudText>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
+                <div class="overview-summary-item">
+                    <MudCard Class="performance-card modern-card">
+                        <MudCardContent Class="pa-4">
+                            <div class="card-header d-flex align-center mb-4">
+                                <MudIcon Icon="@Icons.Material.Filled.Timer"
+                                       Color="Color.Warning"
+                                       Size="Size.Large"
+                                       Class="mr-3" />
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:InitializationTime"]</MudText>
+                            </div>
+                            <div class="card-content">
+                                <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-3">
+                                    @(SystemStatus.TotalInitializationTimeMs)ms
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                    @L["ModuleSystem:SystemOverview:Labels:StartTime"]: @(SystemStatus.StartTime?.ToString("HH:mm:ss") ?? L["ModuleSystem:SystemOverview:Labels:Unknown"])
+                                </MudText>
+                                <MudProgressLinear Color="Color.Warning" 
+                                                 Value="@GetInitTimeProgress(SystemStatus.TotalInitializationTimeMs)" 
+                                                 Class="mb-2"
+                                                 Size="Size.Medium" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @GetInitTimeDescription(SystemStatus.TotalInitializationTimeMs)
+                                </MudText>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
             </MudItem>
 
             <!-- 健康状态 -->
             <MudItem xs="12" sm="6" md="3">
-                <MudCard Class="health-card modern-card">
-                    <MudCardContent Class="pa-4">
-                        <div class="card-header d-flex align-center mb-4">
-                            <MudIcon Icon="@GetHealthIcon()"
-                                   Color="@GetHealthColor()"
-                                   Size="Size.Large"
-                                   Class="mr-3" />
-                            <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:HealthStatus"]</MudText>
-                        </div>
-                        <div class="card-content">
-                            <MudText Typo="Typo.h4" Color="@GetHealthColor()" Class="mb-3">
-                                @GetHealthText()
-                            </MudText>
-                            <div class="mb-2">
-                                @if (HasHealthIssues())
-                                {
-                                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mb-1">
-                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
-                                        @L["ModuleSystem:SystemOverview:Messages:HasIssues"]
-                                    </MudChip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-1">
-                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                        @L["ModuleSystem:SystemOverview:Messages:RunningNormally"]
-                                    </MudChip>
-                                }
+                <div class="overview-summary-item">
+                    <MudCard Class="health-card modern-card">
+                        <MudCardContent Class="pa-4">
+                            <div class="card-header d-flex align-center mb-4">
+                                <MudIcon Icon="@GetHealthIcon()"
+                                       Color="@GetHealthColor()"
+                                       Size="Size.Large"
+                                       Class="mr-3" />
+                                <MudText Typo="Typo.h6">@L["ModuleSystem:SystemOverview:Labels:HealthStatus"]</MudText>
                             </div>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @GetHealthDescription()
-                            </MudText>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
+                            <div class="card-content">
+                                <MudText Typo="Typo.h4" Color="@GetHealthColor()" Class="mb-3">
+                                    @GetHealthText()
+                                </MudText>
+                                <div class="mb-2">
+                                    @if (HasHealthIssues())
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mb-1">
+                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                                            @L["ModuleSystem:SystemOverview:Messages:HasIssues"]
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-1">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                            @L["ModuleSystem:SystemOverview:Messages:RunningNormally"]
+                                        </MudChip>
+                                    }
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @GetHealthDescription()
+                                </MudText>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
             </MudItem>
         </MudGrid>
 
@@ -146,14 +154,16 @@
             @for (int i = 0; i < 4; i++)
             {
                 <MudItem xs="12" sm="6" md="3">
-                    <MudCard Class="modern-card">
-                        <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 200px;">
-                            <div class="text-center">
-                                <MudProgressCircular Indeterminate="true" Class="mb-3" />
-                                <MudText Color="Color.Secondary">@L["ModuleSystem:SystemOverview:Labels:Loading"]</MudText>
-                            </div>
-                        </MudCardContent>
-                    </MudCard>
+                    <div class="overview-summary-item">
+                        <MudCard Class="modern-card">
+                            <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="min-height: 200px;">
+                                <div class="text-center">
+                                    <MudProgressCircular Indeterminate="true" Class="mb-3" />
+                                    <MudText Color="Color.Secondary">@L["ModuleSystem:SystemOverview:Labels:Loading"]</MudText>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </div>
                 </MudItem>
             }
         </MudGrid>

@@ -8,10 +8,6 @@
     min-height: 500px;
 }
 
-::deep .mud-tabs .mud-tab-panel {
-    padding: 0;
-}
-
 @media (max-width: 960px) {
     .dashboard-page-shell {
         padding: 8px;
