@@ -43,7 +43,8 @@
 </MudGrid>
 
 <!-- Provider 详情对话框 -->
-<StateStoreProviderDetailDialog @bind-IsVisible="_showProviderDetail"
+<StateStoreProviderDetailDialog IsVisible="_showProviderDetail"
+                               IsVisibleChanged="OnProviderDetailVisibilityChanged"
                                Provider="_selectedProvider" />
 
 @code {
@@ -58,5 +59,17 @@
     {
         _selectedProvider = provider;
         _showProviderDetail = true;
+    }
+
+    private Task OnProviderDetailVisibilityChanged(bool isVisible)
+    {
+        _showProviderDetail = isVisible;
+
+        if (!isVisible)
+        {
+            _selectedProvider = null;
+        }
+
+        return Task.CompletedTask;
     }
 }

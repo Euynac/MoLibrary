@@ -5,7 +5,7 @@
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<SharedResource> L
 
-<MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
     <DialogContent>
         @if (SelectedModuleDetail != null)
         {
@@ -308,10 +308,19 @@
     /// 关闭对话框
     /// </summary>
     /// <returns></returns>
-    private async Task OnClose()
+    private Task OnClose() => SetVisibilityAsync(false);
+
+    private Task OnVisibleChanged(bool isVisible) => SetVisibilityAsync(isVisible);
+
+    private async Task SetVisibilityAsync(bool isVisible)
     {
-        IsVisible = false;
-        await IsVisibleChanged.InvokeAsync(IsVisible);
+        if (IsVisible == isVisible)
+        {
+            return;
+        }
+
+        IsVisible = isVisible;
+        await IsVisibleChanged.InvokeAsync(isVisible);
     }
 
     /// <summary>

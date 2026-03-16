@@ -70,7 +70,8 @@
 </MudContainer>
 
 <!-- 模块详情对话框 -->
-<ModuleDetailDialog @bind-IsVisible="showModuleDetail"
+<ModuleDetailDialog IsVisible="showModuleDetail"
+                   IsVisibleChanged="OnModuleDetailVisibilityChanged"
                    SelectedModuleDetail="selectedModuleDetail" />
 
 
@@ -174,6 +175,18 @@
         catch (Exception ex)
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {ex.Message}", Severity.Error);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnModuleDetailVisibilityChanged(bool isVisible)
+    {
+        showModuleDetail = isVisible;
+
+        if (!isVisible)
+        {
+            selectedModuleDetail = null;
         }
 
         return Task.CompletedTask;

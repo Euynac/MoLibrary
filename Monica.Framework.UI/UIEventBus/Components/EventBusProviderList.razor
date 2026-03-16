@@ -49,7 +49,8 @@
 </MudGrid>
 
 <!-- Provider 详情对话框 -->
-<EventBusProviderDetailDialog @bind-IsVisible="_showProviderDetail"
+<EventBusProviderDetailDialog IsVisible="_showProviderDetail"
+                              IsVisibleChanged="OnProviderDetailVisibilityChanged"
                               Provider="_selectedProvider"
                               Subscriptions="_providerSubscriptions" />
 
@@ -78,5 +79,18 @@
         }).ToList();
 
         _showProviderDetail = true;
+    }
+
+    private Task OnProviderDetailVisibilityChanged(bool isVisible)
+    {
+        _showProviderDetail = isVisible;
+
+        if (!isVisible)
+        {
+            _selectedProvider = null;
+            _providerSubscriptions = [];
+        }
+
+        return Task.CompletedTask;
     }
 }

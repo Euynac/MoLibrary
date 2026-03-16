@@ -466,7 +466,8 @@
     </MudPaper>
 </div>
 
-<StateStoreProviderDetailDialog @bind-IsVisible="isProviderDetailVisible"
+<StateStoreProviderDetailDialog IsVisible="isProviderDetailVisible"
+                                IsVisibleChanged="OnProviderDetailVisibilityChanged"
                                 Provider="providerDetailTarget" />
 
 @code {
@@ -537,6 +538,18 @@
     {
         providerDetailTarget = provider;
         isProviderDetailVisible = true;
+    }
+
+    private Task OnProviderDetailVisibilityChanged(bool isVisible)
+    {
+        isProviderDetailVisible = isVisible;
+
+        if (!isVisible)
+        {
+            providerDetailTarget = null;
+        }
+
+        return Task.CompletedTask;
     }
 
     private void OnProviderCardKeyDown(KeyboardEventArgs args, StateStoreProviderInfo provider)

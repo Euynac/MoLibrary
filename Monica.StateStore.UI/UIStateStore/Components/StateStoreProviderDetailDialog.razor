@@ -2,7 +2,7 @@
 @using Monica.StateStore.UI.Models
 @inject IStringLocalizer<StateStoreResource> L
 
-<MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
     <TitleContent>
         @if (Provider is not null)
         {
@@ -103,10 +103,19 @@
         MaxWidth = MaxWidth.Large
     };
 
-    private async Task OnClose()
+    private Task OnClose() => SetVisibilityAsync(false);
+
+    private Task OnVisibleChanged(bool isVisible) => SetVisibilityAsync(isVisible);
+
+    private async Task SetVisibilityAsync(bool isVisible)
     {
-        IsVisible = false;
-        await IsVisibleChanged.InvokeAsync(IsVisible);
+        if (IsVisible == isVisible)
+        {
+            return;
+        }
+
+        IsVisible = isVisible;
+        await IsVisibleChanged.InvokeAsync(isVisible);
     }
 
     private string GetServiceKeyText(StateStoreProviderInfo provider)

@@ -2,7 +2,7 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.UI.UIModuleSystem.Components
 
-<MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+<MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
     <DialogContent>
         @if (Provider != null)
         {
@@ -199,10 +199,19 @@
     /// <summary>
     /// 关闭对话框
     /// </summary>
-    private async Task OnClose()
+    private Task OnClose() => SetVisibilityAsync(false);
+
+    private Task OnVisibleChanged(bool isVisible) => SetVisibilityAsync(isVisible);
+
+    private async Task SetVisibilityAsync(bool isVisible)
     {
-        IsVisible = false;
-        await IsVisibleChanged.InvokeAsync(IsVisible);
+        if (IsVisible == isVisible)
+        {
+            return;
+        }
+
+        IsVisible = isVisible;
+        await IsVisibleChanged.InvokeAsync(isVisible);
     }
 
     private string GetProviderIcon() => Provider?.ProviderType switch
