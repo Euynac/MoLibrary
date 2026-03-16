@@ -3,62 +3,127 @@ using Monica.StateStore.Providers;
 namespace Monica.StateStore.UI.Models;
 
 /// <summary>
-/// 表示已注册的 StateStore Provider 信息
+/// Represents a registered state store provider shown by the dashboard.
 /// </summary>
 public class StateStoreProviderInfo
 {
     /// <summary>
-    /// 服务键 (null 表示非 Keyed 的默认 Provider)
+    /// Service key. Null means the non-keyed default provider.
     /// </summary>
     public string? ServiceKey { get; init; }
 
     /// <summary>
-    /// 显示名称
+    /// Dashboard-facing service label.
     /// </summary>
     public string DisplayName => ServiceKey ?? "默认";
 
     /// <summary>
-    /// Provider 类型
+    /// Provider family display name such as Redis or Dapr.
+    /// </summary>
+    public string ProviderDisplayName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Provider type.
     /// </summary>
     public EStateStoreProviderType ProviderType { get; init; }
 
     /// <summary>
-    /// Provider 能力
+    /// Low-level provider capabilities.
     /// </summary>
     public EStateStoreCapabilities Capabilities { get; init; }
 
     /// <summary>
-    /// 是否为分布式 StateStore
+    /// Browser features exposed by the dashboard workspace.
+    /// </summary>
+    public EStateStoreBrowserFeatures BrowserFeatures { get; init; }
+
+    /// <summary>
+    /// Preferred search mode for the provider in the dashboard workspace.
+    /// </summary>
+    public EStateStoreKeySearchMode DefaultSearchMode { get; init; }
+
+    /// <summary>
+    /// Whether the provider is distributed.
     /// </summary>
     public bool IsDistributed { get; init; }
 
     /// <summary>
-    /// 是否为 IMoStateStore 的默认实现（用户直接注入 IMoStateStore 时获得的实例）
+    /// Whether this provider is the default IMoStateStore implementation resolved from DI.
     /// </summary>
     public bool IsDefaultIMoStateStore { get; init; }
 
     /// <summary>
-    /// Provider Option 的类型
+    /// Provider option type.
     /// </summary>
     public Type? OptionType { get; init; }
 
     /// <summary>
-    /// Provider Option 的实例
+    /// Provider option snapshot.
     /// </summary>
     public object? OptionInstance { get; init; }
 
     /// <summary>
-    /// 实现类型名称
+    /// Flattened configuration entries prepared for UI rendering.
+    /// </summary>
+    public IReadOnlyList<StateStoreProviderConfigEntry> ConfigurationEntries { get; init; } = [];
+
+    /// <summary>
+    /// Concrete implementation type name.
     /// </summary>
     public string ImplementationType { get; init; } = "";
 
     /// <summary>
-    /// 检查 Provider 是否支持 Key 扫描
+    /// Whether an option snapshot exists for the provider.
     /// </summary>
-    public bool SupportsKeyScanning => Capabilities.HasFlag(EStateStoreCapabilities.KeyScanning);
+    public bool HasConfigurationSnapshot => OptionType is not null || OptionInstance is not null;
 
     /// <summary>
-    /// 获取 Provider 类型的显示名称
+    /// Whether the provider exposes visible configuration entries.
+    /// </summary>
+    public bool HasVisibleConfiguration => ConfigurationEntries.Count > 0;
+
+    /// <summary>
+    /// Whether the provider supports pattern-based key browsing.
+    /// </summary>
+    public bool SupportsKeyScanning => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.PatternSearch);
+
+    /// <summary>
+    /// Whether the provider supports exact key lookup.
+    /// </summary>
+    public bool SupportsExactLookup => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.ExactLookup);
+
+    /// <summary>
+    /// Whether the provider supports value preview.
+    /// </summary>
+    public bool SupportsValuePreview => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.ValuePreview);
+
+    /// <summary>
+    /// Whether the provider supports key creation.
+    /// </summary>
+    public bool SupportsKeyCreation => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.Create);
+
+    /// <summary>
+    /// Whether the provider supports key updates.
+    /// </summary>
+    public bool SupportsKeyUpdate => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.Update);
+
+    /// <summary>
+    /// Whether the provider supports key deletion.
+    /// </summary>
+    public bool SupportsKeyDeletion => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.Delete);
+
+    /// <summary>
+    /// Whether the provider supports bulk delete.
+    /// </summary>
+    public bool SupportsBulkDelete => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.BulkDelete);
+
+    /// <summary>
+    /// Whether the provider supports reading key TTL.
+    /// </summary>
+    public bool SupportsKeyTTL => BrowserFeatures.HasFlag(EStateStoreBrowserFeatures.TimeToLive);
+
+    /// <summary>
+    /// Localized provider type fallback label.
     /// </summary>
     public string ProviderTypeName => ProviderType switch
     {

@@ -9,7 +9,7 @@ namespace Monica.StateStore.MemoryProvider;
 /// Memory cache based state store implementation
 /// </summary>
 public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCacheProvider> logger)
-    : StateStoreBase(logger), IMemoryStateStore
+    : StateStoreBase(logger), IMemoryStateStore, IStateStoreKeyTtlReader
 {
     private readonly ConcurrentDictionary<string, byte> _keyRegistry = new();
 
@@ -48,27 +48,23 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         // Register key
         _keyRegistry.TryAdd(key, 0);
 
+        var expiresAt = ResolveExpiration(ttl);
+
         StateEntry<T> stateEntry;
 
         if (memoryCache.TryGetValue(key, out var existingEntry) && existingEntry is StateEntry<T> existing)
         {
             // Update existing entry
-            existing.Update(value);
+            existing.Update(value, expiresAt);
             stateEntry = existing;
         }
         else
         {
             // Create new entry
-            stateEntry = new StateEntry<T>(value, 0);
+            stateEntry = new StateEntry<T>(value, 0, expiresAt);
         }
 
-        var options = new MemoryCacheEntryOptions();
-        if (ttl.HasValue)
-        {
-            options.AbsoluteExpirationRelativeToNow = ttl.Value;
-        }
-
-        memoryCache.Set(key, stateEntry, options);
+        memoryCache.Set(key, stateEntry, CreateEntryOptions(expiresAt));
         Logger.LogDebug("Saved state with key: {Key}", key);
         return Task.CompletedTask;
     }
@@ -113,6 +109,8 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     public override Task<(bool Success, string? NewETag)> TrySaveStateWithETagAsync<T>(string key, T value, string expectedETag,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
+        var expiresAt = ResolveExpiration(ttl);
+
         // Use lock for atomic operation
         lock (memoryCache)
         {
@@ -127,15 +125,8 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
                 }
 
                 // ETag matches, update entry
-                existing.Update(value);
-
-                var options = new MemoryCacheEntryOptions();
-                if (ttl.HasValue)
-                {
-                    options.AbsoluteExpirationRelativeToNow = ttl.Value;
-                }
-
-                memoryCache.Set(key, existing, options);
+                existing.Update(value, expiresAt);
+                memoryCache.Set(key, existing, CreateEntryOptions(expiresAt));
                 Logger.LogDebug("Updated state with ETag verification for key: {Key}, NewETag: {ETag}", key, existing.ETag);
                 return Task.FromResult<(bool, string?)>((true, existing.ETag));
             }
@@ -149,6 +140,8 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
     public override Task<bool> TrySaveStateIfNotExistsAsync<T>(string key, T value,
         CancellationToken cancellationToken = default, TimeSpan? ttl = null)
     {
+        var expiresAt = ResolveExpiration(ttl);
+
         // Use lock for atomic operation
         lock (memoryCache)
         {
@@ -160,18 +153,12 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
             }
 
             // Key doesn't exist, create new entry
-            var stateEntry = new StateEntry<T>(value, 0);
-
-            var options = new MemoryCacheEntryOptions();
-            if (ttl.HasValue)
-            {
-                options.AbsoluteExpirationRelativeToNow = ttl.Value;
-            }
+            var stateEntry = new StateEntry<T>(value, 0, expiresAt);
 
             // Register key
             _keyRegistry.TryAdd(key, 0);
 
-            memoryCache.Set(key, stateEntry, options);
+            memoryCache.Set(key, stateEntry, CreateEntryOptions(expiresAt));
             Logger.LogDebug("Saved state (if not exists) with key: {Key}", key);
             return Task.FromResult(true);
         }
@@ -193,6 +180,8 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
         CancellationToken cancellationToken = default,
         TimeSpan? ttl = null)
     {
+        var expiresAt = ResolveExpiration(ttl);
+
         foreach (var (key, value) in items)
         {
             // Register key
@@ -202,25 +191,31 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
 
             if (memoryCache.TryGetValue(key, out var existingEntry) && existingEntry is StateEntry<T> existing)
             {
-                existing.Update(value);
+                existing.Update(value, expiresAt);
                 stateEntry = existing;
             }
             else
             {
-                stateEntry = new StateEntry<T>(value, 0);
+                stateEntry = new StateEntry<T>(value, 0, expiresAt);
             }
 
-            var options = new MemoryCacheEntryOptions();
-            if (ttl.HasValue)
-            {
-                options.AbsoluteExpirationRelativeToNow = ttl.Value;
-            }
-
-            memoryCache.Set(key, stateEntry, options);
+            memoryCache.Set(key, stateEntry, CreateEntryOptions(expiresAt));
         }
 
         Logger.LogDebug("Saved {Count} states in bulk", items.Count);
         return Task.CompletedTask;
+    }
+
+    public Task<StateStoreKeyTtlSnapshot> GetKeyTtlAsync(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!memoryCache.TryGetValue(key, out var entry) || entry is not IStateEntry stateEntry)
+        {
+            throw new KeyNotFoundException($"Key not found: {key}");
+        }
+
+        return Task.FromResult(CreateTtlSnapshot(stateEntry.ExpiresAt));
     }
 
     public override Task<bool> TryDeleteStateWithETagAsync(
@@ -266,5 +261,29 @@ public class MemoryCacheProvider(IMemoryCache memoryCache, ILogger<MemoryCachePr
             .Replace("\\*", ".*")
             .Replace("\\?", ".") + "$";
         return new Regex(regexPattern, RegexOptions.Compiled);
+    }
+
+    private static DateTimeOffset? ResolveExpiration(TimeSpan? ttl)
+    {
+        return ttl.HasValue ? DateTimeOffset.UtcNow.Add(ttl.Value) : null;
+    }
+
+    private static MemoryCacheEntryOptions CreateEntryOptions(DateTimeOffset? expiresAt)
+    {
+        var options = new MemoryCacheEntryOptions();
+
+        if (expiresAt.HasValue)
+        {
+            options.AbsoluteExpiration = expiresAt;
+        }
+
+        return options;
+    }
+
+    private static StateStoreKeyTtlSnapshot CreateTtlSnapshot(DateTimeOffset? expiresAt)
+    {
+        return expiresAt.HasValue
+            ? StateStoreKeyTtlSnapshot.FromRemaining(expiresAt.Value - DateTimeOffset.UtcNow)
+            : StateStoreKeyTtlSnapshot.Permanent;
     }
 }

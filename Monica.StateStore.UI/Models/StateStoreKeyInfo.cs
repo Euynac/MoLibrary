@@ -1,79 +1,91 @@
+using Monica.StateStore;
+
 namespace Monica.StateStore.UI.Models;
 
 /// <summary>
-/// 表示 StateStore 中的 Key 信息
+/// Represents one state store key in the dashboard workspace.
 /// </summary>
 public class StateStoreKeyInfo
 {
     /// <summary>
-    /// Key 名称
+    /// Key name.
     /// </summary>
     public required string Key { get; init; }
 
     /// <summary>
-    /// 原始 JSON 值 (用于显示)
+    /// Raw value preview shown by the dashboard.
     /// </summary>
     public string? RawValue { get; set; }
 
     /// <summary>
-    /// 值是否已加载
+    /// Whether the value preview has been loaded.
     /// </summary>
     public bool IsValueLoaded { get; set; }
 
     /// <summary>
-    /// ETag (用于乐观并发控制)
+    /// ETag used for optimistic concurrency.
     /// </summary>
     public string? ETag { get; set; }
 
     /// <summary>
-    /// 加载值时的错误信息
+    /// Remaining TTL when the provider exposes it.
+    /// </summary>
+    public TimeSpan? TTL { get; set; }
+
+    /// <summary>
+    /// TTL availability for the current provider and key.
+    /// </summary>
+    public EStateStoreKeyTtlStatus TTLStatus { get; set; } = EStateStoreKeyTtlStatus.Unknown;
+
+    /// <summary>
+    /// Error message captured while loading the value preview.
     /// </summary>
     public string? Error { get; set; }
 }
 
 /// <summary>
-/// 创建/更新 Key 的请求模型
+/// Create or update request model for a state store key.
 /// </summary>
 public class StateStoreKeyUpdateRequest
 {
     /// <summary>
-    /// Key 名称
+    /// Key name.
     /// </summary>
     public required string Key { get; set; }
 
     /// <summary>
-    /// JSON 值
+    /// JSON payload or raw string payload.
     /// </summary>
     public required string Value { get; set; }
 
     /// <summary>
-    /// ETag (用于乐观并发控制)
+    /// ETag used for optimistic concurrency.
     /// </summary>
     public string? ETag { get; set; }
 
     /// <summary>
-    /// 过期时间
+    /// Time to live.
     /// </summary>
     public TimeSpan? TTL { get; set; }
 }
 
 /// <summary>
-/// Key 扫描结果 (支持分页)
+/// Legacy key scan result kept for compatibility with existing components.
 /// </summary>
 public record KeyScanResult
 {
     /// <summary>
-    /// 匹配的 Key 列表
+    /// Matched keys.
     /// </summary>
     public List<string> Keys { get; init; } = [];
 
     /// <summary>
-    /// 总数量
+    /// Total matched count.
     /// </summary>
     public int TotalCount { get; init; }
 
     /// <summary>
-    /// 是否还有更多
+    /// Whether more results exist after the current page.
     /// </summary>
     public bool HasMore { get; init; }
 }

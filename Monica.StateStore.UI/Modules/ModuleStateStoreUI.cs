@@ -5,6 +5,7 @@ using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
 using Monica.StateStore.UI.Pages;
 using Monica.StateStore.UI.Services;
+using Monica.StateStore.UI.Services.Browser;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -57,6 +58,10 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<StateStoreUIService>();
+        services.AddSingleton<IStateStoreBrowserApi, RedisStateStoreBrowserApi>();
+        services.AddSingleton<IStateStoreBrowserApi, MemoryStateStoreBrowserApi>();
+        services.AddSingleton<IStateStoreBrowserApi, DaprStateStoreBrowserApi>();
+        services.AddSingleton<IStateStoreBrowserApi, FallbackStateStoreBrowserApi>();
     }
 }
 

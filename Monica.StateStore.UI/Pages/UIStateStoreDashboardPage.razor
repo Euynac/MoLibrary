@@ -1,10 +1,10 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.StateStore.UI.Services
-@using Monica.StateStore.UI.Models
-@using Monica.StateStore.UI.UIStateStore.Components
-@using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Options
 @using Monica.Modules
+@using Monica.StateStore.UI.Models
+@using Monica.StateStore.UI.Services
+@using Monica.StateStore.UI.UIStateStore.Components
+@using Monica.Tool.MoResponse
 @inject StateStoreUIService StateStoreService
 @inject IOptions<ModuleStateStoreUIOption> Options
 @inject ISnackbar Snackbar
@@ -12,46 +12,79 @@
 
 <PageTitle>@L["Dashboard:PageTitle"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
-    <MudPaper Class="pa-6 mb-6" Elevation="2">
-        <MudText Typo="Typo.h3">@L["Dashboard:Title"]</MudText>
+<div class="state-store-dashboard-page">
+    <MudPaper Class="dashboard-banner" Elevation="0">
+        <div class="dashboard-banner__copy">
+            <MudText Typo="Typo.overline" Class="dashboard-eyebrow">@L["Dashboard:Eyebrow"]</MudText>
+            <MudText Typo="Typo.h5">@L["Dashboard:Title"]</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Dashboard:Subtitle"]</MudText>
+        </div>
+
+        <div class="dashboard-banner__metrics">
+            <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Storage">
+                @L["Dashboard:Summary:RegisteredProviders", providers.Count]
+            </MudChip>
+
+            @if (PatternProviderCount > 0)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Search">
+                    @L["Dashboard:Summary:PatternProviders", PatternProviderCount]
+                </MudChip>
+            }
+
+            @if (ExactOnlyProviderCount > 0)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Key">
+                    @L["Dashboard:Summary:ExactOnlyProviders", ExactOnlyProviderCount]
+                </MudChip>
+            }
+
+            @if (DefaultProvider is not null)
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Star">
+                    @L["Dashboard:Summary:DefaultProvider", DefaultProvider.DisplayName]
+                </MudChip>
+            }
+        </div>
     </MudPaper>
 
-    <MudTabs Elevation="4"
-             Rounded="true"
-             ApplyEffectsToContainer="true"
-             Class="mb-6">
-        <MudTabPanel Text="@L["Dashboard:Tabs:ProviderOverview"]" Icon="@Icons.Material.Filled.Hub">
-            <div class="tab-content-panel">
-                <StateStoreProviderList Providers="providers"
-                                        OnRefresh="LoadProvidersAsync"
-                                        IsLoading="isLoading" />
-            </div>
-        </MudTabPanel>
-
-        <MudTabPanel Text="@L["Dashboard:Tabs:KeyBrowser"]" Icon="@Icons.Material.Filled.Key">
-            <div class="tab-content-panel">
-                @if (providers.Any())
-                {
-                    <StateStoreKeyExplorer Providers="providers"
-                                           Options="Options.Value" />
-                }
-                else if (!isLoading)
-                {
-                    <MudAlert Severity="Severity.Info">
-                        @L["Dashboard:Messages:NoProviders"]
-                    </MudAlert>
-                }
-            </div>
-        </MudTabPanel>
-    </MudTabs>
-</MudContainer>
+    <div class="dashboard-content">
+        @if (isLoading)
+        {
+            <MudPaper Class="dashboard-state" Elevation="0">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.h6">@L["Dashboard:Messages:LoadingProviders"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:LoadingProvidersDescription"]</MudText>
+            </MudPaper>
+        }
+        else if (!providers.Any())
+        {
+            <MudPaper Class="dashboard-state" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">@L["Dashboard:Messages:NoProviders"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Dashboard:Messages:NoProvidersDescription"]</MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <StateStoreKeyExplorer Providers="providers"
+                                   Options="Options.Value"
+                                   OnRefreshProviders="LoadProvidersAsync" />
+        }
+    </div>
+</div>
 
 @code {
     public const string PAGE_URL = "/state-store-dashboard";
 
     private List<StateStoreProviderInfo> providers = [];
-    private bool isLoading = false;
+    private bool isLoading;
+
+    private StateStoreProviderInfo? DefaultProvider => providers.FirstOrDefault(provider => provider.IsDefaultIMoStateStore);
+
+    private int ExactOnlyProviderCount => providers.Count(provider => provider.SupportsExactLookup && !provider.SupportsKeyScanning);
+
+    private int PatternProviderCount => providers.Count(provider => provider.SupportsKeyScanning);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

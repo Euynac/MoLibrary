@@ -3,129 +3,82 @@
 @inject IStringLocalizer<StateStoreResource> L
 
 <MudDialog @bind-Visible="IsVisible" Options="DialogOptions">
+    <TitleContent>
+        @if (Provider is not null)
+        {
+            <div class="provider-dialog__title">
+                <MudText Typo="Typo.h6">@Provider.DisplayName</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@GetProviderSummary(Provider)</MudText>
+            </div>
+        }
+    </TitleContent>
     <DialogContent>
         @if (Provider != null)
         {
-            <div class="provider-detail-header mb-4">
-                <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
-                    <MudAvatar Color="@GetProviderColor()" Size="Size.Medium" Class="mr-2">
-                        <MudIcon Icon="@GetProviderIcon()" />
-                    </MudAvatar>
-                    @Provider.DisplayName
-                </MudText>
-                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                    @Provider.ImplementationType
-                </MudText>
+            <div class="provider-dialog">
+                <div class="provider-dialog__overview">
+                    <div class="provider-dialog__stat">
+                        <span>@L["ProviderDetail:Labels:ProviderType"]</span>
+                        <strong>@Provider.ProviderTypeName</strong>
+                    </div>
+
+                    <div class="provider-dialog__stat">
+                        <span>@L["ProviderDetail:Labels:ServiceKey"]</span>
+                        <strong>@GetServiceKeyText(Provider)</strong>
+                    </div>
+
+                    <div class="provider-dialog__stat">
+                        <span>@L["ProviderDetail:Labels:StorageMode"]</span>
+                        <strong>@GetStorageModeText(Provider)</strong>
+                    </div>
+
+                    <div class="provider-dialog__stat">
+                        <span>@L["ProviderDetail:Labels:ImplementationType"]</span>
+                        <strong>@Provider.ImplementationType</strong>
+                    </div>
+                </div>
+
+                <div class="provider-dialog__section">
+                    <div class="provider-dialog__section-header">
+                        <MudText Typo="Typo.subtitle1">@L["ProviderDetail:Labels:SupportedCapabilities"]</MudText>
+                    </div>
+
+                    <div class="provider-dialog__chips">
+                        @foreach (var capability in GetCapabilityLabels(Provider))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@capability</MudChip>
+                        }
+                    </div>
+                </div>
+
+                <div class="provider-dialog__section">
+                    <div class="provider-dialog__section-header">
+                        <div>
+                            <MudText Typo="Typo.subtitle1">@L["ProviderDetail:Tabs:ConfigOptions"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@GetConfigurationSource(Provider)</MudText>
+                        </div>
+                    </div>
+
+                    @if (Provider.HasVisibleConfiguration)
+                    {
+                        <div class="provider-dialog__config-grid">
+                            @foreach (var entry in Provider.ConfigurationEntries)
+                            {
+                                <div class="provider-dialog__config-row">
+                                    <span title="@entry.Path">@entry.Label</span>
+                                    <strong title="@entry.Value">@entry.Value</strong>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                            @GetConfigurationEmptyMessage(Provider)
+                        </MudAlert>
+                    }
+                </div>
             </div>
-
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
-                <MudTabPanel Text="@L["ProviderDetail:Tabs:ProviderInfo"]" Icon="@Icons.Material.Filled.Info">
-                    <div class="tab-content pa-4">
-                        <MudGrid Spacing="3">
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ProviderType"]</MudText>
-                                    </div>
-                                    <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
-                                        @Provider.ProviderTypeName
-                                    </MudChip>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ServiceKey"]</MudText>
-                                    </div>
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @(Provider.ServiceKey ?? L["ProviderDetail:Labels:DefaultNoKey"])
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
-                                                 Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
-                                                 Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:StorageMode"]</MudText>
-                                    </div>
-                                    <MudChip T="string"
-                                             Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
-                                             Size="Size.Small">
-                                        @(Provider.IsDistributed ? L["ProviderDetail:Labels:Distributed"] : L["ProviderDetail:Labels:LocalMemory"])
-                                    </MudChip>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-2">
-                                        <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:ImplementationType"]</MudText>
-                                    </div>
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @Provider.ImplementationType
-                                    </MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <MudPaper Class="pa-4" Elevation="2">
-                                    <div class="d-flex align-center mb-3">
-                                        <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ProviderDetail:Labels:SupportedCapabilities"]</MudText>
-                                    </div>
-                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                        @if (Provider.SupportsKeyScanning)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Class="mr-1" />
-                                                @L["ProviderDetail:Capabilities:KeyScanning"]
-                                            </MudChip>
-                                        }
-                                        else
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" Class="mr-1" />
-                                                @L["ProviderDetail:Capabilities:NoScanning"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.RawStringRetrieval))
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.TextFields" Size="Size.Small" Class="mr-1" />
-                                                @L["ProviderDetail:Capabilities:RawStringRetrieval"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.QueryState))
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
-                                                @L["ProviderDetail:Capabilities:QueryState"]
-                                            </MudChip>
-                                        }
-                                        @if (Provider.Capabilities.HasFlag(EStateStoreCapabilities.BulkOperations))
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                                <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                                                @L["ProviderDetail:Capabilities:BulkOperations"]
-                                            </MudChip>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            </MudItem>
-                        </MudGrid>
-                    </div>
-                </MudTabPanel>
-
-                <MudTabPanel Text="@L["ProviderDetail:Tabs:ConfigOptions"]" Icon="@Icons.Material.Filled.Settings">
-                    <div class="tab-content pa-4">
-                        <ModuleOptionDisplay OptionType="@Provider.OptionType"
-                                           OptionInstance="@Provider.OptionInstance" />
-                    </div>
-                </MudTabPanel>
-            </MudTabs>
         }
     </DialogContent>
     <DialogActions>
@@ -136,25 +89,13 @@
 </MudDialog>
 
 @code {
-    /// <summary>
-    /// 是否显示对话框
-    /// </summary>
     [Parameter] public bool IsVisible { get; set; }
 
-    /// <summary>
-    /// 是否显示对话框改变事件
-    /// </summary>
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
-    /// <summary>
-    /// Provider 信息
-    /// </summary>
     [Parameter] public StateStoreProviderInfo? Provider { get; set; }
 
-    /// <summary>
-    /// 对话框选项
-    /// </summary>
-    private DialogOptions DialogOptions = new()
+    private DialogOptions DialogOptions { get; } = new()
     {
         CloseButton = true,
         CloseOnEscapeKey = true,
@@ -162,28 +103,92 @@
         MaxWidth = MaxWidth.Large
     };
 
-    /// <summary>
-    /// 关闭对话框
-    /// </summary>
     private async Task OnClose()
     {
         IsVisible = false;
         await IsVisibleChanged.InvokeAsync(IsVisible);
     }
 
-    private string GetProviderIcon() => Provider?.ProviderType switch
+    private string GetServiceKeyText(StateStoreProviderInfo provider)
     {
-        EStateStoreProviderType.Redis => Icons.Material.Filled.Storage,
-        EStateStoreProviderType.Dapr => Icons.Material.Filled.Cloud,
-        EStateStoreProviderType.Memory => Icons.Material.Filled.Memory,
-        _ => Icons.Material.Filled.Help
-    };
+        return string.IsNullOrWhiteSpace(provider.ServiceKey)
+            ? L["ProviderDetail:Labels:DefaultNoKey"]
+            : provider.ServiceKey;
+    }
 
-    private Color GetProviderColor() => Provider?.ProviderType switch
+    private string GetStorageModeText(StateStoreProviderInfo provider)
     {
-        EStateStoreProviderType.Redis => Color.Error,
-        EStateStoreProviderType.Dapr => Color.Info,
-        EStateStoreProviderType.Memory => Color.Success,
-        _ => Color.Default
-    };
+        return provider.IsDistributed
+            ? L["ProviderDetail:Labels:Distributed"]
+            : L["ProviderDetail:Labels:LocalMemory"];
+    }
+
+    private string GetProviderSummary(StateStoreProviderInfo provider)
+    {
+        return $"{provider.ProviderDisplayName} · {GetStorageModeText(provider)}";
+    }
+
+    private string GetConfigurationSource(StateStoreProviderInfo provider)
+    {
+        return provider.OptionType?.Name ?? L["ProviderDetail:Messages:ConfigurationShared"];
+    }
+
+    private string GetConfigurationEmptyMessage(StateStoreProviderInfo provider)
+    {
+        return provider.HasConfigurationSnapshot
+            ? L["ProviderDetail:Messages:NoConfigurationDescription"]
+            : L["ProviderDetail:Messages:ConfigurationShared"];
+    }
+
+    private List<string> GetCapabilityLabels(StateStoreProviderInfo provider)
+    {
+        var labels = new List<string>
+        {
+            provider.SupportsKeyScanning
+                ? L["ProviderDetail:Capabilities:KeyScanning"]
+                : L["ProviderDetail:Capabilities:NoScanning"]
+        };
+
+        if (provider.SupportsExactLookup)
+        {
+            labels.Add(L["KeyExplorer:Labels:ExactLookupMode"]);
+        }
+
+        if (provider.SupportsValuePreview)
+        {
+            labels.Add(L["KeyExplorer:Labels:ValuePreview"]);
+        }
+
+        if (provider.SupportsKeyTTL)
+        {
+            labels.Add(L["KeyExplorer:Detail:Labels:TTL"]);
+        }
+
+        if (provider.SupportsKeyCreation)
+        {
+            labels.Add(L["KeyExplorer:Actions:Create"]);
+        }
+
+        if (provider.SupportsKeyUpdate)
+        {
+            labels.Add(L["KeyExplorer:Actions:Edit"]);
+        }
+
+        if (provider.SupportsKeyDeletion)
+        {
+            labels.Add(L["KeyExplorer:Actions:Delete"]);
+        }
+
+        if (provider.Capabilities.HasFlag(EStateStoreCapabilities.QueryState))
+        {
+            labels.Add(L["ProviderDetail:Capabilities:QueryState"]);
+        }
+
+        if (provider.Capabilities.HasFlag(EStateStoreCapabilities.BulkOperations))
+        {
+            labels.Add(L["ProviderDetail:Capabilities:BulkOperations"]);
+        }
+
+        return labels;
+    }
 }

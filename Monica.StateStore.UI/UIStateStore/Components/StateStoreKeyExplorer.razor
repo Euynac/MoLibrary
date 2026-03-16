@@ -1,296 +1,625 @@
+@using Microsoft.AspNetCore.Components.Web
 @using Monica.Modules
+@using Monica.StateStore
 @using Monica.StateStore.Providers
-@using Monica.StateStore.UI.Services
 @using Monica.StateStore.UI.Models
+@using Monica.StateStore.UI.Services
 @using Monica.Tool.MoResponse
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<StateStoreResource> L
 
-<MudGrid>
-    @* Provider 选择和搜索 *@
-    <MudItem xs="12">
-        <MudPaper Class="pa-4">
-            <MudGrid>
-                <MudItem xs="12" md="4">
-                    <MudSelect T="StateStoreProviderInfo"
-                               Label="@L["KeyExplorer:Labels:SelectProvider"]"
-                               @bind-Value="selectedProvider"
-                               @bind-Value:after="OnProviderChanged"
-                               Variant="Variant.Outlined">
-                        @foreach (var provider in Providers)
-                        {
-                            <MudSelectItem Value="provider">
-                                <div class="d-flex align-center">
-                                    <MudIcon Icon="@GetProviderIcon(provider)"
-                                             Size="Size.Small" Class="mr-2" />
-                                    @provider.DisplayName
-                                    <MudChip T="string" Size="Size.Small" Class="ml-2"
-                                             Color="@GetProviderColor(provider)">
-                                        @provider.ProviderTypeName
-                                    </MudChip>
-                                </div>
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
+<div class="state-browser-workspace">
+    <MudPaper Class="workspace-panel provider-rail-shell" Elevation="0">
+        <div class="panel-header">
+            <div>
+                <MudText Typo="Typo.overline" Class="section-eyebrow">@L["KeyExplorer:Rail:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6">@L["KeyExplorer:Rail:Title"]</MudText>
+            </div>
 
-                <MudItem xs="12" md="5">
-                    <MudTextField @bind-Value="searchPattern"
-                                  Label="@GetSearchLabel()"
-                                  Placeholder="@GetSearchPlaceholder()"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  OnAdornmentClick="SearchKeysAsync"
-                                  OnKeyDown="OnSearchKeyDown" />
-                </MudItem>
-
-                <MudItem xs="12" md="3" Class="d-flex align-center gap-2">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Search"
-                               OnClick="SearchKeysAsync"
-                               Disabled="@(selectedProvider == null || isSearching)">
-                        @GetSearchButtonText()
-                    </MudButton>
-
-                    @if (Options.AllowKeyCreation)
-                    {
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Success"
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   OnClick="OpenCreateKeyDialog"
-                                   Disabled="@(selectedProvider == null)">
-                            @L["KeyExplorer:Actions:Create"]
-                        </MudButton>
-                    }
-                </MudItem>
-            </MudGrid>
-
-            @if (selectedProvider != null && !selectedProvider.SupportsKeyScanning)
+            @if (OnRefreshProviders.HasDelegate)
             {
-                <MudAlert Severity="Severity.Warning" Class="mt-3">
-                    <MudText>
-                        <strong>@L["KeyExplorer:Messages:NoScanningSupport"]</strong>@L["KeyExplorer:Messages:EnterFullKeyName"]
+                <MudTooltip Text="@L["ProviderList:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   Disabled="@isRefreshingProviders"
+                                   OnClick="RefreshProvidersAsync" />
+                </MudTooltip>
+            }
+        </div>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @L["KeyExplorer:Rail:Subtitle", Providers.Count]
+        </MudText>
+
+        <div class="provider-list">
+            @foreach (var provider in Providers)
+            {
+                <div role="button"
+                     tabindex="0"
+                     class="@GetProviderCardClass(provider)"
+                     @onclick="() => SelectProvider(provider)"
+                     @onkeydown="args => OnProviderCardKeyDown(args, provider)">
+                    <div class="provider-card__content">
+                        <div class="provider-card__copy">
+                            <MudText Typo="Typo.subtitle2">@provider.DisplayName</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @GetProviderCardDescription(provider)
+                            </MudText>
+                        </div>
+
+                        <div class="provider-card__actions" @onclick:stopPropagation="true">
+                            <MudTooltip Text="@L["ProviderCard:Actions:ViewDetails"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Color="Color.Default"
+                                               Size="Size.Small"
+                                               OnClick="@(() => OpenProviderDetail(provider))" />
+                            </MudTooltip>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="workspace-panel browser-shell" Elevation="0">
+        <div class="panel-header">
+            <div>
+                <MudText Typo="Typo.overline" Class="section-eyebrow">@L["KeyExplorer:Workspace:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h5">@GetWorkspaceTitle()</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@GetWorkspaceSubtitle()</MudText>
+            </div>
+
+            <div class="workspace-header__stats">
+                @if (selectedProvider is not null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                        @GetSearchModeText(searchMode)
+                    </MudChip>
+                }
+
+                @if (browseResult is not null && hasBrowsed && keys.Count > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        @GetResultCountText()
+                    </MudChip>
+                }
+
+                @if (selectedKeyNames.Count > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text">
+                        @L["KeyExplorer:Labels:SelectedCount", selectedKeyNames.Count]
+                    </MudChip>
+                }
+            </div>
+        </div>
+
+        <div class="browser-toolbar">
+            <div class="mode-switch" role="group" aria-label="@L["KeyExplorer:Labels:SearchMode"]">
+                <MudButton Variant="@(IsSearchMode(EStateStoreKeySearchMode.ExactKey) ? Variant.Filled : Variant.Outlined)"
+                           Color="@(IsSearchMode(EStateStoreKeySearchMode.ExactKey) ? Color.Primary : Color.Default)"
+                           Disabled="@(selectedProvider is null || !selectedProvider.SupportsExactLookup)"
+                           OnClick="@(() => SetSearchMode(EStateStoreKeySearchMode.ExactKey))">
+                    @L["KeyExplorer:Labels:ExactLookupMode"]
+                </MudButton>
+
+                <MudButton Variant="@(IsSearchMode(EStateStoreKeySearchMode.PatternScan) ? Variant.Filled : Variant.Outlined)"
+                           Color="@(IsSearchMode(EStateStoreKeySearchMode.PatternScan) ? Color.Primary : Color.Default)"
+                           Disabled="@(selectedProvider is null || !selectedProvider.SupportsKeyScanning)"
+                           OnClick="@(() => SetSearchMode(EStateStoreKeySearchMode.PatternScan))">
+                    @L["KeyExplorer:Labels:PatternSearchMode"]
+                </MudButton>
+            </div>
+
+            <MudTextField T="string"
+                          Class="search-field"
+                          @bind-Value="searchQuery"
+                          Label="@GetSearchLabel()"
+                          Placeholder="@GetSearchPlaceholder()"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          Disabled="@(selectedProvider is null)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnAdornmentClick="SearchKeysAsync"
+                          OnKeyDown="OnSearchKeyDown" />
+
+            <div class="toolbar-actions">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Search"
+                           OnClick="SearchKeysAsync"
+                           Disabled="@(!CanSearch())">
+                    @GetSearchActionText()
+                </MudButton>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenCreateKeyDialog"
+                           Disabled="@(!CanCreateSelectedProviderKeys())">
+                    @L["KeyExplorer:Actions:Create"]
+                </MudButton>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="DeleteSelectedKeysAsync"
+                           Disabled="@(!CanDeleteSelectedKeys())">
+                    @L["KeyExplorer:Actions:DeleteSelected", selectedKeyNames.Count]
+                </MudButton>
+            </div>
+        </div>
+
+        @if (selectedProvider is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="support-note">
+                @GetSearchModeDescription()
+            </MudText>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(GetWorkspaceSupportMessage()))
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="support-alert">
+                @GetWorkspaceSupportMessage()
+            </MudAlert>
+        }
+
+        <div class="results-shell">
+            @if (selectedProvider is null)
+            {
+                <div class="workspace-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6">@L["KeyExplorer:Workspace:NoProviderTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["KeyExplorer:Workspace:NoProviderSubtitle"]
                     </MudText>
+                </div>
+            }
+            else if (isSearching)
+            {
+                <div class="workspace-state">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.subtitle1">@GetSearchActionText()</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@GetSearchModeDescription()</MudText>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(browseError))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @browseError
                 </MudAlert>
             }
-        </MudPaper>
-    </MudItem>
-
-    @* Key 表格 *@
-    <MudItem xs="12">
-        <MudPaper Class="pa-4">
-            @if (isSearching)
+            else if (!hasBrowsed)
             {
-                <div class="d-flex justify-center pa-4">
-                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                </div>
-            }
-            else if (searchError != null)
-            {
-                <MudAlert Severity="Severity.Error">@searchError</MudAlert>
-            }
-            else if (keys.Any())
-            {
-                <div class="d-flex justify-space-between align-center mb-3">
-                    <MudText Typo="Typo.subtitle1">
-                        @L["KeyExplorer:Messages:FoundKeys", scanResult.TotalCount]
-                        @if (scanResult.HasMore)
-                        {
-                            <span class="ml-1">@L["KeyExplorer:Messages:ShowingFirst", keys.Count]</span>
-                        }
+                <div class="workspace-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">@L["KeyExplorer:Workspace:ReadyTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["KeyExplorer:Workspace:ReadySubtitle"]
                     </MudText>
-
-                    @if (selectedKeys.Any() && Options.AllowKeyDeletion)
-                    {
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Error"
-                                   StartIcon="@Icons.Material.Filled.Delete"
-                                   OnClick="DeleteSelectedKeys">
-                            @L["KeyExplorer:Actions:DeleteSelected", selectedKeys.Count]
-                        </MudButton>
-                    }
+                </div>
+            }
+            else if (browseResult?.IsMissing == true)
+            {
+                <div class="workspace-state workspace-state--warning">
+                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Warning" />
+                    <MudText Typo="Typo.h6">@L["KeyExplorer:Messages:MissingKeyTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["KeyExplorer:Messages:MissingKeyDescription", browseResult.Query]
+                    </MudText>
+                </div>
+            }
+            else if (!keys.Any())
+            {
+                <div class="workspace-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6">@L["KeyExplorer:Messages:NoKeysFound"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["KeyExplorer:Messages:NoKeysFoundHint"]
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="results-header">
+                    <div>
+                        <MudText Typo="Typo.subtitle1">@GetResultsHeadline()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@GetResultsSubtitle()</MudText>
+                    </div>
                 </div>
 
-                <MudTable T="StateStoreKeyInfo"
-                          Items="keys"
-                          Dense="true"
-                          Hover="true"
-                          MultiSelection="@Options.AllowKeyDeletion"
-                          @bind-SelectedItems="selectedKeys"
-                          Loading="isLoadingValues">
-                    <HeaderContent>
-                        <MudTh>@L["KeyExplorer:Labels:KeyNameColumn"]</MudTh>
-                        <MudTh>@L["KeyExplorer:Labels:ValuePreview"]</MudTh>
-                        <MudTh Style="width: 150px;">@L["KeyExplorer:Labels:Actions"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Key">
-                            <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
-                                @context.Key
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="值">
-                            <KeyValuePreviewCell KeyInfo="context"
-                                                 OnLoadValue="() => LoadKeyValueAsync(context)" />
-                        </MudTd>
-                        <MudTd DataLabel="操作">
-                            <div class="d-flex gap-1">
+                <div class="results-list">
+                    @foreach (var resultItem in keys)
+                    {
+                        <div class="@GetResultRowClass(resultItem)"
+                             @onclick="() => SelectKeyAsync(resultItem)">
+                            <div class="result-row__selection" @onclick:stopPropagation="true">
+                                @if (CanShowRowSelection())
+                                {
+                                    <MudCheckBox T="bool"
+                                                 Value="@selectedKeyNames.Contains(resultItem.Key)"
+                                                 ValueChanged="@((bool value) => ToggleKeySelection(resultItem, value))"
+                                                 Color="Color.Error" />
+                                }
+                            </div>
+
+                            <div class="result-row__body">
+                                <MudText Typo="Typo.subtitle2" Class="result-key">@resultItem.Key</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="result-preview">
+                                    @GetResultPreviewText(resultItem)
+                                </MudText>
+                            </div>
+
+                            <div class="result-row__status">
+                                @if (loadingKeyName == resultItem.Key)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Color="Color.Primary" Indeterminate="true" />
+                                }
+                                else
+                                {
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@GetResultStatusColor(resultItem)"
+                                             Variant="Variant.Text">
+                                        @GetResultStatusText(resultItem)
+                                    </MudChip>
+                                }
+                            </div>
+
+                            <div class="result-row__actions" @onclick:stopPropagation="true">
                                 <MudTooltip Text="@L["KeyExplorer:Actions:View"]">
                                     <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                    Size="Size.Small"
                                                    Color="Color.Info"
-                                                   OnClick="() => ViewKey(context)" />
+                                                   OnClick="() => ViewKeyAsync(resultItem)"
+                                                   Disabled="@(!CanViewKeys())" />
                                 </MudTooltip>
 
-                                @if (Options.AllowKeyEditing)
-                                {
-                                    <MudTooltip Text="@L["KeyExplorer:Actions:Edit"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                       Size="Size.Small"
-                                                       Color="Color.Primary"
-                                                       OnClick="() => EditKey(context)" />
-                                    </MudTooltip>
-                                }
+                                <MudTooltip Text="@L["KeyExplorer:Actions:Edit"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="() => EditKeyAsync(resultItem)"
+                                                   Disabled="@(!CanEditSelectedProviderKeys())" />
+                                </MudTooltip>
 
-                                @if (Options.AllowKeyDeletion)
-                                {
-                                    <MudTooltip Text="@L["KeyExplorer:Actions:Delete"]">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                       Size="Size.Small"
-                                                       Color="Color.Error"
-                                                       OnClick="() => DeleteKey(context)" />
-                                    </MudTooltip>
-                                }
+                                <MudTooltip Text="@L["KeyExplorer:Actions:Delete"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="() => DeleteKeyAsync(resultItem)"
+                                                   Disabled="@(!CanDeleteSelectedProviderKey())" />
+                                </MudTooltip>
                             </div>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                        </div>
+                    }
+                </div>
             }
-            else if (hasSearched)
-            {
-                <MudAlert Severity="Severity.Info">@L["KeyExplorer:Messages:NoKeysFound"]</MudAlert>
-            }
-            else
-            {
-                <MudText Class="text-center pa-4" Color="Color.Secondary">
-                    @L["KeyExplorer:Messages:SelectProviderToStart"]
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="workspace-panel detail-shell" Elevation="0">
+        <div class="panel-header">
+            <div>
+                <MudText Typo="Typo.overline" Class="section-eyebrow">@L["KeyExplorer:Detail:Eyebrow"]</MudText>
+                <MudText Typo="Typo.h6">@GetDetailTitle()</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@GetDetailSubtitle()</MudText>
+            </div>
+        </div>
+
+        @if (selectedProvider is null)
+        {
+            <div class="workspace-state detail-state">
+                <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">@L["KeyExplorer:Detail:EmptyTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["KeyExplorer:Detail:EmptySubtitle"]
                 </MudText>
-            }
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+            </div>
+        }
+        else if (selectedKey is null)
+        {
+            <div class="workspace-state detail-state">
+                <MudIcon Icon="@Icons.Material.Filled.Key" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6">@L["KeyExplorer:Detail:SelectKeyTitle"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["KeyExplorer:Detail:SelectKeySubtitle"]
+                </MudText>
+            </div>
+        }
+        else
+        {
+            <div class="detail-record">
+                <div class="detail-actions">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               StartIcon="@Icons.Material.Filled.Visibility"
+                               OnClick="() => ViewKeyAsync(selectedKey)"
+                               Disabled="@(!CanViewKeys())">
+                        @L["KeyExplorer:Actions:View"]
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               OnClick="() => EditKeyAsync(selectedKey)"
+                               Disabled="@(!CanEditSelectedProviderKeys())">
+                        @L["KeyExplorer:Actions:Edit"]
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Delete"
+                               OnClick="() => DeleteKeyAsync(selectedKey)"
+                               Disabled="@(!CanDeleteSelectedProviderKey())">
+                        @L["KeyExplorer:Actions:Delete"]
+                    </MudButton>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(GetDetailSupportMessage()))
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="support-alert">
+                        @GetDetailSupportMessage()
+                    </MudAlert>
+                }
+
+                <div class="detail-metadata">
+                    <div class="detail-metadata__item">
+                        <span>@L["KeyExplorer:Detail:Labels:Key"]</span>
+                        <strong class="detail-key">@selectedKey.Key</strong>
+                    </div>
+
+                    <div class="detail-metadata__item">
+                        <span>@L["KeyExplorer:Detail:Labels:Provider"]</span>
+                        <strong>@selectedProvider.DisplayName</strong>
+                    </div>
+
+                    <div class="detail-metadata__item">
+                        <span>@L["KeyExplorer:Detail:Labels:Mode"]</span>
+                        <strong>@GetSearchModeText(searchMode)</strong>
+                    </div>
+
+                    <div class="detail-metadata__item">
+                        <span>@L["KeyExplorer:Detail:Labels:ETag"]</span>
+                        <strong>@(string.IsNullOrWhiteSpace(selectedKey.ETag) ? L["KeyExplorer:Detail:NoETag"] : selectedKey.ETag)</strong>
+                    </div>
+
+                    <div class="detail-metadata__item">
+                        <span>@L["KeyExplorer:Detail:Labels:TTL"]</span>
+                        <strong>@GetTtlText(selectedKey)</strong>
+                    </div>
+
+                    <div class="detail-metadata__item detail-metadata__item--full">
+                        <span>@L["KeyExplorer:Detail:Labels:Status"]</span>
+                        <strong>@GetResultStatusText(selectedKey)</strong>
+                    </div>
+                </div>
+
+                <div class="detail-preview">
+                    <div class="detail-preview__header">
+                        <MudText Typo="Typo.subtitle1">@L["KeyExplorer:Detail:PreviewTitle"]</MudText>
+
+                        @if (selectedProvider.SupportsValuePreview && !selectedKey.IsValueLoaded)
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       OnClick="LoadSelectedKeyAsync">
+                                @L["KeyValuePreview:Actions:LoadValue"]
+                            </MudButton>
+                        }
+                    </div>
+
+                    @if (!selectedProvider.SupportsValuePreview)
+                    {
+                        <div class="workspace-state detail-preview__state">
+                            <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Large" Color="Color.Secondary" />
+                            <MudText Typo="Typo.subtitle1">@L["KeyExplorer:Messages:ValuePreviewUnavailableTitle"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["KeyExplorer:Messages:ValuePreviewUnavailable"]
+                            </MudText>
+                        </div>
+                    }
+                    else if (loadingKeyName == selectedKey.Key)
+                    {
+                        <div class="workspace-state detail-preview__state">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["KeyValuePreview:Actions:LoadValue"]
+                            </MudText>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(selectedKey.Error))
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                            @selectedKey.Error
+                        </MudAlert>
+                    }
+                    else if (!selectedKey.IsValueLoaded)
+                    {
+                        <div class="workspace-state detail-preview__state">
+                            <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" />
+                            <MudText Typo="Typo.subtitle1">@L["KeyExplorer:Detail:PreviewReadyTitle"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["KeyExplorer:Detail:PreviewReadySubtitle"]
+                            </MudText>
+                        </div>
+                    }
+                    else if (selectedKey.RawValue is null)
+                    {
+                        <div class="workspace-state detail-preview__state">
+                            <MudIcon Icon="@Icons.Material.Filled.DataObject" Size="Size.Large" Color="Color.Secondary" />
+                            <MudText Typo="Typo.subtitle1">@L["KeyValuePreview:Labels:Empty"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["KeyExplorer:Detail:EmptyValueSubtitle"]
+                            </MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <pre class="value-preview">@selectedKey.RawValue</pre>
+                    }
+                </div>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+<StateStoreProviderDetailDialog @bind-IsVisible="isProviderDetailVisible"
+                                Provider="providerDetailTarget" />
 
 @code {
     [Parameter] public List<StateStoreProviderInfo> Providers { get; set; } = [];
     [Parameter] public ModuleStateStoreUIOption Options { get; set; } = new();
+    [Parameter] public EventCallback OnRefreshProviders { get; set; }
 
+    private readonly HashSet<string> selectedKeyNames = new(StringComparer.Ordinal);
     private StateStoreProviderInfo? selectedProvider;
-    private string searchPattern = "*";
+    private StateStoreKeyInfo? selectedKey;
+    private StateStoreKeyBrowseResult? browseResult;
     private List<StateStoreKeyInfo> keys = [];
-    private HashSet<StateStoreKeyInfo> selectedKeys = [];
-    private KeyScanResult scanResult = new();
-    private bool isSearching = false;
-    private bool isLoadingValues = false;
-    private bool hasSearched = false;
-    private string? searchError = null;
+    private EStateStoreKeySearchMode searchMode = EStateStoreKeySearchMode.Auto;
+    private string searchQuery = string.Empty;
+    private string? browseError;
+    private string? loadingKeyName;
+    private bool hasBrowsed;
+    private bool isSearching;
+    private bool isRefreshingProviders;
+    private bool isProviderDetailVisible;
+    private StateStoreProviderInfo? providerDetailTarget;
 
     protected override void OnParametersSet()
     {
-        if (selectedProvider == null && Providers.Any())
+        var selectedServiceKey = selectedProvider?.ServiceKey;
+        var reboundProvider = ResolveSelectedProvider(selectedServiceKey);
+        var providerChanged = !AreSameProvider(selectedProvider, reboundProvider);
+
+        selectedProvider = reboundProvider;
+
+        if (providerChanged)
         {
-            selectedProvider = Providers.First();
+            ResetWorkspaceForProvider();
+            return;
+        }
+
+        if (selectedProvider is null)
+        {
+            return;
+        }
+
+        searchMode = NormalizeSearchMode(
+            selectedProvider,
+            searchMode == EStateStoreKeySearchMode.Auto
+                ? selectedProvider.DefaultSearchMode
+                : searchMode);
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            searchQuery = GetInitialSearchQuery(selectedProvider, searchMode);
+        }
+
+        RebindSelectedKey();
+    }
+
+    private void SelectProvider(StateStoreProviderInfo provider)
+    {
+        if (AreSameProvider(selectedProvider, provider))
+        {
+            return;
+        }
+
+        selectedProvider = provider;
+        ResetWorkspaceForProvider();
+    }
+
+    private void OpenProviderDetail(StateStoreProviderInfo provider)
+    {
+        providerDetailTarget = provider;
+        isProviderDetailVisible = true;
+    }
+
+    private void OnProviderCardKeyDown(KeyboardEventArgs args, StateStoreProviderInfo provider)
+    {
+        if (args.Key is "Enter" or " " or "Spacebar")
+        {
+            SelectProvider(provider);
         }
     }
 
-    private void OnProviderChanged()
+    private async Task RefreshProvidersAsync()
     {
-        keys.Clear();
-        selectedKeys.Clear();
-        searchError = null;
-        hasSearched = false;
-        searchPattern = selectedProvider?.SupportsKeyScanning == true ? "*" : "";
+        if (!OnRefreshProviders.HasDelegate || isRefreshingProviders)
+        {
+            return;
+        }
+
+        isRefreshingProviders = true;
+
+        try
+        {
+            await OnRefreshProviders.InvokeAsync();
+        }
+        finally
+        {
+            isRefreshingProviders = false;
+            StateHasChanged();
+        }
     }
 
-    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    private async Task OnSearchKeyDown(KeyboardEventArgs args)
     {
-        if (e.Key == "Enter")
+        if (args.Key == "Enter")
         {
             await SearchKeysAsync();
         }
     }
 
-    private string GetSearchLabel()
-    {
-        return selectedProvider?.SupportsKeyScanning == true
-            ? L["KeyExplorer:Labels:KeyPattern"]
-            : L["KeyExplorer:Labels:KeyName"];
-    }
-
-    private string GetSearchPlaceholder()
-    {
-        return selectedProvider?.SupportsKeyScanning == true
-            ? L["KeyExplorer:Placeholders:PatternSearch"]
-            : L["KeyExplorer:Placeholders:FullKeyName"];
-    }
-
-    private string GetSearchButtonText()
-    {
-        return selectedProvider?.SupportsKeyScanning == true ? L["KeyExplorer:Actions:Scan"] : L["KeyExplorer:Actions:Query"];
-    }
-
     private async Task SearchKeysAsync()
     {
-        if (selectedProvider == null || string.IsNullOrWhiteSpace(searchPattern)) return;
+        if (selectedProvider is null || !CanSearch())
+        {
+            return;
+        }
 
         isSearching = true;
-        searchError = null;
-        hasSearched = true;
+        browseError = null;
+        hasBrowsed = true;
+        browseResult = null;
         keys.Clear();
-        selectedKeys.Clear();
+        selectedKeyNames.Clear();
+        selectedKey = null;
+        loadingKeyName = null;
         StateHasChanged();
 
         try
         {
-            // 对于不支持扫描的 Provider，使用精确查询
-            if (!selectedProvider.SupportsKeyScanning)
-            {
-                var keyResult = await StateStoreService.GetKeyAsync(
-                    selectedProvider.ServiceKey,
-                    searchPattern);
-
-                if (keyResult.IsOk(out var keyInfo))
+            var result = await StateStoreService.SearchKeysAsync(
+                selectedProvider.ServiceKey,
+                new StateStoreKeyBrowseRequest
                 {
-                    keys = [keyInfo];
-                    scanResult = new KeyScanResult { Keys = [searchPattern], TotalCount = 1 };
-                }
+                    Query = searchQuery.Trim(),
+                    Limit = Options.MaxKeysPerPage,
+                    SearchMode = searchMode
+                });
+
+            if (result.IsFailed(out var error))
+            {
+                browseError = error.Message;
+                return;
             }
-            else
-            {
-                var result = await StateStoreService.ScanKeysAsync(
-                    selectedProvider.ServiceKey,
-                    searchPattern,
-                    Options.MaxKeysPerPage);
 
-                if (result.IsFailed(out var error))
-                {
-                    searchError = error.Message;
-                }
-                else
-                {
-                    scanResult = result.Data!;
-                    keys = scanResult.Keys
-                        .Select(k => new StateStoreKeyInfo { Key = k })
-                        .ToList();
-                }
+            browseResult = result.Data!;
+            keys = browseResult.Items.ToList();
+
+            if (keys.Count > 0)
+            {
+                await SelectKeyAsync(keys[0]);
             }
         }
         catch (Exception ex)
         {
-            searchError = ex.Message;
+            browseError = ex.Message;
         }
         finally
         {
@@ -299,36 +628,78 @@
         }
     }
 
-    private async Task LoadKeyValueAsync(StateStoreKeyInfo keyInfo)
+    private async Task SelectKeyAsync(StateStoreKeyInfo keyInfo)
     {
-        if (keyInfo.IsValueLoaded || selectedProvider == null) return;
+        selectedKey = keyInfo;
 
-        var result = await StateStoreService.GetKeyAsync(
-            selectedProvider.ServiceKey,
-            keyInfo.Key);
-
-        if (result.IsOk(out var loadedKey))
+        if (selectedProvider?.SupportsValuePreview == true)
         {
-            keyInfo.RawValue = loadedKey.RawValue;
-            keyInfo.ETag = loadedKey.ETag;
-            keyInfo.IsValueLoaded = true;
-            keyInfo.Error = loadedKey.Error;
+            await EnsureKeyLoadedAsync(keyInfo);
         }
         else
         {
-            keyInfo.Error = result.Message;
-            keyInfo.IsValueLoaded = true;
+            StateHasChanged();
         }
-
-        StateHasChanged();
     }
 
-    private async Task ViewKey(StateStoreKeyInfo keyInfo)
+    private async Task LoadSelectedKeyAsync()
     {
-        if (!keyInfo.IsValueLoaded)
+        if (selectedKey is null)
         {
-            await LoadKeyValueAsync(keyInfo);
+            return;
         }
+
+        await EnsureKeyLoadedAsync(selectedKey);
+    }
+
+    private async Task EnsureKeyLoadedAsync(StateStoreKeyInfo keyInfo)
+    {
+        if (selectedProvider is null || keyInfo.IsValueLoaded)
+        {
+            return;
+        }
+
+        loadingKeyName = keyInfo.Key;
+        StateHasChanged();
+
+        try
+        {
+            var result = await StateStoreService.GetKeyAsync(selectedProvider.ServiceKey, keyInfo.Key);
+
+            if (result.IsOk(out var loadedKey))
+            {
+                keyInfo.RawValue = loadedKey.RawValue;
+                keyInfo.ETag = loadedKey.ETag;
+                keyInfo.TTL = loadedKey.TTL;
+                keyInfo.TTLStatus = loadedKey.TTLStatus;
+                keyInfo.Error = loadedKey.Error;
+                keyInfo.IsValueLoaded = true;
+            }
+            else
+            {
+                keyInfo.Error = result.Message;
+                keyInfo.IsValueLoaded = true;
+            }
+        }
+        finally
+        {
+            if (loadingKeyName == keyInfo.Key)
+            {
+                loadingKeyName = null;
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task ViewKeyAsync(StateStoreKeyInfo keyInfo)
+    {
+        if (!CanViewKeys())
+        {
+            return;
+        }
+
+        await EnsureKeyLoadedAsync(keyInfo);
 
         var parameters = new DialogParameters<KeyEditorDialog>
         {
@@ -336,123 +707,634 @@
             { x => x.ReadOnly, true }
         };
 
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyEditorDialog>(L["KeyExplorer:Dialogs:ViewKeyTitle", keyInfo.Key], parameters, options);
+        await DialogService.ShowAsync<KeyEditorDialog>(
+            L["KeyExplorer:Dialogs:ViewKeyTitle", keyInfo.Key],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
     }
 
-    private async Task EditKey(StateStoreKeyInfo keyInfo)
+    private async Task EditKeyAsync(StateStoreKeyInfo keyInfo)
     {
-        if (!keyInfo.IsValueLoaded)
+        if (selectedProvider is null || !CanEditSelectedProviderKeys())
         {
-            await LoadKeyValueAsync(keyInfo);
+            return;
         }
+
+        await EnsureKeyLoadedAsync(keyInfo);
 
         var parameters = new DialogParameters<KeyEditorDialog>
         {
             { x => x.KeyInfo, keyInfo },
-            { x => x.ServiceKey, selectedProvider?.ServiceKey },
+            { x => x.ServiceKey, selectedProvider.ServiceKey },
             { x => x.ReadOnly, false },
             { x => x.OnSaved, EventCallback.Factory.Create<StateStoreKeyInfo>(this, OnKeySaved) }
         };
 
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyEditorDialog>(L["KeyExplorer:Dialogs:EditKeyTitle", keyInfo.Key], parameters, options);
-    }
-
-    private void OnKeySaved(StateStoreKeyInfo updatedKey)
-    {
-        var existing = keys.FirstOrDefault(k => k.Key == updatedKey.Key);
-        if (existing != null)
-        {
-            existing.RawValue = updatedKey.RawValue;
-            existing.ETag = updatedKey.ETag;
-        }
-
-        Snackbar.Add(L["KeyExplorer:Messages:KeySaveSuccess"], Severity.Success);
-        StateHasChanged();
+        await DialogService.ShowAsync<KeyEditorDialog>(
+            L["KeyExplorer:Dialogs:EditKeyTitle", keyInfo.Key],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
     }
 
     private async Task OpenCreateKeyDialog()
     {
+        if (selectedProvider is null || !CanCreateSelectedProviderKeys())
+        {
+            return;
+        }
+
         var parameters = new DialogParameters<KeyCreateDialog>
         {
-            { x => x.ServiceKey, selectedProvider?.ServiceKey },
+            { x => x.ServiceKey, selectedProvider.ServiceKey },
             { x => x.OnCreated, EventCallback.Factory.Create<StateStoreKeyInfo>(this, OnKeyCreated) }
         };
 
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
-        await DialogService.ShowAsync<KeyCreateDialog>(L["KeyCreate:Dialogs:Title"], parameters, options);
+        await DialogService.ShowAsync<KeyCreateDialog>(
+            L["KeyCreate:Dialogs:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
     }
 
-    private void OnKeyCreated(StateStoreKeyInfo newKey)
+    private async Task DeleteKeyAsync(StateStoreKeyInfo keyInfo)
     {
-        keys.Insert(0, newKey);
-        scanResult = scanResult with { TotalCount = scanResult.TotalCount + 1 };
-        Snackbar.Add(L["KeyExplorer:Messages:KeyCreateSuccess"], Severity.Success);
-        StateHasChanged();
-    }
+        if (selectedProvider is null || !CanDeleteSelectedProviderKey())
+        {
+            return;
+        }
 
-    private async Task DeleteKey(StateStoreKeyInfo keyInfo)
-    {
         var confirmed = await DialogService.ShowMessageBoxAsync(
             L["KeyExplorer:Dialogs:DeleteKeyTitle"],
             L["KeyExplorer:Dialogs:DeleteKeyMessage", keyInfo.Key],
             L["KeyExplorer:Dialogs:DeleteKeyConfirm"],
             L["KeyExplorer:Dialogs:DeleteKeyCancel"]);
 
-        if (confirmed == true && selectedProvider != null)
+        if (confirmed != true)
         {
-            var result = await StateStoreService.DeleteKeyAsync(
-                selectedProvider.ServiceKey,
-                keyInfo.Key,
-                keyInfo.ETag);
+            return;
+        }
 
-            if (result.IsFailed(out var error))
+        var result = await StateStoreService.DeleteKeyAsync(
+            selectedProvider.ServiceKey,
+            keyInfo.Key,
+            keyInfo.ETag);
+
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message ?? string.Empty], Severity.Error);
+            return;
+        }
+
+        keys.RemoveAll(item => string.Equals(item.Key, keyInfo.Key, StringComparison.Ordinal));
+        selectedKeyNames.Remove(keyInfo.Key);
+
+        if (selectedKey?.Key == keyInfo.Key)
+        {
+            selectedKey = keys.FirstOrDefault();
+
+            if (selectedKey is not null)
             {
-                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteFailed", error.Message ?? string.Empty], Severity.Error);
-            }
-            else
-            {
-                keys.Remove(keyInfo);
-                scanResult = scanResult with { TotalCount = scanResult.TotalCount - 1 };
-                Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteSuccess"], Severity.Success);
-                StateHasChanged();
+                await EnsureKeyLoadedAsync(selectedKey);
             }
         }
+
+        if (selectedKey is null)
+        {
+            StateHasChanged();
+        }
+
+        UpdateBrowseResultTotal(-1);
+        Snackbar.Add(L["KeyExplorer:Messages:KeyDeleteSuccess"], Severity.Success);
+        StateHasChanged();
     }
 
-    private async Task DeleteSelectedKeys()
+    private async Task DeleteSelectedKeysAsync()
     {
-        if (!selectedKeys.Any() || selectedProvider == null) return;
+        if (selectedProvider is null || !CanDeleteSelectedKeys())
+        {
+            return;
+        }
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
             L["KeyExplorer:Dialogs:BatchDeleteTitle"],
-            L["KeyExplorer:Dialogs:BatchDeleteMessage", selectedKeys.Count],
+            L["KeyExplorer:Dialogs:BatchDeleteMessage", selectedKeyNames.Count],
             L["KeyExplorer:Dialogs:BatchDeleteConfirm"],
             L["KeyExplorer:Dialogs:DeleteKeyCancel"]);
 
-        if (confirmed == true)
+        if (confirmed != true)
         {
-            var result = await StateStoreService.DeleteKeysAsync(
-                selectedProvider.ServiceKey,
-                selectedKeys.Select(k => k.Key).ToList());
-
-            if (result.IsFailed(out var error))
-            {
-                Snackbar.Add(L["KeyExplorer:Messages:BatchDeleteFailed", error.Message ?? string.Empty], Severity.Error);
-            }
-            else
-            {
-                foreach (var key in selectedKeys.ToList())
-                {
-                    keys.Remove(key);
-                }
-                scanResult = scanResult with { TotalCount = scanResult.TotalCount - selectedKeys.Count };
-                selectedKeys.Clear();
-                Snackbar.Add(result.Message ?? L["KeyExplorer:Messages:DeleteSuccess"], Severity.Success);
-                StateHasChanged();
-            }
+            return;
         }
+
+        var keysToDelete = selectedKeyNames.ToList();
+        var result = await StateStoreService.DeleteKeysAsync(selectedProvider.ServiceKey, keysToDelete);
+
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(L["KeyExplorer:Messages:BatchDeleteFailed", error.Message ?? string.Empty], Severity.Error);
+            return;
+        }
+
+        keys.RemoveAll(item => selectedKeyNames.Contains(item.Key));
+
+        if (selectedKey is not null && selectedKeyNames.Contains(selectedKey.Key))
+        {
+            selectedKey = keys.FirstOrDefault();
+        }
+
+        var deletedCount = selectedKeyNames.Count;
+        selectedKeyNames.Clear();
+        UpdateBrowseResultTotal(-deletedCount);
+
+        if (selectedKey is not null)
+        {
+            await EnsureKeyLoadedAsync(selectedKey);
+        }
+
+        Snackbar.Add(result.Message ?? L["KeyExplorer:Messages:DeleteSuccess"], Severity.Success);
+        StateHasChanged();
+    }
+
+    private void ToggleKeySelection(StateStoreKeyInfo keyInfo, bool isSelected)
+    {
+        if (isSelected)
+        {
+            selectedKeyNames.Add(keyInfo.Key);
+        }
+        else
+        {
+            selectedKeyNames.Remove(keyInfo.Key);
+        }
+    }
+
+    private void SetSearchMode(EStateStoreKeySearchMode nextMode)
+    {
+        if (selectedProvider is null)
+        {
+            return;
+        }
+
+        var previousDefault = GetInitialSearchQuery(selectedProvider, searchMode);
+        searchMode = NormalizeSearchMode(selectedProvider, nextMode);
+
+        if (string.IsNullOrWhiteSpace(searchQuery) || string.Equals(searchQuery, previousDefault, StringComparison.Ordinal))
+        {
+            searchQuery = GetInitialSearchQuery(selectedProvider, searchMode);
+        }
+    }
+
+    private void OnKeySaved(StateStoreKeyInfo updatedKey)
+    {
+        var existing = keys.FirstOrDefault(item => string.Equals(item.Key, updatedKey.Key, StringComparison.Ordinal));
+
+        if (existing is not null)
+        {
+            existing.RawValue = updatedKey.RawValue;
+            existing.ETag = updatedKey.ETag;
+            existing.TTL = updatedKey.TTL;
+            existing.TTLStatus = updatedKey.TTLStatus;
+            existing.Error = updatedKey.Error;
+            existing.IsValueLoaded = true;
+        }
+
+        if (selectedKey?.Key == updatedKey.Key)
+        {
+            selectedKey = existing ?? updatedKey;
+        }
+
+        Snackbar.Add(L["KeyExplorer:Messages:KeySaveSuccess"], Severity.Success);
+        StateHasChanged();
+    }
+
+    private void OnKeyCreated(StateStoreKeyInfo newKey)
+    {
+        if (selectedProvider is null)
+        {
+            return;
+        }
+
+        searchMode = NormalizeSearchMode(selectedProvider, EStateStoreKeySearchMode.ExactKey);
+        searchQuery = newKey.Key;
+        browseError = null;
+        hasBrowsed = true;
+        keys = new List<StateStoreKeyInfo> { newKey };
+        selectedKeyNames.Clear();
+        selectedKey = newKey;
+        browseResult = new StateStoreKeyBrowseResult
+        {
+            Query = newKey.Key,
+            Items = new List<StateStoreKeyInfo> { newKey },
+            TotalCount = 1,
+            AppliedMode = searchMode
+        };
+
+        Snackbar.Add(L["KeyExplorer:Messages:KeyCreateSuccess"], Severity.Success);
+        StateHasChanged();
+    }
+
+    private void ResetWorkspaceForProvider()
+    {
+        browseError = null;
+        browseResult = null;
+        hasBrowsed = false;
+        loadingKeyName = null;
+        selectedKey = null;
+        keys.Clear();
+        selectedKeyNames.Clear();
+
+        if (selectedProvider is null)
+        {
+            searchMode = EStateStoreKeySearchMode.Auto;
+            searchQuery = string.Empty;
+            return;
+        }
+
+        searchMode = NormalizeSearchMode(selectedProvider, selectedProvider.DefaultSearchMode);
+        searchQuery = GetInitialSearchQuery(selectedProvider, searchMode);
+    }
+
+    private void RebindSelectedKey()
+    {
+        if (selectedKey is null)
+        {
+            return;
+        }
+
+        selectedKey = keys.FirstOrDefault(item => string.Equals(item.Key, selectedKey.Key, StringComparison.Ordinal));
+    }
+
+    private void UpdateBrowseResultTotal(int delta)
+    {
+        if (browseResult is null)
+        {
+            return;
+        }
+
+        browseResult = browseResult with
+        {
+            Items = keys.ToList(),
+            TotalCount = Math.Max(0, browseResult.TotalCount + delta)
+        };
+    }
+
+    private bool CanSearch()
+    {
+        return selectedProvider is not null &&
+               !isSearching &&
+               !string.IsNullOrWhiteSpace(searchQuery);
+    }
+
+    private bool CanViewKeys() => selectedProvider?.SupportsExactLookup == true;
+
+    private bool CanCreateSelectedProviderKeys()
+    {
+        return selectedProvider is not null &&
+               Options.AllowKeyCreation &&
+               selectedProvider.SupportsKeyCreation;
+    }
+
+    private bool CanEditSelectedProviderKeys()
+    {
+        return selectedProvider is not null &&
+               Options.AllowKeyEditing &&
+               selectedProvider.SupportsKeyUpdate;
+    }
+
+    private bool CanDeleteSelectedProviderKey()
+    {
+        return selectedProvider is not null &&
+               Options.AllowKeyDeletion &&
+               selectedProvider.SupportsKeyDeletion;
+    }
+
+    private bool CanDeleteSelectedKeys()
+    {
+        return selectedProvider is not null &&
+               Options.AllowKeyDeletion &&
+               selectedProvider.SupportsBulkDelete &&
+               selectedKeyNames.Count > 0;
+    }
+
+    private bool CanShowRowSelection()
+    {
+        return selectedProvider is not null &&
+               Options.AllowKeyDeletion &&
+               selectedProvider.SupportsBulkDelete;
+    }
+
+    private string GetWorkspaceTitle()
+    {
+        return selectedProvider is null
+            ? L["KeyExplorer:Workspace:NoProviderTitle"]
+            : selectedProvider.DisplayName;
+    }
+
+    private string GetWorkspaceSubtitle()
+    {
+        return selectedProvider is null
+            ? L["KeyExplorer:Workspace:NoProviderSubtitle"]
+            : L["KeyExplorer:Workspace:ProviderSubtitle", selectedProvider.ProviderDisplayName, GetSearchModeText(searchMode)];
+    }
+
+    private string GetDetailTitle()
+    {
+        if (selectedProvider is null)
+        {
+            return L["KeyExplorer:Detail:EmptyTitle"];
+        }
+
+        return selectedKey?.Key ?? L["KeyExplorer:Detail:SelectKeyTitle"];
+    }
+
+    private string GetDetailSubtitle()
+    {
+        if (selectedProvider is null)
+        {
+            return L["KeyExplorer:Detail:EmptySubtitle"];
+        }
+
+        if (selectedKey is null)
+        {
+            return L["KeyExplorer:Detail:SelectKeySubtitle"];
+        }
+
+        return L["KeyExplorer:Detail:SelectedKeySubtitle", selectedProvider.DisplayName];
+    }
+
+    private string GetSearchLabel()
+    {
+        return searchMode == EStateStoreKeySearchMode.PatternScan
+            ? L["KeyExplorer:Labels:KeyPattern"]
+            : L["KeyExplorer:Labels:KeyName"];
+    }
+
+    private string GetSearchPlaceholder()
+    {
+        return searchMode == EStateStoreKeySearchMode.PatternScan
+            ? L["KeyExplorer:Placeholders:PatternSearch"]
+            : L["KeyExplorer:Placeholders:FullKeyName"];
+    }
+
+    private string GetSearchActionText()
+    {
+        return searchMode == EStateStoreKeySearchMode.PatternScan
+            ? L["KeyExplorer:Actions:Scan"]
+            : L["KeyExplorer:Actions:Query"];
+    }
+
+    private string GetSearchModeText(EStateStoreKeySearchMode mode)
+    {
+        return mode == EStateStoreKeySearchMode.PatternScan
+            ? L["KeyExplorer:Labels:PatternSearchMode"]
+            : L["KeyExplorer:Labels:ExactLookupMode"];
+    }
+
+    private string GetSearchModeDescription()
+    {
+        return searchMode == EStateStoreKeySearchMode.PatternScan
+            ? L["KeyExplorer:Messages:PatternSearchDescription", Options.MaxKeysPerPage]
+            : L["KeyExplorer:Messages:ExactSearchDescription"];
+    }
+
+    private string GetResultsHeadline()
+    {
+        return browseResult is not null
+            ? L["KeyExplorer:Messages:FoundKeys", browseResult.TotalCount]
+            : L["KeyExplorer:Messages:FoundKeys", keys.Count];
+    }
+
+    private string GetResultsSubtitle()
+    {
+        if (browseResult is null)
+        {
+            return string.Empty;
+        }
+
+        return browseResult.HasMore
+            ? L["KeyExplorer:Messages:ShowingFirst", keys.Count]
+            : L["KeyExplorer:Messages:ResultsLoadedHint"];
+    }
+
+    private string GetResultCountText()
+    {
+        return browseResult is null
+            ? L["KeyExplorer:Labels:ResultCount", keys.Count]
+            : L["KeyExplorer:Labels:ResultCount", browseResult.TotalCount];
+    }
+
+    private string GetResultPreviewText(StateStoreKeyInfo keyInfo)
+    {
+        if (!string.IsNullOrWhiteSpace(keyInfo.Error))
+        {
+            return keyInfo.Error;
+        }
+
+        if (!keyInfo.IsValueLoaded)
+        {
+            return L["KeyExplorer:Statuses:SelectToInspect"];
+        }
+
+        if (keyInfo.RawValue is null)
+        {
+            return L["KeyValuePreview:Labels:Empty"];
+        }
+
+        return ToPreviewText(keyInfo.RawValue);
+    }
+
+    private string GetResultStatusText(StateStoreKeyInfo keyInfo)
+    {
+        if (loadingKeyName == keyInfo.Key)
+        {
+            return L["KeyExplorer:Statuses:Loading"];
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyInfo.Error))
+        {
+            return L["KeyExplorer:Statuses:LoadFailed"];
+        }
+
+        if (!keyInfo.IsValueLoaded)
+        {
+            return L["KeyExplorer:Statuses:SelectToInspect"];
+        }
+
+        return keyInfo.RawValue is null
+            ? L["KeyValuePreview:Labels:Empty"]
+            : L["KeyExplorer:Statuses:ValueLoaded"];
+    }
+
+    private string GetTtlText(StateStoreKeyInfo keyInfo)
+    {
+        return keyInfo.TTLStatus switch
+        {
+            EStateStoreKeyTtlStatus.Expiring when keyInfo.TTL.HasValue => FormatTtl(keyInfo.TTL.Value),
+            EStateStoreKeyTtlStatus.Permanent => L["KeyExplorer:Detail:TTLPermanent"],
+            EStateStoreKeyTtlStatus.Unsupported => L["KeyExplorer:Detail:TTLUnavailable"],
+            _ => L["KeyExplorer:Detail:TTLUnknown"]
+        };
+    }
+
+    private static string FormatTtl(TimeSpan ttl)
+    {
+        var remaining = ttl < TimeSpan.Zero ? TimeSpan.Zero : ttl;
+        return remaining.TotalDays >= 1
+            ? remaining.ToString(@"d\.hh\:mm\:ss")
+            : remaining.ToString(@"hh\:mm\:ss");
+    }
+
+    private Color GetResultStatusColor(StateStoreKeyInfo keyInfo)
+    {
+        if (loadingKeyName == keyInfo.Key)
+        {
+            return Color.Info;
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyInfo.Error))
+        {
+            return Color.Error;
+        }
+
+        if (!keyInfo.IsValueLoaded)
+        {
+            return Color.Default;
+        }
+
+        return keyInfo.RawValue is null ? Color.Warning : Color.Success;
+    }
+
+    private string GetWorkspaceSupportMessage()
+    {
+        if (selectedProvider is null)
+        {
+            return string.Empty;
+        }
+
+        var messages = new List<string>();
+
+        if (!selectedProvider.SupportsKeyScanning)
+        {
+            messages.Add(L["KeyExplorer:Messages:ExactOnlyProvider"]);
+        }
+
+        if (Options.AllowKeyDeletion && !selectedProvider.SupportsBulkDelete)
+        {
+            messages.Add(L["KeyExplorer:Messages:BulkDeleteUnavailable"]);
+        }
+
+        if (Options.AllowKeyCreation && !selectedProvider.SupportsKeyCreation)
+        {
+            messages.Add(L["KeyExplorer:Messages:CreateUnavailable"]);
+        }
+
+        return string.Join(" ", messages);
+    }
+
+    private string GetDetailSupportMessage()
+    {
+        if (selectedProvider is null || selectedKey is null)
+        {
+            return string.Empty;
+        }
+
+        var messages = new List<string>();
+
+        if (!selectedProvider.SupportsValuePreview)
+        {
+            messages.Add(L["KeyExplorer:Messages:ValuePreviewUnavailable"]);
+        }
+
+        if (!CanEditSelectedProviderKeys())
+        {
+            messages.Add(L["KeyExplorer:Messages:EditUnavailable"]);
+        }
+
+        if (!CanDeleteSelectedProviderKey())
+        {
+            messages.Add(L["KeyExplorer:Messages:DeleteUnavailable"]);
+        }
+
+        return string.Join(" ", messages.Distinct());
+    }
+
+    private string GetProviderCardClass(StateStoreProviderInfo provider)
+    {
+        return AreSameProvider(selectedProvider, provider)
+            ? "provider-card is-active"
+            : "provider-card";
+    }
+
+    private string GetProviderCardDescription(StateStoreProviderInfo provider)
+    {
+        var parts = new List<string>();
+
+        if (provider.IsDefaultIMoStateStore)
+        {
+            parts.Add(L["KeyExplorer:Labels:DefaultProvider"]);
+        }
+
+        parts.Add(provider.ProviderDisplayName);
+        parts.Add(provider.IsDistributed
+            ? L["ProviderDetail:Labels:Distributed"]
+            : L["ProviderDetail:Labels:LocalMemory"]);
+        parts.Add(provider.SupportsKeyScanning
+            ? L["KeyExplorer:Labels:PatternSearchMode"]
+            : L["KeyExplorer:Labels:ExactLookupMode"]);
+
+        return string.Join(" · ", parts);
+    }
+
+    private string GetResultRowClass(StateStoreKeyInfo keyInfo)
+    {
+        return selectedKey?.Key == keyInfo.Key
+            ? "result-row is-selected"
+            : "result-row";
+    }
+
+    private bool IsSearchMode(EStateStoreKeySearchMode mode) => searchMode == mode;
+
+    private StateStoreProviderInfo? ResolveSelectedProvider(string? serviceKey)
+    {
+        if (Providers.Count == 0)
+        {
+            return null;
+        }
+
+        if (serviceKey is null)
+        {
+            return Providers.FirstOrDefault(provider => provider.ServiceKey is null) ?? Providers[0];
+        }
+
+        return Providers.FirstOrDefault(provider => string.Equals(provider.ServiceKey, serviceKey, StringComparison.Ordinal))
+               ?? Providers[0];
+    }
+
+    private static bool AreSameProvider(StateStoreProviderInfo? left, StateStoreProviderInfo? right)
+    {
+        return string.Equals(left?.ServiceKey, right?.ServiceKey, StringComparison.Ordinal);
+    }
+
+    private EStateStoreKeySearchMode NormalizeSearchMode(
+        StateStoreProviderInfo provider,
+        EStateStoreKeySearchMode requestedMode)
+    {
+        if (requestedMode == EStateStoreKeySearchMode.PatternScan && provider.SupportsKeyScanning)
+        {
+            return EStateStoreKeySearchMode.PatternScan;
+        }
+
+        if (provider.SupportsExactLookup)
+        {
+            return EStateStoreKeySearchMode.ExactKey;
+        }
+
+        return EStateStoreKeySearchMode.PatternScan;
+    }
+
+    private string GetInitialSearchQuery(StateStoreProviderInfo provider, EStateStoreKeySearchMode mode)
+    {
+        return mode == EStateStoreKeySearchMode.PatternScan
+            ? Options.DefaultScanPattern
+            : string.Empty;
     }
 
     private static string GetProviderIcon(StateStoreProviderInfo provider) => provider.ProviderType switch
@@ -460,14 +1342,18 @@
         EStateStoreProviderType.Redis => Icons.Material.Filled.Storage,
         EStateStoreProviderType.Dapr => Icons.Material.Filled.Cloud,
         EStateStoreProviderType.Memory => Icons.Material.Filled.Memory,
-        _ => Icons.Material.Filled.Help
+        _ => Icons.Material.Filled.HelpOutline
     };
 
-    private static Color GetProviderColor(StateStoreProviderInfo provider) => provider.ProviderType switch
+    private static string ToPreviewText(string rawValue)
     {
-        EStateStoreProviderType.Redis => Color.Error,
-        EStateStoreProviderType.Dapr => Color.Info,
-        EStateStoreProviderType.Memory => Color.Success,
-        _ => Color.Default
-    };
+        var preview = rawValue
+            .Replace("\r", string.Empty)
+            .Replace("\n", " ")
+            .Trim();
+
+        return preview.Length <= 120
+            ? preview
+            : $"{preview[..120]}...";
+    }
 }

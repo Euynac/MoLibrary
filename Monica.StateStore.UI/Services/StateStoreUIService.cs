@@ -1,4 +1,6 @@
-using System.Text.Json;
+using System.Collections;
+using System.Globalization;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,51 +9,58 @@ using Monica.Core.Module.Models;
 using Monica.Modules;
 using Monica.StateStore.Providers;
 using Monica.StateStore.UI.Models;
+using Monica.StateStore.UI.Services.Browser;
 using Monica.Tool.MoResponse;
 
 namespace Monica.StateStore.UI.Services;
 
 /// <summary>
-/// StateStore UI 服务 - 提供 Provider 发现和 Key 管理操作
+/// UI service for state store provider discovery and dashboard operations.
 /// </summary>
 public class StateStoreUIService(
     IServiceProvider serviceProvider,
     IOptions<ModuleStateStoreOption> stateStoreOption,
+    IEnumerable<IStateStoreBrowserApi> browserApis,
     ILogger<StateStoreUIService> logger)
 {
-    /// <summary>
-    /// Cached provider snapshots for efficient lookup
-    /// </summary>
+    private static readonly HashSet<string> IgnoredOptionProperties =
+    [
+        "Logger",
+        "DisableModuleIfHasException",
+        "IsDisabled"
+    ];
+
+    private static readonly string[] SensitiveOptionFragments =
+    [
+        "password",
+        "secret",
+        "token",
+        "connectionstring",
+        "apiKey",
+        "clientSecret"
+    ];
+
+    private readonly IReadOnlyList<IStateStoreBrowserApi> _browserApis = browserApis.ToList();
     private List<ModuleSnapshot>? _providerSnapshots;
 
-    /// <summary>
-    /// Gets or initializes the cached provider snapshots
-    /// </summary>
     private List<ModuleSnapshot> ProviderSnapshots =>
         _providerSnapshots ??= MoModuleRegisterCentre.GetModuleProviders(EMoModuleKey.StateStore);
 
     #region Provider Discovery
 
-    /// <summary>
-    /// 获取所有已注册的 StateStore Provider
-    /// </summary>
     public Res<List<StateStoreProviderInfo>> GetRegisteredProviders()
     {
         try
         {
             var providers = new List<StateStoreProviderInfo>();
-
-            // 1. 从模块注册中获取 Keyed 服务键
             var keyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(typeof(ModuleStateStore));
 
-            // 2. 获取非 Keyed 的默认 Provider
             var defaultProvider = serviceProvider.GetService<IMoStateStore>();
             if (defaultProvider != null)
             {
                 providers.Add(CreateProviderInfo(null, defaultProvider));
             }
 
-            // 3. 获取 Keyed Provider
             foreach (var key in keyedServiceKeys)
             {
                 try
@@ -64,22 +73,22 @@ public class StateStoreUIService(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "解析 Keyed StateStore Provider 失败: {Key}", key);
+                    logger.LogWarning(ex, "Failed to resolve keyed state store provider: {Key}", key);
                 }
             }
 
-            return Res.Ok(providers);
+            return Res.Ok(providers
+                .OrderByDescending(provider => provider.IsDefaultIMoStateStore)
+                .ThenBy(provider => provider.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList());
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取已注册 Provider 失败");
+            logger.LogError(ex, "Failed to get registered state store providers.");
             return Res.Fail($"获取已注册 Provider 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 根据服务键获取 Provider
-    /// </summary>
     public Res<IMoStateStore> GetProvider(string? serviceKey)
     {
         try
@@ -97,17 +106,20 @@ public class StateStoreUIService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取 Provider 失败: {Key}", serviceKey);
+            logger.LogError(ex, "Failed to get state store provider: {ServiceKey}", serviceKey);
             return Res.Fail($"获取 Provider 失败: {ex.Message}");
         }
     }
 
     private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IMoStateStore provider)
     {
-        var (providerType, capabilities, displayName) = GetProviderMetadata(provider);
+        var (providerType, capabilities, providerDisplayName) = GetProviderMetadata(provider);
+        var browserApi = GetBrowserApi(providerType, provider);
+        var browserFeatures = browserApi.GetFeatures(provider);
+        var defaultSearchMode = browserApi.GetDefaultSearchMode(provider);
         var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, provider);
+        var configurationEntries = CreateConfigurationEntries(optionType, optionInstance);
 
-        // Determine if this is the default IMoStateStore (only for non-keyed providers)
         var isDefaultIMoStateStore = false;
         if (serviceKey == null)
         {
@@ -119,66 +131,63 @@ public class StateStoreUIService(
         return new StateStoreProviderInfo
         {
             ServiceKey = serviceKey,
+            ProviderDisplayName = providerDisplayName,
             ProviderType = providerType,
             Capabilities = capabilities,
+            BrowserFeatures = browserFeatures,
+            DefaultSearchMode = defaultSearchMode,
             IsDistributed = provider is IDistributedStateStore,
             IsDefaultIMoStateStore = isDefaultIMoStateStore,
             OptionType = optionType,
             OptionInstance = optionInstance,
+            ConfigurationEntries = configurationEntries,
             ImplementationType = provider.GetType().Name
         };
     }
 
-    /// <summary>
-    /// Gets provider metadata from the registered IStateStoreModuleProvider
-    /// </summary>
     private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IMoStateStore provider)
     {
-        // Try to find the matching provider module based on the provider's type name
-        var providerTypeName = provider.GetType().FullName ?? "";
+        var providerTypeName = provider.GetType().FullName ?? string.Empty;
 
         foreach (var snapshot in ProviderSnapshots)
         {
-            if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider) continue;
+            if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider)
+            {
+                continue;
+            }
 
-            // Match by checking if the provider type name contains the module's display name
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
             {
                 return (moduleProvider.ProviderType, moduleProvider.Capabilities, moduleProvider.DisplayName);
             }
         }
 
-        // Fallback for memory provider or unknown types
         if (provider is IMemoryStateStore)
         {
             return (EStateStoreProviderType.Memory,
-                    EStateStoreCapabilities.KeyScanning | EStateStoreCapabilities.BulkOperations,
-                    "Memory");
+                EStateStoreCapabilities.KeyScanning | EStateStoreCapabilities.BulkOperations,
+                "Memory");
         }
 
         return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, "Unknown");
     }
 
-    /// <summary>
-    /// Gets provider option information using ModuleSnapshot's generic option retrieval
-    /// </summary>
     private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, IMoStateStore provider)
     {
         try
         {
-            var providerTypeName = provider.GetType().FullName ?? "";
+            var providerTypeName = provider.GetType().FullName ?? string.Empty;
 
-            // Find the matching provider module snapshot
             foreach (var snapshot in ProviderSnapshots)
             {
-                if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider) continue;
+                if (snapshot.ModuleInstance is not IStateStoreModuleProvider moduleProvider)
+                {
+                    continue;
+                }
 
-                // Match by checking if the provider type name contains the module's display name
                 if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Use ModuleSnapshot's generic GetKeyedOption method
-                    var (optionType, optionInstance) = snapshot.GetKeyedOption(serviceProvider, serviceKey);
-                    return (optionType, optionInstance);
+                    return snapshot.GetKeyedOption(serviceProvider, serviceKey);
                 }
             }
 
@@ -186,138 +195,295 @@ public class StateStoreUIService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "获取 Provider 配置失败: {ServiceKey}", serviceKey);
+            logger.LogWarning(ex, "Failed to get provider option snapshot: {ServiceKey}", serviceKey);
             return (null, null);
         }
+    }
+
+    private IStateStoreBrowserApi GetBrowserApi(EStateStoreProviderType providerType, IMoStateStore provider)
+    {
+        return _browserApis.First(api => api.CanHandle(providerType, provider));
+    }
+
+    private static IReadOnlyList<StateStoreProviderConfigEntry> CreateConfigurationEntries(Type? optionType, object? optionInstance)
+    {
+        if (optionType is null || optionInstance is null)
+        {
+            return [];
+        }
+
+        var entries = new List<StateStoreProviderConfigEntry>();
+        AppendConfigurationEntries(entries, optionInstance, prefix: string.Empty, depth: 0);
+
+        return entries
+            .OrderBy(entry => entry.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AppendConfigurationEntries(
+        List<StateStoreProviderConfigEntry> entries,
+        object source,
+        string prefix,
+        int depth)
+    {
+        if (depth > 2)
+        {
+            return;
+        }
+
+        foreach (var property in source.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        {
+            if (!property.CanRead || property.GetIndexParameters().Length > 0 || IgnoredOptionProperties.Contains(property.Name))
+            {
+                continue;
+            }
+
+            object? value;
+            try
+            {
+                value = property.GetValue(source);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (value is null)
+            {
+                continue;
+            }
+
+            var path = string.IsNullOrWhiteSpace(prefix) ? property.Name : $"{prefix}.{property.Name}";
+
+            if (TryFormatScalarValue(property.Name, value, out var scalarValue))
+            {
+                entries.Add(new StateStoreProviderConfigEntry
+                {
+                    Path = path,
+                    Label = HumanizePropertyName(property.Name),
+                    Value = scalarValue
+                });
+                continue;
+            }
+
+            if (TryFormatSequenceValue(property.Name, value, out var sequenceValue))
+            {
+                entries.Add(new StateStoreProviderConfigEntry
+                {
+                    Path = path,
+                    Label = HumanizePropertyName(property.Name),
+                    Value = sequenceValue
+                });
+                continue;
+            }
+
+            AppendConfigurationEntries(entries, value, path, depth + 1);
+        }
+    }
+
+    private static bool TryFormatScalarValue(string propertyName, object value, out string formattedValue)
+    {
+        switch (value)
+        {
+            case string text when string.IsNullOrWhiteSpace(text):
+                formattedValue = string.Empty;
+                return false;
+            case string text:
+                formattedValue = IsSensitiveOption(propertyName) ? "••••••" : text;
+                return true;
+            case bool flag:
+                formattedValue = flag ? "Enabled" : "Disabled";
+                return true;
+            case TimeSpan timeSpan:
+                formattedValue = timeSpan.ToString("c", CultureInfo.InvariantCulture);
+                return true;
+            case Enum enumValue:
+                formattedValue = enumValue.ToString();
+                return true;
+            case Uri uri:
+                formattedValue = uri.ToString();
+                return true;
+            case DateTime dateTime:
+                formattedValue = dateTime.ToString("u", CultureInfo.InvariantCulture);
+                return true;
+            case DateTimeOffset dateTimeOffset:
+                formattedValue = dateTimeOffset.ToString("u", CultureInfo.InvariantCulture);
+                return true;
+        }
+
+        var valueType = value.GetType();
+        if (valueType.IsPrimitive || value is decimal)
+        {
+            formattedValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(formattedValue);
+        }
+
+        formattedValue = string.Empty;
+        return false;
+    }
+
+    private static bool TryFormatSequenceValue(string propertyName, object value, out string formattedValue)
+    {
+        if (value is string || value is not IEnumerable enumerable)
+        {
+            formattedValue = string.Empty;
+            return false;
+        }
+
+        var items = enumerable
+            .Cast<object?>()
+            .Where(item => item is not null)
+            .Select(item => TryFormatScalarValue(propertyName, item!, out var itemValue)
+                ? itemValue
+                : item!.ToString())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Take(6)
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            formattedValue = string.Empty;
+            return false;
+        }
+
+        formattedValue = string.Join(", ", items);
+        return true;
+    }
+
+    private static bool IsSensitiveOption(string propertyName)
+    {
+        return SensitiveOptionFragments.Any(fragment =>
+            propertyName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string HumanizePropertyName(string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            return propertyName;
+        }
+
+        return string.Concat(propertyName.Select((character, index) =>
+            index > 0 && char.IsUpper(character) && !char.IsUpper(propertyName[index - 1])
+                ? $" {character}"
+                : character.ToString()));
     }
 
     #endregion
 
     #region Key Operations
 
-    /// <summary>
-    /// 扫描匹配模式的 Key
-    /// </summary>
     public async Task<Res<KeyScanResult>> ScanKeysAsync(
         string? serviceKey,
         string pattern = "*",
         int limit = 100,
         CancellationToken cancellationToken = default)
     {
-        if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        var browseResult = await SearchKeysAsync(serviceKey, new StateStoreKeyBrowseRequest
+        {
+            Query = pattern,
+            Limit = limit,
+            SearchMode = EStateStoreKeySearchMode.PatternScan
+        }, cancellationToken);
+
+        if (browseResult.IsFailed(out var error, out var data))
+        {
             return Res.Fail(error);
+        }
+
+        return Res.Ok(new KeyScanResult
+        {
+            Keys = data.Items.Select(item => item.Key).ToList(),
+            TotalCount = data.TotalCount,
+            HasMore = data.HasMore
+        });
+    }
+
+    public async Task<Res<StateStoreKeyBrowseResult>> SearchKeysAsync(
+        string? serviceKey,
+        StateStoreKeyBrowseRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
+            return Res.Fail(error);
+        }
 
         try
         {
-            var keys = await provider.ScanKeysAsync(pattern, cancellationToken);
-
-            return Res.Ok(new KeyScanResult
-            {
-                Keys = keys.Take(limit).ToList(),
-                TotalCount = keys.Count,
-                HasMore = keys.Count > limit
-            });
-        }
-        catch (NotImplementedException)
-        {
-            return Res.Fail("此 Provider 不支持 Key 扫描，请输入完整 Key 名称进行查询");
+            var (providerType, _, _) = GetProviderMetadata(provider);
+            var browserApi = GetBrowserApi(providerType, provider);
+            return Res.Ok(await browserApi.BrowseAsync(provider, request, cancellationToken));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "扫描 Key 失败: {Pattern}", pattern);
-            return Res.Fail($"扫描 Key 失败: {ex.Message}");
+            logger.LogError(ex, "Failed to search keys for query: {Query}", request.Query);
+            return Res.Fail($"搜索 Key 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 获取单个 Key 的值和元数据
-    /// </summary>
     public async Task<Res<StateStoreKeyInfo>> GetKeyAsync(
         string? serviceKey,
         string key,
         CancellationToken cancellationToken = default)
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
             return Res.Fail(error);
+        }
 
         try
         {
-            string? rawValue = null;
-            string? etag = null;
-
-            var (value, etagValue) = await provider.GetStateAndETagAsync<object>(key, cancellationToken);
-            rawValue = value != null ? JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }) : null;
-            etag = etagValue;
-
-            return Res.Ok(new StateStoreKeyInfo
-            {
-                Key = key,
-                RawValue = rawValue,
-                IsValueLoaded = true,
-                ETag = etag
-            });
+            var (providerType, _, _) = GetProviderMetadata(provider);
+            var browserApi = GetBrowserApi(providerType, provider);
+            return Res.Ok(await browserApi.LoadKeyAsync(provider, key, cancellationToken));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Res.Fail(ex.Message);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取 Key 失败: {Key}", key);
-            return Res.Ok(new StateStoreKeyInfo
-            {
-                Key = key,
-                IsValueLoaded = false,
-                Error = ex.Message
-            });
+            logger.LogError(ex, "Failed to load state store key: {Key}", key);
+            return Res.Fail($"获取 Key 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 检查 Key 是否存在
-    /// </summary>
     public async Task<Res<bool>> KeyExistsAsync(
         string? serviceKey,
         string key,
         CancellationToken cancellationToken = default)
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
             return Res.Fail(error);
+        }
 
         try
         {
-            var exists = await provider.ExistAsync(key, cancellationToken);
-            return Res.Ok(exists);
+            return Res.Ok(await provider.ExistAsync(key, cancellationToken));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "检查 Key 是否存在失败: {Key}", key);
+            logger.LogError(ex, "Failed to check whether key exists: {Key}", key);
             return Res.Fail($"检查 Key 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 创建或更新 Key
-    /// </summary>
     public async Task<Res> SaveKeyAsync(
         string? serviceKey,
         StateStoreKeyUpdateRequest request,
         CancellationToken cancellationToken = default)
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
             return error;
+        }
 
         try
         {
-            // 解析 JSON 值
-            object? value;
-            try
-            {
-                value = JsonSerializer.Deserialize<object>(request.Value);
-            }
-            catch
-            {
-                // 如果不是有效 JSON，作为字符串处理
-                value = request.Value;
-            }
+            var value = ParseRequestValue(request);
 
-            // 如果提供了 ETag，使用乐观并发控制
             if (!string.IsNullOrEmpty(request.ETag))
             {
                 var (success, _) = await provider.TrySaveStateWithETagAsync(
@@ -341,14 +507,55 @@ public class StateStoreUIService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "保存 Key 失败: {Key}", request.Key);
+            logger.LogError(ex, "Failed to save state store key: {Key}", request.Key);
             return Res.Fail($"保存 Key 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 删除 Key
-    /// </summary>
+    public async Task<Res<StateStoreKeyInfo>> CreateKeyAsync(
+        string? serviceKey,
+        StateStoreKeyUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
+            return Res.Fail(error);
+        }
+
+        try
+        {
+            var value = ParseRequestValue(request);
+            var created = await provider.TrySaveStateIfNotExistsAsync(
+                request.Key,
+                value,
+                cancellationToken,
+                request.TTL);
+
+            if (!created)
+            {
+                return Res.Fail("Key 已存在，请使用其他名称或编辑现有 Key");
+            }
+
+            var createdKey = await GetKeyAsync(serviceKey, request.Key, cancellationToken);
+            if (createdKey.IsOk(out var loadedKey))
+            {
+                return Res.Ok(loadedKey);
+            }
+
+            return Res.Ok(new StateStoreKeyInfo
+            {
+                Key = request.Key,
+                RawValue = request.Value,
+                IsValueLoaded = true
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create state store key: {Key}", request.Key);
+            return Res.Fail($"创建 Key 失败: {ex.Message}");
+        }
+    }
+
     public async Task<Res> DeleteKeyAsync(
         string? serviceKey,
         string key,
@@ -356,7 +563,9 @@ public class StateStoreUIService(
         CancellationToken cancellationToken = default)
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
             return error;
+        }
 
         try
         {
@@ -377,21 +586,20 @@ public class StateStoreUIService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "删除 Key 失败: {Key}", key);
+            logger.LogError(ex, "Failed to delete state store key: {Key}", key);
             return Res.Fail($"删除 Key 失败: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// 批量删除 Key
-    /// </summary>
     public async Task<Res> DeleteKeysAsync(
         string? serviceKey,
         IReadOnlyList<string> keys,
         CancellationToken cancellationToken = default)
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
+        {
             return error;
+        }
 
         try
         {
@@ -400,10 +608,22 @@ public class StateStoreUIService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "批量删除 Key 失败");
+            logger.LogError(ex, "Failed to delete state store keys in bulk.");
             return Res.Fail($"批量删除 Key 失败: {ex.Message}");
         }
     }
 
     #endregion
+
+    private static object? ParseRequestValue(StateStoreKeyUpdateRequest request)
+    {
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<object>(request.Value);
+        }
+        catch
+        {
+            return request.Value;
+        }
+    }
 }

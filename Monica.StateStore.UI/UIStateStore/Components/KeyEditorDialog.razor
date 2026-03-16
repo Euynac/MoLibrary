@@ -104,6 +104,12 @@
     protected override void OnInitialized()
     {
         editedValue = KeyInfo.RawValue ?? "";
+        ttlSeconds = KeyInfo.TTLStatus switch
+        {
+            Monica.StateStore.EStateStoreKeyTtlStatus.Expiring when KeyInfo.TTL.HasValue => (int)Math.Ceiling(KeyInfo.TTL.Value.TotalSeconds),
+            Monica.StateStore.EStateStoreKeyTtlStatus.Permanent => 0,
+            _ => ttlSeconds
+        };
     }
 
     private void FormatJson()
@@ -161,8 +167,17 @@
             }
             else
             {
-                KeyInfo.RawValue = editedValue;
-                await OnSaved.InvokeAsync(KeyInfo);
+                var refreshedKey = await StateStoreService.GetKeyAsync(ServiceKey, KeyInfo.Key);
+                if (refreshedKey.IsOk(out var loadedKey))
+                {
+                    await OnSaved.InvokeAsync(loadedKey);
+                }
+                else
+                {
+                    KeyInfo.RawValue = editedValue;
+                    await OnSaved.InvokeAsync(KeyInfo);
+                }
+
                 MudDialog.Close(DialogResult.Ok(true));
             }
         }

@@ -1,14 +1,25 @@
 {
   "Dashboard": {
     "PageTitle": "状态存储管理",
+    "Eyebrow": "状态浏览器",
     "Title": "状态存储管理",
+    "Subtitle": "在同一工作台里检查 Provider、浏览 Key，并快速验证状态存储行为。",
+    "Summary": {
+      "RegisteredProviders": "已接入 {0} 个 Provider",
+      "DefaultProvider": "默认路由: {0}",
+      "PatternProviders": "可浏览 {0} 个",
+      "ExactOnlyProviders": "仅精确查询 {0} 个"
+    },
     "Tabs": {
       "ProviderOverview": "Provider 概览",
       "KeyBrowser": "Key 浏览器"
     },
     "Messages": {
       "NoProviders": "未注册任何 StateStore Provider",
-      "LoadProviderFailed": "加载 Provider 失败: {0}"
+      "NoProvidersDescription": "请先注册至少一个 StateStore Provider，才能使用浏览工作台。",
+      "LoadProviderFailed": "加载 Provider 失败: {0}",
+      "LoadingProviders": "正在加载已注册的 Provider...",
+      "LoadingProvidersDescription": "正在刷新 Provider 元数据和工作区能力信息。"
     }
   },
   "ProviderList": {
@@ -55,18 +66,71 @@
       "QueryState": "查询状态",
       "BulkOperations": "批量操作"
     },
+    "Messages": {
+      "NoConfiguration": "暂无可展示的配置项",
+      "NoConfigurationDescription": "当前 Provider 有配置快照，但没有适合在工作台中直接展示的简单字段。",
+      "ConfigurationShared": "当前 Provider 使用共享实现，没有独立配置快照。"
+    },
     "Actions": {
       "Close": "关闭"
     }
   },
   "KeyExplorer": {
+    "Rail": {
+      "Eyebrow": "数据源",
+      "Title": "Providers",
+      "Subtitle": "当前可用 {0} 个 Provider",
+      "SelectedProvider": "当前数据源",
+      "SelectedProviderSummary": "{0}，底层类型 {1}"
+    },
+    "Workspace": {
+      "Eyebrow": "浏览器",
+      "ReadyTitle": "准备开始查询",
+      "ReadySubtitle": "确定搜索模式并输入查询条件后执行查询，结果会在当前工作区内持续展示。",
+      "NoProviderTitle": "还没有可用的 Provider",
+      "NoProviderSubtitle": "请先刷新 Provider 列表，或在应用中注册 StateStore Provider 后再进入浏览。",
+      "ProviderSubtitle": "{0}，实现为 {1}"
+    },
+    "Detail": {
+      "Eyebrow": "记录详情",
+      "Tabs": {
+        "Record": "记录详情"
+      },
+      "EmptyTitle": "选择一个 Provider",
+      "EmptySubtitle": "从左侧选择 Provider 后，即可在中间浏览 Key 并在这里查看记录详情。",
+      "SelectKeyTitle": "选择一条记录",
+      "SelectKeySubtitle": "在中间结果区点选记录后，这里会展示值、TTL、状态和可执行操作。Provider 详情可通过左侧卡片的查看按钮打开。",
+      "SelectedKeySubtitle": "查看当前记录的载荷和操作状态。",
+      "PreviewTitle": "值预览",
+      "PreviewReadyTitle": "值还未加载",
+      "PreviewReadySubtitle": "当前 Provider 支持值预览，但这条记录尚未加载。",
+      "EmptyValueSubtitle": "该记录存在，但当前值为空。",
+      "NoETag": "不可用",
+      "TTLPermanent": "永久",
+      "TTLUnavailable": "当前 Provider 不支持读取",
+      "TTLUnknown": "尚未读取",
+      "Labels": {
+        "Provider": "Provider",
+        "Mode": "模式",
+        "Key": "Key",
+        "Status": "状态",
+        "ETag": "ETag",
+        "TTL": "TTL",
+        "ConfigurationCount": "{0} 个配置项"
+      }
+    },
     "Labels": {
-      "SelectProvider": "选择 Provider",
       "KeyPattern": "Key 模式 (例如: user:*, session:*)",
       "KeyName": "Key 名称 (完整名称)",
       "KeyNameColumn": "Key 名称",
       "ValuePreview": "值预览",
-      "Actions": "操作"
+      "Actions": "操作",
+      "SearchMode": "搜索模式",
+      "ExactLookupMode": "精确查询",
+      "PatternSearchMode": "模式扫描",
+      "DefaultProvider": "默认",
+      "ResultCount": "{0} 条记录",
+      "SelectedCount": "已选 {0} 条"
     },
     "Placeholders": {
       "PatternSearch": "*",
@@ -82,18 +146,34 @@
       "DeleteSelected": "删除选中 ({0})"
     },
     "Messages": {
-      "NoScanningSupport": "此 Provider 不支持 Key 扫描",
-      "EnterFullKeyName": "请输入完整 Key 名称进行查询。",
       "FoundKeys": "找到 {0} 个 Key",
       "ShowingFirst": "(显示前 {0} 个)",
       "NoKeysFound": "未找到匹配的 Key",
-      "SelectProviderToStart": "选择一个 Provider 并输入搜索条件开始查询",
+      "NoKeysFoundHint": "可以尝试调整搜索模式或更换查询条件后再次搜索。",
       "KeySaveSuccess": "Key 保存成功",
       "KeyCreateSuccess": "Key 创建成功",
       "KeyDeleteSuccess": "Key 删除成功",
       "KeyDeleteFailed": "删除 Key 失败: {0}",
       "BatchDeleteFailed": "批量删除 Key 失败: {0}",
-      "DeleteSuccess": "删除成功"
+      "DeleteSuccess": "删除成功",
+      "PatternSearchDescription": "通过模式扫描浏览 Key，并在右侧持续查看选中记录详情。",
+      "ExactSearchDescription": "当前 Provider 仅支持精确 Key 查询，不支持模式扫描。",
+      "ExactOnlyProvider": "当前 Provider 只能使用精确查询模式。",
+      "MissingKeyTitle": "未找到记录",
+      "MissingKeyDescription": "没有找到 Key '{0}' 对应的记录。",
+      "ResultsLoadedHint": "从结果区选择一条记录，即可在右侧检查其详情。",
+      "ValuePreviewUnavailableTitle": "无法预览值",
+      "ValuePreviewUnavailable": "当前 Provider 无法为这条记录加载值预览。",
+      "CreateUnavailable": "当前 Provider 或当前工作区不允许创建记录。",
+      "EditUnavailable": "当前 Provider 或当前工作区不允许编辑记录。",
+      "DeleteUnavailable": "当前 Provider 或当前工作区不允许删除记录。",
+      "BulkDeleteUnavailable": "当前 Provider 或当前工作区不允许批量删除。"
+    },
+    "Statuses": {
+      "SelectToInspect": "选择一条记录开始检查",
+      "Loading": "正在加载值预览",
+      "ValueLoaded": "值已加载",
+      "LoadFailed": "加载失败"
     },
     "Dialogs": {
       "DeleteKeyTitle": "删除 Key",

@@ -24,6 +24,8 @@ public interface IStateEntry
     /// 最后更新时间
     /// </summary>
     DateTimeOffset UpdatedAt { get; }
+
+    DateTimeOffset? ExpiresAt { get; }
 }
 
 /// <summary>
@@ -62,26 +64,31 @@ public class StateEntry<T> : IStateEntry
     /// </summary>
     public DateTimeOffset UpdatedAt { get; set; }
 
+    public DateTimeOffset? ExpiresAt { get; set; }
+
     public StateEntry()
     {
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
     }
 
-    public StateEntry(T? value, int version = 0) : this()
+    public StateEntry(T? value, int version = 0, DateTimeOffset? expiresAt = null) : this()
     {
         Value = value;
         Version = version;
+        ExpiresAt = expiresAt;
     }
 
     /// <summary>
-    /// 更新状态数据并递增版本号
+    /// Updates the value, version, and expiration metadata.
     /// </summary>
-    /// <param name="newValue">新的状态数据</param>
-    public void Update(T? newValue)
+    /// <param name="newValue">Updated state value.</param>
+    /// <param name="expiresAt">Absolute expiration time, if any.</param>
+    public void Update(T? newValue, DateTimeOffset? expiresAt = null)
     {
         Value = newValue;
         Version++;
         UpdatedAt = DateTimeOffset.UtcNow;
+        ExpiresAt = expiresAt;
     }
 } 

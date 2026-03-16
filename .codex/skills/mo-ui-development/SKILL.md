@@ -105,6 +105,15 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
+### 9. Theme-First Visual Simplicity
+
+- Prefer simple, quiet layouts that mostly rely on the active MudBlazor theme.
+- Do not introduce gradients, glow effects, decorative shadows, or custom multi-color surfaces unless the user explicitly asks for a branded visual treatment.
+- Favor `var(--mud-palette-surface)`, `var(--mud-palette-background-gray)`, `var(--mud-palette-lines-default)`, and `var(--mud-palette-text-secondary)` over inventing new color systems.
+- Use CSS isolation primarily for layout, spacing, centering, sizing, and overflow control. Do not use it to repaint large parts of MudBlazor unless there is a clear product requirement.
+- When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
+- If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
+
 ## MudBlazor CSS Variable Workflow (Required)
 
 ### A. Initialize or Update Variable List

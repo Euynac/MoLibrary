@@ -131,16 +131,6 @@
 
         try
         {
-            // 检查 Key 是否已存在
-            var existsResult = await StateStoreService.KeyExistsAsync(ServiceKey, keyName);
-            if (existsResult.IsOk(out var exists) && exists)
-            {
-                errorMessage = L["KeyCreate:Messages:KeyExists"];
-                isSaving = false;
-                StateHasChanged();
-                return;
-            }
-
             var request = new StateStoreKeyUpdateRequest
             {
                 Key = keyName,
@@ -148,7 +138,7 @@
                 TTL = ttlSeconds > 0 ? TimeSpan.FromSeconds(ttlSeconds) : null
             };
 
-            var result = await StateStoreService.SaveKeyAsync(ServiceKey, request);
+            var result = await StateStoreService.CreateKeyAsync(ServiceKey, request);
 
             if (result.IsFailed(out var error))
             {
@@ -156,7 +146,7 @@
             }
             else
             {
-                var newKey = new StateStoreKeyInfo
+                var newKey = result.Data ?? new StateStoreKeyInfo
                 {
                     Key = keyName,
                     RawValue = jsonValue,

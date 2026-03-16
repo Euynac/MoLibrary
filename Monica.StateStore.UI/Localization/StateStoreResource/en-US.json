@@ -1,14 +1,25 @@
 {
   "Dashboard": {
     "PageTitle": "State Store Management",
+    "Eyebrow": "State Browser",
     "Title": "State Store Management",
+    "Subtitle": "Inspect providers, browse keys, and verify state behavior without leaving the workspace.",
+    "Summary": {
+      "RegisteredProviders": "{0} providers online",
+      "DefaultProvider": "Default route: {0}",
+      "PatternProviders": "{0} browse-enabled",
+      "ExactOnlyProviders": "{0} exact-only"
+    },
     "Tabs": {
       "ProviderOverview": "Provider Overview",
       "KeyBrowser": "Key Browser"
     },
     "Messages": {
       "NoProviders": "No StateStore Provider registered",
-      "LoadProviderFailed": "Failed to load Provider: {0}"
+      "NoProvidersDescription": "Register at least one StateStore provider to unlock the browser workspace.",
+      "LoadProviderFailed": "Failed to load Provider: {0}",
+      "LoadingProviders": "Loading registered providers...",
+      "LoadingProvidersDescription": "Refreshing provider metadata and workspace capabilities."
     }
   },
   "ProviderList": {
@@ -55,22 +66,75 @@
       "QueryState": "Query State",
       "BulkOperations": "Bulk Operations"
     },
+    "Messages": {
+      "NoConfiguration": "No displayable configuration",
+      "NoConfigurationDescription": "This provider has an option snapshot, but it does not expose simple fields that fit the dashboard property grid.",
+      "ConfigurationShared": "This provider uses a shared implementation without a dedicated option snapshot."
+    },
     "Actions": {
       "Close": "Close"
     }
   },
   "KeyExplorer": {
+    "Rail": {
+      "Eyebrow": "Sources",
+      "Title": "Providers",
+      "Subtitle": "{0} providers available",
+      "SelectedProvider": "Current source",
+      "SelectedProviderSummary": "{0} powered by {1}"
+    },
+    "Workspace": {
+      "Eyebrow": "Browser",
+      "ReadyTitle": "Ready to search",
+      "ReadySubtitle": "Choose the query mode, enter a key or pattern, and search to inspect records in place.",
+      "NoProviderTitle": "No provider selected",
+      "NoProviderSubtitle": "Refresh the provider list or register a StateStore provider to begin browsing.",
+      "ProviderSubtitle": "{0} using {1}"
+    },
+    "Detail": {
+      "Eyebrow": "Record Detail",
+      "Tabs": {
+        "Record": "Record"
+      },
+      "EmptyTitle": "Select a provider",
+      "EmptySubtitle": "Choose a provider on the left to browse keys in the center and inspect a record here.",
+      "SelectKeyTitle": "Select a record",
+      "SelectKeySubtitle": "Choose a key in the browser pane to inspect its payload, TTL, status, and actions. Use the eye action on a provider card to view provider details.",
+      "SelectedKeySubtitle": "Inspect payload and operations for the active record.",
+      "PreviewTitle": "Value preview",
+      "PreviewReadyTitle": "Preview unavailable",
+      "PreviewReadySubtitle": "This provider can load values, but the active record has not been loaded yet.",
+      "EmptyValueSubtitle": "The record exists but currently stores an empty payload.",
+      "NoETag": "Unavailable",
+      "TTLPermanent": "Permanent",
+      "TTLUnavailable": "This provider cannot read TTL",
+      "TTLUnknown": "Not loaded yet",
+      "Labels": {
+        "Provider": "Provider",
+        "Mode": "Mode",
+        "Key": "Key",
+        "Status": "Status",
+        "ETag": "ETag",
+        "TTL": "TTL",
+        "ConfigurationCount": "{0} entries"
+      }
+    },
     "Labels": {
-      "SelectProvider": "Select Provider",
       "KeyPattern": "Key Pattern (e.g., user:*, session:*)",
       "KeyName": "Key Name (Full Name)",
       "KeyNameColumn": "Key Name",
       "ValuePreview": "Value Preview",
-      "Actions": "Actions"
+      "Actions": "Actions",
+      "SearchMode": "Search Mode",
+      "ExactLookupMode": "Exact Lookup",
+      "PatternSearchMode": "Pattern Scan",
+      "DefaultProvider": "Default",
+      "ResultCount": "{0} records",
+      "SelectedCount": "{0} selected"
     },
     "Placeholders": {
       "PatternSearch": "*",
-      "FullKeyName": "Enter full Key name"
+      "FullKeyName": "Enter full key name"
     },
     "Actions": {
       "Scan": "Scan",
@@ -82,18 +146,34 @@
       "DeleteSelected": "Delete Selected ({0})"
     },
     "Messages": {
-      "NoScanningSupport": "This Provider does not support Key scanning",
-      "EnterFullKeyName": "Please enter the full Key name to query.",
       "FoundKeys": "Found {0} Keys",
       "ShowingFirst": "(Showing first {0})",
       "NoKeysFound": "No matching Keys found",
-      "SelectProviderToStart": "Select a Provider and enter search criteria to start",
+      "NoKeysFoundHint": "Try a different pattern or switch the provider mode before searching again.",
       "KeySaveSuccess": "Key saved successfully",
       "KeyCreateSuccess": "Key created successfully",
       "KeyDeleteSuccess": "Key deleted successfully",
       "KeyDeleteFailed": "Failed to delete Key: {0}",
       "BatchDeleteFailed": "Failed to batch delete Keys: {0}",
-      "DeleteSuccess": "Deleted successfully"
+      "DeleteSuccess": "Deleted successfully",
+      "PatternSearchDescription": "Browse keys by pattern and keep the result list visible while you inspect records on the right.",
+      "ExactSearchDescription": "This provider supports direct exact-key lookup instead of pattern-based browsing.",
+      "ExactOnlyProvider": "Exact-key mode is required for this provider.",
+      "MissingKeyTitle": "Record not found",
+      "MissingKeyDescription": "No record was found for '{0}'.",
+      "ResultsLoadedHint": "Select a record to inspect it in the right-hand pane.",
+      "ValuePreviewUnavailableTitle": "Preview unavailable",
+      "ValuePreviewUnavailable": "This provider cannot load a preview for the selected record.",
+      "CreateUnavailable": "Create is disabled for this provider or workspace.",
+      "EditUnavailable": "Edit is disabled for this provider or workspace.",
+      "DeleteUnavailable": "Delete is disabled for this provider or workspace.",
+      "BulkDeleteUnavailable": "Bulk delete is disabled for this provider or workspace."
+    },
+    "Statuses": {
+      "SelectToInspect": "Select a record to inspect",
+      "Loading": "Loading value preview",
+      "ValueLoaded": "Value loaded",
+      "LoadFailed": "Load failed"
     },
     "Dialogs": {
       "DeleteKeyTitle": "Delete Key",

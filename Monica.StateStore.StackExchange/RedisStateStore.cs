@@ -18,7 +18,7 @@ namespace Monica.StateStore.StackExchange;
 /// TTL is set atomically within Lua scripts via EXPIRE command
 /// Reference: Dapr components-contrib/state/redis/redis.go
 /// </summary>
-public class RedisStateStore : DistributedStateStoreBase
+public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReader
 {
     private readonly IConnectionMultiplexer _connection;
     private readonly ModuleRedisStateStoreOption _option;
@@ -267,6 +267,40 @@ public class RedisStateStore : DistributedStateStoreBase
         catch (Exception ex)
         {
             throw ex.CreateException(Logger, "ERROR getting state with key: {0}", key);
+        }
+    }
+
+    public async Task<StateStoreKeyTtlSnapshot> GetKeyTtlAsync(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var redisKey = GetRedisKey(key);
+        try
+        {
+            var ttl = await _database.KeyTimeToLiveAsync(redisKey);
+            if (ttl.HasValue)
+            {
+                return StateStoreKeyTtlSnapshot.FromRemaining(ttl.Value);
+            }
+
+            if (!await _database.KeyExistsAsync(redisKey))
+            {
+                throw new KeyNotFoundException($"Key not found: {key}");
+            }
+
+            return StateStoreKeyTtlSnapshot.Permanent;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (KeyNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw ex.CreateException(Logger, "ERROR getting TTL for key: {0}", key);
         }
     }
 
