@@ -2,6 +2,7 @@
 @using Monica.Tool.Extensions
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SystemInfoResource> L
 
 @{
     var linkGroups = BuildVisibleGroups();
@@ -16,7 +17,7 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
-                        <MudText Typo="Typo.h6" Style="font-weight: 500;">快捷链接</MudText>
+                        <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["CustomLinks:Title"]</MudText>
                     </MudStack>
                     <MudChip T="string"
                              Size="Size.Small"
@@ -72,9 +73,9 @@
                                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                                                                    Size="Size.Small"
                                                                    Color="Color.Primary"
-                                                                   title="复制用户名"
-                                                                   aria-label="复制用户名"
-                                                                   OnClick="@(() => CopyValueAsync(link.UserName!, "已复制用户名", "复制用户名失败"))" />
+                                                                   title="@L["CustomLinks:Actions:CopyUserName"]"
+                                                                   aria-label="@L["CustomLinks:Actions:CopyUserName"]"
+                                                                   OnClick="@(() => CopyValueAsync(link.UserName!, L["CustomLinks:Messages:CopyUserNameSucceeded"].Value, L["CustomLinks:Messages:CopyUserNameFailed"].Value))" />
                                                 </div>
                                             }
 
@@ -85,9 +86,9 @@
                                                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
                                                                    Size="Size.Small"
                                                                    Color="Color.Secondary"
-                                                                   title="复制密码"
-                                                                   aria-label="复制密码"
-                                                                   OnClick="@(() => CopyValueAsync(link.Password!, "已复制密码", "复制密码失败"))" />
+                                                                   title="@L["CustomLinks:Actions:CopyPassword"]"
+                                                                   aria-label="@L["CustomLinks:Actions:CopyPassword"]"
+                                                                   OnClick="@(() => CopyValueAsync(link.Password!, L["CustomLinks:Messages:CopyPasswordSucceeded"].Value, L["CustomLinks:Messages:CopyPasswordFailed"].Value))" />
                                                 </div>
                                             }
                                         </div>
@@ -141,7 +142,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"{failureMessage}: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["CustomLinks:Messages:CopyFailedWithMessage", failureMessage, ex.Message].Value, Severity.Error);
         }
     }
 }

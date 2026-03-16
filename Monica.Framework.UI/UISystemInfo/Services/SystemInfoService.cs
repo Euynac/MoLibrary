@@ -1,22 +1,27 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISystemInfo.Models;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Framework.UI.UISystemInfo.Services;
 
 /// <summary>
-/// 系统信息服务，直接实现业务逻辑
+/// Provides system information for the System Info UI page.
 /// </summary>
-/// <param name="logger">日志服务</param>
-public class SystemInfoService(ILogger<SystemInfoService> logger)
+/// <param name="logger">The logger.</param>
+/// <param name="localizer">The localizer.</param>
+public class SystemInfoService(
+    ILogger<SystemInfoService> logger,
+    IStringLocalizer<SystemInfoResource> localizer)
 {
     /// <summary>
-    /// 获取系统信息
+    /// Gets system information.
     /// </summary>
-    /// <param name="simple">是否简化输出</param>
-    /// <returns>系统信息</returns>
+    /// <param name="simple">Whether to return a simplified response.</param>
+    /// <returns>The system information result.</returns>
     public async Task<Res<SystemInfoResponse>> GetSystemInfoAsync(bool? simple = null)
     {
         try
@@ -24,8 +29,8 @@ public class SystemInfoService(ILogger<SystemInfoService> logger)
             var entryAssembly = Assembly.GetEntryAssembly();
             if (entryAssembly == null)
             {
-                logger.LogWarning("无法获取入口程序集信息");
-                return Res.Fail("无法获取入口程序集信息");
+                logger.LogWarning("Unable to resolve entry assembly information.");
+                return Res.Fail(localizer["Service:Errors:EntryAssemblyUnavailable"].Value);
             }
 
             var fileInfo = FileVersionInfo.GetVersionInfo(entryAssembly.Location);
@@ -79,13 +84,13 @@ public class SystemInfoService(ILogger<SystemInfoService> logger)
                 // It seems to be introduced by SourceLink related changes in the SDK 8 version. I found an existing github issue as well: https://github.com/dotnet/sdk/issues/34568
             }
 
-            logger.LogDebug("成功获取系统信息，简化模式: {Simple}", simple ?? false);
+            logger.LogDebug("Successfully retrieved system information. Simple mode: {Simple}", simple ?? false);
             return Res.Ok(response);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取系统信息失败");
-            return Res.Fail($"获取系统信息失败: {ex.Message}");
+            logger.LogError(ex, "Failed to retrieve system information.");
+            return Res.Fail(localizer["Service:Errors:GetSystemInfoFailed", ex.Message].Value);
         }
     }
 } 

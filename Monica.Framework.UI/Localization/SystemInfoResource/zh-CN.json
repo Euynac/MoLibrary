@@ -1,0 +1,96 @@
+{
+  "Page": {
+    "PageTitle": "系统信息",
+    "Header": {
+      "Title": "系统信息",
+      "Refresh": "刷新信息"
+    },
+    "States": {
+      "LoadingTitle": "正在加载系统信息...",
+      "LoadFailedAlert": "加载系统信息失败，请稍后重试。"
+    },
+    "BasicInfo": {
+      "Title": "基本信息",
+      "BuildTime": "构建时间",
+      "LocalTime": "本地时间",
+      "UtcTime": "UTC时间",
+      "ProductVersion": "产品版本",
+      "ProcessStartTime": "进程启动时间",
+      "RunningFor": "已运行 {0}"
+    },
+    "EnvironmentInfo": {
+      "Title": "环境信息",
+      "MachineName": "机器名",
+      "UserName": "用户名",
+      "ProcessId": "进程ID",
+      "Is64BitOperatingSystem": "64位操作系统",
+      "WorkingSet": "工作集"
+    },
+    "FileInfo": {
+      "Title": "文件信息",
+      "ProductName": "产品名称",
+      "ProductVersion": "产品版本",
+      "FileVersion": "文件版本",
+      "CompanyName": "公司名称",
+      "Copyright": "版权信息"
+    },
+    "SystemDetails": {
+      "Title": "系统详细信息",
+      "DotNetVersion": ".NET版本",
+      "OperatingSystem": "操作系统",
+      "CurrentDirectory": "当前目录",
+      "SystemPageSize": "系统页面大小",
+      "UserInteractive": "用户交互式"
+    },
+    "Messages": {
+      "LoadFailed": "加载系统信息失败: {0}",
+      "LoadError": "加载系统信息时发生错误: {0}",
+      "RefreshSucceeded": "系统信息已刷新"
+    }
+  },
+  "CustomLinks": {
+    "Title": "快捷链接",
+    "Actions": {
+      "CopyUserName": "复制用户名",
+      "CopyPassword": "复制密码"
+    },
+    "Messages": {
+      "CopyUserNameSucceeded": "已复制用户名",
+      "CopyUserNameFailed": "复制用户名失败",
+      "CopyPasswordSucceeded": "已复制密码",
+      "CopyPasswordFailed": "复制密码失败",
+      "CopyFailedWithMessage": "{0}: {1}"
+    }
+  },
+  "Shared": {
+    "Common": {
+      "Yes": "是",
+      "No": "否"
+    },
+    "Units": {
+      "Bytes": "字节",
+      "Kilobytes": "KB",
+      "Megabytes": "MB",
+      "Gigabytes": "GB",
+      "Terabytes": "TB"
+    },
+    "Duration": {
+      "Separator": "",
+      "ZeroSeconds": "0秒",
+      "DaySingular": "{0}天",
+      "DayPlural": "{0}天",
+      "HourSingular": "{0}小时",
+      "HourPlural": "{0}小时",
+      "MinuteSingular": "{0}分钟",
+      "MinutePlural": "{0}分钟",
+      "SecondSingular": "{0}秒",
+      "SecondPlural": "{0}秒"
+    }
+  },
+  "Service": {
+    "Errors": {
+      "EntryAssemblyUnavailable": "无法获取入口程序集信息",
+      "GetSystemInfoFailed": "获取系统信息失败: {0}"
+    }
+  }
+}
