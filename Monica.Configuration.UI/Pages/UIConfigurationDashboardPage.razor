@@ -12,82 +12,84 @@
 
 <PageTitle>@DashboardTitle</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
-    <MudPaper Class="pa-6 mb-6" Elevation="2">
-        <MudText Typo="Typo.h3" Class="mb-2">
-            <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-3" />
-            @DashboardTitle
-        </MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            @DashboardDescription
-        </MudText>
-    </MudPaper>
+<div class="dashboard-page-shell">
+    <MudContainer MaxWidth="MaxWidth.False">
+        <MudPaper Class="pa-6 mb-6" Elevation="2">
+            <MudText Typo="Typo.h3" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-3" />
+                @DashboardTitle
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                @DashboardDescription
+            </MudText>
+        </MudPaper>
 
-    <MudTabs Elevation="4"
-             Rounded="true"
-             ApplyEffectsToContainer="true"
-             Class="mb-6"
-             @bind-ActivePanelIndex="activeTabIndex"
-             @bind-ActivePanelIndex:after="OnTabChangedAsync">
-        <MudTabPanel Text="配置状态" Icon="@Icons.Material.Filled.Tune">
-            <div class="tab-content-panel">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudStack Row="true"
-                              Justify="Justify.SpaceBetween"
-                              AlignItems="AlignItems.Center"
-                              Class="mb-4">
-                        <MudText Typo="Typo.h6">配置状态</MudText>
-                        <MudButton Variant="Variant.Outlined"
-                                   StartIcon="@Icons.Material.Filled.Refresh"
-                                   OnClick="LoadConfigStatusAsync"
-                                   Disabled="@isLoading">
-                            刷新
-                        </MudButton>
-                    </MudStack>
-
-                    @if (configStatus != null)
-                    {
-                        <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
-                    }
-                    else if (isLoading)
-                    {
-                        <MudStack AlignItems="AlignItems.Center"
-                                  Justify="Justify.Center"
-                                  Spacing="2"
-                                  Class="loading-state">
-                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载配置状态...</MudText>
+        <MudTabs Elevation="4"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 Class="mb-6"
+                 @bind-ActivePanelIndex="activeTabIndex"
+                 @bind-ActivePanelIndex:after="OnTabChangedAsync">
+            <MudTabPanel Text="配置状态" Icon="@Icons.Material.Filled.Tune">
+                <div class="tab-content-panel">
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudStack Row="true"
+                                  Justify="Justify.SpaceBetween"
+                                  AlignItems="AlignItems.Center"
+                                  Class="mb-4">
+                            <MudText Typo="Typo.h6">配置状态</MudText>
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                       OnClick="LoadConfigStatusAsync"
+                                       Disabled="@isLoading">
+                                刷新
+                            </MudButton>
                         </MudStack>
-                    }
-                </MudPaper>
-            </div>
-        </MudTabPanel>
 
-        <MudTabPanel Text="配置历史" Icon="@Icons.Material.Filled.History">
-            <div class="tab-content-panel">
-                <ConfigurationHistory />
-            </div>
-        </MudTabPanel>
+                        @if (configStatus != null)
+                        {
+                            <ConfigurationExplorer Configs="configStatus" OnConfigUpdate="HandleConfigUpdate" />
+                        }
+                        else if (isLoading)
+                        {
+                            <MudStack AlignItems="AlignItems.Center"
+                                      Justify="Justify.Center"
+                                      Spacing="2"
+                                      Class="loading-state">
+                                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">正在加载配置状态...</MudText>
+                            </MudStack>
+                        }
+                    </MudPaper>
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="配置概览" Icon="@Icons.Material.Filled.Assessment">
-            <div class="tab-content-panel">
-                <ConfigurationOverview />
-            </div>
-        </MudTabPanel>
+            <MudTabPanel Text="配置历史" Icon="@Icons.Material.Filled.History">
+                <div class="tab-content-panel">
+                    <ConfigurationHistory />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="调试视图" Icon="@Icons.Material.Filled.BugReport">
-            <div class="tab-content-panel">
-                <ConfigurationDebugView @ref="debugViewComponent" />
-            </div>
-        </MudTabPanel>
+            <MudTabPanel Text="配置概览" Icon="@Icons.Material.Filled.Assessment">
+                <div class="tab-content-panel">
+                    <ConfigurationOverview />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="配置提供者" Icon="@Icons.Material.Filled.Extension">
-            <div class="tab-content-panel">
-                <ConfigurationProviderView @ref="providerViewComponent" />
-            </div>
-        </MudTabPanel>
-    </MudTabs>
-</MudContainer>
+            <MudTabPanel Text="调试视图" Icon="@Icons.Material.Filled.BugReport">
+                <div class="tab-content-panel">
+                    <ConfigurationDebugView @ref="debugViewComponent" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="配置提供者" Icon="@Icons.Material.Filled.Extension">
+                <div class="tab-content-panel">
+                    <ConfigurationProviderView @ref="providerViewComponent" />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+</div>
 
 @code {
     public const string PAGE_URL = "/configuration-dashboard";

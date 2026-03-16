@@ -12,62 +12,58 @@
 
 <PageTitle>@L["ModuleSystem:Dashboard:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="ma-4">
-    <MudPaper Class="pa-6 mb-6" Elevation="2">
-        <MudText Typo="Typo.h3" Class="mb-2">
-            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-3" />
-            @L["ModuleSystem:Dashboard:Title"]
-        </MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            @L["ModuleSystem:Dashboard:Description"]
-        </MudText>
-    </MudPaper>
+<div class="dashboard-page-shell">
+    <MudContainer MaxWidth="MaxWidth.False">
+        <MudPaper Class="pa-6 mb-6" Elevation="2">
+            <MudText Typo="Typo.h3" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-3" />
+                @L["ModuleSystem:Dashboard:Title"]
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                @L["ModuleSystem:Dashboard:Description"]
+            </MudText>
+        </MudPaper>
 
-    <MudTabs ActivePanelIndex="@activeTabIndex"
-             ActivePanelIndexChanged="@OnActivePanelIndexChanged"
-             Elevation="4"
-             Rounded="true"
-             ApplyEffectsToContainer="true"
-             Class="mb-6">
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
-            <div class="tab-content-panel">
-                <SystemOverview SystemStatus="systemStatus" />
-            </div>
-        </MudTabPanel>
+        <MudTabs ActivePanelIndex="@activeTabIndex"
+                 ActivePanelIndexChanged="@OnActivePanelIndexChanged"
+                 Elevation="4"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 Class="mb-6">
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
+                <div class="tab-content-panel">
+                    <SystemOverview SystemStatus="systemStatus" HealthCheckData="healthCheck" />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
-            <div class="tab-content-panel">
-                <PerformanceMonitoring SystemPerformance="systemPerformance" />
-            </div>
-        </MudTabPanel>
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
+                <div class="tab-content-panel">
+                    <PerformanceMonitoring SystemPerformance="systemPerformance" />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:HealthCheck"]" Icon="@Icons.Material.Filled.HealthAndSafety">
-            <div class="tab-content-panel">
-                <HealthCheck HealthCheckData="healthCheck" />
-            </div>
-        </MudTabPanel>
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:ModuleManagement"]" Icon="@Icons.Material.Filled.ViewModule">
+                <div class="tab-content-panel">
+                    <ModuleManagement RegistrationInfo="registrationInfo"
+                                      OnRefresh="RefreshData"
+                                      OnModuleDetailClicked="ViewModuleDetail" />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:ModuleManagement"]" Icon="@Icons.Material.Filled.ViewModule">
-            <div class="tab-content-panel">
-                <ModuleManagement RegistrationInfo="registrationInfo"
-                                OnRefresh="RefreshData"
-                                OnModuleDetailClicked="ViewModuleDetail" />
-            </div>
-        </MudTabPanel>
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:AssemblyAnalysis"]" Icon="@Icons.Material.Filled.Hub">
+                <div class="tab-content-panel">
+                    <AssemblyAnalysis AssemblyAnalysisData="assemblyAnalysis" />
+                </div>
+            </MudTabPanel>
 
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:AssemblyAnalysis"]" Icon="@Icons.Material.Filled.Hub">
-            <div class="tab-content-panel">
-                <AssemblyAnalysis AssemblyAnalysisData="assemblyAnalysis" />
-            </div>
-        </MudTabPanel>
-
-        <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
-            <div class="tab-content-panel">
-                <DependencyGraph DependencyGraphData="dependencyGraph" />
-            </div>
-        </MudTabPanel>
-    </MudTabs>
-</MudContainer>
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
+                <div class="tab-content-panel">
+                    <DependencyGraph DependencyGraphData="dependencyGraph" />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+</div>
 
 <!-- 模块详情对话框 -->
 <ModuleDetailDialog IsVisible="showModuleDetail"
@@ -87,7 +83,7 @@
     private bool showModuleDetail = false;
     private int activeTabIndex;
 
-    private const int AssemblyAnalysisTabIndex = 4;
+    private const int AssemblyAnalysisTabIndex = 3;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

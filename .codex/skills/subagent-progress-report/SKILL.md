@@ -34,15 +34,16 @@ Prefer active logging over silence. Quiet-period recovery exists as a fallback w
 
 Main agent:
 
-1. Create a shared session root with `python <skill-dir>/scripts/init_main_agent_session.py`.
+1. In `Main-Agent mode`, confirm sub-agent tooling is available, then create a shared session root with `python <skill-dir>/scripts/init_main_agent_session.py`.
 2. Delegate with a stable `<task-label>--<tool-nickname>` agent name and require `$subagent-progress-report` in `Sub-Agent mode`.
 3. Run `python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-root>" --agent-name "<agent-name>"`.
 4. Instruct the child to prefer many short factual log entries and to avoid long silent stretches.
-5. After bootstrap succeeds, treat silence as a temporary quiet period only until the recovery flow says otherwise.
+5. If the child complains about missing sub-agent-management tools or starts acting like the main orchestrator, treat that as role confusion and redelegate with a sharper scope fence.
+6. After bootstrap succeeds, treat silence as a temporary quiet period only until the recovery flow says otherwise.
 
 Sub-agent:
 
-1. Reuse the main-agent-provided `<session-root>` and exact `<agent-name>`.
+1. Reuse the main-agent-provided `<session-root>` and exact `<agent-name>`. Do not rerun the main-agent tool-availability check.
 2. Initialize `<session-root>/<agent-name>/` with `python <skill-dir>/scripts/init_subagent_session.py --session-root "<session-root>" --agent-name "<agent-name>"`.
 3. Write the first non-empty `agent.log` entry immediately after initialization.
 4. Keep logging through the task at every meaningful step, especially before and after long-running work, after discoveries, and after failures.

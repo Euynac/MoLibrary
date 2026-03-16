@@ -53,6 +53,13 @@ python <skill-dir>/scripts/check_subagent_bootstrap.py --session-root "<session-
    - `bootstrapped`: the folder exists and the child wrote the first non-empty log entry. Continue supervision.
 3. Once a child is `bootstrapped`, assume it is healthy until the log, harness state, or explicit drift says otherwise. Do not treat one quiet read as failure.
 
+## Handle role confusion
+
+1. If a child says it cannot continue because it lacks `spawn_agent`, `send_input`, or `wait`, treat that as hallucinated role confusion unless the delegated task explicitly requires spawning additional children.
+2. Apply the same discard-and-redelegate rule if the child starts acting like the main orchestrator, tells the user to switch environments, or cites the main-agent-only tool check as its blocker.
+3. Do not trust conclusions from a child that failed this role check, even if it returned `completed` or `blocked`.
+4. Close the child in the harness, archive its directory if it exists, and redelegate with a sharper scope fence.
+
 ## Supervise a live child
 
 1. Read one child directly from `<session-root>/<agent-name>/agent.log`, newest entry first.

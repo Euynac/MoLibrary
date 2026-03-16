@@ -117,6 +117,20 @@
         "NoCheckItems": "No check items",
         "NoIssuesFound": "No issues found"
       },
+      "States": {
+        "Healthy": "Healthy",
+        "Warning": "Warning",
+        "Unhealthy": "Unhealthy",
+        "Critical": "Critical",
+        "Unknown": "Unknown"
+      },
+      "Severities": {
+        "Information": "Information",
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High",
+        "Critical": "Critical"
+      },
       "Loading": {
         "HealthOverview": "Loading health overview...",
         "PerformanceMetrics": "Loading performance metrics...",

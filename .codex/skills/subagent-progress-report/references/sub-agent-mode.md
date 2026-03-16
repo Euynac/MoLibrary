@@ -5,6 +5,7 @@
 1. Expect the main agent to provide one shared `<session-root>` and one finalized `<agent-name>`.
 2. Use exactly the main-agent-provided `<agent-name>`. Do not invent or rename it, even if the harness also shows a generated nickname.
 3. Reuse the provided session root. Do not create a second root.
+4. Do not rerun the main-agent tool-availability check. In `Sub-Agent mode`, lacking direct access to `spawn_agent`, `send_input`, or `wait` is normal unless your delegated task explicitly requires spawning child agents.
 
 ## Initialize immediately
 

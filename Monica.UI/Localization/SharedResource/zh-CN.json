@@ -117,6 +117,20 @@
         "NoCheckItems": "暂无检查项目",
         "NoIssuesFound": "未发现问题"
       },
+      "States": {
+        "Healthy": "健康",
+        "Warning": "警告",
+        "Unhealthy": "异常",
+        "Critical": "严重",
+        "Unknown": "未知"
+      },
+      "Severities": {
+        "Information": "信息",
+        "Low": "低",
+        "Medium": "中",
+        "High": "高",
+        "Critical": "严重"
+      },
       "Loading": {
         "HealthOverview": "加载健康概览...",
         "PerformanceMetrics": "加载性能指标...",

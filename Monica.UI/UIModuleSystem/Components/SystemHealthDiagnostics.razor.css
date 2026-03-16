@@ -1,0 +1,87 @@
+.health-diagnostics {
+    width: 100%;
+}
+
+.diagnostic-card {
+    height: 100%;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.diagnostic-card-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.diagnostic-body {
+    flex: 1;
+    min-height: 0;
+}
+
+.metric-card {
+    height: 100%;
+}
+
+.diagnostic-list-card {
+    height: 100%;
+    min-height: 560px;
+}
+
+.diagnostic-list {
+    height: 100%;
+    overflow: auto;
+}
+
+.signal-item {
+    border-radius: 8px;
+}
+
+.signal-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.signal-item-title {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.empty-state-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 100%;
+    text-align: center;
+}
+
+.empty-state-icon {
+    font-size: 64px;
+}
+
+@media (max-width: 960px) {
+    .diagnostic-list-card {
+        min-height: auto;
+    }
+
+    .diagnostic-list {
+        max-height: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .signal-item-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
