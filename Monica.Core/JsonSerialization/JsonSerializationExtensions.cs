@@ -5,7 +5,7 @@ using Monica.Modules;
 
 namespace Monica.Core.JsonSerialization;
 
-public static class MoGlobalJsonExtensions
+public static class JsonSerializationExtensions
 {
     public static void ApplyJsonSerializationDefaults(this JsonSerializerOptions options, ModuleJsonSerializationOption extraOption)
     {
