@@ -2,7 +2,7 @@ namespace Monica.Core.Localization.Models;
 
 internal sealed class LocalizationResourceRegistry
 {
-    private readonly object _syncRoot = new();
+    private readonly Lock _syncRoot = new();
     private LocalizationResourceRegistration[] _registrations = [];
     private Dictionary<Type, LocalizationResourceRegistration> _registrationLookup = [];
 
