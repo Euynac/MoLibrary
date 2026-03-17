@@ -1,5 +1,6 @@
 @using System.Net
 @using System.Text
+@using Microsoft.JSInterop
 @using Monica.Framework.UI.UILogging.Models
 @using Monica.UI.Components.ContextMenu
 
@@ -79,8 +80,10 @@
                                      _currentMatchIndex >= 0 && _currentMatchIndex < _matchedLineIndices.Count &&
                                      _matchedLineIndices[_currentMatchIndex] == lineIndex;
 
-                <div class="log-entry @GetSeverityClass(line.Severity) @(line.IsContextTarget ? "context-target" : "") @(isCurrentMatch ? "current-match" : "") @(_selectedLineIndex == lineIndex ? "selected" : "")"
+                <div @key="line.AbsoluteLineNumber ?? lineIndex"
+                     class="log-entry @GetSeverityClass(line.Severity) @(line.IsContextTarget ? "context-target" : "") @(isCurrentMatch ? "current-match" : "") @(_selectedLineIndex == lineIndex ? "selected" : "")"
                      data-line-index="@lineIndex"
+                     data-absolute-line-number="@line.AbsoluteLineNumber"
                      @onclick="() => HandleEntryClick(line, lineIndex)"
                      @oncontextmenu="e => OnContextMenu(e, line)"
                      @oncontextmenu:preventDefault="true">
@@ -134,12 +137,19 @@
     public EventCallback<(LogLineViewModel line, string keyword)> OnApplyFilter { get; set; }
 
     [Parameter]
-    public EventCallback<int> OnLoadMore { get; set; }
+    public Func<int, Task<int>>? LoadMoreRequested { get; set; }
 
+    private const string JsModulePath = "./_content/Monica.Framework.UI/js/logging-ui.js";
     private ElementReference _scrollContainer;
     private bool _isRendered;
     private long _lastVersion;
     private int _linesCount;
+    private IJSObjectReference? _jsModule;
+    private bool _pendingScrollToBottom;
+    private long? _pendingScrollAnchorLineNumber;
+    private long _pendingPreserveAfterVersion;
+    private long? _lastFirstAbsoluteLineNumber;
+    private long? _lastLastAbsoluteLineNumber;
 
     // Context menu state
     private bool _contextMenuVisible;
@@ -161,28 +171,34 @@
     // Selected line state
     private int? _selectedLineIndex = null;
 
-    protected override Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         _linesCount = Lines?.Count ?? 0;
 
-        // Update match tracking when filter changes or lines update
-        var filterChanged = _lastFilter != Filter;
+        var filterChanged = !Equals(_lastFilter, Filter);
         if (filterChanged || Version != _lastVersion)
         {
             _lastFilter = Filter;
             UpdateMatchTracking();
         }
 
+        var firstLine = Lines.Count > 0 ? Lines[0] : null;
+        var lastLine = Lines.Count > 0 ? Lines[^1] : null;
+        var currentFirstAbsoluteLineNumber = firstLine?.AbsoluteLineNumber;
+        var currentLastAbsoluteLineNumber = lastLine?.AbsoluteLineNumber;
+
         if (Version != _lastVersion)
         {
-            _lastVersion = Version;
-            if (_isRendered && AutoScroll)
+            if (ShouldScrollToBottom(currentFirstAbsoluteLineNumber, currentLastAbsoluteLineNumber))
             {
-                _ = ScrollToBottomAsync();
+                _pendingScrollToBottom = true;
             }
+
+            _lastVersion = Version;
         }
 
-        return base.OnParametersSetAsync();
+        _lastFirstAbsoluteLineNumber = currentFirstAbsoluteLineNumber;
+        _lastLastAbsoluteLineNumber = currentLastAbsoluteLineNumber;
     }
 
     private void UpdateMatchTracking()
@@ -225,6 +241,24 @@
             _isRendered = true;
             BuildContextMenu();
             await SetupScrollListenerAsync();
+
+            if (AutoScroll && Lines.Count > 0)
+            {
+                _pendingScrollToBottom = true;
+            }
+        }
+
+        if (_pendingScrollAnchorLineNumber.HasValue && Version > _pendingPreserveAfterVersion)
+        {
+            var anchorLineNumber = _pendingScrollAnchorLineNumber.Value;
+            _pendingScrollAnchorLineNumber = null;
+            await PreserveScrollPositionAsync(anchorLineNumber);
+        }
+
+        if (_pendingScrollToBottom)
+        {
+            _pendingScrollToBottom = false;
+            await ScrollToBottomAsync();
         }
     }
 
@@ -232,20 +266,18 @@
     {
         try
         {
-            // Dispose previous reference if exists
             _dotNetRef?.Dispose();
             _dotNetRef = DotNetObjectReference.Create(this);
 
-            // Add scroll listener with callback
-            await JsRuntime.InvokeVoidAsync("MoLogging.addScrollTopListener",
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("addScrollTopListener",
                 _scrollContainer,
                 _dotNetRef,
                 nameof(HandleScrollToTop),
-                50); // 50px threshold
+                50);
         }
         catch (Exception ex)
         {
-            // Ignore JS errors during setup
             Console.WriteLine($"Failed to setup scroll listener: {ex.Message}");
         }
     }
@@ -253,7 +285,7 @@
     [JSInvokable]
     public async Task<bool> HandleScrollToTop()
     {
-        if (_isLoadingMore || !OnLoadMore.HasDelegate)
+        if (_isLoadingMore || LoadMoreRequested is null)
         {
             return false;
         }
@@ -261,27 +293,20 @@
         try
         {
             _isLoadingMore = true;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
 
-            var previousLineCount = Lines?.Count ?? 0;
+            var anchorLineNumber = Lines.Count > 0
+                ? Lines[0]?.AbsoluteLineNumber
+                : null;
+            var loadedCount = await LoadMoreRequested.Invoke(50);
 
-            // Trigger load more event (load 50 lines)
-            await OnLoadMore.InvokeAsync(50);
-
-            // Wait a bit for the new lines to render
-            await Task.Delay(100);
-
-            // Preserve scroll position
-            var newLineCount = (Lines?.Count ?? 0) - previousLineCount;
-            if (newLineCount > 0)
+            if (loadedCount > 0 && anchorLineNumber.HasValue)
             {
-                await JsRuntime.InvokeVoidAsync("MoLogging.preserveScrollPosition",
-                    _scrollContainer,
-                    previousLineCount,
-                    newLineCount);
+                _pendingScrollAnchorLineNumber = anchorLineNumber.Value;
+                _pendingPreserveAfterVersion = Version;
             }
 
-            return true;
+            return loadedCount > 0;
         }
         catch (Exception ex)
         {
@@ -292,8 +317,28 @@
         finally
         {
             _isLoadingMore = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private bool ShouldScrollToBottom(long? currentFirstAbsoluteLineNumber, long? currentLastAbsoluteLineNumber)
+    {
+        if (!_isRendered || !AutoScroll || !currentLastAbsoluteLineNumber.HasValue)
+        {
+            return false;
+        }
+
+        if (!_lastLastAbsoluteLineNumber.HasValue)
+        {
+            return true;
+        }
+
+        var isHistoryPrepend = currentFirstAbsoluteLineNumber.HasValue
+            && _lastFirstAbsoluteLineNumber.HasValue
+            && currentFirstAbsoluteLineNumber.Value < _lastFirstAbsoluteLineNumber.Value
+            && currentLastAbsoluteLineNumber.Value == _lastLastAbsoluteLineNumber.Value;
+
+        return !isHistoryPrepend;
     }
 
     private void BuildContextMenu()
@@ -339,8 +384,6 @@
 
     private Task OnContextMenuItemClickWrapper(ContextMenuItem<LogLineViewModel> menuItem)
     {
-        // The menu item actions are already executed by the MoContextMenu component
-        // This callback is just for additional handling if needed
         return Task.CompletedTask;
     }
 
@@ -382,7 +425,8 @@
         }
 
         var text = line.GetCopyText(format);
-        var success = await JsRuntime.InvokeAsync<bool>("MoLogging.copyToClipboard", text);
+        var jsModule = await GetJsModuleAsync();
+        var success = await jsModule.InvokeAsync<bool>("copyToClipboard", text);
 
         if (success)
         {
@@ -408,8 +452,8 @@
 
         try
         {
-            // 获取当前选中的文本
-            var selectedText = await JsRuntime.InvokeAsync<string>("MoLogging.getSelectedText");
+            var jsModule = await GetJsModuleAsync();
+            var selectedText = await jsModule.InvokeAsync<string>("getSelectedText");
 
             if (string.IsNullOrWhiteSpace(selectedText))
             {
@@ -430,11 +474,11 @@
     {
         try
         {
-            await JsRuntime.InvokeVoidAsync("MoLogging.scrollToTop", _scrollContainer);
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("scrollToTop", _scrollContainer);
         }
         catch (JSException)
         {
-            // ignore js error
         }
     }
 
@@ -442,11 +486,11 @@
     {
         try
         {
-            await JsRuntime.InvokeVoidAsync("MoLogging.scrollToBottom", _scrollContainer);
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("scrollToBottom", _scrollContainer);
         }
         catch (JSException)
         {
-            // ignore js error
         }
     }
 
@@ -457,7 +501,6 @@
             return;
         }
 
-        // Cycle to next match
         _currentMatchIndex = (_currentMatchIndex + 1) % _totalMatches;
 
         await ScrollToCurrentMatch();
@@ -471,7 +514,6 @@
             return;
         }
 
-        // Cycle to previous match (wrap around if at first)
         _currentMatchIndex = (_currentMatchIndex - 1 + _totalMatches) % _totalMatches;
 
         await ScrollToCurrentMatch();
@@ -489,27 +531,46 @@
 
         try
         {
-            await JsRuntime.InvokeVoidAsync("MoLogging.scrollToLineIndex", _scrollContainer, lineIndex);
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
         }
         catch (JSException)
         {
-            // ignore js error
         }
     }
 
-    /// <summary>
-    /// 滚动到指定行索引（居中显示）
-    /// </summary>
     public async Task ScrollToLineAsync(int lineIndex)
     {
         try
         {
-            await JsRuntime.InvokeVoidAsync("MoLogging.scrollToLineIndex", _scrollContainer, lineIndex);
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("scrollToLineIndex", _scrollContainer, lineIndex);
         }
         catch (JSException)
         {
-            // ignore js error
         }
+    }
+
+    private async Task PreserveScrollPositionAsync(long absoluteLineNumber)
+    {
+        try
+        {
+            var jsModule = await GetJsModuleAsync();
+            await jsModule.InvokeVoidAsync("preserveScrollPosition", _scrollContainer, absoluteLineNumber);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task<IJSObjectReference> GetJsModuleAsync()
+    {
+        if (_jsModule is null)
+        {
+            _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", JsModulePath);
+        }
+
+        return _jsModule;
     }
 
     private static string GetSeverityClass(LogSeverity severity) => severity switch
@@ -565,17 +626,28 @@
     {
         try
         {
-            await JsRuntime.InvokeVoidAsync("MoLogging.removeScrollListener", _scrollContainer);
+            if (_jsModule is not null)
+            {
+                await _jsModule.InvokeVoidAsync("removeScrollListener", _scrollContainer);
+            }
         }
         catch (JSDisconnectedException)
         {
-            // Circuit is disconnected, JS call is not possible
         }
         catch (Exception)
         {
-            // Ignore other JS errors during disposal
         }
 
         _dotNetRef?.Dispose();
+        if (_jsModule is not null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

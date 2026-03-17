@@ -1,6 +1,7 @@
 @attribute [Route(LOGGING_MONITOR_URL)]
 @using System.Diagnostics
 @using System.Threading.Channels
+@using Microsoft.JSInterop
 @using Microsoft.Extensions.Logging
 @using Monica.Framework.UI.UILogging.Components
 @using Monica.Framework.UI.UILogging.Models
@@ -18,12 +19,10 @@
 
 <PageTitle>日志监控</PageTitle>
 
-<script src="_content/Monica.Framework.UI/js/logging-ui.js"></script>
-
 <div class="page-container">
     @if (_isInitializing)
     {
-        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100vh;">
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="page-loading-state">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
             <MudText Typo="Typo.h6" Class="mt-4">正在加载日志数据...</MudText>
         </MudStack>
@@ -134,7 +133,7 @@
                                        OnLineClicked="HandleLineClick"
                                        OnShowContext="HandleShowContext"
                                        OnApplyFilter="HandleApplyFilter"
-                                       OnLoadMore="HandleLoadMore" />
+                                       LoadMoreRequested="HandleLoadMoreAsync" />
                         </div>
                     </div>
                 </MudTabPanel>
@@ -247,6 +246,7 @@
     private long _totalFileLineCount;
     private long _initLoadTimeMs;
 
+    private IJSObjectReference? _jsModule;
     private LogViewer? _logViewerRef;
 
     private IReadOnlyList<LogLineViewModel> _currentLines => _snapshot?.Lines ?? Array.Empty<LogLineViewModel>();
@@ -276,7 +276,7 @@
             Logger.LogError(ex, "初始化日志页面失败");
             Snackbar.Add($"初始化失败: {ex.Message}", Severity.Error);
 
-            // 清理已创建的订阅
+            // Clean up the subscription created during initialization.
             if (_subscriptionCts != null)
             {
                 await _subscriptionCts.CancelAsync();
@@ -329,7 +329,7 @@
         }
         catch (OperationCanceledException)
         {
-            // ignore
+            // Ignore cancellation.
         }
     }
 
@@ -451,15 +451,30 @@
         StateHasChanged();
     }
 
-    private Task DownloadFileAsync(string relativePath)
+    private async Task DownloadFileAsync(string relativePath)
     {
-        NavigationManager.NavigateTo($"logging-ui/files/{relativePath}", true);
-        return Task.CompletedTask;
+        try
+        {
+            await TriggerBrowserDownloadAsync(BuildFileDownloadUrl(relativePath));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "下载日志文件失败: {RelativePath}", relativePath);
+            Snackbar.Add($"下载失败: {ex.Message}", Severity.Error);
+        }
     }
 
-    private void ExportBuffer()
+    private async Task ExportBuffer()
     {
-        NavigationManager.NavigateTo("logging-ui/current/export", true);
+        try
+        {
+            await TriggerBrowserDownloadAsync("logging-ui/current/export");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "导出临时日志失败");
+            Snackbar.Add($"导出失败: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task HandleShowContext((LogLineViewModel line, int lineIndex) args)
@@ -474,22 +489,22 @@
 
         try
         {
-            // 保存当前状态
+            // Preserve the current state before entering context mode.
             _savedSnapshot = _snapshot;
             _savedAutoScroll = _autoScroll;
             _savedIsRunning = _isRunning;
             _savedLineIndex = lineIndex;
 
-            // 如果正在运行，先暂停
+            // Pause live updates before loading file context.
             if (_isRunning)
             {
                 await LoggingService.PauseAsync();
             }
 
-            // 禁用自动滚动
+            // Disable auto-scroll while showing file context.
             _autoScroll = false;
 
-            // 读取上下文
+            // Read file context around the selected line.
             var contextResult = await LogFileQueryService.ReadContextAsync(
                 _currentLogFilePath ?? string.Empty,
                 line.AbsoluteLineNumber.Value,
@@ -501,7 +516,7 @@
                 return;
             }
 
-            // 创建临时快照显示上下文
+            // Build a temporary snapshot for the context view.
             _snapshot = new ScreenLogSnapshot
             {
                 Lines = context.Lines,
@@ -517,7 +532,7 @@
             Snackbar.Add($"已加载行号 #{line.AbsoluteLineNumber.Value} 附近的上下文", Severity.Info);
             StateHasChanged();
 
-            // 等待UI渲染后滚动到目标行（居中显示）
+            // Wait for the UI to render before centering the target line.
             await Task.Delay(100);
             await ScrollToTargetLineAsync();
         }
@@ -535,7 +550,7 @@
             return;
         }
 
-        // 找到目标行在当前快照中的索引
+        // Find the target line index inside the current snapshot.
         var targetIndex = _snapshot?.Lines
             .Select((line, index) => new { line, index })
             .FirstOrDefault(x => x.line.AbsoluteLineNumber == _contextTargetLine.Value)?.index;
@@ -553,11 +568,11 @@
             return;
         }
 
-        // 恢复之前的状态
+        // Restore the state that was active before entering context mode.
         _snapshot = _savedSnapshot;
         _autoScroll = _savedAutoScroll;
 
-        // 如果之前在运行，重新启动
+        // Resume live updates when they were active before entering context mode.
         if (_savedIsRunning)
         {
             await LoggingService.StartAsync();
@@ -571,10 +586,10 @@
         Snackbar.Add("已返回实时日志视图", Severity.Info);
         StateHasChanged();
 
-        // 恢复滚动位置到之前查看的行
+        // Restore the previous line position after the realtime view is rendered again.
         if (_savedLineIndex.HasValue)
         {
-            await Task.Delay(100); // 等待UI渲染
+            await Task.Delay(100); // Wait for the realtime view to render.
             if (_logViewerRef != null)
             {
                 await _logViewerRef.ScrollToLineAsync(_savedLineIndex.Value);
@@ -589,12 +604,11 @@
         await ApplyFilterAsync();
     }
 
-    private async Task HandleLoadMore(int lineCount)
+    private async Task<int> HandleLoadMoreAsync(int lineCount)
     {
         if (_isContextMode)
         {
-            // Don't load more in context mode
-            return;
+            return 0;
         }
 
         try
@@ -611,7 +625,7 @@
                 {
                     Snackbar.Add(error.Message ?? "加载更多日志失败", Severity.Warning);
                 }
-                return;
+                return 0;
             }
 
             if (loadedCount == 0)
@@ -622,12 +636,44 @@
             {
                 Logger.LogDebug("已加载 {Count} 行历史日志", loadedCount);
             }
+
+            return loadedCount;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "加载更多日志时发生异常");
             Snackbar.Add($"加载失败: {ex.Message}", Severity.Error);
+            return 0;
         }
+    }
+
+    private async Task TriggerBrowserDownloadAsync(string relativeUrl)
+    {
+        var jsModule = await GetJsModuleAsync();
+        var downloadUrl = NavigationManager.ToAbsoluteUri(relativeUrl).ToString();
+        await jsModule.InvokeVoidAsync("downloadFile", downloadUrl);
+    }
+
+    private async Task<IJSObjectReference> GetJsModuleAsync()
+    {
+        if (_jsModule is null)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.Framework.UI/js/logging-ui.js");
+        }
+
+        return _jsModule;
+    }
+
+    private static string BuildFileDownloadUrl(string relativePath)
+    {
+        var normalizedPath = relativePath.Replace('\\', '/');
+        var encodedSegments = normalizedPath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString);
+
+        return $"logging-ui/files/{string.Join("/", encodedSegments)}";
     }
 
     private async Task OpenFileSwitchDialog()
@@ -709,6 +755,17 @@
         if (_subscription is not null)
         {
             await _subscription.DisposeAsync();
+        }
+
+        if (_jsModule is not null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
         }
     }
 }
