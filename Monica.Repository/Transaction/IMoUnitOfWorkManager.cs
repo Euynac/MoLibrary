@@ -17,6 +17,7 @@ public interface IMoUnitOfWorkManager
     /// or <c>null</c> if no unit of work is active.
     /// </value>
     IMoUnitOfWork? Current { get; }
+
     /// <summary>
     /// Begins a new unit of work with the specified options.
     /// </summary>
@@ -30,6 +31,7 @@ public interface IMoUnitOfWorkManager
     /// An instance of <see cref="IMoUnitOfWork"/> representing the newly created unit of work.
     /// </returns>
     IMoUnitOfWork Begin(MoUnitOfWorkOptions options, bool requiresNew = false);
+
     /// <summary>
     /// Begins a new unit of work with the specified options.
     /// </summary>
@@ -41,4 +43,6 @@ public interface IMoUnitOfWorkManager
     /// An instance of <see cref="IMoUnitOfWork"/> representing the newly created unit of work.
     /// </returns>
     IMoUnitOfWork Begin(bool requiresNew = false);
+
+    IMoUnitOfWork BeginTransaction();
 }

@@ -50,6 +50,11 @@ public class MoUnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
         return Begin(new MoUnitOfWorkOptions(), requiresNew);
     }
 
+    public IMoUnitOfWork BeginTransaction()
+    {
+        return Begin(new MoUnitOfWorkOptions { IsTransactional = true }, true);
+    }
+
     private IMoUnitOfWork CreateNewUnitOfWork()
     {
         var scope = serviceScopeFactory.CreateScope();
