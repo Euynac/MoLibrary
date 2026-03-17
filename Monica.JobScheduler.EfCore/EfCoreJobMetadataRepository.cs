@@ -1,10 +1,12 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.EfCore.Mappers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
+using Monica.Modules;
 using Monica.Repository.Interfaces;
 
 namespace Monica.JobScheduler.EfCore;
@@ -15,8 +17,11 @@ namespace Monica.JobScheduler.EfCore;
 /// </summary>
 public class EfCoreJobMetadataRepository(
     IDbContextProvider<JobSchedulerDbContext> dbContextProvider,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<EfCoreJobMetadataRepository> logger) : IMoJobMetadataRepository
 {
+    private readonly string _schedulerScopeKey = options.Value.SchedulerScopeKey;
+
     #region JobDefinition Operations
 
     public async Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default)
@@ -29,7 +34,9 @@ public class EfCoreJobMetadataRepository(
         var entity = await dbContext.JobDefinitions
             .AsNoTracking()
             .IgnoreQueryFilters() // Include soft-deleted for lookups  TODO in future, unified filter disable logic 
-            .FirstOrDefaultAsync(e => e.JobKey == jobKey, cancellationToken);
+            .FirstOrDefaultAsync(
+                e => e.JobKey == jobKey && e.SchedulerScopeKey == _schedulerScopeKey,
+                cancellationToken);
 
         return entity == null ? null : JobMetadataMapper.ToModel(entity);
     }
@@ -42,10 +49,13 @@ public class EfCoreJobMetadataRepository(
             throw new ArgumentException("JobDefinition.JobKey cannot be null or empty.", nameof(definition));
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
+        definition.SchedulerScopeKey = _schedulerScopeKey;
 
         var existingEntity = await dbContext.JobDefinitions
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(e => e.JobKey == definition.JobKey, cancellationToken);
+            .FirstOrDefaultAsync(
+                e => e.JobKey == definition.JobKey && e.SchedulerScopeKey == _schedulerScopeKey,
+                cancellationToken);
 
         if (existingEntity == null)
         {
@@ -87,6 +97,7 @@ public class EfCoreJobMetadataRepository(
         var dbContext = await dbContextProvider.GetDbContextAsync();
 
         var queryable = dbContext.JobDefinitions.AsNoTracking();
+        queryable = queryable.Where(d => d.SchedulerScopeKey == _schedulerScopeKey);
 
         // Apply soft delete filter conditionally
         queryable = !query.IncludeDeleted ? queryable.Where(d => !d.IsDeleted) : queryable.IgnoreQueryFilters();
@@ -131,7 +142,9 @@ public class EfCoreJobMetadataRepository(
 
         var entity = await dbContext.JobInstances
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.InstanceId == instanceId, cancellationToken);
+            .FirstOrDefaultAsync(
+                e => e.InstanceId == instanceId && e.SchedulerScopeKey == _schedulerScopeKey,
+                cancellationToken);
 
         return entity == null ? null : JobMetadataMapper.ToModel(entity);
     }
@@ -144,9 +157,12 @@ public class EfCoreJobMetadataRepository(
             throw new ArgumentException("JobInstance.InstanceId cannot be null or empty.", nameof(instance));
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
+        instance.SchedulerScopeKey = _schedulerScopeKey;
 
         var existingEntity = await dbContext.JobInstances
-            .FirstOrDefaultAsync(e => e.InstanceId == instance.InstanceId, cancellationToken);
+            .FirstOrDefaultAsync(
+                e => e.InstanceId == instance.InstanceId && e.SchedulerScopeKey == _schedulerScopeKey,
+                cancellationToken);
 
         if (existingEntity == null)
         {
@@ -185,6 +201,7 @@ public class EfCoreJobMetadataRepository(
 
         var queryable = dbContext.JobInstances
             .AsNoTracking()
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
             .ApplyFilters(query);
 
         // Get total count
@@ -208,7 +225,7 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
-    /// 查询 Job 实例列表并投影到自定义类型（使用数据库端 SELECT 投影）
+    /// Queries job instances and projects them to a custom type using database-side projection.
     /// </summary>
     public async Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
         JobInstanceQuery query,
@@ -222,6 +239,7 @@ public class EfCoreJobMetadataRepository(
 
         var queryable = dbContext.JobInstances
             .AsNoTracking()
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
             .ApplyFilters(query);
 
         // Get total count before projection
@@ -251,7 +269,7 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
-    /// 获取指定时间范围内各状态的实例统计数量（使用数据库端 GROUP BY）
+    /// Gets the instance count for each state within the specified time range using database-side grouping.
     /// </summary>
     public async Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
         DateTime? startTime = null,
@@ -263,6 +281,7 @@ public class EfCoreJobMetadataRepository(
         // Database-side GROUP BY - generates efficient SQL
         var statistics = await dbContext.JobInstances
             .AsNoTracking()
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
             .ApplyTimeRangeFilter(startTime, endTime)
             .GroupBy(i => i.State)
             .Select(g => new { State = g.Key, Count = g.Count() })
@@ -284,7 +303,7 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
-    /// 批量获取多个作业的最后一次执行实例（一次查询，避免N+1问题）
+    /// Gets the latest execution instance for each requested job in a single query.
     /// </summary>
     public async Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
         IEnumerable<string> jobKeys,
@@ -300,15 +319,15 @@ public class EfCoreJobMetadataRepository(
 
         var dbContext = await dbContextProvider.GetDbContextAsync();
 
-        // 使用子查询方式：先分组找到每个JobKey的最大CreatedAt，然后关联查询
+        // Use grouped subqueries to find the latest instance per job key.
         var latestInstances = await dbContext.JobInstances
             .AsNoTracking()
-            .Where(i => jobKeyList.Contains(i.JobKey))
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && jobKeyList.Contains(i.JobKey))
             .GroupBy(i => i.JobKey)
             .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
             .ToListAsync(cancellationToken);
 
-        // 转换为字典
+        // Convert to dictionary.
         var result = new Dictionary<string, JobInstance?>();
         foreach (var jobKey in jobKeyList)
         {
@@ -325,7 +344,7 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
-    /// 批量删除 Job 实例（EF Core 实现）
+    /// Deletes job instances in batch using EF Core.
     /// </summary>
     public async Task<int> DeleteInstancesAsync(
         IEnumerable<string> instanceIds,
@@ -344,7 +363,7 @@ public class EfCoreJobMetadataRepository(
         // Use ExecuteDeleteAsync for efficient batch deletion (EF Core 7+)
         // This generates a single DELETE statement without loading entities into memory
         var deletedCount = await dbContext.JobInstances
-            .Where(i => instanceIdList.Contains(i.InstanceId))
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && instanceIdList.Contains(i.InstanceId))
             .ExecuteDeleteAsync(cancellationToken);
 
         logger.LogInformation(
@@ -356,7 +375,7 @@ public class EfCoreJobMetadataRepository(
     }
 
     /// <summary>
-    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// Queries the instance identifiers that should be cleaned up.
     /// </summary>
     public async Task<List<string>> GetCleanupCandidatesAsync(
         IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,
@@ -380,7 +399,7 @@ public class EfCoreJobMetadataRepository(
         // This avoids loading large StateHistory strings
         var rankedQuery = dbContext.JobInstances
             .AsNoTracking()
-            .Where(i => terminalStates.Contains(i.State))
+            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && terminalStates.Contains(i.State))
             .Select(i => new
             {
                 i.InstanceId,
@@ -456,6 +475,5 @@ public class EfCoreJobMetadataRepository(
 
         return result;
     }
-
     #endregion
 }

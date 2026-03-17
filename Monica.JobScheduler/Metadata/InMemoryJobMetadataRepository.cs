@@ -1,21 +1,26 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
+using Monica.Modules;
 using Monica.JobScheduler.Models;
 
 namespace Monica.JobScheduler.Metadata;
 
 /// <summary>
-/// 基于内存的 Job 元数据仓储实现
+/// In-memory implementation of the job metadata repository.
 /// </summary>
 /// <remarks>
-/// 使用并发字典提供线程安全的、易失性的存储。适用于开发和测试环境。
-/// 数据在应用重启后会丢失。
+/// Uses concurrent dictionaries to provide thread-safe volatile storage for development and test environments.
+/// Data is lost when the application restarts.
 /// </remarks>
-public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository> logger)
+public class InMemoryJobMetadataRepository(
+    ILogger<InMemoryJobMetadataRepository> logger,
+    IOptions<ModuleJobSchedulerOption> options)
     : IMoJobMetadataRepository
 {
+    private readonly string _schedulerScopeKey = options.Value.SchedulerScopeKey;
     private readonly ConcurrentDictionary<string, JobDefinition> _definitions = new();
     private readonly ConcurrentDictionary<string, JobInstance> _instances = new();
 
@@ -29,7 +34,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         _definitions.TryGetValue(jobKey, out var definition);
-        return Task.FromResult(definition);
+        return Task.FromResult(IsCurrentScope(definition?.SchedulerScopeKey) ? definition : null);
     }
 
     public Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
@@ -41,6 +46,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             throw new ArgumentException("JobDefinition.JobKey cannot be null or empty.", nameof(definition));
 
         cancellationToken.ThrowIfCancellationRequested();
+        definition.SchedulerScopeKey = _schedulerScopeKey;
 
         var isNew = _definitions.TryAdd(definition.JobKey, definition);
 
@@ -74,9 +80,11 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         ArgumentNullException.ThrowIfNull(query);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var items = _definitions.Values.AsEnumerable();
+        var items = _definitions.Values
+            .Where(d => IsCurrentScope(d.SchedulerScopeKey))
+            .AsEnumerable();
 
-        // 应用过滤
+        // Apply filters
         if (!query.IncludeDeleted)
             items = items.Where(d => !d.IsDeleted);
 
@@ -86,7 +94,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         var list = items.ToList();
         var totalCount = list.Count;
 
-        // 分页
+        // Apply pagination
         var paged = list
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -114,7 +122,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         _instances.TryGetValue(instanceId, out var instance);
-        return Task.FromResult(instance);
+        return Task.FromResult(IsCurrentScope(instance?.SchedulerScopeKey) ? instance : null);
     }
 
     public Task SaveInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
@@ -126,6 +134,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             throw new ArgumentException("JobInstance.InstanceId cannot be null or empty.", nameof(instance));
 
         cancellationToken.ThrowIfCancellationRequested();
+        instance.SchedulerScopeKey = _schedulerScopeKey;
 
         var isNew = _instances.TryAdd(instance.InstanceId, instance);
 
@@ -160,6 +169,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         var items = _instances.Values
+            .Where(i => IsCurrentScope(i.SchedulerScopeKey))
             .ApplyFilters(query)
             .ApplySorting(query.SortBy, query.SortDescending);
 
@@ -178,7 +188,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
-    /// 查询 Job 实例列表并投影到自定义类型
+    /// Queries job instances and projects them to a custom type.
     /// </summary>
     public Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
         JobInstanceQuery query,
@@ -190,6 +200,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         var items = _instances.Values
+            .Where(i => IsCurrentScope(i.SchedulerScopeKey))
             .ApplyFilters(query)
             .ApplySorting(query.SortBy, query.SortDescending);
 
@@ -214,7 +225,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
-    /// 获取指定时间范围内各状态的实例统计数量
+    /// Gets the instance count for each state within the specified time range.
     /// </summary>
     public Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
         DateTime? startTime = null,
@@ -224,6 +235,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
         cancellationToken.ThrowIfCancellationRequested();
 
         var statistics = _instances.Values
+            .Where(i => IsCurrentScope(i.SchedulerScopeKey))
             .ApplyTimeRangeFilter(startTime, endTime)
             .GroupBy(i => i.State)
             .ToDictionary(g => g.Key, g => g.Count());
@@ -243,7 +255,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
-    /// 批量获取多个作业的最后一次执行实例（避免N+1查询问题）
+    /// Gets the latest execution instance for each requested job without N+1 lookups.
     /// </summary>
     public Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
         IEnumerable<string> jobKeys,
@@ -259,11 +271,11 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             return Task.FromResult(result);
         }
 
-        // 对每个JobKey找到最后一次执行实例
+        // Find the latest execution instance for each job key.
         foreach (var jobKey in jobKeyList)
         {
             var latestInstance = _instances.Values
-                .Where(i => i.JobKey == jobKey)
+                .Where(i => IsCurrentScope(i.SchedulerScopeKey) && i.JobKey == jobKey)
                 .OrderByDescending(i => i.CreatedAt)
                 .FirstOrDefault();
 
@@ -279,7 +291,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
-    /// 批量删除 Job 实例（内存实现）
+    /// Deletes job instances in batch using the in-memory store.
     /// </summary>
     public Task<int> DeleteInstancesAsync(
         IEnumerable<string> instanceIds,
@@ -293,7 +305,9 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
 
         foreach (var instanceId in instanceIdList)
         {
-            if (_instances.TryRemove(instanceId, out var removedInstance))
+            if (_instances.TryGetValue(instanceId, out var instance) &&
+                IsCurrentScope(instance.SchedulerScopeKey) &&
+                _instances.TryRemove(instanceId, out var removedInstance))
             {
                 deletedCount++;
                 logger.LogDebug(
@@ -312,7 +326,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
     }
 
     /// <summary>
-    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// Queries the instance identifiers that should be cleaned up.
     /// </summary>
     public Task<List<string>> GetCleanupCandidatesAsync(
         IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,
@@ -334,6 +348,7 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
 
         // Single pass: group by JobKey, project only needed fields
         var groupedInstances = _instances.Values
+            .Where(i => IsCurrentScope(i.SchedulerScopeKey))
             .Where(i => terminalStates.Contains(i.State))
             .GroupBy(i => i.JobKey)
             .Select(g => new
@@ -399,6 +414,11 @@ public class InMemoryJobMetadataRepository(ILogger<InMemoryJobMetadataRepository
             maxDeletionsPerCycle > 0 ? maxDeletionsPerCycle.ToString() : "unlimited");
 
         return Task.FromResult(result);
+    }
+
+    private bool IsCurrentScope(string? schedulerScopeKey)
+    {
+        return string.Equals(schedulerScopeKey, _schedulerScopeKey, StringComparison.Ordinal);
     }
 
     #endregion

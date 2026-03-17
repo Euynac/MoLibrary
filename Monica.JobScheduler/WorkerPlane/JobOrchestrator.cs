@@ -8,7 +8,6 @@ using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
-using Monica.RegisterCentre.Interfaces;
 
 namespace Monica.JobScheduler.WorkerPlane;
 
@@ -23,7 +22,6 @@ public class JobOrchestrator(
     IJobCancellationTokenManager jobCancellationManager,
     JobExecutor jobExecutor,
     JobRegistry jobRegistry,
-    IRegisterCentreClientInfo client,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobOrchestrator> logger)
 {
@@ -64,15 +62,11 @@ public class JobOrchestrator(
                 instance.InstanceId);
 
             // Step 3: Update state to Processing (will automatically publish JobStartedEvent)
-            var workerClientId = client.GetServiceStatus().InstanceId;
-
-            if(workerClientId == null) throw new InvalidOperationException("Worker client id is null. Check if the register centre module is properly configured.");
             await jobInstanceManager.UpdateStateAsync(
                 instance.InstanceId,
                 JobState.Processing,
                 null,
-                cancellationToken,
-                workerClientId);
+                cancellationToken);
 
             // Step 4: Execute job via executor
             var executionTask = ExecuteJobViaExecutorAsync(

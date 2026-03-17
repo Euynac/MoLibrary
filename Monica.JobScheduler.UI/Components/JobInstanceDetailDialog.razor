@@ -23,7 +23,7 @@
         }
         else if (_jobInstance != null)
         {
-            <!-- 操作按钮 -->
+            <!-- Action buttons -->
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
                 <MudStack Row="true" Spacing="2">
                     @if (ShowJobDefinitionButton)
@@ -55,7 +55,7 @@
                 </MudStack>
             </MudStack>
 
-            <!-- 基本信息 -->
+            <!-- Basic information -->
             <MudPaper Class="pa-4 mb-4" Elevation="2">
                 <MudText Typo="Typo.h6" Class="mb-3">@L["Dialogs:JobInstanceDetail:BasicInfo"]</MudText>
                 <MudGrid>
@@ -118,7 +118,7 @@
                 </MudGrid>
             </MudPaper>
 
-            <!-- 作业参数 -->
+            <!-- Job arguments -->
             @if (!string.IsNullOrEmpty(_jobInstance.JobArgs))
             {
                 <MudPaper Class="pa-4 mb-4" Elevation="2">
@@ -133,7 +133,7 @@
                 </MudPaper>
             }
 
-            <!-- 状态历史 -->
+            <!-- State history -->
             <StateHistoryViewer Instance="@_jobInstance" />
         }
     </DialogContent>

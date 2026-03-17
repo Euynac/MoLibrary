@@ -8,7 +8,8 @@ namespace Monica.JobScheduler.Events;
 /// </summary>
 public class JobDefinitionsChangedEvent
 {
-    public required string FromProject { get; init; }
+    public required string SchedulerScopeKey { get; init; }
+    public required string FromProject { get; init; }//TODO change to FromClientId
     /// <summary>
     /// The current list of all active job definitions after reconciliation
     /// </summary>

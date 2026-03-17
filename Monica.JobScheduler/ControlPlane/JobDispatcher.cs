@@ -61,6 +61,7 @@ public class JobDispatcher(
             // Publish event (slot is reserved)
             var executionEvent = new JobExecutionEvent
             {
+                SchedulerScopeKey = definition.SchedulerScopeKey,
                 InstanceId = instance.InstanceId,
                 JobKey = definition.JobKey,
                 JobArgs = jobArgsJson,
@@ -70,7 +71,9 @@ public class JobDispatcher(
                 JobType = definition.JobType,
             };
 
-            var topicName = JobEventTopicHelper.GetTopicName<JobExecutionEvent>(definition.FromProject);
+            var topicName = JobEventTopicHelper.GetProjectTopicName<JobExecutionEvent>(
+                definition.SchedulerScopeKey,
+                definition.FromProject);
             await eventBus.PublishAsync(executionEvent, topicName, cancellationToken);
 
             logger.LogDebug(

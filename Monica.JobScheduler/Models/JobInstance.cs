@@ -15,6 +15,11 @@ public class JobInstance
     public const string CreatedStateHistoryLabel = "Created";
 
     /// <summary>
+    /// Gets or sets the scheduler scope key used to isolate shared persistence and events across environments.
+    /// </summary>
+    public string SchedulerScopeKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the unique identifier for this job instance.
     /// Generated as a GUID when the instance is created.
     /// Used as the cancellation token key in IMoCancellationManager for distributed cancellation.
@@ -93,6 +98,7 @@ public class JobInstance
     /// This method is intended for repository rehydration only.
     /// </summary>
     public void RestoreFromPersistence(
+        string schedulerScopeKey,
         JobState state,
         DateTime createdAt,
         DateTime? startedAt,
@@ -102,6 +108,7 @@ public class JobInstance
         int retryAttempt,
         string? runningClientId)
     {
+        SchedulerScopeKey = schedulerScopeKey;
         State = state;
         CreatedAt = createdAt;
         StartedAt = startedAt;
@@ -118,7 +125,8 @@ public class JobInstance
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public void UpdateStateAsync(JobState newState,
-        string? message = null, string? clientId = null)
+        string? message = null,
+        string? sourceClientId = null)
     {
 
         var currentState = State;
@@ -138,7 +146,7 @@ public class JobInstance
         {
             case JobState.Processing:
                 StartedAt = now;
-                RunningClientId = clientId ?? throw new InvalidOperationException("RunningClientId must be set when state is Processing");
+                RunningClientId = sourceClientId ?? throw new InvalidOperationException("RunningClientId must be set when state is Processing");
                 break;
 
             case JobState.Succeeded:
@@ -152,7 +160,7 @@ public class JobInstance
         }
         
         // Always append state history for complete audit trail
-        AppendStateHistory(currentState, newState, message, now);
+        AppendStateHistory(currentState, newState, message, now, sourceClientId);
     }
 
     /// <summary>
@@ -164,9 +172,10 @@ public class JobInstance
     /// <param name="newState">The new state.</param>
     /// <param name="message">Optional message to record. Can be null or multi-line.</param>
     /// <param name="timestamp">The timestamp of the state change.</param>
-    private void AppendStateHistory(JobState oldState, JobState newState, string? message, DateTime timestamp)
+    /// <param name="sourceClientId">Optional source client identifier that performed the state change.</param>
+    private void AppendStateHistory(JobState oldState, JobState newState, string? message, DateTime timestamp, string? sourceClientId = null)
     {
-        AppendStateHistory(oldState.ToString(), newState, message, timestamp);
+        AppendStateHistory(oldState.ToString(), newState, message, timestamp, sourceClientId);
     }
 
     /// <summary>
@@ -178,9 +187,15 @@ public class JobInstance
     /// <param name="newState">The new state.</param>
     /// <param name="message">Optional message to record. Can be null or multi-line.</param>
     /// <param name="timestamp">The timestamp of the state change.</param>
-    internal void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp)
+    /// <param name="sourceClientId">Optional source client identifier that performed the state change.</param>
+    internal void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp, string? sourceClientId = null)
     {
         var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}]";
+        if (!string.IsNullOrWhiteSpace(sourceClientId))
+        {
+            header += $" [client:{sourceClientId}]";
+        }
+
         var historyEntry = string.IsNullOrEmpty(message)
             ? header
             : $"{header} {message}";
@@ -323,14 +338,32 @@ public class JobInstance
         }
 
         // Extract message (rest of first line + all continuation lines)
+        var sourceClientId = default(string);
         var messageBuilder = new StringBuilder();
-        var firstLineMessage = stateEnd + 1 < firstLine.Length
+        var remaining = stateEnd + 1 < firstLine.Length
             ? firstLine[(stateEnd + 1)..].TrimStart()
             : "";
 
-        if (!string.IsNullOrEmpty(firstLineMessage))
+        while (remaining.StartsWith('['))
         {
-            messageBuilder.Append(firstLineMessage);
+            var metadataEnd = remaining.IndexOf(']');
+            if (metadataEnd < 0)
+            {
+                break;
+            }
+
+            var metadata = remaining[1..metadataEnd];
+            if (metadata.StartsWith("client:", StringComparison.OrdinalIgnoreCase))
+            {
+                sourceClientId = metadata["client:".Length..];
+            }
+
+            remaining = remaining[(metadataEnd + 1)..].TrimStart();
+        }
+
+        if (!string.IsNullOrEmpty(remaining))
+        {
+            messageBuilder.Append(remaining);
         }
 
         // Add continuation lines
@@ -344,7 +377,7 @@ public class JobInstance
         }
 
         var message = messageBuilder.ToString();
-        record = new StateHistoryRecord(timestamp, previousStateLabel, newState, message);
+        record = new StateHistoryRecord(timestamp, previousStateLabel, newState, message, sourceClientId);
         return true;
     }
 
@@ -355,7 +388,13 @@ public class JobInstance
     /// <param name="PreviousStateLabel">The previous state label.</param>
     /// <param name="NewState">The new state.</param>
     /// <param name="Message">The message associated with this state change.</param>
-    public record StateHistoryRecord(DateTime Timestamp, string PreviousStateLabel, JobState NewState, string Message);
+    /// <param name="SourceClientId">The client identifier that performed this state change, if available.</param>
+    public record StateHistoryRecord(
+        DateTime Timestamp,
+        string PreviousStateLabel,
+        JobState NewState,
+        string Message,
+        string? SourceClientId = null);
 
 
     /// <summary>

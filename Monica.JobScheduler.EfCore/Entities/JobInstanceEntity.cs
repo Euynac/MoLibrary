@@ -11,6 +11,11 @@ namespace Monica.JobScheduler.EfCore.Entities;
 public class JobInstanceEntity : MoEntity<long>, IHasEntitySelfConfig<JobInstanceEntity>
 {
     /// <summary>
+    /// Scheduler scope key used to isolate shared persistence across environments.
+    /// </summary>
+    public string SchedulerScopeKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// Unique identifier for this job instance (GUID).
     /// </summary>
     public string InstanceId { get; set; } = string.Empty;
@@ -76,23 +81,30 @@ public class JobInstanceEntity : MoEntity<long>, IHasEntitySelfConfig<JobInstanc
             .IsUnique()
             .HasDatabaseName("IX_JobInstances_InstanceId");
 
-        // Index on JobKey for filtering
-        builder.HasIndex(e => e.JobKey)
-            .HasDatabaseName("IX_JobInstances_JobKey");
+        builder.HasIndex(e => e.SchedulerScopeKey)
+            .HasDatabaseName("IX_JobInstances_SchedulerScopeKey");
 
-        // Index on CreatedAt for sorting and range queries
-        builder.HasIndex(e => e.CreatedAt)
-            .HasDatabaseName("IX_JobInstances_CreatedAt");
+        // Index on SchedulerScopeKey + JobKey for filtering
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.JobKey })
+            .HasDatabaseName("IX_JobInstances_SchedulerScopeKey_JobKey");
+
+        // Index on SchedulerScopeKey + CreatedAt for sorting and range queries
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.CreatedAt })
+            .HasDatabaseName("IX_JobInstances_SchedulerScopeKey_CreatedAt");
 
         // Composite index for common query patterns
-        builder.HasIndex(e => new { e.JobKey, e.State, e.CreatedAt })
-            .HasDatabaseName("IX_JobInstances_JobKey_State_CreatedAt");
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.JobKey, e.State, e.CreatedAt })
+            .HasDatabaseName("IX_JobInstances_SchedulerScopeKey_JobKey_State_CreatedAt");
 
         // Composite index optimized for fetching latest instance per job (descending order)
         // This index is critical for batch queries in GetLatestInstancesAsync
-        builder.HasIndex(e => new { e.JobKey, e.CreatedAt })
-            .IsDescending(false, true) // JobKey ASC, CreatedAt DESC
-            .HasDatabaseName("IX_JobInstances_JobKey_CreatedAt_Desc");
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.JobKey, e.CreatedAt })
+            .IsDescending(false, false, true) // Scope ASC, JobKey ASC, CreatedAt DESC
+            .HasDatabaseName("IX_JobInstances_SchedulerScopeKey_JobKey_CreatedAt_Desc");
+
+        builder.Property(e => e.SchedulerScopeKey)
+            .IsRequired()
+            .HasMaxLength(200);
 
         builder.Property(e => e.InstanceId)
             .IsRequired()

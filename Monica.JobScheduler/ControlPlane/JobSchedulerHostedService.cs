@@ -7,6 +7,7 @@ using Monica.Core.Features.ObservableInstance;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.WorkerPlane;
 using Monica.RegisterCentre.Core;
@@ -65,7 +66,8 @@ public class JobSchedulerHostedService(
 
         // Subscribe to job definitions changed event (recurring jobs only)
         _definitionsChangedSubscription = await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
-            recurringJobScheduler.OnJobDefinitionsChangedAsync);
+            recurringJobScheduler.OnJobDefinitionsChangedAsync,
+            JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(_options.SchedulerScopeKey));
         RecordState("Subscribed to JobDefinitionsChangedEvent", logLevel: LogLevel.Debug);
     }
 

@@ -72,6 +72,12 @@ public class RecurringJobScheduler(
     /// </summary>
     public async Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            logger.LogDebug("Ignored JobDefinitionsChangedEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
+            return;
+        }
+
         await _scheduleLock.WaitAsync();
         try
         {
@@ -206,7 +212,7 @@ public class RecurringJobScheduler(
                 return;
             }
 
-            // If previously was long-interval, now转回Timer mode, clear from tracking
+            // If the job was previously tracked as long-interval, switch it back to timer mode.
             _longIntervalSchedules.TryRemove(validatedDefinition.JobKey, out _);
 
             // Create timer for next occurrence

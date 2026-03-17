@@ -6,6 +6,7 @@ using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
@@ -128,6 +129,7 @@ public class JobSchedulerApiService(
 
         var requestEvent = new ManualJobExecutionRequestEvent
         {
+            SchedulerScopeKey = definition.SchedulerScopeKey,
             JobKey = definition.JobKey,
             JobArgsJson = jobArgsJson,
             InstanceId = instanceId,
@@ -136,7 +138,10 @@ public class JobSchedulerApiService(
 
         try
         {
-            await eventBus.PublishAsync(requestEvent, null, cancellationToken);
+            await eventBus.PublishAsync(
+                requestEvent,
+                JobEventTopicHelper.GetTopicName<ManualJobExecutionRequestEvent>(definition.SchedulerScopeKey),
+                cancellationToken);
 
             logger.LogInformation(
                 "Delegated manual job execution to Centre: {JobKey}, InstanceId: {InstanceId}",

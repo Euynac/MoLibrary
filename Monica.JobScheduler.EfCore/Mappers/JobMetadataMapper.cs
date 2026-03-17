@@ -18,6 +18,7 @@ public static class JobMetadataMapper
     {
         var entity = existingEntity ?? new JobDefinitionEntity();
 
+        entity.SchedulerScopeKey = model.SchedulerScopeKey;
         entity.JobKey = model.JobKey;
         entity.JobArgsKey = model.JobArgsKey;
         entity.FromProject = model.FromProject;
@@ -48,6 +49,7 @@ public static class JobMetadataMapper
     {
         return new JobDefinition
         {
+            SchedulerScopeKey = entity.SchedulerScopeKey,
             JobKey = entity.JobKey,
             JobArgsKey = entity.JobArgsKey,
             FromProject = entity.FromProject,
@@ -80,6 +82,7 @@ public static class JobMetadataMapper
     {
         var entity = existingEntity ?? new JobInstanceEntity();
 
+        entity.SchedulerScopeKey = model.SchedulerScopeKey;
         entity.InstanceId = model.InstanceId;
         entity.JobKey = model.JobKey;
         entity.State = model.State;
@@ -110,6 +113,7 @@ public static class JobMetadataMapper
         };
 
         model.RestoreFromPersistence(
+            entity.SchedulerScopeKey,
             entity.State,
             entity.CreatedAt,
             entity.StartedAt,

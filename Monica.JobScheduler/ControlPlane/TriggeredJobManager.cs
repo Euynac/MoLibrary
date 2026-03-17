@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -20,6 +21,8 @@ public class TriggeredJobManager(
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<TriggeredJobManager> logger) : IMoTriggeredJobManager
 {
+    private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
+
     public async Task<string> EnqueueAsync<TArgs>(TArgs args, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -58,6 +61,7 @@ public class TriggeredJobManager(
 
         var triggeredEvent = new JobTriggeredEvent
         {
+            SchedulerScopeKey = definition.SchedulerScopeKey,
             InstanceId = instanceId,
             JobKey = definition.JobKey,
             JobArgs = jobArgs,
@@ -65,7 +69,10 @@ public class TriggeredJobManager(
             TriggeredAt = DateTime.UtcNow,
         };
 
-        await eventBus.PublishAsync(triggeredEvent, null, cancellationToken);
+        await eventBus.PublishAsync(
+            triggeredEvent,
+            JobEventTopicHelper.GetTopicName<JobTriggeredEvent>(_jobSchedulerOptions.SchedulerScopeKey),
+            cancellationToken);
 
         logger.LogInformation(
             "Triggered job enqueued: {JobKey}, InstanceId: {InstanceId}, Delay: {Delay}",
@@ -101,10 +108,11 @@ public class TriggeredJobManager(
         // Publish event to notify JobSchedulerHostedService to cancel timer
         await eventBus.PublishAsync(new JobCancellationRequestedEvent
         {
+            SchedulerScopeKey = instance.SchedulerScopeKey,
             InstanceId = instanceId,
             JobKey = instance.JobKey,
             RequestedAt = DateTime.UtcNow
-        });
+        }, JobEventTopicHelper.GetTopicName<JobCancellationRequestedEvent>(_jobSchedulerOptions.SchedulerScopeKey));
 
         logger.LogInformation("Cancellation requested for scheduled job {InstanceId}", instanceId);
         return true;

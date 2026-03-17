@@ -11,6 +11,11 @@ namespace Monica.JobScheduler.Events;
 public class JobExecutionEvent
 {
     /// <summary>
+    /// Gets the scheduler scope key that isolates the event from other environments.
+    /// </summary>
+    public required string SchedulerScopeKey { get; init; }
+
+    /// <summary>
     /// Gets the unique identifier for this job instance.
     /// This ID is used to track the execution lifecycle and state of this specific job run.
     /// </summary>

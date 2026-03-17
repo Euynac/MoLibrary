@@ -5,8 +5,10 @@ using Microsoft.Extensions.Options;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
+using Monica.RegisterCentre.Interfaces;
 
 namespace Monica.JobScheduler.ControlPlane;
 
@@ -17,10 +19,13 @@ namespace Monica.JobScheduler.ControlPlane;
 /// </summary>
 public class JobInstanceManager(
     IMoJobMetadataRepository metadataRepository,
-    [FromKeyedServices(nameof(ModuleJobScheduler))]IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    IRegisterCentreClientInfo clientInfo,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobInstanceManager> logger)
 {
+    private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
+
     /// <summary>
     /// Creates a new job instance with the specified initial state.
     /// </summary>
@@ -44,9 +49,10 @@ public class JobInstanceManager(
 
         var instance = new JobInstance
         {
+            SchedulerScopeKey = definition.SchedulerScopeKey,
             InstanceId = instanceId,
             JobKey = definition.JobKey,
-            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, options.Value.JobArgsSerializerOptions) : null,
+            JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, _jobSchedulerOptions.JobArgsSerializerOptions) : null,
             CreatedAt = now,
             State = initialState,
             RetryAttempt = 0
@@ -77,14 +83,12 @@ public class JobInstanceManager(
     /// <param name="newState">The new state to transition to.</param>
     /// <param name="message">Optional message to record with state transition.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <param name="clientId">The worker instance ID (required when newState is Processing).</param>
     /// <exception cref="InvalidOperationException">Thrown when the state transition is invalid.</exception>
     public async Task UpdateStateAsync(
         string instanceId,
         JobState newState,
         string? message = null,
-        CancellationToken cancellationToken = default,
-        string? clientId = null)
+        CancellationToken cancellationToken = default)
     {
         var instance = await metadataRepository.GetInstanceAsync(instanceId, cancellationToken);
         if (instance == null)
@@ -94,14 +98,17 @@ public class JobInstanceManager(
         }
 
         var currentState = instance.State;
-        instance.UpdateStateAsync(newState, message, clientId);
+        var sourceClientId = ResolveSourceClientId(newState);
+
+        instance.UpdateStateAsync(newState, message, sourceClientId);
         await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
 
         logger.LogDebug(
-            "Updated job instance {InstanceId} state from {OldState} to {NewState}",
+            "Updated job instance {InstanceId} state from {OldState} to {NewState} by client {SourceClientId}",
             instanceId,
             currentState,
-            newState);
+            newState,
+            sourceClientId ?? "(unknown)");
 
         // Publish lifecycle events based on state transitions
         await PublishLifecycleEventAsync(instance, currentState, newState);
@@ -127,11 +134,12 @@ public class JobInstanceManager(
 
                 await eventBus.PublishAsync(new JobStartedEvent
                 {
+                    SchedulerScopeKey = instance.SchedulerScopeKey,
                     InstanceId = instance.InstanceId,
                     JobKey = instance.JobKey,
                     WorkerClientId = instance.RunningClientId,
                     StartedAt = instance.StartedAt ?? DateTime.UtcNow
-                });
+                }, JobEventTopicHelper.GetTopicName<JobStartedEvent>(_jobSchedulerOptions.SchedulerScopeKey));
 
                 logger.LogDebug(
                     "Published JobStartedEvent for instance {InstanceId}",
@@ -152,12 +160,13 @@ public class JobInstanceManager(
 
                 await eventBus.PublishAsync(new JobCompletedEvent
                 {
+                    SchedulerScopeKey = instance.SchedulerScopeKey,
                     InstanceId = instance.InstanceId,
                     JobKey = instance.JobKey,
                     WorkerClientId = instance.RunningClientId,
                     FinalState = newState,
                     CompletedAt = instance.CompletedAt ?? DateTime.UtcNow
-                });
+                }, JobEventTopicHelper.GetTopicName<JobCompletedEvent>(_jobSchedulerOptions.SchedulerScopeKey));
 
                 logger.LogDebug(
                     "Published JobCompletedEvent for instance {InstanceId} from {OldState} to {State}",
@@ -186,4 +195,27 @@ public class JobInstanceManager(
         JobState.Terminated or
         JobState.Cancelled or
         JobState.Skipped;
+
+    private string? ResolveSourceClientId(JobState newState)
+    {
+        try
+        {
+            var sourceClientId = clientInfo.GetServiceStatus().InstanceId;
+            if (!string.IsNullOrWhiteSpace(sourceClientId))
+            {
+                return sourceClientId;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to resolve current source client id for job state update");
+        }
+
+        if (newState == JobState.Processing)
+        {
+            throw new InvalidOperationException("RunningClientId must be available when transitioning to Processing.");
+        }
+
+        return null;
+    }
 }

@@ -11,6 +11,11 @@ namespace Monica.JobScheduler.EfCore.Entities;
 public class JobDefinitionEntity : MoEntity<long>, IHasSoftDelete, IHasEntitySelfConfig<JobDefinitionEntity>
 {
     /// <summary>
+    /// Scheduler scope key used to isolate shared persistence across environments.
+    /// </summary>
+    public string SchedulerScopeKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// Unique identifier for this job definition (typically the job type's full name).
     /// </summary>
     public string JobKey { get; set; } = string.Empty;
@@ -105,14 +110,21 @@ public class JobDefinitionEntity : MoEntity<long>, IHasSoftDelete, IHasEntitySel
 
         builder.HasKey(e => e.Id);
 
-        // Unique index on JobKey for efficient lookups
-        builder.HasIndex(e => e.JobKey)
-            .IsUnique()
-            .HasDatabaseName("IX_JobDefinitions_JobKey");
+        builder.HasIndex(e => e.SchedulerScopeKey)
+            .HasDatabaseName("IX_JobDefinitions_SchedulerScopeKey");
 
-        // Index on FromProject for filtering
-        builder.HasIndex(e => e.FromProject)
-            .HasDatabaseName("IX_JobDefinitions_FromProject");
+        // Unique index on SchedulerScopeKey + JobKey for efficient scoped lookups
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.JobKey })
+            .IsUnique()
+            .HasDatabaseName("IX_JobDefinitions_SchedulerScopeKey_JobKey");
+
+        // Index on SchedulerScopeKey + FromProject for filtering
+        builder.HasIndex(e => new { e.SchedulerScopeKey, e.FromProject })
+            .HasDatabaseName("IX_JobDefinitions_SchedulerScopeKey_FromProject");
+
+        builder.Property(e => e.SchedulerScopeKey)
+            .IsRequired()
+            .HasMaxLength(200);
 
         builder.Property(e => e.JobKey)
             .IsRequired()

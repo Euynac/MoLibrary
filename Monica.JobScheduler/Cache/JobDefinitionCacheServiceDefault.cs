@@ -1,9 +1,10 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
@@ -19,8 +20,10 @@ namespace Monica.JobScheduler.Cache;
 public class JobDefinitionCacheServiceDefault(
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobDefinitionCacheServiceDefault> logger) : IJobDefinitionCacheService
 {
+    protected readonly ModuleJobSchedulerOption JobSchedulerOptions = options.Value;
     protected readonly IMoJobMetadataRepository MetadataRepository = metadataRepository;
     protected readonly IMoEventBus EventBus = eventBus;
     protected readonly ILogger Logger = logger;
@@ -79,17 +82,19 @@ public class JobDefinitionCacheServiceDefault(
     {
         try
         {
-            var projectName = Assembly.GetEntryAssembly()?.GetName().Name ?? "Unknown";
             await EventBus.PublishAsync(new JobDefinitionsChangedEvent
             {
-                FromProject = projectName,
+                SchedulerScopeKey = definition.SchedulerScopeKey,
+                FromProject = definition.FromProject,
                 AddedDefinitions = [],
                 AddedJobKeys = [],
                 DeletedJobKeys = [],
                 UpdatedDefinitions = [definition],
                 UpdatedJobKeys = [definition.JobKey],
                 ReconciledAt = DateTime.UtcNow
-            }, cancellationToken: cancellationToken);
+            },
+            JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(JobSchedulerOptions.SchedulerScopeKey),
+            cancellationToken);
 
             Logger.LogInformation(
                 "Published JobDefinitionsChangedEvent for updated job: {JobKey}",

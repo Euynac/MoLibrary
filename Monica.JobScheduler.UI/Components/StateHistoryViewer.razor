@@ -27,18 +27,26 @@
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         @record.Timestamp.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")
                                     </MudText>
+                                    @if (!string.IsNullOrWhiteSpace(record.SourceClientId))
+                                    {
+                                        <MudTooltip Text="@L["Dialogs:StateHistory:SourceClientTooltip", record.SourceClientId!]">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info"
+                                                     Size="Size.Small"
+                                                     Color="Color.Info" />
+                                        </MudTooltip>
+                                    }
                                 </MudStack>
 
                                 @if (!string.IsNullOrEmpty(record.Message))
                                 {
                                     @if (IsStackTrace(record.Message))
                                     {
-                                        <!-- 使用新的 StackTraceViewer 组件显示堆栈信息 -->
+                                        <!-- Render stack trace details with the dedicated viewer. -->
                                         <StackTraceViewer Message="@record.Message" />
                                     }
                                     else
                                     {
-                                        <!-- 普通消息，保持原有显示方式 -->
+                                        <!-- Render regular history messages inline. -->
                                         <div class="normal-message-wrapper">
                                             <MudPaper Elevation="0"
                                                       Class="normal-message">
@@ -74,7 +82,7 @@
     }
 
     /// <summary>
-    /// 判断消息是否为堆栈跟踪信息
+    /// Determines whether the message is a stack trace.
     /// </summary>
     private bool IsStackTrace(string message)
     {

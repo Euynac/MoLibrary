@@ -180,6 +180,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         // Create JobDefinition with defaults
         var definition = new JobDefinition
         {
+            SchedulerScopeKey = Option.SchedulerScopeKey,
             JobKey = jobType.FullName ?? throw new InvalidOperationException($"Job type {jobType.Name} must have full name."),
             JobName = attribute?.JobName ?? jobType.Name,
             Description = attribute?.Description,
@@ -237,9 +238,10 @@ public class ModuleJobSchedulerGuide
 {
     private const string CONFIG_METADATA_STORE = nameof(CONFIG_METADATA_STORE);
     private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
+    private const string CONFIG_SCOPE = nameof(CONFIG_SCOPE);
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [CONFIG_PROVIDER,CONFIG_METADATA_STORE];
+        return [CONFIG_PROVIDER, CONFIG_METADATA_STORE, CONFIG_SCOPE];
     }
 
     /// <summary>
@@ -268,6 +270,22 @@ public class ModuleJobSchedulerGuide
         {
             context.Services.TryAddSingleton<IMoJobMetadataRepository, InMemoryJobMetadataRepository>();
         }, key: CONFIG_METADATA_STORE);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the scheduler scope key used to isolate shared persistence and events across environments.
+    /// </summary>
+    public ModuleJobSchedulerGuide UseSchedulerScope(string scopeKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(scopeKey);
+
+        ConfigureModuleOption(option =>
+        {
+            option.SchedulerScopeKey = scopeKey;
+        });
+
+        ConfigureEmpty(CONFIG_SCOPE);
         return this;
     }
     
@@ -308,6 +326,12 @@ public class ModuleJobSchedulerGuide
 /// </summary>
 public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
 {
+    /// <summary>
+    /// The scheduler scope key used to isolate persistence and events across environments.
+    /// This value must be explicitly configured through <see cref="ModuleJobSchedulerGuide.UseSchedulerScope"/>.
+    /// </summary>
+    public string SchedulerScopeKey { get; set; } = string.Empty;
+
     /// <summary>
     /// The project name used for job reconciliation and identification.
     /// Default: Entry Assembly Name.

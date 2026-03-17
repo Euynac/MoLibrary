@@ -9,6 +9,7 @@ using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.WorkerPlane;
@@ -33,9 +34,11 @@ public class JobConcurrencyGuardHostedService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleRegisterCentreOption> registerCentreOptions
+    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
+    IOptions<ModuleJobSchedulerOption> jobSchedulerOptions
 ) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
 {
+    private readonly ModuleJobSchedulerOption _jobSchedulerOptions = jobSchedulerOptions.Value;
     private ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
     private ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
     private List<IAsyncDisposable> _eventSubscriptions = [];
@@ -183,9 +186,15 @@ public class JobConcurrencyGuardHostedService(
 
     private async Task SubscribeLifecycleEventsAsync()
     {
-        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobStartedEvent>(OnJobStartedAsync));
-        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobCompletedEvent>(OnJobCompletedAsync));
-        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync));
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobStartedEvent>(
+            OnJobStartedAsync,
+            JobEventTopicHelper.GetTopicName<JobStartedEvent>(_jobSchedulerOptions.SchedulerScopeKey)));
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobCompletedEvent>(
+            OnJobCompletedAsync,
+            JobEventTopicHelper.GetTopicName<JobCompletedEvent>(_jobSchedulerOptions.SchedulerScopeKey)));
+        _eventSubscriptions.Add(await eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
+            OnJobDefinitionsChangedAsync,
+            JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(_jobSchedulerOptions.SchedulerScopeKey)));
     }
 
     /// <summary>
@@ -544,6 +553,12 @@ public class JobConcurrencyGuardHostedService(
 
     private async Task OnJobStartedAsync(JobStartedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            RecordState($"Ignored JobStartedEvent for foreign scope {evt.SchedulerScopeKey}", logLevel: LogLevel.Debug);
+            return;
+        }
+
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
         {
             RecordState(
@@ -579,6 +594,12 @@ public class JobConcurrencyGuardHostedService(
 
     private async Task OnJobCompletedAsync(JobCompletedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            RecordState($"Ignored JobCompletedEvent for foreign scope {evt.SchedulerScopeKey}", logLevel: LogLevel.Debug);
+            return;
+        }
+
         if (!_statistics.TryGetValue(evt.JobKey, out var statistic))
         {
             RecordState(
@@ -618,6 +639,12 @@ public class JobConcurrencyGuardHostedService(
     /// </summary>
     private Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _jobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            RecordState($"Ignored JobDefinitionsChangedEvent for foreign scope {evt.SchedulerScopeKey}", logLevel: LogLevel.Debug);
+            return Task.CompletedTask;
+        }
+
         RecordState(
             $"Received JobDefinitionsChangedEvent: {evt.AddedJobKeys.Count} added, {evt.UpdatedJobKeys.Count} updated, {evt.DeletedJobKeys.Count} deleted",
             logLevel: LogLevel.Debug);

@@ -109,7 +109,9 @@ public class JobWorkerManagerHostedService(
         // Subscribe to each project's topic
         foreach (var fromProject in projectsToSubscribe)
         {
-            var topicName = JobEventTopicHelper.GetTopicName<JobExecutionEvent>(fromProject);
+            var topicName = JobEventTopicHelper.GetProjectTopicName<JobExecutionEvent>(
+                _options.SchedulerScopeKey,
+                fromProject);
             var subscription = await eventBus.SubscribeAsync<JobExecutionEvent>(HandleJobExecutionAsync, topicName);
 
             _eventSubscriptions.Add(subscription);
@@ -129,6 +131,14 @@ public class JobWorkerManagerHostedService(
     /// <param name="executionEvent">The job execution event.</param>
     private async Task HandleJobExecutionAsync(JobExecutionEvent executionEvent)
     {
+        if (!string.Equals(executionEvent.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            RecordState(
+                $"Ignored JobExecutionEvent for foreign scope {executionEvent.SchedulerScopeKey}",
+                logLevel: LogLevel.Debug);
+            return;
+        }
+
         RecordState(
             $"Received JobExecutionEvent for job {executionEvent.JobKey}, InstanceId: {executionEvent.InstanceId}",
             logLevel: LogLevel.Debug);

@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
@@ -20,7 +22,7 @@ namespace Monica.JobScheduler.Cache;
 public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisposable, IAsyncDisposable
 {
     private readonly IMoStateStore _staleStore;
-    private const string STALE_PREFIX = "JobDefinition:Updated:";
+    private readonly string _stalePrefix;
 
     private readonly ConcurrentDictionary<string, JobDefinition> _cache = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _jobLocks = new();
@@ -34,13 +36,18 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
         IMoJobMetadataRepository metadataRepository,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IMoStateStore stateStore,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+        IOptions<ModuleJobSchedulerOption> options,
         ILogger<JobDefinitionCacheService> logger)
-        : base(metadataRepository, eventBus, logger)
+        : base(metadataRepository, eventBus, options, logger)
     {
         _staleStore = stateStore;
+        _stalePrefix = $"JobDefinition:Updated:{JobSchedulerOptions.SchedulerScopeKey}:";
 
         // Subscribe to JobDefinitionsChangedEvent for cache invalidation
-        _eventSubscription = eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(OnJobDefinitionsChangedAsync).GetAwaiter().GetResult();
+        _eventSubscription = eventBus.SubscribeAsync<JobDefinitionsChangedEvent>(
+                OnJobDefinitionsChangedAsync,
+                JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(JobSchedulerOptions.SchedulerScopeKey))
+            .GetAwaiter().GetResult();
         Logger.LogDebug("JobDefinitionCacheService initialized and subscribed to JobDefinitionsChangedEvent");
     }
 
@@ -69,7 +76,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                 bool isStale = false;
                 try
                 {
-                    isStale = await _staleStore.ExistAsync(STALE_PREFIX + jobKey, cancellationToken);
+                    isStale = await _staleStore.ExistAsync(_stalePrefix + jobKey, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -97,7 +104,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
                     // Clear staleness flag
                     try
                     {
-                        await _staleStore.DeleteStateAsync(STALE_PREFIX + jobKey, cancellationToken);
+                        await _staleStore.DeleteStateAsync(_stalePrefix + jobKey, cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -207,7 +214,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
             try
             {
                 await _staleStore.SaveStateAsync(
-                    STALE_PREFIX + definition.JobKey,
+                    _stalePrefix + definition.JobKey,
                     true,
                     cancellationToken,
                     _staleFlagTtl);
@@ -230,6 +237,12 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     /// </summary>
     private async Task OnJobDefinitionsChangedAsync(JobDefinitionsChangedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, JobSchedulerOptions.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            Logger.LogDebug("Ignored JobDefinitionsChangedEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
+            return;
+        }
+
         Logger.LogInformation(
             "Processing JobDefinitionsChangedEvent: {AddedCount} added, {UpdatedCount} updated, {DeletedCount} deleted",
             evt.AddedJobKeys.Count,
@@ -242,7 +255,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
             try
             {
                 await _staleStore.SaveStateAsync(
-                    STALE_PREFIX + jobKey,
+                    _stalePrefix + jobKey,
                     true,
                     ttl: _staleFlagTtl);
 
@@ -262,7 +275,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
 
             try
             {
-                await _staleStore.DeleteStateAsync(STALE_PREFIX + jobKey);
+                await _staleStore.DeleteStateAsync(_stalePrefix + jobKey);
             }
             catch (Exception ex)
             {

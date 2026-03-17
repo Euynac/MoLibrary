@@ -10,6 +10,11 @@ namespace Monica.JobScheduler.Models;
 public class JobDefinition
 {
     /// <summary>
+    /// Gets or sets the scheduler scope key used to isolate shared persistence and events across environments.
+    /// </summary>
+    public required string SchedulerScopeKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the unique identifier for this job definition. which is the job type's full name (TypeFullName).
     /// </summary>
     public required string JobKey { get; set; }

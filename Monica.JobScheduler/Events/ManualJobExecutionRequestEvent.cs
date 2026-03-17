@@ -7,6 +7,11 @@ namespace Monica.JobScheduler.Events;
 public class ManualJobExecutionRequestEvent
 {
     /// <summary>
+    /// Gets the scheduler scope key that isolates the event from other environments.
+    /// </summary>
+    public required string SchedulerScopeKey { get; init; }
+
+    /// <summary>
     /// Gets the pre-generated instance ID for immediate return to caller.
     /// </summary>
     public required string InstanceId { get; init; }

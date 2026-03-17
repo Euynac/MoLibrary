@@ -485,7 +485,8 @@
     },
     "StateHistory": {
       "Title": "状态历史",
-      "NoHistory": "暂无历史记录"
+      "NoHistory": "暂无历史记录",
+      "SourceClientTooltip": "状态变更来源客户端: {0}"
     }
   },
   "Services": {

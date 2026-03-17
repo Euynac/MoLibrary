@@ -8,6 +8,7 @@ using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.RegisterCentre.Core;
 using Monica.RegisterCentre.Events;
@@ -107,6 +108,7 @@ public class JobRegistrationHostedService(
 
             await eventBus.PublishAsync(new JobDefinitionsChangedEvent
             {
+                SchedulerScopeKey = _jobSchedulerOptions.SchedulerScopeKey,
                 FromProject = Assembly.GetEntryAssembly()?.GetName().Name!,
                 AddedDefinitions = jobDefinitions.Where(d => result.AddedJobKeys.Contains(d.JobKey)).ToList(),
                 AddedJobKeys = result.AddedJobKeys.ToList(),
@@ -114,7 +116,7 @@ public class JobRegistrationHostedService(
                 UpdatedDefinitions = [],  // Reconciliation does not handle updates
                 UpdatedJobKeys = [],      // Reconciliation does not handle updates
                 ReconciledAt = DateTime.UtcNow
-            }, cancellationToken: cancellationToken);
+            }, JobEventTopicHelper.GetTopicName<JobDefinitionsChangedEvent>(_jobSchedulerOptions.SchedulerScopeKey), cancellationToken);
 
             RecordState("Published JobDefinitionsChangedEvent to notify subscribers of reconciliation", logLevel: LogLevel.Information);
         }

@@ -7,6 +7,7 @@ namespace Monica.JobScheduler.Events;
 /// </summary>
 public class JobCompletedEvent
 {
+    public required string SchedulerScopeKey { get; init; }
     public required string InstanceId { get; init; }
     public required string JobKey { get; init; }
     public required string WorkerClientId { get; init; }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Events;
+using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
 
@@ -41,15 +42,21 @@ public class TriggeredJobScheduler(
     public async Task InitializeAsync(IMoEventBus eventBus, CancellationToken cancellationToken = default)
     {
         // Subscribe to job triggered event
-        _triggeredJobSubscription = await eventBus.SubscribeAsync<JobTriggeredEvent>(OnJobTriggeredAsync);
+        _triggeredJobSubscription = await eventBus.SubscribeAsync<JobTriggeredEvent>(
+            OnJobTriggeredAsync,
+            JobEventTopicHelper.GetTopicName<JobTriggeredEvent>(_options.SchedulerScopeKey));
         logger.LogDebug("Subscribed to JobTriggeredEvent");
 
         // Subscribe to job cancellation event
-        _cancellationSubscription = await eventBus.SubscribeAsync<JobCancellationRequestedEvent>(OnJobCancellationRequestedAsync);
+        _cancellationSubscription = await eventBus.SubscribeAsync<JobCancellationRequestedEvent>(
+            OnJobCancellationRequestedAsync,
+            JobEventTopicHelper.GetTopicName<JobCancellationRequestedEvent>(_options.SchedulerScopeKey));
         logger.LogDebug("Subscribed to JobCancellationRequestedEvent");
 
         // Subscribe to manual job execution requests from Worker nodes
-        _manualExecutionSubscription = await eventBus.SubscribeAsync<ManualJobExecutionRequestEvent>(OnManualJobExecutionRequestAsync);
+        _manualExecutionSubscription = await eventBus.SubscribeAsync<ManualJobExecutionRequestEvent>(
+            OnManualJobExecutionRequestAsync,
+            JobEventTopicHelper.GetTopicName<ManualJobExecutionRequestEvent>(_options.SchedulerScopeKey));
         logger.LogDebug("Subscribed to ManualJobExecutionRequestEvent");
 
         if (!_options.TriggeredJobDebugMode)
@@ -74,6 +81,12 @@ public class TriggeredJobScheduler(
     /// </summary>
     private async Task OnJobTriggeredAsync(JobTriggeredEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            logger.LogDebug("Ignored JobTriggeredEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
+            return;
+        }
+
         try
         {
             var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
@@ -133,6 +146,12 @@ public class TriggeredJobScheduler(
     /// </summary>
     private async Task OnManualJobExecutionRequestAsync(ManualJobExecutionRequestEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            logger.LogDebug("Ignored ManualJobExecutionRequestEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
+            return;
+        }
+
         try
         {
             var definition = await cacheService.GetDefinitionAsync(evt.JobKey);
@@ -306,6 +325,12 @@ public class TriggeredJobScheduler(
     /// </summary>
     private async Task OnJobCancellationRequestedAsync(JobCancellationRequestedEvent evt)
     {
+        if (!string.Equals(evt.SchedulerScopeKey, _options.SchedulerScopeKey, StringComparison.Ordinal))
+        {
+            logger.LogDebug("Ignored JobCancellationRequestedEvent for foreign scope {Scope}", evt.SchedulerScopeKey);
+            return;
+        }
+
         try
         {
             // Remove and dispose timer if exists

@@ -485,7 +485,8 @@
     },
     "StateHistory": {
       "Title": "State History",
-      "NoHistory": "No history records"
+      "NoHistory": "No history records",
+      "SourceClientTooltip": "State changed by client: {0}"
     }
   },
   "Services": {
