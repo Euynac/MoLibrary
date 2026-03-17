@@ -17,7 +17,7 @@ public interface IRegisterCentreClientInfo
     /// </summary>
     /// <param name="isHeartbeatInfo">是否为心跳信息（心跳时不包含环境变量和监听地址元数据）</param>
     /// <returns>实例状态信息</returns>
-    InstanceState GetServiceStatus(bool isHeartbeatInfo = false);
+    InstanceState GetServiceStatus(bool isHeartbeatInfo = true);
 
     /// <summary>
     /// 获取当前实例的注册时间（首次注册时记录，null 表示尚未注册）
