@@ -3,6 +3,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Markdown.Localization;
 using Monica.Markdown.Pages;
 using Monica.Markdown.UIGit.Services;
 using MudBlazor;
@@ -46,6 +47,9 @@ public class ModuleGitUI(ModuleGitUIOption option)
 
         if (!Option.DisableGitDashboardPage)
         {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<MarkdownResource>();
+
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {

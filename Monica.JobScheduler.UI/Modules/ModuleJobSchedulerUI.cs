@@ -4,6 +4,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
 using Monica.JobScheduler.UI.Services;
 using MudBlazor;
@@ -61,6 +62,9 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<JobSchedulerResource>();
+
         // 依赖后端 JobScheduler 模块
         DependsOnModule<ModuleJobSchedulerGuide>().Register();
 

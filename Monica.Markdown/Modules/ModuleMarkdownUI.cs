@@ -9,6 +9,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Pages;
 using Monica.Markdown.Interfaces;
+using Monica.Markdown.Localization;
 using Monica.Markdown.Services;
 using Monica.Markdown.UIMarkdown.Models;
 using Monica.Markdown.UIMarkdown.Services;
@@ -54,6 +55,9 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
         var uiCoreGuide = DependsOnModule<ModuleUICoreGuide>().Register();
         if (!Option.DisableMarkdownPage)
         {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<MarkdownResource>();
+
             uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMarkdownPage>(
                 MarkdownViewerLocation.PageUrl,
                 "Pages:MarkdownDocuments:Title",

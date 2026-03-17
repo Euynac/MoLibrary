@@ -34,7 +34,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IWantIterateBusinessTypes
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
-    private readonly List<Type> _resourceMarkerTypes = [];
+    private readonly List<Type> _discoveredResourceMarkerTypes = [];
 
     public override ModuleKey GetModuleKey()
     {
@@ -73,6 +73,12 @@ public class ModuleLocalization(ModuleLocalizationOption option)
         });
     }
 
+    /// <summary>
+    /// Collects localization resource marker types discovered through the global type finder.
+    /// This path is intended for resource types that live in host or business assemblies participating in the configured scan.
+    /// Built-in Monica modules must not rely on this hook because their assemblies may not be part of that scan.
+    /// Monica modules should declare a dependency on <see cref="ModuleLocalizationGuide"/> and register resource types through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>.
+    /// </summary>
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
         foreach (var type in types)
@@ -80,20 +86,18 @@ public class ModuleLocalization(ModuleLocalizationOption option)
             if (type is { IsClass: true, IsAbstract: false } &&
                 typeof(IMoLocalizationResource).IsAssignableFrom(type))
             {
-                _resourceMarkerTypes.Add(type);
+                _discoveredResourceMarkerTypes.Add(type);
             }
 
             yield return type;
         }
     }
 
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    public override void PostConfigureServices(IServiceCollection _)
     {
-        _resourceRegistry.ReplaceFromTypes(_resourceMarkerTypes);
+        _resourceRegistry.ReplaceFromTypes(Option.ResourceMarkerTypes.Concat(_discoveredResourceMarkerTypes));
         Logger.LogInformation("Registered {Count} localization resource marker types.", _resourceRegistry.GetRegistrations().Count);
     }
-    
-
 }
 
 public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
@@ -105,6 +109,25 @@ public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleL
         {
             ctx.ApplicationBuilder.UseRequestLocalization();
         }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+    }
+
+    /// <summary>
+    /// Manually registers a localization resource marker type for Monica modules and other reusable libraries.
+    /// Use this method when a resource type should not depend on the host application's business-type scan.
+    /// Host or business application resource types should continue to rely on automatic discovery through <see cref="IWantIterateBusinessTypes"/>.
+    /// </summary>
+    public ModuleLocalizationGuide AddResource<TResource>() where TResource : class, IMoLocalizationResource
+    {
+        ConfigureModuleOption(option =>
+        {
+            var resourceType = typeof(TResource);
+            if (!option.ResourceMarkerTypes.Contains(resourceType))
+            {
+                option.ResourceMarkerTypes.Add(resourceType);
+            }
+        }, secondKey: typeof(TResource).FullName);
+
+        return this;
     }
 }
 
@@ -133,5 +156,12 @@ public class ModuleLocalizationOption : MoModuleOption<ModuleLocalization>
     /// Cookie name for culture persistence. Default: ".AspNetCore.Culture"
     /// </summary>
     public string CookieName { get; set; } = ".AspNetCore.Culture";
+
+    /// <summary>
+    /// Manually registered localization resource marker types.
+    /// Built-in Monica modules should add their resource types through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>
+    /// instead of relying on <see cref="IWantIterateBusinessTypes"/>, which is intended for the host application's scanned types.
+    /// </summary>
+    public List<Type> ResourceMarkerTypes { get; set; } = [];
 }
 

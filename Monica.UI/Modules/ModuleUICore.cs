@@ -10,6 +10,7 @@ using Monica.Core.Modularity.Dashboard;
 using Monica.Core.Modularity.Dashboard.Interfaces;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.UI.Localization;
 using Monica.UI.Components;
 using Monica.UI.Components.Pages;
 using Monica.UI.Components.Markdown;
@@ -57,8 +58,9 @@ public class ModuleUICore(ModuleUICoreOption option)
     /// </summary>
     public override void ClaimDependencies()
     {
-        // 依赖本地化模块以支持语言切换功能
-        DependsOnModule<ModuleLocalizationGuide>().Register();
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<UIRegistryResource>()
+            .AddResource<SharedResource>();
     }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)

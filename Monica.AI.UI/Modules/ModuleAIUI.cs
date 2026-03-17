@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
 using Monica.AI.UI.Services;
 using Monica.Core;
@@ -52,6 +53,12 @@ public class ModuleAIUI(ModuleAIUIOption option)
     {
         // 依赖后端 AI 模块
         DependsOnModule<ModuleAIGuide>().Register();
+
+        if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage)
+        {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<AIResource>();
+        }
 
         // 依赖 UI 核心模块并注册页面
         if (!Option.DisableAIChatPage)

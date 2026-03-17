@@ -4,6 +4,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.UI.Pages;
+using Monica.StateStore.UI.Localization;
 using Monica.StateStore.UI.Services;
 using Monica.StateStore.UI.Services.Browser;
 using MudBlazor;
@@ -37,6 +38,9 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
     {
         if (!Option.DisableStateStorePage)
         {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<StateStoreResource>();
+
             // 依赖 StateStore 模块
             DependsOnModule<ModuleStateStoreGuide>().Register();
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
 using Monica.AI.UI.Services;
 using Monica.Core;
@@ -50,6 +51,12 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
     {
         // Depends on RAG backend module
         DependsOnModule<ModuleRAGGuide>().Register();
+
+        if (!Option.DisableRAGManagePage || !Option.DisableRAGDebugPage || !Option.DisableRAGChunkersPage)
+        {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<AIResource>();
+        }
 
         // Depends on UI core module and register RAG pages
         if (!Option.DisableRAGManagePage)
