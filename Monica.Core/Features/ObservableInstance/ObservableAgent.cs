@@ -14,6 +14,7 @@ public class ObservableAgent : IDisposable
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly ILogger? _logger;
     private LogLevel? _defaultLogLevel;
+    private long _historySequence;
 
     // Log level mappings storage (type-erased for multi-enum support)
     private readonly Dictionary<Type, Dictionary<object, LogLevel>> _logLevelMappings = new();
@@ -188,6 +189,7 @@ public class ObservableAgent : IDisposable
             logLevel ??= GetLogLevel(newState);
             history = new ObservableStateHistory
             {
+                Sequence = ++_historySequence,
                 PreviousState = previousState,
                 CurrentState = newState ?? previousState,
                 Message = message,
@@ -263,6 +265,7 @@ public class ObservableAgent : IDisposable
         {
             return _stateHistory
                 .OrderByDescending(h => h.Timestamp)
+                .ThenByDescending(h => h.Sequence)
                 .Take(count)
                 .ToList()
                 .AsReadOnly();
@@ -285,6 +288,7 @@ public class ObservableAgent : IDisposable
             return _stateHistory
                 .Where(h => h.Exception != null)
                 .OrderByDescending(h => h.Timestamp)
+                .ThenByDescending(h => h.Sequence)
                 .ToList()
                 .AsReadOnly();
         }
@@ -309,6 +313,7 @@ public class ObservableAgent : IDisposable
             return _stateHistory
                 .Where(h => h.Exception != null)
                 .OrderByDescending(h => h.Timestamp)
+                .ThenByDescending(h => h.Sequence)
                 .Take(count)
                 .ToList()
                 .AsReadOnly();

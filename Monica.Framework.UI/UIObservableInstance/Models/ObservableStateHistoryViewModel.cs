@@ -18,6 +18,11 @@ public class ObservableStateHistoryViewModel
     public DateTime Timestamp { get; set; }
 
     /// <summary>
+    /// Per-instance sequence number for deterministic ordering.
+    /// </summary>
+    public long Sequence { get; set; }
+
+    /// <summary>
     /// Previous state before this change
     /// </summary>
     public object? PreviousState { get; set; }
@@ -73,7 +78,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Formatted timestamp
     /// </summary>
-    public string TimestampDisplay => Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    public string TimestampDisplay => Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
 
     /// <summary>
     /// Relative time display ("2 minutes ago" format)

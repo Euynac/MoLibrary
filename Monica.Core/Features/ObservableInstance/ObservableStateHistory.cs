@@ -9,6 +9,12 @@ namespace Monica.Core.Features.ObservableInstance;
 public class ObservableStateHistory
 {
     /// <summary>
+    /// Gets the per-instance sequence number of this history entry.
+    /// Used to keep a deterministic order when multiple entries share the same timestamp.
+    /// </summary>
+    public long Sequence { get; init; }
+
+    /// <summary>
     /// Gets the timestamp when this state change occurred
     /// </summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;

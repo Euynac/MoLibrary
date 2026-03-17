@@ -218,17 +218,37 @@ public class RegisterCentreClientHostedService(
     {
         RecordState("Attempting to compete for Leader", logLevel: LogLevel.Debug);
 
-        var (success, state, eTag) = await stateManager.TryBecomeLeaderAsync(ct);
-
-        if (success && state != null && eTag != null)
-        {
-            leaderService.SetAsLeader(state.BecomeLeaderTime, eTag);
-            RecordState("Successfully became Leader", HostedServiceState.Running);
-        }
-        else
+        if (!await TryAcquireLeaderLeaseAsync(ct))
         {
             RecordState("Leader competition failed, another instance may have become Leader", logLevel: LogLevel.Debug);
         }
+    }
+
+    /// <summary>
+    /// Attempts to acquire a fresh leader lease without emitting a LeaderLost/LeaderGained pair.
+    /// Used both for follower competition and same-heartbeat inline recovery after lease expiration.
+    /// </summary>
+    private async Task<bool> TryAcquireLeaderLeaseAsync(CancellationToken ct)
+    {
+        var (success, state, eTag) = await stateManager.TryBecomeLeaderAsync(ct);
+
+        if (!success || state == null || string.IsNullOrEmpty(eTag))
+        {
+            return false;
+        }
+
+        if (leaderService.IsLeader)
+        {
+            leaderService.UpdateETag(eTag);
+            RecordState(
+                "Leader lease expired but was reacquired within the same heartbeat, continuing as Leader",
+                logLevel: LogLevel.Warning);
+            return true;
+        }
+
+        leaderService.SetAsLeader(state.BecomeLeaderTime, eTag);
+        RecordState("Successfully became Leader", HostedServiceState.Running);
+        return true;
     }
 
     /// <summary>
@@ -272,9 +292,15 @@ public class RegisterCentreClientHostedService(
         }
         else
         {
-            RecordState("Leader key expired or deleted, competing for Leader again", logLevel: LogLevel.Information);
+            RecordState("Leader key expired or deleted, attempting inline leader recovery", logLevel: LogLevel.Warning);
+
+            if (await TryAcquireLeaderLeaseAsync(ct))
+            {
+                return;
+            }
+
+            RecordState("Leader key expired and inline recovery failed, leadership lost", logLevel: LogLevel.Warning);
             leaderService.TriggerLeaderLost(LeaderLostReason.LeaderKeyExpired);
-            await CompeteForLeaderAsync(ct);
         }
     }
 

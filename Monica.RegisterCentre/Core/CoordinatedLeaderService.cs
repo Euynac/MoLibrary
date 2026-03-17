@@ -51,6 +51,17 @@ public abstract class CoordinatedLeaderService(
     private readonly SemaphoreSlim _leaderTransitionLock = new(1, 1);
 
     /// <summary>
+    /// Serializes leader event handling in arrival order.
+    /// Prevents lost/gained races when the election service emits back-to-back transitions.
+    /// </summary>
+    private readonly Lock _leaderEventQueueLock = new();
+
+    /// <summary>
+    /// Tracks the tail of the leader event processing queue.
+    /// </summary>
+    private Task _leaderEventQueue = Task.CompletedTask;
+
+    /// <summary>
     /// The application-level stopping token passed from ExecuteBackgroundAsync.
     /// </summary>
     private CancellationToken _stoppingToken;
@@ -106,7 +117,13 @@ public abstract class CoordinatedLeaderService(
             if (LeaderService.IsLeader)
             {
                 RecordState("Already leader, triggering initial leader gained", HostedServiceState.Starting);
-                await HandleLeaderGainedAsync();
+                await EnqueueLeaderEventAsync(
+                    HandleLeaderGainedAsync,
+                    ex =>
+                    {
+                        Logger.LogError(ex, "{ServiceName} failed to handle initial leader gained", ServiceName);
+                        RecordState("Failed to handle initial leader gained", HostedServiceState.Faulted, ex);
+                    });
             }
             else
             {
@@ -141,41 +158,61 @@ public abstract class CoordinatedLeaderService(
 
     /// <summary>
     /// Event handler for leader gained event.
-    /// Delegates to async handler on thread pool to avoid blocking the event source.
+    /// Queues async handling without blocking the event source.
     /// </summary>
     private void OnLeaderGainedHandler(object? sender, LeaderGainedEvent e)
     {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await HandleLeaderGainedAsync();
-            }
-            catch (Exception ex)
+        _ = EnqueueLeaderEventAsync(
+            HandleLeaderGainedAsync,
+            ex =>
             {
                 Logger.LogError(ex, "{ServiceName} failed to handle leader gained event", ServiceName);
                 RecordState("Failed to handle leader gained", HostedServiceState.Faulted, ex);
-            }
-        });
+            });
     }
 
     /// <summary>
     /// Event handler for leader lost event.
-    /// Delegates to async handler on thread pool to avoid blocking the event source.
+    /// Queues async handling without blocking the event source.
     /// </summary>
     private void OnLeaderLostHandler(object? sender, LeaderLostEvent e)
     {
-        _ = Task.Run(async () =>
+        _ = EnqueueLeaderEventAsync(
+            () => HandleLeaderLostAsync(e.Reason),
+            ex => Logger.LogError(ex, "{ServiceName} failed to handle leader lost event", ServiceName));
+    }
+
+    /// <summary>
+    /// Enqueues leader transitions so each service processes gained/lost events in arrival order.
+    /// </summary>
+    private Task EnqueueLeaderEventAsync(Func<Task> handler, Action<Exception> onError)
+    {
+        lock (_leaderEventQueueLock)
         {
-            try
-            {
-                await HandleLeaderLostAsync(e.Reason);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "{ServiceName} failed to handle leader lost event", ServiceName);
-            }
-        });
+            _leaderEventQueue = _leaderEventQueue
+                .ContinueWith(
+                    async _ =>
+                    {
+                        try
+                        {
+                            await handler();
+                        }
+                        catch (OperationCanceledException) when (_stoppingToken.IsCancellationRequested)
+                        {
+                            // Ignore cancellation caused by application shutdown.
+                        }
+                        catch (Exception ex)
+                        {
+                            onError(ex);
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.None,
+                    TaskScheduler.Default)
+                .Unwrap();
+
+            return _leaderEventQueue;
+        }
     }
 
     /// <summary>
@@ -184,7 +221,6 @@ public abstract class CoordinatedLeaderService(
     /// </summary>
     private async Task HandleLeaderGainedAsync()
     {
-        RecordState("Becoming leader");
         await _leaderTransitionLock.WaitAsync(_stoppingToken);
         try
         {
@@ -202,6 +238,8 @@ public abstract class CoordinatedLeaderService(
                 RecordState($"{ServiceName} application is shutting down, ignoring leader gained event", logLevel: LogLevel.Debug);
                 return;
             }
+
+            RecordState("Becoming leader");
 
             // Create leader-scoped cancellation token
             _leaderCts = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);

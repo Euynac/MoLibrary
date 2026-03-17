@@ -330,6 +330,7 @@ public sealed class ObservableInstanceMonitorService(
             var viewModels = history
                 .Select(MapToHistoryViewModel)
                 .OrderByDescending(vm => vm.Timestamp)
+                .ThenByDescending(vm => vm.Sequence)
                 .ToList();
 
             return Res.Ok(viewModels);
@@ -360,6 +361,7 @@ public sealed class ObservableInstanceMonitorService(
             var viewModels = exceptions
                 .Select(MapToHistoryViewModel)
                 .OrderByDescending(vm => vm.Timestamp)
+                .ThenByDescending(vm => vm.Sequence)
                 .ToList();
 
             return Res.Ok(viewModels);
@@ -438,6 +440,7 @@ public sealed class ObservableInstanceMonitorService(
     {
         return new ObservableStateHistoryViewModel
         {
+            Sequence = history.Sequence,
             Timestamp = history.Timestamp,
             PreviousState = history.PreviousState,
             CurrentState = history.CurrentState,
