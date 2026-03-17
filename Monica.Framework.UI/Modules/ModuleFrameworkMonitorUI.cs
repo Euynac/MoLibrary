@@ -3,6 +3,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using MudBlazor;
 
@@ -43,6 +44,9 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
     {
         if (!Option.DisableUIFrameworkMonitorPage)
         {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<FrameworkMonitorResource>();
+
             DependsOnModule<ModuleFrameworkMonitorGuide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIFrameworkMonitorPage>(

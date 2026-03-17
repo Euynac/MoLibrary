@@ -7,6 +7,7 @@ using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISystemInfo.Models;
 using Monica.Framework.UI.UISystemInfo.Services;
 using Monica.Framework.UI.Pages;
@@ -47,6 +48,9 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<SystemInfoResource>();
+
         if (!Option.DisableUISystemInfoPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()

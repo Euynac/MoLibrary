@@ -3,6 +3,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIRegisterCentre.Services;
 using Monica.Framework.UI.Pages;
 using MudBlazor;
@@ -25,6 +26,9 @@ public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<RegisterCentreResource>();
+
         if (!Option.DisableRegisterCentrePage)
         {
             DependsOnModule<ModuleRegisterCentreGuide>().Register();
