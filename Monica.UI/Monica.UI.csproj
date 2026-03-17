@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
-    <ProjectReference Include="..\Monica.Localization\Monica.Localization.csproj" />
   </ItemGroup>
 
   <ItemGroup>
