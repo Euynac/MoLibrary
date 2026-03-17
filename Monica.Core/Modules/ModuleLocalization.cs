@@ -1,21 +1,17 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Monica.Core;
+using Monica.Core.Localization;
+using Monica.Core.Localization.Localizers;
+using Monica.Core.Localization.Models;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
-using Monica.Localization;
-using Monica.Localization.Localizers;
-using Monica.Localization.Models;
-using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

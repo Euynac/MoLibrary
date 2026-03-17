@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
-using Monica.Localization.Models;
+using Monica.Core.Localization.Models;
 
-namespace Monica.Localization.Json;
+namespace Monica.Core.Localization.Json;
 
 public static class JsonResourceLoader
 {

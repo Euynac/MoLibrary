@@ -2,11 +2,11 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Localization.Json;
-using Monica.Localization.Models;
+using Monica.Core.Localization.Json;
+using Monica.Core.Localization.Models;
 using Monica.Modules;
 
-namespace Monica.Localization.Localizers;
+namespace Monica.Core.Localization.Localizers;
 
 internal class MoStringLocalizerFactory(
     IOptions<ModuleLocalizationOption> options,

@@ -1,6 +1,4 @@
-using Monica.Localization;
-
-namespace Monica.Localization.Models;
+namespace Monica.Core.Localization.Models;
 
 internal sealed class LocalizationResourceRegistry
 {

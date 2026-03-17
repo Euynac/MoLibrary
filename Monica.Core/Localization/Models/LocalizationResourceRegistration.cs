@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Monica.Localization.Models;
+namespace Monica.Core.Localization.Models;
 
 internal record LocalizationResourceRegistration(
     Type ResourceType,

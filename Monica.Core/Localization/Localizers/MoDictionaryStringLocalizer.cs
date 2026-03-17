@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Modules;
 
-namespace Monica.Localization.Localizers;
+namespace Monica.Core.Localization.Localizers;
 
 public class MoDictionaryStringLocalizer(
     string resourceName,

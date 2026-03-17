@@ -1,4 +1,4 @@
-using Monica.Localization;
+using Monica.Core.Localization;
 
 namespace Monica.Markdown.Localization;
 

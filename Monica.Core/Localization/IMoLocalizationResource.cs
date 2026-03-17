@@ -1,4 +1,4 @@
-namespace Monica.Localization;
+namespace Monica.Core.Localization;
 
 /// <summary>
 /// Marker interface for type-based Monica localization resources.
