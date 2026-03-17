@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IMoBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.2.0
+version: 2.5.0
 ---
 
 # Monica UI Development Guide
@@ -10,32 +10,57 @@ This skill is for Monica Blazor UI work with MudBlazor v9.
 
 All script paths in this document are relative to the `mo-ui-development` skill directory.
 
-## Mandatory First Step (Required Every Time)
+Project-local temporary state for this skill is stored under:
 
-Run the source check script before any UI implementation:
+- `.tmp/mo-ui-development/mudblazor-source.json` - saved MudBlazor source root
+- `.tmp/mo-ui-development/mudblazor-css-variables.json` - generated machine-readable CSS variable list
+
+## MudBlazor Source Access (Use Only When Needed)
+
+MudBlazor source inspection is **not required for every UI task**. Use it when:
+
+- MudBlazor API usage or runtime behavior is uncertain
+- You need to inspect component internals, styles, or unit tests
+- You are verifying migration details for MudBlazor v9
+- You need to refresh the authoritative CSS variable list from source
+
+Before a source-dependent task, run:
 
 ```bash
 python scripts/check_mudblazor_source.py
 ```
 
-If it fails, stop implementation and ask the user to download MudBlazor v9 source to:
+If the current task is source-dependent and the check fails, you must **stop that work immediately**. Do not continue by guessing from memory, migration notes, or outdated examples.
 
-`D:\Repositories\References\MudBlazor-9.0.0`
+Required recovery flow for source-dependent work:
 
-This path is hardcoded in the script. Users can edit the script constant when needed.
+1. Ask the user for their local MudBlazor source path, or ask them to download MudBlazor source first.
+2. After the user provides the path, **the agent** saves it into `.tmp/mo-ui-development/mudblazor-source.json`.
+3. Only continue after the check succeeds.
+
+Use this command to persist the path into the project-local temp config and verify it:
+
+```bash
+python scripts/check_mudblazor_source.py --save-source-root D:\Path\To\MudBlazor
+```
+
+Do not ask the user to set environment variables for this workflow.
+
+If the task is not source-dependent and the existing references are enough, continue without source inspection.
 
 ## MudBlazor v9 Source-First Rules
 
-1. Treat local MudBlazor source as the source of truth.
-2. If any API or behavior is uncertain, search the source first, not old migration notes.
-3. Preferred source entry points:
+1. For any source-dependent UI task, MudBlazor source availability is mandatory.
+2. Treat local MudBlazor source as the source of truth for uncertain APIs or behavior.
+3. If source is unavailable, stop the source-dependent task until the user provides a valid source path.
+4. Preferred source entry points:
    - `src/MudBlazor/Components/...`
    - `src/MudBlazor/Styles/...`
    - `src/MudBlazor.UnitTests/...`
-4. Use `rg` for quick lookup:
+5. Use `rg` for quick lookup after `python scripts/check_mudblazor_source.py` reports the resolved source root:
 
 ```bash
-rg -n "ShowAsync|ShowMessageBoxAsync|GetDefaultConverter|IReversibleConverter" D:\Repositories\References\MudBlazor-9.0.0\src
+rg -n "ShowAsync|ShowMessageBoxAsync|GetDefaultConverter|IReversibleConverter" <resolved-mudblazor-source-root>\src
 ```
 
 ## Critical UI Rules
@@ -118,11 +143,13 @@ Always specify `T` for generic MudBlazor components:
 
 ### A. Initialize or Update Variable List
 
-Run this after MudBlazor source changes or before CSS validation:
+Run this when you need to refresh the generated variable list from MudBlazor source:
 
 ```bash
 python scripts/sync_mud_css_variables.py
 ```
+
+This workflow is source-dependent. If `.tmp/mo-ui-development/mudblazor-source.json` is missing or points to an invalid path, stop and follow the source recovery flow above.
 
 This script reads:
 
@@ -130,7 +157,7 @@ This script reads:
 
 and updates:
 
-- `references/mudblazor-css-variables.json` (authoritative machine-readable list of real variables)
+- `.tmp/mo-ui-development/mudblazor-css-variables.json` (authoritative machine-readable list of real variables)
 
 ### B. Validate CSS/Razor Usage
 
@@ -200,21 +227,23 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 - `references/offline-requirements.md`
 - `references/browser-storage-guide.md`
 - `references/localization-guide.md`
-- `references/mudblazor-css-variables.json` (real available CSS variable list, generated)
+- `.tmp/mo-ui-development/mudblazor-css-variables.json` (real available CSS variable list, generated)
 - `references/mudblazor-css-variables.md` (semantic usage guide, manually maintained)
 
 ## Scripts
 
-- `scripts/check_mudblazor_source.py` - Verify local MudBlazor source path (Windows/WSL compatible path resolution).
-- `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON from source.
-- `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes.
+- `scripts/check_mudblazor_source.py` - Verify the saved project-local MudBlazor source path and optionally persist it into `.tmp/mo-ui-development/mudblazor-source.json`.
+- `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/mo-ui-development/mudblazor-css-variables.json`.
+- `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
 - `scripts/validate_localization.py` - Validate localization keys (missing/unused/sync) and verify `RegisterLocalizedComponent` keys against `UIRegistryResource`.
 - `scripts/font_downloader.py` - Download fonts for offline usage.
 
 ## Quick Checklist
 
-- [ ] Run source check script first
-- [ ] Confirm uncertain APIs from MudBlazor source
+- [ ] Run the source check only for source-dependent work
+- [ ] If source check fails during source-dependent work, stop and ask the user for a valid local source path
+- [ ] Save the provided source path into `.tmp/mo-ui-development/mudblazor-source.json`
+- [ ] Confirm uncertain APIs from MudBlazor source before continuing source-dependent work
 - [ ] Use CSS isolation (`.razor.css`) with wrapper + `::deep`
 - [ ] Use MudBlazor v9 async APIs
 - [ ] Use valid MudBlazor CSS variables only
