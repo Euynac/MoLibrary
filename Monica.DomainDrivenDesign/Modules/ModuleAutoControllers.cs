@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -27,13 +29,21 @@ public static class ModuleAutoControllersBuilderExtensions
         /// </summary>
         public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null)
         {
-            return new ModuleAutoControllersGuide().Register(action).ConfigureExtraOption(crudOptionAction);
+            var applicationPartTypes = new HashSet<Type>();
+
+            return new ModuleAutoControllersGuide()
+                .Register(option =>
+                {
+                    option.SetApplicationPartTypes(applicationPartTypes);
+                    action?.Invoke(option);
+                })
+                .ConfigureExtraOption(crudOptionAction);
         }
     }
 }
 
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
-    : MoModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option)
+    : MoModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IWantIterateBusinessTypes
 {
     public override ModuleKey GetModuleKey()
     {
@@ -52,35 +62,14 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
         {
-            //if MVC controller discovery touches EFCore migration assemblies, it will cause missing design-time dependencies
             builder.ConfigureApplicationPartManager(manager =>
             {
-                var related = Mo.Options.GlobalTypeFinder.GetAssemblies()
-                    .Where(static assembly => !assembly.IsDynamic)
-                    .Select(static assembly => assembly.GetName().Name)
-                    .Where(static name => !string.IsNullOrWhiteSpace(name))
-                    .Select(static name => name!)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var option = provider.GetRequiredService<IOptions<ModuleAutoControllersOption>>().Value;
 
-                related = Mo.Options.GlobalTypeFinder.GetTypes()
-                    .Where(static type => type is { IsClass: true, IsAbstract: false } && typeof(IMoCrudAppService).IsAssignableFrom(type))
-                    .Select(static type => type.Assembly.GetName().Name)
-                    .Where(name => !string.IsNullOrWhiteSpace(name) && related.Contains(name))
-                    .Select(static name => name!)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                if (related.Count > 0)
-                {
-                    var partsToKeep = manager.ApplicationParts
-                        .Where(p => p is not AssemblyPart part ||
-                                    related.Contains(part.Name))
-                        .ToList();
+                manager.ApplicationParts.Clear();
+                manager.ApplicationParts.Add(new MoTypeCollectionApplicationPart(option.ApplicationPartTypes));
 
-                    manager.ApplicationParts.Clear();
-                    foreach (var part in partsToKeep)
-                        manager.ApplicationParts.Add(part);
-                }
-                
-                //用于在ApplicationParts检测需要自定义添加的Controller
+                // Used to identify generated CRUD controllers from the registered types.
                 manager.FeatureProviders.Add(
                     ActivatorUtilities
                         .CreateInstance<MoConventionalCrudControllerFeatureProvider>(provider));
@@ -102,6 +91,20 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
             services.AddEndpointsApiExplorer();
         });
     }
+
+    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            if (type is { IsClass: true, IsAbstract: false, IsGenericType: false } &&
+                (typeof(ControllerBase).IsAssignableFrom(type) || typeof(IMoCrudAppService).IsAssignableFrom(type)))
+            {
+                Option.AddApplicationPartType(type);
+            }
+
+            yield return type;
+        }
+    }
 }
 
 public class ModuleAutoControllersGuide : MoModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
@@ -112,4 +115,15 @@ public class ModuleAutoControllersGuide : MoModuleGuide<ModuleAutoControllers, M
 
 public class ModuleAutoControllersOption : MoModuleOption<ModuleAutoControllers>
 {
+    internal HashSet<Type> ApplicationPartTypes { get; private set; } = [];
+
+    internal void SetApplicationPartTypes(HashSet<Type> applicationPartTypes)
+    {
+        ApplicationPartTypes = applicationPartTypes;
+    }
+
+    internal void AddApplicationPartType(Type type)
+    {
+        ApplicationPartTypes.Add(type);
+    }
 }
