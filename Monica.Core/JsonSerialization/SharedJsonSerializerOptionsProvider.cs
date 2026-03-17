@@ -1,15 +1,15 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Monica.Core.GlobalJson.Interfaces;
+using Monica.Core.JsonSerialization.Interfaces;
 
-namespace Monica.Core.GlobalJson;
+namespace Monica.Core.JsonSerialization;
 
-public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
+public class SharedJsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
 {
     /// <summary>
     /// Gets or sets the shared JSON serializer options used by MVC and other global pipelines.
     /// </summary>
-    public static JsonSerializerOptions GlobalJsonSerializerOptions { get; set; } = new();
+    public static JsonSerializerOptions SharedSerializerOptions { get; set; } = new();
     ///// <summary>
     ///// Shared backend JSON settings for scenarios such as domain-event publishing.
     ///// </summary>
@@ -67,12 +67,12 @@ public class DefaultMoGlobalJsonOptions : IGlobalJsonOption
         //}
     }
 
-    public JsonSerializerOptions GlobalOptions => GlobalJsonSerializerOptions;
+    public JsonSerializerOptions SerializerOptions => SharedSerializerOptions;
 
     [return: NotNullIfNotNull("str")]
     public string? UsingJsonNamePolicy(string? str)
     {
         if(str == null) return null;
-        return GlobalOptions.PropertyNamingPolicy?.ConvertName(str) ?? str;
+        return SerializerOptions.PropertyNamingPolicy?.ConvertName(str) ?? str;
     }
 }

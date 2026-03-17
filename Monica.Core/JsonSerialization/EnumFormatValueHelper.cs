@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using Monica.Core.GlobalJson.Attributes;
+using Monica.Core.JsonSerialization.Attributes;
 
-namespace Monica.Core.GlobalJson;
+namespace Monica.Core.JsonSerialization;
 
 /// <summary>
 /// Provides helper methods for working with enum format values.

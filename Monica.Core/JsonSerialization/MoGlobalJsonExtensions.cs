@@ -1,13 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Monica.Core.GlobalJson.Converters;
+using Monica.Core.JsonSerialization.Converters;
 using Monica.Modules;
 
-namespace Monica.Core.GlobalJson;
+namespace Monica.Core.JsonSerialization;
 
 public static class MoGlobalJsonExtensions
 {
-    public static void ConfigGlobalJsonSerializeOptions(this JsonSerializerOptions options, ModuleGlobalJsonOption extraOption)
+    public static void ApplyJsonSerializationDefaults(this JsonSerializerOptions options, ModuleJsonSerializationOption extraOption)
     {
         options.Converters.Add(new NullableDateTimeJsonConverter());
         options.Converters.Add(new MoDateTimeJsonConverter());

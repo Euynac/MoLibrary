@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.GlobalJson.Converters;
+namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
 /// JSON converter that serializes and deserializes <see cref="DateTime"/> values
@@ -15,26 +15,26 @@ public class MoDateTimeJsonConverter : JsonConverter<DateTime>
         var input = reader.GetString();
         if (reader.TokenType == JsonTokenType.String)
         {
-            foreach (var format in DefaultMoGlobalJsonOptions.DateTimeFormats)
+            foreach (var format in SharedJsonSerializerOptionsProvider.DateTimeFormats)
             {
                 if (DateTime.TryParseExact(input, format, null, DateTimeStyles.None, out var date))
                 {
-                    return DefaultMoGlobalJsonOptions.NormalizeInTime(date);
+                    return SharedJsonSerializerOptionsProvider.NormalizeInTime(date);
                 }
             }
 
             if (DateTime.TryParse(input, out var defaultDate))
             {
-                return DefaultMoGlobalJsonOptions.NormalizeInTime(defaultDate);
+                return SharedJsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
             }
         }
 
-        return DefaultMoGlobalJsonOptions.NormalizeInTime(reader.GetDateTime());
+        return SharedJsonSerializerOptionsProvider.NormalizeInTime(reader.GetDateTime());
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
     {
-        writer.WriteStringValue(DefaultMoGlobalJsonOptions.NormalizeOutTime(value).ToString(DefaultMoGlobalJsonOptions.OutputDateTimeFormat));
+        writer.WriteStringValue(SharedJsonSerializerOptionsProvider.NormalizeOutTime(value).ToString(SharedJsonSerializerOptionsProvider.OutputDateTimeFormat));
     }
 }
 

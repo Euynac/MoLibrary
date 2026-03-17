@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.GlobalJson.Interfaces;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Modules;
 using Monica.Dapr.Interfaces;
 using Monica.EventBus.Abstractions;
@@ -31,7 +31,7 @@ internal class DaprEventBusSubscriptionHostedService(
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger<DaprEventBusSubscriptionHostedService> logger,
-    IGlobalJsonOption jsonOption,
+    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(
         subscriptionManager,
@@ -160,7 +160,7 @@ internal class DaprEventBusSubscriptionHostedService(
                 var eventData = JsonSerializer.Deserialize(
                     message.Data.Span,
                     eventType,
-                    jsonOption.GlobalOptions);
+                    jsonSerializerOptionsProvider.SerializerOptions);
 
                 if (eventData == null)
                 {

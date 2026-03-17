@@ -2,9 +2,9 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Monica.Core.GlobalJson.Attributes;
+using Monica.Core.JsonSerialization.Attributes;
 
-namespace Monica.Core.GlobalJson.Converters;
+namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
 /// JSON converter that uses <see cref="EnumFormatValueAttribute"/> to serialize/deserialize enum values.

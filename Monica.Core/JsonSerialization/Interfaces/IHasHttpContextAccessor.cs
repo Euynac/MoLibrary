@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Monica.Core.GlobalJson.Interfaces;
+namespace Monica.Core.JsonSerialization.Interfaces;
 
 public interface IHasHttpContextAccessor
 {

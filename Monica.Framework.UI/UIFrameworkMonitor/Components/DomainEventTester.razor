@@ -1,12 +1,12 @@
 @using Monica.Framework.Services
 @using Monica.Framework.Core.Model
 @using Monica.Tool.MoResponse
-@using Monica.Core.GlobalJson.Interfaces
 @using System.Text.Json
-@using Monica.Core.GlobalJson
+@using Monica.Core.JsonSerialization
+@using Monica.Core.JsonSerialization.Interfaces
 @inject IFrameworkMonitorService FrameworkMonitorService
 
-@inject IGlobalJsonOption JsonOption
+@inject IJsonSerializerOptionsProvider JsonSerializerOptionsProvider
 @inject ISnackbar Snackbar
 
 <div class="framework-monitor-tab-section">
@@ -159,7 +159,7 @@
     private void SelectEvent(DtoDomainEventInfo eventInfo)
     {
         _selectedEvent = eventInfo;
-        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonOption.GlobalOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
+        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
     }
 
     private async Task PublishEventAsync()

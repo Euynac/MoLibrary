@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.GlobalJson.Converters;
+namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
 /// Writes object values by preserving their original JSON shape whenever possible.

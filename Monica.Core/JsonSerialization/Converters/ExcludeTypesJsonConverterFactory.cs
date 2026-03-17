@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.GlobalJson.Converters;
+namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
 /// Decorates another converter factory and skips conversion for explicitly ignored types.

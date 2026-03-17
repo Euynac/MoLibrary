@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
-using Monica.Core.GlobalJson.Interfaces;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Framework.Core.Extensions;
 using Monica.EventBus.Abstractions;
 using Monica.Framework.Core;
@@ -18,7 +18,7 @@ namespace Monica.Framework.Services;
 public class FrameworkMonitorService(
     ILogger<FrameworkMonitorService> logger,
     IMoDistributedEventBus eventBus,
-    IGlobalJsonOption jsonOption,
+    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IMapper mapper,
     IRequestFilter? requestFilter = null) : IFrameworkMonitorService
 {
@@ -99,7 +99,7 @@ public class FrameworkMonitorService(
             if (ProjectUnitStores.GetUnitByName<UnitDomainEvent>(eventKey) is { } unitEvent)
             {
                 var json = eventContent.ToString();
-                var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonOption.GlobalOptions)!;
+                var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonSerializerOptionsProvider.SerializerOptions)!;
                 
                 await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
                 

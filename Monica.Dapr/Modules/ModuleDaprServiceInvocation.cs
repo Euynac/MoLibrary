@@ -3,7 +3,7 @@ using Dapr.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
-using Monica.Core.GlobalJson.Interfaces;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -37,7 +37,7 @@ public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption optio
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleGlobalJsonGuide>().Register();
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
         DependsOnModule<ModuleDaprClientGuide>().Register();
         DependsOnModule<ModuleServiceInvocationGuide>().Register();
     }
@@ -63,7 +63,7 @@ public class ModuleDaprServiceInvocationOption : MoModuleOption<ModuleDaprServic
 public class DaprServiceInvocationConnector(
     DaprClient client,
     ILogger<DaprServiceInvocationConnector> logger,
-    IGlobalJsonOption jsonOption) : IServiceInvocationConnector
+    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IServiceInvocationConnector
 {
     public async Task<Res<TResponse>> GetAsync<TResponse>(string appId, string callbackUrl)
     {
@@ -74,7 +74,7 @@ public class DaprServiceInvocationConnector(
                 client.CreateInvokeMethodRequest(HttpMethod.Get, appId,
                     callbackUrl, []));
             content = await response.Content.ReadAsStringAsync();
-            var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
+            var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);
             if (res == null)
                 throw new InvocationException(appId, callbackUrl,
                     new Exception("Json序列化为空"), response);
@@ -122,7 +122,7 @@ public class DaprServiceInvocationConnector(
                     callbackUrl, [], request));
 
             content = await response.Content.ReadAsStringAsync();
-            var res = JsonSerializer.Deserialize<TResponse>(content, jsonOption.GlobalOptions);
+            var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);
             if (res == null)
                 throw new InvocationException(appId, callbackUrl,
                     new Exception("Json序列化为空"), response);

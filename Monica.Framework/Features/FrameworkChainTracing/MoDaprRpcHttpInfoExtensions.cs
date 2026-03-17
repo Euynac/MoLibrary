@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Core.GlobalJson.Interfaces;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Tool.MoResponse;
 
@@ -30,7 +30,7 @@ public static class MoDaprRpcHttpInfoExtensions
 /// <summary>
 /// 用于扩展Dapr调用相关功能，如自定义Header、链路追踪。注意该中间件是添加给Dapr ActorHost服务。
 /// </summary>
-internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, IMoExceptionHandler handler, IMoChainTracing tracing) : IMiddleware
+internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider jsonSerializerOptionsProvider, IMoExceptionHandler handler, IMoChainTracing tracing) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -57,7 +57,7 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
                 // //// Reset stream position, so next middleware can read it
                 context.Request.Body.Position = 0;
 
-                if (JsonSerializer.Deserialize<MoRpcRequest>(context.Request.Body, jsonOption.GlobalOptions) is { Headers.Count: > 0 } request)
+                if (JsonSerializer.Deserialize<MoRpcRequest>(context.Request.Body, jsonSerializerOptionsProvider.SerializerOptions) is { Headers.Count: > 0 } request)
                 {
                     foreach (var (key, value) in request.Headers.Where(p => p.Key.StartsWith("X-")))
                     {
@@ -90,7 +90,7 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
             await next(context);
 
             memoryStream.Position = 0;
-            var jsonNode = await JsonSerializer.DeserializeAsync<JsonNode>(memoryStream, jsonOption.GlobalOptions);
+            var jsonNode = await JsonSerializer.DeserializeAsync<JsonNode>(memoryStream, jsonSerializerOptionsProvider.SerializerOptions);
 
             scope.EndWithSuccess();
 
@@ -102,8 +102,8 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
                 if (jsonNode is JsonObject jsonObject)
                 {
                     // 获取或创建 extraInfo 对象
-                    var extraInfoKey = jsonOption.UsingJsonNamePolicy(nameof(Res.ExtraInfo));
-                    var chainKey = jsonOption.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
+                    var extraInfoKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(nameof(Res.ExtraInfo));
+                    var chainKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
 
                     if (!jsonObject.ContainsKey(extraInfoKey) || jsonObject[extraInfoKey] is not JsonObject)
                     {
@@ -111,14 +111,14 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IGlobalJsonOption jsonOption, I
                     }
 
                     var extraInfoObj = jsonObject[extraInfoKey]!.AsObject();
-                    extraInfoObj[chainKey] = JsonSerializer.SerializeToNode(chain.Root, jsonOption.GlobalOptions);
+                    extraInfoObj[chainKey] = JsonSerializer.SerializeToNode(chain.Root, jsonSerializerOptionsProvider.SerializerOptions);
                 }
             }
 
             using var newResStream = new MemoryStream();
             context.Response.Body = newResStream;
 
-            await context.Response.WriteAsJsonAsync(jsonNode, jsonOption.GlobalOptions);
+            await context.Response.WriteAsJsonAsync(jsonNode, jsonSerializerOptionsProvider.SerializerOptions);
 
             // Copy body back to so its available to the user agent
             newResStream.Position = 0;

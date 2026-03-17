@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.GlobalJson;
-using Monica.Core.GlobalJson.Interfaces;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Monica.Core;
+using Monica.Core.JsonSerialization;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -13,34 +13,34 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Modules;
 
 
-public static class ModuleGlobalJsonBuilderExtensions
+public static class ModuleJsonSerializationBuilderExtensions
 {
     extension(Mo)
     {
         /// <summary>
-        /// 配置 GlobalJson 模块
+        /// 配置 JsonSerialization 模块
         /// </summary>
-        public static ModuleGlobalJsonGuide AddGlobalJson(Action<ModuleGlobalJsonOption>? action = null)
+        public static ModuleJsonSerializationGuide AddJsonSerialization(Action<ModuleJsonSerializationOption>? action = null)
         {
-            return new ModuleGlobalJsonGuide().Register(action);
+            return new ModuleJsonSerializationGuide().Register(action);
         }
     }
 }
 
-public class ModuleGlobalJson(ModuleGlobalJsonOption option)
-    : MoModule<ModuleGlobalJson, ModuleGlobalJsonOption, ModuleGlobalJsonGuide>(option)
+public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
+    : MoModule<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {
-        return EMoModuleKey.GlobalJson;
+        return EMoModuleKey.JsonSerialization;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
         var jsonSerializerOptions = new JsonSerializerOptions();
-        jsonSerializerOptions.ConfigGlobalJsonSerializeOptions(Option);
+        jsonSerializerOptions.ApplyJsonSerializationDefaults(Option);
         Option.ExtendAction?.Invoke(jsonSerializerOptions);
-        DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions = jsonSerializerOptions;
+        SharedJsonSerializerOptionsProvider.SharedSerializerOptions = jsonSerializerOptions;
 
         //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
         services.AddHttpContextAccessor();
@@ -48,19 +48,19 @@ public class ModuleGlobalJson(ModuleGlobalJsonOption option)
         //巨坑：minimal api 等全局注册
         services.Configure<JsonOptions>(o =>
         {
-            o.SerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
+            o.SerializerOptions.CloneFrom(SharedJsonSerializerOptionsProvider.SharedSerializerOptions);
         });
         //MVC框架HTTP请求与响应的JsonConverter全局注册
         services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
         {
-            o.JsonSerializerOptions.CloneFrom(DefaultMoGlobalJsonOptions.GlobalJsonSerializerOptions);
+            o.JsonSerializerOptions.CloneFrom(SharedJsonSerializerOptionsProvider.SharedSerializerOptions);
         });
 
-        services.AddSingleton<IGlobalJsonOption, DefaultMoGlobalJsonOptions>();
+        services.AddSingleton<IJsonSerializerOptionsProvider, SharedJsonSerializerOptionsProvider>();
     }
 }
 
-public class ModuleGlobalJsonGuide : MoModuleGuide<ModuleGlobalJson, ModuleGlobalJsonOption, ModuleGlobalJsonGuide>
+public class ModuleJsonSerializationGuide : MoModuleGuide<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>
 {
 
 
@@ -68,7 +68,7 @@ public class ModuleGlobalJsonGuide : MoModuleGuide<ModuleGlobalJson, ModuleGloba
 
 
 
-public class ModuleGlobalJsonOption : MoModuleOption<ModuleGlobalJson>
+public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerialization>
 {
 
     public Action<JsonSerializerOptions>? ExtendAction { get; set; }

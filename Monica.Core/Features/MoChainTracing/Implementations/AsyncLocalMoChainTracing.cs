@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Core.GlobalJson.Interfaces;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 using System.Text.Json;
+using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Tool.General;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;
@@ -18,8 +18,8 @@ namespace Monica.Core.Features.MoChainTracing.Implementations;
 /// </remarks>
 /// <param name="options">Chain tracing configuration options.</param>
 /// <param name="logger">The logger.</param>
-/// <param name="jsonOption">Global JSON serialization options.</param>
-public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing> logger, IGlobalJsonOption jsonOption) : IMoChainTracing
+/// <param name="jsonSerializerOptionsProvider">Global JSON serialization options.</param>
+public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing> logger, IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IMoChainTracing
 {
     private static readonly AsyncLocal<MoChainContext?> _chainContext = new();
     private readonly ModuleChainTracingOption _options = options.Value;
@@ -239,8 +239,8 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
           
             if (remoteRes.ExtraInfo is { } expando)
             {
-                if (expando.GetOrDefault(jsonOption.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY)) is JsonElement
-                        jsonElement && jsonElement.Deserialize<MoChainNode>(jsonOption.GlobalOptions) is {} chainNode)
+                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY)) is JsonElement
+                        jsonElement && jsonElement.Deserialize<MoChainNode>(jsonSerializerOptionsProvider.SerializerOptions) is {} chainNode)
                 {
                     chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
                     success = context.MergeRemoteChain(traceId, chainNode, _options.MaxChainDepth);

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.GlobalJson.Converters;
+namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
 /// Serializes <see cref="long"/> values as strings to avoid precision loss for snowflake-style identifiers.

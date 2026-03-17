@@ -39,7 +39,7 @@ public enum EMoModuleKey
     DaprLocker,
     GlobalExceptionHandler,
     AutoControllers,
-    GlobalJson,
+    JsonSerialization,
     Mediator,
     Swagger,
     /// <summary>

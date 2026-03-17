@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Monica.Core.GlobalJson.Converters;
+using Monica.Core.JsonSerialization.Converters;
 
 namespace Monica.RegisterCentre.Models;
 
