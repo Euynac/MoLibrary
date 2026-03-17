@@ -6,12 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Module;
 using Monica.Core.Module.Interfaces;
 using Monica.Core.Module.Models;
+using Monica.Localization;
 using Monica.Localization.Localizers;
+using Monica.Localization.Models;
 using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
@@ -34,6 +37,9 @@ public static class ModuleLocalizationBuilderExtensions
 public class ModuleLocalization(ModuleLocalizationOption option)
     : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IWantIterateBusinessTypes
 {
+    private readonly LocalizationResourceRegistry _resourceRegistry = new();
+    private readonly List<Type> _resourceMarkerTypes = [];
+
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.Localization;
@@ -44,6 +50,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     {
         // Add ASP.NET Core localization services
         services.AddLocalization();
+        services.TryAddSingleton(_resourceRegistry);
 
         // Replace default factory with custom JSON-based factory
         services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, MoStringLocalizerFactory>());
@@ -74,9 +81,23 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     {
         foreach (var type in types)
         {
+            if (type is { IsClass: true, IsAbstract: false } &&
+                typeof(IMoLocalizationResource).IsAssignableFrom(type))
+            {
+                _resourceMarkerTypes.Add(type);
+            }
+
             yield return type;
         }
     }
+
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        _resourceRegistry.ReplaceFromTypes(_resourceMarkerTypes);
+        Logger.LogInformation("Registered {Count} localization resource marker types.", _resourceRegistry.GetRegistrations().Count);
+    }
+    
+
 }
 
 public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>

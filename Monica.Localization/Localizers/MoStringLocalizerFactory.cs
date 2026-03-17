@@ -3,38 +3,24 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Localization.Json;
+using Monica.Localization.Models;
 using Monica.Modules;
 
 namespace Monica.Localization.Localizers;
 
-public class MoStringLocalizerFactory(
+internal class MoStringLocalizerFactory(
     IOptions<ModuleLocalizationOption> options,
-    ILoggerFactory loggerFactory) : IStringLocalizerFactory
+    ILoggerFactory loggerFactory,
+    LocalizationResourceRegistry resourceRegistry) : IStringLocalizerFactory
 {
     private readonly ConcurrentDictionary<Type, IStringLocalizer> _localizerCache = new();
-    private readonly Lazy<Dictionary<Type, Dictionary<string, Dictionary<string, string>>>> _allResources
-        = new(() => LoadAllResources(options.Value, loggerFactory.CreateLogger<MoStringLocalizerFactory>()));
+    private readonly ILogger<MoStringLocalizerFactory> _logger = loggerFactory.CreateLogger<MoStringLocalizerFactory>();
 
     public IStringLocalizer Create(Type resourceSource)
     {
-        return _localizerCache.GetOrAdd(resourceSource, type =>
-        {
-            if (_allResources.Value.TryGetValue(type, out var resources))
-            {
-                return new MoDictionaryStringLocalizer(
-                    type.Name,
-                    resources,
-                    options.Value,
-                    loggerFactory.CreateLogger<MoDictionaryStringLocalizer>());
-            }
+        ArgumentNullException.ThrowIfNull(resourceSource);
 
-            // Fallback: return empty localizer that returns keys
-            return new MoDictionaryStringLocalizer(
-                type.Name,
-                new Dictionary<string, Dictionary<string, string>>(),
-                options.Value,
-                loggerFactory.CreateLogger<MoDictionaryStringLocalizer>());
-        });
+        return _localizerCache.GetOrAdd(resourceSource, CreateLocalizer);
     }
 
     public IStringLocalizer Create(string baseName, string location)
@@ -43,84 +29,43 @@ public class MoStringLocalizerFactory(
         throw new NotSupportedException("String-based localization is not supported. Use IStringLocalizer<T> instead.");
     }
 
-    private static Dictionary<Type, Dictionary<string, Dictionary<string, string>>> LoadAllResources(
-        ModuleLocalizationOption option,
-        ILogger logger)
+    private IStringLocalizer CreateLocalizer(Type resourceSource)
     {
-        var result = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
-
-        // Auto-discover resources from all loaded application assemblies so third-party Monica modules
-        // can ship their own localization resources without living in a Monica.* assembly.
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(ShouldScanAssembly);
-
-        foreach (var assembly in assemblies)
+        if (resourceRegistry.TryGetRegistration(resourceSource, out var registration))
         {
-            try
-            {
-                var resourceTypes = assembly.GetExportedTypes()
-                    .Where(t => t.Namespace?.Contains(".Localization") == true &&
-                               t.IsClass &&
-                               !t.IsAbstract);
-
-                foreach (var resourceType in resourceTypes)
-                {
-                    var resources = JsonResourceLoader.LoadFromAssembly(
-                        assembly,
-                        resourceType,
-                        option.SupportedCultures);
-
-                    if (resources.Count > 0)
-                    {
-                        result[resourceType] = resources;
-                        logger.LogDebug("Loaded localization resources for {ResourceType} from {Assembly}",
-                            resourceType.Name, assembly.GetName().Name);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to load localization resources from assembly {Assembly}",
-                    assembly.GetName().Name);
-            }
+            return CreateDictionaryLocalizer(registration);
         }
 
-        logger.LogInformation("Loaded localization resources for {Count} resource types", result.Count);
-        return result;
+        _logger.LogDebug(
+            "No localization resource registration was found for {ResourceType}. Returning an empty localizer.",
+            resourceSource.FullName ?? resourceSource.Name);
+
+        return CreateEmptyLocalizer(resourceSource);
     }
 
-    private static bool ShouldScanAssembly(System.Reflection.Assembly assembly)
+    private IStringLocalizer CreateDictionaryLocalizer(LocalizationResourceRegistration registration)
     {
-        if (assembly.IsDynamic)
-        {
-            return false;
-        }
+        var resources = JsonResourceLoader.Load(registration, options.Value.SupportedCultures);
 
-        var assemblyName = assembly.GetName().Name;
-        if (string.IsNullOrWhiteSpace(assemblyName))
-        {
-            return false;
-        }
+        _logger.LogDebug(
+            "Loaded localization resources for {ResourceType} from {Assembly}. Culture count: {CultureCount}",
+            registration.ResourceType.FullName ?? registration.ResourceType.Name,
+            registration.Assembly.GetName().Name,
+            resources.Count);
 
-        return !ExcludedAssemblyPrefixes.Any(prefix =>
-            assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        return new MoDictionaryStringLocalizer(
+            registration.ResourceType.Name,
+            resources,
+            options.Value,
+            loggerFactory.CreateLogger<MoDictionaryStringLocalizer>());
     }
 
-    private static readonly string[] ExcludedAssemblyPrefixes =
-    [
-        "System",
-        "Microsoft",
-        "mscorlib",
-        "netstandard",
-        "Windows",
-        "Presentation",
-        "Accessibility",
-        "MudBlazor",
-        "Serilog",
-        "Renci",
-        "Npgsql",
-        "Google",
-        "Grpc",
-        "Swashbuckle"
-    ];
+    private IStringLocalizer CreateEmptyLocalizer(Type resourceSource)
+    {
+        return new MoDictionaryStringLocalizer(
+            resourceSource.Name,
+            new Dictionary<string, Dictionary<string, string>>(),
+            options.Value,
+            loggerFactory.CreateLogger<MoDictionaryStringLocalizer>());
+    }
 }

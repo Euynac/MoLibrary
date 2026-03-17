@@ -1,25 +1,29 @@
 using System.Reflection;
 using System.Text.Json;
+using Monica.Localization.Models;
 
 namespace Monica.Localization.Json;
 
 public static class JsonResourceLoader
 {
-    public static Dictionary<string, Dictionary<string, string>> LoadFromAssembly(
-        Assembly assembly,
-        Type resourceType,
-        List<string> supportedCultures)
+    internal static Dictionary<string, Dictionary<string, string>> Load(
+        LocalizationResourceRegistration registration,
+        IReadOnlyCollection<string> supportedCultures)
     {
+        ArgumentNullException.ThrowIfNull(registration);
+        ArgumentNullException.ThrowIfNull(supportedCultures);
+
         var result = new Dictionary<string, Dictionary<string, string>>();
-        var resourceName = resourceType.Name;
 
         foreach (var culture in supportedCultures)
         {
-            // Expected pattern: {Namespace}.{ResourceName}.{Culture}.json
-            var resourcePath = $"{resourceType.Namespace}.{resourceName}.{culture}.json";
+            var resourcePath = $"{registration.BasePath}.{culture}.json";
 
-            using var stream = assembly.GetManifestResourceStream(resourcePath);
-            if (stream == null) continue;
+            using var stream = registration.Assembly.GetManifestResourceStream(resourcePath);
+            if (stream == null)
+            {
+                continue;
+            }
 
             using var reader = new StreamReader(stream);
             var json = reader.ReadToEnd();
@@ -32,6 +36,20 @@ public static class JsonResourceLoader
         }
 
         return result;
+    }
+
+    public static Dictionary<string, Dictionary<string, string>> LoadFromAssembly(
+        Assembly assembly,
+        Type resourceType,
+        List<string> supportedCultures)
+    {
+        ArgumentNullException.ThrowIfNull(assembly);
+        ArgumentNullException.ThrowIfNull(resourceType);
+        ArgumentNullException.ThrowIfNull(supportedCultures);
+
+        return Load(
+            LocalizationResourceRegistration.Create(resourceType) with { Assembly = assembly },
+            supportedCultures);
     }
 
     private static Dictionary<string, string> FlattenKeys(
