@@ -22,7 +22,7 @@
                                     <MudChip T="string"
                                              Size="Size.Small"
                                              Color="@ColorService.GetStateColor(record.NewState)">
-                                        @record.OldState → @record.NewState
+                                        @record.PreviousStateLabel → @record.NewState
                                     </MudChip>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                                         @record.Timestamp.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss.fff")

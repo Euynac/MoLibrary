@@ -10,6 +10,11 @@ namespace Monica.JobScheduler.Models;
 public class JobInstance
 {
     /// <summary>
+    /// Label used for the synthetic first history entry before an instance enters its initial job state.
+    /// </summary>
+    public const string CreatedStateHistoryLabel = "Created";
+
+    /// <summary>
     /// Gets or sets the unique identifier for this job instance.
     /// Generated as a GUID when the instance is created.
     /// Used as the cancellation token key in IMoCancellationManager for distributed cancellation.
@@ -64,7 +69,7 @@ public class JobInstance
     /// <summary>
     /// Gets the state change history.
     /// Uses line-prefix format where each entry starts with ">>> " followed by metadata:
-    /// >>> [yyyy-MM-dd HH:mm:ss] [oldstate->newstate] optional message
+    /// >>> [yyyy-MM-dd HH:mm:ss] [previous-state-label->newstate] optional message
     /// Multi-line messages (like stack traces) continue on following lines without the ">>> " prefix.
     /// </summary>
     public string? StateHistory { get; private set; }
@@ -83,18 +88,6 @@ public class JobInstance
     /// </summary>
     public string? RunningClientId { get; set; }
     
-    /// <summary>
-    /// Initializes the instance state when creating a new job instance.
-    /// This should only be called once during instance creation.
-    /// </summary>
-    /// <param name="initialState">The initial state.</param>
-    /// <param name="message">Optional initialization message.</param>
-    public void InitializeState(JobState initialState, string? message = null)
-    {
-        State = initialState;
-        AppendStateHistory("Created", initialState, message, DateTime.UtcNow);
-    }
-
     /// <summary>
     /// Restores runtime fields from persistence without creating new state history records.
     /// This method is intended for repository rehydration only.
@@ -164,7 +157,7 @@ public class JobInstance
 
     /// <summary>
     /// Appends a state change record to the state history using line-prefix format.
-    /// Format: >>> [timestamp] [oldstate->newstate] optional message
+    /// Format: >>> [timestamp] [previous-state-label->newstate] optional message
     /// Multi-line messages continue on subsequent lines without the prefix.
     /// </summary>
     /// <param name="oldState">The previous state.</param>
@@ -178,14 +171,14 @@ public class JobInstance
 
     /// <summary>
     /// Appends a state change record to the state history using line-prefix format.
-    /// Format: >>> [timestamp] [oldstate->newstate] optional message
+    /// Format: >>> [timestamp] [previous-state-label->newstate] optional message
     /// Multi-line messages continue on subsequent lines without the prefix.
     /// </summary>
     /// <param name="oldState">The previous state label.</param>
     /// <param name="newState">The new state.</param>
     /// <param name="message">Optional message to record. Can be null or multi-line.</param>
     /// <param name="timestamp">The timestamp of the state change.</param>
-    private void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp)
+    internal void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp)
     {
         var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}]";
         var historyEntry = string.IsNullOrEmpty(message)
@@ -280,7 +273,7 @@ public class JobInstance
         record = null!;
 
         // Entry format:
-        // >>> [timestamp] [oldstate->newstate] optional message
+        // >>> [timestamp] [previous-state-label->newstate] optional message
         // continuation line 1
         // continuation line 2
 
@@ -318,13 +311,13 @@ public class JobInstance
 
         var stateTransition = firstLine[(stateStart + 1)..stateEnd];
         var states = stateTransition.Split("->", StringSplitOptions.TrimEntries);
-        if (states.Length != 2)
+        if (states.Length != 2 || string.IsNullOrWhiteSpace(states[0]))
         {
             return false;
         }
 
-        if (!Enum.TryParse<JobState>(states[0], out var oldState) ||
-            !Enum.TryParse<JobState>(states[1], out var newState))
+        var previousStateLabel = states[0];
+        if (!Enum.TryParse<JobState>(states[1], out var newState))
         {
             return false;
         }
@@ -351,7 +344,7 @@ public class JobInstance
         }
 
         var message = messageBuilder.ToString();
-        record = new StateHistoryRecord(timestamp, oldState, newState, message);
+        record = new StateHistoryRecord(timestamp, previousStateLabel, newState, message);
         return true;
     }
 
@@ -359,10 +352,10 @@ public class JobInstance
     /// Represents a single state change record in the job instance history.
     /// </summary>
     /// <param name="Timestamp">The timestamp when the state change occurred.</param>
-    /// <param name="OldState">The previous state.</param>
+    /// <param name="PreviousStateLabel">The previous state label.</param>
     /// <param name="NewState">The new state.</param>
     /// <param name="Message">The message associated with this state change.</param>
-    public record StateHistoryRecord(DateTime Timestamp, JobState OldState, JobState NewState, string Message);
+    public record StateHistoryRecord(DateTime Timestamp, string PreviousStateLabel, JobState NewState, string Message);
 
 
     /// <summary>

@@ -48,9 +48,14 @@ public class JobInstanceManager(
             JobKey = definition.JobKey,
             JobArgs = parameters != null ? JsonSerializer.Serialize(parameters, options.Value.JobArgsSerializerOptions) : null,
             CreatedAt = now,
+            State = initialState,
             RetryAttempt = 0
         };
-        instance.InitializeState(initialState, initDescription ?? "Instance created");
+        instance.AppendStateHistory(
+            JobInstance.CreatedStateHistoryLabel,
+            initialState,
+            initDescription ?? "Instance created",
+            now);
 
         await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
 
