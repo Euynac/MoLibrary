@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.GlobalJson;
 using Monica.Core.GlobalJson.Interfaces;
-using Monica.Core.Module;
-using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Monica.Core;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

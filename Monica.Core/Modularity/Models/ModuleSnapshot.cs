@@ -1,0 +1,78 @@
+using Microsoft.Extensions.Options;
+using Monica.Core.Modularity.Features;
+using Monica.Core.Modularity.Interfaces;
+
+namespace Monica.Core.Modularity.Models;
+
+/// <summary>
+/// Represents a module snapshot, including the module instance, registration info, and state.
+/// </summary>
+/// <param name="moduleInstance">The module instance.</param>
+/// <param name="registerInfo">The registration information.</param>
+public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo registerInfo)
+{
+    /// <summary>
+    /// The module instance.
+    /// </summary>
+    public IMoModule ModuleInstance { get; set; } = moduleInstance;
+
+    /// <summary>
+    /// The module registration information.
+    /// </summary>
+    public ModuleRegisterInfo RegisterInfo { get; set; } = registerInfo;
+
+    /// <summary>
+    /// The module type.
+    /// </summary>
+    public Type ModuleType { get; set; } = moduleInstance.GetType();
+
+    /// <summary>
+    /// Gets the <see cref="ModuleKey"/> for the module. Returns `null` for unregistered modules.
+    /// </summary>
+    public ModuleKey? ModuleKey => ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(ModuleType);
+
+    /// <summary>
+    /// Gets the total initialization duration for the module, in milliseconds.
+    /// </summary>
+    public long TotalInitializationDurationMs =>
+        ModuleProfiler.GetModuleTotalDuration(ModuleType);
+
+
+    public override string ToString()
+    {
+        var moduleKeyDisplay = ModuleKey?.ToString() ?? "Unknown";
+        return $"[{moduleKeyDisplay}] {RegisterInfo}";
+    }
+
+    /// <summary>
+    /// Gets the keyed option for this module from DI container.
+    /// Uses ModuleOptionType from RegisterInfo and IOptionsSnapshot for retrieval.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider</param>
+    /// <param name="serviceKey">The keyed service key, or null for default option</param>
+    /// <returns>Tuple of option type and option instance</returns>
+    public (Type OptionType, object? OptionInstance) GetKeyedOption(
+        IServiceProvider serviceProvider,
+        string? serviceKey)
+    {
+        var optionType = RegisterInfo.ModuleOptionType;
+
+        if (serviceKey == null)
+        {
+            // For non-keyed (default) option, use IOptions<T>
+            var optionsType = typeof(IOptions<>).MakeGenericType(optionType);
+            var options = serviceProvider.GetService(optionsType);
+            var value = options?.GetType().GetProperty("Value")?.GetValue(options);
+            return (optionType, value);
+        }
+
+        // For keyed option, use IOptionsSnapshot<T>.Get(key)
+        var snapshotType = typeof(IOptionsSnapshot<>).MakeGenericType(optionType);
+        var snapshot = serviceProvider.GetService(snapshotType);
+        if (snapshot == null) return (optionType, null);
+
+        var getMethod = snapshotType.GetMethod("Get");
+        var instance = getMethod?.Invoke(snapshot, [serviceKey]);
+        return (optionType, instance);
+    }
+}

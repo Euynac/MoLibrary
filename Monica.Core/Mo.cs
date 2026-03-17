@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Module;
-using Monica.Core.Module.BuilderWrapper;
-using Monica.Core.Module.TypeFinder;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.BuilderWrapper;
+using Monica.Core.Modularity.TypeFinder;
 
 namespace Monica.Core;
 

@@ -8,9 +8,9 @@ using Monica.Core.Features.MoDiffHighlight;
 using Monica.Core.Features.MoDiffHighlight.Algorithms;
 using Monica.Core.Features.MoDiffHighlight.Models;
 using Monica.Core.Features.MoDiffHighlight.Renderers;
-using Monica.Core.Module;
-using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

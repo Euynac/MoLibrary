@@ -1,9 +1,9 @@
 using Dapr.Client;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
-using Monica.Core.Module;
-using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

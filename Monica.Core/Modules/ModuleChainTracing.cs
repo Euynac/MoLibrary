@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Module;
-using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
 using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Decorators;
 using Monica.Core.Features.MoChainTracing.Implementations;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Module;
-using Monica.Core.Module.Models;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Models;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Models;

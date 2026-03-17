@@ -6,9 +6,9 @@ using Monica.Authority.Authorization;
 using Monica.Authority.Implements.Authorization;
 using Monica.Core;
 using Monica.Core.ExceptionHandler;
-using Monica.Core.Module;
-using Monica.Core.Module.Interfaces;
-using Monica.Core.Module.Models;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy;
 
 // ReSharper disable once CheckNamespace
