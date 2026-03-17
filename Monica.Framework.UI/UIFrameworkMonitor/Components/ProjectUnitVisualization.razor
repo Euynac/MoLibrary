@@ -1,12 +1,13 @@
+@using Microsoft.AspNetCore.Components
 @using Monica.Framework.Core.Model
 @using Monica.Framework.Services
 @using Monica.Tool.MoResponse
-@using System.Linq
 @using static Monica.Framework.UI.UIFrameworkMonitor.Components.ProjectUnitLayoutPanel
 @using Monica.UI.Components.ContextMenu
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<FrameworkMonitorResource> L
 @implements IAsyncDisposable
 
 <div class="framework-monitor-tab-section">
@@ -14,26 +15,26 @@
               Justify="Justify.SpaceBetween"
               AlignItems="AlignItems.Center"
               Class="framework-monitor-tab-section__header">
-        <MudText Typo="Typo.h6">项目架构可视化</MudText>
+        <MudText Typo="Typo.h6">@L["ProjectUnitVisualization:Header:Title"]</MudText>
         <div class="framework-monitor-tab-section__actions">
-            <MudTooltip Text="刷新数据">
+            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:RefreshTooltip"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="LoadProjectUnitsAsync"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="重置视图">
+            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:ResetViewTooltip"]">
                 <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
                                Color="Color.Secondary"
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="布局设置">
+            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:LayoutSettingsTooltip"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
                                Color="Color.Info"
                                OnClick="ToggleLayoutPanel" />
             </MudTooltip>
-            <MudTooltip Text="筛选设置">
+            <MudTooltip Text="@L["ProjectUnitVisualization:Actions:FilterSettingsTooltip"]">
                 <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
                                Color="Color.Tertiary"
                                OnClick="ToggleFilterPanel" />
@@ -50,17 +51,17 @@
                                     ForceDistanceChanged="OnForceDistanceChanged"
                                     ForceStrengthChanged="OnForceStrengthChanged" />
         }
-        
+
         @if (_showFilterPanel)
         {
             @if (!string.IsNullOrEmpty(_relatedToNodeId))
             {
-                var relatedUnit = _allProjectUnits.FirstOrDefault(u => u.Key == _relatedToNodeId);
+                var relatedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == _relatedToNodeId);
                 <MudAlert Severity="Severity.Info" Class="mb-2" CloseIconClicked="ClearRelatedFilterClick">
-                    正在显示与 <strong>@(relatedUnit?.Title ?? _relatedToNodeId)</strong> 连通的所有节点
+                    @((MarkupString)L["ProjectUnitVisualization:States:RelatedNodesAlert", relatedUnit?.Title ?? _relatedToNodeId].Value)
                 </MudAlert>
             }
-            
+
             <ProjectUnitFilterPanel @bind-FilterText="_filterText"
                                     @bind-SelectedUnitTypes="_selectedUnitTypes"
                                     @bind-ShowOnlyWithDependencies="_showOnlyWithDependencies"
@@ -84,28 +85,31 @@
             <MudGrid>
                 <MudItem xs="12" sm="8">
                     <MudText Typo="Typo.caption">
-                        显示 @_filteredUnits.Count / @_allProjectUnits.Count 个项目单元
+                        @L["ProjectUnitVisualization:Legend:VisibleCount", _filteredUnits.Count, _allProjectUnits.Count]
                     </MudText>
                 </MudItem>
                 <MudItem xs="12" sm="4" Class="d-flex justify-end">
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">圆形: 简单单元</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Square" Color="Color.Warning">矩形: 复杂单元</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">
+                        @L["ProjectUnitVisualization:Legend:SimpleUnit"]
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Square" Color="Color.Warning">
+                        @L["ProjectUnitVisualization:Legend:ComplexUnit"]
+                    </MudChip>
                 </MudItem>
             </MudGrid>
         </MudPaper>
     </div>
 </div>
 
-<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible" 
+<ProjectUnitDetailDialog @bind-Visible="_detailDialogVisible"
                          SelectedUnit="_selectedUnit"
                          AllProjectUnits="_allProjectUnits"
                          OnNodeFocus="HandleNodeFocusFromDialog" />
 
-@* 右键菜单 *@
-<MoContextMenu TItem="DtoProjectUnit" 
-               Items="@_contextMenuItems" 
+<MoContextMenu TItem="DtoProjectUnit"
+               Items="@_contextMenuItems"
                Visible="@_contextMenuOpen"
-               InitialX="@_contextMenuX" 
+               InitialX="@_contextMenuX"
                InitialY="@_contextMenuY"
                ContextItem="@_contextMenuUnit"
                OnItemClick="@OnContextMenuItemClick"
@@ -113,49 +117,58 @@
 
 @code {
     private IJSObjectReference? _jsModule;
-    private List<DtoProjectUnit> _allProjectUnits = new();
-    private List<DtoProjectUnit> _filteredUnits = new();
-    private bool _loading = false;
-    private bool _detailDialogVisible = false;
+    private List<DtoProjectUnit> _allProjectUnits = [];
+    private List<DtoProjectUnit> _filteredUnits = [];
+    private bool _loading;
+    private bool _detailDialogVisible;
     private DtoProjectUnit? _selectedUnit;
     private DtoProjectUnit? _contextMenuUnit;
-    private bool _showFilterPanel = false;
-    private bool _showLayoutPanel = false;
+    private bool _showFilterPanel;
+    private bool _showLayoutPanel;
     private string _filterText = string.Empty;
     private IReadOnlyCollection<EProjectUnitType> _selectedUnitTypes = new HashSet<EProjectUnitType>();
-    private bool _showOnlyWithDependencies = false;
-    private bool _showOnlyWithAlerts = false;
-    private string? _relatedToNodeId = null;
-    private bool _contextMenuOpen = false;
-    private double _contextMenuX = 0;
-    private double _contextMenuY = 0;
+    private bool _showOnlyWithDependencies;
+    private bool _showOnlyWithAlerts;
+    private string? _relatedToNodeId;
+    private bool _contextMenuOpen;
+    private double _contextMenuX;
+    private double _contextMenuY;
     private LayoutType _currentLayout = LayoutType.Force;
     private int _forceDistance = 500;
     private int _forceStrength = -300;
-    private List<ContextMenuItem<DtoProjectUnit>> _contextMenuItems = new();
+    private List<ContextMenuItem<DtoProjectUnit>> _contextMenuItems = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", 
-				"./_content/Monica.Framework.UI/UIFrameworkMonitor/projectUnitGraph.js");
-            
-            await InitializeGraph();
-            await LoadProjectUnitsAsync();
+            return;
         }
+
+        _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import",
+            "./_content/Monica.Framework.UI/UIFrameworkMonitor/projectUnitGraph.js");
+
+        await InitializeGraph();
+        await LoadProjectUnitsAsync();
     }
 
     private async Task InitializeGraph()
     {
-        if (_jsModule != null)
+        if (_jsModule is null)
         {
-            var isDarkMode = await JSRuntime.InvokeAsync<bool>("eval", 
-                "document.documentElement.classList.contains('dark')");
-            
-            await _jsModule.InvokeVoidAsync("initializeGraph", "project-unit-graph", isDarkMode,
-                DotNetObjectReference.Create(this));
+            return;
         }
+
+        var isDarkMode = await JSRuntime.InvokeAsync<bool>(
+            "eval",
+            "document.documentElement.classList.contains('dark')");
+
+        await _jsModule.InvokeVoidAsync(
+            "initializeGraph",
+            "project-unit-graph",
+            isDarkMode,
+            DotNetObjectReference.Create(this));
     }
 
     private async Task LoadProjectUnitsAsync()
@@ -168,24 +181,23 @@
             var result = await FrameworkMonitorService.GetAllProjectUnitsAsync();
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
                 return;
             }
 
             _allProjectUnits = data;
-            // Initialize selected types to all types if empty
             if (!_selectedUnitTypes.Any())
             {
                 _selectedUnitTypes = new HashSet<EProjectUnitType>(
-                    Enum.GetValues<EProjectUnitType>().Where(t => t != EProjectUnitType.None)
-                );
+                    Enum.GetValues<EProjectUnitType>().Where(static type => type != EProjectUnitType.None));
             }
+
             _filteredUnits = new List<DtoProjectUnit>(_allProjectUnits);
             await UpdateGraph();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -196,17 +208,18 @@
 
     private async Task UpdateGraph()
     {
-        if (_jsModule != null)
+        if (_jsModule is null)
         {
-            var graphData = PrepareGraphData();
-            await _jsModule.InvokeVoidAsync("updateGraph", graphData);
-            // 应用当前布局设置
-            await SetLayout(_currentLayout);
-            if (_currentLayout == LayoutType.Force)
-            {
-                await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
-                await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
-            }
+            return;
+        }
+
+        await _jsModule.InvokeVoidAsync("updateGraph", PrepareGraphData());
+        await SetLayout(_currentLayout);
+
+        if (_currentLayout == LayoutType.Force)
+        {
+            await _jsModule.InvokeVoidAsync("setForceDistance", _forceDistance);
+            await _jsModule.InvokeVoidAsync("setForceStrength", _forceStrength);
         }
     }
 
@@ -216,35 +229,36 @@
         {
             id = unit.Key,
             title = unit.Title,
-            type = unit.UnitType.ToString(),
+            type = L.GetProjectUnitTypeText(unit.UnitType),
             typeValue = (int)unit.UnitType,
             dependencyCount = unit.DependencyUnits.Count,
             dependedByCount = unit.DependedByCount,
             hasAttributes = unit.Attributes.Any(),
             methodCount = unit.Methods.Count,
             hasMethod = unit.Methods.Any(),
-            // 添加节点配置信息
             isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
             color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),
             icon = ProjectUnitVisualizationConfig.GetUnitTypeIcon(unit.UnitType),
-            chips = ProjectUnitVisualizationConfig.GetUnitTypeChips(unit),
-            metadata = ProjectUnitVisualizationConfig.GetUnitMetadata(unit),
-            // 添加告警信息
+            chips = L.BuildProjectUnitGraphChips(unit),
+            metadata = L.BuildProjectUnitGraphMetadata(unit),
             alertLevel = ProjectUnitVisualizationConfig.GetHighestAlertLevel(unit),
-            alertCount = unit.Alerts.Count
+            alertCount = unit.Alerts.Count,
+            tooltip = L.BuildProjectUnitGraphTooltip(unit),
+            summary = L.BuildProjectUnitGraphSummary(unit),
+            noMetadataText = L["ProjectUnitVisualization:Graph:NoMetadata"].Value
         }).ToList();
 
         var links = new List<object>();
         foreach (var unit in _filteredUnits)
         {
-            foreach (var dep in unit.DependencyUnits)
+            foreach (var dependency in unit.DependencyUnits)
             {
-                if (_filteredUnits.Any(u => u.Key == dep.Key))
+                if (_filteredUnits.Any(item => item.Key == dependency.Key))
                 {
                     links.Add(new
                     {
                         source = unit.Key,
-                        target = dep.Key
+                        target = dependency.Key
                     });
                 }
             }
@@ -256,45 +270,54 @@
     private void ToggleFilterPanel()
     {
         _showFilterPanel = !_showFilterPanel;
-        if (_showFilterPanel) _showLayoutPanel = false;
+        if (_showFilterPanel)
+        {
+            _showLayoutPanel = false;
+        }
     }
-    
+
     private void ToggleLayoutPanel()
     {
         _showLayoutPanel = !_showLayoutPanel;
-        if (_showLayoutPanel) _showFilterPanel = false;
+        if (_showLayoutPanel)
+        {
+            _showFilterPanel = false;
+        }
     }
-    
+
     private async Task SetLayout(LayoutType layoutType)
     {
         _currentLayout = layoutType;
-        if (_jsModule != null)
+        if (_jsModule is null)
         {
-            var layoutName = layoutType switch
-            {
-                LayoutType.Force => "force",
-                LayoutType.Hierarchy => "hierarchy",
-                LayoutType.Circular => "circular",
-                LayoutType.MultiCircular => "multi_circular",
-                _ => "force"
-            };
-            await _jsModule.InvokeVoidAsync("setLayout", layoutName);
+            return;
         }
+
+        var layoutName = layoutType switch
+        {
+            LayoutType.Force => "force",
+            LayoutType.Hierarchy => "hierarchy",
+            LayoutType.Circular => "circular",
+            LayoutType.MultiCircular => "multi_circular",
+            _ => "force"
+        };
+
+        await _jsModule.InvokeVoidAsync("setLayout", layoutName);
     }
-    
+
     private async Task OnForceDistanceChanged(int value)
     {
         _forceDistance = value;
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             await _jsModule.InvokeVoidAsync("setForceDistance", value);
         }
     }
-    
+
     private async Task OnForceStrengthChanged(int value)
     {
         _forceStrength = value;
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             await _jsModule.InvokeVoidAsync("setForceStrength", value);
         }
@@ -304,24 +327,20 @@
     {
         _filteredUnits = _allProjectUnits.Where(unit =>
         {
-            // 如果设置了相关节点筛选，则只显示相关节点
             if (!string.IsNullOrEmpty(_relatedToNodeId))
             {
-                var relatedNodes = GetAllRelatedNodes(_relatedToNodeId);
-                return relatedNodes.Contains(unit.Key);
+                return GetAllRelatedNodes(_relatedToNodeId).Contains(unit.Key);
             }
 
-            var matchesText = string.IsNullOrWhiteSpace(_filterText) ||
-                unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
-                unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
-                (!string.IsNullOrEmpty(unit.Author) && unit.Author.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) ||
-                (unit.Group?.Any(g => g.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) == true) ||
-                (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
+            var matchesText = string.IsNullOrWhiteSpace(_filterText)
+                || unit.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+                || unit.Key.Contains(_filterText, StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrEmpty(unit.Author) && unit.Author.Contains(_filterText, StringComparison.OrdinalIgnoreCase))
+                || (unit.Group?.Any(group => group.Contains(_filterText, StringComparison.OrdinalIgnoreCase)) == true)
+                || (!string.IsNullOrEmpty(unit.Description) && unit.Description.Contains(_filterText, StringComparison.OrdinalIgnoreCase));
 
             var matchesType = !_selectedUnitTypes.Any() || _selectedUnitTypes.Contains(unit.UnitType);
-
             var matchesDependencies = !_showOnlyWithDependencies || unit.DependencyUnits.Any() || unit.DependedByCount > 0;
-
             var matchesAlerts = !_showOnlyWithAlerts || unit.Alerts.Any();
 
             return matchesText && matchesType && matchesDependencies && matchesAlerts;
@@ -332,7 +351,7 @@
 
     private async Task ResetView()
     {
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             await _jsModule.InvokeVoidAsync("resetView");
         }
@@ -341,129 +360,137 @@
     [JSInvokable]
     public void OnNodeClick(string nodeId)
     {
-        _selectedUnit = _allProjectUnits.FirstOrDefault(u => u.Key == nodeId);
-        if (_selectedUnit != null)
+        _selectedUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == nodeId);
+        if (_selectedUnit is null)
         {
-            _detailDialogVisible = true;
-            StateHasChanged();
+            return;
         }
+
+        _detailDialogVisible = true;
+        StateHasChanged();
     }
 
     [JSInvokable]
     public void OnNodeRightClick(string nodeId, double x, double y)
     {
-        _contextMenuUnit = _allProjectUnits.FirstOrDefault(u => u.Key == nodeId);
-        if (_contextMenuUnit != null)
+        _contextMenuUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == nodeId);
+        if (_contextMenuUnit is null)
         {
-            _contextMenuX = x;
-            _contextMenuY = y;
-            _contextMenuItems = BuildContextMenuItems(_contextMenuUnit);
-            _contextMenuOpen = true;
-            StateHasChanged();
+            return;
         }
+
+        _contextMenuX = x;
+        _contextMenuY = y;
+        _contextMenuItems = BuildContextMenuItems(_contextMenuUnit);
+        _contextMenuOpen = true;
+        StateHasChanged();
     }
-    
+
     private void OnBackgroundClick()
     {
-        if (_contextMenuOpen)
+        if (!_contextMenuOpen)
         {
-            _contextMenuOpen = false;
-            StateHasChanged();
+            return;
         }
+
+        _contextMenuOpen = false;
+        StateHasChanged();
     }
-    
+
     [JSInvokable]
     public void OnSvgBackgroundClick()
     {
-        if (_contextMenuOpen)
+        if (!_contextMenuOpen)
         {
-            _contextMenuOpen = false;
-            StateHasChanged();
+            return;
         }
+
+        _contextMenuOpen = false;
+        StateHasChanged();
     }
 
     private void CloseContextMenu()
     {
         _contextMenuOpen = false;
     }
-    
+
     private List<ContextMenuItem<DtoProjectUnit>> BuildContextMenuItems(DtoProjectUnit unit)
     {
         var builder = ContextMenuBuilder<DtoProjectUnit>.Create()
-            .AddItem("查看详情", Icons.Material.Filled.Info, ShowContextDetailsAsync)
-            .AddItem("聚焦此节点", Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
-            .AddItem("筛选同类型", Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:Details"], Icons.Material.Filled.Info, ShowContextDetailsAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FocusNode"], Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:FilterByType"], Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
 
-        // 根据当前状态决定显示哪个连通节点选项
         if (!string.IsNullOrEmpty(_relatedToNodeId))
         {
             if (_relatedToNodeId == unit.Key)
             {
-                builder.AddItem("取消连通节点筛选", Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ClearRelatedFilter"], Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
             }
             else
             {
-                builder.AddItem("显示其他连通节点", Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+                builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowOtherRelatedNodes"], Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
             }
         }
         else
         {
-            builder.AddItem("显示连通节点", Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+            builder.AddItem(L["ProjectUnitVisualization:ContextMenu:ShowRelatedNodes"], Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
         }
 
-        builder.AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
-               .AddDivider()
-               .AddItem("复制完整名称", Icons.Material.Filled.ContentCopy, CopyFullNameAsync);
+        builder
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:ClearAllFilters"], Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddDivider()
+            .AddItem(L["ProjectUnitVisualization:ContextMenu:CopyFullName"], Icons.Material.Filled.ContentCopy, CopyFullNameAsync);
 
         return builder.Build();
     }
-    
-    private async Task OnContextMenuItemClick(ContextMenuItem<DtoProjectUnit> item)
+
+    private Task OnContextMenuItemClick(ContextMenuItem<DtoProjectUnit> item)
     {
-        // 菜单项点击事件由各自的OnClick处理函数处理
-        // 这里可以添加通用的处理逻辑，比如关闭菜单
         _contextMenuOpen = false;
         StateHasChanged();
+        return Task.CompletedTask;
     }
-    
-    private async Task ShowContextDetailsAsync(DtoProjectUnit? unit)
+
+    private Task ShowContextDetailsAsync(DtoProjectUnit? unit)
     {
         _selectedUnit = unit ?? _contextMenuUnit;
         _detailDialogVisible = true;
+        return Task.CompletedTask;
     }
 
     private async Task FocusOnNodeAsync(DtoProjectUnit? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (_jsModule != null && targetUnit != null)
+        if (_jsModule is not null && targetUnit is not null)
         {
             await _jsModule.InvokeVoidAsync("focusOnNode", targetUnit.Key);
         }
     }
 
-    private async Task OnLayoutChanged(LayoutType layoutType)
+    private Task OnLayoutChanged(LayoutType layoutType)
     {
-        _currentLayout = layoutType;
-        await SetLayout(layoutType);
+        return SetLayout(layoutType);
     }
 
     private async Task FilterByTypeAsync(DtoProjectUnit? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit != null)
+        if (targetUnit is null)
         {
-            _selectedUnitTypes = new HashSet<EProjectUnitType> { targetUnit.UnitType };
-            _showFilterPanel = true;
-            await ApplyFilters();
+            return;
         }
+
+        _selectedUnitTypes = new HashSet<EProjectUnitType> { targetUnit.UnitType };
+        _showFilterPanel = true;
+        await ApplyFilters();
     }
-    
+
     private async Task ClearAllFiltersAsync(DtoProjectUnit? unit)
     {
         _filterText = string.Empty;
         _selectedUnitTypes = new HashSet<EProjectUnitType>(
-            Enum.GetValues<EProjectUnitType>().Where(t => t != EProjectUnitType.None)
-        );
+            Enum.GetValues<EProjectUnitType>().Where(static type => type != EProjectUnitType.None));
         _showOnlyWithDependencies = false;
         _showOnlyWithAlerts = false;
         _relatedToNodeId = null;
@@ -473,68 +500,68 @@
     private async Task ShowRelatedNodesAsync(DtoProjectUnit? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit != null)
+        if (targetUnit is null)
         {
-            _relatedToNodeId = targetUnit.Key;
-            _showFilterPanel = true;
-            await ApplyFilters();
-            Snackbar.Add($"显示与 {targetUnit.Title} 连通的所有节点", Severity.Info);
+            return;
         }
+
+        _relatedToNodeId = targetUnit.Key;
+        _showFilterPanel = true;
+        await ApplyFilters();
+        Snackbar.Add(L["ProjectUnitVisualization:Messages:ShowingRelatedNodes", targetUnit.Title], Severity.Info);
     }
-    
-    private async Task ClearRelatedFilterAsync(DtoProjectUnit? unit)
+
+    private Task ClearRelatedFilterAsync(DtoProjectUnit? unit)
     {
         _relatedToNodeId = null;
-        await ApplyFilters();
+        return ApplyFilters();
     }
-    
-    private async Task ClearRelatedFilterClick()
+
+    private Task ClearRelatedFilterClick()
     {
         _relatedToNodeId = null;
-        await ApplyFilters();
+        return ApplyFilters();
     }
-    
+
     private async Task CopyFullNameAsync(DtoProjectUnit? unit)
     {
         var targetUnit = unit ?? _contextMenuUnit;
-        if (targetUnit != null)
+        if (targetUnit is null)
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", targetUnit.Key);
-            Snackbar.Add("已复制到剪贴板", Severity.Success);
+            return;
         }
+
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", targetUnit.Key);
+        Snackbar.Add(L["ProjectUnitVisualization:Messages:CopiedToClipboard"], Severity.Success);
     }
-    
+
     private HashSet<string> GetAllRelatedNodes(string nodeId)
     {
         var related = new HashSet<string>();
         var queue = new Queue<string>();
-        
-        // 从起始节点开始
+
         queue.Enqueue(nodeId);
         related.Add(nodeId);
-        
-        // 使用广度优先搜索找到整个连通图
+
         while (queue.Count > 0)
         {
             var currentId = queue.Dequeue();
-            var currentUnit = _allProjectUnits.FirstOrDefault(u => u.Key == currentId);
-            
-            if (currentUnit != null)
+            var currentUnit = _allProjectUnits.FirstOrDefault(unit => unit.Key == currentId);
+
+            if (currentUnit is not null)
             {
-                // 查找当前节点的所有依赖（出边）
-                foreach (var dep in currentUnit.DependencyUnits)
+                foreach (var dependency in currentUnit.DependencyUnits)
                 {
-                    if (related.Add(dep.Key))
+                    if (related.Add(dependency.Key))
                     {
-                        queue.Enqueue(dep.Key);
+                        queue.Enqueue(dependency.Key);
                     }
                 }
             }
-            
-            // 查找依赖当前节点的所有节点（入边）
-            var dependents = _allProjectUnits.Where(u => 
-                u.DependencyUnits.Any(d => d.Key == currentId));
-            
+
+            var dependents = _allProjectUnits.Where(unit =>
+                unit.DependencyUnits.Any(dependency => dependency.Key == currentId));
+
             foreach (var dependent in dependents)
             {
                 if (related.Add(dependent.Key))
@@ -543,14 +570,13 @@
                 }
             }
         }
-        
+
         return related;
     }
 
-    
     private async Task HandleNodeFocusFromDialog(string nodeKey)
     {
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             await _jsModule.InvokeVoidAsync("focusOnNode", nodeKey);
         }
@@ -558,11 +584,10 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule != null)
+        if (_jsModule is not null)
         {
             await _jsModule.InvokeVoidAsync("dispose");
             await _jsModule.DisposeAsync();
         }
     }
-
 }

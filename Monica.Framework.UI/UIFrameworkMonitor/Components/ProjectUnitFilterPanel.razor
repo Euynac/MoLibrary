@@ -1,12 +1,13 @@
 @using Monica.Framework.Core.Model
 @using System.Linq
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
 <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
     <MudGrid>
         <MudItem xs="12" sm="6" md="4">
             <MudTextField @bind-Value="FilterText"
-                          Label="搜索项目单元"
-                          HelperText="支持搜索：名称、作者、分组、描述"
+                          Label="@L["ProjectUnitFilterPanel:Fields:SearchLabel"]"
+                          HelperText="@L["ProjectUnitFilterPanel:Fields:SearchHelper"]"
                           Variant="Variant.Outlined"
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
@@ -15,22 +16,22 @@
                           OnDebounceIntervalElapsed="OnFilterTextChanged" />
         </MudItem>
         <MudItem xs="12" md="8">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">单元类型筛选:</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ProjectUnitFilterPanel:Sections:TypeFilter"]</MudText>
             <div class="d-flex flex-wrap gap-1 mb-2">
-                <MudButton Size="Size.Small" 
-                           Variant="Variant.Text" 
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Text"
                            Color="Color.Primary"
                            OnClick="SelectAllTypes">
-                    全选
+                    @L["Shared:Actions:SelectAll"]
                 </MudButton>
-                <MudButton Size="Size.Small" 
-                           Variant="Variant.Text" 
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Text"
                            Color="Color.Secondary"
                            OnClick="ClearAllTypes">
-                    清除
+                    @L["Shared:Actions:Clear"]
                 </MudButton>
             </div>
-            <MudChipSet T="EProjectUnitType" 
+            <MudChipSet T="EProjectUnitType"
                         SelectionMode="SelectionMode.MultiSelection"
                         SelectedValues="SelectedUnitTypes"
                         SelectedValuesChanged="OnSelectedUnitTypesChanged">
@@ -38,13 +39,13 @@
                 {
                     var color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
                     var isSelected = SelectedUnitTypes.Contains(unitType);
-                    <MudChip T="EProjectUnitType" 
+                    <MudChip T="EProjectUnitType"
                              Value="unitType"
-                             Style="@(isSelected 
-                                 ? $"background-color: {color}; border-color: {color}; color: white" 
+                             Style="@(isSelected
+                                 ? $"background-color: {color}; border-color: {color}; color: white"
                                  : $"background-color: {color}20; border-color: {color}; color: {color}")"
                              Size="Size.Small">
-                        @unitType.ToString()
+                        @L.GetProjectUnitTypeText(unitType)
                     </MudChip>
                 }
             </MudChipSet>
@@ -52,13 +53,13 @@
         <MudItem xs="12" sm="6">
             <MudSwitch T="bool" Value="ShowOnlyWithDependencies"
                        ValueChanged="OnShowOnlyWithDependenciesChanged"
-                       Label="仅显示有依赖关系"
+                       Label="@L["ProjectUnitFilterPanel:Switches:OnlyDependencies"]"
                        Color="Color.Primary" />
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudSwitch T="bool" Value="ShowOnlyWithAlerts"
                        ValueChanged="OnShowOnlyWithAlertsChanged"
-                       Label="仅显示有告警"
+                       Label="@L["ProjectUnitFilterPanel:Switches:OnlyAlerts"]"
                        Color="Color.Warning" />
         </MudItem>
     </MudGrid>
@@ -79,16 +80,14 @@
     
     [Parameter] public EventCallback OnFiltersChanged { get; set; }
     
-    private List<EProjectUnitType> AllUnitTypes { get; set; } = new();
+    private List<EProjectUnitType> AllUnitTypes { get; set; } = [];
     
     protected override void OnInitialized()
     {
-        // 获取所有单元类型（排除None）
         AllUnitTypes = Enum.GetValues<EProjectUnitType>()
-            .Where(t => t != EProjectUnitType.None)
+            .Where(static type => type != EProjectUnitType.None)
             .ToList();
-            
-        // 默认全选
+
         if (!SelectedUnitTypes.Any())
         {
             var allTypes = new HashSet<EProjectUnitType>(AllUnitTypes);
@@ -112,8 +111,7 @@
     
     private async Task SelectAllTypes()
     {
-        var allTypes = new HashSet<EProjectUnitType>(AllUnitTypes);
-        await OnSelectedUnitTypesChanged(allTypes);
+        await OnSelectedUnitTypesChanged(new HashSet<EProjectUnitType>(AllUnitTypes));
     }
     
     private async Task ClearAllTypes()

@@ -8,32 +8,33 @@
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<RegisterCentreResource> L
 @implements IAsyncDisposable
 
 <MudCard>
     <MudCardHeader>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">子域依赖关系图</MudText>
+            <MudText Typo="Typo.h6">@L["DomainGraph:Title"]</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
-            <MudTooltip Text="刷新数据">
+            <MudTooltip Text="@L["DomainGraph:Tooltips:RefreshData"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="LoadDomainDataAsync"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="重置视图">
+            <MudTooltip Text="@L["DomainGraph:Tooltips:ResetView"]">
                 <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
                                Color="Color.Secondary"
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="布局设置">
+            <MudTooltip Text="@L["DomainGraph:Tooltips:LayoutSettings"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
                                Color="Color.Info"
                                OnClick="ToggleLayoutPanel" />
             </MudTooltip>
-            <MudTooltip Text="筛选设置">
+            <MudTooltip Text="@L["DomainGraph:Tooltips:FilterSettings"]">
                 <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
                                Color="Color.Tertiary"
                                OnClick="ToggleFilterPanel" />
@@ -75,12 +76,12 @@
             <MudGrid>
                 <MudItem xs="12" sm="8">
                     <MudText Typo="Typo.caption">
-                        显示 @_filteredDomains.Count / @_domains.Count 个子域，@_filteredDependencies.Count / @_dependencies.Count 个依赖关系
+                        @L["DomainGraph:Summary:ShowingDomainsAndDependencies", _filteredDomains.Count, _domains.Count, _filteredDependencies.Count, _dependencies.Count]
                     </MudText>
                 </MudItem>
                 <MudItem xs="12" sm="4" Class="d-flex justify-end">
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">节点：子域</MudChip>
-                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">箭头：依赖</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Color="Color.Info">@L["DomainGraph:Summary:NodeLegend"]</MudChip>
+                    <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary">@L["DomainGraph:Summary:ArrowLegend"]</MudChip>
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -149,7 +150,7 @@
                 "document.documentElement.classList.contains('dark')");
             
             await _jsModule.InvokeVoidAsync("initializeGraph", "domain-dependency-graph", isDarkMode,
-                DotNetObjectReference.Create(this));
+                DotNetObjectReference.Create(this), GetGraphTexts());
         }
     }
 
@@ -176,7 +177,7 @@
                 }
                 else
                 {
-                    Snackbar.Add($"获取服务状态失败: {servicesError.Message}", Severity.Warning);
+                    Snackbar.Add(L["DomainGraph:Messages:GetServicesFailed", servicesError.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Warning);
                 }
 
                 // 初始化筛选
@@ -187,12 +188,12 @@
             }
             else
             {
-                Snackbar.Add($"获取域信息失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["DomainGraph:Messages:GetDomainsFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载域数据失败: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["DomainGraph:Messages:LoadFailed", ex.Message].Value, Severity.Error);
         }
         finally
         {
@@ -210,7 +211,7 @@
         {
             if (service.DependentSubDomains?.Any() == true)
             {
-                var sourceDomain = service.DomainName ?? "未知";
+                var sourceDomain = GetServiceDomainName(service);
                 
                 foreach (var dependentDomain in service.DependentSubDomains)
                 {
@@ -222,7 +223,7 @@
                             SourceDomain = sourceDomain,
                             TargetDomain = dependentDomain,
                             ServiceCount = services.Count(s => 
-                                (s.DomainName ?? "未知") == sourceDomain && 
+                                GetServiceDomainName(s) == sourceDomain && 
                                 s.DependentSubDomains?.Contains(dependentDomain) == true)
                         });
                     }
@@ -237,7 +238,7 @@
         
         foreach (var service in services)
         {
-            var domainName = service.DomainName ?? "未知";
+            var domainName = GetServiceDomainName(service);
             if (!_domainServicesMap.ContainsKey(domainName))
             {
                 _domainServicesMap[domainName] = new List<RegisteredServiceStatus>();
@@ -297,14 +298,14 @@
         var hasDependencies = _dependencies.Any(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
         
         var builder = ContextMenuBuilder<string>.Create()
-            .AddItem("查看域详情", Icons.Material.Filled.Info, ViewDomainDetailsAsync)
-            .AddItem("聚焦此域", Icons.Material.Filled.CenterFocusStrong, FocusOnDomainAsync)
+            .AddItem(L["DomainGraph:ContextMenu:ViewDomainDetails"].Value, Icons.Material.Filled.Info, ViewDomainDetailsAsync)
+            .AddItem(L["DomainGraph:ContextMenu:FocusDomain"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnDomainAsync)
             .AddDivider()
-            .AddItemIf(hasServices, "筛选此域服务", Icons.Material.Filled.FilterAlt, FilterByDomainAsync)
-            .AddItemIf(hasDependencies, "显示依赖关系", Icons.Material.Filled.AccountTree, ShowDependenciesAsync)
-            .AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddItemIf(hasServices, L["DomainGraph:ContextMenu:FilterDomainServices"].Value, Icons.Material.Filled.FilterAlt, FilterByDomainAsync)
+            .AddItemIf(hasDependencies, L["DomainGraph:ContextMenu:ShowDependencies"].Value, Icons.Material.Filled.AccountTree, ShowDependenciesAsync)
+            .AddItem(L["DomainGraph:ContextMenu:ClearFilters"].Value, Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem("复制域名", Icons.Material.Filled.ContentCopy, CopyDomainNameAsync);
+            .AddItem(L["DomainGraph:ContextMenu:CopyDomainName"].Value, Icons.Material.Filled.ContentCopy, CopyDomainNameAsync);
         
         return builder.Build();
     }
@@ -323,7 +324,7 @@
             var serviceCount = _domainServicesMap.GetValueOrDefault(domainName ?? "", new List<RegisteredServiceStatus>()).Count;
             var dependencyCount = _dependencies.Count(d => d.SourceDomain == domainName || d.TargetDomain == domainName);
             
-            Snackbar.Add($"域: {domain.DisplayName ?? domain.Name}\n服务数: {serviceCount}\n依赖关系: {dependencyCount}", Severity.Info);
+            Snackbar.Add(L["DomainGraph:Messages:DomainSummary", domain.DisplayName ?? domain.Name, serviceCount, dependencyCount].Value, Severity.Info);
         }
     }
     
@@ -342,7 +343,7 @@
             _selectedDomainsFilter = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"已筛选域: {domainName}", Severity.Info);
+            Snackbar.Add(L["DomainGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     
@@ -363,7 +364,7 @@
             _showOnlyWithDependencies = true;
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"显示与 {domainName} 相关的依赖关系", Severity.Info);
+            Snackbar.Add(L["DomainGraph:Messages:ShowingDependencies", domainName].Value, Severity.Info);
         }
     }
     
@@ -374,7 +375,7 @@
         _showOnlyWithServices = false;
         _showOnlyWithDependencies = false;
         await ApplyFilters();
-        Snackbar.Add("已清除所有筛选", Severity.Info);
+        Snackbar.Add(L["DomainGraph:Messages:ClearedFilters"].Value, Severity.Info);
     }
     
     private async Task CopyDomainNameAsync(string? domainName)
@@ -382,7 +383,7 @@
         if (!string.IsNullOrEmpty(domainName))
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", domainName);
-            Snackbar.Add("已复制到剪贴板", Severity.Success);
+            Snackbar.Add(L["DomainGraph:Messages:CopiedDomainName"].Value, Severity.Success);
         }
     }
 
@@ -407,6 +408,9 @@
         _showLayoutPanel = !_showLayoutPanel;
         if (_showLayoutPanel) _showFilterPanel = false;
     }
+
+    private string GetServiceDomainName(RegisteredServiceStatus service)
+        => service.DomainName ?? L["Shared:Values:Unknown"].Value;
 
     private async Task ApplyFilters()
     {
@@ -578,4 +582,26 @@
         public required string TargetDomain { get; set; }
         public int ServiceCount { get; set; }
     }
+
+    private object GetGraphTexts() => new
+    {
+        labels = new
+        {
+            serviceCount = L["DomainGraph:Graph:Labels:ServiceCount"].Value,
+            relatedServices = L["DomainGraph:Graph:Labels:RelatedServices"].Value,
+            statusCount = L["DomainGraph:Graph:Labels:StatusCount"].Value,
+            andMore = L["DomainGraph:Graph:Labels:AndMore"].Value,
+            noRelatedServices = L["DomainGraph:Graph:Labels:NoRelatedServices"].Value,
+            clickToViewDetails = L["DomainGraph:Graph:Labels:ClickToViewDetails"].Value,
+            dependencyServiceCount = L["DomainGraph:Graph:Labels:DependencyServiceCount"].Value
+        },
+        statuses = new
+        {
+            running = L["Shared:ServiceStatuses:Running"].Value,
+            updating = L["Shared:ServiceStatuses:Updating"].Value,
+            offline = L["Shared:ServiceStatuses:Offline"].Value,
+            error = L["Shared:ServiceStatuses:Error"].Value,
+            unknown = L["Shared:ServiceStatuses:Unknown"].Value
+        }
+    };
 }

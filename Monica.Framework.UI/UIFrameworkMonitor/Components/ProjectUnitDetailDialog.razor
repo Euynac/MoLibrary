@@ -6,12 +6,13 @@
 @using Monica.Framework.Services
 @using Monica.Tool.Extensions
 @inject IFrameworkMonitorService FrameworkMonitorService
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
 <MudDialog @bind-Visible="Visible" Options="DialogOptions" OnBackdropClick="HandleBackdropClick">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-3" />
-            项目单元详情
+            @L["ProjectUnitDetailDialog:Title"]
         </MudText>
     </TitleContent>
     <DialogContent>
@@ -20,73 +21,73 @@
             <MudSimpleTable Style="overflow-x: auto;" Elevation="0">
                 <tbody>
                     <tr>
-                        <td style="min-width: 120px;"><MudText Typo="Typo.subtitle2">单元名称</MudText></td>
+                        <td style="min-width: 120px;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Name"]</MudText></td>
                         <td><MudText>@SelectedUnit.Title</MudText></td>
                     </tr>
                     <tr>
-                        <td><MudText Typo="Typo.subtitle2">完整名称</MudText></td>
+                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:FullName"]</MudText></td>
                         <td><MudText>@SelectedUnit.Key</MudText></td>
                     </tr>
                     @if (!string.IsNullOrEmpty(SelectedUnit.Author))
                     {
                         <tr>
-                            <td><MudText Typo="Typo.subtitle2">作者</MudText></td>
+                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Author"]</MudText></td>
                             <td><MudText>@SelectedUnit.Author</MudText></td>
                         </tr>
                     }
                     @if (SelectedUnit.Group?.Any() == true)
                     {
                         <tr>
-                            <td><MudText Typo="Typo.subtitle2">分组</MudText></td>
+                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Group"]</MudText></td>
                             <td><MudText>@string.Join(", ", SelectedUnit.Group)</MudText></td>
                         </tr>
                     }
                     @if (!string.IsNullOrEmpty(SelectedUnit.Description))
                     {
                         <tr>
-                            <td><MudText Typo="Typo.subtitle2">描述</MudText></td>
+                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Description"]</MudText></td>
                             <td><MudText>@SelectedUnit.Description</MudText></td>
                         </tr>
                     }
                     <tr>
-                        <td><MudText Typo="Typo.subtitle2">单元类型</MudText></td>
+                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Type"]</MudText></td>
                         <td>
-                            <MudChip T="string" Size="Size.Small" 
+                            <MudChip T="string" Size="Size.Small"
                                      Style="@($"background-color: {GetUnitTypeColor(SelectedUnit.UnitType)}; color: white;")">
-                                @SelectedUnit.UnitType.ToString()
+                                @L.GetProjectUnitTypeText(SelectedUnit.UnitType)
                             </MudChip>
                         </td>
                     </tr>
                     <tr>
-                        <td><MudText Typo="Typo.subtitle2">统计信息</MudText></td>
+                        <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Statistics"]</MudText></td>
                         <td>
                             <MudChipSet T="string">
                                 @if (SelectedUnit.DependencyUnits.Count > 0)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info"
                                              Icon="@Icons.Material.Filled.Link">
-                                        依赖 @SelectedUnit.DependencyUnits.Count
+                                        @L.GetCountText(FrameworkMonitorCountText.Dependency, SelectedUnit.DependencyUnits.Count)
                                     </MudChip>
                                 }
                                 @if (SelectedUnit.DependedByCount > 0)
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Success"
                                              Icon="@Icons.Material.Filled.CallReceived">
-                                        被依赖 @SelectedUnit.DependedByCount
+                                        @L.GetCountText(FrameworkMonitorCountText.DependedBy, SelectedUnit.DependedByCount)
                                     </MudChip>
                                 }
                                 @if (SelectedUnit.Attributes.Any())
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
                                              Icon="@Icons.Material.Filled.Label">
-                                        特性 @SelectedUnit.Attributes.Count
+                                        @L.GetCountText(FrameworkMonitorCountText.Attribute, SelectedUnit.Attributes.Count)
                                     </MudChip>
                                 }
                                 @if (SelectedUnit.Methods.Any())
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Primary"
                                              Icon="@Icons.Material.Filled.Functions">
-                                        方法 @SelectedUnit.Methods.Count
+                                        @L.GetCountText(FrameworkMonitorCountText.Method, SelectedUnit.Methods.Count)
                                     </MudChip>
                                 }
                                 @if (SelectedUnit.Alerts.Any())
@@ -99,21 +100,21 @@
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Error"
                                                  Icon="@Icons.Material.Filled.Error">
-                                            错误 @errorCount
+                                            @L.GetCountText(FrameworkMonitorCountText.Error, errorCount)
                                         </MudChip>
                                     }
                                     @if (warningCount > 0)
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                                                  Icon="@Icons.Material.Filled.Warning">
-                                            警告 @warningCount
+                                            @L.GetCountText(FrameworkMonitorCountText.Warning, warningCount)
                                         </MudChip>
                                     }
                                     @if (infoCount > 0)
                                     {
                                         <MudChip T="string" Size="Size.Small" Color="Color.Info"
                                                  Icon="@Icons.Material.Filled.Info">
-                                            信息 @infoCount
+                                            @L.GetCountText(FrameworkMonitorCountText.Info, infoCount)
                                         </MudChip>
                                     }
                                 }
@@ -123,7 +124,7 @@
                     @if (SelectedUnit.DependencyUnits.Any())
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">依赖单元</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Dependencies"]</MudText></td>
                             <td>
                                 <MudChipSet T="string">
                                     @foreach (var dep in SelectedUnit.DependencyUnits)
@@ -138,19 +139,13 @@
                             </td>
                         </tr>
                     }
-                    @* Configuration单元的IsOffline信息 *@
                     @if (SelectedUnit.UnitType == EProjectUnitType.Configuration && _originalProjectUnit is UnitConfiguration configUnit)
                     {
                         <tr>
-                            <td><MudText Typo="Typo.subtitle2">配置模式</MudText></td>
+                            <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConfigurationMode"]</MudText></td>
                             <td>
                                 @{
-                                    var modeText = configUnit.IsOffline switch
-                                    {
-                                        true => "离线配置",
-                                        false => "在线配置", 
-                                        null => "未知模式"
-                                    };
+                                    var modeText = L.GetConfigurationModeText(configUnit.IsOffline);
                                     var modeColor = configUnit.IsOffline switch
                                     {
                                         true => Color.Success,
@@ -169,18 +164,17 @@
                                 </MudChip>
                             </td>
                         </tr>
-                        @* Configuration依赖详情 *@
                         @if (configUnit.ConfigurationDependencies.Any())
                         {
                             <tr>
-                                <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">使用方式</MudText></td>
+                                <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConfigurationUsage"]</MudText></td>
                                 <td>
                                     <MudExpansionPanels>
                                         <MudExpansionPanel>
                                             <TitleContent>
                                                 <div style="display: flex; align-items: center">
                                                     <MudIcon Icon="@Icons.Material.Filled.Link" class="mr-3" />
-                                                    <MudText>配置使用详情 (@configUnit.ConfigurationDependencies.Count)</MudText>
+                                                    <MudText>@L["ProjectUnitDetailDialog:Sections:ConfigurationUsageDetails", configUnit.ConfigurationDependencies.Count]</MudText>
                                                 </div>
                                             </TitleContent>
                                             <ChildContent>
@@ -189,14 +183,7 @@
                                                     {
                                                         var unit = dependency.Key;
                                                         var usage = dependency.Value;
-                                                        var usageText = usage switch
-                                                        {
-                                                            EConfigurationUsageType.Offline => "IOptions (离线)",
-                                                            EConfigurationUsageType.OnlineSnapshot => "IOptionsSnapshot (在线)",
-                                                            EConfigurationUsageType.OnlineMonitor => "IOptionsMonitor (在线)",
-                                                            EConfigurationUsageType.Unknown => "未知方式",
-                                                            _ => "未知方式"
-                                                        };
+                                                        var usageText = L.GetConfigurationUsageText(usage);
                                                         var usageColor = usage switch
                                                         {
                                                             EConfigurationUsageType.Offline => Color.Success,
@@ -222,7 +209,7 @@
                                                                     @unit.Title
                                                                 </MudChip>
                                                                 <MudText Typo="Typo.caption" Class="ml-2" Style="color: var(--mud-palette-text-secondary);">
-                                                                    (@unit.UnitType.ToString())
+                                                                    (@L.GetProjectUnitTypeText(unit.UnitType))
                                                                 </MudText>
                                                             </div>
                                                             <MudChip T="string" Size="Size.Small" Color="@usageColor" Icon="@usageIcon">
@@ -238,18 +225,17 @@
                             </tr>
                         }
                     }
-                    @* 构造函数参数信息 *@
                     @if (_originalProjectUnit?.ConstructorParameterTypes.Any() == true)
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">构造参数</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:ConstructorParameters"]</MudText></td>
                             <td>
                                 <MudExpansionPanels>
                                     <MudExpansionPanel>
                                         <TitleContent>
                                             <div style="display: flex; align-items: center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Construction" class="mr-3" />
-                                                <MudText>构造函数参数 (@_originalProjectUnit.ConstructorParameterTypes.Count)</MudText>
+                                                <MudText>@L["ProjectUnitDetailDialog:Sections:ConstructorParameters", _originalProjectUnit.ConstructorParameterTypes.Count]</MudText>
                                             </div>
                                         </TitleContent>
                                         <ChildContent>
@@ -276,7 +262,7 @@
                     @if (DependedByUnits != null && DependedByUnits.Any())
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">被依赖单元</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:DependedBy"]</MudText></td>
                             <td>
                                 <MudChipSet T="string">
                                     @foreach (var dep in DependedByUnits)
@@ -294,7 +280,7 @@
                     @if (SelectedUnit.Attributes.Any())
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">特性</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Attributes"]</MudText></td>
                             <td>
                                 <MudChipSet T="string">
                                     @foreach (var attr in SelectedUnit.Attributes)
@@ -310,14 +296,14 @@
                     @if (SelectedUnit.Methods.Any())
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">方法信息</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Methods"]</MudText></td>
                             <td>
                                 <MudExpansionPanels>
                                     <MudExpansionPanel>
                                         <TitleContent>
                                             <div style="display: flex; align-items: center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Functions" class="mr-3" />
-                                                <MudText>公共方法 (@SelectedUnit.Methods.Count)</MudText>
+                                                <MudText>@L["ProjectUnitDetailDialog:Sections:PublicMethods", SelectedUnit.Methods.Count]</MudText>
                                             </div>
                                         </TitleContent>
                                         <ChildContent>
@@ -333,28 +319,28 @@
                                                                 <MudChipSet T="string" Class="ml-2">
                                                                     @if (method.MethodInfo.IsStatic)
                                                                     {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" 
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
                                                                                  Icon="@Icons.Material.Filled.Public">
-                                                                            Static
+                                                                            @L.GetMethodModifierText(FrameworkMonitorMethodModifier.Static)
                                                                         </MudChip>
                                                                     }
                                                                     @if (method.MethodInfo.IsVirtual && !method.MethodInfo.IsAbstract)
                                                                     {
                                                                         <MudChip T="string" Size="Size.Small" Color="Color.Tertiary">
-                                                                            Virtual
+                                                                            @L.GetMethodModifierText(FrameworkMonitorMethodModifier.Virtual)
                                                                         </MudChip>
                                                                     }
                                                                     @if (method.MethodInfo.IsAbstract)
                                                                     {
                                                                         <MudChip T="string" Size="Size.Small" Color="Color.Warning">
-                                                                            Abstract
+                                                                            @L.GetMethodModifierText(FrameworkMonitorMethodModifier.Abstract)
                                                                         </MudChip>
                                                                     }
                                                                     @if (IsAsyncMethod(method.MethodInfo))
                                                                     {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info"
                                                                                  Icon="@Icons.Material.Filled.Sync">
-                                                                            Async
+                                                                            @L.GetMethodModifierText(FrameworkMonitorMethodModifier.Async)
                                                                         </MudChip>
                                                                     }
                                                                 </MudChipSet>
@@ -379,7 +365,7 @@
                     @if (SelectedUnit.Alerts.Any())
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">告警信息</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Alerts"]</MudText></td>
                             <td>
                                 <MudStack Spacing="1">
                                     @foreach (var alert in SelectedUnit.Alerts.OrderByDescending(a => a.Level))
@@ -401,7 +387,7 @@
                                         <div class="d-flex align-center">
                                             <MudIcon Icon="@alertIcon" Color="@alertColor" Size="Size.Small" Class="mr-2" />
                                             <MudText>
-                                                <strong>[@alert.Level]</strong> @alert.Message
+                                                <strong>[@L.GetAlertLevelText(alert.Level)]</strong> @alert.Message
                                                 @if (!string.IsNullOrEmpty(alert.Source))
                                                 {
                                                     <MudText Typo="Typo.caption" Class="ml-2" Style="display: inline;">(@alert.Source)</MudText>
@@ -419,14 +405,14 @@
                     @if (unitInfoAttribute?.MarkdownDocs != null)
                     {
                         <tr>
-                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">文档</MudText></td>
+                            <td style="vertical-align: top;"><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Documentation"]</MudText></td>
                             <td>
                                 <MudExpansionPanels>
                                     <MudExpansionPanel>
                                         <TitleContent>
                                             <div style="display: flex; align-items: center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Description" class="mr-3" />
-                                                <MudText>Markdown文档</MudText>
+                                                <MudText>@L["ProjectUnitDetailDialog:Sections:MarkdownDocument"]</MudText>
                                             </div>
                                         </TitleContent>
                                         <ChildContent>
@@ -445,7 +431,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">关闭</MudButton>
+        <MudButton OnClick="Close">@L["Shared:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -472,22 +458,22 @@
     {
         if (SelectedUnit != null && AllProjectUnits != null)
         {
-            // 计算被依赖的单元（哪些单元依赖了当前单元）
+            // Calculate units that depend on the current unit.
             DependedByUnits = AllProjectUnits
                 .Where(u => u.DependencyUnits.Any(d => d.Key == SelectedUnit.Key))
                 .ToList();
-            
-            // 尝试获取原始ProjectUnit实例
+
+            // Try to load the original ProjectUnit instance.
             _originalProjectUnit = FrameworkMonitorService.GetProjectUnitByKey(SelectedUnit.Key);
         }
     }
     
     private async Task OnChipClick(string nodeKey)
     {
-        // 关闭对话框
+        // Close the dialog first.
         await VisibleChanged.InvokeAsync(false);
-        
-        // 触发聚焦事件
+
+        // Then request graph focus.
         if (OnNodeFocus.HasDelegate)
         {
             await OnNodeFocus.InvokeAsync(nodeKey);
@@ -501,7 +487,7 @@
     
     private async Task HandleBackdropClick()
     {
-        // 手动处理背景点击，确保状态正确同步
+        // Keep dialog state synchronized when the backdrop is clicked.
         await VisibleChanged.InvokeAsync(false);
     }
     

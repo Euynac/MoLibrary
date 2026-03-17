@@ -73,7 +73,7 @@ export class ProjectUnitCardRenderer {
                 
                 // 对于方法签名，限制最大宽度
                 let effectiveValueWidth = valueWidth;
-                if (item.key === '方法' && valueWidth > 200) {
+                if (item.kind === 'method' && valueWidth > 200) {
                     effectiveValueWidth = Math.min(valueWidth, 250);
                 }
                 
@@ -198,13 +198,13 @@ export class ProjectUnitCardRenderer {
             .style('filter', `url(#shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)})`)
             .style('cursor', 'pointer');
         
-        // 绘制三层结构
+        // Draw the three card sections.
         this.drawHeader(card, nodeData, width, height, config.header.height);
         
         const contentItems = nodeData.metadata || [];
         const contentHeight = height - config.header.height - this.calculateFooterHeight(nodeData, width);
         const contentStartY = -height / 2 + config.header.height;
-        this.drawContent(card, contentItems, width, contentHeight, contentStartY);
+        this.drawContent(card, nodeData, contentItems, width, contentHeight, contentStartY);
         
         const footerHeight = this.calculateFooterHeight(nodeData, width);
         const footerY = height / 2 - footerHeight;
@@ -237,9 +237,9 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制内容区 - 显示方法信息等元数据
+     * Draw the content area and show metadata such as methods.
      */
-    drawContent(card, contentItems, width, height, startY) {
+    drawContent(card, nodeData, contentItems, width, height, startY) {
         const { config, style } = this;
         
         if (contentItems.length === 0) {
@@ -252,7 +252,7 @@ export class ProjectUnitCardRenderer {
                 .style('font-size', config.content.fontSize)
                 .style('opacity', 0.6)
                 .style('pointer-events', 'none')
-                .text('暂无元数据');
+                .text(nodeData.noMetadataText || 'No metadata');
             return;
         }
         
@@ -283,7 +283,7 @@ export class ProjectUnitCardRenderer {
             let displayValue = item.value;
             
             // 对方法信息进行特殊处理
-            if (item.key === '方法') {
+            if (item.kind === 'method') {
                 const colonIndex = item.value.indexOf(':');
                 if (colonIndex > 0) {
                     const methodName = item.value.substring(0, colonIndex);

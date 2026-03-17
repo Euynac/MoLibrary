@@ -18,9 +18,9 @@ let graphInstance = null;
  * @param {boolean} isDarkMode - 是否为暗色模式
  * @param {Object} dotNetRef - .NET对象引用
  */
-export function initializeGraph(containerId, isDarkMode = false, dotNetRef = null) {
+export function initializeGraph(containerId, isDarkMode = false, dotNetRef = null, texts = {}) {
     dispose();
-    graphInstance = new ServiceGraph(containerId, { isDarkMode, dotNetRef });
+    graphInstance = new ServiceGraph(containerId, { isDarkMode, dotNetRef, texts });
 }
 
 /**
@@ -109,6 +109,38 @@ class ServiceGraph extends GraphBase {
         this.dotNetRef = options.dotNetRef;
         this.animations = new Map(); // 存储动画定时器
         this.currentLayout = 'force';
+        this.texts = {
+            labels: {
+                appId: 'AppId',
+                domain: 'Domain',
+                project: 'Project',
+                status: 'Status',
+                instances: 'Instances',
+                version: 'Version',
+                notAvailable: 'N/A',
+                unknown: 'Unknown'
+            },
+            statuses: {
+                running: 'Running',
+                updating: 'Updating',
+                offline: 'Offline',
+                error: 'Error',
+                unknown: 'Unknown'
+            }
+        };
+
+        if (options.texts) {
+            this.texts = {
+                labels: {
+                    ...this.texts.labels,
+                    ...(options.texts.labels || {})
+                },
+                statuses: {
+                    ...this.texts.statuses,
+                    ...(options.texts.statuses || {})
+                }
+            };
+        }
         
         // 创建力导向布局管理器
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
@@ -476,14 +508,14 @@ class ServiceGraph extends GraphBase {
     buildTooltipContent(node) {
         const statusText = this.getStatusText(node.status);
         let content = `<strong>${node.name}</strong><br/>`;
-        content += `<strong>AppId:</strong> ${node.id}<br/>`;
-        content += `<strong>域:</strong> ${node.domain}<br/>`;
-        if (node.project) content += `<strong>项目:</strong> ${node.project}<br/>`;
-        content += `<strong>状态:</strong> ${statusText}<br/>`;
-        content += `<strong>实例:</strong> ${node.runningInstances}/${node.totalInstances}`;
+        content += `<strong>${this.texts.labels.appId}:</strong> ${node.id}<br/>`;
+        content += `<strong>${this.texts.labels.domain}:</strong> ${node.domain || this.texts.labels.unknown}<br/>`;
+        if (node.project) content += `<strong>${this.texts.labels.project}:</strong> ${node.project}<br/>`;
+        content += `<strong>${this.texts.labels.status}:</strong> ${statusText}<br/>`;
+        content += `<strong>${this.texts.labels.instances}:</strong> ${node.runningInstances}/${node.totalInstances}`;
         
         if (node.instanceInfo) {
-            content += `<br/><strong>版本:</strong> ${node.instanceInfo.registerInfo?.assemblyVersion || 'N/A'}`;
+            content += `<br/><strong>${this.texts.labels.version}:</strong> ${node.instanceInfo.registerInfo?.assemblyVersion || this.texts.labels.notAvailable}`;
         }
         
         return content;
@@ -491,11 +523,11 @@ class ServiceGraph extends GraphBase {
 
     getStatusText(status) {
         switch (status) {
-            case 'Running': return '运行中';
-            case 'Updating': return '更新中';
-            case 'Offline': return '离线';
-            case 'Error': return '异常';
-            default: return '未知';
+            case 'Running': return this.texts.statuses.running;
+            case 'Updating': return this.texts.statuses.updating;
+            case 'Offline': return this.texts.statuses.offline;
+            case 'Error': return this.texts.statuses.error;
+            default: return this.texts.statuses.unknown;
         }
     }
 

@@ -8,6 +8,7 @@
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
 @implements IAsyncDisposable
 
@@ -17,14 +18,14 @@
                   Justify="Justify.SpaceBetween"
                   AlignItems="AlignItems.Center"
                   Class="framework-monitor-tab-section__header">
-            <MudText Typo="Typo.h6">枚举信息查看器</MudText>
+            <MudText Typo="Typo.h6">@L["EnumInfoViewer:Header:Title"]</MudText>
             <div class="framework-monitor-tab-section__actions">
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            OnClick="LoadAllEnumsAsync"
                            StartIcon="@Icons.Material.Filled.Refresh"
                            Disabled="@_loading">
-                    刷新
+                    @L["Shared:Actions:Refresh"]
                 </MudButton>
             </div>
         </MudStack>
@@ -36,7 +37,7 @@
                                   ValueChanged="OnSearchTextChanged"
                                   Immediate="true"
                                   Clearable="true"
-                                  Placeholder="搜索程序集、枚举和值中的任意内容"
+                                  Placeholder="@L["EnumInfoViewer:Search:Placeholder"]"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search"
                                   FullWidth="true"
@@ -51,14 +52,14 @@
                                  Icon="@Icons.Material.Filled.Search">
                             @GetSearchSummary()
                         </MudChip>
-                        <MudTooltip Text="上一个匹配">
+                        <MudTooltip Text="@L["Shared:Actions:PreviousMatch"]">
                             <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward"
                                            Color="Color.Primary"
                                            Variant="Variant.Outlined"
                                            OnClick="GoToPreviousMatchAsync"
                                            Disabled="@(!HasSearchMatches)" />
                         </MudTooltip>
-                        <MudTooltip Text="下一个匹配">
+                        <MudTooltip Text="@L["Shared:Actions:NextMatch"]">
                             <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward"
                                            Color="Color.Primary"
                                            Variant="Variant.Outlined"
@@ -69,7 +70,7 @@
                     else
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            输入关键词后会在程序集、枚举和枚举值中同步高亮定位
+                            @L["EnumInfoViewer:Search:Hint"]
                         </MudText>
                     }
                 </div>
@@ -84,7 +85,7 @@
                 <MudItem xs="12" md="4">
                     <MudPaper Class="enum-info-viewer__panel" Elevation="1">
                         <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">程序集</div>
+                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Assemblies"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetAssemblyPanelSummary()</div>
                         </div>
 
@@ -108,7 +109,7 @@
                                                                 HighlightedTexts="@_searchTerms"
                                                                 Class="enum-info-viewer__highlight" />
                                             </div>
-                                            <div class="enum-info-viewer__item-badge">@group.Enums.Count 个枚举</div>
+                                            <div class="enum-info-viewer__item-badge">@L.GetCountText(FrameworkMonitorCountText.Enum, group.Enums.Count)</div>
                                         </div>
                                         @if (!string.IsNullOrWhiteSpace(group.From))
                                         {
@@ -124,7 +125,7 @@
                             else
                             {
                                 <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    暂无枚举数据，请点击刷新按钮加载数据。
+                                    @L["EnumInfoViewer:States:Empty"]
                                 </MudAlert>
                             }
                         </div>
@@ -134,7 +135,7 @@
                 <MudItem xs="12" md="4">
                     <MudPaper Class="enum-info-viewer__panel" Elevation="1">
                         <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">枚举列表</div>
+                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Enums"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetEnumPanelSummary()</div>
                         </div>
 
@@ -158,7 +159,7 @@
                                                                 HighlightedTexts="@_searchTerms"
                                                                 Class="enum-info-viewer__highlight" />
                                             </div>
-                                            <div class="enum-info-viewer__item-badge">@enumInfo.Values.Count 个值</div>
+                                            <div class="enum-info-viewer__item-badge">@L.GetCountText(FrameworkMonitorCountText.EnumValue, enumInfo.Values.Count)</div>
                                         </div>
                                     </div>
                                 }
@@ -166,7 +167,7 @@
                             else
                             {
                                 <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    请先从左侧选择一个程序集。
+                                    @L["EnumInfoViewer:States:SelectAssembly"]
                                 </MudAlert>
                             }
                         </div>
@@ -176,7 +177,7 @@
                 <MudItem xs="12" md="4">
                     <MudPaper Class="enum-info-viewer__panel" Elevation="1">
                         <div class="enum-info-viewer__panel-header">
-                            <div class="enum-info-viewer__panel-title">枚举值</div>
+                            <div class="enum-info-viewer__panel-title">@L["EnumInfoViewer:Panels:Values"]</div>
                             <div class="enum-info-viewer__panel-subtitle">@GetValuePanelSummary()</div>
                         </div>
 
@@ -192,7 +193,7 @@
                                                         Class="enum-info-viewer__highlight" />
                                     </div>
                                     <div class="enum-info-viewer__selected-enum-meta">
-                                        共 @SelectedEnum.Values.Count 个枚举值
+                                        @L.GetCountText(FrameworkMonitorCountText.EnumValue, SelectedEnum.Values.Count)
                                     </div>
                                 </div>
 
@@ -233,7 +234,7 @@
                             else
                             {
                                 <MudAlert Severity="Severity.Info" Class="enum-info-viewer__empty">
-                                    请先从中间列表选择一个枚举。
+                                    @L["EnumInfoViewer:States:SelectEnum"]
                                 </MudAlert>
                             }
                         </div>
@@ -329,7 +330,7 @@
             var result = await FrameworkMonitorService.GetEnumInfoAsync();
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
                 return;
             }
 
@@ -346,7 +347,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -623,45 +624,45 @@
     {
         if (!_enumGroups.Any())
         {
-            return "未加载数据";
+            return L["EnumInfoViewer:Summaries:NotLoaded"];
         }
 
-        return $"共 {_enumGroups.Count} 个程序集";
+        return L.GetCountText(FrameworkMonitorCountText.Assembly, _enumGroups.Count);
     }
 
     private string GetEnumPanelSummary()
     {
         if (SelectedAssembly is null)
         {
-            return "选择程序集后显示";
+            return L["EnumInfoViewer:Summaries:SelectAssembly"];
         }
 
-        return $"共 {SelectedAssembly.Enums.Count} 个枚举";
+        return L.GetCountText(FrameworkMonitorCountText.Enum, SelectedAssembly.Enums.Count);
     }
 
     private string GetValuePanelSummary()
     {
         if (SelectedEnum is null)
         {
-            return "选择枚举后显示";
+            return L["EnumInfoViewer:Summaries:SelectEnum"];
         }
 
-        return $"共 {SelectedEnum.Values.Count} 个枚举值";
+        return L.GetCountText(FrameworkMonitorCountText.EnumValue, SelectedEnum.Values.Count);
     }
 
     private string GetSearchSummary()
     {
         if (!HasSearchQuery)
         {
-            return "输入关键词开始搜索";
+            return L["EnumInfoViewer:Summaries:StartSearch"];
         }
 
         if (!HasSearchMatches)
         {
-            return "0 个匹配";
+            return L.GetCountText(FrameworkMonitorCountText.Match, 0);
         }
 
-        return $"{_currentMatchIndex + 1} / {_searchMatches.Count} 个匹配";
+        return L["EnumInfoViewer:Summaries:MatchProgress", _currentMatchIndex + 1, _searchMatches.Count];
     }
 
     private Color GetSearchSummaryColor()
@@ -749,7 +750,7 @@
     {
         if (string.IsNullOrWhiteSpace(fullName))
         {
-            return "Unknown";
+            return L["Shared:Labels:Unknown"];
         }
 
         var parts = fullName.Split(',');

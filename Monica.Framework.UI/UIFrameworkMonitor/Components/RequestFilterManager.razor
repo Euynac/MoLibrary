@@ -2,20 +2,21 @@
 @using Monica.Tool.MoResponse
 @inject IFrameworkMonitorService FrameworkMonitorService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
 <div class="framework-monitor-tab-section">
     <MudStack Row="true"
               Justify="Justify.SpaceBetween"
               AlignItems="AlignItems.Center"
               Class="framework-monitor-tab-section__header">
-        <MudText Typo="Typo.h6">请求过滤管理</MudText>
+        <MudText Typo="Typo.h6">@L["RequestFilterManager:Header:Title"]</MudText>
         <div class="framework-monitor-tab-section__actions">
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
                       OnClick="LoadDisabledUrlsAsync"
                       StartIcon="@Icons.Material.Filled.Refresh"
                       Disabled="@_loading">
-                刷新状态
+                @L["RequestFilterManager:Actions:RefreshState"]
             </MudButton>
         </div>
     </MudStack>
@@ -23,66 +24,66 @@
         <MudGrid>
             <MudItem xs="12" md="6">
                 <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">URL管理</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:UrlManagement"]</MudText>
                     <MudStack Spacing="3">
-                        <MudTextField @bind-Value="_newUrl" 
-                                     Label="URL路径" 
+                        <MudTextField @bind-Value="_newUrl"
+                                     Label="@L["RequestFilterManager:Fields:UrlPath"]"
                                      Variant="Variant.Outlined"
-                                     Placeholder="例如: /api/test" />
-                        
+                                     Placeholder="@L["RequestFilterManager:Fields:UrlPlaceholder"]" />
+
                         <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Filled" 
-                                      Color="Color.Error" 
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Error"
                                       OnClick="@(() => ManageUrlAsync(true))"
                                       StartIcon="@Icons.Material.Filled.Block"
                                       Disabled="@_managing">
-                                禁用
+                                @L["RequestFilterManager:Actions:Disable"]
                             </MudButton>
-                            <MudButton Variant="Variant.Filled" 
-                                      Color="Color.Success" 
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Success"
                                       OnClick="@(() => ManageUrlAsync(false))"
                                       StartIcon="@Icons.Material.Filled.CheckCircle"
                                       Disabled="@_managing">
-                                启用
+                                @L["RequestFilterManager:Actions:Enable"]
                             </MudButton>
                         </MudStack>
                     </MudStack>
                 </MudPaper>
             </MudItem>
-            
+
             <MudItem xs="12" md="6">
                 <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">批量管理</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:BatchManagement"]</MudText>
                     <MudStack Spacing="3">
-                        <MudTextField @bind-Value="_batchUrls" 
-                                     Label="批量URL (每行一个)" 
+                        <MudTextField @bind-Value="_batchUrls"
+                                     Label="@L["RequestFilterManager:Fields:BatchUrls"]"
                                      Variant="Variant.Outlined"
                                      Lines="5"
-                                     Placeholder="例如:&#10;/api/test1&#10;/api/test2&#10;/api/test3" />
-                        
+                                     Placeholder="@L["RequestFilterManager:Fields:BatchUrlsPlaceholder"]" />
+
                         <MudStack Row="true" Spacing="2">
-                            <MudButton Variant="Variant.Outlined" 
-                                      Color="Color.Error" 
+                            <MudButton Variant="Variant.Outlined"
+                                      Color="Color.Error"
                                       OnClick="@(() => BatchManageUrlsAsync(true))"
                                       StartIcon="@Icons.Material.Filled.Block"
                                       Disabled="@_managing">
-                                批量禁用
+                                @L["RequestFilterManager:Actions:BatchDisable"]
                             </MudButton>
-                            <MudButton Variant="Variant.Outlined" 
-                                      Color="Color.Success" 
+                            <MudButton Variant="Variant.Outlined"
+                                      Color="Color.Success"
                                       OnClick="@(() => BatchManageUrlsAsync(false))"
                                       StartIcon="@Icons.Material.Filled.CheckCircle"
                                       Disabled="@_managing">
-                                批量启用
+                                @L["RequestFilterManager:Actions:BatchEnable"]
                             </MudButton>
                         </MudStack>
                     </MudStack>
                 </MudPaper>
             </MudItem>
-            
+
             <MudItem xs="12">
                 <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">当前被禁用的URL</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["RequestFilterManager:Sections:DisabledUrls"]</MudText>
                     @if (_loading)
                     {
                         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
@@ -100,21 +101,21 @@
                                 </MudChip>
                             }
                         </MudStack>
-                        
+
                         <MudDivider Class="my-4" />
-                        
-                        <MudButton Variant="Variant.Outlined" 
-                                  Color="Color.Success" 
+
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Success"
                                   OnClick="EnableAllUrlsAsync"
                                   StartIcon="@Icons.Material.Filled.CheckCircle"
                                   Disabled="@_managing">
-                            启用所有URL
+                            @L["RequestFilterManager:Actions:EnableAllUrls"]
                         </MudButton>
                     }
                     else
                     {
                         <MudAlert Severity="Severity.Success">
-                            当前没有被禁用的URL，所有请求都可以正常访问。
+                            @L["RequestFilterManager:States:EmptyDisabledUrls"]
                         </MudAlert>
                     }
                 </MudPaper>
@@ -124,9 +125,9 @@
 </div>
 
 @code {
-    private List<string> _disabledUrls = new();
-    private bool _loading = false;
-    private bool _managing = false;
+    private List<string> _disabledUrls = [];
+    private bool _loading;
+    private bool _managing;
     private string _newUrl = string.Empty;
     private string _batchUrls = string.Empty;
 
@@ -148,7 +149,7 @@
             var result = await FrameworkMonitorService.ManageRequestFilterAsync(null, null);
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
                 return;
             }
 
@@ -156,7 +157,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -169,7 +170,7 @@
     {
         if (string.IsNullOrWhiteSpace(_newUrl))
         {
-            Snackbar.Add("请输入URL路径", Severity.Warning);
+            Snackbar.Add(L["RequestFilterManager:Messages:RequireUrl"], Severity.Warning);
             return;
         }
 
@@ -180,22 +181,25 @@
         {
             var urls = new List<string> { _newUrl.Trim() };
             var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, disable);
-            
+
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"操作失败: {error}", Severity.Error);
+                Snackbar.Add(L["RequestFilterManager:Messages:OperationFailed", error], Severity.Error);
                 return;
             }
 
             _disabledUrls = data;
             _newUrl = string.Empty;
-            
-            var action = disable ? "禁用" : "启用";
-            Snackbar.Add($"URL {action}成功", Severity.Success);
+
+            Snackbar.Add(
+                disable
+                    ? L["RequestFilterManager:Messages:DisableSucceeded"]
+                    : L["RequestFilterManager:Messages:EnableSucceeded"],
+                Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"操作异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["RequestFilterManager:Messages:OperationException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -208,7 +212,7 @@
     {
         if (string.IsNullOrWhiteSpace(_batchUrls))
         {
-            Snackbar.Add("请输入要管理的URL列表", Severity.Warning);
+            Snackbar.Add(L["RequestFilterManager:Messages:RequireBatchUrls"], Severity.Warning);
             return;
         }
 
@@ -219,7 +223,7 @@
 
         if (!urls.Any())
         {
-            Snackbar.Add("没有有效的URL", Severity.Warning);
+            Snackbar.Add(L["RequestFilterManager:Messages:NoValidUrls"], Severity.Warning);
             return;
         }
 
@@ -229,22 +233,25 @@
         try
         {
             var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, disable);
-            
+
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"批量操作失败: {error}", Severity.Error);
+                Snackbar.Add(L["RequestFilterManager:Messages:BatchOperationFailed", error], Severity.Error);
                 return;
             }
 
             _disabledUrls = data;
             _batchUrls = string.Empty;
-            
-            var action = disable ? "禁用" : "启用";
-            Snackbar.Add($"批量{action}成功，共处理 {urls.Count} 个URL", Severity.Success);
+
+            Snackbar.Add(
+                disable
+                    ? L["RequestFilterManager:Messages:BatchDisableSucceeded", urls.Count]
+                    : L["RequestFilterManager:Messages:BatchEnableSucceeded", urls.Count],
+                Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"批量操作异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["RequestFilterManager:Messages:BatchOperationException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -262,19 +269,19 @@
         {
             var urls = new List<string> { url };
             var result = await FrameworkMonitorService.ManageRequestFilterAsync(urls, false);
-            
+
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"启用失败: {error}", Severity.Error);
+                Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleFailed", error], Severity.Error);
                 return;
             }
 
             _disabledUrls = data;
-            Snackbar.Add($"URL {url} 启用成功", Severity.Success);
+            Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleSucceeded", url], Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"启用异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["RequestFilterManager:Messages:EnableSingleException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -296,19 +303,19 @@
         try
         {
             var result = await FrameworkMonitorService.ManageRequestFilterAsync(_disabledUrls.ToList(), false);
-            
+
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"启用所有URL失败: {error}", Severity.Error);
+                Snackbar.Add(L["RequestFilterManager:Messages:EnableAllFailed", error], Severity.Error);
                 return;
             }
 
             _disabledUrls = data;
-            Snackbar.Add("所有URL启用成功", Severity.Success);
+            Snackbar.Add(L["RequestFilterManager:Messages:EnableAllSucceeded"], Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"启用所有URL异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["RequestFilterManager:Messages:EnableAllException", ex.Message], Severity.Error);
         }
         finally
         {

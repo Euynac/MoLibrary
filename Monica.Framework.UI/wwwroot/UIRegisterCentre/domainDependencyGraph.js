@@ -18,9 +18,9 @@ let graphInstance = null;
  * @param {boolean} isDarkMode - 是否为暗色模式
  * @param {Object} dotNetHelper - .NET回调对象
  */
-export function initializeGraph(containerId, isDarkMode = false, dotNetHelper = null) {
+export function initializeGraph(containerId, isDarkMode = false, dotNetHelper = null, texts = {}) {
     dispose();
-    graphInstance = new DomainDependencyGraph(containerId, { isDarkMode, dotNetHelper });
+    graphInstance = new DomainDependencyGraph(containerId, { isDarkMode, dotNetHelper, texts });
 }
 
 /**
@@ -109,6 +109,37 @@ class DomainDependencyGraph extends GraphBase {
         this.linkElements = null;
         this.dotNetHelper = options.dotNetHelper || null;
         this.currentLayout = 'force';
+        this.texts = {
+            labels: {
+                serviceCount: 'Service Count',
+                relatedServices: 'Related Services ({0})',
+                statusCount: '{0}: {1}',
+                andMore: 'and {0} more',
+                noRelatedServices: 'No related services',
+                clickToViewDetails: 'Click to view details',
+                dependencyServiceCount: 'Service Count'
+            },
+            statuses: {
+                running: 'Running',
+                updating: 'Updating',
+                offline: 'Offline',
+                error: 'Error',
+                unknown: 'Unknown'
+            }
+        };
+
+        if (options.texts) {
+            this.texts = {
+                labels: {
+                    ...this.texts.labels,
+                    ...(options.texts.labels || {})
+                },
+                statuses: {
+                    ...this.texts.statuses,
+                    ...(options.texts.statuses || {})
+                }
+            };
+        }
         
         // 创建力导向布局管理器
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
@@ -238,7 +269,7 @@ class DomainDependencyGraph extends GraphBase {
         this.linkElements
             .style('cursor', 'pointer')
             .on('mouseenter', (event, d) => {
-                this.showTooltip(event, `${d.source.name || d.source} → ${d.target.name || d.target}<br/>服务数: ${d.serviceCount || 1}`);
+                this.showTooltip(event, `${d.source.name || d.source} → ${d.target.name || d.target}<br/>${this.texts.labels.dependencyServiceCount}: ${d.serviceCount || 1}`);
             })
             .on('mouseleave', (event, d) => {
                 this.hideTooltip();
@@ -437,7 +468,7 @@ class DomainDependencyGraph extends GraphBase {
 
         // 显示相关微服务信息
         if (domain.services && domain.services.length > 0) {
-            content += `<br/><br/><strong>相关微服务 (${domain.services.length}个):</strong>`;
+            content += `<br/><br/><strong>${this.formatText(this.texts.labels.relatedServices, domain.services.length)}:</strong>`;
             
             // 按状态分组显示服务
             const servicesByStatus = this.groupServicesByStatus(domain.services);
@@ -445,23 +476,23 @@ class DomainDependencyGraph extends GraphBase {
             Object.entries(servicesByStatus).forEach(([status, services]) => {
                 const statusText = this.getServiceStatusText(status);
                 const statusColor = this.getServiceStatusColor(status);
-                content += `<br/><span style="color: ${statusColor};">• ${statusText}: ${services.length}个</span>`;
+                content += `<br/><span style="color: ${statusColor};">• ${this.formatText(this.texts.labels.statusCount, statusText, services.length)}</span>`;
                 
                 // 显示前3个服务名称
                 if (services.length > 0) {
                     const serviceNames = services.slice(0, 3).map(s => s.name || s.appName).join(', ');
                     content += `<br/><span style="font-size: 11px; color: #aaa; margin-left: 12px;">${serviceNames}`;
                     if (services.length > 3) {
-                        content += ` 等${services.length}个`;
+                        content += ` ${this.formatText(this.texts.labels.andMore, services.length)}`;
                     }
                     content += `</span>`;
                 }
             });
         } else {
-            content += `<br/><span style="color: #999;">暂无相关微服务</span>`;
+            content += `<br/><span style="color: #999;">${this.texts.labels.noRelatedServices}</span>`;
         }
 
-        content += `<br/><br/><span style="font-size: 11px; color: #888;">点击查看详情</span>`;
+        content += `<br/><br/><span style="font-size: 11px; color: #888;">${this.texts.labels.clickToViewDetails}</span>`;
         return content;
     }
 
@@ -489,12 +520,16 @@ class DomainDependencyGraph extends GraphBase {
      */
     getServiceStatusText(status) {
         switch (status) {
-            case 'Running': return '运行中';
-            case 'Error': return '错误';
-            case 'Updating': return '更新中';
-            case 'Offline': return '离线';
-            default: return '未知';
+            case 'Running': return this.texts.statuses.running;
+            case 'Error': return this.texts.statuses.error;
+            case 'Updating': return this.texts.statuses.updating;
+            case 'Offline': return this.texts.statuses.offline;
+            default: return this.texts.statuses.unknown;
         }
+    }
+
+    formatText(template, ...values) {
+        return values.reduce((current, value, index) => current.replace(`{${index}}`, value), template);
     }
 
     /**

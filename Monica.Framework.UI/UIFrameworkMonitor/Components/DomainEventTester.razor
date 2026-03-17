@@ -5,23 +5,23 @@
 @using System.Text.Json
 @using Monica.Core.GlobalJson
 @inject IFrameworkMonitorService FrameworkMonitorService
-
 @inject IGlobalJsonOption JsonOption
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
 <div class="framework-monitor-tab-section">
     <MudStack Row="true"
               Justify="Justify.SpaceBetween"
               AlignItems="AlignItems.Center"
               Class="framework-monitor-tab-section__header">
-        <MudText Typo="Typo.h6">领域事件测试</MudText>
+        <MudText Typo="Typo.h6">@L["DomainEventTester:Header:Title"]</MudText>
         <div class="framework-monitor-tab-section__actions">
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
                       OnClick="LoadDomainEventsAsync"
                       StartIcon="@Icons.Material.Filled.Refresh"
                       Disabled="@_loading">
-                刷新事件列表
+                @L["DomainEventTester:Actions:Refresh"]
             </MudButton>
         </div>
     </MudStack>
@@ -29,7 +29,7 @@
         <MudGrid>
             <MudItem xs="12" md="6">
                 <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">事件列表</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventList"]</MudText>
                     @if (_loading)
                     {
                         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
@@ -52,33 +52,33 @@
                     else
                     {
                         <MudAlert Severity="Severity.Info">
-                            暂无领域事件数据，请点击刷新按钮加载数据。
+                            @L["DomainEventTester:States:Empty"]
                         </MudAlert>
                     }
                 </MudPaper>
             </MudItem>
-            
+
             <MudItem xs="12" md="6">
                 <MudPaper Class="pa-4" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="mb-3">事件测试</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventTester"]</MudText>
                     @if (_selectedEvent != null)
                     {
                         <MudStack Spacing="3">
-                            <MudTextField @bind-Value="_selectedEvent.Info.Title" 
-                                         Label="事件名称" 
+                            <MudTextField @bind-Value="_selectedEvent.Info.Title"
+                                         Label="@L["DomainEventTester:Fields:EventName"]"
                                          Variant="Variant.Outlined"
                                          ReadOnly="true" />
-                            
-                             <MudTextField @bind-Value="_eventContent" 
-                                          Label="事件内容 (JSON)" 
+
+                             <MudTextField @bind-Value="_eventContent"
+                                          Label="@L["DomainEventTester:Fields:EventContent"]"
                                           Variant="Variant.Outlined"
                                           Lines="@GetJsonLines()"
                                           Sizing="InputSizing.Auto"
                                           MaxLines="30"
-                                          Placeholder="请输入事件的JSON数据..." />
-                            
-                            <MudButton Variant="Variant.Filled" 
-                                      Color="Color.Primary" 
+                                          Placeholder="@L["DomainEventTester:Fields:EventContentPlaceholder"]" />
+
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
                                       OnClick="PublishEventAsync"
                                       StartIcon="@Icons.Material.Filled.Send"
                                       Disabled="@_publishing"
@@ -86,11 +86,11 @@
                                 @if (_publishing)
                                 {
                                     <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                    <MudText Class="ms-2">发布中...</MudText>
+                                    <MudText Class="ms-2">@L["DomainEventTester:Actions:Publishing"]</MudText>
                                 }
                                 else
                                 {
-                                    <MudText>发布事件</MudText>
+                                    <MudText>@L["DomainEventTester:Actions:Publish"]</MudText>
                                 }
                             </MudButton>
                         </MudStack>
@@ -98,11 +98,11 @@
                     else
                     {
                         <MudAlert Severity="Severity.Info">
-                            请先从左侧列表选择要测试的领域事件。
+                            @L["DomainEventTester:States:NoSelection"]
                         </MudAlert>
                     }
                 </MudPaper>
-            </MudItem>	
+            </MudItem>
         </MudGrid>
     </div>
 </div>
@@ -110,16 +110,10 @@
 
 @code {
     private List<DtoDomainEventInfo> _domainEvents = [];
-    private bool _loading = false;
-    private bool _publishing = false;
+    private bool _loading;
+    private bool _publishing;
     private DtoDomainEventInfo? _selectedEvent;
     private string _eventContent = string.Empty;
-
-    private readonly DialogOptions _dialogOptions = new()
-    {
-        MaxWidth = MaxWidth.Medium,
-        FullWidth = true
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -139,7 +133,7 @@
             var result = await FrameworkMonitorService.GetDomainEventsAsync();
             if (result.IsFailed(out var error, out var data))
             {
-                Snackbar.Add($"加载失败: {error}", Severity.Error);
+                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
                 return;
             }
 
@@ -147,7 +141,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -166,7 +160,7 @@
     {
         if (_selectedEvent == null || string.IsNullOrWhiteSpace(_eventContent))
         {
-            Snackbar.Add("请选择事件并填入事件内容", Severity.Warning);
+            Snackbar.Add(L["DomainEventTester:Messages:SelectEventAndContent"], Severity.Warning);
             return;
         }
 
@@ -178,15 +172,15 @@
             var result = await FrameworkMonitorService.PublishDomainEventAsync(_selectedEvent.Info.Title, _eventContent);
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"发布失败: {error}", Severity.Error);
+                Snackbar.Add(L["DomainEventTester:Messages:PublishFailed", error], Severity.Error);
                 return;
             }
 
-            Snackbar.Add("发布成功", Severity.Success);
+            Snackbar.Add(L["DomainEventTester:Messages:PublishSucceeded"], Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"发布异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["DomainEventTester:Messages:PublishException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -199,10 +193,11 @@
     private int GetJsonLines()
     {
         if (string.IsNullOrEmpty(_eventContent))
+        {
             return 5;
-            
+        }
+
         var lines = _eventContent.Split('\n').Length;
         return Math.Max(5, Math.Min(lines + 2, 30));
     }
-
 }
