@@ -1,38 +1,40 @@
 @using Monica.RegisterCentre.Models
 @using Monica.Framework.UI.UIRegisterCentre.Services
 @using Monica.Framework.UI.UIRegisterCentre.Models
+@using Monica.Framework.UI.UIRegisterCentre.Extensions
 @using Monica.Tool.MoResponse
 @using Monica.UI.Components.ContextMenu
 @inject RegisterCentreService RegisterCentreService
 @inject IServiceProvider ServiceProvider
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<RegisterCentreResource> L
 @implements IAsyncDisposable
 
 <MudCard>
     <MudCardHeader>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">微服务架构图</MudText>
+            <MudText Typo="Typo.h6">@L["ServiceGraph:Title"]</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
-            <MudTooltip Text="刷新数据">
+            <MudTooltip Text="@L["ServiceGraph:Tooltips:RefreshData"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="LoadServiceDataAsync"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="重置视图">
+            <MudTooltip Text="@L["ServiceGraph:Tooltips:ResetView"]">
                 <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
                                Color="Color.Secondary"
                                OnClick="ResetView"
                                Disabled="@_loading" />
             </MudTooltip>
-            <MudTooltip Text="布局设置">
+            <MudTooltip Text="@L["ServiceGraph:Tooltips:LayoutSettings"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Dashboard"
                                Color="Color.Info"
                                OnClick="ToggleLayoutPanel" />
             </MudTooltip>
-            <MudTooltip Text="筛选设置">
+            <MudTooltip Text="@L["ServiceGraph:Tooltips:FilterSettings"]">
                 <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
                                Color="Color.Tertiary"
                                OnClick="ToggleFilterPanel" />
@@ -74,18 +76,18 @@
             <MudGrid>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.caption">
-                        显示 @_filteredServices.Count / @_allServices.Count 个微服务
+                        @L["ServiceGraph:Summary:ShowingServices", _filteredServices.Count, _allServices.Count]
                     </MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6" Class="d-flex justify-end flex-wrap">
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
-                             Color="Color.Success" Class="mr-1 mb-1">运行中</MudChip>
+                             Color="Color.Success" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Running"]</MudChip>
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Update" 
-                             Color="Color.Info" Class="mr-1 mb-1">更新中</MudChip>
+                             Color="Color.Info" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Updating"]</MudChip>
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.CloudOff" 
-                             Color="Color.Default" Class="mr-1 mb-1">离线</MudChip>
+                             Color="Color.Default" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Offline"]</MudChip>
                     <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Error" 
-                             Color="Color.Error" Class="mr-1 mb-1">异常</MudChip>
+                             Color="Color.Error" Class="mr-1 mb-1">@L["Shared:ServiceStatuses:Error"]</MudChip>
                 </MudItem>
             </MudGrid>
         </MudPaper>
@@ -152,7 +154,7 @@
                 "document.documentElement.classList.contains('dark')");
             
             await _jsModule.InvokeVoidAsync("initializeGraph", "service-graph", isDarkMode,
-                DotNetObjectReference.Create(this));
+                DotNetObjectReference.Create(this), GetGraphTexts());
         }
     }
 
@@ -179,12 +181,12 @@
             }
             else
             {
-                Snackbar.Add($"加载服务数据失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["ServiceGraph:Messages:LoadFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载服务数据异常: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["ServiceGraph:Messages:LoadException", ex.Message].Value, Severity.Error);
         }
         finally
         {
@@ -205,14 +207,13 @@
             }
             else
             {
-                Snackbar.Add($"获取域颜色信息失败: {error.Message}", Severity.Warning);
-                // 使用空的颜色映射，后续会使用默认颜色
+                Snackbar.Add(L["ServiceGraph:Messages:GetDomainColorsFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Warning);
                 _domainColors = new Dictionary<string, string>();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"分配域颜色时发生异常: {ex.Message}", Severity.Warning);
+            Snackbar.Add(L["ServiceGraph:Messages:GetDomainColorsException", ex.Message].Value, Severity.Warning);
             _domainColors = new Dictionary<string, string>();
         }
     }
@@ -230,7 +231,7 @@
         // 初始化选择的域
         if (!_selectedDomains.Any())
         {
-            var allDomains = _allServices.Select(s => s.DomainName ?? "未知").Distinct().ToList();
+            var allDomains = _allServices.Select(GetServiceDomainName).Distinct().ToList();
             _selectedDomains = new HashSet<string>(allDomains);
         }
     }
@@ -256,7 +257,7 @@
                 return false;
                 
             // 域筛选
-            var serviceDomain = service.DomainName ?? "未知";
+            var serviceDomain = GetServiceDomainName(service);
             if (!_selectedDomains.Contains(serviceDomain))
                 return false;
                 
@@ -349,12 +350,12 @@
         {
             id = service.AppId,
             name = service.AppName,
-            domain = service.DomainName ?? "未知",
+            domain = GetServiceDomainName(service),
             project = service.ProjectName,
             status = service.OverallStatus.ToString(),
             runningInstances = service.RunningInstanceCount,
             totalInstances = service.TotalInstanceCount,
-            color = RegisterCentreService.GetDomainColor(service.DomainName ?? "未知"),
+            color = RegisterCentreService.GetDomainColor(GetServiceDomainName(service)),
             instanceInfo = service.GetValidInstanceInfo()
         }).ToList();
 
@@ -415,16 +416,16 @@
     private List<ContextMenuItem<RegisteredServiceStatus>> BuildContextMenuItems(RegisteredServiceStatus service)
     {
         var builder = ContextMenuBuilder<RegisteredServiceStatus>.Create()
-            .AddItem("查看服务详情", Icons.Material.Filled.Info, ViewServiceDetailsAsync)
-            .AddItem("聚焦此服务", Icons.Material.Filled.CenterFocusStrong, FocusOnServiceAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:ViewServiceDetails"].Value, Icons.Material.Filled.Info, ViewServiceDetailsAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FocusService"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnServiceAsync)
             .AddDivider()
-            .AddItem("筛选同状态", Icons.Material.Filled.FilterAlt, FilterByStatusAsync)
-            .AddItem("筛选同域", Icons.Material.Filled.Domain, FilterByDomainAsync)
-            .AddItemIf(!string.IsNullOrEmpty(service.ProjectName), "筛选同项目", Icons.Material.Filled.Folder, FilterByProjectAsync)
-            .AddItem("清除所有筛选", Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FilterSameStatus"].Value, Icons.Material.Filled.FilterAlt, FilterByStatusAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:FilterSameDomain"].Value, Icons.Material.Filled.Domain, FilterByDomainAsync)
+            .AddItemIf(!string.IsNullOrEmpty(service.ProjectName), L["ServiceGraph:ContextMenu:FilterSameProject"].Value, Icons.Material.Filled.Folder, FilterByProjectAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:ClearFilters"].Value, Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
             .AddDivider()
-            .AddItem("复制服务ID", Icons.Material.Filled.ContentCopy, CopyServiceIdAsync)
-            .AddItem("复制服务名", Icons.Material.Filled.ContentCopy, CopyServiceNameAsync);
+            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceId"].Value, Icons.Material.Filled.ContentCopy, CopyServiceIdAsync)
+            .AddItem(L["ServiceGraph:ContextMenu:CopyServiceName"].Value, Icons.Material.Filled.ContentCopy, CopyServiceNameAsync);
         
         return builder.Build();
     }
@@ -458,7 +459,7 @@
             _selectedStatuses = new HashSet<ServiceStatus> { service.OverallStatus };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"已筛选状态: {service.OverallStatus}", Severity.Info);
+            Snackbar.Add(L["ServiceGraph:Messages:FilteredStatus", service.OverallStatus.GetText(L)].Value, Severity.Info);
         }
     }
     
@@ -466,11 +467,11 @@
     {
         if (service != null)
         {
-            var domainName = service.DomainName ?? "未知";
+            var domainName = GetServiceDomainName(service);
             _selectedDomains = new HashSet<string> { domainName };
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"已筛选域: {domainName}", Severity.Info);
+            Snackbar.Add(L["ServiceGraph:Messages:FilteredDomain", domainName].Value, Severity.Info);
         }
     }
     
@@ -481,7 +482,7 @@
             _filterText = service.ProjectName;
             _showFilterPanel = true;
             await ApplyFilters();
-            Snackbar.Add($"已筛选项目: {service.ProjectName}", Severity.Info);
+            Snackbar.Add(L["ServiceGraph:Messages:FilteredProject", service.ProjectName].Value, Severity.Info);
         }
     }
     
@@ -489,11 +490,11 @@
     {
         _filterText = string.Empty;
         _selectedStatuses = new HashSet<ServiceStatus>(Enum.GetValues<ServiceStatus>());
-        var allDomains = _allServices.Select(s => s.DomainName ?? "未知").Distinct().ToList();
+        var allDomains = _allServices.Select(GetServiceDomainName).Distinct().ToList();
         _selectedDomains = new HashSet<string>(allDomains);
         _showOnlyWithInstances = false;
         await ApplyFilters();
-        Snackbar.Add("已清除所有筛选", Severity.Info);
+        Snackbar.Add(L["ServiceGraph:Messages:ClearedFilters"].Value, Severity.Info);
     }
     
     private async Task CopyServiceIdAsync(RegisteredServiceStatus? service)
@@ -501,7 +502,7 @@
         if (service != null)
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppId);
-            Snackbar.Add("已复制服务ID到剪贴板", Severity.Success);
+            Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceId"].Value, Severity.Success);
         }
     }
     
@@ -510,9 +511,35 @@
         if (service != null)
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", service.AppName);
-            Snackbar.Add("已复制服务名到剪贴板", Severity.Success);
+            Snackbar.Add(L["ServiceGraph:Messages:CopiedServiceName"].Value, Severity.Success);
         }
     }
+
+    private string GetServiceDomainName(RegisteredServiceStatus service)
+        => service.DomainName ?? L["Shared:Values:Unknown"].Value;
+
+    private object GetGraphTexts() => new
+    {
+        labels = new
+        {
+            appId = L["ServiceGraph:Graph:Labels:AppId"].Value,
+            domain = L["ServiceGraph:Graph:Labels:Domain"].Value,
+            project = L["ServiceGraph:Graph:Labels:Project"].Value,
+            status = L["ServiceGraph:Graph:Labels:Status"].Value,
+            instances = L["ServiceGraph:Graph:Labels:Instances"].Value,
+            version = L["ServiceGraph:Graph:Labels:Version"].Value,
+            notAvailable = L["Shared:Values:NotAvailable"].Value,
+            unknown = L["Shared:Values:Unknown"].Value
+        },
+        statuses = new
+        {
+            running = L["Shared:ServiceStatuses:Running"].Value,
+            updating = L["Shared:ServiceStatuses:Updating"].Value,
+            offline = L["Shared:ServiceStatuses:Offline"].Value,
+            error = L["Shared:ServiceStatuses:Error"].Value,
+            unknown = L["Shared:ServiceStatuses:Unknown"].Value
+        }
+    };
 
     private async Task ResetView()
     {

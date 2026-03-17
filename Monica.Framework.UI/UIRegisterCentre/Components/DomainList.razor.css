@@ -1,0 +1,12 @@
+.domain-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.domain-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mud-elevation-8) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

@@ -40,10 +40,6 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
-/* 标签页内容间距 */
-::deep .mud-tabs .mud-tab-panel {
-    padding: 0;
-}
 
 /* 芯片样式调整 */
 ::deep .mud-chip {

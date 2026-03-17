@@ -10,26 +10,27 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject RegisterCentreService RegisterCentreService
+@inject IStringLocalizer<RegisterCentreResource> L
 
 @if (Service != null)
 {
     <MudTabs Elevation="0" Rounded="true" Centered="false" ApplyEffectsToContainer="true" TabPanelsClass="pa-6">
-        <MudTabPanel Text="服务概览">
+        <MudTabPanel Text="@L["ServiceDetail:Tabs:Overview"]">
             <MudGrid>
                 <MudItem xs="12">
                     <MudPaper Class="pa-4" Elevation="0">
                         <MudGrid>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string" Label="App ID" Value="@Service.AppId" ReadOnly="true" />
+                                <MudTextField T="string" Label="@L["ServiceDetail:Overview:Fields:AppId"]" Value="@Service.AppId" ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string" Label="服务名称" Value="@Service.AppName" ReadOnly="true" />
+                                <MudTextField T="string" Label="@L["ServiceDetail:Overview:Fields:ServiceName"]" Value="@Service.AppName" ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string" Label="项目名称" Value="@Service.ProjectName" ReadOnly="true" />
+                                <MudTextField T="string" Label="@L["ServiceDetail:Overview:Fields:ProjectName"]" Value="@Service.ProjectName" ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string" Label="领域名" Value="@Service.DomainName" ReadOnly="true" />
+                                <MudTextField T="string" Label="@L["ServiceDetail:Overview:Fields:DomainName"]" Value="@Service.DomainName" ReadOnly="true" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -37,18 +38,18 @@
                 
                 <MudItem xs="12">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">服务状态</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:Status:Title"]</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4">
                                 <MudChip T="string" Color="@Service.OverallStatus.GetColor()" Icon="@Service.OverallStatus.GetIcon()" Size="Size.Large">
-                                    @Service.OverallStatus.GetText()
+                                    @Service.OverallStatus.GetText(L)
                                 </MudChip>
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudText Typo="Typo.body1">运行实例: @Service.RunningInstanceCount</MudText>
+                                <MudText Typo="Typo.body1">@L["ServiceDetail:Status:RunningInstances", Service.RunningInstanceCount]</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudText Typo="Typo.body1">总实例数: @Service.TotalInstanceCount</MudText>
+                                <MudText Typo="Typo.body1">@L["ServiceDetail:Status:TotalInstances", Service.TotalInstanceCount]</MudText>
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -56,10 +57,10 @@
             </MudGrid>
         </MudTabPanel>
         
-        <MudTabPanel Text="@($"实例列表 ({Service.TotalInstanceCount + Service.EvictedInstances.Count})")">
+        <MudTabPanel Text="@L["ServiceDetail:Tabs:Instances", Service.TotalInstanceCount + Service.EvictedInstances.Count]">
             <MudDataGrid T="InstanceDisplayItem" Items="@GetAllInstancesForDisplay()" Hover="true" Dense="true">
                 <Columns>
-                    <TemplateColumn Title="实例ID">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:InstanceId"]">
                         <CellTemplate>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudTooltip Text="@context.Item.Instance.InstanceId">
@@ -69,7 +70,7 @@
                                 </MudTooltip>
                                 @if (context.Item.Instance.IsLeader)
                                 {
-                                    <MudTooltip Text="领导者实例">
+                                    <MudTooltip Text="@L["ServiceDetail:Instances:Values:LeaderInstance"]">
                                         <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium"
                                                  Color="Color.Warning"
                                                  Size="Size.Small" />
@@ -78,56 +79,56 @@
                                 @if (context.Item.IsEvicted)
                                 {
                                     <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">
-                                        已驱逐
+                                        @L["ServiceDetail:Instances:Values:Evicted"]
                                     </MudChip>
                                 }
                             </MudStack>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="状态">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:Status"]">
                         <CellTemplate>
                             <MudChip T="string"
                                      Color="@context.Item.Instance.Status.GetColor()"
                                      Size="Size.Small"
                                      Icon="@context.Item.Instance.Status.GetIcon()"
                                      Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
-                                @context.Item.Instance.Status.GetText()
+                                @context.Item.Instance.Status.GetText(L)
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="角色">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:Role"]">
                         <CellTemplate>
                             @if (context.Item.Instance.IsLeader)
                             {
                                 <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
-                                    Leader
+                                    @L["Shared:LeaderStatuses:Leader"]
                                 </MudChip>
                             }
                             else
                             {
                                 <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Circle" Variant="Variant.Outlined" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
-                                    Follower
+                                    @L["Shared:LeaderStatuses:Follower"]
                                 </MudChip>
                             }
                         </CellTemplate>
                     </TemplateColumn>
-                    <PropertyColumn Property="x => x.Instance.AssemblyVersion" Title="程序集版本" />
-                    <PropertyColumn Property="x => x.Instance.ReleaseVersion" Title="发布版本" />
-                    <TemplateColumn Title="构建时间">
+                    <PropertyColumn Property="x => x.Instance.AssemblyVersion" Title="@L["ServiceDetail:Instances:Columns:AssemblyVersion"]" />
+                    <PropertyColumn Property="x => x.Instance.ReleaseVersion" Title="@L["ServiceDetail:Instances:Columns:ReleaseVersion"]" />
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:BuildTime"]">
                         <CellTemplate>
                             <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
                                 @context.Item.Instance.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                             </MudText>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="最后心跳">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:LastHeartbeat"]">
                         <CellTemplate>
                             <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
                                 @context.Item.Instance.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
                             </MudText>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="注册时间">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:RegistrationTime"]">
                         <CellTemplate>
                             <MudText Typo="Typo.body2" Style="@(context.Item.IsEvicted ? "opacity: 0.6;" : "")">
                                 @context.Item.Instance.RegistrationTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
@@ -136,7 +137,7 @@
                     </TemplateColumn>
                     @if (HasEvictedInstances())
                     {
-                        <TemplateColumn Title="驱逐时间">
+                        <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:EvictionTime"]">
                             <CellTemplate>
                                 @if (context.Item.IsEvicted)
                                 {
@@ -146,12 +147,12 @@
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Values:NotAvailable"]</MudText>
                                 }
                             </CellTemplate>
                         </TemplateColumn>
                     }
-                    <TemplateColumn Title="心跳健康度">
+                    <TemplateColumn Title="@L["ServiceDetail:Instances:Columns:HeartbeatHealth"]">
                         <CellTemplate>
                             @{
                                 var timeSinceHeartbeat = DateTime.Now - context.Item.Instance.LastHeartbeatTime.FromUtcToLocal();
@@ -165,48 +166,48 @@
             </MudDataGrid>
         </MudTabPanel>
         
-        <MudTabPanel Text="配置信息">
+        <MudTabPanel Text="@L["ServiceDetail:Tabs:Configuration"]">
             <MudGrid>
                 <MudItem xs="12">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">选举配置</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:Configuration:Sections:ElectionConfig"]</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="3">
-                                <MudTextField T="int" Label="心跳周期 (秒)"
+                                <MudTextField T="int" Label="@L["ServiceDetail:Configuration:Fields:HeartbeatPeriodSeconds"]"
                                             Value="@RegisterCentreOptions.Value.Election.HeartbeatPeriodSeconds"
                                             ReadOnly="true"
-                                            HelperText="实例定期发送心跳的间隔" />
+                                            HelperText="@L["ServiceDetail:Configuration:Fields:HeartbeatPeriodHelper"]" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="int" Label="心跳抖动 (毫秒)"
+                                <MudTextField T="int" Label="@L["ServiceDetail:Configuration:Fields:HeartbeatJitterMilliseconds"]"
                                             Value="@RegisterCentreOptions.Value.Election.HeartbeatJitterMilliseconds"
                                             ReadOnly="true"
-                                            HelperText="心跳发送时的随机抖动范围" />
+                                            HelperText="@L["ServiceDetail:Configuration:Fields:HeartbeatJitterHelper"]" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="12">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">TTL 配置</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:Configuration:Sections:TtlConfig"]</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-3" Elevation="1">
-                                    <MudText Typo="Typo.subtitle1" Class="mb-2">实例 TTL</MudText>
+                                    <MudText Typo="Typo.subtitle1" Class="mb-2">@L["ServiceDetail:Configuration:Fields:InstanceTtl"]</MudText>
                                     <MudGrid>
                                         <MudItem xs="4">
-                                            <MudTextField T="double" Label="倍率"
+                                            <MudTextField T="double" Label="@L["ServiceDetail:Configuration:Fields:Multiplier"]"
                                                         Value="@RegisterCentreOptions.Value.Election.RegistrationOfflineTTLMultiplier"
                                                         ReadOnly="true" />
                                         </MudItem>
                                         <MudItem xs="4">
-                                            <MudTextField T="int" Label="附加秒数"
+                                            <MudTextField T="int" Label="@L["ServiceDetail:Configuration:Fields:AdditionalSeconds"]"
                                                         Value="@RegisterCentreOptions.Value.Election.RegistrationOfflineTTLAdditionalSeconds"
                                                         ReadOnly="true" />
                                         </MudItem>
                                         <MudItem xs="4">
-                                            <MudTextField T="string" Label="计算值"
-                                                        Value="@($"{RegisterCentreOptions.Value.Election.RegistrationTTL.TotalSeconds}秒")"
+                                            <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:CalculatedValue"]"
+                                                        Value="@L["Shared:Formats:SecondsValue", RegisterCentreOptions.Value.Election.RegistrationTTL.TotalSeconds]"
                                                         ReadOnly="true" />
                                         </MudItem>
                                     </MudGrid>
@@ -214,21 +215,21 @@
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-3" Elevation="1">
-                                    <MudText Typo="Typo.subtitle1" Class="mb-2">Leader TTL</MudText>
+                                    <MudText Typo="Typo.subtitle1" Class="mb-2">@L["ServiceDetail:Configuration:Fields:LeaderTtl"]</MudText>
                                     <MudGrid>
                                         <MudItem xs="4">
-                                            <MudTextField T="double" Label="倍率"
+                                            <MudTextField T="double" Label="@L["ServiceDetail:Configuration:Fields:Multiplier"]"
                                                         Value="@RegisterCentreOptions.Value.Election.LeaderOfflineTTLMultiplier"
                                                         ReadOnly="true" />
                                         </MudItem>
                                         <MudItem xs="4">
-                                            <MudTextField T="int" Label="附加秒数"
+                                            <MudTextField T="int" Label="@L["ServiceDetail:Configuration:Fields:AdditionalSeconds"]"
                                                         Value="@RegisterCentreOptions.Value.Election.LeaderOfflineTTLAdditionalSeconds"
                                                         ReadOnly="true" />
                                         </MudItem>
                                         <MudItem xs="4">
-                                            <MudTextField T="string" Label="计算值"
-                                                        Value="@($"{RegisterCentreOptions.Value.Election.LeaderTTL.TotalSeconds}秒")"
+                                            <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:CalculatedValue"]"
+                                                        Value="@L["Shared:Formats:SecondsValue", RegisterCentreOptions.Value.Election.LeaderTTL.TotalSeconds]"
                                                         ReadOnly="true" />
                                         </MudItem>
                                     </MudGrid>
@@ -239,28 +240,28 @@
                 </MudItem>
                 <MudItem xs="12">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">运行模式</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:Configuration:Sections:RuntimeMode"]</MudText>
                         <MudGrid>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="string" Label="状态存储模式"
-                                            Value="@(RegisterCentreOptions.Value.IsStandaloneMode ? "单实例内存模式" : "分布式StateStore模式")"
+                                <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:StateStoreMode"]"
+                                            Value="@(RegisterCentreOptions.Value.IsStandaloneMode ? L["ServiceDetail:Configuration:Values:StandaloneMode"].Value : L["ServiceDetail:Configuration:Values:DistributedMode"].Value)"
                                             ReadOnly="true" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
-                                <MudTextField T="string" Label="孤立处理模式"
+                                <MudTextField T="string" Label="@L["ServiceDetail:Configuration:Fields:IsolationHandlingMode"]"
                                             Value="@GetIsolationHandlingModeText()"
                                             ReadOnly="true"
-                                            HelperText="网络隔离时的处理策略" />
+                                            HelperText="@L["ServiceDetail:Configuration:Fields:IsolationHandlingHelper"]" />
                             </MudItem>
                             <MudItem xs="12" sm="4">
                                 <MudSwitch T="bool" Value="@RegisterCentreOptions.Value.IsCentreServer"
-                                          Label="注册中心服务器" Disabled="true" Color="Color.Primary" />
+                                          Label="@L["ServiceDetail:Configuration:Fields:RegisterCentreServer"]" Disabled="true" Color="Color.Primary" />
                             </MudItem>
                         </MudGrid>
                         <MudDivider Class="my-4" />
                         <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
                             <MudText Typo="Typo.body2">
-                                状态转换: 心跳成功 → 正常运行 | 心跳失败 → Polly 重试策略 → 重试耗尽 → 释放 Leader → 触发孤立处理
+                                @L["ServiceDetail:Configuration:Messages:StateTransition"]
                             </MudText>
                         </MudAlert>
                     </MudPaper>
@@ -268,30 +269,30 @@
             </MudGrid>
         </MudTabPanel>
 
-        <MudTabPanel Text="选举状态">
+        <MudTabPanel Text="@L["ServiceDetail:Tabs:ElectionStatus"]">
             <MudGrid>
                 <MudItem xs="12" md="6">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">当前选举状态</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:ElectionStatus:Sections:CurrentStatus"]</MudText>
                         <MudStack Spacing="3">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudText Typo="Typo.subtitle1">状态:</MudText>
+                                <MudText Typo="Typo.subtitle1">@L["ServiceDetail:ElectionStatus:Fields:Status"]</MudText>
                                 <MudChip T="string" Color="@LeaderElectionService.CurrentStatus.GetColor()" Size="Size.Medium" Icon="@LeaderElectionService.CurrentStatus.GetIcon()">
-                                    @LeaderElectionService.CurrentStatus.GetText()
+                                    @LeaderElectionService.CurrentStatus.GetText(L)
                                 </MudChip>
                             </MudStack>
                             @if (LeaderElectionService.IsLeader)
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudText Typo="Typo.subtitle1">成为Leader时间:</MudText>
-                                    <MudText Typo="Typo.body1">@(LeaderElectionService.LeaderBecomeTime?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</MudText>
+                                    <MudText Typo="Typo.subtitle1">@L["ServiceDetail:ElectionStatus:Fields:BecameLeaderAt"]</MudText>
+                                    <MudText Typo="Typo.body1">@(LeaderElectionService.LeaderBecomeTime?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)</MudText>
                                 </MudStack>
                             }
                             @if (!string.IsNullOrEmpty(LeaderElectionService.CurrentETag))
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudText Typo="Typo.subtitle1">当前ETag:</MudText>
-                                    <MudTooltip Text="用于乐观锁的版本标识">
+                                    <MudText Typo="Typo.subtitle1">@L["ServiceDetail:ElectionStatus:Fields:CurrentETag"]</MudText>
+                                    <MudTooltip Text="@L["ServiceDetail:ElectionStatus:Tooltips:CurrentETag"]">
                                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
                                             @LeaderElectionService.CurrentETag
                                         </MudChip>
@@ -303,25 +304,25 @@
                 </MudItem>
                 <MudItem xs="12" md="6">
                     <MudPaper Class="pa-4" Elevation="0">
-                        <MudText Typo="Typo.h6" Class="mb-3">选举状态说明</MudText>
+                        <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:ElectionStatus:Sections:Description"]</MudText>
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star">
-                                    Leader
+                                    @L["Shared:LeaderStatuses:Leader"]
                                 </MudChip>
-                                <MudText Typo="Typo.body2">当前实例是集群领导者，负责协调工作</MudText>
+                                <MudText Typo="Typo.body2">@L["ServiceDetail:ElectionStatus:Descriptions:Leader"]</MudText>
                             </MudStack>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Circle">
-                                    Follower
+                                    @L["Shared:LeaderStatuses:Follower"]
                                 </MudChip>
-                                <MudText Typo="Typo.body2">当前实例是跟随者，等待成为Leader</MudText>
+                                <MudText Typo="Typo.body2">@L["ServiceDetail:ElectionStatus:Descriptions:Follower"]</MudText>
                             </MudStack>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Search">
-                                    Looking
+                                    @L["Shared:LeaderStatuses:Looking"]
                                 </MudChip>
-                                <MudText Typo="Typo.body2">正在进行Leader选举中</MudText>
+                                <MudText Typo="Typo.body2">@L["ServiceDetail:ElectionStatus:Descriptions:Looking"]</MudText>
                             </MudStack>
                         </MudStack>
                     </MudPaper>
@@ -329,22 +330,21 @@
             </MudGrid>
             <MudDivider Class="my-4" />
             <MudPaper Class="pa-4" Elevation="0">
-                <MudText Typo="Typo.h6" Class="mb-3">Leader 管理操作</MudText>
+                <MudText Typo="Typo.h6" Class="mb-3">@L["ServiceDetail:ElectionStatus:Sections:Management"]</MudText>
                 <MudAlert Severity="Severity.Warning" Class="mb-3">
-                    强制删除 Leader 将导致当前 Leader 实例丢失 Leader 状态，并触发新一轮选举。
-                    此操作主要用于开发测试 Leader 变更场景。
+                    @L["ServiceDetail:ElectionStatus:Warnings:ForceDeleteLeader"]
                 </MudAlert>
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Error"
                            StartIcon="@Icons.Material.Filled.DeleteForever"
                            OnClick="OnForceDeleteLeaderClicked"
                            Disabled="@(!HasLeader)">
-                    强制删除 Leader
+                    @L["ServiceDetail:ElectionStatus:Actions:ForceDeleteLeader"]
                 </MudButton>
             </MudPaper>
         </MudTabPanel>
 
-        <MudTabPanel Text="元数据信息">
+        <MudTabPanel Text="@L["ServiceDetail:Tabs:Metadata"]">
             <MudGrid>
                 @foreach (var instance in Service.Instances.Values)
                 {
@@ -352,15 +352,15 @@
                         <MudPaper Class="pa-4" Elevation="0">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
                                 <MudText Typo="Typo.h6">
-                                    实例 @instance.InstanceId 元数据
+                                    @L["ServiceDetail:Metadata:InstanceTitle", instance.InstanceId]
                                 </MudText>
                                 <MudChip T="string" Color="@instance.Status.GetColor()" Size="Size.Small" Icon="@instance.Status.GetIcon()">
-                                    @instance.Status.GetText()
+                                    @instance.Status.GetText(L)
                                 </MudChip>
                                 @if (instance.IsLeader)
                                 {
                                     <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star">
-                                        Leader
+                                        @L["Shared:LeaderStatuses:Leader"]
                                     </MudChip>
                                 }
                             </MudStack>
@@ -368,8 +368,8 @@
                             {
                                 <MudDataGrid T="KeyValuePair<string, string>" Items="@instance.Metadata" Dense="true" Hover="true">
                                     <Columns>
-                                        <PropertyColumn Property="x => x.Key" Title="键" />
-                                        <TemplateColumn Title="值">
+                                        <PropertyColumn Property="x => x.Key" Title="@L["ServiceDetail:Metadata:Columns:Key"]" />
+                                        <TemplateColumn Title="@L["ServiceDetail:Metadata:Columns:Value"]">
                                             <CellTemplate>
                                                 <MetadataValueDisplay Value="@context.Item.Value" />
                                             </CellTemplate>
@@ -379,7 +379,7 @@
                             }
                             else
                             {
-                                <MudAlert Severity="Severity.Info">该实例没有元数据信息</MudAlert>
+                                <MudAlert Severity="Severity.Info">@L["ServiceDetail:Metadata:States:NoMetadata"]</MudAlert>
                             }
                         </MudPaper>
                     </MudItem>
@@ -387,7 +387,7 @@
                 @if (!Service.Instances.Any())
                 {
                     <MudItem xs="12">
-                        <MudAlert Severity="Severity.Warning">没有可显示的实例信息</MudAlert>
+                        <MudAlert Severity="Severity.Warning">@L["ServiceDetail:Metadata:States:NoInstances"]</MudAlert>
                     </MudItem>
                 }
             </MudGrid>
@@ -443,18 +443,19 @@
     private async Task OnForceDeleteLeaderClicked()
     {
         bool? result = await DialogService.ShowMessageBoxAsync(
-            "确认操作",
-            $"确定要强制删除服务 '{Service.AppName}' 的 Leader 吗？此操作将触发新一轮 Leader 选举。",
-            yesText: "确定删除", cancelText: "取消");
+            L["ServiceDetail:Dialogs:ConfirmActionTitle"].Value,
+            L["ServiceDetail:Dialogs:ForceDeleteLeaderMessage", Service.AppName].Value,
+            yesText: L["ServiceDetail:Dialogs:ConfirmDelete"].Value,
+            cancelText: L["Shared:Actions:Cancel"].Value);
 
         if (result != true) return;
 
         var res = await RegisterCentreService.ForceDeleteLeaderAsync(Service.AppId);
 
         if (res.IsFailed(out var error))
-            Snackbar.Add($"删除 Leader 失败: {error}", Severity.Error);
+            Snackbar.Add(L["ServiceDetail:Messages:DeleteLeaderFailed", error].Value, Severity.Error);
         else
-            Snackbar.Add("已成功删除 Leader，新一轮选举即将开始", Severity.Success);
+            Snackbar.Add(L["ServiceDetail:Messages:DeleteLeaderSucceeded"].Value, Severity.Success);
     }
 
     private string GetHeartbeatHealthText(TimeSpan timeSinceHeartbeat)
@@ -465,11 +466,11 @@
         var offlineThreshold = election.RegistrationTTL.TotalSeconds;
 
         if (timeSinceHeartbeat.TotalSeconds < unhealthyThreshold)
-            return "健康";
+            return L["Shared:HeartbeatHealth:Healthy"].Value;
         else if (timeSinceHeartbeat.TotalSeconds < offlineThreshold)
-            return "不健康";
+            return L["Shared:HeartbeatHealth:Unhealthy"].Value;
         else
-            return "离线";
+            return L["Shared:HeartbeatHealth:Offline"].Value;
     }
 
     private Color GetHeartbeatHealthColor(TimeSpan timeSinceHeartbeat)
@@ -491,9 +492,9 @@
     {
         return RegisterCentreOptions.Value.IsolationHandlingMode switch
         {
-            EIsolationHandlingMode.ContinueRunning => "继续运行 (降级模式)",
-            EIsolationHandlingMode.FastShutdown => "快速下线",
-            _ => "未知"
+            EIsolationHandlingMode.ContinueRunning => L["ServiceDetail:Configuration:Values:ContinueRunning"].Value,
+            EIsolationHandlingMode.FastShutdown => L["ServiceDetail:Configuration:Values:FastShutdown"].Value,
+            _ => L["Shared:Values:Unknown"].Value
         };
     }
 }

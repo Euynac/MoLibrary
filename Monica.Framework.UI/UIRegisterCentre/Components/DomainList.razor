@@ -4,14 +4,15 @@
 @using Monica.Tool.MoResponse
 @inject RegisterCentreService RegisterCentreService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<RegisterCentreResource> L
 
 <MudStack Spacing="4">
     <MudPaper Class="pa-4">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.h6">子域列表</MudText>
+            <MudText Typo="Typo.h6">@L["DomainList:Title"]</MudText>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshDomainsAsync" Disabled="@_isLoading">
                 <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
-                刷新
+                @L["Shared:Actions:Refresh"]
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -20,14 +21,14 @@
     {
         <MudPaper Class="pa-4">
             <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">正在加载域信息...</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2">@L["DomainList:States:Loading"]</MudText>
         </MudPaper>
     }
     else if (!_domains.Any())
     {
         <MudPaper Class="pa-4">
             <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-                暂无域信息
+                @L["DomainList:States:Empty"]
             </MudText>
         </MudPaper>
     }
@@ -45,34 +46,34 @@
                                         @(domain.DisplayName ?? domain.Name)
                                     </MudText>
                                     <MudStack AlignItems="AlignItems.End" Spacing="1">
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@GetOwnedServiceCount(domain.Name)" />
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Text="@L["DomainList:Counts:OwnedServices", GetOwnedServiceCount(domain.Name)]" />
                                         @if (GetRelatedServiceCount(domain.Name) > 0)
                                         {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@GetRelatedServiceCountText(domain.Name)" />
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@L["DomainList:Counts:RelatedDependencies", GetRelatedServiceCount(domain.Name)]" />
                                         }
                                     </MudStack>
                                 </MudStack>
-                                
+
                                 @if (!string.IsNullOrEmpty(domain.Description))
                                 {
                                     <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-primary);">
                                         @domain.Description
                                     </MudText>
                                 }
-                                
+
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.7;">
-                                        域名: @domain.Name
+                                        @L["DomainList:Summary:DomainName", domain.Name]
                                     </MudText>
                                     @{
                                         var ownedCount = GetOwnedServiceCount(domain.Name);
                                         var relatedCount = GetRelatedServiceCount(domain.Name);
                                     }
                                     <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-primary); opacity: 0.8;">
-                                        本域服务: @ownedCount.Replace(" 个服务", "个")
+                                        @L["DomainList:Summary:OwnedServices", ownedCount]
                                         @if (relatedCount > 0)
                                         {
-                                            <span> • 被依赖: @(relatedCount)个</span>
+                                            <span> • @L["DomainList:Summary:DependentBy", relatedCount]</span>
                                         }
                                     </MudText>
                                 </MudStack>
@@ -85,24 +86,9 @@
     }
 </MudStack>
 
-<style>
-    .domain-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .domain-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--mud-elevation-8) !important;
-    }
-    
-    .cursor-pointer {
-        cursor: pointer;
-    }
-</style>
-
 @code {
     [Parameter] public EventCallback<DomainInfo> OnDomainSelected { get; set; }
-    
+
     private bool _isLoading = false;
     private List<DomainInfo> _domains = [];
     private List<RegisteredServiceStatus> _allServices = [];
@@ -125,7 +111,7 @@
             var domainsResult = await RegisterCentreService.GetDomainsWithColorsAsync();
             if (domainsResult.IsFailed(out var error, out var domains))
             {
-                Snackbar.Add($"获取域列表失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["DomainList:Messages:LoadFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
                 _domains = [];
             }
             else
@@ -141,7 +127,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"刷新域列表失败: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["DomainList:Messages:RefreshFailed", ex.Message].Value, Severity.Error);
             _domains = [];
         }
         finally
@@ -157,24 +143,14 @@
         return $"background: linear-gradient(135deg, {color} 0%, {color}dd 100%); border: none;";
     }
 
-    private string GetOwnedServiceCount(string domainName)
-    {
-        var count = _allServices.Count(s => 
-            string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
-        return $"{count} 个服务";
-    }
-    
+    private int GetOwnedServiceCount(string domainName)
+        => _allServices.Count(s => string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase));
+
     private int GetRelatedServiceCount(string domainName)
     {
-        return _allServices.Count(s => 
+        return _allServices.Count(s =>
             !string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase) &&
             (s.DependentSubDomains?.Contains(domainName, StringComparer.OrdinalIgnoreCase) == true));
-    }
-    
-    private string GetRelatedServiceCountText(string domainName)
-    {
-        var count = GetRelatedServiceCount(domainName);
-        return $"+{count} 依赖";
     }
 
     private async Task HandleDomainClick(DomainInfo domain)

@@ -1,30 +1,52 @@
 .page-container {
-    height: 94vh;
-    max-height: 95vh;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 10px;
+    padding: 0.75rem;
     margin: 0;
+    box-sizing: border-box;
+}
+
+.page-loading-state {
+    flex: 1;
+    min-height: 0;
 }
 
 .page-content {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* Fix MudTabs height constraint chain */
 .page-content ::deep .mud-tabs {
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.page-content ::deep .mud-tabs-tabbar {
+    flex-shrink: 0;
 }
 
 .page-content ::deep .mud-tabs-panels {
     flex: 1;
     min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.page-content ::deep .mud-tab-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -32,23 +54,24 @@
     flex: 1;
     min-height: 0;
     display: flex;
-    flex-direction: column;
     overflow: hidden;
 }
 
-.realtime-log-panel {
-    height: 90vh;
+.realtime-log-panel,
+.file-table-panel {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     overflow: hidden;
     padding: 1rem;
+    box-sizing: border-box;
 }
 
-.toolbar-section {
-    flex-shrink: 0;
-}
-
+.file-info,
+.toolbar-section,
 .filter-section {
     flex-shrink: 0;
 }
@@ -56,6 +79,8 @@
 .viewer-section {
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
@@ -72,14 +97,6 @@
     vertical-align: middle;
 }
 
-.file-table-panel {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    overflow: hidden;
-}
-
 .selection-pause-alert {
     flex-shrink: 0;
     animation: fadeIn 0.3s ease-in;
@@ -90,6 +107,7 @@
         opacity: 0;
         transform: translateY(-5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

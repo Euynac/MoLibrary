@@ -1,16 +1,17 @@
 @attribute [Route(PAGE_URL)]
+@using System.Globalization
 @using Monica.Framework.UI.UISystemInfo.Components
-@using Monica.Framework.UI.UISystemInfo.Services
 @using Monica.Framework.UI.UISystemInfo.Models
-@using Monica.Tool.Extensions
+@using Monica.Framework.UI.UISystemInfo.Services
+@using Monica.Modules
 @using Monica.Tool.MoResponse
 @using Microsoft.Extensions.Options
-@using Monica.Modules
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
+@inject IStringLocalizer<SystemInfoResource> L
 
-<PageTitle>系统信息</PageTitle>
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <!-- Header -->
@@ -18,16 +19,16 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">系统信息</MudText>
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">@L["Page:Header:Title"]</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
-                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
-                          Color="Color.Inherit" 
-                          Variant="Variant.Outlined" 
-                          OnClick="RefreshSystemInfo"
-                          Size="Size.Medium"
-                          Style="border-color: white; color: white;">
-                    刷新信息
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Inherit"
+                           Variant="Variant.Outlined"
+                           OnClick="RefreshSystemInfo"
+                           Size="Size.Medium"
+                           Style="border-color: white; color: white;">
+                    @L["Page:Header:Refresh"]
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -37,7 +38,7 @@
     {
         <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载系统信息...</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Primary">@L["Page:States:LoadingTitle"]</MudText>
         </MudStack>
     }
     else if (_systemInfo != null)
@@ -57,7 +58,7 @@
                         <CardHeaderContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" />
-                                <MudText Typo="Typo.h6" Style="font-weight: 500;">基本信息</MudText>
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:BasicInfo:Title"]</MudText>
                             </MudStack>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -65,27 +66,27 @@
                         <MudStack Spacing="3">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Success" />
-                                <MudText><strong>构建时间:</strong></MudText>
+                                <MudText><strong>@L["Page:BasicInfo:BuildTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                            
+                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.BuildTime)</MudText>
+
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Info" />
-                                <MudText><strong>本地时间:</strong></MudText>
+                                <MudText><strong>@L["Page:BasicInfo:LocalTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.LocalTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                            
+                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.LocalTime)</MudText>
+
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Color="Color.Warning" />
-                                <MudText><strong>UTC时间:</strong></MudText>
+                                <MudText><strong>@L["Page:BasicInfo:UtcTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@_systemInfo.UtcTime.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
-                            
+                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.UtcTime)</MudText>
+
                             @if (!string.IsNullOrEmpty(_systemInfo.ProductVersion))
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Label" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>产品版本:</strong></MudText>
+                                    <MudText><strong>@L["Page:BasicInfo:ProductVersion"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProductVersion</MudText>
                             }
@@ -94,11 +95,11 @@
                             {
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>进程启动时间:</strong></MudText>
+                                    <MudText><strong>@L["Page:BasicInfo:ProcessStartTime"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProcessStartTime.Value.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.ProcessStartTime.Value)</MudText>
                                 <MudText Class="ml-6" Style="color: #888; font-size: 0.875rem;">
-                                    已运行 @FormatUptime(_systemInfo.ProcessStartTime.Value)
+                                    @L["Page:BasicInfo:RunningFor", FormatUptime(_systemInfo.ProcessStartTime.Value)]
                                 </MudText>
                             }
                         </MudStack>
@@ -115,7 +116,7 @@
                             <CardHeaderContent>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">环境信息</MudText>
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:EnvironmentInfo:Title"]</MudText>
                                 </MudStack>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -123,37 +124,37 @@
                             <MudStack Spacing="3">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>机器名:</strong></MudText>
+                                    <MudText><strong>@L["Page:EnvironmentInfo:MachineName"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.MachineName</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Info" />
-                                    <MudText><strong>用户名:</strong></MudText>
+                                    <MudText><strong>@L["Page:EnvironmentInfo:UserName"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.UserName</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Warning" />
-                                    <MudText><strong>进程ID:</strong></MudText>
+                                    <MudText><strong>@L["Page:EnvironmentInfo:ProcessId"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Architecture" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>64位操作系统:</strong></MudText>
+                                    <MudText><strong>@L["Page:EnvironmentInfo:Is64BitOperatingSystem"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem ? "是" : "否")</MudText>
-                                
+                                <MudText Class="ml-6" Style="color: #666;">@FormatBoolean(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem)</MudText>
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Tertiary" />
-                                    <MudText><strong>工作集:</strong></MudText>
+                                    <MudText><strong>@L["Page:EnvironmentInfo:WorkingSet"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
+                                <MudText Class="ml-6" Style="color: #666;">@FormatScaledBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
                             </MudStack>
                         </MudCardContent>
-                        </MudCard>
-                    </MudItem>
+                    </MudCard>
+                </MudItem>
 
                 <!-- File information card -->
                 @if (_systemInfo.FileInfo != null)
@@ -164,7 +165,7 @@
                                 <CardHeaderContent>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Color="Color.Primary" />
-                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">文件信息</MudText>
+                                        <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:FileInfo:Title"]</MudText>
                                     </MudStack>
                                 </CardHeaderContent>
                             </MudCardHeader>
@@ -172,31 +173,31 @@
                                 <MudStack Spacing="3">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Apps" Size="Size.Small" Color="Color.Success" />
-                                        <MudText><strong>产品名称:</strong></MudText>
+                                        <MudText><strong>@L["Page:FileInfo:ProductName"]:</strong></MudText>
                                     </MudStack>
                                     <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductName</MudText>
-                                    
+
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
-                                        <MudText><strong>产品版本:</strong></MudText>
+                                        <MudText><strong>@L["Page:FileInfo:ProductVersion"]:</strong></MudText>
                                     </MudStack>
                                     <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductVersion</MudText>
-                                    
+
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />
-                                        <MudText><strong>文件版本:</strong></MudText>
+                                        <MudText><strong>@L["Page:FileInfo:FileVersion"]:</strong></MudText>
                                     </MudStack>
                                     <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.FileVersion</MudText>
-                                    
+
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Color="Color.Secondary" />
-                                        <MudText><strong>公司名称:</strong></MudText>
+                                        <MudText><strong>@L["Page:FileInfo:CompanyName"]:</strong></MudText>
                                     </MudStack>
                                     <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.CompanyName</MudText>
-                                    
+
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Copyright" Size="Size.Small" Color="Color.Tertiary" />
-                                        <MudText><strong>版权信息:</strong></MudText>
+                                        <MudText><strong>@L["Page:FileInfo:Copyright"]:</strong></MudText>
                                     </MudStack>
                                     <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.LegalCopyright</MudText>
                                 </MudStack>
@@ -212,7 +213,7 @@
                             <CardHeaderContent>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
-                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">系统详细信息</MudText>
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">@L["Page:SystemDetails:Title"]</MudText>
                                 </MudStack>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -220,37 +221,37 @@
                             <MudStack Spacing="3">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.DeveloperMode" Size="Size.Small" Color="Color.Success" />
-                                    <MudText><strong>.NET版本:</strong></MudText>
+                                    <MudText><strong>@L["Page:SystemDetails:DotNetVersion"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.Version?.ToString()</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.DesktopWindows" Size="Size.Small" Color="Color.Info" />
-                                    <MudText><strong>操作系统:</strong></MudText>
+                                    <MudText><strong>@L["Page:SystemDetails:OperatingSystem"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.OSVersion?.ToString()</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Warning" />
-                                    <MudText><strong>当前目录:</strong></MudText>
+                                    <MudText><strong>@L["Page:SystemDetails:CurrentDirectory"]:</strong></MudText>
                                 </MudStack>
                                 <MudText Class="ml-6" Style="color: #666; word-break: break-all;">@_systemInfo.EnvironmentInfo.CurrentDirectory</MudText>
-                                
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Color="Color.Secondary" />
-                                    <MudText><strong>系统页面大小:</strong></MudText>
+                                    <MudText><strong>@L["Page:SystemDetails:SystemPageSize"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.SystemPageSize bytes</MudText>
-                                
+                                <MudText Class="ml-6" Style="color: #666;">@FormatByteCount(_systemInfo.EnvironmentInfo.SystemPageSize)</MudText>
+
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" Color="Color.Tertiary" />
-                                    <MudText><strong>用户交互式:</strong></MudText>
+                                    <MudText><strong>@L["Page:SystemDetails:UserInteractive"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@(_systemInfo.EnvironmentInfo.UserInteractive ? "是" : "否")</MudText>
+                                <MudText Class="ml-6" Style="color: #666;">@FormatBoolean(_systemInfo.EnvironmentInfo.UserInteractive)</MudText>
                             </MudStack>
                         </MudCardContent>
-                        </MudCard>
-                    </MudItem>
+                    </MudCard>
+                </MudItem>
             }
         </MudGrid>
     }
@@ -259,7 +260,7 @@
         <MudAlert Severity="Severity.Error" Class="ma-4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.Error" />
-                <MudText>加载系统信息失败，请稍后重试。</MudText>
+                <MudText>@L["Page:States:LoadFailedAlert"]</MudText>
             </MudStack>
         </MudAlert>
     }
@@ -275,60 +276,126 @@
     {
         if (firstRender)
         {
-            await LoadSystemInfo();
+            await LoadSystemInfoAsync();
         }
     }
 
-    private async Task LoadSystemInfo()
+    private async Task<bool> LoadSystemInfoAsync()
     {
         _loading = true;
         StateHasChanged();
+
+        var isSuccess = false;
 
         try
         {
             if ((await SystemInfoService.GetSystemInfoAsync(simple: false)).IsFailed(out var error, out var data))
             {
-                Snackbar.Add("加载系统信息失败:" + error, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadFailed", error.Message ?? string.Empty].Value, Severity.Error);
             }
             else
             {
                 _systemInfo = data;
+                isSuccess = true;
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载系统信息时发生错误: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Messages:LoadError", ex.Message].Value, Severity.Error);
         }
         finally
         {
             _loading = false;
             StateHasChanged();
         }
+
+        return isSuccess;
     }
 
     private async Task RefreshSystemInfo()
     {
-        await LoadSystemInfo();
-        Snackbar.Add("系统信息已刷新", Severity.Success);
+        if (await LoadSystemInfoAsync())
+        {
+            Snackbar.Add(L["Page:Messages:RefreshSucceeded"].Value, Severity.Success);
+        }
     }
 
-    private static string FormatBytes(long bytes)
+    private string FormatDateTime(DateTime value)
+    {
+        return value.ToString("G", CultureInfo.CurrentCulture);
+    }
+
+    private string FormatBoolean(bool value)
+    {
+        return L[value ? "Shared:Common:Yes" : "Shared:Common:No"].Value;
+    }
+
+    private string FormatScaledBytes(long bytes)
     {
         const int scale = 1024;
-        string[] orders = ["bytes", "KB", "MB", "GB", "TB"];
-        double max = bytes;
-        int order = 0;
-        while (max >= scale && order < orders.Length - 1)
+        string[] unitKeys = ["Bytes", "Kilobytes", "Megabytes", "Gigabytes", "Terabytes"];
+        double value = bytes;
+        var order = 0;
+
+        while (Math.Abs(value) >= scale && order < unitKeys.Length - 1)
         {
             order++;
-            max = max / scale;
+            value /= scale;
         }
-        return $"{max:##.##} {orders[order]}";
+
+        return $"{value.ToString("0.##", CultureInfo.CurrentCulture)} {L[$"Shared:Units:{unitKeys[order]}"].Value}";
     }
 
-    private static string FormatUptime(DateTime startTime)
+    private string FormatByteCount(long bytes)
+    {
+        return $"{bytes.ToString("N0", CultureInfo.CurrentCulture)} {L["Shared:Units:Bytes"].Value}";
+    }
+
+    private string FormatUptime(DateTime startTime)
     {
         var uptime = DateTime.Now - startTime;
-        return uptime.ToZhFormatString();
+        if (uptime < TimeSpan.Zero)
+        {
+            uptime = TimeSpan.Zero;
+        }
+
+        List<string> parts = [];
+
+        AppendDurationPart(parts, uptime.Days, "Shared:Duration:DaySingular", "Shared:Duration:DayPlural");
+        AppendDurationPart(parts, uptime.Hours, "Shared:Duration:HourSingular", "Shared:Duration:HourPlural");
+        AppendDurationPart(parts, uptime.Minutes, "Shared:Duration:MinuteSingular", "Shared:Duration:MinutePlural");
+
+        var secondValue = uptime.Milliseconds == 0
+            ? uptime.Seconds
+            : uptime.Seconds + uptime.Milliseconds / 1000d;
+
+        AppendDurationPart(parts, secondValue, "Shared:Duration:SecondSingular", "Shared:Duration:SecondPlural");
+
+        if (parts.Count == 0)
+        {
+            return L["Shared:Duration:ZeroSeconds"].Value;
+        }
+
+        return string.Join(L["Shared:Duration:Separator"].Value, parts);
     }
-} 
+
+    private void AppendDurationPart(List<string> parts, int value, string singularKey, string pluralKey)
+    {
+        if (value <= 0)
+        {
+            return;
+        }
+
+        parts.Add(L[value == 1 ? singularKey : pluralKey, value].Value);
+    }
+
+    private void AppendDurationPart(List<string> parts, double value, string singularKey, string pluralKey)
+    {
+        if (value <= 0)
+        {
+            return;
+        }
+
+        parts.Add(L[Math.Abs(value - 1d) < 0.0001d ? singularKey : pluralKey, value].Value);
+    }
+}

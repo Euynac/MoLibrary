@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Framework.UI.Localization;
 using Monica.Modules;
 using Monica.RegisterCentre.Interfaces;
 using Monica.RegisterCentre.Models;
@@ -11,7 +13,8 @@ namespace Monica.Framework.UI.UIRegisterCentre.Services;
 public class RegisterCentreService(
     ILogger<RegisterCentreService> logger,
     IServiceProvider serviceProvider,
-    IOptions<ModuleRegisterCentreUIOption> uiOptions)
+    IOptions<ModuleRegisterCentreUIOption> uiOptions,
+    IStringLocalizer<RegisterCentreResource> localizer)
 {
     private static readonly Dictionary<string, string> _domainColors = new();
     private static List<DomainInfo> _cachedDomains = [];
@@ -28,7 +31,7 @@ public class RegisterCentreService(
             var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
             if (stateManager == null)
             {
-                return "当前服务未配置注册中心状态管理器";
+                return Res.Fail(localizer["Service:Errors:StateManagerNotConfigured"].Value);
             }
 
             var instances = await stateManager.GetAllInstancesAsync();
@@ -36,19 +39,19 @@ public class RegisterCentreService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取服务状态失败");
-            return $"获取服务状态失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get service status.");
+            return Res.Fail(localizer["Service:Errors:GetServicesStatusFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// 将 InstanceState 列表转换为 RegisteredServiceStatus 列表（按 ServiceName 分组）
+    /// Converts <see cref="InstanceState"/> items to grouped <see cref="RegisteredServiceStatus"/> values.
     /// </summary>
     private static List<RegisteredServiceStatus> ConvertToRegisteredServiceStatus(List<InstanceState> instances)
     {
         var result = new List<RegisteredServiceStatus>();
 
-        // 按 ServiceName（即 AppId）分组
+        // Group by ServiceName (AppId)
         var groupedByAppId = instances.GroupBy(i => i.ServiceName);
 
         foreach (var group in groupedByAppId)
@@ -66,7 +69,7 @@ public class RegisterCentreService(
                     i => i.InstanceId,
                     i =>
                     {
-                        // 存在于 StateStore 中即表示在线
+                        // Presence in the state store means the instance is online.
                         i.Status = ServiceStatus.Running;
                         return i;
                     })
@@ -79,9 +82,9 @@ public class RegisterCentreService(
     }
 
     /// <summary>
-    /// 获取合并的服务状态列表（包含预定义服务和已注册服务）
+    /// Gets the merged service status list including predefined and registered services.
     /// </summary>
-    /// <returns>合并后的服务状态列表</returns>
+    /// <returns>The merged service status list.</returns>
     public async Task<Res<List<RegisteredServiceStatus>>> GetMergedServicesStatusAsync()
     {
         try
@@ -89,7 +92,7 @@ public class RegisterCentreService(
             var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
             var infoProvider = serviceProvider.GetService<IRegisterCentreCatalogProvider>();
 
-            // 获取已注册的服务状态
+            // Load registered services.
             List<RegisteredServiceStatus> registeredServices = [];
             if (stateManager != null)
             {
@@ -97,28 +100,26 @@ public class RegisterCentreService(
                 registeredServices = ConvertToRegisteredServiceStatus(instances);
             }
 
-            // 获取预定义的服务信息
+            // Load predefined services.
             List<PredefinedServiceInfo> preloadedServices = [];
             if (infoProvider != null)
             {
                 preloadedServices = await infoProvider.GetPreloadedServicesAsync();
             }
 
-            // 合并服务列表
+            // Merge both service sets.
             var mergedServices = new List<RegisteredServiceStatus>(registeredServices);
 
-            // 检查预定义服务是否已在注册服务中存在，如果不存在则添加
+            // Add predefined services that are not registered yet.
             foreach (var preloadedService in preloadedServices)
             {
                 var existingService = registeredServices.FirstOrDefault(r => r.AppId == preloadedService.AppId);
                 if (existingService == null)
                 {
-                    // 创建一个离线状态的服务条目
                     mergedServices.Add(new RegisteredServiceStatus
                     {
                         AppId = preloadedService.AppId,
                         AppName = preloadedService.AppName ?? preloadedService.AppId,
-                        // 其他属性保持默认值，Instances为空字典表示离线状态
                     });
                 }
             }
@@ -127,13 +128,13 @@ public class RegisterCentreService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取合并服务状态失败");
-            return $"获取合并服务状态失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get merged service status.");
+            return Res.Fail(localizer["Service:Errors:GetMergedServicesStatusFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// Get merged services with eviction tracking
+    /// Gets merged services with evicted instance tracking.
     /// </summary>
     public async Task<Res<List<RegisteredServiceStatus>>> GetMergedServicesWithEvictionTrackingAsync()
     {
@@ -151,7 +152,7 @@ public class RegisterCentreService(
     {
         lock (_evictionLock)
         {
-            // Build current instances map
+            // Build current instances map.
             var currentInstances = new Dictionary<string, InstanceState>();
             foreach (var service in currentServices)
             {
@@ -162,12 +163,11 @@ public class RegisterCentreService(
                 }
             }
 
-            // Detect evictions by comparing with previous snapshot
+            // Detect evictions by comparing with the previous snapshot.
             foreach (var (key, previousInstance) in _previousInstancesSnapshot)
             {
                 if (!currentInstances.ContainsKey(key))
                 {
-                    // Instance was evicted
                     var serviceName = previousInstance.ServiceName;
 
                     if (!_evictedInstances.ContainsKey(serviceName))
@@ -175,7 +175,6 @@ public class RegisterCentreService(
 
                     var queue = _evictedInstances[serviceName];
 
-                    // Add to queue with minimal data to reduce memory usage
                     queue.Enqueue(new EvictedInstanceInfo
                     {
                         InstanceId = previousInstance.InstanceId,
@@ -193,14 +192,14 @@ public class RegisterCentreService(
                         IsLeader = previousInstance.IsLeader
                     });
 
-                    // Enforce max retention count
+                    // Enforce max retention count.
                     var maxCount = uiOptions.Value.MaxEvictedServiceRetentionCount;
                     while (queue.Count > maxCount)
                         queue.Dequeue();
                 }
             }
 
-            // Update snapshot for next comparison
+            // Update snapshot for the next comparison.
             _previousInstancesSnapshot = currentInstances;
         }
     }
@@ -220,9 +219,9 @@ public class RegisterCentreService(
     }
 
     /// <summary>
-    /// 获取域信息并初始化颜色分配
+    /// Gets domains and initializes color assignments.
     /// </summary>
-    /// <returns>域信息列表</returns>
+    /// <returns>The domain list.</returns>
     public async Task<Res<List<DomainInfo>>> GetDomainsWithColorsAsync()
     {
         try
@@ -230,57 +229,57 @@ public class RegisterCentreService(
             var infoProvider = serviceProvider.GetService<IRegisterCentreCatalogProvider>();
             if (infoProvider == null)
             {
-                return "当前服务未配置IRegisterCentreInfoProvider";
+                return Res.Fail(localizer["Service:Errors:InfoProviderNotConfigured"].Value);
             }
 
             var domains = await infoProvider.GetAllDomainsAsync();
 
-            // 检查是否需要重新初始化颜色分配
+            // Rebuild colors when the domain set changes.
             if (_cachedDomains.Count != domains.Count ||
                 !domains.All(d => _cachedDomains.Any(c => c.Name == d.Name)))
             {
                 _cachedDomains = domains.ToList();
                 InitializeDomainColors(_cachedDomains);
-                logger.LogInformation("重新初始化域颜色分配，共 {Count} 个域", domains.Count);
+                logger.LogInformation("Reinitialized domain color assignments. Domain count: {Count}", domains.Count);
             }
 
             return domains.ToList();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取域信息失败");
-            return $"获取域信息失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get domains.");
+            return Res.Fail(localizer["Service:Errors:GetDomainsFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// 获取指定域的颜色
+    /// Gets the configured color for a domain.
     /// </summary>
-    /// <param name="domainName">域名称</param>
-    /// <returns>域对应的颜色，如果域不存在则返回默认颜色</returns>
+    /// <param name="domainName">The domain name.</param>
+    /// <returns>The domain color or the default color.</returns>
     public string GetDomainColor(string domainName)
     {
         if (string.IsNullOrEmpty(domainName))
         {
-            return "#666666"; // 默认灰色
+            return "#666666";
         }
 
         return _domainColors.GetValueOrDefault(domainName, "#666666");
     }
 
     /// <summary>
-    /// 获取所有域颜色映射
+    /// Gets all domain color mappings.
     /// </summary>
-    /// <returns>域名到颜色的映射字典</returns>
+    /// <returns>The domain color mappings.</returns>
     public Dictionary<string, string> GetAllDomainColors()
     {
         return _domainColors;
     }
 
     /// <summary>
-    /// 初始化域颜色分配
+    /// Initializes domain color assignments.
     /// </summary>
-    /// <param name="domains">域信息列表</param>
+    /// <param name="domains">The domains.</param>
     private static void InitializeDomainColors(List<DomainInfo> domains)
     {
         _domainColors.Clear();
@@ -295,10 +294,10 @@ public class RegisterCentreService(
     }
 
     /// <summary>
-    /// 生成视觉上区分度高的颜色
+    /// Generates visually distinct colors.
     /// </summary>
-    /// <param name="count">需要生成的颜色数量</param>
-    /// <returns>颜色列表</returns>
+    /// <param name="count">The number of colors to generate.</param>
+    /// <returns>The generated colors.</returns>
     private static List<string> GenerateDistinctColors(int count)
     {
         var colors = new List<string>();
@@ -309,8 +308,8 @@ public class RegisterCentreService(
         for (var i = 0; i < count; i++)
         {
             var hue = (i * hueStep) % 360;
-            var saturation = 65 + (i % 3) * 15; // 65-95%
-            var lightness = 50 + (i % 2) * 10; // 50-60%
+            var saturation = 65 + (i % 3) * 15;
+            var lightness = 50 + (i % 2) * 10;
             colors.Add($"hsl({hue:F0}, {saturation}%, {lightness}%)");
         }
 
@@ -318,17 +317,17 @@ public class RegisterCentreService(
     }
 
     /// <summary>
-    /// 获取指定域的相关微服务列表
+    /// Gets services that belong to or depend on the specified domain.
     /// </summary>
-    /// <param name="domainName">域名称</param>
-    /// <returns>该域相关的微服务列表</returns>
+    /// <param name="domainName">The domain name.</param>
+    /// <returns>The related services.</returns>
     public async Task<Res<List<RegisteredServiceStatus>>> GetDomainRelatedServicesAsync(string domainName)
     {
         try
         {
             if (string.IsNullOrEmpty(domainName))
             {
-                return "域名称不能为空";
+                return Res.Fail(localizer["Service:Errors:DomainNameRequired"].Value);
             }
 
             var servicesResult = await GetMergedServicesStatusAsync();
@@ -346,23 +345,23 @@ public class RegisterCentreService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取域相关服务失败");
-            return $"获取域相关服务失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get related domain services.");
+            return Res.Fail(localizer["Service:Errors:GetDomainRelatedServicesFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// 获取域详细信息（包含相关微服务）
+    /// Gets domain details including related services.
     /// </summary>
-    /// <param name="domainName">域名称</param>
-    /// <returns>域详细信息</returns>
+    /// <param name="domainName">The domain name.</param>
+    /// <returns>The domain details.</returns>
     public async Task<Res<DomainDetailInfo>> GetDomainDetailAsync(string domainName)
     {
         try
         {
             if (string.IsNullOrEmpty(domainName))
             {
-                return "域名称不能为空";
+                return Res.Fail(localizer["Service:Errors:DomainNameRequired"].Value);
             }
 
             var domainsResult = await GetDomainsWithColorsAsync();
@@ -374,7 +373,7 @@ public class RegisterCentreService(
             var domain = domains.FirstOrDefault(d => string.Equals(d.Name, domainName, StringComparison.OrdinalIgnoreCase));
             if (domain == null)
             {
-                return $"未找到域: {domainName}";
+                return Res.Fail(localizer["Service:Errors:DomainNotFound", domainName].Value);
             }
 
             var servicesResult = await GetDomainRelatedServicesAsync(domainName);
@@ -394,15 +393,15 @@ public class RegisterCentreService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取域详细信息失败");
-            return $"获取域详细信息失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get domain details.");
+            return Res.Fail(localizer["Service:Errors:GetDomainDetailFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// 获取当前 Leader 状态信息
+    /// Gets the current leader state.
     /// </summary>
-    /// <returns>Leader 状态信息</returns>
+    /// <returns>The leader state.</returns>
     public async Task<Res<LeaderState?>> GetLeaderStateAsync()
     {
         try
@@ -410,59 +409,59 @@ public class RegisterCentreService(
             var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
             if (stateManager == null)
             {
-                return "当前服务未配置注册中心状态管理器";
+                return Res.Fail(localizer["Service:Errors:StateManagerNotConfigured"].Value);
             }
 
             return await stateManager.GetLeaderStateAsync();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "获取Leader状态失败");
-            return $"获取Leader状态失败: {ex.Message}";
+            logger.LogError(ex, "Failed to get leader state.");
+            return Res.Fail(localizer["Service:Errors:GetLeaderStateFailed", ex.Message].Value);
         }
     }
 
     /// <summary>
-    /// 强制删除指定服务的 Leader（用于触发重新选举）
+    /// Forces deletion of the leader key for the specified service.
     /// </summary>
-    /// <param name="serviceName">服务名称（AppId）</param>
-    /// <returns>操作结果</returns>
+    /// <param name="serviceName">The service name (AppId).</param>
+    /// <returns>The operation result.</returns>
     public async Task<Res> ForceDeleteLeaderAsync(string serviceName)
     {
         try
         {
             var stateManager = serviceProvider.GetService<IRegistrationStateManager>();
             if (stateManager == null)
-                return "当前服务未配置注册中心状态管理器";
+                return Res.Fail(localizer["Service:Errors:StateManagerNotConfigured"].Value);
 
             await stateManager.ForceDeleteLeaderKeyAsync(serviceName);
             return Res.Ok();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "强制删除 Leader 失败: {ServiceName}", serviceName);
-            return $"强制删除 Leader 失败: {ex.Message}";
+            logger.LogError(ex, "Failed to force delete leader for service {ServiceName}.", serviceName);
+            return Res.Fail(localizer["Service:Errors:ForceDeleteLeaderFailed", ex.Message].Value);
         }
     }
 }
 
 /// <summary>
-/// 域详细信息
+/// Represents domain details for the Register Centre UI.
 /// </summary>
 public class DomainDetailInfo
 {
     /// <summary>
-    /// 域信息
+    /// Gets or sets the domain metadata.
     /// </summary>
     public required DomainInfo Domain { get; set; }
 
     /// <summary>
-    /// 相关微服务列表
+    /// Gets or sets the related services.
     /// </summary>
     public List<RegisteredServiceStatus> RelatedServices { get; set; } = [];
 
     /// <summary>
-    /// 域颜色
+    /// Gets or sets the domain color.
     /// </summary>
     public string Color { get; set; } = "#666666";
 }

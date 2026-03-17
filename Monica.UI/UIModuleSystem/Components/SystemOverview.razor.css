@@ -2,6 +2,23 @@
     width: 100%;
 }
 
+.overview-summary-item {
+    display: flex;
+    height: 100%;
+}
+
+.overview-summary-item ::deep .modern-card {
+    display: flex;
+    width: 100%;
+    min-height: 226px;
+}
+
+.overview-summary-item ::deep .mud-card-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
 .modern-card {
     height: 100%;
 }
@@ -12,11 +29,23 @@
 }
 
 .card-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
     padding-top: 8px;
+}
+
+.card-content > :last-child {
+    margin-top: auto;
 }
 
 /* 响应式设计 */
 @media (max-width: 960px) {
+    .overview-summary-item ::deep .modern-card {
+        min-height: auto;
+    }
+
     .modern-card {
         min-height: auto;
     }

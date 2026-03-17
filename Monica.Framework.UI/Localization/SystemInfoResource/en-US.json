@@ -1,0 +1,96 @@
+{
+  "Page": {
+    "PageTitle": "System Information",
+    "Header": {
+      "Title": "System Information",
+      "Refresh": "Refresh"
+    },
+    "States": {
+      "LoadingTitle": "Loading system information...",
+      "LoadFailedAlert": "Failed to load system information. Please try again later."
+    },
+    "BasicInfo": {
+      "Title": "Basic Information",
+      "BuildTime": "Build Time",
+      "LocalTime": "Local Time",
+      "UtcTime": "UTC Time",
+      "ProductVersion": "Product Version",
+      "ProcessStartTime": "Process Start Time",
+      "RunningFor": "Uptime {0}"
+    },
+    "EnvironmentInfo": {
+      "Title": "Environment Information",
+      "MachineName": "Machine Name",
+      "UserName": "User Name",
+      "ProcessId": "Process ID",
+      "Is64BitOperatingSystem": "64-bit Operating System",
+      "WorkingSet": "Working Set"
+    },
+    "FileInfo": {
+      "Title": "File Information",
+      "ProductName": "Product Name",
+      "ProductVersion": "Product Version",
+      "FileVersion": "File Version",
+      "CompanyName": "Company Name",
+      "Copyright": "Copyright"
+    },
+    "SystemDetails": {
+      "Title": "System Details",
+      "DotNetVersion": ".NET Version",
+      "OperatingSystem": "Operating System",
+      "CurrentDirectory": "Current Directory",
+      "SystemPageSize": "System Page Size",
+      "UserInteractive": "User Interactive"
+    },
+    "Messages": {
+      "LoadFailed": "Failed to load system information: {0}",
+      "LoadError": "An error occurred while loading system information: {0}",
+      "RefreshSucceeded": "System information refreshed."
+    }
+  },
+  "CustomLinks": {
+    "Title": "Quick Links",
+    "Actions": {
+      "CopyUserName": "Copy user name",
+      "CopyPassword": "Copy password"
+    },
+    "Messages": {
+      "CopyUserNameSucceeded": "User name copied.",
+      "CopyUserNameFailed": "Failed to copy user name",
+      "CopyPasswordSucceeded": "Password copied.",
+      "CopyPasswordFailed": "Failed to copy password",
+      "CopyFailedWithMessage": "{0}: {1}"
+    }
+  },
+  "Shared": {
+    "Common": {
+      "Yes": "Yes",
+      "No": "No"
+    },
+    "Units": {
+      "Bytes": "bytes",
+      "Kilobytes": "KB",
+      "Megabytes": "MB",
+      "Gigabytes": "GB",
+      "Terabytes": "TB"
+    },
+    "Duration": {
+      "Separator": " ",
+      "ZeroSeconds": "0 seconds",
+      "DaySingular": "{0} day",
+      "DayPlural": "{0} days",
+      "HourSingular": "{0} hour",
+      "HourPlural": "{0} hours",
+      "MinuteSingular": "{0} minute",
+      "MinutePlural": "{0} minutes",
+      "SecondSingular": "{0} second",
+      "SecondPlural": "{0} seconds"
+    }
+  },
+  "Service": {
+    "Errors": {
+      "EntryAssemblyUnavailable": "Unable to resolve the entry assembly information.",
+      "GetSystemInfoFailed": "Failed to get system information: {0}"
+    }
+  }
+}

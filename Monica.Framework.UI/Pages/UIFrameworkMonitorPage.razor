@@ -1,17 +1,15 @@
 @attribute [Route(FRAMEWORK_MONITOR_DEBUG_URL)]
 
 @using Monica.Framework.UI.UIFrameworkMonitor.Components
-@using Monica.Framework.Services
-@inject IFrameworkMonitorService FrameworkMonitorService
-@inject ISnackbar Snackbar
+@inject IStringLocalizer<FrameworkMonitorResource> L
 
-<PageTitle>框架监控</PageTitle>
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <div class="framework-monitor-page">
     <MudContainer MaxWidth="MaxWidth.False" Class="framework-monitor-page__outer-container">
         <div class="framework-monitor-page__container">
             <div class="framework-monitor-page__header">
-                <MudText Typo="Typo.h4">框架监控</MudText>
+                <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
             </div>
 
             <div class="framework-monitor-page__content">
@@ -19,31 +17,31 @@
                          Rounded="true"
                          ApplyEffectsToContainer="true"
                          Class="framework-monitor-tabs">
-                    <MudTabPanel Text="项目单元"
+                    <MudTabPanel Text="@L["Page:Tabs:ProjectUnit"]"
                                  Icon="@Icons.Material.Filled.AccountTree"
                                  PanelClass="framework-monitor-tab-panel">
                         <ProjectUnitMonitor />
                     </MudTabPanel>
 
-                    <MudTabPanel Text="架构可视化"
+                    <MudTabPanel Text="@L["Page:Tabs:ArchitectureVisualization"]"
                                  Icon="@Icons.Material.Filled.Hub"
                                  PanelClass="framework-monitor-tab-panel">
                         <ProjectUnitVisualization />
                     </MudTabPanel>
 
-                    <MudTabPanel Text="领域事件测试"
+                    <MudTabPanel Text="@L["Page:Tabs:DomainEventTester"]"
                                  Icon="@Icons.Material.Filled.Event"
                                  PanelClass="framework-monitor-tab-panel">
                         <DomainEventTester />
                     </MudTabPanel>
 
-                    <MudTabPanel Text="请求过滤管理"
+                    <MudTabPanel Text="@L["Page:Tabs:RequestFilterManager"]"
                                  Icon="@Icons.Material.Filled.FilterAlt"
                                  PanelClass="framework-monitor-tab-panel">
                         <RequestFilterManager />
                     </MudTabPanel>
 
-                    <MudTabPanel Text="枚举信息"
+                    <MudTabPanel Text="@L["Page:Tabs:EnumInfo"]"
                                  Icon="@Icons.Material.Filled.List"
                                  PanelClass="framework-monitor-tab-panel">
                         <EnumInfoViewer />
