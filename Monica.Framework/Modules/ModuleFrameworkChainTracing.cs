@@ -23,7 +23,7 @@ public static class ModuleFrameworkChainTracingBuilderExtensions
 }
 
 public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption option)
-    : MoModuleWithDependencies<ModuleFrameworkChainTracing, ModuleFrameworkChainTracingOption, ModuleFrameworkChainTracingGuide>(option)
+    : MoModule<ModuleFrameworkChainTracing, ModuleFrameworkChainTracingOption, ModuleFrameworkChainTracingGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

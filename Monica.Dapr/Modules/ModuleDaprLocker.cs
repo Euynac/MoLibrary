@@ -21,7 +21,7 @@ public static class ModuleDaprLockerBuilderExtensions
 }
 
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
-    : MoModuleWithDependencies<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
+    : MoModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

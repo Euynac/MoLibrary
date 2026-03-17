@@ -27,7 +27,7 @@ public static class ModuleDaprEventBusBuilderExtensions
 }
 
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : MoModuleWithDependencies<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
+    : MoModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
       IEventBusModuleProvider
 {
     public override ModuleKey GetModuleKey()

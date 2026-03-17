@@ -16,7 +16,7 @@ using Monica.DataChannel.UIDataChannel.Services;
 namespace Monica.Modules;
 
 public class ModuleDataChannel(ModuleDataChannelOption option)
-    : MoModuleWithDependencies<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
+    : MoModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

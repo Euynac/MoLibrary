@@ -39,7 +39,7 @@ public abstract class MoModule : IMoModule
 /// Base abstract class for Monica modules.
 /// Provides the default implementation of <see cref="IMoModule"/>.
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleStaticInfo, IMoModuleGuideBridge
+public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleStaticInfo, IMoModuleGuideBridge, IDependsOnOtherModules
     where TModuleOption : MoModuleOption<TModuleSelf>, new() 
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
     where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
@@ -134,14 +134,9 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
         }
         builder.UseEndpoints(configure);
     }
-}
-
-public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule<TModuleSelf, TModuleOption, TModuleGuide>(option), IWantDependsOnOtherModules
-    where TModuleOption : MoModuleOption<TModuleSelf>, new()
-    where TModuleSelf : MoModuleWithDependencies<TModuleSelf, TModuleOption, TModuleGuide>
-    where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
-{
-    public abstract void ClaimDependencies();
+    public virtual void ClaimDependencies()
+    {
+    }
 
 
     [MustUseReturnValue]
@@ -152,11 +147,12 @@ public abstract class MoModuleWithDependencies<TModuleSelf, TModuleOption, TModu
     }
 }
 
-public interface IWantDependsOnOtherModules
+
+public interface IDependsOnOtherModules
 {
     /// <summary>
     /// Declares dependent modules and optionally configures them.
     /// The option instance available here may not be final because automatically registered configuration from other modules has not been merged yet.
     /// </summary>
-    public void ClaimDependencies();
+    void ClaimDependencies();
 }

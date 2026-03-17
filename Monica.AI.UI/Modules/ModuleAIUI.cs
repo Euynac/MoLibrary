@@ -32,7 +32,7 @@ public static class ModuleAIUIBuilderExtensions
 /// 提供基于 Blazor 的 AI 聊天界面
 /// </summary>
 public class ModuleAIUI(ModuleAIUIOption option)
-    : MoModuleWithDependencies<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
+    : MoModule<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

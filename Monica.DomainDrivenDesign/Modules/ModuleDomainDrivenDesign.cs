@@ -14,7 +14,7 @@ using Monica.Tool.Extensions;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModuleWithDependencies<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
+public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModule<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

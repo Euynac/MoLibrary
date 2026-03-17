@@ -85,7 +85,7 @@ public static class ModuleRedisStateStoreBuilderExtensions
 }
 
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
-    : MoModuleWithDependencies<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
+    : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
     public override ModuleKey GetModuleKey()

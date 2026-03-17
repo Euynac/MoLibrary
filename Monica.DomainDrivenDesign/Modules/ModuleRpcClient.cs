@@ -32,7 +32,7 @@ public static class ModuleRpcClientBuilderExtensions
 }
 
 public class ModuleRpcClient(ModuleRpcClientOption option) :
-    MoModuleWithDependencies<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
+    MoModule<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
     IWantIterateBusinessTypes
 {
     public List<Type> RelatedTypes { get; set; } = [];

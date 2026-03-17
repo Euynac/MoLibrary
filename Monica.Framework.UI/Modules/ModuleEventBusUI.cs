@@ -32,7 +32,7 @@ public static class ModuleEventBusUIBuilderExtensions
 /// 事件总线UI模块
 /// </summary>
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
-    : MoModuleWithDependencies<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
+    : MoModule<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

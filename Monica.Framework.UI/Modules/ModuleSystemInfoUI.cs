@@ -33,7 +33,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
 /// System information UI module.
 /// </summary>
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
-    : MoModuleWithDependencies<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
+    : MoModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

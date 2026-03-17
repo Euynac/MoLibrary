@@ -24,7 +24,7 @@ public static class ModuleProgressBarBuilderExtensions
 }
 
 public class ModuleProgressBar(ModuleProgressBarOption option)
-    : MoModuleWithDependencies<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
+    : MoModule<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

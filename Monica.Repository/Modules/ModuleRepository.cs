@@ -33,7 +33,7 @@ public static class ModuleRepositoryBuilderExtensions
 }
 
 public class ModuleRepository(ModuleRepositoryOption option)
-    : MoModuleWithDependencies<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
+    : MoModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

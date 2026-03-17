@@ -32,7 +32,7 @@ public static class ModuleTimekeeperUIBuilderExtensions
 /// Timekeeper UI模块
 /// </summary>
 public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
-    : MoModuleWithDependencies<ModuleTimekeeperUI, ModuleTimekeeperUIOption, ModuleTimekeeperUIGuide>(option)
+    : MoModule<ModuleTimekeeperUI, ModuleTimekeeperUIOption, ModuleTimekeeperUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

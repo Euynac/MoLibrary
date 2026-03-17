@@ -71,6 +71,8 @@ Mo.Add{Name}(options =>
 
 ### Module Dependencies
 
+Modules declare dependencies by overriding `ClaimDependencies()` on `MoModule<TModuleSelf, TModuleOption, TModuleGuide>`.
+
 ```csharp
 public override void ClaimDependencies()
 {

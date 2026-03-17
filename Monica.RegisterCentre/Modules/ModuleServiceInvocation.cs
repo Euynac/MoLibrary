@@ -13,7 +13,7 @@ namespace Monica.Modules;
 /// 服务调用模块
 /// </summary>
 public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
-    : MoModuleWithDependencies<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
+    : MoModule<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.ServiceInvocation;
 

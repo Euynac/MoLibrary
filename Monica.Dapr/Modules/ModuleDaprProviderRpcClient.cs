@@ -19,7 +19,7 @@ public static class ModuleDaprProviderRpcClientBuilderExtensions
 }
 
 public class ModuleDaprProviderRpcClient(ModuleDaprProviderRpcClientOption option)
-    : MoModuleWithDependencies<ModuleDaprProviderRpcClient, ModuleDaprProviderRpcClientOption, ModuleDaprProviderRpcClientGuide>(option)
+    : MoModule<ModuleDaprProviderRpcClient, ModuleDaprProviderRpcClientOption, ModuleDaprProviderRpcClientGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

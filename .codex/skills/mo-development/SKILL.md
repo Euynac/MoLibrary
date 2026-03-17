@@ -61,6 +61,8 @@ public override void ClaimDependencies()
 }
 ```
 
+Modules declare dependencies by overriding `ClaimDependencies()` on `MoModule<TModuleSelf, TModuleOption, TModuleGuide>`.
+
 Dependencies are automatically registered when a module is added.
 
 ### Required Configuration Methods (GetRequestedConfigMethodKeys)

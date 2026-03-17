@@ -28,7 +28,7 @@ public static class ModuleSwaggerUIBuilderExtensions
 /// Swagger UI增强模块 - 提供自定义导航按钮等UI扩展功能
 /// </summary>
 public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
-    : MoModuleWithDependencies<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
+    : MoModule<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

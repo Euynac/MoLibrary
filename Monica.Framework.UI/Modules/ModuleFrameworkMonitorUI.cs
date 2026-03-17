@@ -27,7 +27,7 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
 /// 框架监控UI模块
 /// </summary>
 public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
-    : MoModuleWithDependencies<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>(option)
+    : MoModule<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

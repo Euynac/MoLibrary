@@ -33,7 +33,7 @@ public static class ModuleAutoControllersBuilderExtensions
 }
 
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
-    : MoModuleWithDependencies<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option)
+    : MoModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

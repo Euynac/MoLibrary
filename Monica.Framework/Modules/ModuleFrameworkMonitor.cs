@@ -31,7 +31,7 @@ public static class ModuleFrameworkMonitorBuilderExtensions
 }
 
 public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
-    : MoModuleWithDependencies<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
+    : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
 {
 
     public override void ClaimDependencies()

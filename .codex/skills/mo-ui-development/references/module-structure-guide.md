@@ -109,9 +109,11 @@ Key characteristics:
 
 ## UI Module Class Implementation
 
+UI modules inherit from `MoModule<TModuleSelf, TModuleOption, TModuleGuide>` and declare required modules in `ClaimDependencies()`.
+
 ```csharp
 public class Module{Name}UI(Module{Name}UIOption option)
-    : MoModuleWithDependencies<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
+    : MoModule<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.{Name}UI;
 

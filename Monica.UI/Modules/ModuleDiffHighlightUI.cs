@@ -27,7 +27,7 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 /// 文本差异对比高亮UI模块
 /// </summary>
 public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
-    : MoModuleWithDependencies<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
+    : MoModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

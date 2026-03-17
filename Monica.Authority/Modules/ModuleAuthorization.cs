@@ -29,7 +29,7 @@ public static class ModuleAuthorizationBuilderExtensions
     }
 }
 
-public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModuleWithDependencies<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
+public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

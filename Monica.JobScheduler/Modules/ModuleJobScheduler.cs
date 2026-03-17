@@ -43,7 +43,7 @@ public static class ModuleJobSchedulerBuilderExtensions
 /// and metadata persistence layer.
 /// </summary>
 public class ModuleJobScheduler(ModuleJobSchedulerOption option)
-    : MoModuleWithDependencies<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
+    : MoModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
 

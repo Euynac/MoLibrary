@@ -31,7 +31,7 @@ public static class ModuleHostedServiceBuilderExtensions
 /// Provides centralized HostedService state management, heartbeat monitoring, and coordination support.
 /// </summary>
 public class ModuleHostedService(ModuleHostedServiceOption option)
-    : MoModuleWithDependencies<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
+    : MoModule<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

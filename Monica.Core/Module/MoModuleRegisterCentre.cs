@@ -118,9 +118,8 @@ public static class MoModuleRegisterCentre
                 info.StartModulePhase(EMoModuleConfigMethods.ClaimDependencies);
                 try
                 {
-                    if (!moduleType.IsImplementInterface(typeof(IWantDependsOnOtherModules))) continue;
                     var option = info.CreateCurrentModuleOption();
-                    if (Activator.CreateInstance(moduleType, option) is IWantDependsOnOtherModules moduleTmpInstance)
+                    if (Activator.CreateInstance(moduleType, option) is IDependsOnOtherModules moduleTmpInstance)
                     {
                         moduleTmpInstance.ClaimDependencies();
                     }

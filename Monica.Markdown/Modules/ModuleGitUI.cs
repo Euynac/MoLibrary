@@ -31,7 +31,7 @@ public static class ModuleGitUIBuilderExtensions
 /// Git dashboard UI module.
 /// </summary>
 public class ModuleGitUI(ModuleGitUIOption option)
-    : MoModuleWithDependencies<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
+    : MoModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
 {
     /// <inheritdoc />
     public override ModuleKey GetModuleKey()

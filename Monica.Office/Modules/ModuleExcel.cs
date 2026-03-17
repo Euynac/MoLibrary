@@ -29,7 +29,7 @@ public static class ModuleExcelBuilderExtensions
     }
 }
 
-public class ModuleExcel(ModuleExcelOption option) : MoModuleWithDependencies<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
+public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

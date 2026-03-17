@@ -56,7 +56,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
 }
 
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : MoModuleWithDependencies<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
+    : MoModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
     public override ModuleKey GetModuleKey()

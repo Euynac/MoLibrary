@@ -36,7 +36,7 @@ public static class ModuleGitBuilderExtensions
 /// Git synchronization module.
 /// </summary>
 public class ModuleGit(ModuleGitOption option)
-    : MoModuleWithDependencies<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
+    : MoModule<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
 {
     /// <inheritdoc />
     public override ModuleKey GetModuleKey()

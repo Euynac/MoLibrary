@@ -26,7 +26,7 @@ public static class ModuleSignalrUIBuilderExtensions
 }
 
 public class ModuleSignalrUI(ModuleSignalrUIOption option)
-    : MoModuleWithDependencies<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
+    : MoModule<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

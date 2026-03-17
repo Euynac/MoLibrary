@@ -41,7 +41,7 @@ public static class ModuleUICoreBuilderExtensions
 /// 提供基于MudBlazor的UI基础设施
 /// </summary>
 public class ModuleUICore(ModuleUICoreOption option)
-    : MoModuleWithDependencies<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
+    : MoModule<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
 {
     /// <summary>
     /// 获取当前模块枚举

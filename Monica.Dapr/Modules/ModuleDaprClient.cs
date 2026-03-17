@@ -29,7 +29,7 @@ public static class ModuleDaprClientBuilderExtensions
 }
 
 public class ModuleDaprClient(ModuleDaprClientOption option)
-    : MoModuleWithDependencies<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
+    : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

@@ -30,7 +30,7 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
 /// Dapr 服务调用模块
 /// </summary>
 public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
-    : MoModuleWithDependencies<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
+    : MoModule<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
         ModuleDaprServiceInvocationGuide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.DaprProviderClientConnector;

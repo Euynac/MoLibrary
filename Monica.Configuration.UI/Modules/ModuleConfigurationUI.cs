@@ -37,7 +37,7 @@ public static class ModuleConfigurationUIBuilderExtensions
 /// 配置管理UI模块
 /// </summary>
 public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
-    : MoModuleWithDependencies<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
+    : MoModule<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

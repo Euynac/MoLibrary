@@ -34,7 +34,7 @@ public static class ModuleLoggingUIBuilderExtensions
 /// Logging UI 模块实现
 /// </summary>
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
-    : MoModuleWithDependencies<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
+    : MoModule<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

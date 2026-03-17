@@ -32,7 +32,7 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 /// ObservableInstance UI module
 /// </summary>
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
-    : MoModuleWithDependencies<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
+    : MoModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

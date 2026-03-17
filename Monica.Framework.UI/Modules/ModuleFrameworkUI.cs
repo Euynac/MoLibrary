@@ -22,7 +22,7 @@ public static class ModuleFrameworkUIBuilderExtensions
 }
 
 public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
-    : MoModuleWithDependencies<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
+    : MoModule<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

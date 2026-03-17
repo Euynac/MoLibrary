@@ -26,7 +26,7 @@ public static class ModuleMapperUIBuilderExtensions
 /// Mapper UI模块
 /// </summary>
 public class ModuleMapperUI(ModuleMapperUIOption option)
-    : MoModuleWithDependencies<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
+    : MoModule<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

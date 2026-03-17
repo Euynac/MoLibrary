@@ -23,7 +23,7 @@ namespace Monica.Modules;
 /// tree navigation, and markdown rendering.
 /// </summary>
 public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
-    : MoModuleWithDependencies<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
+    : MoModule<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
 {
     /// <summary>
     /// Gets the module key for this UI module.

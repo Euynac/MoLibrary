@@ -28,7 +28,7 @@ public static class ModuleAutoModelBuilderExtensions
     }
 }
 
-public class ModuleAutoModel(ModuleAutoModelOption option) : MoModuleWithDependencies<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
+public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {

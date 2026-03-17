@@ -11,7 +11,7 @@ using MudBlazor;
 namespace Monica.Modules;
 
 public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
-    : MoModuleWithDependencies<ModuleRegisterCentreUI, ModuleRegisterCentreUIOption, ModuleRegisterCentreUIGuide>(option)
+    : MoModule<ModuleRegisterCentreUI, ModuleRegisterCentreUIOption, ModuleRegisterCentreUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

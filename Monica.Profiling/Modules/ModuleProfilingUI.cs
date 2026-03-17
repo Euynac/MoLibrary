@@ -29,7 +29,7 @@ public static class ModuleProfilingUIBuilderExtensions
 ///     Profiling UI 模块 - 提供内存分析和性能监控界面
 /// </summary>
 public class ModuleProfilingUI(ModuleProfilingUIOption option)
-    : MoModuleWithDependencies<ModuleProfilingUI, ModuleProfilingUIOption, ModuleProfilingUIGuide>(option)
+    : MoModule<ModuleProfilingUI, ModuleProfilingUIOption, ModuleProfilingUIGuide>(option)
 {
     public override ModuleKey GetModuleKey()
     {

@@ -66,7 +66,7 @@ public class ModuleJobSchedulerEfCoreGuide
 /// Provides EF Core-based storage for job definitions and instances.
 /// </summary>
 public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
-    : MoModuleWithDependencies<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(option)
+    : MoModule<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.JobSchedulerEfCore;
 

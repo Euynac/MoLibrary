@@ -32,7 +32,7 @@ public static class ModuleRAGUIBuilderExtensions
 /// Provides Blazor-based RAG debug and management interface.
 /// </summary>
 public class ModuleRAGUI(ModuleRAGUIOption option)
-    : MoModuleWithDependencies<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
+    : MoModule<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.RAGUI;
 

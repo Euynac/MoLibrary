@@ -29,7 +29,7 @@ public static class ModuleChainTracingBuilderExtensions
 /// </summary>
 /// <param name="option">The module options.</param>
 public class ModuleChainTracing(ModuleChainTracingOption option)
-    : MoModuleWithDependencies<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
+    : MoModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     
     public override ModuleKey GetModuleKey()

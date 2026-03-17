@@ -14,7 +14,7 @@ namespace Monica.Modules;
 /// DataChannel UI模块，提供DataChannel的管理界面
 /// </summary>
 public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
-    : MoModuleWithDependencies<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
+    : MoModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
 {
     /// <summary>
     /// 获取当前模块枚举
