@@ -6,7 +6,8 @@
     "Configuration": "配置",
     "Debug": "调试",
     "Module": "模块",
-    "TaskScheduling": "任务调度"
+    "TaskScheduling": "任务调度",
+    "Infrastructure": "基础设施"
   },
   "Pages": {
     "AIChat": {
@@ -92,6 +93,9 @@
     },
     "GitRepositories": {
       "Title": "Git 仓库"
+    },
+    "K8S": {
+      "Title": "K8S 运维"
     }
   }
 }

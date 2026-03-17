@@ -6,7 +6,8 @@
     "Configuration": "Configuration",
     "Debug": "Debug",
     "Module": "Module",
-    "TaskScheduling": "Task Scheduling"
+    "TaskScheduling": "Task Scheduling",
+    "Infrastructure": "Infrastructure"
   },
   "Pages": {
     "AIChat": {
@@ -92,6 +93,9 @@
     },
     "GitRepositories": {
       "Title": "Git Repositories"
+    },
+    "K8S": {
+      "Title": "K8S Operations"
     }
   }
 }

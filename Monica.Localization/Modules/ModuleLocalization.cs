@@ -32,12 +32,13 @@ public static class ModuleLocalizationBuilderExtensions
 }
 
 public class ModuleLocalization(ModuleLocalizationOption option)
-    : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option)
+    : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IWantIterateBusinessTypes
 {
     public override ModuleKey GetModuleKey()
     {
         return EMoModuleKey.Localization;
     }
+    
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -67,6 +68,14 @@ public class ModuleLocalization(ModuleLocalizationOption option)
                 }
             ];
         });
+    }
+
+    public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
+    {
+        foreach (var type in types)
+        {
+            yield return type;
+        }
     }
 }
 

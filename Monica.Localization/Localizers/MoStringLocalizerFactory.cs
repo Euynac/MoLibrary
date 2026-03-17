@@ -49,15 +49,16 @@ public class MoStringLocalizerFactory(
     {
         var result = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
 
-        // Auto-discover resources from all loaded assemblies
+        // Auto-discover resources from all loaded application assemblies so third-party Monica modules
+        // can ship their own localization resources without living in a Monica.* assembly.
         var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && a.GetName().Name?.StartsWith("Monica") == true);
+            .Where(ShouldScanAssembly);
 
         foreach (var assembly in assemblies)
         {
             try
             {
-                var resourceTypes = assembly.GetTypes()
+                var resourceTypes = assembly.GetExportedTypes()
                     .Where(t => t.Namespace?.Contains(".Localization") == true &&
                                t.IsClass &&
                                !t.IsAbstract);
@@ -87,5 +88,39 @@ public class MoStringLocalizerFactory(
         logger.LogInformation("Loaded localization resources for {Count} resource types", result.Count);
         return result;
     }
-}
 
+    private static bool ShouldScanAssembly(System.Reflection.Assembly assembly)
+    {
+        if (assembly.IsDynamic)
+        {
+            return false;
+        }
+
+        var assemblyName = assembly.GetName().Name;
+        if (string.IsNullOrWhiteSpace(assemblyName))
+        {
+            return false;
+        }
+
+        return !ExcludedAssemblyPrefixes.Any(prefix =>
+            assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static readonly string[] ExcludedAssemblyPrefixes =
+    [
+        "System",
+        "Microsoft",
+        "mscorlib",
+        "netstandard",
+        "Windows",
+        "Presentation",
+        "Accessibility",
+        "MudBlazor",
+        "Serilog",
+        "Renci",
+        "Npgsql",
+        "Google",
+        "Grpc",
+        "Swashbuckle"
+    ];
+}
