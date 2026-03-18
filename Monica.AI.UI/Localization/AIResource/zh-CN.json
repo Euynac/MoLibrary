@@ -37,6 +37,15 @@
       "DisableDebug": "关闭 Tool 调试",
       "Summary": "{0} 次 Tool 调用",
       "RunningSummary": "正在执行 {0} 个 Tool",
+      "Actions": {
+        "ViewDebug": "查看调试详情"
+      },
+      "Dialog": {
+        "Title": "{0} 调试详情",
+        "Subtitle": "查看 LLM 传入参数、Tool 完整输出与调试统计。",
+        "RunningHint": "Tool 仍在执行，输出可能尚未完整。",
+        "EstimatedTokenHint": "Token 为估算值，按 UTF-8 字节数近似计算。"
+      },
       "LatestRunning": "最新：{0} 执行中",
       "LatestCompleted": "最新：{0} 已完成",
       "LatestFailed": "最新：{0} 执行失败",
@@ -54,7 +63,10 @@
         "Error": "错误",
         "CallId": "调用 ID",
         "StartedAt": "开始时间",
-        "CompletedAt": "完成时间"
+        "CompletedAt": "完成时间",
+        "Duration": "耗时",
+        "Characters": "字符数",
+        "EstimatedTokens": "估算 Token"
       },
       "Subtitle": {
         "Running": "已完成 {0} 个，仍在执行 {1} 个",

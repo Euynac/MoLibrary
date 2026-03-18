@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Agents.AI;
@@ -27,7 +28,8 @@ public class KnowledgeSearchToolProvider(
 
     private static readonly JsonSerializerOptions s_toolJsonOptions = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     private readonly ModuleRAGOption _ragOptions = ragOptions.Value;

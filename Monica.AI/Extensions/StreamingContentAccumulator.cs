@@ -49,44 +49,11 @@ public class StreamingContentAccumulator
         }
         else if (content is FunctionCallContent functionCall)
         {
-            ToolCalls.Add(new ToolCallInfo
-            {
-                ToolName = functionCall.Name,
-                CallId = functionCall.CallId ?? string.Empty,
-                Arguments = functionCall.Arguments,
-                ArgumentsText = ToolCallContentSerializer.SerializeArguments(functionCall.Arguments),
-                Status = ToolCallStatus.Running,
-                StartedAt = DateTimeOffset.UtcNow
-            });
+            ProcessFunctionCall(functionCall);
         }
         else if (content is FunctionResultContent functionResult)
         {
-            var completedAt = DateTimeOffset.UtcNow;
-            var exceptionMessage = functionResult.Exception?.ToString();
-            var matching = ToolCalls.FindIndex(t => t.CallId == (functionResult.CallId ?? string.Empty));
-            if (matching >= 0)
-            {
-                ToolCalls[matching] = ToolCalls[matching] with
-                {
-                    ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
-                    ExceptionMessage = exceptionMessage,
-                    Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
-                    CompletedAt = completedAt
-                };
-            }
-            else
-            {
-                ToolCalls.Add(new ToolCallInfo
-                {
-                    ToolName = "Unknown Tool",
-                    CallId = functionResult.CallId ?? string.Empty,
-                    ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
-                    ExceptionMessage = exceptionMessage,
-                    Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
-                    StartedAt = completedAt,
-                    CompletedAt = completedAt
-                });
-            }
+            ProcessFunctionResult(functionResult);
         }
     }
 
@@ -121,5 +88,96 @@ public class StreamingContentAccumulator
         FullReasoning = string.Empty;
         ReasoningStopwatch.Reset();
         ToolCalls.Clear();
+    }
+
+    private void ProcessFunctionCall(FunctionCallContent functionCall)
+    {
+        var argumentsText = ToolCallContentSerializer.SerializeArguments(functionCall.Arguments);
+        var matchingIndex = FindMatchingFunctionCallIndex(functionCall, argumentsText);
+        if (matchingIndex >= 0)
+        {
+            var existingCall = ToolCalls[matchingIndex];
+            ToolCalls[matchingIndex] = existingCall with
+            {
+                Arguments = functionCall.Arguments ?? existingCall.Arguments,
+                ArgumentsText = string.IsNullOrWhiteSpace(argumentsText)
+                    ? existingCall.ArgumentsText
+                    : argumentsText
+            };
+            return;
+        }
+
+        ToolCalls.Add(new ToolCallInfo
+        {
+            ToolName = functionCall.Name,
+            CallId = functionCall.CallId ?? string.Empty,
+            Arguments = functionCall.Arguments,
+            ArgumentsText = argumentsText,
+            Status = ToolCallStatus.Running,
+            StartedAt = DateTimeOffset.UtcNow
+        });
+    }
+
+    private void ProcessFunctionResult(FunctionResultContent functionResult)
+    {
+        var completedAt = DateTimeOffset.UtcNow;
+        var exceptionMessage = functionResult.Exception?.ToString();
+        var matchingIndex = FindMatchingFunctionResultIndex(functionResult);
+        if (matchingIndex >= 0)
+        {
+            ToolCalls[matchingIndex] = ToolCalls[matchingIndex] with
+            {
+                ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
+                ExceptionMessage = exceptionMessage,
+                Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+                CompletedAt = completedAt
+            };
+            return;
+        }
+
+        ToolCalls.Add(new ToolCallInfo
+        {
+            ToolName = "Unknown Tool",
+            CallId = functionResult.CallId ?? string.Empty,
+            ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
+            ExceptionMessage = exceptionMessage,
+            Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+            StartedAt = completedAt,
+            CompletedAt = completedAt
+        });
+    }
+
+    private int FindMatchingFunctionCallIndex(FunctionCallContent functionCall, string? argumentsText)
+    {
+        var callId = functionCall.CallId ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(callId))
+        {
+            return ToolCalls.FindLastIndex(call => string.Equals(call.CallId, callId, StringComparison.Ordinal));
+        }
+
+        return ToolCalls.FindLastIndex(call =>
+            call.Status == ToolCallStatus.Running
+            && string.IsNullOrWhiteSpace(call.ResultText)
+            && string.Equals(call.ToolName, functionCall.Name, StringComparison.Ordinal)
+            && string.Equals(call.ArgumentsText, argumentsText, StringComparison.Ordinal));
+    }
+
+    private int FindMatchingFunctionResultIndex(FunctionResultContent functionResult)
+    {
+        var callId = functionResult.CallId ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(callId))
+        {
+            var runningMatch = ToolCalls.FindLastIndex(call =>
+                string.Equals(call.CallId, callId, StringComparison.Ordinal)
+                && call.Status == ToolCallStatus.Running);
+            if (runningMatch >= 0)
+            {
+                return runningMatch;
+            }
+
+            return ToolCalls.FindLastIndex(call => string.Equals(call.CallId, callId, StringComparison.Ordinal));
+        }
+
+        return ToolCalls.FindLastIndex(call => call.Status == ToolCallStatus.Running);
     }
 }

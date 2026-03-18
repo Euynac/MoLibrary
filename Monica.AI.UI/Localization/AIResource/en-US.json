@@ -37,6 +37,15 @@
       "DisableDebug": "Disable tool debug",
       "Summary": "{0} tool call(s)",
       "RunningSummary": "{0} tool call(s) in progress",
+      "Actions": {
+        "ViewDebug": "View debug details"
+      },
+      "Dialog": {
+        "Title": "{0} debug details",
+        "Subtitle": "Inspect the raw LLM arguments, full tool output, and debug metrics.",
+        "RunningHint": "The tool is still running, so the output may still change.",
+        "EstimatedTokenHint": "Token counts are estimated from UTF-8 byte length."
+      },
       "LatestRunning": "Latest: {0} is running",
       "LatestCompleted": "Latest: {0} completed",
       "LatestFailed": "Latest: {0} failed",
@@ -54,7 +63,10 @@
         "Error": "Error",
         "CallId": "Call ID",
         "StartedAt": "Started",
-        "CompletedAt": "Completed"
+        "CompletedAt": "Completed",
+        "Duration": "Duration",
+        "Characters": "Characters",
+        "EstimatedTokens": "Estimated tokens"
       },
       "Subtitle": {
         "Running": "{0} completed, {1} still running",

@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Monica.AI.Models;
 
@@ -10,7 +11,8 @@ internal static class ToolCallContentSerializer
 {
     private static readonly JsonSerializerOptions s_jsonOptions = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     public static string? SerializeArguments(IDictionary<string, object?>? arguments)
@@ -32,10 +34,20 @@ internal static class ToolCallContentSerializer
 
         if (result is string text)
         {
-            return TryFormatJson(text) ?? text;
+            return FormatText(text);
         }
 
-        return SerializeObject(result);
+        if (result is JsonElement element)
+        {
+            return SerializeJsonElement(element);
+        }
+
+        if (result is JsonDocument document)
+        {
+            return SerializeJsonElement(document.RootElement);
+        }
+
+        return SerializeUnknownResult(result);
     }
 
     public static ToolCallStatus GetFinalStatus(string? exceptionMessage)
@@ -55,12 +67,56 @@ internal static class ToolCallContentSerializer
         }
     }
 
+    private static string SerializeJsonElement(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return FormatText(element.GetString());
+        }
+
+        return JsonSerializer.Serialize(element, s_jsonOptions);
+    }
+
+    private static string SerializeUnknownResult(object value)
+    {
+        var serialized = SerializeObject(value);
+        return TryUnwrapSerializedString(serialized) ?? serialized;
+    }
+
+    private static string FormatText(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        return TryFormatJson(text) ?? text;
+    }
+
     private static string? TryFormatJson(string text)
     {
         try
         {
             using var document = JsonDocument.Parse(text);
             return JsonSerializer.Serialize(document.RootElement, s_jsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryUnwrapSerializedString(string serialized)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(serialized);
+            if (document.RootElement.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return FormatText(document.RootElement.GetString());
         }
         catch
         {

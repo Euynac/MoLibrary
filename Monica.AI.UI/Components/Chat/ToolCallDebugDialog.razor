@@ -1,0 +1,173 @@
+@using System.Text
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="tool-call-dialog-root">
+            <MudText Typo="Typo.body2" Class="tool-call-dialog-subtitle">
+                @L["Chat:ToolCalls:Dialog:Subtitle"]
+            </MudText>
+
+            <div class="tool-call-dialog-badges">
+                <span class="tool-call-dialog-badge @GetStatusClass(ToolCall)">
+                    @GetStatusText(ToolCall)
+                </span>
+                @if (ToolCall.Duration is { } duration)
+                {
+                    <span class="tool-call-dialog-badge neutral">
+                        @L["Chat:ToolCalls:Fields:Duration"]: @FormatDuration(duration)
+                    </span>
+                }
+            </div>
+
+            @if (ToolCall.Status == ToolCallStatus.Running)
+            {
+                <div class="tool-call-dialog-note">
+                    <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" />
+                    <MudText Typo="Typo.caption">
+                        @L["Chat:ToolCalls:Dialog:RunningHint"]
+                    </MudText>
+                </div>
+            }
+
+            <div class="tool-call-dialog-metadata">
+                <div class="tool-call-dialog-metadata-item">
+                    <MudText Typo="Typo.overline" Class="tool-call-dialog-label">
+                        @L["Chat:ToolCalls:Fields:CallId"]
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="tool-call-dialog-value">
+                        @ToolCall.CallId
+                    </MudText>
+                </div>
+                <div class="tool-call-dialog-metadata-item">
+                    <MudText Typo="Typo.overline" Class="tool-call-dialog-label">
+                        @L["Chat:ToolCalls:Fields:StartedAt"]
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="tool-call-dialog-value">
+                        @FormatDateTime(ToolCall.StartedAt)
+                    </MudText>
+                </div>
+                @if (ToolCall.CompletedAt is { } completedAt)
+                {
+                    <div class="tool-call-dialog-metadata-item">
+                        <MudText Typo="Typo.overline" Class="tool-call-dialog-label">
+                            @L["Chat:ToolCalls:Fields:CompletedAt"]
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="tool-call-dialog-value">
+                            @FormatDateTime(completedAt)
+                        </MudText>
+                    </div>
+                }
+            </div>
+
+            <div class="tool-call-dialog-panels">
+                <section class="tool-call-dialog-panel">
+                    <div class="tool-call-dialog-panel-header">
+                        <MudText Typo="Typo.subtitle2">
+                            @L["Chat:ToolCalls:Fields:Input"]
+                        </MudText>
+                        <div class="tool-call-dialog-metrics">
+                            <span class="tool-call-dialog-metric">
+                                @L["Chat:ToolCalls:Fields:Characters"]: @GetCharacterCount(InputText)
+                            </span>
+                            <span class="tool-call-dialog-metric">
+                                @L["Chat:ToolCalls:Fields:EstimatedTokens"]: @EstimateTokenCount(InputText)
+                            </span>
+                        </div>
+                    </div>
+                    <pre class="tool-call-dialog-code">@InputText</pre>
+                </section>
+
+                <section class="tool-call-dialog-panel">
+                    <div class="tool-call-dialog-panel-header">
+                        <MudText Typo="Typo.subtitle2">
+                            @GetOutputTitle()
+                        </MudText>
+                        <div class="tool-call-dialog-metrics">
+                            <span class="tool-call-dialog-metric">
+                                @L["Chat:ToolCalls:Fields:Characters"]: @GetCharacterCount(OutputText)
+                            </span>
+                            <span class="tool-call-dialog-metric">
+                                @L["Chat:ToolCalls:Fields:EstimatedTokens"]: @EstimateTokenCount(OutputText)
+                            </span>
+                        </div>
+                    </div>
+                    <pre class="tool-call-dialog-code">@OutputText</pre>
+                </section>
+            </div>
+
+            <MudText Typo="Typo.caption" Class="tool-call-dialog-footnote">
+                @L["Chat:ToolCalls:Dialog:EstimatedTokenHint"]
+            </MudText>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public required ToolCallInfo ToolCall { get; set; }
+
+    private string InputText => ToolCall.ArgumentsText ?? L["Chat:ToolCalls:NoInput"];
+
+    private string OutputText => GetOutputText(ToolCall) ?? L["Chat:ToolCalls:NoOutput"];
+
+    private void Close() => MudDialog.Close();
+
+    private string GetOutputTitle()
+        => string.IsNullOrWhiteSpace(ToolCall.ExceptionMessage)
+            ? L["Chat:ToolCalls:Fields:Output"]
+            : L["Chat:ToolCalls:Fields:Error"];
+
+    private string GetStatusText(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => L["Chat:ToolCalls:Status:Failed"],
+            ToolCallStatus.Completed => L["Chat:ToolCalls:Status:Completed"],
+            _ => L["Chat:ToolCalls:Status:Running"]
+        };
+
+    private static string GetStatusClass(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => "failed",
+            ToolCallStatus.Completed => "completed",
+            _ => "running"
+        };
+
+    private static string? GetOutputText(ToolCallInfo call)
+        => string.IsNullOrWhiteSpace(call.ExceptionMessage)
+            ? call.ResultText
+            : call.ExceptionMessage;
+
+    private static string FormatDuration(TimeSpan duration)
+        => duration.TotalSeconds >= 1
+            ? $"{duration.TotalSeconds:F1}s"
+            : $"{duration.TotalMilliseconds:F0}ms";
+
+    private static string FormatDateTime(DateTimeOffset value)
+        => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+
+    private static int GetCharacterCount(string? text)
+        => text?.Length ?? 0;
+
+    private static int EstimateTokenCount(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var byteCount = Encoding.UTF8.GetByteCount(text);
+        return Math.Max(1, (int)Math.Ceiling(byteCount / 4d));
+    }
+}

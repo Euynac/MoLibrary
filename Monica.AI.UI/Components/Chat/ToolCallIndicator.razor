@@ -1,5 +1,6 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@inject IDialogService DialogService
 @inject IStringLocalizer<AIResource> L
 
 @if (ActiveToolCalls.Count > 0)
@@ -38,9 +39,16 @@
                             @preview
                         </MudText>
                     }
-                    @if (EnableDebugMode && !string.IsNullOrWhiteSpace(call.ResultText))
+                    @if (EnableDebugMode)
                     {
-                        <pre class="tool-call-live-debug">@call.ResultText</pre>
+                        <div class="tool-call-live-actions">
+                            <MudButton Variant="Variant.Text"
+                                       Size="Size.Small"
+                                       Class="tool-call-live-button"
+                                       OnClick="@(() => OpenDebugDialogAsync(call))">
+                                @L["Chat:ToolCalls:Actions:ViewDebug"]
+                            </MudButton>
+                        </div>
                     }
                 </div>
             }
@@ -92,5 +100,23 @@
         }
 
         return call.Arguments.FirstOrDefault(x => x.Value is not null).Value?.ToString();
+    }
+
+    private Task OpenDebugDialogAsync(ToolCallInfo call)
+    {
+        var parameters = new DialogParameters
+        {
+            [nameof(ToolCallDebugDialog.ToolCall)] = call
+        };
+
+        return DialogService.ShowAsync<ToolCallDebugDialog>(
+            L["Chat:ToolCalls:Dialog:Title", call.ToolName],
+            parameters,
+            new DialogOptions
+            {
+                CloseButton = true,
+                FullWidth = true,
+                MaxWidth = MaxWidth.ExtraLarge
+            });
     }
 }

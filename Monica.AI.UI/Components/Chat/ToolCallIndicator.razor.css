@@ -100,6 +100,17 @@
     text-overflow: ellipsis;
 }
 
+.tool-call-live-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.tool-call-live-actions ::deep .tool-call-live-button {
+    min-width: auto;
+    padding: 0;
+    font-weight: 600;
+}
+
 .tool-call-status-badge {
     display: inline-flex;
     align-items: center;
@@ -125,21 +136,6 @@
 .tool-call-status-badge.failed {
     color: var(--mud-palette-error-darken);
     background-color: rgba(var(--mud-palette-error-rgb), 0.12);
-}
-
-.tool-call-live-debug {
-    margin: 0;
-    padding: 8px 10px;
-    border-radius: 8px;
-    background-color: var(--mud-palette-background-gray);
-    color: var(--mud-palette-text-secondary);
-    font-family: "IBM Plex Mono", "Courier Prime", monospace;
-    font-size: 0.75rem;
-    line-height: 1.45;
-    max-height: 180px;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
 }
 
 @media (max-width: 600px) {
