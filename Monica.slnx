@@ -4,14 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Folder Name="/examples/">
-    <Project Path="examples/Examples.Monica/Examples.Monica.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Test.Monica.Core/Test.Monica.Core.csproj" />
-    <Project Path="tests/Test.Monica.Tool/Test.Monica.Tool.csproj" />
-    <Project Path="tests/Test.Monica/Test.Monica.csproj" />
-  </Folder>
+ 
   <Project Path="Monica.AI.UI/Monica.AI.UI.csproj" />
   <Project Path="Monica.AI/Monica.AI.csproj" />
   <Project Path="Monica.Authority/Monica.Authority.csproj" />
