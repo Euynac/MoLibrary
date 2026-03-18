@@ -3,14 +3,15 @@ using System.Collections.Immutable;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Monica.Authority.Implements.Authorization;
+using Monica.Authority.Authentication.Abstractions;
+using Monica.Authority.Authentication.Models;
+using Monica.Authority.Authorization.Exceptions;
+using Monica.Authority.Identity.Extensions;
 using Monica.Modules;
-using Monica.Authority.Security;
 
-namespace Monica.Authority.Authentication;
+namespace Monica.Authority.Authentication.Services;
 
 public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IMoJwtAuthManager, IMoAuthManager
 {
@@ -131,31 +132,4 @@ public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfi
     {
         return GenerateTokens(username, claims, now).AccessToken;
     }
-}
-
-public class JwtAuthResult
-{
-    public string AccessToken { get; set; } = string.Empty;
-    public string RefreshToken => RefreshTokenObj.TokenString;
-
-    /// <summary>
-    /// Token类型
-    /// </summary>
-    public string TokenType => "bearer";
-    /// <summary>
-    /// AccessToken失效时间
-    /// </summary>
-    public DateTime ExpiresAt { get; set; }
-    [JsonIgnore]
-    public RefreshToken RefreshTokenObj { get; set; } = new();
-}
-
-public class RefreshToken
-{
-    public string Username { get; set; } = string.Empty;    // can be used for usage tracking
-    // can optionally include other metadata, such as user agent, ip address, device name, and so on
-
-    public string TokenString { get; set; } = string.Empty;
-
-    public DateTime ExpireAt { get; set; }
 }

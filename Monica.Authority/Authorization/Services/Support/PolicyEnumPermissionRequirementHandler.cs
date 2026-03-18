@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
-using Monica.Authority.Authorization;
+using Monica.Authority.Authorization.Abstractions;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
-public class EnumPermissionRequirementHandler(IMoPermissionChecker permissionChecker)
-    : AuthorizationHandler<EnumPermissionRequirement>
+public class PolicyEnumPermissionRequirementHandler(IMoPermissionChecker permissionChecker)
+    : AuthorizationHandler<PolicyEnumPermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
-        EnumPermissionRequirement requirement)
+        PolicyEnumPermissionRequirement requirement)
     {
         if (await permissionChecker.IsGrantedAsync(context.User, requirement.PermissionName))
         {

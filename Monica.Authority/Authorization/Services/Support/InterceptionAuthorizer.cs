@@ -1,11 +1,12 @@
-using Monica.Authority.Authorization;
-using Monica.Authority.Security;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Models;
+using Monica.Authority.Identity.Abstractions;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
-public class AuthorizationInterceptor(IMethodInvocationAuthorizationService methodInvocationAuthorizationService, IMoCurrentPrincipalAccessor accessor)
+public class InterceptionAuthorizer(IMethodInvocationAuthorizationService methodInvocationAuthorizationService, IMoCurrentPrincipalAccessor accessor)
     : MoInterceptor
 {
     public override async Task InterceptAsync(IMoMethodInvocation invocation)

@@ -1,4 +1,4 @@
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Models;
 
 public enum EPermissionGrantResult
 {

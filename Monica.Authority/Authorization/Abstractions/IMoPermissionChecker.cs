@@ -1,6 +1,7 @@
 using System.Security.Claims;
+using Monica.Authority.Authorization.Models;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Abstractions;
 
 /// <summary>
 /// 判断授权

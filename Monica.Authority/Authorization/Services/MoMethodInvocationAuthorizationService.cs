@@ -2,17 +2,17 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Monica.Authority.Authorization;
-using Authorization_IMethodInvocationAuthorizationService = Monica.Authority.Authorization.IMethodInvocationAuthorizationService;
-using MethodInvocationAuthorizationContext = Monica.Authority.Authorization.MethodInvocationAuthorizationContext;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Exceptions;
+using MethodInvocationAuthorizationContext = Monica.Authority.Authorization.Models.MethodInvocationAuthorizationContext;
 
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services;
 
 public class MoMethodInvocationAuthorizationService(
     IMoAuthorizationPolicyProvider moAuthorizationPolicyProvider,
     IMoAuthorizationService moAuthorizationService, IHttpContextAccessor accessor)
-    : Authorization_IMethodInvocationAuthorizationService
+    : IMethodInvocationAuthorizationService
 {
     public async Task CheckAsync(MethodInvocationAuthorizationContext context)
     {

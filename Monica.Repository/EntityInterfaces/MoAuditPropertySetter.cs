@@ -1,4 +1,4 @@
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Abstractions;
 using Monica.Repository.EntityInterfaces.Auditing;
 
 namespace Monica.Repository.EntityInterfaces;

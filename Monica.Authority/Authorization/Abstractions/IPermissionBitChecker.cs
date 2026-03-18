@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Monica.Authority.Authorization.Annotations;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Abstractions;
 
 /// <summary>
 /// 二进制权限检查器

@@ -1,12 +1,12 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
 /// 注册非Controller的，用于DomainService、ApplicationService等Authorize标签中间件
 /// </summary>
-public static class AuthorizationInterceptorRegistrar
+public static class InterceptionRegistrar
 {
     public static bool ShouldIntercept(Type type)
     {

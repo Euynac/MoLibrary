@@ -1,6 +1,6 @@
 using Check = Monica.Tool.Utils.Check;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Models;
 
 public class MultiplePermissionGrantResult
 {

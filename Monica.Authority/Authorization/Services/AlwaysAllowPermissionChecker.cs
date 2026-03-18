@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Models;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Services;
 
 /// <summary>
 /// Always allows for any permission.

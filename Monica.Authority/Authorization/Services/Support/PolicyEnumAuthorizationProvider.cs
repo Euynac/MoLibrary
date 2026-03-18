@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using Monica.Authority.Authorization;
+using Monica.Authority.Authorization.Abstractions;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
-public class MoEnumAuthorizationPolicyProvider(
+public class PolicyEnumAuthorizationProvider(
     IOptions<AuthorizationOptions> options)
     : DefaultAuthorizationPolicyProvider(options), IMoAuthorizationPolicyProvider
 {
@@ -25,7 +25,7 @@ public class MoEnumAuthorizationPolicyProvider(
         {
             //TODO: Optimize & Cache!
             var policyBuilder = new AuthorizationPolicyBuilder(Array.Empty<string>());
-            policyBuilder.Requirements.Add(new EnumPermissionRequirement(policyName));
+            policyBuilder.Requirements.Add(new PolicyEnumPermissionRequirement(policyName));
             return policyBuilder.Build();
         }
 

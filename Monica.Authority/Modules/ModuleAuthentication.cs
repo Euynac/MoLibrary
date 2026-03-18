@@ -7,8 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Authority.Authentication;
-using Monica.Authority.Implements.Security;
-using Monica.Authority.Security;
+using Monica.Authority.Authentication.Abstractions;
+using Monica.Authority.Authentication.Services;
+using Monica.Authority.Identity.Abstractions;
+using Monica.Authority.Identity.Models;
+using Monica.Authority.Identity.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -191,20 +194,4 @@ public class ModuleAuthenticationOption : MoModuleOptionWithMinimalApi<ModuleAut
     /// </summary>
     public int RefreshTokenExpiration { get; set; } = 120;
     public bool IsDebugging { get; set; }
-}
-
-public class CustomAuthorizeFilter : IAuthorizationFilter
-{
-    public void OnAuthorization(AuthorizationFilterContext context)
-    {
-        if (context.HttpContext.User.Identity == null)
-        {
-            return;
-        }
-
-        if (!context.HttpContext.User.Identity.IsAuthenticated)
-        {
-            return;
-        }
-    }
 }

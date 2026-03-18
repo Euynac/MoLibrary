@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Tool.Extensions;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Exceptions;
 
 public class MoAuthorizationException : Exception
 {

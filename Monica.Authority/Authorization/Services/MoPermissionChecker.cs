@@ -1,8 +1,9 @@
 using System.Security.Claims;
-using Monica.Authority.Authorization;
-using Monica.Authority.Security;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Models;
+using Monica.Authority.Identity.Abstractions;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services;
 
 public class MoPermissionChecker<TEnum>(IMoCurrentPrincipalAccessor accessor, IPermissionBitChecker<TEnum> checker)
     : IMoPermissionChecker where TEnum : struct, Enum

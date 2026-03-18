@@ -1,83 +1,12 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.Extensions.Options;
-using Monica.Authority.Authentication;
-using Monica.Tool.Extensions;
+using Monica.Authority.Authentication.Abstractions;
+using Monica.Authority.Identity.Abstractions;
+using Monica.Authority.Identity.Models;
 
-namespace Monica.Authority.Security;
+namespace Monica.Authority.Identity.Services;
 
-/// <summary>
-/// 当前系统用户管理接口
-/// </summary>
-public interface IMoSystemUserManager
-{
-    /// <summary>
-    /// 判断当前用户信息是否是系统用户
-    /// </summary>
-    /// <param name="userInfo"></param>
-    /// <returns></returns>
-    public bool IsSystemUser(IMoUser userInfo);
-    /// <summary>
-    /// 获取当前系统用户Token
-    /// </summary>
-    /// <returns></returns>
-    public string GetTokenOfCurSystemUser();
-    /// <summary>
-    /// 获取当前系统用户Claims
-    /// </summary>
-    /// <returns></returns>
-    public List<Claim> GetCurSystemUserClaims();
-    /// <summary>
-    /// 获取当前系统用户Principal
-    /// </summary>
-    /// <returns></returns>
-    public ClaimsPrincipal GetCurSystemUserPrinciple();
-    MoSystemUserOptions.SystemUserInfo GetSystemUserInfo<T>(T userEnum) where T : struct, Enum;
-    string GetTokenOfSystemUser<T>(T userEnum) where T : struct, Enum;
-    List<Claim> GetSystemUserClaims<T>(T userEnum) where T : struct, Enum;
-    ClaimsPrincipal GetSystemUserPrinciple<T>(T userEnum) where T : struct, Enum;
-    IEnumerable<MoSystemUserOptions.SystemUserInfo> GetAllSystemUserInfos();
-}
-
-public enum EMoDefaultSystemUser
-{
-    System = 0
-}
-
-public class MoSystemUserOptions
-{
-    public Type? SystemUserEnums { get; private set; } 
-    public object? CurrentSystemUserEnum { get; set; }
-    public Dictionary<object, SystemUserInfo> InfoDict { get; set; } = [];
-
-    public class SystemUserInfo
-    {
-        public required string Username { get; set; }
-        public required string UserId { get; set; }
-        public required string NickName { get; set; }
-    }
-
-    public void SetCurSystemUser<T>(T curSystemUser) where T : struct, Enum
-    {
-        SystemUserEnums = typeof(T);
-        CurrentSystemUserEnum = curSystemUser;
-        foreach (var (i, key) in Enum.GetValues<T>().WithIndex())
-        {
-            var index = i + 1;
-            InfoDict.Add(key, new SystemUserInfo
-            {
-                Username = key.ToString(),
-                UserId = Guid.Empty.ToString()[..^index.ToString().Length] + index,
-                NickName = key.GetDescription()!
-            });
-        }
-
-    }
-
-    
-}
-
-
-public class MoSystemUserManager(IMoAuthManager manager, IOptions<MoSystemUserOptions> options) : IMoSystemUserManager
+internal class MoSystemUserManager(IMoAuthManager manager, IOptions<MoSystemUserOptions> options) : IMoSystemUserManager
 {
     private readonly MoSystemUserOptions _options = options.Value;
 

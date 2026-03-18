@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Abstractions;
 
 namespace Monica.SignalR.Interfaces;
 

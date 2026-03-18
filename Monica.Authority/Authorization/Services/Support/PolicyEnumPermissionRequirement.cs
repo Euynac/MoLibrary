@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Check = Monica.Tool.Utils.Check;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
-public class EnumPermissionRequirement : IAuthorizationRequirement
+public class PolicyEnumPermissionRequirement : IAuthorizationRequirement
 {
     public string PermissionName { get; }
 
-    public EnumPermissionRequirement(string permissionName)
+    public PolicyEnumPermissionRequirement(string permissionName)
     {
         Check.NotNull(permissionName, nameof(permissionName));
 

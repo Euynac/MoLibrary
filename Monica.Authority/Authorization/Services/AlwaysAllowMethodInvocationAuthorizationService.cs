@@ -1,4 +1,7 @@
-namespace Monica.Authority.Authorization;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Models;
+
+namespace Monica.Authority.Authorization.Services;
 
 public class AlwaysAllowMethodInvocationAuthorizationService : IMethodInvocationAuthorizationService
 {

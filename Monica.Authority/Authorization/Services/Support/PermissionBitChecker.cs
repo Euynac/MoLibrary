@@ -1,32 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Security.Claims;
-using Monica.Authority.Authorization;
+using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Annotations;
 using Monica.Tool.Extensions;
 
-namespace Monica.Authority.Implements.Authorization;
-
-/// <summary>
-/// 二进制权限枚举检查器管理器
-/// </summary>
-public class PermissionBitCheckerManager
-{
-    private static readonly Dictionary<Type, object> _dict = [];
-    public static IPermissionBitChecker Singleton { get; internal set; } = null!;
-    public static void AddChecker<TEnum>(IPermissionBitChecker<TEnum> checker) where TEnum : struct, Enum
-    {
-        _dict.Add(typeof(TEnum), checker);
-    }
-
-    public bool TryGetChecker<TEnum>([NotNullWhen(true)] out IPermissionBitChecker<TEnum>? checker) where TEnum : struct, Enum
-    {
-        checker = null;
-        if (!_dict.TryGetValue(typeof(TEnum), out var obj)) return false;
-        checker = (IPermissionBitChecker<TEnum>) obj;
-        return true;
-    }
-}
+namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
 /// 二进制权限枚举检查器，首个枚举以占位符表示，不算入权限

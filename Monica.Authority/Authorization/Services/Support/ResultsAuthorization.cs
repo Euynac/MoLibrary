@@ -1,8 +1,8 @@
 using Monica.Tool.MoResponse;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services.Support;
 
-public static class MoAuthorizationRes
+public static class ResultsAuthorization
 {
     public static Res NotLogin()
     {

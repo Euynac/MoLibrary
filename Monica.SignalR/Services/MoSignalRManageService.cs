@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Models;
 using Monica.SignalR.Interfaces;
 using Monica.SignalR.Models;
 using Monica.Modules;

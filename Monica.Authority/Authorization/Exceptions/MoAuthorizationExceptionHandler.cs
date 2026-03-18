@@ -2,10 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Monica.Authority.Authorization.Services.Support;
 using Monica.Core.ExceptionHandler;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Exceptions;
 
 internal class MoAuthorizationExceptionHandler : IMoExceptionHandlerPack
 {
@@ -19,19 +20,19 @@ internal class MoAuthorizationExceptionHandler : IMoExceptionHandlerPack
                 return true;
 
             case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.NotLogin }:
-                res = MoAuthorizationRes.NotLogin();
+                res = ResultsAuthorization.NotLogin();
                 return true;
 
             case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.RefreshTokenExpired }:
-                res = MoAuthorizationRes.RefreshTokenExpired();
+                res = ResultsAuthorization.RefreshTokenExpired();
                 return true;
 
             case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.AccessTokenExpired } e:
-                res = MoAuthorizationRes.AccessTokenExpired(e.Reason);
+                res = ResultsAuthorization.AccessTokenExpired(e.Reason);
                 return true;
 
             case SecurityTokenExpiredException expired:
-                res = MoAuthorizationRes.AccessTokenExpired(expired.Message);
+                res = ResultsAuthorization.AccessTokenExpired(expired.Message);
                 return true;
 
             case MoAuthorizationException authorizationException:

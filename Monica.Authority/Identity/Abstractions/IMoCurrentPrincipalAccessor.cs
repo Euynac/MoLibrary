@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace Monica.Authority.Security;
+namespace Monica.Authority.Identity.Abstractions;
 
 public interface IMoCurrentPrincipalAccessor
 {

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Abstractions;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.JsonSerialization;

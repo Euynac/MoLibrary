@@ -1,7 +1,7 @@
-using Monica.Authority.Implements.Authorization;
-using Monica.Authority.Security;
+using Monica.Authority.Authorization.Services.Support;
+using Monica.Authority.Identity.Abstractions;
 
-namespace Monica.Authority.Implements.Security;
+namespace Monica.Authority.Authorization.Extensions;
 
 /// <summary>
 /// 相关授权扩展方法

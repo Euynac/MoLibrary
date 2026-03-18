@@ -1,7 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Monica.Authority.Authorization.Abstractions;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Services;
 
 public class AlwaysAllowAuthorizationService
     : IMoAuthorizationService

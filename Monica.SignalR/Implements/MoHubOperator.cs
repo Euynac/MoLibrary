@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Abstractions;
+using Monica.Authority.Identity.Extensions;
 using Monica.SignalR.Interfaces;
 
 namespace Monica.SignalR.Implements;

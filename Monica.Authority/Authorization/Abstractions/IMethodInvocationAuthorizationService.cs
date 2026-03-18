@@ -1,14 +1,8 @@
-using System.Reflection;
-using System.Security.Claims;
+using Monica.Authority.Authorization.Models;
 
-namespace Monica.Authority.Authorization;
+namespace Monica.Authority.Authorization.Abstractions;
 
 public interface IMethodInvocationAuthorizationService
 {
     Task CheckAsync(MethodInvocationAuthorizationContext context);
-}
-public class MethodInvocationAuthorizationContext(MethodInfo method, ClaimsPrincipal user)
-{
-    public ClaimsPrincipal User { get; } = user;
-    public MethodInfo Method { get; } = method;
 }

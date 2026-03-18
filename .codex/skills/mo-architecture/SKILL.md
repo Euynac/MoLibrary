@@ -1,7 +1,7 @@
 ---
 name: mo-architecture
 description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Monica Unified Module Architecture
@@ -16,11 +16,13 @@ Other skills reference this skill:
 
 **Creating a new module?** → Use the Infrastructure Module Template below.
 **Adding UI to an existing module?** → Choose Mixed (lightweight UI) or Standalone (complex UI).
-**Module getting large?** → Use the Features Pattern to bundle sub-modules.
+**Module getting large?** → Use the Features Pattern (only if 40+ files or 3+ independent sub-domains).
 **Need developer-facing attributes?** → Place in `Annotations/` (public layer).
 **Page file getting large?** → Check the Page Decomposition Rules.
 **Unsure where a file goes?** → Check the Standard Layer Names table.
 **Unsure if something is public or internal?** → Check the Visibility Rules table.
+**Grouping related files?** → Use prefix naming. Only create sub-folders for 6+ files. See Folder Depth & Grouping Rules.
+**Folder depth reaching 4 levels?** → Stop. Use prefix naming instead. Max depth is 3.
 
 ## Core Principles
 
@@ -93,6 +95,72 @@ Providers do NOT orchestrate business workflows, manage page state, or return `R
 
 Exception: `Tools/` is reserved for AI tool providers in Monica.AI modules.
 
+## Folder Depth & Grouping Rules
+
+### Maximum Depth: 3 Levels
+
+The maximum folder depth from project root is **3 levels**: `Feature/Layer/SubLayer/`. Never create a 4th nesting level.
+
+```
+✅ Authorization/Services/Support/PolicyRequirement.cs        (3 levels)
+❌ Authorization/Services/Support/Policies/PolicyRequirement.cs (4 levels — NEVER)
+```
+
+### Prefix Naming Over Sub-Folders
+
+**Prefer prefix naming to group related files** within a folder instead of creating sub-folders. This leverages IDE alphabetical sorting to achieve visual grouping without folder overhead.
+
+This is the standard pattern used by ASP.NET Core, EF Core, and MudBlazor:
+```
+# ASP.NET Core — Authentication/ has 7+ files, zero sub-folders
+AuthenticationHandler.cs
+AuthenticationMiddleware.cs
+AuthenticationScheme.cs
+AuthenticationSchemeBuilder.cs
+AuthenticationSchemeOptions.cs
+AuthenticationSchemeProvider.cs
+```
+
+Apply to Monica modules:
+```
+# ✅ Prefix naming — flat, scannable, IDE-friendly
+Authorization/Services/Support/
+├── InterceptionAuthorizer.cs
+├── InterceptionRegistrar.cs
+├── PermissionBitChecker.cs
+├── PermissionBitCheckerManager.cs
+├── PolicyEnumRequirement.cs
+├── PolicyEnumRequirementHandler.cs
+├── PolicyEnumProvider.cs
+└── AuthorizationRes.cs
+
+# ❌ Sub-folder explosion — 4+ levels, 1-2 files per folder
+Authorization/Services/Support/Interception/AuthorizationInterceptor.cs
+Authorization/Services/Support/Policies/EnumPermissionRequirement.cs
+Authorization/Services/Support/PermissionBits/PermissionBitChecker.cs
+Authorization/Services/Support/Responses/MoAuthorizationRes.cs
+```
+
+### When to Use Sub-Folders vs Prefixes
+
+| Condition | Strategy |
+|-----------|----------|
+| Group has ≤ 5 files | Prefix naming, keep flat |
+| Group has 6–10 files | Consider sub-folder |
+| Group has > 10 files | Use sub-folder |
+| Would create 4th nesting level | **Always** use prefix, never sub-folder |
+| `Internal/` boundary marker | Sub-folder (this is a visibility boundary, not grouping) |
+| `Providers/{ProviderName}/` | Sub-folder (each provider is a replaceable unit) |
+
+### Restructuring Scope Rule
+
+Architecture restructuring means **moving existing files** into the correct layer folders. It does NOT include:
+- Splitting classes or extracting new interfaces
+- Changing public API surface
+- Adding new abstractions that didn't exist before
+
+Those are separate tasks requiring explicit user approval.
+
 ## Standard Layer Names
 
 | Folder | Purpose | Visibility |
@@ -104,7 +172,7 @@ Exception: `Tools/` is reserved for AI tool providers in Monica.AI modules.
 | `Models/Internal/` | Internal-only data types | Private |
 | `Facades/` | Thin orchestration, returns `Res<T>` | Public |
 | `Services/` | Implementation logic | Private |
-| `Services/Support/` | Registry, Resolver, Coordinator, Policy, Factory | Private |
+| `Services/Support/` | Registry, Resolver, Coordinator, Policy, Factory — use prefix naming to group | Private |
 | `Providers/` | Pluggable strategy implementations | Private |
 | `Modules/` | Module registration classes | Public |
 | `Extensions/` | Extension methods | Depends on usage |
@@ -112,7 +180,7 @@ Exception: `Tools/` is reserved for AI tool providers in Monica.AI modules.
 | `Exceptions/` | Module-specific exception types | Public |
 | `Utils/` | Pure utility functions | Private |
 
-When a layer has many files, create feature sub-folders within it.
+Group files within a layer using **prefix naming**. Only create sub-folders when a group exceeds 5 files (see Folder Depth & Grouping Rules above).
 
 ## Infrastructure Module Template
 
@@ -122,33 +190,33 @@ Monica.{Name}/
 │   └── Module{Name}.cs
 ├── Abstractions/
 │   ├── I{Feature}.cs
-│   ├── {FeatureGroup}/
-│   └── Internal/
+│   └── Internal/                        # (visibility boundary — sub-folder allowed)
 │       └── I{InternalContract}.cs
 ├── Annotations/                         # (optional, developer-facing attributes)
 │   └── {Name}Attribute.cs
 ├── Models/
 │   ├── {Entity}.cs
-│   ├── {FeatureGroup}/
-│   └── Internal/
+│   └── Internal/                        # (visibility boundary — sub-folder allowed)
 │       └── {InternalModel}.cs
 ├── Facades/
 │   └── {Name}Facade.cs
 ├── Services/
 │   ├── {Feature}Service.cs
-│   ├── {FeatureGroup}/
-│   └── Support/
-│       ├── {Feature}Registry.cs
-│       ├── {Feature}Resolver.cs
-│       └── {Feature}Coordinator.cs
+│   └── Support/                         # Use prefix naming to group, NOT sub-folders
+│       ├── {Group}Registry.cs           # e.g., ChunkerRegistry.cs
+│       ├── {Group}Resolver.cs           # e.g., ChunkerResolver.cs
+│       ├── {Group}Coordinator.cs        # e.g., IndexCoordinator.cs
+│       └── {Group}Policy.cs             # e.g., PermissionPolicy.cs
 ├── Providers/
-│   └── {ProviderName}/
+│   └── {ProviderName}/                  # (replaceable unit — sub-folder allowed)
 │       └── {Name}Provider.cs
 ├── Extensions/                          # (optional)
 ├── Events/                              # (optional)
 ├── Exceptions/                          # (optional)
 └── Utils/                               # (optional)
 ```
+
+**Template is maximum structure, not minimum.** Most modules only need 2–3 of these layers. Do NOT create empty or near-empty layers. If a module only has Services and Abstractions, that's fine.
 
 ### Facade Rules
 
@@ -169,9 +237,11 @@ Monica.{Name}/
 
 Suitable types: Registry, Resolver, Coordinator, Policy, Normalizer, Factory.
 
+Use **prefix naming** to group related support files (e.g., `PolicyRequirement.cs`, `PolicyHandler.cs`, `PolicyProvider.cs`). Do NOT create sub-folders within `Support/` unless a single group exceeds 5 files.
+
 ## Features Pattern (Bundled Sub-Modules)
 
-When a project contains multiple independent sub-features:
+**When to use**: Only when a module has **40+ files** or **3+ clearly independent sub-domains with their own Facades**. For smaller modules, standard flat layers are preferred.
 
 ```
 Monica.{Name}/
@@ -180,17 +250,13 @@ Monica.{Name}/
 │   └── Module{SubFeature}.cs
 ├── {FeatureA}/                          # OR under Features/
 │   ├── Abstractions/
-│   │   └── Internal/
 │   ├── Models/
-│   │   └── Internal/
 │   ├── Facades/
-│   ├── Services/
-│   │   └── Support/
-│   └── Providers/
+│   └── Services/
+│       └── Support/                     # Prefix naming inside, no sub-folders
 ├── {FeatureB}/
 │   ├── Abstractions/
 │   ├── Models/
-│   ├── Facades/
 │   └── Services/
 ├── Extensions/                          # (optional, project-level)
 └── Utils/                               # (optional, project-level)
@@ -200,6 +266,7 @@ Rules:
 - Each feature follows the same layer convention as a top-level module
 - Cross-feature shared types go in project-level folders
 - Features must NOT depend on another feature's internal `Services/`
+- Only include layers that have files — do not create empty layers
 
 Two valid approaches:
 - **Feature folders at project root** — when features are the primary unit (e.g., `Monica.AI/Chat/`, `Monica.AI/RAG/`)
@@ -299,7 +366,7 @@ Monica.{Name}/
 │   └── Internal/
 ├── Facades/
 ├── Services/
-│   └── Support/
+│   └── Support/                         # Prefix naming inside, no sub-folders
 ├── Providers/
 │   └── {ProviderName}/
 ├── Pages/

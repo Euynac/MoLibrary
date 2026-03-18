@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Authorization;
-using Monica.Authority.Implements.Authorization;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Exceptions;
+using Monica.Authority.Authorization.Services;
+using Monica.Authority.Authorization.Services.Support;
 using Monica.Core;
 using Monica.Core.ExceptionHandler;
 using Monica.Core.Modularity;
@@ -40,14 +43,14 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
     {
         services.AddAuthorization();
         //services.AddAuthorizationCore();
-        services.AddSingleton<IAuthorizationHandler, EnumPermissionRequirementHandler>();
+        services.AddSingleton<IAuthorizationHandler, PolicyEnumPermissionRequirementHandler>();
         services.AddTransient<DefaultAuthorizationPolicyProvider>();
 
         services.AddSingleton<IAuthorizationService, MoAuthorizationService>();
         services.AddSingleton<IMoAuthorizationService, MoAuthorizationService>();
         services.AddSingleton<IMethodInvocationAuthorizationService, MoMethodInvocationAuthorizationService>();
 
-        services.AddTransient<IMoAuthorizationPolicyProvider, MoEnumAuthorizationPolicyProvider>();
+        services.AddTransient<IMoAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
 
         var manager = new PermissionBitCheckerManager();
         var checker = new PermissionBitChecker(manager);
@@ -133,9 +136,9 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     {
         ConfigureServices(context =>
         {
-            context.Services.AddMoInterceptor<AuthorizationInterceptor>().CreateProxyWhenSatisfy((descriptor) =>
+            context.Services.AddMoInterceptor<InterceptionAuthorizer>().CreateProxyWhenSatisfy((descriptor) =>
             {
-                if (AuthorizationInterceptorRegistrar.ShouldIntercept(descriptor.ImplementationType))
+                if (InterceptionRegistrar.ShouldIntercept(descriptor.ImplementationType))
                 {
                     //TODO 支持对Controller、OurCRUD进行权限验证
                     //TODO 输出日志

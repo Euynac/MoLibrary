@@ -2,9 +2,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Authority.Authorization;
+using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Authorization.Exceptions;
 
-namespace Monica.Authority.Implements.Authorization;
+namespace Monica.Authority.Authorization.Services;
 
 public class MoAuthorizationService(
     IAuthorizationPolicyProvider policyProvider,

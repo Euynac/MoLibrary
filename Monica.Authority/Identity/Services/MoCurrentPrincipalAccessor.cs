@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Monica.Authority.Security;
+using Monica.Authority.Identity.Abstractions;
 
-namespace Monica.Authority.Implements.Security;
+namespace Monica.Authority.Identity.Services;
 
 public class MoCurrentPrincipalAccessor(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUser) : IMoCurrentPrincipalAccessor
 {
