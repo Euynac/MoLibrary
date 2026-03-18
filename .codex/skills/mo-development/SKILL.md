@@ -130,9 +130,9 @@ public class ModuleExampleGuide
 
 ## Unified Response Model (Res)
 
-**Scope**: `Res`/`Res<T>` is **only for UI module-related services** — services directly consumed by Blazor components or UI layers. Non-UI / infrastructure modules must use standard .NET patterns (direct return types + exceptions).
+**Scope**: `Res`/`Res<T>` is used in **Facades** — the public entry points defined in infrastructure modules that serve both Minimal API and UI consumers. Internal services within modules must use standard .NET patterns (direct return types + exceptions).
 
-UI-facing service methods use the unified response model `Res<T>` or `Res` for return values.
+Facade methods use the unified response model `Res<T>` or `Res` for return values. UI modules inject Facades directly — no separate UI service layer needed for data access.
 
 ### Quick Reference
 
@@ -158,11 +158,12 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 
 ### Important Rules
 
-1. **UI service methods** must return `Res<T>` or `Res` - never return null
-2. **Infrastructure / non-UI service methods** must use standard return types and throw exceptions for errors — do not use `Res`
-3. **Use implicit conversions** for cleaner code when returning success or error in UI services
+1. **Facade methods** must return `Res<T>` or `Res` — never return null
+2. **Internal services** (in `Services/`) must use standard return types and throw exceptions — do not use `Res`
+3. **Use implicit conversions** for cleaner code when returning success or error in Facades
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
-5. **Required using**: Include `using Monica.Tool.MoResponse;` only in UI service files
+5. **Required using**: Include `using Monica.Tool.MoResponse;` in Facade files
+6. **UI modules inject Facades directly** — no separate UI service layer needed for data access
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 

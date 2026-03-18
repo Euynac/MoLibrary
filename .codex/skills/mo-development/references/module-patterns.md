@@ -2,6 +2,9 @@
 
 This guide defines the standardized patterns and conventions for creating modules in Monica.
 
+> **Canonical architecture reference**: `mo-architecture` skill (`SKILL.md`)
+> When this file conflicts with the architecture skill, the architecture skill takes precedence.
+
 ## Module Naming Conventions
 
 | Component | Naming Pattern | Example |
@@ -12,19 +15,98 @@ This guide defines the standardized patterns and conventions for creating module
 | Builder extensions | `extension(Mo)` with `Add{Name}()` | `Mo.AddSignalR()` |
 | Module key entry | `EMoModuleKey.{Name}` | `EMoModuleKey.SignalR` |
 
-## File Structure
-
-### Standard Infrastructure Module
+## Standard Infrastructure Module Structure
 
 ```
-Monica.{ModuleName}/
+Monica.{Name}/
 ├── Modules/
-│   └── Module{Name}.cs               # Core module implementation
-├── Services/                         # Module services
-│   ├── I{Feature}Service.cs          # Service interfaces
-│   └── {Feature}Service.cs           # Service implementations
-├── Models/                           # Data models (if needed)
-└── Middleware/                       # Module middleware (if needed)
+│   └── Module{Name}.cs
+│
+├── Abstractions/                    # Public contracts
+│   ├── I{Feature}.cs
+│   └── Internal/                    # Internal-only contracts
+│       └── I{InternalContract}.cs
+│
+├── Models/                          # Public data contracts
+│   ├── {Entity}.cs
+│   └── Internal/                    # Internal-only models
+│       └── {InternalModel}.cs
+│
+├── Facades/                         # Public entry points (Res<T>)
+│   └── {Name}Facade.cs
+│
+├── Services/                        # Internal implementation
+│   ├── {Feature}Service.cs
+│   └── Support/
+│       ├── {Feature}Registry.cs
+│       ├── {Feature}Resolver.cs
+│       └── {Feature}Coordinator.cs
+│
+├── Providers/                       # Pluggable implementations
+│   └── {ProviderName}/
+│       └── {Name}Provider.cs
+│
+├── Extensions/                      # (optional)
+├── Events/                          # (optional)
+├── Exceptions/                      # (optional)
+└── Utils/                           # (optional, unified utility folder)
+```
+
+### Public vs Internal Boundary
+
+- `Abstractions/` and `Models/` — public, consumed by external modules
+- `Abstractions/Internal/` and `Models/Internal/` — private, module-internal only
+- `Facades/` — public, consumed by Minimal API and UI
+- `Services/` and `Providers/` — private, module-internal only
+
+### Facade Pattern
+
+Facades are the public entry point for API and UI consumers:
+
+- Return `Res` / `Res<T>` exclusively
+- Defined in the **infrastructure module** (not UI module)
+- Shared by both Minimal API and UI — no separate UI service layer needed
+- Delegate to `Services/` for implementation
+- Must stay lightweight (~200 lines max per facade file)
+- Other infrastructure modules do NOT consume Facades — they use `Abstractions/` interfaces
+
+```csharp
+public class {Name}Facade(
+    ILogger<{Name}Facade> logger,
+    {Feature}Service featureService,
+    AnotherService anotherService)
+{
+    public async Task<Res<TResponse>> GetDataAsync(TRequest request)
+    {
+        try
+        {
+            var result = await featureService.ProcessAsync(request);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Operation failed");
+            return Res.Fail($"Operation failed: {ex.Message}");
+        }
+    }
+}
+```
+
+### Internal Service Pattern (Exceptions)
+
+Services are internal implementation — use standard .NET patterns:
+
+```csharp
+internal class {Feature}Service(
+    ILogger<{Feature}Service> logger,
+    IOtherDependency dependency)
+{
+    public async Task<TResponse> ProcessAsync(TRequest request)
+    {
+        var result = await dependency.ExecuteAsync(request);
+        return result ?? throw new KeyNotFoundException("Data not found");
+    }
+}
 ```
 
 ## Module Class Implementation
@@ -39,14 +121,15 @@ public class Module{Name}(Module{Name}Option option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<I{Name}Service, {Name}Service>();
+        // Register facade (public)
+        services.AddScoped<{Name}Facade>();
+        // Register services (internal)
+        services.AddScoped<{Feature}Service>();
     }
 }
 ```
 
 ### Module That Declares Dependencies
-
-Modules inherit from `MoModule<TModuleSelf, TModuleOption, TModuleGuide>` and declare required modules in `ClaimDependencies()`.
 
 ```csharp
 public class Module{Name}(Module{Name}Option option)
@@ -56,7 +139,8 @@ public class Module{Name}(Module{Name}Option option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<I{Name}Service, {Name}Service>();
+        services.AddScoped<{Name}Facade>();
+        services.AddScoped<{Feature}Service>();
     }
 
     public override void ClaimDependencies()
@@ -69,15 +153,12 @@ public class Module{Name}(Module{Name}Option option)
 
 ## Options Class
 
-Options classes inherit from `MoModuleOption<TModule>` or `MoModuleOptionWithMinimalApi<TModule>` (for modules that expose Minimal API endpoints):
-
 ```csharp
 // Standard module options
 public class Module{Name}Option : MoModuleOption<Module{Name}>
 {
     public bool EnableFeature { get; set; } = true;
     public int MaxItems { get; set; } = 100;
-    public string ConnectionString { get; set; } = string.Empty;
 }
 
 // Module with Minimal API endpoints
@@ -97,18 +178,10 @@ public class Module{Name}Guide : MoModuleGuide<Module{Name}, Module{Name}Option,
         Option.EnableFeature = enable;
         return this;
     }
-
-    public Module{Name}Guide WithMaxItems(int maxItems)
-    {
-        Option.MaxItems = maxItems;
-        return this;
-    }
 }
 ```
 
 ## Builder Extensions
-
-Builder extensions use the `extension(Mo)` syntax:
 
 ```csharp
 public static Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = null)
@@ -120,94 +193,57 @@ public static Module{Name}Guide Add{Name}(Action<Module{Name}Option>? action = n
 Usage:
 
 ```csharp
-// With options action
 Mo.Add{Name}(options =>
 {
     options.EnableFeature = true;
     options.MaxItems = 50;
 });
 
-// With fluent guide
 Mo.Add{Name}()
     .EnableFeature()
     .WithMaxItems(50);
-
-// Dependencies are automatically registered
-Mo.AddJobSchedulerUI(options =>
-{
-    options.DisableJobSchedulerPage = false;
-});
-// ModuleJobScheduler and ModuleUICore are automatically added
 ```
 
-## UI Modules
+## Features Pattern (Bundled Sub-Modules)
 
-UI module architecture patterns (Mixed, Standalone, Framework), UI module class implementation, and folder conventions are documented in the **mo-ui-development** skill's `references/module-structure-guide.md`.
+When a module bundles multiple independent features:
 
-## Service Layer Integration
-
-### UI Service Pattern (Res<T>)
-
-UI services — those directly consumed by Blazor components — use `Res<T>` / `Res` return types:
-
-```csharp
-public class {Name}UIService(
-    ILogger<{Name}UIService> logger,
-    IOtherDependency dependency)
-{
-    public async Task<Res<TResponse>> GetDataAsync(TRequest request)
-    {
-        try
-        {
-            var result = await dependency.ProcessAsync(request);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Operation failed");
-            return Res.Fail($"Operation failed: {ex.Message}");
-        }
-    }
-
-    public async Task<Res> ExecuteActionAsync(TRequest request)
-    {
-        // Implementation
-        return Res.Ok();
-    }
-}
+```
+Monica.{Name}/
+├── Modules/
+│   ├── Module{Name}.cs
+│   └── Module{SubFeature}.cs
+│
+├── {FeatureA}/                      # Each feature follows the same layer convention
+│   ├── Abstractions/
+│   │   └── Internal/
+│   ├── Models/
+│   │   └── Internal/
+│   ├── Facades/
+│   ├── Services/
+│   │   └── Support/
+│   └── Providers/
+│
+├── {FeatureB}/
+│   ├── Abstractions/
+│   ├── Models/
+│   ├── Facades/
+│   └── Services/
+│
+└── Utils/                           # (optional, project-level)
 ```
 
-### Infrastructure Service Pattern (Exceptions)
+Rules:
+- Each feature folder follows the exact same layer convention as a top-level module
+- Cross-feature shared types go in project-level folders
+- Features must NOT depend on another feature's internal `Services/` — use `Abstractions/` for cross-feature contracts
 
-Non-UI / infrastructure services use standard .NET patterns — direct return types and throw exceptions:
-
-```csharp
-public class {Name}Service(
-    ILogger<{Name}Service> logger,
-    IOtherDependency dependency)
-{
-    public async Task<TResponse> GetDataAsync(TRequest request)
-    {
-        var result = await dependency.ProcessAsync(request);
-        return result ?? throw new KeyNotFoundException("Data not found");
-    }
-
-    public async Task ExecuteActionAsync(TRequest request)
-    {
-        if (!IsValid(request))
-            throw new InvalidOperationException("Invalid request");
-
-        await dependency.ProcessAsync(request);
-    }
-}
-```
-
-### Using Options in Services
+## Using Options in Services
 
 ```csharp
-public class {Name}UIService(
+public class {Name}Facade(
     IOptions<Module{Name}Option> options,
-    ILogger<{Name}UIService> logger)
+    ILogger<{Name}Facade> logger)
 {
     private readonly Module{Name}Option _options = options.Value;
 
@@ -217,85 +253,53 @@ public class {Name}UIService(
         {
             return "Feature is disabled";
         }
-
-        // Use _options.MaxItems, etc.
+        // ...
     }
 }
 ```
 
-## Minimal API to Service Layer Refactoring
+## Minimal API Rules
 
-When a source module contains Minimal API definitions with inline business logic, refactor them to the service layer pattern.
-
-### Principles
-
-- **Service in source module**: Service class must be defined in the source module, not the UI module
-- **Business logic migration**: Move all business logic from Minimal API to service class
-- **Interface abstraction**: Define interface for the service to support DI
-- **Model reuse**: Reuse existing models from the source module instead of creating duplicates
-
-### Before: Minimal API with Inline Logic
+Minimal API handlers must be thin — parameter extraction + facade call only:
 
 ```csharp
-endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
-    async ([FromRoute] string eventKey,
-          [FromServices] IMoDistributedEventBus eventBus,
-          [FromServices] IGlobalJsonOption jsonOption,
-          [FromBody] JsonNode eventContent,
-          HttpResponse response,
-          HttpContext context) =>
-{
-    if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } e)
+// Thin Minimal API — delegates to Facade
+endpoints.MapPost("/api/{feature}",
+    async ([FromRoute] string id,
+          [FromServices] {Name}Facade facade,
+          [FromBody] RequestModel request) =>
     {
-        var json = eventContent.ToString();
-        var eventToPublish = JsonSerializer.Deserialize(json, e.Type, jsonOption.GlobalOptions)!;
-        await eventBus.PublishAsync(e.Type, eventToPublish);
-        return Res.Ok(eventToPublish).AppendMsg($"Published {eventKey} event").GetResponse();
-    }
-
-    return Res.Fail($"Failed to get {eventKey} unit information").GetResponse();
-});
-```
-
-### After: Thin Minimal API + Service
-
-```csharp
-// Minimal API - thin delegation layer
-endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
-    async ([FromRoute] string eventKey,
-          [FromServices] IDomainEventService domainEventService,
-          [FromBody] JsonNode eventContent) =>
-    {
-        return await domainEventService.PublishDomainEventAsync(eventKey, eventContent);
+        return await facade.ProcessAsync(id, request);
     });
 ```
 
-```csharp
-// Service implementation (in source module)
-public class DomainEventService(
-    IMoDistributedEventBus eventBus,
-    IGlobalJsonOption jsonOption) : IDomainEventService
-{
-    public async Task<object> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
-    {
-        if (ProjectUnitStores.GetUnit<UnitDomainEvent>(eventKey) is { } unitEvent)
-        {
-            var json = eventContent.ToString();
-            var eventToPublish = JsonSerializer.Deserialize(json, unitEvent.Type, jsonOption.GlobalOptions)!;
-            await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
-            return Res.Ok(eventToPublish).AppendMsg($"Published {eventKey} event");
-        }
-        return Res.Fail($"Failed to get {eventKey} unit information");
-    }
-}
+If a Minimal API handler exceeds "parameter handling + 1-2 facade calls", the logic must move into the Facade.
+
+## Dependency Direction
+
 ```
+Minimal API / UI Component
+    → Facade (Res<T>)
+    → Services (internal, exceptions)
+    → Providers (pluggable implementations)
+
+Other Module
+    → Abstractions (interfaces) + Models (public)
+```
+
+Forbidden:
+- Service → Facade
+- Provider → Facade
+- Provider → UI
+- Internal Service → another module's internal Service
 
 ## Best Practices
 
 1. **Use primary constructors** for dependency injection
 2. **Keep modules focused** — one module, one responsibility
-3. **Declare dependencies explicitly** in `ClaimDependencies()` using `DependsOnModule<TGuide>().Register()`
+3. **Declare dependencies explicitly** in `ClaimDependencies()`
 4. **Use options for configuration** — inject `IOptions<TOption>`
 5. **Follow naming conventions** — consistent naming makes code discoverable
-6. **Return Res types only in UI services** — infrastructure services use standard returns + exceptions
-7. **UI module patterns** — see mo-ui-development skill for UI module architecture and folder conventions
+6. **Facades return Res<T>** — internal services use standard returns + exceptions
+7. **Use `Internal/` sub-folders** to separate public from private types
+8. **Use `Utils/`** as the only utility folder name (not Helpers/Tools/Common)
