@@ -6,12 +6,6 @@
 
 **Service lifetime**: Scoped (one instance per Blazor circuit)
 
-**Source files**:
-- `Monica.UI/Services/IMoBrowserStorage.cs` - Interface definition
-- `Monica.UI/Services/MoBrowserStorage.cs` - Implementation with lazy JS module loading
-- `Monica.UI/Services/BrowserStorageExtensions.cs` - Convenience extension methods
-- `Monica.UI/Services/Models/TablePersistenceState.cs` - Table state model
-
 ## Key Naming Convention
 
 All keys are auto-prefixed with `mo:` by the service. Use the format `{category}:{id}`:
@@ -77,8 +71,6 @@ Task<int> ClearAllTableStatesAsync()
 ```
 
 ### Complete Usage Example
-
-Based on `Monica.JobScheduler.UI/Pages/JobInstancesPage.razor`:
 
 ```razor
 @inject IMoBrowserStorage BrowserStorage
@@ -152,8 +144,6 @@ Based on `Monica.JobScheduler.UI/Pages/JobInstancesPage.razor`:
 4. **Use a unique table ID**: Each table needs a distinct ID string (e.g. `"job-instances"`, `"user-list"`)
 
 ## Theme Persistence Pattern
-
-Based on `Monica.UI/Components/Layout/MoThemeProvider.razor`:
 
 ```razor
 @inject IMoBrowserStorage BrowserStorage
