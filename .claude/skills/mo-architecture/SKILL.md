@@ -1,6 +1,6 @@
 ---
 name: mo-architecture
-description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
+description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
 version: 1.0.0
 ---
 
@@ -17,6 +17,8 @@ Other skills reference this skill:
 **Creating a new module?** → Use the Infrastructure Module Template below.
 **Adding UI to an existing module?** → Choose Mixed (lightweight UI) or Standalone (complex UI).
 **Module getting large?** → Use the Features Pattern to bundle sub-modules.
+**Need developer-facing attributes?** → Place in `Annotations/` (public layer).
+**Page file getting large?** → Check the Page Decomposition Rules.
 **Unsure where a file goes?** → Check the Standard Layer Names table.
 **Unsure if something is public or internal?** → Check the Visibility Rules table.
 
@@ -322,6 +324,61 @@ Boundary rules:
 When to use Mixed: UI is lightweight, tightly coupled lifecycle, no separate packaging needed.
 When to upgrade to Standalone: UI pages growing, multiple UI sub-features, separate deployment needed.
 
+## Page Decomposition Rules
+
+Pages are thin composition shells — they wire up components and delegate state. They do not own business logic, polling loops, or complex state machines.
+
+### Size Limits
+
+| Element | Guideline |
+|---------|-----------|
+| Page markup | ~100–200 lines |
+| Page `@code` block | ~50–150 lines (lifecycle + event wiring only) |
+| Total page file | ≤ 350 lines |
+
+### What to Extract and Where
+
+| Concern | Extract to | Example |
+|---------|-----------|---------|
+| Complex UI sections | `UI{Name}/Components/` | `DocumentQueueSection.razor` |
+| Dialog flows | `UI{Name}/Dialogs/` | `CreateKnowledgeBaseDialog.razor` |
+| Page/selection/polling state | `UI{Name}/State/` | `RAGManagePageState.cs` |
+| Loading orchestration | `UI{Name}/State/` | `RAGLoadingStateManager.cs` |
+| Format/display helpers | `UI{Name}/Support/` | `EmbeddingModelDisplayResolver.cs` |
+| Batch coordination | `UI{Name}/Support/` | `RAGBatchIndexCoordinator.cs` |
+
+### Page Composition Pattern
+
+```razor
+@* Page is a thin shell: inject state, compose components *@
+@inject RAGManagePageState PageState
+
+<div class="rag-manage-page">
+    <KnowledgeBaseListPanel />
+    <KnowledgeBaseDetailPanel />
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await PageState.InitializeAsync();
+    }
+
+    public void Dispose() => PageState.Dispose();
+}
+```
+
+### Red Flags (Extract Immediately)
+
+- Page has > 10 private fields
+- Page owns `CancellationTokenSource` or polling loops
+- Page has `Interlocked` or concurrency primitives
+- Page has > 5 `Can*()` guard methods
+- Page duplicates loading skeleton markup across panels
+- UI module has a flat root-level `Services/` folder
+
+For a concrete anti-pattern case study, see `references/refactoring-examples.md`.
+
 ## Naming Conventions
 
 ### Module Registration
@@ -369,10 +426,13 @@ Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
 | `Providers/` | `internal` | Pluggable but internal |
 | `Utils/` | `internal` | Module-internal utilities |
 
-
 ## Additional Resources
 
 ### Reference Files
 
-For concrete refactoring examples and prohibited practices, consult:
-- **`references/refactoring-examples.md`** — RAG refactoring walkthrough and list of prohibited architectural patterns
+- **`references/refactoring-examples.md`** — Infrastructure refactoring walkthrough, prohibited architectural patterns
+- **`references/page-state-pattern.md`** — UI page state implementation patterns with 3 levels (data bag, async Facade-calling, polling/concurrency), registration, and wiring examples
+
+### Examples
+
+- **`examples/anti-pattern-god-page.razor`** — Anti-pattern: God Page with 20+ fields, polling, concurrency in `@code` block

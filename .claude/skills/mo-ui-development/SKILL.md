@@ -252,3 +252,45 @@ For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-d
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use localization for all user-facing text
 - [ ] Add AppBar/navigation keys to `UIRegistryResource` when using `RegisterLocalizedComponent`
+
+## Page Complexity Checklist
+
+Before creating or modifying a page, verify it stays within architecture limits. See `mo-architecture` skill for full Page Decomposition Rules.
+
+### Pre-Flight Check (Before Writing a Page)
+
+- [ ] Page markup ≤ 200 lines (composition only, no inline business logic)
+- [ ] Page `@code` block ≤ 150 lines (lifecycle + event wiring)
+- [ ] Total page file ≤ 350 lines
+- [ ] Page injects Facades directly — no intermediate `*UIService` wrapper
+- [ ] State lives in `UI{Name}/State/`, not in page fields
+- [ ] No `CancellationTokenSource`, `Interlocked`, or polling loops in page code
+
+### Red Flags During Review
+
+| Symptom | Action |
+|---------|--------|
+| Page > 350 lines | Extract components to `UI{Name}/Components/` |
+| > 10 private fields in `@code` | Extract state class to `UI{Name}/State/` |
+| `CancellationTokenSource` in page | Move polling to `State/` or `Support/` |
+| > 5 `Can*()` guard methods | Move to state class with computed properties |
+| Duplicated loading skeletons | Extract shared loading component |
+| Flat root `Services/` in UI module | Restructure to `UI{Name}/State/` + `UI{Name}/Support/` |
+| `*UIService` wrapping a Facade | Remove wrapper, inject Facade directly |
+
+### Correct UI Module Structure
+
+```
+Monica.{Name}.UI/
+├── Pages/
+│   └── UI{Name}Page.razor          # Thin shell ≤ 350 lines
+├── UI{Name}/
+│   ├── Components/                  # Extracted UI sections
+│   ├── Dialogs/                     # Dialog components
+│   ├── State/                       # Page state, polling, loading
+│   └── Support/                     # Coordinators, resolvers, formatters
+```
+
+For a real anti-pattern case study (`UIAIRAGManagePage.razor` — 1,614 lines), see `mo-architecture` skill → `references/refactoring-examples.md`.
+
+For State class implementation patterns (data bag, async Facade-calling, polling/concurrency), see `mo-architecture` skill → `references/page-state-pattern.md`.
