@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
@@ -8,6 +9,7 @@ using Monica.AI.Providers.Anthropic;
 using Monica.AI.Providers.Fake;
 using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
+using Monica.AI.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -67,6 +69,9 @@ public class ModuleAI(ModuleAIOption option)
         // 注册 Provider 管理器
         services.AddSingleton<AIProviderManager>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
+        services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAIChatAgentDecorator, ToolInvocationTrackingAgentDecorator>());
 
         // 注册聊天服务
         services.AddSingleton<AIChatService>();

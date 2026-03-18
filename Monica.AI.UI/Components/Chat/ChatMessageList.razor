@@ -37,6 +37,7 @@
         @foreach (var message in Messages)
         {
             <ChatMessageItem Message="@message" EnableMarkdown="@EnableMarkdown"
+                             ToolDebugEnabled="@ToolDebugEnabled"
                              OnEdit="@OnEditMessage" OnRetry="@OnRetryMessage" />
         }
 
@@ -46,6 +47,7 @@
                 @ref="_streamingItemRef"
                 StreamingContent="@StreamingContent"
                 EnableMarkdown="@EnableMarkdown"
+                ToolDebugEnabled="@ToolDebugEnabled"
                 ExternalCancellationToken="@CancellationToken"
                 OnStreamComplete="@HandleStreamComplete"
                 OnStreamError="@HandleStreamError" />
@@ -59,6 +61,7 @@
     [Parameter] public IReadOnlyList<AIChatMessage> Messages { get; set; } = [];
     [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public bool ToolDebugEnabled { get; set; }
     [Parameter] public bool EnableAutoScroll { get; set; } = true;
     [Parameter] public CancellationToken CancellationToken { get; set; }
     [Parameter] public EventCallback<string> OnStreamComplete { get; set; }

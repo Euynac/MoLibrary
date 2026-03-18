@@ -40,4 +40,20 @@ public static class AIChatStorageExtensions
     {
         return storage.SetAsync($"{AIChatCategory}:default-model", modelName);
     }
+
+    /// <summary>
+    /// Get the tool debug flag from storage.
+    /// </summary>
+    public static Task<bool> GetToolDebugEnabledAsync(this IMoBrowserStorage storage)
+    {
+        return storage.GetAsync($"{AIChatCategory}:tool-debug-enabled", false);
+    }
+
+    /// <summary>
+    /// Persist the tool debug flag.
+    /// </summary>
+    public static Task SaveToolDebugEnabledAsync(this IMoBrowserStorage storage, bool enabled)
+    {
+        return storage.SetAsync($"{AIChatCategory}:tool-debug-enabled", enabled);
+    }
 }

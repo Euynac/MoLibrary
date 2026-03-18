@@ -31,28 +31,6 @@
     border-bottom-left-radius: 4px;
 }
 
-/* 使用 ::deep 选择器样式化 MudBlazor 组件内容 */
-.message-content ::deep .mud-markdown-body {
-    color: inherit;
-}
-
-.message-content ::deep .mud-markdown-body p {
-    margin-bottom: 8px;
-}
-
-.message-content ::deep .mud-markdown-body p:last-child {
-    margin-bottom: 0;
-}
-
-.message-content ::deep .mud-markdown-body pre {
-    overflow-x: auto;
-}
-
-.message-content ::deep .mud-markdown-body code {
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 0.9em;
-}
-
 .message-text {
     white-space: pre-wrap;
 }

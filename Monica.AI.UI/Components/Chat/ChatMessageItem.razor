@@ -1,3 +1,4 @@
+@using Monica.UI.Components.Markdown
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
@@ -67,10 +68,11 @@
                         }
                     </div>
                 }
-                <ToolCallDetail ToolCalls="@Message.ToolCalls" />
+                <ToolCallDetail ToolCalls="@Message.ToolCalls"
+                                EnableDebugMode="@ToolDebugEnabled" />
                 @if (EnableMarkdown)
                 {
-                    <MudMarkdown Value="@Message.Content" />
+                    <MoMarkdown Value="@Message.Content" EnableMermaid="true" />
                 }
                 else
                 {
@@ -128,6 +130,7 @@
 @code {
     [Parameter] public required AIChatMessage Message { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public bool ToolDebugEnabled { get; set; }
     [Parameter] public EventCallback<(AIChatMessage Message, string NewContent)> OnEdit { get; set; }
     [Parameter] public EventCallback<AIChatMessage> OnRetry { get; set; }
 

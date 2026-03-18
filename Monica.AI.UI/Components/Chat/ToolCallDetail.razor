@@ -1,11 +1,21 @@
+@using System.Text.Json
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 @if (ToolCalls is { Count: > 0 })
 {
     <div class="tool-call-detail">
         <div class="tool-call-header" @onclick="ToggleExpanded">
             <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" />
-            <MudText Typo="Typo.body2" Class="tool-call-summary">
-                @ToolCalls.Count tool call@(ToolCalls.Count > 1 ? "s" : "")
-            </MudText>
+            <div class="tool-call-header-copy">
+                <MudText Typo="Typo.body2" Class="tool-call-summary">
+                    @L["Chat:ToolCalls:Summary", ToolCalls.Count]
+                </MudText>
+                <MudText Typo="Typo.caption" Class="tool-call-subtitle">
+                    @GetSubtitle()
+                </MudText>
+            </div>
             <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                      Size="Size.Small" Class="tool-call-chevron" />
         </div>
@@ -14,31 +24,83 @@
             <div class="tool-call-body">
                 @foreach (var call in ToolCalls)
                 {
-                    <div class="tool-call-item">
-                        <div class="tool-call-name">
-                            <MudIcon Icon="@Icons.Material.Filled.Search"
-                                     Size="Size.Small" />
-                            <MudText Typo="Typo.body2" Class="tool-name-text">
-                                @call.ToolName
-                            </MudText>
-                        </div>
-                        @if (call.Arguments is { Count: > 0 })
-                        {
-                            <div class="tool-call-args">
-                                @foreach (var arg in call.Arguments)
+                    <div class="tool-call-item @GetStatusClass(call)">
+                        <div class="tool-call-item-header">
+                            <div class="tool-call-name">
+                                <MudIcon Icon="@GetToolIcon(call)" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="tool-name-text">
+                                    @call.ToolName
+                                </MudText>
+                            </div>
+                            <div class="tool-call-badges">
+                                <span class="tool-call-status-badge @GetStatusClass(call)">
+                                    @GetStatusText(call)
+                                </span>
+                                @if (call.Duration is { } duration)
                                 {
-                                    <MudText Typo="Typo.caption" Class="tool-arg">
-                                        @arg.Key: @arg.Value
-                                    </MudText>
+                                    <span class="tool-call-status-badge neutral">
+                                        @FormatDuration(duration)
+                                    </span>
                                 }
                             </div>
-                        }
-                        @if (call.Result is not null)
+                        </div>
+
+                        @if (GetInputPreview(call) is { } preview)
                         {
-                            <div class="tool-call-result">
-                                <MudText Typo="Typo.caption" Class="tool-result-text">
-                                    @TruncateResult(call.Result)
+                            <MudText Typo="Typo.caption" Class="tool-call-preview">
+                                @preview
+                            </MudText>
+                        }
+
+                        @if (!EnableDebugMode)
+                        {
+                            @if (!string.IsNullOrWhiteSpace(call.ExceptionMessage))
+                            {
+                                <div class="tool-call-result error">
+                                    <MudText Typo="Typo.caption" Class="tool-result-text">
+                                        @TruncateText(call.ExceptionMessage)
+                                    </MudText>
+                                </div>
+                            }
+                            else if (GetOutputPreview(call) is { } outputPreview)
+                            {
+                                <div class="tool-call-result">
+                                    <MudText Typo="Typo.caption" Class="tool-result-text">
+                                        @outputPreview
+                                    </MudText>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="tool-call-debug-grid">
+                                <div class="tool-call-debug-block">
+                                    <MudText Typo="Typo.overline" Class="tool-call-debug-title">
+                                        @L["Chat:ToolCalls:Fields:Input"]
+                                    </MudText>
+                                    <pre class="tool-call-debug-code">@(call.ArgumentsText ?? L["Chat:ToolCalls:NoInput"])</pre>
+                                </div>
+                                <div class="tool-call-debug-block">
+                                    <MudText Typo="Typo.overline" Class="tool-call-debug-title">
+                                        @GetOutputTitle(call)
+                                    </MudText>
+                                    <pre class="tool-call-debug-code">@(GetOutputText(call) ?? L["Chat:ToolCalls:NoOutput"])</pre>
+                                </div>
+                            </div>
+
+                            <div class="tool-call-metadata">
+                                <MudText Typo="Typo.caption" Class="tool-call-metadata-line">
+                                    @L["Chat:ToolCalls:Fields:CallId"]: @call.CallId
                                 </MudText>
+                                <MudText Typo="Typo.caption" Class="tool-call-metadata-line">
+                                    @L["Chat:ToolCalls:Fields:StartedAt"]: @call.StartedAt.ToLocalTime().ToString("HH:mm:ss")
+                                </MudText>
+                                @if (call.CompletedAt is { } completedAt)
+                                {
+                                    <MudText Typo="Typo.caption" Class="tool-call-metadata-line">
+                                        @L["Chat:ToolCalls:Fields:CompletedAt"]: @completedAt.ToLocalTime().ToString("HH:mm:ss")
+                                    </MudText>
+                                }
                             </div>
                         }
                     </div>
@@ -50,11 +112,141 @@
 
 @code {
     [Parameter] public List<ToolCallInfo>? ToolCalls { get; set; }
+    [Parameter] public bool EnableDebugMode { get; set; }
 
     private bool _expanded;
 
     private void ToggleExpanded() => _expanded = !_expanded;
 
-    private static string TruncateResult(string result, int maxLength = 200)
-        => result.Length > maxLength ? result[..maxLength] + "..." : result;
+    private string GetSubtitle()
+    {
+        if (ToolCalls is not { Count: > 0 })
+        {
+            return string.Empty;
+        }
+
+        var running = ToolCalls.Count(call => call.Status == ToolCallStatus.Running);
+        var failed = ToolCalls.Count(call => call.Status == ToolCallStatus.Failed);
+        var completed = ToolCalls.Count(call => call.Status == ToolCallStatus.Completed);
+
+        if (failed > 0)
+        {
+            return L["Chat:ToolCalls:Subtitle:Failed", completed, failed, running];
+        }
+
+        if (running > 0)
+        {
+            return L["Chat:ToolCalls:Subtitle:Running", completed, running];
+        }
+
+        return L["Chat:ToolCalls:Subtitle:Completed", completed];
+    }
+
+    private string GetStatusText(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => L["Chat:ToolCalls:Status:Failed"],
+            ToolCallStatus.Completed => L["Chat:ToolCalls:Status:Completed"],
+            _ => L["Chat:ToolCalls:Status:Running"]
+        };
+
+    private static string GetStatusClass(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => "failed",
+            ToolCallStatus.Completed => "completed",
+            _ => "running"
+        };
+
+    private static string GetToolIcon(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => Icons.Material.Filled.ErrorOutline,
+            ToolCallStatus.Completed => Icons.Material.Filled.TaskAlt,
+            _ => Icons.Material.Filled.Search
+        };
+
+    private static string? GetInputPreview(ToolCallInfo call)
+    {
+        if (call.Arguments is null || call.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        if (call.Arguments.TryGetValue("userQuestion", out var query) && query is not null)
+        {
+            return query.ToString();
+        }
+
+        return call.Arguments.FirstOrDefault(x => x.Value is not null).Value?.ToString();
+    }
+
+    private string GetOutputTitle(ToolCallInfo call)
+        => string.IsNullOrWhiteSpace(call.ExceptionMessage)
+            ? L["Chat:ToolCalls:Fields:Output"]
+            : L["Chat:ToolCalls:Fields:Error"];
+
+    private static string? GetOutputText(ToolCallInfo call)
+        => string.IsNullOrWhiteSpace(call.ExceptionMessage)
+            ? call.ResultText
+            : call.ExceptionMessage;
+
+    private string? GetOutputPreview(ToolCallInfo call)
+    {
+        if (!string.IsNullOrWhiteSpace(call.ExceptionMessage))
+        {
+            return TruncateText(call.ExceptionMessage);
+        }
+
+        if (TryGetResultCount(call.ResultText, out var resultCount))
+        {
+            return L["Chat:ToolCalls:ResultCount", resultCount];
+        }
+
+        return string.IsNullOrWhiteSpace(call.ResultText)
+            ? null
+            : TruncateText(call.ResultText);
+    }
+
+    private static bool TryGetResultCount(string? resultText, out int resultCount)
+    {
+        resultCount = 0;
+        if (string.IsNullOrWhiteSpace(resultText))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(resultText);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (!document.RootElement.TryGetProperty("resultCount", out var resultCountProperty))
+            {
+                return false;
+            }
+
+            if (!resultCountProperty.TryGetInt32(out resultCount))
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+        => duration.TotalSeconds >= 1
+            ? $"{duration.TotalSeconds:F1}s"
+            : $"{duration.TotalMilliseconds:F0}ms";
+
+    private static string TruncateText(string text, int maxLength = 180)
+        => text.Length > maxLength ? text[..maxLength] + "..." : text;
 }

@@ -174,9 +174,76 @@ public class TokenUsage
 /// <summary>
 /// Information about a tool call made during message generation.
 /// </summary>
-public record ToolCallInfo(
-    string ToolName,
-    string CallId,
-    IDictionary<string, object?>? Arguments,
-    string? Result,
-    DateTimeOffset Timestamp);
+public sealed record ToolCallInfo
+{
+    /// <summary>
+    /// Tool name reported by the model.
+    /// </summary>
+    public required string ToolName { get; init; }
+
+    /// <summary>
+    /// Unique tool call identifier.
+    /// </summary>
+    public required string CallId { get; init; }
+
+    /// <summary>
+    /// Raw tool arguments.
+    /// </summary>
+    public IDictionary<string, object?>? Arguments { get; init; }
+
+    /// <summary>
+    /// Pretty-printed tool arguments for debug display.
+    /// </summary>
+    public string? ArgumentsText { get; init; }
+
+    /// <summary>
+    /// Pretty-printed tool output for debug display.
+    /// </summary>
+    public string? ResultText { get; init; }
+
+    /// <summary>
+    /// Tool execution exception text, when available.
+    /// </summary>
+    public string? ExceptionMessage { get; init; }
+
+    /// <summary>
+    /// Current execution status of the tool call.
+    /// </summary>
+    public ToolCallStatus Status { get; init; }
+
+    /// <summary>
+    /// When the tool call started.
+    /// </summary>
+    public DateTimeOffset StartedAt { get; init; }
+
+    /// <summary>
+    /// When the tool call finished.
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; init; }
+
+    /// <summary>
+    /// Total execution duration.
+    /// </summary>
+    public TimeSpan? Duration => CompletedAt is { } completedAt ? completedAt - StartedAt : null;
+}
+
+/// <summary>
+/// Execution status for a tool call.
+/// </summary>
+public enum ToolCallStatus
+{
+    /// <summary>
+    /// The tool call has been requested and is still running.
+    /// </summary>
+    Running,
+
+    /// <summary>
+    /// The tool call finished successfully.
+    /// </summary>
+    Completed,
+
+    /// <summary>
+    /// The tool call finished with an error.
+    /// </summary>
+    Failed
+}

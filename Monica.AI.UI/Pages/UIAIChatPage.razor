@@ -19,6 +19,10 @@
 @inject IStringLocalizer<AIResource> L
 @inject IMoBrowserStorage BrowserStorage
 
+<HeadContent>
+    <link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" />
+</HeadContent>
+
 <div class="ai-chat-shell">
     @if (_options.ShowSessionList)
     {
@@ -45,6 +49,13 @@
                 }
             </div>
             <div class="topbar-right">
+                <MudTooltip Text="@(_state.ToolDebugEnabled
+                                      ? L["Chat:ToolCalls:DisableDebug"]
+                                      : L["Chat:ToolCalls:EnableDebug"])">
+                    <MudIconButton Icon="@Icons.Material.Filled.BugReport"
+                                   Class="@($"tool-debug-button {(_state.ToolDebugEnabled ? "active" : "")}")"
+                                   OnClick="ToggleToolDebugAsync" />
+                </MudTooltip>
                 <MudIconButton Icon="@Icons.Material.Filled.Settings"
                                Class="settings-button"
                                OnClick="OpenPromptSettingsAsync" />
@@ -130,6 +141,7 @@
     {
         var savedProviderId = await BrowserStorage.GetDefaultProviderAsync();
         var savedModelName = await BrowserStorage.GetDefaultModelAsync();
+        _state.ToolDebugEnabled = await BrowserStorage.GetToolDebugEnabledAsync();
 
         if (!string.IsNullOrEmpty(savedProviderId))
         {
@@ -568,6 +580,24 @@
     private void HandleKbSelectionChanged(List<string> selectedIds)
     {
         _state.SelectedKnowledgeBaseIds = selectedIds;
+
+        var currentSession = _state.CurrentAgentSessionState
+            ?? _sessionStorage.GetSession(_sessionStorage.CurrentSessionId ?? string.Empty);
+
+        if (currentSession is null)
+        {
+            return;
+        }
+
+        currentSession.ActiveKnowledgeBaseIds = ChatPageHelper.GetKnowledgeBaseIds(selectedIds);
+        UpdateCurrentSession();
+    }
+
+    private async Task ToggleToolDebugAsync()
+    {
+        _state.ToolDebugEnabled = !_state.ToolDebugEnabled;
+        await BrowserStorage.SaveToolDebugEnabledAsync(_state.ToolDebugEnabled);
+        StateHasChanged();
     }
 
     // Helper to build ChatContainer parameters
@@ -589,6 +619,7 @@
             EnableAutoScroll = _options.EnableAutoScroll,
             SupportsReasoning = _state.SupportsReasoning,
             ReasoningEnabled = _state.ReasoningEnabled,
+            ToolDebugEnabled = _state.ToolDebugEnabled,
             KnowledgeBases = _state.KnowledgeBases,
             SelectedKnowledgeBaseIds = _state.SelectedKnowledgeBaseIds,
             OnSendMessage = EventCallback.Factory.Create<string>(this, HandleSendMessage),

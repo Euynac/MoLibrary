@@ -36,6 +36,7 @@ public sealed class ChatContainerParameters
     public bool EnableAutoScroll { get; init; } = true;
     public bool SupportsReasoning { get; init; }
     public bool ReasoningEnabled { get; init; }
+    public bool ToolDebugEnabled { get; init; }
 
     // RAG
     public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; init; }

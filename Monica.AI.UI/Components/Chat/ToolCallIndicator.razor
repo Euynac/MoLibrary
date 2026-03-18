@@ -1,25 +1,96 @@
-<div class="tool-call-indicator">
-    <div class="tool-call-icon">
-        <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
-        <span class="tool-call-pulse"></span>
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+@if (ActiveToolCalls.Count > 0)
+{
+    <div class="tool-call-indicator">
+        <div class="tool-call-indicator-header">
+            <div class="tool-call-icon">
+                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" />
+                <span class="tool-call-pulse"></span>
+            </div>
+            <div class="tool-call-copy">
+                <MudText Typo="Typo.body2" Class="tool-call-label">
+                    @L["Chat:ToolCalls:RunningSummary", ActiveToolCalls.Count]
+                </MudText>
+                <MudText Typo="Typo.caption" Class="tool-call-caption">
+                    @GetIndicatorCaption()
+                </MudText>
+            </div>
+        </div>
+
+        <div class="tool-call-live-list">
+            @foreach (var call in ActiveToolCalls.TakeLast(3))
+            {
+                <div class="tool-call-live-item @GetStatusClass(call)">
+                    <div class="tool-call-live-meta">
+                        <MudText Typo="Typo.caption" Class="tool-call-live-name">
+                            @call.ToolName
+                        </MudText>
+                        <span class="tool-call-status-badge @GetStatusClass(call)">
+                            @GetStatusText(call)
+                        </span>
+                    </div>
+                    @if (GetInputPreview(call) is { } preview)
+                    {
+                        <MudText Typo="Typo.caption" Class="tool-call-live-preview">
+                            @preview
+                        </MudText>
+                    }
+                    @if (EnableDebugMode && !string.IsNullOrWhiteSpace(call.ResultText))
+                    {
+                        <pre class="tool-call-live-debug">@call.ResultText</pre>
+                    }
+                </div>
+            }
+        </div>
     </div>
-    <MudText Typo="Typo.body2" Class="tool-call-label">
-        @GetDisplayText()
-    </MudText>
-</div>
+}
 
 @code {
     [Parameter] public List<ToolCallInfo> ActiveToolCalls { get; set; } = [];
+    [Parameter] public bool EnableDebugMode { get; set; }
 
-    private string GetDisplayText()
+    private string GetIndicatorCaption()
     {
-        if (ActiveToolCalls.Count == 0)
-            return "Calling tool...";
-
         var latest = ActiveToolCalls[^1];
-        if (latest.Result is not null)
-            return $"Completed: {latest.ToolName}";
+        return latest.Status switch
+        {
+            ToolCallStatus.Failed => L["Chat:ToolCalls:LatestFailed", latest.ToolName],
+            ToolCallStatus.Completed => L["Chat:ToolCalls:LatestCompleted", latest.ToolName],
+            _ => L["Chat:ToolCalls:LatestRunning", latest.ToolName]
+        };
+    }
 
-        return $"Searching: {latest.ToolName}...";
+    private string GetStatusText(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => L["Chat:ToolCalls:Status:Failed"],
+            ToolCallStatus.Completed => L["Chat:ToolCalls:Status:Completed"],
+            _ => L["Chat:ToolCalls:Status:Running"]
+        };
+
+    private static string GetStatusClass(ToolCallInfo call)
+        => call.Status switch
+        {
+            ToolCallStatus.Failed => "failed",
+            ToolCallStatus.Completed => "completed",
+            _ => "running"
+        };
+
+    private static string? GetInputPreview(ToolCallInfo call)
+    {
+        if (call.Arguments is null || call.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        if (call.Arguments.TryGetValue("userQuestion", out var query) && query is not null)
+        {
+            return query.ToString();
+        }
+
+        return call.Arguments.FirstOrDefault(x => x.Value is not null).Value?.ToString();
     }
 }

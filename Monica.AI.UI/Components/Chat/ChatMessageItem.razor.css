@@ -49,32 +49,6 @@
     padding-left: 16px;
 }
 
-/* MudMarkdown content styling */
-.message-content ::deep .mud-markdown-body {
-    color: inherit;
-}
-
-.message-content ::deep .mud-markdown-body p {
-    margin-bottom: 8px;
-}
-
-.message-content ::deep .mud-markdown-body p:last-child {
-    margin-bottom: 0;
-}
-
-.message-content ::deep .mud-markdown-body pre {
-    overflow-x: auto;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
-}
-
-.message-content ::deep .mud-markdown-body code {
-    font-family: "IBM Plex Mono", "Courier Prime", monospace;
-    font-size: 0.9em;
-}
-
 .message-content ::deep .message-text {
     white-space: pre-wrap;
 }

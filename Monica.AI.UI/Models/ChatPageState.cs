@@ -44,6 +44,7 @@ public sealed class ChatPageState
     // Feature state
     public bool ReasoningEnabled { get; set; }
     public bool SupportsReasoning { get; set; }
+    public bool ToolDebugEnabled { get; set; }
 
     // RAG state
     public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];

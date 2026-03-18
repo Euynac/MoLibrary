@@ -15,6 +15,14 @@
       "Send": "发送消息",
       "Stop": "停止生成"
     },
+    "KnowledgeBaseSelector": {
+      "Tooltip": "选择知识库",
+      "SelectedCount": "已选 {0} 个知识库",
+      "NoneSelected": "未选择知识库",
+      "SearchPlaceholder": "搜索知识库...",
+      "NoMatching": "未找到匹配的知识库",
+      "Clear": "清空"
+    },
     "Actions": {
       "EnableDeepThinking": "启用深度思考",
       "DisableDeepThinking": "禁用深度思考",
@@ -23,6 +31,36 @@
     "Status": {
       "Current": "当前",
       "GenerationStopped": "生成已停止"
+    },
+    "ToolCalls": {
+      "EnableDebug": "启用 Tool 调试",
+      "DisableDebug": "关闭 Tool 调试",
+      "Summary": "{0} 次 Tool 调用",
+      "RunningSummary": "正在执行 {0} 个 Tool",
+      "LatestRunning": "最新：{0} 执行中",
+      "LatestCompleted": "最新：{0} 已完成",
+      "LatestFailed": "最新：{0} 执行失败",
+      "ResultCount": "返回了 {0} 条结果",
+      "NoInput": "无输入",
+      "NoOutput": "无输出",
+      "Status": {
+        "Running": "运行中",
+        "Completed": "已完成",
+        "Failed": "失败"
+      },
+      "Fields": {
+        "Input": "输入",
+        "Output": "输出",
+        "Error": "错误",
+        "CallId": "调用 ID",
+        "StartedAt": "开始时间",
+        "CompletedAt": "完成时间"
+      },
+      "Subtitle": {
+        "Running": "已完成 {0} 个，仍在执行 {1} 个",
+        "Completed": "共完成 {0} 个 Tool 调用",
+        "Failed": "已完成 {0} 个，失败 {1} 个，执行中 {2} 个"
+      }
     }
   },
   "Provider": {

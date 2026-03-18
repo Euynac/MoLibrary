@@ -14,7 +14,7 @@ public class AgentSessionState
     private string _providerId;
 
     public AgentSessionState(
-        ChatClientAgent agent,
+        AIAgent agent,
         AgentSession session,
         string providerId)
     {
@@ -151,9 +151,9 @@ public class AgentSessionState
     public List<AIChatMessage> Messages { get; } = [];
     
     /// <summary>
-    /// The ChatClientAgent instance wrapping the IChatClient
+    /// The current agent pipeline instance for this session.
     /// </summary>
-    public ChatClientAgent Agent { get; internal set; }
+    public AIAgent Agent { get; internal set; }
 
     /// <summary>
     /// The agent session holding history and context provider references

@@ -85,6 +85,16 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.tool-debug-button {
+    color: var(--mud-palette-text-secondary);
+}
+
+.tool-debug-button.active {
+    color: var(--mud-palette-warning);
+    background-color: rgba(var(--mud-palette-warning-rgb), 0.14);
+}
+
+.tool-debug-button:hover,
 .settings-button:hover {
     background-color: var(--mud-palette-action-default-hover);
 }

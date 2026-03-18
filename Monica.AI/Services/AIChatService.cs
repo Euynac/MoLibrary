@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.Modules;
-using Monica.AI.RAG.Services;
+using Monica.AI.Tools;
 
 namespace Monica.AI.Services;
 
@@ -17,17 +16,13 @@ namespace Monica.AI.Services;
 public class AIChatService(
     IAIProviderFactory providerFactory,
     IOptions<ModuleAIOption> options,
-    IServiceProvider serviceProvider)
+    IAIChatAgentFactory agentFactory)
 {
     private readonly ModuleAIOption _options = options.Value;
-    private readonly RAGService? _ragService = serviceProvider.GetService(typeof(RAGService)) as RAGService;
-    private readonly ILoggerFactory? _loggerFactory = serviceProvider.GetService(typeof(ILoggerFactory)) as ILoggerFactory;
 
     /// <summary>
     /// Create a new chat session backed by ChatClientAgent.
-    /// When knowledgeBaseIds are provided and RAG module is registered,
-    /// the agent is created with a TextSearchProvider (AIContextProvider)
-    /// that automatically performs RAG search on each invocation.
+    /// Registered tool providers can enrich the agent based on the session configuration.
     /// </summary>
     public async Task<AgentSessionState> CreateSessionAsync(
         string? providerId = null,
@@ -49,14 +44,14 @@ public class AIChatService(
 
         var chatClient = provider.GetChatClient(modelName);
 
-        var agent = CreateAgent(chatClient, resolvedPrompt, knowledgeBaseIds);
+        var agent = await CreateAgentAsync(chatClient, resolvedPrompt, knowledgeBaseIds, ct);
         var session = await agent.CreateSessionAsync(ct);
 
         var state = new AgentSessionState(agent, session, resolvedProviderId)
         {
             Title = title ?? "New Chat",
             SystemPrompt = resolvedPrompt,
-            ActiveKnowledgeBaseIds = knowledgeBaseIds,
+            ActiveKnowledgeBaseIds = knowledgeBaseIds is { Count: > 0 } ? [.. knowledgeBaseIds] : null,
             ModelName = modelName,
             ReasoningEnabled = reasoningEnabled
         };
@@ -76,7 +71,7 @@ public class AIChatService(
             throw new InvalidOperationException($"Provider '{state.ProviderId}' not found.");
 
         var chatClient = provider.GetChatClient(state.ModelName);
-        var newAgent = CreateAgent(chatClient, state.SystemPrompt, state.ActiveKnowledgeBaseIds);
+        var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, state.ActiveKnowledgeBaseIds, ct);
         var newSession = await newAgent.CreateSessionAsync(ct);
 
         // Copy chat history from old session to new session
@@ -113,14 +108,14 @@ public class AIChatService(
         }
 
         var userMessage = new ChatMessage(ChatRole.User, message);
-        var runOptions = CreateRunOptions(state);
+        var updateChannel = new AgentResponseUpdateChannel();
+        var runOptions = CreateRunOptions(state, updateChannel);
+        _ = ProduceStreamingUpdatesAsync(state, userMessage, runOptions, updateChannel, ct);
 
-        await foreach (var update in state.Agent.RunStreamingAsync([userMessage], state.Session, runOptions, ct))
+        await foreach (var update in updateChannel.ReadAllAsync(ct))
         {
             yield return update;
         }
-
-        state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     /// <summary>
@@ -164,43 +159,70 @@ public class AIChatService(
     }
 
     /// <summary>
-    /// Creates a ChatClientAgent, optionally with RAG TextSearchProvider integration.
+    /// Creates a ChatClientAgent for the current session configuration.
     /// </summary>
-    private ChatClientAgent CreateAgent(
+    private async Task<AIAgent> CreateAgentAsync(
         IChatClient chatClient,
         string? instructions,
-        List<string>? knowledgeBaseIds)
+        List<string>? knowledgeBaseIds,
+        CancellationToken ct)
     {
-        if (_ragService is not null && knowledgeBaseIds is { Count: > 0 })
-        {
-            var ragOptions = serviceProvider.GetService(typeof(IOptions<ModuleRAGOption>))
-                as IOptions<ModuleRAGOption>;
-            var topK = ragOptions?.Value.DefaultTopK ?? 5;
-            var searchProviderOptions = ragOptions?.Value.SearchProviderOptions;
-            var searchAdapter = _ragService.CreateSearchAdapter(knowledgeBaseIds, topK);
-
-            var textSearchProvider = new TextSearchProvider(searchAdapter, options: searchProviderOptions);
-
-            var agentOptions = new ChatClientAgentOptions
+        return await agentFactory.CreateAsync(
+            chatClient,
+            new AIChatAgentCreateContext
             {
-                ChatOptions = new ChatOptions { Instructions = instructions },
-                AIContextProviders = new List<AIContextProvider> { textSearchProvider }
-            };
-
-            return new ChatClientAgent(chatClient, agentOptions, _loggerFactory);
-        }
-
-        return new ChatClientAgent(chatClient, instructions: instructions);
+                Instructions = instructions,
+                KnowledgeBaseIds = knowledgeBaseIds is { Count: > 0 } ? [.. knowledgeBaseIds] : []
+            },
+            ct);
     }
 
-    private static ChatClientAgentRunOptions? CreateRunOptions(AgentSessionState state)
+    private static ChatClientAgentRunOptions CreateRunOptions(
+        AgentSessionState state,
+        AgentResponseUpdateChannel updateChannel)
     {
-        if (!state.ReasoningEnabled) return null;
+        ArgumentNullException.ThrowIfNull(updateChannel);
 
-        var chatOptions = new ChatOptions
+        var runOptions = new ChatClientAgentRunOptions
         {
-            Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium }
+            AdditionalProperties = new AdditionalPropertiesDictionary()
         };
-        return new ChatClientAgentRunOptions { ChatOptions = chatOptions };
+        runOptions.AdditionalProperties.Add(updateChannel);
+
+        if (state.ReasoningEnabled)
+        {
+            runOptions.ChatOptions = new ChatOptions
+            {
+                Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium }
+            };
+        }
+
+        return runOptions;
+    }
+
+    private static async Task ProduceStreamingUpdatesAsync(
+        AgentSessionState state,
+        ChatMessage userMessage,
+        ChatClientAgentRunOptions runOptions,
+        AgentResponseUpdateChannel updateChannel,
+        CancellationToken ct)
+    {
+        try
+        {
+            using (AgentResponseUpdateChannelContext.Push(updateChannel))
+            {
+                await foreach (var update in state.Agent.RunStreamingAsync([userMessage], state.Session, runOptions, ct))
+                {
+                    await updateChannel.PublishAsync(update, ct);
+                }
+            }
+
+            state.UpdatedAt = DateTimeOffset.UtcNow;
+            updateChannel.Complete();
+        }
+        catch (Exception ex)
+        {
+            updateChannel.Complete(ex);
+        }
     }
 }

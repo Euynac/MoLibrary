@@ -104,6 +104,7 @@ public class AIChatUIService(
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var accumulator = new StreamingContentAccumulator();
+        var historyCountBeforeSend = state.ChatHistory?.Count ?? 0;
 
         await foreach (var update in chatService.SendMessageStreamingAsync(state, message, ct))
         {
@@ -115,6 +116,12 @@ public class AIChatUIService(
         }
 
         var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
+        var toolCallsFromHistory = ToolCallHistoryExtractor.Extract(state.ChatHistory, historyCountBeforeSend);
+        if (toolCallsFromHistory.Count > 0)
+        {
+            aiMessage.ToolCalls = MergeToolCalls(aiMessage.ToolCalls, toolCallsFromHistory);
+        }
+
         stateManager.AddAssistantMessage(sessionId, aiMessage);
         state.UpdatedAt = DateTimeOffset.UtcNow;
     }
@@ -227,6 +234,54 @@ public class AIChatUIService(
     {
         await Task.CompletedTask;
         yield break;
+    }
+
+    private static List<ToolCallInfo>? MergeToolCalls(
+        List<ToolCallInfo>? streamedToolCalls,
+        List<ToolCallInfo> historyToolCalls)
+    {
+        if (historyToolCalls.Count == 0)
+        {
+            return streamedToolCalls;
+        }
+
+        if (streamedToolCalls is not { Count: > 0 })
+        {
+            return historyToolCalls;
+        }
+
+        var merged = new List<ToolCallInfo>(streamedToolCalls);
+        foreach (var historyCall in historyToolCalls)
+        {
+            var existingIndex = merged.FindIndex(call =>
+                !string.IsNullOrWhiteSpace(call.CallId)
+                && call.CallId == historyCall.CallId);
+
+            if (existingIndex < 0)
+            {
+                merged.Add(historyCall);
+                continue;
+            }
+
+            var existingCall = merged[existingIndex];
+            merged[existingIndex] = existingCall with
+            {
+                Arguments = existingCall.Arguments ?? historyCall.Arguments,
+                ArgumentsText = existingCall.ArgumentsText ?? historyCall.ArgumentsText,
+                ResultText = string.IsNullOrWhiteSpace(existingCall.ResultText)
+                    ? historyCall.ResultText
+                    : existingCall.ResultText,
+                ExceptionMessage = string.IsNullOrWhiteSpace(existingCall.ExceptionMessage)
+                    ? historyCall.ExceptionMessage
+                    : existingCall.ExceptionMessage,
+                Status = existingCall.Status == ToolCallStatus.Running
+                    ? historyCall.Status
+                    : existingCall.Status,
+                CompletedAt = existingCall.CompletedAt ?? historyCall.CompletedAt
+            };
+        }
+
+        return merged;
     }
 
     /// <summary>

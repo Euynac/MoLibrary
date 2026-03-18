@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
+using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
+using Monica.AI.RAG.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -58,6 +60,8 @@ public class ModuleRAG(ModuleRAGOption option)
             ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDocumentChunker, SimpleMarkdownDocumentChunker>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IAIChatToolProvider, KnowledgeSearchToolProvider>());
     }
 }
 

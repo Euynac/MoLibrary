@@ -15,6 +15,14 @@
       "Send": "Send message",
       "Stop": "Stop generating"
     },
+    "KnowledgeBaseSelector": {
+      "Tooltip": "Select knowledge bases",
+      "SelectedCount": "{0} knowledge base(s) selected",
+      "NoneSelected": "No knowledge bases selected",
+      "SearchPlaceholder": "Search knowledge bases...",
+      "NoMatching": "No matching knowledge bases found",
+      "Clear": "Clear"
+    },
     "Actions": {
       "EnableDeepThinking": "Enable deep thinking",
       "DisableDeepThinking": "Disable deep thinking",
@@ -23,6 +31,36 @@
     "Status": {
       "Current": "Current",
       "GenerationStopped": "Generation stopped"
+    },
+    "ToolCalls": {
+      "EnableDebug": "Enable tool debug",
+      "DisableDebug": "Disable tool debug",
+      "Summary": "{0} tool call(s)",
+      "RunningSummary": "{0} tool call(s) in progress",
+      "LatestRunning": "Latest: {0} is running",
+      "LatestCompleted": "Latest: {0} completed",
+      "LatestFailed": "Latest: {0} failed",
+      "ResultCount": "{0} result(s) returned",
+      "NoInput": "No input",
+      "NoOutput": "No output",
+      "Status": {
+        "Running": "Running",
+        "Completed": "Completed",
+        "Failed": "Failed"
+      },
+      "Fields": {
+        "Input": "Input",
+        "Output": "Output",
+        "Error": "Error",
+        "CallId": "Call ID",
+        "StartedAt": "Started",
+        "CompletedAt": "Completed"
+      },
+      "Subtitle": {
+        "Running": "{0} completed, {1} still running",
+        "Completed": "{0} tool call(s) completed",
+        "Failed": "{0} completed, {1} failed, {2} running"
+      }
     }
   },
   "Provider": {

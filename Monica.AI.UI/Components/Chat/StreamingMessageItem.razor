@@ -1,5 +1,6 @@
 @using Microsoft.Agents.AI
 @using Monica.AI.Extensions
+@using Monica.UI.Components.Markdown
 @implements IAsyncDisposable
 
 <div class="message-wrapper assistant-message">
@@ -56,13 +57,14 @@
                 @* Tool call indicator *@
                 @if (_accumulator.ToolCalls.Count > 0)
                 {
-                    <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls" />
+                    <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls"
+                                       EnableDebugMode="@ToolDebugEnabled" />
                 }
 
                 @* Main content *@
                 @if (EnableMarkdown && !string.IsNullOrEmpty(_accumulator.FullContent))
                 {
-                    <MudMarkdown Value="@_accumulator.FullContent" />
+                    <MoMarkdown Value="@_accumulator.FullContent" EnableMermaid="true" />
                 }
                 else if (!string.IsNullOrEmpty(_accumulator.FullContent))
                 {
@@ -88,6 +90,7 @@
     [Parameter] public EventCallback<string> OnStreamError { get; set; }
     [Parameter] public CancellationToken ExternalCancellationToken { get; set; }
     [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public bool ToolDebugEnabled { get; set; }
 
     private readonly StreamingContentAccumulator _accumulator = new();
     private bool _isStreaming = true;

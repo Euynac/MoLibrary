@@ -49,22 +49,43 @@ public class StreamingContentAccumulator
         }
         else if (content is FunctionCallContent functionCall)
         {
-            ToolCalls.Add(new ToolCallInfo(
-                functionCall.Name,
-                functionCall.CallId ?? string.Empty,
-                functionCall.Arguments,
-                null,
-                DateTimeOffset.UtcNow));
+            ToolCalls.Add(new ToolCallInfo
+            {
+                ToolName = functionCall.Name,
+                CallId = functionCall.CallId ?? string.Empty,
+                Arguments = functionCall.Arguments,
+                ArgumentsText = ToolCallContentSerializer.SerializeArguments(functionCall.Arguments),
+                Status = ToolCallStatus.Running,
+                StartedAt = DateTimeOffset.UtcNow
+            });
         }
         else if (content is FunctionResultContent functionResult)
         {
-            var matching = ToolCalls.FindIndex(t => t.CallId == functionResult.CallId);
+            var completedAt = DateTimeOffset.UtcNow;
+            var exceptionMessage = functionResult.Exception?.ToString();
+            var matching = ToolCalls.FindIndex(t => t.CallId == (functionResult.CallId ?? string.Empty));
             if (matching >= 0)
             {
                 ToolCalls[matching] = ToolCalls[matching] with
                 {
-                    Result = functionResult.Result?.ToString()
+                    ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
+                    ExceptionMessage = exceptionMessage,
+                    Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+                    CompletedAt = completedAt
                 };
+            }
+            else
+            {
+                ToolCalls.Add(new ToolCallInfo
+                {
+                    ToolName = "Unknown Tool",
+                    CallId = functionResult.CallId ?? string.Empty,
+                    ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
+                    ExceptionMessage = exceptionMessage,
+                    Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+                    StartedAt = completedAt,
+                    CompletedAt = completedAt
+                });
             }
         }
     }
