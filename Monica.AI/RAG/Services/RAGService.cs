@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -557,6 +558,13 @@ public sealed partial class RAGService(
                 continue;
             }
 
+            var searchBinding = overrideBinding ?? binding;
+            var queryVector = await GetOrCreateQueryVectorAsync(
+                query,
+                searchBinding,
+                queryVectorsByBindingKey,
+                ct);
+
             var hybridSearch = collection.GetService(typeof(IKeywordHybridSearchable<RAGVectorRecord>))
                                as IKeywordHybridSearchable<RAGVectorRecord>;
 
@@ -566,26 +574,23 @@ public sealed partial class RAGService(
             var isHybridSearch = hybridSearch is not null;
             if (hybridSearch is { } keywordHybridSearch)
             {
-                if (includeVectorSimilarityForHybrid)
-                {
-                    similarityScoresByKey = await GetSimilarityScoresForHybridResultsAsync(
-                        collection,
-                        kbId,
-                        query,
-                        topK,
-                        ct);
-                }
+                similarityScoresByKey = await GetSimilarityScoresForHybridResultsAsync(
+                    collection,
+                    kbId,
+                    queryVector,
+                    topK,
+                    ct);
 
                 var keywords = WordSegmenter().Matches(query).Select(m => m.Value).ToList();
                 searchResults = keywordHybridSearch.HybridSearchAsync(
-                    query,
+                    queryVector,
                     keywords,
                     top: topK,
                     cancellationToken: ct);
             }
             else
             {
-                searchResults = collection.SearchAsync(query, top: topK, cancellationToken: ct);
+                searchResults = collection.SearchAsync(queryVector, top: topK, cancellationToken: ct);
             }
 
             await foreach (var result in searchResults)
@@ -631,17 +636,54 @@ public sealed partial class RAGService(
             .ToList();
     }
 
-    private async Task<Dictionary<string, double>> GetSimilarityScoresForHybridResultsAsync(
+    private async Task<float[]> GenerateQueryVectorAsync(
+        string query,
+        RAGEmbeddingBinding binding,
+        CancellationToken ct)
+    {
+        var generator = embeddingBindingResolver.GetEmbeddingGenerator(binding);
+        var generated = await generator.GenerateAsync([query], cancellationToken: ct);
+        var embedding = generated.FirstOrDefault();
+        if (embedding is null)
+        {
+            throw new InvalidOperationException(
+                $"Embedding generator returned no vectors for provider '{binding.ProviderId}', model '{binding.ModelName}'.");
+        }
+
+        return embedding.Vector.ToArray();
+    }
+
+    private async Task<float[]> GetOrCreateQueryVectorAsync(
+        string query,
+        RAGEmbeddingBinding binding,
+        IDictionary<string, float[]> cache,
+        CancellationToken ct)
+    {
+        var cacheKey = BuildQueryVectorCacheKey(binding);
+        if (cache.TryGetValue(cacheKey, out var cachedVector))
+        {
+            return cachedVector;
+        }
+
+        var generatedVector = await GenerateQueryVectorAsync(query, binding, ct);
+        cache[cacheKey] = generatedVector;
+        return generatedVector;
+    }
+
+    private static string BuildQueryVectorCacheKey(RAGEmbeddingBinding binding)
+        => $"{binding.ProviderId}::{binding.ModelName}::{binding.Dimensions.ToString(CultureInfo.InvariantCulture)}";
+
+    private static async Task<Dictionary<string, double>> GetSimilarityScoresForHybridResultsAsync(
         VectorStoreCollection<Guid, RAGVectorRecord> collection,
         string knowledgeBaseId,
-        string query,
+        float[] queryVector,
         int topK,
         CancellationToken ct)
     {
         var similarityScores = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         var similarityTop = Math.Max(topK * HybridSimilaritySearchMultiplier, HybridSimilaritySearchMinimum);
 
-        await foreach (var similarityResult in collection.SearchAsync(query, top: similarityTop, cancellationToken: ct))
+        await foreach (var similarityResult in collection.SearchAsync(queryVector, top: similarityTop, cancellationToken: ct))
         {
             var similarityRecord = similarityResult.Record;
             if (similarityRecord is null || similarityResult.Score is null)
