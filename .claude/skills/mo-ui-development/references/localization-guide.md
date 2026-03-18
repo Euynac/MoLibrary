@@ -264,29 +264,30 @@ public class StateStoreResource { }
 
 **Basic validation:**
 ```bash
-python .claude/skills/mo-ui-development/scripts/validate_localization.py
+python .codex/skills/mo-ui-development/scripts/validate_localization.py
 ```
 
 **Summary only:**
 ```bash
-python .claude/skills/mo-ui-development/scripts/validate_localization.py --summary
+python .codex/skills/mo-ui-development/scripts/validate_localization.py --summary
 ```
 
 **Strict mode** (treat unused keys as errors):
 ```bash
-python .claude/skills/mo-ui-development/scripts/validate_localization.py --strict
+python .codex/skills/mo-ui-development/scripts/validate_localization.py --strict
 ```
 
 **JSON output** (for CI/CD):
 ```bash
-python .claude/skills/mo-ui-development/scripts/validate_localization.py --json
+python .codex/skills/mo-ui-development/scripts/validate_localization.py --json
 ```
 
 ### Validation Checks
 
-1. **Missing keys** (ERROR): Keys used in Razor but not defined in JSON
+1. **Missing keys** (ERROR): Keys used in Razor or C# but not defined in JSON
 2. **Unused keys** (WARNING): Keys defined in JSON but never used
 3. **Language sync** (ERROR): Keys in one language but not another
+4. **UI registry keys** (ERROR): Keys passed to `RegisterLocalizedComponent` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`
 
 ### Example Output
 
@@ -325,7 +326,7 @@ Summary:
 ```yaml
 - name: Validate Localization
   run: |
-    python .claude/skills/mo-ui-development/scripts/validate_localization.py --strict --json
+    python .codex/skills/mo-ui-development/scripts/validate_localization.py --strict --json
 ```
 
 ## Troubleshooting
@@ -339,6 +340,18 @@ Summary:
 2. Check key path matches JSON structure exactly
 3. Ensure JSON file is valid (no syntax errors)
 4. Rebuild project
+
+### Navigation/AppBar Key Shows Raw Text
+
+**Symptom:** The navigation or AppBar shows a raw key such as `Pages:GitRepositories:Title`
+
+**Cause:** `RegisterLocalizedComponent` keys are resolved from `UIRegistryResource`, not the page module resource.
+
+**Solution:**
+1. Keep page-local text in the module resource JSON files
+2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
+3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
+4. Re-run `python .codex/skills/mo-ui-development/scripts/validate_localization.py`
 
 ### Parameterized String Shows {0}
 

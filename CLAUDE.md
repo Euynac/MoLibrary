@@ -27,6 +27,17 @@ Invoke when:
 
 **Current MudBlazor version**: 9.0.0 (migrated from 8.9.0)
 
+### /code-simplifier
+
+Invoke when:
+- Improving code quality or readability
+- Reviewing current git changes, AI-generated code, or a user-specified code area
+- Using git diff as an entry point to discover broader related refactoring opportunities unless the user explicitly limits scope
+- Planning a refactor before editing, especially when moving behavior into the object that owns the state
+- Simplifying/refactoring code while preserving exact behavior
+- Making code more object-oriented or moving behavior closer to data/state
+- Increasing cohesion and reducing procedural mutation
+
 ### Microsoft Documentation Skill
 
 You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fetch`, and `microsoft_code_sample_search` - these tools allow you to search through and fetch Microsoft's latest official documentation and code samples, and that information might be more detailed or newer than what's in your training data set.
@@ -40,10 +51,11 @@ When handling questions around how to work with native Microsoft technologies, s
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
+- Prefer rich models over anemic models: keep behavior on the object that owns the data/state, favor high cohesion and encapsulation, and let services focus on orchestration.
 - Split files to avoid overly large single files
 - Instead of just fixing errors and introducing complexity merely to solve problems, you **MUST** focus on simplification to enhance code quality. Refactor whenever possible, **WITHOUT** considering backward compatibility. 
 - If you feel the design is inadequate or lacks necessary information, you may raise concerns and propose improvements for user confirmation before proceeding.
-- **DO NOT** aim for minimal changes. Always pursue the **optimal, elegant, simple, and clear design**—be open to large-scale refactoring.
+- **DO NOT** aim for minimal changes, **ALLOW** breaking changes. Always pursue the **optimal, elegant, simple, and clear design**—be open to large-scale refactoring.
 
 ## Res Usage Policy
 
@@ -71,8 +83,8 @@ When handling questions around how to work with native Microsoft technologies, s
 
 **Correct Usage**:
 ```bash
-# ✅ CORRECT - Use Windows path format with escaped backslashes
-dotnet build D:\\Code\\MoLibrary\\Monica.AI.UI\\Monica.AI.UI.csproj
+# ✅ CORRECT - Use Windows path format with single quotes
+dotnet build 'D:\Code\MoLibrary\Monica.AI.UI\Monica.AI.UI.csproj'
 
 # ❌ WRONG - WSL path format will fail
 dotnet build /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
@@ -82,6 +94,7 @@ dotnet build Monica.AI.UI/Monica.AI.UI.csproj
 ```
 
 **Why This Happens**:
+
 - dotnet CLI in WSL is a Windows program running through interoperability
 - MSBuild (invoked by dotnet) cannot understand `/mnt/d/...` Linux-style paths
 - It expects native Windows paths like `D:\...`

@@ -17,10 +17,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-SKILL_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_VARIABLES_FILE = SKILL_ROOT / "references" / "mudblazor-css-variables.json"
+from mudblazor_skill_state import VARIABLES_JSON_FILE
 
-IGNORED_DIRS = {".git", "bin", "obj", ".pending"}
+DEFAULT_VARIABLES_FILE = VARIABLES_JSON_FILE
+
+IGNORED_DIRS = {".git", ".tmp", "bin", "obj", ".pending"}
 SCAN_GLOBS = ("*.css", "*.razor")
 VAR_USAGE_PATTERN = re.compile(r"var\(\s*(--mud-[a-z0-9-]+)\b", re.IGNORECASE)
 

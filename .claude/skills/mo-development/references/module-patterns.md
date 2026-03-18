@@ -44,11 +44,13 @@ public class Module{Name}(Module{Name}Option option)
 }
 ```
 
-### Module with Dependencies
+### Module That Declares Dependencies
+
+Modules inherit from `MoModule<TModuleSelf, TModuleOption, TModuleGuide>` and declare required modules in `ClaimDependencies()`.
 
 ```csharp
 public class Module{Name}(Module{Name}Option option)
-    : MoModuleWithDependencies<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+    : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
     public override ModuleKey GetModuleKey() => EMoModuleKey.{Name};
 
@@ -292,7 +294,7 @@ public class DomainEventService(
 
 1. **Use primary constructors** for dependency injection
 2. **Keep modules focused** — one module, one responsibility
-3. **Declare dependencies explicitly** using `DependsOnModule<TGuide>().Register()`
+3. **Declare dependencies explicitly** in `ClaimDependencies()` using `DependsOnModule<TGuide>().Register()`
 4. **Use options for configuration** — inject `IOptions<TOption>`
 5. **Follow naming conventions** — consistent naming makes code discoverable
 6. **Return Res types only in UI services** — infrastructure services use standard returns + exceptions

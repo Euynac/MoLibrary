@@ -1,34 +1,17 @@
 ---
 name: planning-with-files
-version: "3.0.0"
-description: Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md in .pending/NNN-description/ folders. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. Now with automatic session recovery and completion tracking.
-user-invocable: true
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Glob
-  - Grep
-  - WebFetch
-  - WebSearch
+description: Use persistent markdown planning files in `.pending/NNN-description/` folders for multi-step work. Use when the user explicitly asks for file-based planning, wants planning files on disk, or needs `task_plan.md`, `findings.md`, and `progress.md` to persist across a complex task.
 ---
 
 # Planning with Files
 
-Work like Manus: Use persistent markdown files as your "working memory on disk."
+Use persistent markdown files as your "working memory on disk."
 
-## CRITICAL: Path Configuration
+## Resource Paths
 
-**⚠️ IMPORTANT:** The `${CLAUDE_PLUGIN_ROOT}` in this documentation is a placeholder that refers to:
+Treat `scripts/...`, `templates/...`, `reference.md`, and `examples.md` as paths relative to this skill directory.
 
-```
-<project-root>/.claude/skills/planning-with-files
-```
-
-This skill is located in the **project directory**, NOT in the user's home directory.
-
-When using the scripts in bash commands, replace `${CLAUDE_PLUGIN_ROOT}` with the actual absolute path to your project's `.claude/skills/planning-with-files` directory.
+Use relative paths in the instructions. Only resolve them to absolute paths if a shell or tool explicitly requires that.
 
 ## FIRST: Setup Requirement Folder
 
@@ -38,36 +21,28 @@ When using the scripts in bash commands, replace `${CLAUDE_PLUGIN_ROOT}` with th
    - Identify 2-4 key words describing the task
    - Convert to kebab-case (lowercase with hyphens)
    - Examples:
-     - "I want to add a RAG module" → "rag-module"
-     - "Create localization support" → "localization-support"
-     - "Fix the authentication bug" → "auth-bug-fix"
+     - "I want to add a RAG module" -> "rag-module"
+     - "Create localization support" -> "localization-support"
+     - "Fix the authentication bug" -> "auth-bug-fix"
 
 2. **Create the requirement folder**:
 
 ```bash
-# Linux/macOS
-# Replace <project-root> with your actual project path
-FOLDER_PATH=$(<project-root>/.claude/skills/planning-with-files/scripts/setup-requirement-folder.sh "task-description")
+FOLDER_PATH=$(scripts/setup-requirement-folder.sh "task-description")
 ```
 
 ```powershell
-# Windows PowerShell
-# Replace <project-root> with your actual project path
-$FOLDER_PATH = & "<project-root>\.claude\skills\planning-with-files\scripts\setup-requirement-folder.ps1" "task-description"
+$FOLDER_PATH = & "scripts/setup-requirement-folder.ps1" "task-description"
 ```
 
 3. **Initialize planning files** in the folder:
 
 ```bash
-# Linux/macOS
-# Replace <project-root> with your actual project path
-<project-root>/.claude/skills/planning-with-files/scripts/init-session.sh "project-name" "$FOLDER_PATH"
+scripts/init-session.sh "project-name" "$FOLDER_PATH"
 ```
 
 ```powershell
-# Windows PowerShell
-# Replace <project-root> with your actual project path
-& "<project-root>\.claude\skills\planning-with-files\scripts\init-session.ps1" "project-name" "$FOLDER_PATH"
+& "scripts/init-session.ps1" "project-name" "$FOLDER_PATH"
 ```
 
 The folder will be created as `.pending/NNN-description/` where NNN is the next available number (e.g., 010, 011, etc.).
@@ -77,15 +52,11 @@ The folder will be created as `.pending/NNN-description/` where NNN is the next 
 **After folder setup**, check for unsynced context from a previous session:
 
 ```bash
-# Linux/macOS
-# Replace <project-root> with your actual project path
-$(command -v python3 || command -v python) <project-root>/.claude/skills/planning-with-files/scripts/session-catchup.py "$(pwd)"
+$(command -v python3 || command -v python) scripts/session-catchup.py "$(pwd)"
 ```
 
 ```powershell
-# Windows PowerShell
-# Replace <project-root> with your actual project path
-& (Get-Command python -ErrorAction SilentlyContinue).Source "<project-root>\.claude\skills\planning-with-files\scripts\session-catchup.py" (Get-Location)
+& (Get-Command python -ErrorAction SilentlyContinue).Source "scripts/session-catchup.py" (Get-Location)
 ```
 
 If catchup report shows unsynced context:
@@ -96,12 +67,12 @@ If catchup report shows unsynced context:
 
 ## Important: Where Files Go
 
-- **Templates** are in `${CLAUDE_PLUGIN_ROOT}/templates/`
+- **Templates** are in `templates/`
 - **Your planning files** go in **`.pending/NNN-description/`** folders
 
 | Location | What Goes There |
 |----------|-----------------|
-| Skill directory (`${CLAUDE_PLUGIN_ROOT}/`) | Templates, scripts, reference docs |
+| Skill directory (`scripts/`, `templates/`, sibling docs) | Templates, scripts, reference docs |
 | `.pending/NNN-description/` | `task_plan.md`, `findings.md`, `progress.md` |
 | Project root | Fallback location if `.pending/` cannot be created |
 
@@ -109,11 +80,11 @@ If catchup report shows unsynced context:
 
 Before ANY complex task:
 
-1. **Setup requirement folder** — Extract task description from user's message, create `.pending/NNN-description/` folder
-2. **Initialize planning files** — Run init-session script with the folder path
-3. **Create planning files** — `task_plan.md`, `findings.md`, `progress.md` in the requirement folder
-4. **Re-read plan before decisions** — Refreshes goals in attention window
-5. **Update after each phase** — Mark complete, log errors
+1. **Setup requirement folder** - Extract task description from user's message, create `.pending/NNN-description/` folder
+2. **Initialize planning files** - Run init-session script with the folder path
+3. **Create planning files** - `task_plan.md`, `findings.md`, `progress.md` in the requirement folder
+4. **Re-read plan before decisions** - Refreshes goals in attention window
+5. **Update after each phase** - Mark complete, log errors
 
 > **Note:** Planning files go in `.pending/NNN-description/` folders, not the project root.
 
@@ -123,7 +94,7 @@ Before ANY complex task:
 Context Window = RAM (volatile, limited)
 Filesystem = Disk (persistent, unlimited)
 
-→ Anything important gets written to disk.
+-> Anything important gets written to disk.
 ```
 
 ## File Purposes
@@ -149,7 +120,7 @@ Before major decisions, read the plan file. This keeps goals in your attention w
 
 ### 4. Update After Act
 After completing any phase:
-- Mark phase status: `in_progress` → `complete`
+- Mark phase status: `in_progress` -> `complete`
 - Log any errors encountered
 - Note files created/modified
 
@@ -175,24 +146,24 @@ Track what you tried. Mutate the approach.
 
 ```
 ATTEMPT 1: Diagnose & Fix
-  → Read error carefully
-  → Identify root cause
-  → Apply targeted fix
+  -> Read error carefully
+  -> Identify root cause
+  -> Apply targeted fix
 
 ATTEMPT 2: Alternative Approach
-  → Same error? Try different method
-  → Different tool? Different library?
-  → NEVER repeat exact same failing action
+  -> Same error? Try different method
+  -> Different tool? Different library?
+  -> NEVER repeat exact same failing action
 
 ATTEMPT 3: Broader Rethink
-  → Question assumptions
-  → Search for solutions
-  → Consider updating the plan
+  -> Question assumptions
+  -> Search for solutions
+  -> Consider updating the plan
 
 AFTER 3 FAILURES: Escalate to User
-  → Explain what you tried
-  → Share the specific error
-  → Ask for guidance
+  -> Explain what you tried
+  -> Share the specific error
+  -> Ask for guidance
 ```
 
 ## Read vs Write Decision Matrix
@@ -200,7 +171,7 @@ AFTER 3 FAILURES: Escalate to User
 | Situation | Action | Reason |
 |-----------|--------|--------|
 | Just wrote a file | DON'T read | Content still in context |
-| Viewed image/PDF | Write findings NOW | Multimodal → text before lost |
+| Viewed image/PDF | Write findings NOW | Multimodal -> text before lost |
 | Browser returned data | Write to file | Screenshots don't persist |
 | Starting new phase | Read plan/findings | Re-orient if context stale |
 | Error occurred | Read relevant file | Need current state to fix |
@@ -236,16 +207,16 @@ If you can answer these, your context management is solid:
 
 Copy these templates to start:
 
-- [templates/task_plan.md](templates/task_plan.md) — Phase tracking
-- [templates/findings.md](templates/findings.md) — Research storage
-- [templates/progress.md](templates/progress.md) — Session logging
+- [templates/task_plan.md](templates/task_plan.md) - Phase tracking
+- [templates/findings.md](templates/findings.md) - Research storage
+- [templates/progress.md](templates/progress.md) - Session logging
 
 ## Scripts
 
 Helper scripts for automation:
 
-- `scripts/init-session.sh` — Initialize all planning files
-- `scripts/session-catchup.py` — Recover context from previous session (v2.2.0)
+- `scripts/init-session.sh` - Initialize all planning files
+- `scripts/session-catchup.py` - Recover context from previous session (v2.2.0)
 
 ## Advanced Topics
 
