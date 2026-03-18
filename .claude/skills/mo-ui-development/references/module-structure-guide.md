@@ -2,114 +2,146 @@
 
 This guide defines the architecture patterns, folder conventions, and component organization for UI modules in Monica.
 
-> **Infrastructure module patterns** (module classes, options, guides, builder extensions, service layer patterns) are documented in the **mo-development** skill's `references/module-patterns.md`.
+> **Canonical architecture reference**: `mo-architecture` skill (`SKILL.md`)
+> When this file conflicts with the architecture skill, the architecture skill takes precedence.
+
+## Core Rule
+
+UI modules are **pure presentation layers**. They:
+
+- Inject Facades from the infrastructure module directly (Facades return `Res<T>`)
+- Do NOT have their own service layer for data access
+- Focus on components, page composition, state management, and localization
+- Maximize reuse of Models from the infrastructure module's public `Models/` folder
 
 ## UI Module Architecture Patterns
 
-Monica has three distinct patterns for UI modules. Choose based on the relationship between infrastructure and UI code.
-
 ### Pattern A: Mixed Module
 
-**When to use**: Infrastructure and UI are tightly coupled and maintained together.
+**When to use**: Infrastructure and UI are tightly coupled, UI is lightweight, no need for separate packaging.
 
 A single project contains both infrastructure and UI code, with two separate module classes.
 
-**Example**: `Monica.DataChannel`
-
 ```
-Monica.DataChannel/
+Monica.{Name}/
 ├── Modules/
-│   ├── ModuleDataChannel.cs           # Infrastructure module
-│   └── ModuleDataChannelUI.cs         # UI module
-├── Pages/
-│   └── UIDataChannelPage.razor        # Page component
-├── UIDataChannel/                      # UI-specific folder
+│   ├── Module{Name}.cs               # Infrastructure module
+│   └── Module{Name}UI.cs             # UI module
+│
+├── Abstractions/                      # Infrastructure layers
+│   └── Internal/
+├── Models/
+│   └── Internal/
+├── Facades/
+│   └── {Name}Facade.cs
+├── Services/
+│   └── Support/
+├── Providers/
+│   └── {ProviderName}/
+│
+├── Pages/                             # UI layers
+│   ├── UI{Name}Page.razor
+│   └── UI{Name}Page.razor.css
+├── UI{Name}/
 │   ├── Components/
-│   ├── Models/
-│   └── Services/
-│       └── DataChannelUIService.cs    # UI service
-├── Services/                           # Infrastructure services
-└── [other infrastructure code]
+│   ├── Dialogs/
+│   ├── Models/                        # View-only models (minimize)
+│   ├── State/
+│   └── Support/
+│
+├── Localization/
+└── wwwroot/
 ```
 
 Key characteristics:
-- Two module classes: `ModuleDataChannel` (infrastructure) + `ModuleDataChannelUI` (UI)
-- UI code lives in `UI{Name}/` subfolder to separate from infrastructure
-- UI service named `{Name}UIService` (e.g., `DataChannelUIService`)
-- Pages at project root `Pages/` folder
+- Two module classes: `Module{Name}` (infrastructure) + `Module{Name}UI` (UI)
+- UI code lives in `UI{Name}/` subfolder, strictly separated from infrastructure
+- UI components inject `{Name}Facade` directly — no intermediate UI service
+- Being in the same assembly does NOT relax layering rules
+
+**When to upgrade**: If UI pages keep growing, multiple UI sub-features emerge, or separate deployment is needed — split into `Monica.{Name}.UI`.
 
 ### Pattern B: Standalone UI Module
 
-**When to use**: UI is complex enough to warrant its own project, or the infrastructure module is in a separate package.
-
-A dedicated `Monica.{Name}.UI` project that references the infrastructure module.
-
-**Example**: `Monica.Configuration.UI`
+**When to use**: UI is complex enough for its own project, or the infrastructure module is in a separate package.
 
 ```
-Monica.Configuration.UI/
+Monica.{Name}.UI/
 ├── Modules/
-│   └── ModuleConfigurationUI.cs       # UI module
+│   └── Module{Name}UI.cs
+│
 ├── Pages/
-│   └── UIConfigurationDashboardPage.razor
-├── Services/
-│   └── ConfigurationUIService.cs      # UI service at project root
-├── Components/                         # Components at project root
-├── Models/
-└── Interfaces/
+│   ├── UI{Name}Page.razor
+│   └── UI{Name}Page.razor.css
+│
+├── UI{Name}/
+│   ├── Components/
+│   ├── Dialogs/
+│   ├── Models/                        # View-only models (minimize)
+│   ├── State/
+│   └── Support/
+│
+├── Localization/
+│   └── {Name}Resource/
+│       ├── zh-CN.json
+│       └── en-US.json
+│
+└── wwwroot/
 ```
 
 Key characteristics:
-- Single UI module class: `ModuleConfigurationUI`
-- **Flat structure**: `Components/`, `Services/`, `Models/` at project root (since there's only one UI module per project)
-- UI service named `{Name}UIService` (e.g., `ConfigurationUIService`)
+- Single UI module class: `Module{Name}UI`
+- Uses `UI{Name}/` feature directory (NOT flat root-level Components/Services/Models)
+- Injects `{Name}Facade` from the infrastructure module directly
 - References infrastructure module via project/package dependency
 
-### Pattern C: Framework UI Module
+### Pattern C: Composite UI Module
 
-**When to use**: Aggregating multiple small UI modules that don't warrant their own projects.
-
-A container project hosting multiple UI sub-modules, each with its own `UI{Name}/` folder.
-
-**Example**: `Monica.Framework.UI`
+**When to use**: One UI project hosts multiple UI sub-modules.
 
 ```
-Monica.Framework.UI/
+Monica.{Family}.UI/
 ├── Modules/
-│   ├── ModuleFrameworkUI.cs           # Parent/aggregator module
-│   ├── ModuleLoggingUI.cs            # Sub-module
-│   └── ModuleEventBusUI.cs           # Sub-module
+│   ├── Module{FeatureA}UI.cs
+│   ├── Module{FeatureB}UI.cs
+│   └── Module{Family}UI.cs           # (optional, aggregator)
+│
 ├── Pages/
-│   ├── UILoggingPage.razor
-│   └── UIEventBusPage.razor
-├── UILogging/                          # Per-feature UI folder
+│   ├── UI{FeatureA}Page.razor
+│   ├── UI{FeatureB}Page.razor
+│   └── ...
+│
+├── UI{FeatureA}/
+│   ├── Components/
+│   ├── Dialogs/
+│   ├── Models/
+│   ├── State/
+│   └── Support/
+│
+├── UI{FeatureB}/
 │   ├── Components/
 │   ├── Models/
-│   └── Services/
-│       └── LoggingUIService.cs
-└── UIEventBus/
-    ├── Components/
-    └── Services/
-        └── EventBusUIService.cs
+│   ├── State/
+│   └── Support/
+│
+├── Localization/
+└── wwwroot/
 ```
 
 Key characteristics:
 - One parent module + N sub-modules, each with own `UI{Name}/` folder
-- Each sub-module has its own `UI{Name}/` folder to separate from other modules
-- UI services named `{Name}UIService` (e.g., `LoggingUIService`)
+- Each sub-module injects the corresponding infrastructure Facade
 
 ### Pattern Selection Guide
 
-| Criteria | Mixed (A) | Standalone (B) | Framework (C) |
+| Criteria | Mixed (A) | Standalone (B) | Composite (C) |
 |----------|-----------|----------------|---------------|
 | Infrastructure + UI coupling | Tight | Loose | N/A |
-| UI complexity | Any | High | Low per module |
+| UI complexity | Low | High | Low per module |
 | Number of UI modules | 1 | 1 | Multiple |
 | Separate deployment | No | Yes | No |
 
 ## UI Module Class Implementation
-
-UI modules inherit from `MoModule<TModuleSelf, TModuleOption, TModuleGuide>` and declare required modules in `ClaimDependencies()`.
 
 ```csharp
 public class Module{Name}UI(Module{Name}UIOption option)
@@ -119,7 +151,9 @@ public class Module{Name}UI(Module{Name}UIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<{Name}UIService>();
+        // No UI service registration needed — components inject Facade directly
+        // Only register UI-specific state/support classes if needed
+        services.AddScoped<{Name}PageState>();
     }
 
     public override void ClaimDependencies()
@@ -128,11 +162,11 @@ public class Module{Name}UI(Module{Name}UIOption option)
         {
             DependsOnModule<Module{Name}Guide>().Register();
             DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterComponent<UI{Name}Page>(
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UI{Name}Page>(
                     UI{Name}Page.{NAME}_URL,
-                    "{Name} Dashboard",
+                    displayNameKey: "Pages:{Name}:Title",
                     Icons.Material.Filled.Settings,
-                    "System Management",
+                    categoryKey: "Categories:SystemManagement",
                     addToNav: true,
                     navOrder: 100));
         }
@@ -140,55 +174,64 @@ public class Module{Name}UI(Module{Name}UIOption option)
 }
 ```
 
-## Naming Conventions
+## UI Folder Responsibilities
 
-When creating UI modules, use these naming patterns:
+| Folder | What belongs here | What does NOT belong here |
+|--------|-------------------|--------------------------|
+| `Pages/` | Route pages, page-level composition, lifecycle entry | Business orchestration, SDK calls |
+| `UI{Name}/Components/` | Reusable Blazor components, partial UI composition | Page routing, business entry points |
+| `UI{Name}/Dialogs/` | Dialog components | Non-dialog components |
+| `UI{Name}/Models/` | ViewModels, DialogModels, display-only models | Infrastructure models (reuse from Facade Models) |
+| `UI{Name}/State/` | Browser state, page state, session state, table state | Business orchestration |
+| `UI{Name}/Support/` | Resolvers, formatters, coordinators, storage adapters | Data access (use Facade instead) |
+| `Localization/` | Resource markers and localization JSON files | Business logic |
+
+## UI Model Reuse Rule
+
+UI modules must maximize reuse of Models from the infrastructure module's public `Models/` folder.
+
+Only create UI-specific models when:
+- The view requires a shape that genuinely differs from any existing model
+- The model is purely presentational (e.g., `DialogModel`, `ViewModel` with UI-only state like `IsExpanded`, `IsSelected`)
+
+Do NOT duplicate infrastructure models in the UI module.
+
+## State and Support Classification
+
+Not everything in the UI layer should be lumped together. Use precise folder placement:
+
+| Type | Folder | Examples |
+|------|--------|---------|
+| Page/session state | `State/` | `ChatSessionStateManager`, `ChatSessionStorage` |
+| Browser persistence | `State/` | `RAGBrowserState`, `TableStateStorage` |
+| Orchestration helpers | `Support/` | `RAGBatchIndexCoordinator`, `RAGChunkViewCoordinator` |
+| Resolution/lookup | `Support/` | `RAGMarkdownDocumentResolver` |
+| Format conversion | `Support/` | `ChunkHighlightFormatter` |
+
+## Naming Conventions
 
 | Variable | Format | Example |
 |----------|--------|---------|
-| `$ModuleName$` | PascalCase | `SignalR`, `SystemInfo` |
-| `$ModuleUIName$` | `{ModuleName}UI` | `SignalrUI`, `SystemInfoUI` |
-| `$UIFolderName$` | `UI{ModuleName}` | `UISignalr`, `UISystemInfo` |
-| `$PageName$` | `UI{ModuleName}Page` | `UISignalRPage`, `UISystemInfoPage` |
-| `$RouteURL$` | kebab-case | `/{module-name}-debug`, `/{module-name}-manage` |
-| `$ServiceName$` | `{ModuleName}UIService` | `DataChannelUIService`, `ConfigurationUIService` |
+| UI module class | `Module{Name}UI` | `ModuleRAGUI` |
+| UI folder | `UI{Name}/` | `UIRAG/`, `UIChat/` |
+| Page component | `UI{Name}Page` | `UIRAGManagePage` |
+| Route URL | `/{name}-{action}` (kebab-case) | `/rag-manage`, `/ai-chat` |
+| State class | `{Feature}State` / `{Feature}StateManager` | `ChatSessionStateManager` |
 
-## UI Folder Structure
+## Data Model Naming
 
-### Mixed / Framework UI Projects
+| Type | Naming Pattern |
+|------|---------------|
+| Request models | `{Feature}Request` |
+| Response models | `{Feature}Response` |
+| View models | `{Feature}ViewModel` |
+| DTOs | `Dto{Feature}` |
 
-Use `UI{ModuleName}/` subfolders to separate UI code from infrastructure or other modules:
+Prioritize reusing infrastructure module models. Composition over redefinition.
 
-```
-UI{ModuleName}/
-├── Components/     # Blazor components specific to this module
-├── Models/         # View models (only create when necessary - reuse source module models)
-└── Services/       # UI services ({ModuleName}UIService)
-```
+## Page File Pattern
 
-### Standalone UI Projects
-
-Use flat structure at project root (since there's only one UI module per project):
-
-```
-Monica.{Name}.UI/
-├── Modules/
-│   └── Module{Name}UI.cs
-├── Pages/
-│   └── UI{Name}Page.razor
-├── Components/         # At project root
-├── Services/           # At project root
-│   └── {Name}UIService.cs
-├── Models/
-└── Interfaces/
-```
-
-## Page File
-
-- **Location**: `Pages/UI{ModuleName}Page.razor`
-- **Route definition**:
-
-```csharp
+```razor
 @attribute [Route({NAME}_URL)]
 
 @code {
@@ -198,58 +241,72 @@ Monica.{Name}.UI/
 
 ### Page Dependency Injection
 
-```csharp
-@using Monica.Framework.UI.{UIFolderName}.Components
-@using Monica.Framework.UI.{UIFolderName}.Services
-@using Monica.Framework.UI.{UIFolderName}.Models
-@inject {ModuleName}UIService {ModuleName}UIService
+```razor
+@using Monica.{Name}.{Feature}.Facades
+@using Monica.{Name}.UI.UI{Name}.Components
+@inject {Name}Facade {Name}Facade
+@inject {Name}PageState PageState
 ```
 
-## Data Model Naming Conventions
-
-- **Location**: `UI{ModuleName}/Models/` (or `Models/` for standalone projects)
-- **Use strongly-typed models**, avoid dynamic types
-- **Prioritize reusing source module models** over creating new ones
-- **Composition over redefinition**: When new models are needed, compose from source module models
-
-| Type | Naming Pattern |
-|------|---------------|
-| Request models | `{Feature}Request` |
-| Response models | `{Feature}Response` |
-| View models | `{Feature}ViewModel` |
-| DTOs | `Dto{Feature}` |
+Note: Pages inject the infrastructure Facade directly — no UI service intermediary.
 
 ## Example References
 
-### UISignalR Module (Framework UI)
+### UIRAG (Composite UI — Monica.AI.UI)
 
 ```
-Modules/SignalrUI.cs                           # Module class
-UISignalr/                                     # UI folder
-├── Components/SignalRConnectionConfig.razor   # Components
-├── Components/SignalRMessageLog.razor
-└── Services/SignalRUIService.cs               # UI service
-Pages/UISignalRPage.razor                      # Page
+Modules/ModuleRAGUI.cs
+Pages/UIAIRAGManagePage.razor
+UIRAG/
+├── Components/
+│   ├── KnowledgeBasePanel.razor
+│   ├── IndexingPanel.razor
+│   └── SearchResultCard.razor
+├── Dialogs/
+│   ├── CreateKnowledgeBaseDialog.razor
+│   └── DocumentSelectionDialog.razor
+├── Models/                              # Only if genuinely needed
+├── State/
+│   └── RAGPageState.cs
+└── Support/
+    ├── RAGBatchIndexCoordinator.cs
+    └── RAGChunkViewCoordinator.cs
 ```
 
-### UIDataChannel Module (Mixed)
+### UIDataChannel (Mixed Module)
 
 ```
-Modules/ModuleDataChannelUI.cs                 # UI module class
-UIDataChannel/                                 # UI folder
-├── Components/ChannelStatusCard.razor
-├── Models/ChannelStatusInfo.cs
-└── Services/DataChannelUIService.cs           # UI service
-Pages/UIDataChannelPage.razor                  # Page
+Modules/ModuleDataChannelUI.cs
+Pages/UIDataChannelPage.razor
+UIDataChannel/
+├── Components/
+│   ├── ChannelStatusCard.razor
+│   └── MetadataDisplay.razor
+├── Dialogs/
+│   ├── ExceptionDetailsDialog.razor
+│   └── MessageDebuggerDialog.razor
+├── Models/
+│   ├── ChannelStatusInfo.cs
+│   └── DtoChannelInfo.cs
+└── State/
 ```
 
-### Configuration UI Module (Standalone)
+### UIConfiguration (Standalone UI)
 
 ```
 Monica.Configuration.UI/
-├── Modules/ModuleConfigurationUI.cs           # UI module class
+├── Modules/ModuleConfigurationUI.cs
 ├── Pages/UIConfigurationDashboardPage.razor
-├── Services/ConfigurationUIService.cs         # UI service at root
-├── Components/                                # Components at root
-└── Models/
+├── UIConfiguration/
+│   ├── Components/
+│   │   ├── ConfigurationEditor.razor
+│   │   ├── ConfigurationExplorer.razor
+│   │   └── ConfigurationList.razor
+│   ├── Dialogs/
+│   │   ├── SaveConfirmationDialog.razor
+│   │   └── RollbackConfirmationDialog.razor
+│   ├── Models/
+│   │   └── ConfigurationStateManager.cs
+│   └── State/
+└── Localization/
 ```
