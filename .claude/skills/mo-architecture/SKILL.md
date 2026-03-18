@@ -49,6 +49,7 @@ Other Module ──→  Abstractions (interfaces)  ←── Services implement
 
 **Public surface** (consumed by external modules, API, UI):
 - `Abstractions/` — interfaces for cross-module dependency
+- `Annotations/` — developer-facing attributes for declarative configuration
 - `Models/` — shared data contracts
 - `Facades/` — `Res<T>` entry points for API/UI
 
@@ -96,6 +97,7 @@ Exception: `Tools/` is reserved for AI tool providers in Monica.AI modules.
 |--------|---------|------------|
 | `Abstractions/` | Interfaces, abstract base classes | Public |
 | `Abstractions/Internal/` | Internal-only contracts | Private |
+| `Annotations/` | Developer-facing attributes for declarative configuration | Public |
 | `Models/` | Records, DTOs, enums, value objects | Public |
 | `Models/Internal/` | Internal-only data types | Private |
 | `Facades/` | Thin orchestration, returns `Res<T>` | Public |
@@ -121,6 +123,8 @@ Monica.{Name}/
 │   ├── {FeatureGroup}/
 │   └── Internal/
 │       └── I{InternalContract}.cs
+├── Annotations/                         # (optional, developer-facing attributes)
+│   └── {Name}Attribute.cs
 ├── Models/
 │   ├── {Entity}.cs
 │   ├── {FeatureGroup}/
@@ -357,6 +361,7 @@ Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
 |-------|---------|-----------|
 | `Abstractions/` | `public` | External modules depend on these |
 | `Abstractions/Internal/` | `internal` | Module-internal contracts |
+| `Annotations/` | `public` | Developer-facing declarative attributes |
 | `Models/` | `public` | Shared data contracts |
 | `Models/Internal/` | `internal` | Module-internal data types |
 | `Facades/` | `public` | API + UI entry points |
@@ -364,58 +369,10 @@ Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
 | `Providers/` | `internal` | Pluggable but internal |
 | `Utils/` | `internal` | Module-internal utilities |
 
-## RAG Refactoring Example
 
-Current `RAGService.cs` (800+ lines) → target structure:
+## Additional Resources
 
-```
-Monica.AI/RAG/
-├── Abstractions/
-│   ├── IDocumentChunker.cs              # Public
-│   └── Internal/
-│       ├── IDocumentIndexStateStore.cs
-│       ├── IKnowledgeDocumentSourceStore.cs
-│       └── IChunkerRoutingStore.cs
-├── Models/
-│   ├── KnowledgeBase.cs                 # Public
-│   ├── TextSearchResult.cs
-│   ├── DocumentIndexState.cs
-│   ├── IndexingProgress.cs
-│   └── Internal/
-│       ├── RAGVectorRecord.cs
-│       ├── DocumentQueueItem.cs
-│       └── RAGEmbeddingBinding.cs
-├── Facades/
-│   └── RAGFacade.cs                     # ~150 lines
-├── Services/
-│   ├── KnowledgeBaseService.cs
-│   ├── DocumentIndexingService.cs
-│   ├── KnowledgeSearchService.cs
-│   ├── DocumentQueueService.cs
-│   └── Support/
-│       ├── ChunkerRegistry.cs
-│       ├── RAGEmbeddingBindingResolver.cs
-│       ├── RAGIndexStateCoordinator.cs
-│       └── RAGVectorCollectionCoordinator.cs
-├── Providers/
-│   ├── Stores/
-│   │   ├── FileDocumentIndexStateStore.cs
-│   │   ├── FileKnowledgeDocumentSourceStore.cs
-│   │   └── FileChunkerRoutingStore.cs
-│   └── Chunkers/
-│       ├── ProductionMarkdownDocumentChunker.cs
-│       └── SimpleMarkdownDocumentChunker.cs
-└── Tools/
-    └── KnowledgeSearchToolProvider.cs
-```
+### Reference Files
 
-## Prohibited Practices
-
-- A single service acting as facade + business logic + provider coordination + state recovery
-- Internal services depending on Facades
-- UI components depending on Providers directly
-- Inventing custom folder names outside the standard layer names
-- Flat root-level `Components/Services/Models` in UI modules
-- Duplicating infrastructure Models in UI modules
-- Complex business logic in Minimal API handlers or Razor pages
-- Using `Helpers/`, `Tools/` (except AI tools), `Common/`, `Misc/` as folder names
+For concrete refactoring examples and prohibited practices, consult:
+- **`references/refactoring-examples.md`** — RAG refactoring walkthrough and list of prohibited architectural patterns
