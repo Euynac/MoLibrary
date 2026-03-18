@@ -115,6 +115,16 @@
             </div>
         </div>
 
+        @if (!string.IsNullOrWhiteSpace(_searchErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Dense="true"
+                      Class="search-error">
+                @_searchErrorMessage
+            </MudAlert>
+        }
+
         @if (_searchResults.Count > 0)
         {
             <MudText Typo="Typo.caption" Class="results-count">
@@ -127,7 +137,7 @@
                 }
             </div>
         }
-        else if (_hasSearched && !_isSearching)
+        else if (_hasSearched && !_isSearching && string.IsNullOrWhiteSpace(_searchErrorMessage))
         {
             <MudText Typo="Typo.body2" Class="no-results">
                 @L["RAG:Search:NoResults"]
@@ -151,6 +161,7 @@
     private bool _showEmbeddingWarning;
     private string _mismatchedKbModelDisplay = string.Empty;
     private string _embeddingWarningMessage = string.Empty;
+    private string _searchErrorMessage = string.Empty;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -312,14 +323,23 @@
 
         _isSearching = true;
         _hasSearched = true;
+        _searchErrorMessage = string.Empty;
         StateHasChanged();
 
-        var result = await RAGUIService.SearchAsync(_searchQuery, _selectedKbIds, _topK);
+        var result = await RAGUIService.SearchAsync(
+            _searchQuery,
+            _selectedKbIds,
+            _topK,
+            BuildSearchEmbeddingOverride());
         if (!result.IsFailed(out var error, out var results))
+        {
             _searchResults = results;
+            _searchErrorMessage = string.Empty;
+        }
         else
         {
             _searchResults = [];
+            _searchErrorMessage = error.Message ?? string.Empty;
             Snackbar.Add(error.Message!, Severity.Error);
         }
 
@@ -472,5 +492,15 @@
         }
 
         return providerId.Trim();
+    }
+
+    private RAGSearchEmbeddingOverride? BuildSearchEmbeddingOverride()
+    {
+        if (!EmbeddingModelOption.TryParseModelKey(_selectedEmbeddingModelKey, out var providerId, out var modelName))
+        {
+            return null;
+        }
+
+        return new RAGSearchEmbeddingOverride(providerId, modelName);
     }
 }

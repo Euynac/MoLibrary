@@ -25,13 +25,31 @@ public sealed class RAGEmbeddingBindingResolver(
                 $"Knowledge base '{kb.Name}' has no embedding model configured. Configure provider and model before indexing or searching.");
         }
 
-        var provider = providerFactory.GetProvider(kb.EmbeddingProviderId)
-                       ?? throw new InvalidOperationException(
-                           $"Embedding provider '{kb.EmbeddingProviderId}' configured on knowledge base '{kb.Name}' was not found.");
+        return await ResolveAsync(kb.EmbeddingProviderId, kb.EmbeddingModelName, ct);
+    }
 
-        var embeddingModel = FindEmbeddingModel(provider, kb.EmbeddingModelName)
+    public async Task<RAGEmbeddingBinding> ResolveAsync(
+        string providerId,
+        string modelName,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerId))
+        {
+            throw new InvalidOperationException("Embedding provider ID cannot be empty.");
+        }
+
+        if (string.IsNullOrWhiteSpace(modelName))
+        {
+            throw new InvalidOperationException("Embedding model name cannot be empty.");
+        }
+
+        var provider = providerFactory.GetProvider(providerId)
+                       ?? throw new InvalidOperationException(
+                           $"Embedding provider '{providerId}' was not found.");
+
+        var embeddingModel = FindEmbeddingModel(provider, modelName)
                              ?? throw new InvalidOperationException(
-                                 $"Embedding model '{kb.EmbeddingModelName}' is not configured on provider '{provider.ProviderId}'.");
+                                 $"Embedding model '{modelName}' is not configured on provider '{provider.ProviderId}'.");
 
         var dimensions = await ResolveEmbeddingDimensionsAsync(provider, embeddingModel, ct);
         return new RAGEmbeddingBinding(provider.ProviderId, embeddingModel.ModelName, dimensions);

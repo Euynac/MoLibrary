@@ -499,13 +499,13 @@ public sealed partial class RAGService(
         IEnumerable<string> knowledgeBaseIds,
         int topK = 0,
         CancellationToken ct = default)
-        => SearchAsync(query, knowledgeBaseIds, topK, includeVectorSimilarityForHybrid: false, ct);
+        => SearchAsync(query, knowledgeBaseIds, topK, embeddingOverride: null, ct);
 
     public async Task<IReadOnlyList<TextSearchResult>> SearchAsync(
         string query,
         IEnumerable<string> knowledgeBaseIds,
         int topK,
-        bool includeVectorSimilarityForHybrid,
+        RAGSearchEmbeddingOverride? embeddingOverride,
         CancellationToken ct = default)
     {
         if (topK <= 0)
@@ -514,6 +514,16 @@ public sealed partial class RAGService(
         }
 
         var results = new List<TextSearchResult>();
+        var queryVectorsByBindingKey = new Dictionary<string, float[]>(StringComparer.OrdinalIgnoreCase);
+        RAGEmbeddingBinding? overrideBinding = null;
+
+        if (embeddingOverride is not null)
+        {
+            overrideBinding = await embeddingBindingResolver.ResolveAsync(
+                embeddingOverride.ProviderId,
+                embeddingOverride.ModelName,
+                ct);
+        }
 
         foreach (var kbId in knowledgeBaseIds.Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -534,7 +544,14 @@ public sealed partial class RAGService(
                 continue;
             }
 
-            var collection = await vectorCollectionCoordinator.GetOrCreateCollectionAsync(kb, binding, ct);
+            if (overrideBinding is { } resolvedOverrideBinding
+                && resolvedOverrideBinding.Dimensions != binding.Dimensions)
+            {
+                throw new InvalidOperationException(
+                    $"Search embedding model '{resolvedOverrideBinding.ModelName}' on provider '{resolvedOverrideBinding.ProviderId}' uses {resolvedOverrideBinding.Dimensions} dimensions, but knowledge base '{kb.Name}' is indexed with {binding.Dimensions}-dimensional vectors. Reindex the knowledge base with the selected model or choose a compatible model.");
+            }
+
+            var collection = await vectorCollectionCoordinator.GetCollectionAsync(kb, binding, ct);
             if (!await collection.CollectionExistsAsync(ct))
             {
                 continue;

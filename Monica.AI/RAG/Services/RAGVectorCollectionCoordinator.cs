@@ -42,6 +42,12 @@ public sealed class RAGVectorCollectionCoordinator(
         CancellationToken ct)
         => await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: true, ct);
 
+    public async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetCollectionAsync(
+        KnowledgeBase kb,
+        RAGEmbeddingBinding binding,
+        CancellationToken ct)
+        => await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: false, ct);
+
     public async Task<IReadOnlyList<string>> GetMissingRecordKeysAsync(
         KnowledgeBase kb,
         RAGEmbeddingBinding binding,

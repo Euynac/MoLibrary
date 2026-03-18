@@ -96,7 +96,8 @@ public class RAGUIService(
     public async Task<Res<IReadOnlyList<TextSearchResult>>> SearchAsync(
         string query,
         IEnumerable<string> kbIds,
-        int topK = 5)
+        int topK = 5,
+        RAGSearchEmbeddingOverride? embeddingOverride = null)
     {
         try
         {
@@ -104,7 +105,7 @@ public class RAGUIService(
                 query,
                 kbIds,
                 topK,
-                includeVectorSimilarityForHybrid: true);
+                embeddingOverride);
             return Res.Ok(results);
         }
         catch (Exception ex)

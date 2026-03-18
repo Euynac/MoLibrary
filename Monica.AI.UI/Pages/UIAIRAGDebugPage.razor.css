@@ -186,6 +186,10 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.rag-main-panel ::deep .search-error {
+    margin: 0;
+}
+
 .search-results {
     display: flex;
     flex-direction: column;

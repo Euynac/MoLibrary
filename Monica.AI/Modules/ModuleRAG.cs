@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -242,7 +243,7 @@ public class ModuleRAGGuide
         {
             var option = ctx.GetModuleExtraOption<ModuleRAGQdrantOption>();
             ctx.Services.AddQdrantVectorStore(
-                option.Host,
+                NormalizeQdrantHost(option.Host, option.Https),
                 option.Port,
                 option.Https,
                 option.ApiKey ?? string.Empty,
@@ -251,6 +252,19 @@ public class ModuleRAGGuide
 
         return this;
     }
+
+    private static string NormalizeQdrantHost(string host, bool https)
+        // Qdrant is accessed through Qdrant.Client, which uses gRPC for the 6334 endpoint.
+        // In this environment the app runs as a Windows .NET process while Qdrant is published
+        // from Docker Compose on the host. Using "localhost" can make the gRPC client probe the
+        // IPv6 loopback (::1) path first. We reproduced that ::1:6334 waits about 21 seconds and
+        // then fails, while 127.0.0.1:6334 succeeds in a few milliseconds. That makes the first
+        // CollectionExistsAsync on a fresh process appear extremely slow even though Qdrant itself
+        // is healthy. Normalize "localhost" to the IPv4 loopback for non-HTTPS local connections
+        // so the client skips the bad ::1 path and reaches the published gRPC port immediately.
+        => !https && string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
+            ? IPAddress.Loopback.ToString()
+            : host;
 
     /// <summary>
     /// Uses a custom chunker routing store implementation.
