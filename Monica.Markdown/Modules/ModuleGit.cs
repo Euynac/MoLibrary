@@ -35,15 +35,10 @@ public static class ModuleGitBuilderExtensions
 /// <summary>
 /// Git synchronization module.
 /// </summary>
+[ModuleKey(EMoModuleKey.Git)]
 public class ModuleGit(ModuleGitOption option)
     : MoModule<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
 {
-    /// <inheritdoc />
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Git;
-    }
-
     /// <inheritdoc />
     public override void ClaimDependencies()
     {

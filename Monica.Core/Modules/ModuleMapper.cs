@@ -85,13 +85,9 @@ public static class ModuleMapperBuilderExtensions
         }
     }
 }
-
+[ModuleKey(EMoModuleKey.Mapper)]
 public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, ModuleMapperOption, ModuleMapperGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Mapper;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -160,9 +156,7 @@ public class ModuleMapper(ModuleMapperOption option) : MoModule<ModuleMapper, Mo
 public class ModuleMapperGuide : MoModuleGuide<ModuleMapper, ModuleMapperOption, ModuleMapperGuide>
 {
 
-
 }
-
 
 public class ModuleMapperOption : MoModuleOptionWithMinimalApi<ModuleMapper>
 {

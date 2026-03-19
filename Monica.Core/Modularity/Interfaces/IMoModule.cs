@@ -1,13 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Interfaces;
-
-public interface IMoModuleStaticInfo
-{
-    static abstract ModuleKey GetStaticModuleKey();
-}
 
 /// <summary>
 /// Defines the module lifecycle hooks used during registration and initialization.
@@ -38,6 +32,4 @@ public interface IMoModule
     /// </summary>
     /// <param name="app">The application builder.</param>
     void ConfigureApplicationBuilder(IApplicationBuilder app);
-
-    ModuleKey GetModuleKey();
 }

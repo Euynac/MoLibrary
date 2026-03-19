@@ -18,12 +18,9 @@ namespace Monica.Modules;
 /// <summary>
 /// Diff highlight module.
 /// </summary>
+[ModuleKey(EMoModuleKey.DiffHighlight)]
 public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DiffHighlight;
-    }
     
     /// <summary>
     /// Configures services.
@@ -139,7 +136,6 @@ public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, Modul
 {
 
 }
-
 
 /// <summary>
 /// Configuration options for the diff highlight module.

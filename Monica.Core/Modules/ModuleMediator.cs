@@ -9,7 +9,6 @@ using Monica.Tool.MoResponse;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleMediatorBuilderExtensions
 {
     extension(Mo)
@@ -24,12 +23,9 @@ public static class ModuleMediatorBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Mediator)]
 public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Mediator;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -44,7 +40,6 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
 
 public class ModuleMediatorGuide : MoModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>
 {
-
 
 }
 

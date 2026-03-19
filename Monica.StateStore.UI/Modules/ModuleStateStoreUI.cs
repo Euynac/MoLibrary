@@ -29,10 +29,10 @@ public static class ModuleStateStoreUIBuilderExtensions
 /// <summary>
 /// StateStore UI 模块 - 提供状态存储管理界面
 /// </summary>
+[ModuleKey(EMoModuleKey.StateStoreUI)]
 public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
     : MoModule<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.StateStoreUI;
 
     public override void ClaimDependencies()
     {

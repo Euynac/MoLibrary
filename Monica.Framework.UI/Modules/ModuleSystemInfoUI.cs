@@ -33,13 +33,10 @@ public static class ModuleSystemInfoUIBuilderExtensions
 /// <summary>
 /// System information UI module.
 /// </summary>
+[ModuleKey(EMoModuleKey.SystemInfoUI)]
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     : MoModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.SystemInfoUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

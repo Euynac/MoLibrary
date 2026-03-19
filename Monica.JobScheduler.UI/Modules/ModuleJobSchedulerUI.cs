@@ -30,13 +30,10 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 /// JobScheduler UI 模块实现
 /// 提供基于 Blazor 的作业调度管理界面
 /// </summary>
+[ModuleKey(EMoModuleKey.JobSchedulerUI)]
 public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
     : MoModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.JobSchedulerUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

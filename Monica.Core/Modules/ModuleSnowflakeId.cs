@@ -8,7 +8,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleSnowflakeIdBuilderExtensions
 {
     extension(Mo)
@@ -23,13 +22,10 @@ public static class ModuleSnowflakeIdBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.SnowflakeId)]
 public class ModuleSnowflakeId(ModuleSnowflakeIdOption option)
     : MoModule<ModuleSnowflakeId, ModuleSnowflakeIdOption, ModuleSnowflakeIdGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.SnowflakeId;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -40,7 +36,6 @@ public class ModuleSnowflakeId(ModuleSnowflakeIdOption option)
 
 public class ModuleSnowflakeIdGuide : MoModuleGuide<ModuleSnowflakeId, ModuleSnowflakeIdOption, ModuleSnowflakeIdGuide>
 {
-
 
 }
 public class ModuleSnowflakeIdOption : MoModuleOption<ModuleSnowflakeId>

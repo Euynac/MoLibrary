@@ -27,9 +27,9 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
     public Type ModuleType { get; set; } = moduleInstance.GetType();
 
     /// <summary>
-    /// Gets the <see cref="ModuleKey"/> for the module. Returns `null` for unregistered modules.
+    /// Gets the <see cref="ModuleKey"/> for the module.
     /// </summary>
-    public ModuleKey? ModuleKey => ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(ModuleType);
+    public ModuleKey ModuleKey => ModuleAnalyser.ResolveModuleKey(ModuleType);
 
     /// <summary>
     /// Gets the total initialization duration for the module, in milliseconds.
@@ -40,8 +40,7 @@ public class ModuleSnapshot(MoModule moduleInstance, ModuleRegisterInfo register
 
     public override string ToString()
     {
-        var moduleKeyDisplay = ModuleKey?.ToString() ?? "Unknown";
-        return $"[{moduleKeyDisplay}] {RegisterInfo}";
+        return $"[{ModuleKey}] {RegisterInfo}";
     }
 
     /// <summary>

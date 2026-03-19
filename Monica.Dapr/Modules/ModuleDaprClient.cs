@@ -13,7 +13,6 @@ using Monica.Dapr.Interfaces;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleDaprClientBuilderExtensions
 {
     extension(Mo)
@@ -28,13 +27,10 @@ public static class ModuleDaprClientBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DaprClient)]
 public class ModuleDaprClient(ModuleDaprClientOption option)
     : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DaprClient;
-    }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)
     {
@@ -70,7 +66,6 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
 
 public class ModuleDaprClientGuide : MoModuleGuide<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>
 {
-
 
 }
 

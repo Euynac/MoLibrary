@@ -25,12 +25,9 @@ public static class ModuleLockerBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Locker)]
 public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Locker;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

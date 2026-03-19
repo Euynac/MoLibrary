@@ -9,7 +9,6 @@ using Monica.Dapr.Locker;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleDaprLockerBuilderExtensions
 {
     public static ModuleDaprLockerGuide UseDaprProvider(this ModuleLockerGuide guide,
@@ -20,13 +19,10 @@ public static class ModuleDaprLockerBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DaprLocker)]
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
     : MoModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DaprLocker;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

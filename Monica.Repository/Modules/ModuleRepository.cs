@@ -32,13 +32,10 @@ public static class ModuleRepositoryBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Repository)]
 public class ModuleRepository(ModuleRepositoryOption option)
     : MoModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Repository;
-    }
 
     public override void ClaimDependencies()
     {

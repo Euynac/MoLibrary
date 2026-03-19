@@ -23,17 +23,10 @@ namespace Monica.Modules;
 /// Markdown UI module providing a document viewer with group selection,
 /// tree navigation, and markdown rendering.
 /// </summary>
+[ModuleKey(EMoModuleKey.MarkdownUI)]
 public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     : MoModule<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
 {
-    /// <summary>
-    /// Gets the module key for this UI module.
-    /// </summary>
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.MarkdownUI;
-    }
-
     /// <summary>
     /// Configures services for the Markdown UI module.
     /// </summary>

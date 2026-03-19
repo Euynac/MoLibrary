@@ -30,16 +30,12 @@ public static class ModuleEventBusBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.EventBus)]
 public class ModuleEventBus(ModuleEventBusOption option)
     : MoModule<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
       IWantIterateBusinessTypes
 {
     private readonly List<EventHandlerRegisterInfo> _autoDiscoveredHandlers = [];
-
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.EventBus;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

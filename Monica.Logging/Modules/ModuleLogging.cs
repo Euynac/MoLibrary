@@ -19,7 +19,6 @@ using Serilog.Extensions.Logging;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleLoggingBuilderExtensions
 {
     extension(Mo)
@@ -34,12 +33,9 @@ public static class ModuleLoggingBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Logging)]
 public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Logging;
-    }
 
     public override void ConfigureBuilder(WebApplicationBuilder builder)
     {
@@ -49,7 +45,6 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         Log.Logger = option.CustomLoggerCreator is { } customLoggerCreator
             ? customLoggerCreator.Invoke(logBuilder)
             : CreateLogger(logBuilder);
-
 
         builder.Host.UseSerilog(Log.Logger); // 这里只注册了ILogger<T>的泛型日志，所以在依赖注入中使用需要使用泛型。
         //设置后，内置的微软日志系统的配置将失效
@@ -133,8 +128,6 @@ public class ModuleLoggingOption : MoModuleOption<ModuleLogging>
     /// </summary>
     public Func<LoggerConfiguration, Logger>? CustomLoggerCreator  { get; set; }
 
-
-
     /// <summary>
     /// <a href="https://github.com/serilog/serilog/wiki/Formatting-Output">Serilog模板文档</a>
     /// </summary>
@@ -150,8 +143,6 @@ public class ModuleLoggingOption : MoModuleOption<ModuleLogging>
     
     public string? LogFileDirectory { get; set; }
     public string LogFileName { get; set; } = $"{Assembly.GetEntryAssembly()!.GetName().Name}.log";
-
-
 
     public bool EnableEnrichThreadName { get; set; }
     public bool DisableEnrichThreadId { get; set; }

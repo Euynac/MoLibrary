@@ -27,13 +27,10 @@ public static class ModuleProfilingBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Profiling)]
 public class ModuleProfiling(ModuleProfilingOption option)
     : MoModule<ModuleProfiling, ModuleProfilingOption, ModuleProfilingGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Profiling;
-    }
 
     /// <summary>
     ///     配置服务

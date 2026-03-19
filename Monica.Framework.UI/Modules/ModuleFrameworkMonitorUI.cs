@@ -27,13 +27,10 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
 /// <summary>
 /// 框架监控UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.FrameworkMonitorUI)]
 public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
     : MoModule<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.FrameworkMonitorUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

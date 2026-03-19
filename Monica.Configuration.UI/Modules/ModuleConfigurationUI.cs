@@ -36,13 +36,10 @@ public static class ModuleConfigurationUIBuilderExtensions
 /// <summary>
 /// 配置管理UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.ConfigurationUI)]
 public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     : MoModule<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ConfigurationUI;
-    }
 
     public override void ClaimDependencies()
     {

@@ -14,7 +14,6 @@ using Monica.Office.Excel.Npoi.Import;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleExcelBuilderExtensions
 {
     extension(Mo)
@@ -29,12 +28,9 @@ public static class ModuleExcelBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Excel)]
 public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Excel;
-    }
 
     public override void ClaimDependencies()
     {

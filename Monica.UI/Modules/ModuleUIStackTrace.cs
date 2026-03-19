@@ -25,13 +25,10 @@ public static class ModuleUIStackTraceBuilderExtensions
 /// <summary>
 /// UIStackTrace module - provides stack trace visualization components
 /// </summary>
+[ModuleKey(EMoModuleKey.UIStackTrace)]
 public class ModuleUIStackTrace(ModuleUIStackTraceOption option)
     : MoModule<ModuleUIStackTrace, ModuleUIStackTraceOption, ModuleUIStackTraceGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.UIStackTrace;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

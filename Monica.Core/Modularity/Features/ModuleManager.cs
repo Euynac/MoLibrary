@@ -68,10 +68,7 @@ public static class ModuleManager
     internal static void CascadeDisableModulesThatDependOn(Type moduleType)
     {
         // Find the module key for the disabled module
-        if (!ModuleAnalyser.ModuleTypeToKeyMap.TryGetValue(moduleType, out var disabledModuleKey))
-        {
-            return;
-        }
+        var disabledModuleKey = ModuleAnalyser.ResolveModuleKey(moduleType);
 
         // Get all modules that depend on this module from the dependency map
         var dependentModuleKeys = new HashSet<ModuleKey>();

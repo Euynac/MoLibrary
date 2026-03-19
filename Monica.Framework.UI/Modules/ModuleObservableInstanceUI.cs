@@ -31,13 +31,10 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 /// <summary>
 /// ObservableInstance UI module
 /// </summary>
+[ModuleKey(EMoModuleKey.ObservableInstanceUI)]
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
     : MoModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ObservableInstanceUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

@@ -32,13 +32,10 @@ public static class ModuleAIUIBuilderExtensions
 /// AI UI 模块实现
 /// 提供基于 Blazor 的 AI 聊天界面
 /// </summary>
+[ModuleKey(EMoModuleKey.AIUI)]
 public class ModuleAIUI(ModuleAIUIOption option)
     : MoModule<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.AIUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

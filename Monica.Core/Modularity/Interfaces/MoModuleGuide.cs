@@ -75,17 +75,11 @@ public class MoModuleGuide
 public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleGuide, IMoModuleGuide, IMoModuleGuideBridge
     where TModuleOption : MoModuleOption<TModule>, new()
     where TModuleGuideSelf : MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf>, new()
-    where TModule : MoModule<TModule, TModuleOption, TModuleGuideSelf>, IMoModuleStaticInfo
+    where TModule : MoModule<TModule, TModuleOption, TModuleGuideSelf>
 {
     public override ModuleKey GetTargetModuleKey()
     {
-        if (ModuleAnalyser.ModuleTypeToKeyMap.TryGetValue(typeof(TModule), out var moduleKey))
-        {
-            return moduleKey;
-        }
-        moduleKey = TModule.GetStaticModuleKey();
-        ModuleAnalyser.RegisterModuleMapping(typeof(TModule), moduleKey);
-        return moduleKey;
+        return ModuleAnalyser.ResolveModuleKey(typeof(TModule));
     }
 
     /// <summary>
@@ -109,6 +103,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     private ModuleRegisterInfo RegisterModule()
     {
         var moduleType = typeof(TModule);
+        ModuleAnalyser.ResolveModuleKey(moduleType);
         if (MoModuleRegisterCentre.TryGetModuleRequestInfo(moduleType, out var requestInfo)) return requestInfo;
 
         requestInfo = new ModuleRegisterInfo(moduleType);

@@ -129,13 +129,13 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var disabledModuleTypes = ModuleManager.GetDisabledModuleTypes();
         foreach (var moduleType in disabledModuleTypes)
         {
-            var moduleKey = ModuleAnalyser.ModuleTypeToKeyMap.GetValueOrDefault(moduleType);
+            var moduleKey = ModuleAnalyser.ResolveModuleKey(moduleType);
 
             var basicInfo = new ModuleBasicInfo
             {
                 ModuleTypeName = moduleType.Name,
                 ModuleFullTypeName = moduleType.FullName ?? moduleType.Name,
-                ModuleKey = moduleKey.Value != null ? moduleKey : throw new Exception($"Can not get module key from module type {moduleType.GetCleanFullName()}"),
+                ModuleKey = moduleKey,
                 Order = int.MaxValue, // Disabled modules do not participate in registration ordering.
                 Status = EMoModuleConfigMethods.Disabled,
                 Dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
@@ -382,7 +382,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
     private static ModuleBasicInfo CreateModuleBasicInfo(ModuleSnapshot snapshot)
     {
         var moduleKey = snapshot.ModuleKey;
-        var dependencies = moduleKey != null && ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey.Value, out var deps)
+        var dependencies = ModuleAnalyser.ModuleDependencyMap.TryGetValue(moduleKey, out var deps)
             ? deps.ToList()
             : [];
 
@@ -416,9 +416,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         };
 
         var moduleKey = snapshot.ModuleKey;
-        var dependencyInfo = moduleKey != null
-            ? ModuleAnalyser.GetModuleDependencyInfo(moduleKey.Value)
-            : new ModuleDependencyInfo();
+        var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(moduleKey);
 
         var configInfo = new ModuleConfigInfo
         {

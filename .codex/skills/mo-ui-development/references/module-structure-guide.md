@@ -144,11 +144,10 @@ Key characteristics:
 ## UI Module Class Implementation
 
 ```csharp
+[ModuleKey(EMoModuleKey.{Name}UI)]
 public class Module{Name}UI(Module{Name}UIOption option)
     : MoModule<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.{Name}UI;
-
     public override void ConfigureServices(IServiceCollection services)
     {
         // No UI service registration needed — components inject Facade directly

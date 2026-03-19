@@ -8,7 +8,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleDaprProviderRpcClientBuilderExtensions
 {
     public static ModuleDaprProviderRpcClientGuide UseDaprProvider(this ModuleRpcClientGuide guide,
@@ -18,13 +17,10 @@ public static class ModuleDaprProviderRpcClientBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DaprProviderRpcClient)]
 public class ModuleDaprProviderRpcClient(ModuleDaprProviderRpcClientOption option)
     : MoModule<ModuleDaprProviderRpcClient, ModuleDaprProviderRpcClientOption, ModuleDaprProviderRpcClientGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DaprProviderRpcClient;
-    }
 
     public override void ClaimDependencies()
     {
@@ -38,7 +34,6 @@ public class ModuleDaprProviderRpcClient(ModuleDaprProviderRpcClientOption optio
 public class ModuleDaprProviderRpcClientGuide : MoModuleGuide<ModuleDaprProviderRpcClient,
     ModuleDaprProviderRpcClientOption, ModuleDaprProviderRpcClientGuide>
 {
-
 
 }
 

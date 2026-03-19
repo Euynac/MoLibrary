@@ -28,14 +28,11 @@ public static class ModuleChainTracingBuilderExtensions
 /// Chain tracing module.
 /// </summary>
 /// <param name="option">The module options.</param>
+[ModuleKey(EMoModuleKey.ChainTracing)]
 public class ModuleChainTracing(ModuleChainTracingOption option)
     : MoModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ChainTracing;
-    }
 
     
     public override void ConfigureServices(IServiceCollection services)
@@ -49,7 +46,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
             services.AddSingleton<IMoChainTracing>(_ => EmptyChainTracing.Instance);
         }
     }
-
 
     public override void ClaimDependencies()
     {

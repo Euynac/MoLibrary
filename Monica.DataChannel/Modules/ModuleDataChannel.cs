@@ -15,13 +15,10 @@ using Monica.DataChannel.UIDataChannel.Services;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+[ModuleKey(EMoModuleKey.DataChannel)]
 public class ModuleDataChannel(ModuleDataChannelOption option)
     : MoModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DataChannel;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -134,7 +131,6 @@ public static class ModuleDataChannelBuilderExtensions
         }
     }
 }
-
 
 public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
 {

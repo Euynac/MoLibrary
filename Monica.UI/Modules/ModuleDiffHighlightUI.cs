@@ -26,13 +26,10 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 /// <summary>
 /// 文本差异对比高亮UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.DiffHighlightUI)]
 public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
     : MoModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DiffHighlightUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

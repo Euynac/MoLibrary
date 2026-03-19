@@ -9,7 +9,6 @@ using Monica.Framework.Features.MoSeeder;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleSeederBuilderExtensions
 {
     extension(Mo)
@@ -24,13 +23,10 @@ public static class ModuleSeederBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Seeder)]
 public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<Type> _seedTypes = [];
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Seeder;
-    }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
@@ -65,15 +61,11 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
 public class ModuleSeederGuide : MoModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>
 {
 
-
 }
 
 public class ModuleSeederOption : MoModuleOption<ModuleSeeder>
 {
 }
-
-
-
 
 ///// <summary>
 ///// 指示该方法是用于在AppInit后执行的Static构造方法

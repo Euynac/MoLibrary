@@ -12,7 +12,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleJsonSerializationBuilderExtensions
 {
     extension(Mo)
@@ -27,13 +26,10 @@ public static class ModuleJsonSerializationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.JsonSerialization)]
 public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
     : MoModule<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.JsonSerialization;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -63,10 +59,7 @@ public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
 public class ModuleJsonSerializationGuide : MoModuleGuide<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>
 {
 
-
 }
-
-
 
 public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerialization>
 {
@@ -146,7 +139,6 @@ public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerializat
 //           && !typeToConvert.IsAssignableTo<IDictionary>()
 //           && typeToConvert is { IsGenericType: false, IsPublic: true };
 
-
 //    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
 //    {
 //        var converterType = typeof(NullObjectToEmptyJsonConverter<>).MakeGenericType(typeToConvert);
@@ -159,9 +151,6 @@ public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerializat
 
 //    public IHttpContextAccessor? HttpContextAccessor { get; set; }
 //}
-
-
-
 
 ////https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/converters-how-to
 //public class JsonConverterFactoryForICollection : JsonConverterFactory, IHasHttpContextAccessor
@@ -182,8 +171,6 @@ public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerializat
 
 //    public IHttpContextAccessor? HttpContextAccessor { get; set; }
 //}
-
-
 
 //public class NullObjectToEmptyJsonConverter<T>(JsonSerializerOptions clonedOptions) : JsonConverterWithHttpContext<T?>
 //{
@@ -231,7 +218,6 @@ public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerializat
 //    }
 //}
 
-
 //public abstract class JsonConverterWithHttpContext<T> : JsonConverter<T>, IJudgeBackendInvoke
 //{
 //    public IHttpContextAccessor? HttpContextAccessor { get; set; }
@@ -276,6 +262,5 @@ public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerializat
 //        Object
 //    }
 //}
-
 
 #endregion

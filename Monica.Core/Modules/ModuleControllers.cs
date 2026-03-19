@@ -8,7 +8,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleControllersBuilderExtensions
 {
     extension(Mo)
@@ -23,6 +22,7 @@ public static class ModuleControllersBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Controllers)]
 public class ModuleControllers(ModuleControllersOption option)
     : MoModule<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(option)
 {
@@ -32,7 +32,6 @@ public class ModuleControllers(ModuleControllersOption option)
             {
 
             }); 
-
 
         if (Option.MvcBuilderActions.Count <= 0 && Option.MvcOptionActions.Count <= 0 && Option.DependentServicesActions.Count <= 0) return;
         foreach (var action in Option.DependentServicesActions)
@@ -53,10 +52,6 @@ public class ModuleControllers(ModuleControllersOption option)
         }
     }
 
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Controllers;
-    }
 }
 
 public class ModuleControllersGuide : MoModuleGuide<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>

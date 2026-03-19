@@ -34,12 +34,9 @@ public static class ModuleAuthenticationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Authentication)]
 public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Authentication;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -55,7 +52,6 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
-
 
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
@@ -96,7 +92,6 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
                 }
             };
         });
-
 
         #region Controller处理
         //还可以通过AddJwtBearer中的Options中的Event实现？

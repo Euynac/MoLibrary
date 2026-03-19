@@ -31,13 +31,10 @@ public static class ModuleTimekeeperUIBuilderExtensions
 /// <summary>
 /// Timekeeper UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.TimekeeperUI)]
 public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
     : MoModule<ModuleTimekeeperUI, ModuleTimekeeperUIOption, ModuleTimekeeperUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.TimekeeperUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

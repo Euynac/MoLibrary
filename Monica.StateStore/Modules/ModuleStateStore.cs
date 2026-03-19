@@ -24,13 +24,10 @@ public static class ModuleStateStoreBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.StateStore)]
 public class ModuleStateStore(ModuleStateStoreOption option)
     : MoModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.StateStore;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

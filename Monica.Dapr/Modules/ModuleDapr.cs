@@ -11,7 +11,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleDaprBuilderExtensions
 {
     extension(Mo)
@@ -26,12 +25,9 @@ public static class ModuleDaprBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Dapr)]
 public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Dapr;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

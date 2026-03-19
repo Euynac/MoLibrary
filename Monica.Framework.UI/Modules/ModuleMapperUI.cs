@@ -25,13 +25,10 @@ public static class ModuleMapperUIBuilderExtensions
 /// <summary>
 /// Mapper UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.MapperUI)]
 public class ModuleMapperUI(ModuleMapperUIOption option)
     : MoModule<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.MapperUI;
-    }
 
     public override void ClaimDependencies()
     {

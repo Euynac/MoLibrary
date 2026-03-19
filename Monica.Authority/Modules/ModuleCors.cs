@@ -22,12 +22,9 @@ public static class ModuleCorsBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Cors)]
 public class ModuleCors(ModuleCorsOption option) : MoModule<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Cors;
-    }
 }
 
 public class ModuleCorsGuide : MoModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>

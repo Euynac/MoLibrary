@@ -6,7 +6,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleFrameworkUIBuilderExtensions
 {
     extension(Mo)
@@ -21,13 +20,10 @@ public static class ModuleFrameworkUIBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.FrameworkUI)]
 public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
     : MoModule<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.FrameworkUI;
-    }
 
     public override void ClaimDependencies()
     {
@@ -38,7 +34,6 @@ public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
 
 public class ModuleFrameworkUIGuide : MoModuleGuide<ModuleFrameworkUI, ModuleFrameworkUIOption, ModuleFrameworkUIGuide>
 {
-
 
 }
 

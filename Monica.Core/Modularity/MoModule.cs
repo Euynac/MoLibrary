@@ -11,6 +11,8 @@ namespace Monica.Core.Modularity;
 
 public abstract class MoModule : IMoModule
 {
+    public ModuleKey ModuleKey => ModuleAnalyser.ResolveModuleKey(GetType());
+
     public virtual void ConfigureBuilder(WebApplicationBuilder builder)
     {
     }
@@ -30,7 +32,6 @@ public abstract class MoModule : IMoModule
     {
     }
 
-    public abstract ModuleKey GetModuleKey();
     internal abstract void ConvertToRegisterRequest();
 }
 
@@ -39,30 +40,13 @@ public abstract class MoModule : IMoModule
 /// Base abstract class for Monica modules.
 /// Provides the default implementation of <see cref="IMoModule"/>.
 /// </summary>
-public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleStaticInfo, IMoModuleGuideBridge, IDependsOnOtherModules
+public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleGuideBridge, IDependsOnOtherModules
     where TModuleOption : MoModuleOption<TModuleSelf>, new() 
     where TModuleSelf : MoModule<TModuleSelf, TModuleOption, TModuleGuide>
     where TModuleGuide : MoModuleGuide<TModuleSelf, TModuleOption, TModuleGuide>, new()
 {
     public TModuleOption Option { get; } = option;
     public ILogger Logger { get;  } = option.Logger;
-
-    /// <summary>
-    /// Gets the module key representing this module type.
-    /// This static method creates a temporary instance to access the GetModuleKey method.
-    /// </summary>
-    /// <returns>The ModuleKey representing this module.</returns>
-    public static ModuleKey GetStaticModuleKey()
-    {
-        // Create a temporary instance with default options to get the module key
-        var instance = Activator.CreateInstance(typeof(TModuleSelf), new TModuleOption()) as TModuleSelf;
-        var moduleKey = instance!.GetModuleKey();
-
-        // Register the mapping between module type and key
-        ModuleAnalyser.RegisterModuleMapping(typeof(TModuleSelf), moduleKey);
-
-        return moduleKey;
-    }
 
     /// <summary>
     /// Gets a configured option object for another module.
@@ -143,7 +127,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()
         where TOtherModuleGuide : MoModuleGuide, new()
     {
-        return MoModuleGuide.DeclareDependency<TOtherModuleGuide>(GetModuleKey(), GetModuleKey());
+        return MoModuleGuide.DeclareDependency<TOtherModuleGuide>(ModuleKey, ModuleKey);
     }
 }
 

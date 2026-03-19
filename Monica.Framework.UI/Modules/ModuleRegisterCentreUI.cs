@@ -11,13 +11,10 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+[ModuleKey(EMoModuleKey.RegisterCentreUI)]
 public class ModuleRegisterCentreUI(ModuleRegisterCentreUIOption option)
     : MoModule<ModuleRegisterCentreUI, ModuleRegisterCentreUIOption, ModuleRegisterCentreUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.RegisterCentreUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

@@ -30,16 +30,13 @@ public static class ModuleLocalizationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Localization)]
 public class ModuleLocalization(ModuleLocalizationOption option)
     : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IWantIterateBusinessTypes
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
     private readonly List<Type> _discoveredResourceMarkerTypes = [];
 
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Localization;
-    }
     
 
     public override void ConfigureServices(IServiceCollection services)

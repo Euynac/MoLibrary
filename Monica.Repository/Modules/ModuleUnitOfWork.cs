@@ -27,13 +27,10 @@ public static class ModuleUnitOfWorkBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.UnitOfWork)]
 public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
     : MoModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.UnitOfWork;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

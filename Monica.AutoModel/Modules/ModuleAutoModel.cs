@@ -28,6 +28,7 @@ public static class ModuleAutoModelBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.AutoModel)]
 public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -41,11 +42,6 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
             typeof(AutoModelExpressionTokenizer<>));
         services.AddTransient<IAutoModelTokenExpressionGen, AutoModelTokenExpressionGenDynamicLinqProvider>();
         services.AddTransient<IAutoModelTypeConverter, AutoModelTypeConverter>();
-    }
-
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.AutoModel;
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -89,7 +85,6 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
 
 public class ModuleAutoModelGuide : MoModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
 {
-
 
 }
 

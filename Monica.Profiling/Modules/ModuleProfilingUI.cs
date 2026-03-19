@@ -28,13 +28,10 @@ public static class ModuleProfilingUIBuilderExtensions
 /// <summary>
 ///     Profiling UI 模块 - 提供内存分析和性能监控界面
 /// </summary>
+[ModuleKey(EMoModuleKey.ProfilingUI)]
 public class ModuleProfilingUI(ModuleProfilingUIOption option)
     : MoModule<ModuleProfilingUI, ModuleProfilingUIOption, ModuleProfilingUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ProfilingUI;
-    }
 
     public override void ClaimDependencies()
     {

@@ -27,18 +27,10 @@ public static class ModuleCancellationManagerBuilderExtensions
 /// 分布式取消令牌管理器模块
 /// 提供跨微服务实例的取消令牌管理功能
 /// </summary>
+[ModuleKey(EMoModuleKey.CancellationManager)]
 public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
 {
-    /// <summary>
-    /// 获取当前模块枚举值
-    /// </summary>
-    /// <returns>返回取消令牌管理器模块枚举</returns>
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.CancellationManager;
-    }
-
     /// <summary>
     /// 配置服务依赖注入
     /// </summary>
@@ -112,7 +104,6 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
         RecordKeyedServiceKey(key);
         return this;
     }
-
 
 }
 

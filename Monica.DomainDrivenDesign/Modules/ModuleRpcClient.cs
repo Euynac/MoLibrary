@@ -31,16 +31,12 @@ public static class ModuleRpcClientBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.RpcClient)]
 public class ModuleRpcClient(ModuleRpcClientOption option) :
     MoModule<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
     IWantIterateBusinessTypes
 {
     public List<Type> RelatedTypes { get; set; } = [];
-
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.RpcClient;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -200,7 +196,6 @@ public interface IMoRpcHttpClientRegisterProvider
 {
     void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid);
 }
-
 
 public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUserManager) : DelegatingHandler
 {

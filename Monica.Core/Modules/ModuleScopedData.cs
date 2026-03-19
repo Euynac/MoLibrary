@@ -25,6 +25,7 @@ public static class ModuleScopedDataBuilderExtensions
 /// <summary>
 /// ScopedData module for managing contextual data within the scoped lifetime.
 /// </summary>
+[ModuleKey(EMoModuleKey.ScopedData)]
 public class ModuleScopedData(ModuleScopedDataOption option)
     : MoModule<ModuleScopedData, ModuleScopedDataOption, ModuleScopedDataGuide>(option)
 {
@@ -40,14 +41,6 @@ public class ModuleScopedData(ModuleScopedDataOption option)
         base.ConfigureServices(services);
     }
 
-    /// <summary>
-    /// Gets the module key for the current module.
-    /// </summary>
-    /// <returns>The module key.</returns>
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ScopedData;
-    }
 }
 
 /// <summary>

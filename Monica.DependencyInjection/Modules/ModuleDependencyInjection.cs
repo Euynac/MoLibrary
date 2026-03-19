@@ -24,15 +24,12 @@ public static class ModuleDependencyInjectionBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DependencyInjection)]
 public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
     : MoModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IWantIterateBusinessTypes
 {
     private IConventionalRegistrar? _registrar;
     private IServiceCollection? _services;
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DependencyInjection;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -40,7 +37,6 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         _services = services;
     }
-
 
     /// <summary>
     /// Iterates through business types and registers them with the dependency injection container.

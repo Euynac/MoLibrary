@@ -30,6 +30,7 @@ public static class ModuleFrameworkMonitorBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.FrameworkMonitor)]
 public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
     : MoModule<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption, ModuleFrameworkMonitorGuide>(option), IWantIterateBusinessTypes
 {
@@ -50,11 +51,6 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
         assembly.GetTypes()
             .Where(p => p.Namespace == related && p.IsSubclassOf(type) &&
                         p.HasExplicitDefinedStaticConstructor()).Do(p => p.RunStaticConstructor());
-    }
-
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.FrameworkMonitor;
     }
 
     private IServiceCollection _services = null!;
@@ -128,7 +124,6 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
                     .WithDescription("请求过滤中间件");
             }
 
-
             endpoints.MapGet("/framework/units",
                 async ([FromServices] IFrameworkMonitorService frameworkMonitorService) =>
                 {
@@ -166,7 +161,6 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
 public class ModuleFrameworkMonitorGuide : MoModuleGuide<ModuleFrameworkMonitor, ModuleFrameworkMonitorOption,
     ModuleFrameworkMonitorGuide>
 {
-
 
 }
 

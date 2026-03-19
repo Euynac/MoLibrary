@@ -23,12 +23,9 @@ using Polly.Retry;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+[ModuleKey(EMoModuleKey.RegisterCentre)]
 public class ModuleRegisterCentre(ModuleRegisterCentreOption option) : MoModule<ModuleRegisterCentre, ModuleRegisterCentreOption, ModuleRegisterCentreGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.RegisterCentre;
-    }
 
     public override void ClaimDependencies()
     {

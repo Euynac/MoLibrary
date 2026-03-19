@@ -19,7 +19,6 @@ using Monica.DomainDrivenDesign.AutoController.Settings;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleAutoControllersBuilderExtensions
 {
     extension(Mo)
@@ -42,13 +41,10 @@ public static class ModuleAutoControllersBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.AutoControllers)]
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
     : MoModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IWantIterateBusinessTypes
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.AutoControllers;
-    }
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>

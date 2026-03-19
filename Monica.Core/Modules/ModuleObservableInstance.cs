@@ -26,13 +26,10 @@ public static class ModuleObservableInstanceBuilderExtensions
 /// ObservableInstance module provides universal state and exception tracking for all instances.
 /// Replaces ModuleExceptionPool functionality with a unified observable pattern.
 /// </summary>
+[ModuleKey(EMoModuleKey.ObservableInstance)]
 public class ModuleObservableInstance(ModuleObservableInstanceOption option)
     : MoModule<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ObservableInstance;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

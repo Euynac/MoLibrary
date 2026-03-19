@@ -26,14 +26,11 @@ public static class ModuleDaprEventBusBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DaprEventBus)]
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     : MoModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
       IEventBusModuleProvider
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DaprEventBus;
-    }
 
     #region IEventBusModuleProvider
 

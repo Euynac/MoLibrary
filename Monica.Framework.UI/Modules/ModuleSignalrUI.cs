@@ -10,7 +10,6 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleSignalrUIBuilderExtensions
 {
     extension(Mo)
@@ -25,13 +24,10 @@ public static class ModuleSignalrUIBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.SignalrUI)]
 public class ModuleSignalrUI(ModuleSignalrUIOption option)
     : MoModule<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.SignalrUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -50,7 +46,6 @@ public class ModuleSignalrUI(ModuleSignalrUIOption option)
 
 public class ModuleSignalrUIGuide : MoModuleGuide<ModuleSignalrUI, ModuleSignalrUIOption, ModuleSignalrUIGuide>
 {
-
 
 }
 

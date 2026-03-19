@@ -11,7 +11,6 @@ using Monica.StateStore.Providers;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleDaprStateStoreBuilderExtensions
 {
     public static ModuleDaprStateStoreGuide UseDaprStateStoreProvider(this ModuleStateStoreGuide guide,
@@ -55,14 +54,11 @@ public static class ModuleDaprStateStoreBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DaprStateStore)]
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
     : MoModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DaprStateStore;
-    }
 
     public override void ClaimDependencies()
     {
@@ -91,9 +87,7 @@ public class
     ModuleDaprStateStoreGuide>
 {
 
-
 }
-
 
 public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
 {

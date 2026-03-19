@@ -84,14 +84,11 @@ public static class ModuleRedisStateStoreBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.RedisStateStore)]
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
     : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.RedisStateStore;
-    }
 
     public override void ClaimDependencies()
     {

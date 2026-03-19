@@ -31,15 +31,10 @@ public static class ModuleGitUIBuilderExtensions
 /// <summary>
 /// Git dashboard UI module.
 /// </summary>
+[ModuleKey(EMoModuleKey.GitUI)]
 public class ModuleGitUI(ModuleGitUIOption option)
     : MoModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
 {
-    /// <inheritdoc />
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.GitUI;
-    }
-
     /// <inheritdoc />
     public override void ClaimDependencies()
     {

@@ -13,18 +13,10 @@ namespace Monica.Modules;
 /// <summary>
 /// DataChannel UI模块，提供DataChannel的管理界面
 /// </summary>
+[ModuleKey(EMoModuleKey.DataChannelUI)]
 public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     : MoModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
 {
-    /// <summary>
-    /// 获取当前模块枚举
-    /// </summary>
-    /// <returns>DataChannelUI模块枚举</returns>
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DataChannelUI;
-    }
-
     /// <summary>
     /// 配置服务
     /// </summary>

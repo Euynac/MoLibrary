@@ -114,11 +114,10 @@ internal class {Feature}Service(
 ### Basic Module
 
 ```csharp
+[ModuleKey(EMoModuleKey.{Name})]
 public class Module{Name}(Module{Name}Option option)
     : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.{Name};
-
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register facade (public)
@@ -132,11 +131,10 @@ public class Module{Name}(Module{Name}Option option)
 ### Module That Declares Dependencies
 
 ```csharp
+[ModuleKey(EMoModuleKey.{Name})]
 public class Module{Name}(Module{Name}Option option)
     : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.{Name};
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<{Name}Facade>();

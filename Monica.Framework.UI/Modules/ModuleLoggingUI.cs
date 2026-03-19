@@ -33,13 +33,10 @@ public static class ModuleLoggingUIBuilderExtensions
 /// <summary>
 /// Logging UI 模块实现
 /// </summary>
+[ModuleKey(EMoModuleKey.LoggingUI)]
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
     : MoModule<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.LoggingUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

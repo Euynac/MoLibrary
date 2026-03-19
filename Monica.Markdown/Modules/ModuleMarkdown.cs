@@ -26,13 +26,10 @@ public static class ModuleMarkdownBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Markdown)]
 public class ModuleMarkdown(ModuleMarkdownOption option)
     : MoModule<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Markdown;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

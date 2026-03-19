@@ -10,7 +10,6 @@ using Monica.Tool.Extensions;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleClockBuilderExtensions
 {
     extension(Mo)
@@ -25,12 +24,9 @@ public static class ModuleClockBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Clock)]
 public class ModuleClock(ModuleClockOption option) : MoModule<ModuleClock, ModuleClockOption, ModuleClockGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Clock;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

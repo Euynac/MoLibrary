@@ -8,7 +8,6 @@ using Monica.StateStore.ProgressBar;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleProgressBarBuilderExtensions
 {
     extension(Mo)
@@ -23,13 +22,10 @@ public static class ModuleProgressBarBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.ProgressBar)]
 public class ModuleProgressBar(ModuleProgressBarOption option)
     : MoModule<ModuleProgressBar, ModuleProgressBarOption, ModuleProgressBarGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.ProgressBar;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

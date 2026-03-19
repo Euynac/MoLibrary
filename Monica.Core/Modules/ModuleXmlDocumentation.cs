@@ -27,14 +27,11 @@ public static class ModuleXmlDocumentationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.XmlDocumentation)]
 public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     : MoModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
 {
     public static IXmlDocumentationService? Singleton { get; private set; }
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.XmlDocumentation;
-    }
 
     /// <summary>
     /// Configures services.

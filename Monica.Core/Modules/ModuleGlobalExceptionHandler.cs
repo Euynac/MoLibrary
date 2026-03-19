@@ -15,7 +15,6 @@ using Monica.Tool.MoResponse;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleGlobalExceptionHandlerBuilderExtensions
 {
     extension(Mo)
@@ -30,13 +29,10 @@ public static class ModuleGlobalExceptionHandlerBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.GlobalExceptionHandler)]
 public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption option)
     : MoModule<ModuleGlobalExceptionHandler, ModuleGlobalExceptionHandlerOption, ModuleGlobalExceptionHandlerGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.GlobalExceptionHandler;
-    }
 
     /// <summary>
     /// Adds global exception handling middleware to the application. This middleware should be added early in the pipeline to catch any exceptions that occur during processing.
@@ -54,8 +50,6 @@ public class ModuleGlobalExceptionHandler(ModuleGlobalExceptionHandlerOption opt
         //{  
         //    app.UseExceptionHandler(_ => { });
         //}
-
-
 
         //默认情况下包含了一个默认的异常处理程序，会打印异常信息到控制台。如若要禁用此功能，需要在日志配置中设置"Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware": "None"
         app.UseExceptionHandler(_ => { });  

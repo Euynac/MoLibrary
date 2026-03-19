@@ -41,18 +41,10 @@ public static class ModuleUICoreBuilderExtensions
 /// UI核心模块
 /// 提供基于MudBlazor的UI基础设施
 /// </summary>
+[ModuleKey(EMoModuleKey.UICore)]
 public class ModuleUICore(ModuleUICoreOption option)
     : MoModule<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
 {
-    /// <summary>
-    /// 获取当前模块枚举
-    /// </summary>
-    /// <returns>UI核心模块枚举</returns>
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.UICore;
-    }
-
     /// <summary>
     /// 声明模块依赖
     /// </summary>
@@ -135,7 +127,6 @@ public class ModuleUICore(ModuleUICoreOption option)
 public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>
 {
 
-
     /// <summary>
     /// 注册UI组件
     /// </summary>
@@ -198,8 +189,6 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             builder.ApplicationBuilder.UseAntiforgery();
 
         }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
-
-
 
         ConfigureEndpoints(builder =>
         {

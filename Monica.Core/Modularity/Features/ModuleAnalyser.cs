@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Monica.Core.Modularity.Models;
 
@@ -32,6 +33,28 @@ public class ModuleAnalyser
     {
         ModuleTypeToKeyMap[moduleType] = moduleKey;
         ModuleKeyToTypeDict[moduleKey] = moduleType;
+    }
+
+    /// <summary>
+    /// Resolves the module key declared on a module type and caches the type-to-key mapping.
+    /// </summary>
+    /// <param name="moduleType">The module type.</param>
+    /// <returns>The resolved module key.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the module type has no <see cref="ModuleKeyAttribute"/>.</exception>
+    public static ModuleKey ResolveModuleKey(Type moduleType)
+    {
+        ArgumentNullException.ThrowIfNull(moduleType);
+
+        if (ModuleTypeToKeyMap.TryGetValue(moduleType, out var cached))
+        {
+            return cached;
+        }
+
+        var attribute = moduleType.GetCustomAttribute<ModuleKeyAttribute>()
+            ?? throw new InvalidOperationException($"Module {moduleType.Name} has no [ModuleKey] attribute.");
+
+        RegisterModuleMapping(moduleType, attribute.Key);
+        return attribute.Key;
     }
 
     /// <summary>
@@ -148,7 +171,13 @@ public class ModuleAnalyser
     {
         var graph = new DirectedGraph<ModuleKey>();
 
-        // Add all modules as nodes
+        // Add all registered modules as nodes, even if they have no dependencies.
+        foreach (var moduleType in MoModuleRegisterCentre.ModuleRegisterContextDict.Keys)
+        {
+            graph.AddNode(ResolveModuleKey(moduleType));
+        }
+
+        // Preserve any additional mappings that may have been populated outside normal registration.
         foreach (var module in ModuleKeyToTypeDict.Keys)
         {
             graph.AddNode(module);
@@ -318,25 +347,15 @@ public class ModuleAnalyser
     /// Gets the current registration order information for all registered modules.
     /// </summary>
     /// <returns>A dictionary containing the module type, module key, and registration order.</returns>
-    public static Dictionary<Type, (ModuleKey? ModuleKey, int Order)> GetModuleRegistrationOrder()
+    public static Dictionary<Type, (ModuleKey ModuleKey, int Order)> GetModuleRegistrationOrder()
     {
-        var result = new Dictionary<Type, (ModuleKey?, int)>();
+        var result = new Dictionary<Type, (ModuleKey ModuleKey, int Order)>();
 
         foreach (var kvp in MoModuleRegisterCentre.ModuleRegisterContextDict)
         {
             var moduleType = kvp.Key;
             var requestInfo = kvp.Value;
-
-            // Resolve the module key for this type.
-            if (ModuleTypeToKeyMap.TryGetValue(moduleType, out var moduleKey))
-            {
-                result[moduleType] = (moduleKey, requestInfo.Order);
-            }
-            else
-            {
-                // If the module key is unknown, keep the order and return `null` for the key.
-                result[moduleType] = (null, requestInfo.Order);
-            }
+            result[moduleType] = (ResolveModuleKey(moduleType), requestInfo.Order);
         }
 
         return result;
@@ -375,11 +394,11 @@ public class ModuleAnalyser
                 var initDuration = snapshot.TotalInitializationDurationMs;
 
                 // Basic module information.
-                var moduleKeyDisplay = moduleKey?.ToString() ?? "Unknown";
+                var moduleKeyDisplay = moduleKey.ToString();
                 sb.AppendLine($"Order {order:D4}: {moduleKeyDisplay} ({moduleTypeName})");
 
                 // Dependency information.
-                if (moduleKey != null && ModuleDependencyMap.TryGetValue(moduleKey.Value, out var dependencies) && dependencies.Count > 0)
+                if (ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
@@ -403,13 +422,13 @@ public class ModuleAnalyser
             foreach (var disabledModuleType in disabledModuleTypes)
             {
                 // Resolve the module key for display.
-                var moduleKey = ModuleTypeToKeyMap.GetValueOrDefault(disabledModuleType);
-                var moduleKeyDisplay = moduleKey.Value != null ? moduleKey.ToString() : disabledModuleType.Name;
+                var moduleKey = ResolveModuleKey(disabledModuleType);
+                var moduleKeyDisplay = moduleKey.ToString();
 
                 sb.AppendLine($"{moduleKeyDisplay} ({disabledModuleType.Name}) [DISABLED]");
 
                 // Dependency information, if any.
-                if (moduleKey.Value != null && ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
+                if (ModuleDependencyMap.TryGetValue(moduleKey, out var dependencies) && dependencies.Count > 0)
                 {
                     sb.AppendLine($"           Dependencies: {string.Join(", ", dependencies)}");
                 }
@@ -442,7 +461,7 @@ public class ModuleAnalyser
             sb.AppendLine($"  Slowest modules:");
             foreach (var module in slowestModules)
             {
-                var moduleKeyDisplay = module.ModuleKey?.ToString() ?? "Unknown";
+                var moduleKeyDisplay = module.ModuleKey.ToString();
                 sb.AppendLine($"    {moduleKeyDisplay}: {module.TotalInitializationDurationMs}ms");
             }
         }

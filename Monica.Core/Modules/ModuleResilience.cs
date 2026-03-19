@@ -23,13 +23,10 @@ public static class ModuleResilienceBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Resilience)]
 public class ModuleResilience(ModuleResilienceOption option)
     : MoModule<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Resilience;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

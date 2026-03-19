@@ -40,15 +40,10 @@ public static class ModuleAIBuilderExtensions
 /// <summary>
 /// AI 模块
 /// </summary>
+[ModuleKey(EMoModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
     : MoModule<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
 {
-    /// <inheritdoc />
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.AI;
-    }
-
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {

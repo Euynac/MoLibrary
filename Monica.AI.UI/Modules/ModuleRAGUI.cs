@@ -32,10 +32,10 @@ public static class ModuleRAGUIBuilderExtensions
 /// RAG UI module.
 /// Provides Blazor-based RAG debug and management interface.
 /// </summary>
+[ModuleKey(EMoModuleKey.RAGUI)]
 public class ModuleRAGUI(ModuleRAGUIOption option)
     : MoModule<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.RAGUI;
 
     public override void ConfigureServices(IServiceCollection services)
     {

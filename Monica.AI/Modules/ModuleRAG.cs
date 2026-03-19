@@ -40,12 +40,10 @@ public static class ModuleRAGBuilderExtensions
 /// <summary>
 /// RAG (Retrieval-Augmented Generation) module.
 /// </summary>
+[ModuleKey(EMoModuleKey.RAG)]
 public class ModuleRAG(ModuleRAGOption option)
     : MoModule<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(option)
 {
-    /// <inheritdoc />
-    public override ModuleKey GetModuleKey() => EMoModuleKey.RAG;
-
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {

@@ -29,11 +29,11 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
 /// <summary>
 /// Dapr 服务调用模块
 /// </summary>
+[ModuleKey(EMoModuleKey.DaprProviderClientConnector)]
 public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
     : MoModule<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
         ModuleDaprServiceInvocationGuide>(option)
 {
-    public override ModuleKey GetModuleKey() => EMoModuleKey.DaprProviderClientConnector;
 
     public override void ClaimDependencies()
     {

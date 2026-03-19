@@ -42,12 +42,11 @@ public static class ModuleJobSchedulerBuilderExtensions
 /// Integrates all components including control plane (scheduling), worker plane (execution),
 /// and metadata persistence layer.
 /// </summary>
+[ModuleKey(EMoModuleKey.JobScheduler)]
 public class ModuleJobScheduler(ModuleJobSchedulerOption option)
     : MoModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
-
-    public override ModuleKey GetModuleKey() => EMoModuleKey.JobScheduler;
 
     /// <summary>
     /// Iterates through business types to discover and collect job types.
@@ -356,7 +355,6 @@ public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
     /// Null for unlimited. Default: null.
     /// </summary>
     public int? MaxWorkerExecutionThreads { get; set; } = null;
-
 
    
 

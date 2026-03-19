@@ -31,14 +31,11 @@ public static class ModuleConfigurationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Configuration)]
 public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IWantIterateBusinessTypes
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Configuration;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -61,7 +58,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
         //     manager.AddStreamingDaprConfigurationStore(Option.DaprStoreName!, [], client,
         //         TimeSpan.FromSeconds(10));
         // }
-
 
         //use reflection to call AddOptions<T> and Bind
         var method = typeof(OptionsServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
@@ -128,7 +124,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
             yield return configType;
         }
     }
-
 
    
 }
@@ -199,7 +194,6 @@ public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConf
     /// </summary>
     public LocalJsonFileProvider.RemovedPropertyHandling RemovedPropertyHandling { get; set; } = LocalJsonFileProvider.RemovedPropertyHandling.Comment;
     #endregion
-
 
     /// <summary>
     /// 设置其他配置来源，优先级高。（优先级就是读取的顺序，后面的读取重复的会覆盖前面的配置）

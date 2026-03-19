@@ -31,13 +31,10 @@ public static class ModuleEventBusUIBuilderExtensions
 /// <summary>
 /// 事件总线UI模块
 /// </summary>
+[ModuleKey(EMoModuleKey.EventBusUI)]
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
     : MoModule<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.EventBusUI;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

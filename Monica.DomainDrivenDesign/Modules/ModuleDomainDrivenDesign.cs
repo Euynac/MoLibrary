@@ -14,12 +14,9 @@ using Monica.Tool.Extensions;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+[ModuleKey(EMoModuleKey.DomainDrivenDesign)]
 public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModule<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DomainDrivenDesign;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -76,7 +73,6 @@ public static class ModuleDomainDrivenDesignBuilderExtensions
 }
 public class ModuleDomainDrivenDesignGuide : MoModuleGuide<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>
 {
-
 
 }
 

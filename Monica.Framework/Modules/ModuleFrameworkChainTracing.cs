@@ -7,7 +7,6 @@ using Monica.Core.Modularity.Models;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-
 public static class ModuleFrameworkChainTracingBuilderExtensions
 {
     extension(Mo)
@@ -22,13 +21,10 @@ public static class ModuleFrameworkChainTracingBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.FrameworkChainTracing)]
 public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption option)
     : MoModule<ModuleFrameworkChainTracing, ModuleFrameworkChainTracingOption, ModuleFrameworkChainTracingGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.FrameworkChainTracing;
-    }
 
     public override void ClaimDependencies()
     {
@@ -53,7 +49,6 @@ public class ModuleFrameworkChainTracing(ModuleFrameworkChainTracingOption optio
 public class ModuleFrameworkChainTracingGuide : MoModuleGuide<ModuleFrameworkChainTracing,
     ModuleFrameworkChainTracingOption, ModuleFrameworkChainTracingGuide>
 {
-
 
 }
 

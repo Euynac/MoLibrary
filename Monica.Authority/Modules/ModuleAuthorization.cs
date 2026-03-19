@@ -32,12 +32,9 @@ public static class ModuleAuthorizationBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.Authority)]
 public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Authority;
-    }
 
     public override void ConfigureServices(IServiceCollection services)
     {

@@ -23,13 +23,10 @@ public static class ModuleDynamicProxyBuilderExtensions
     }
 }
 
+[ModuleKey(EMoModuleKey.DynamicProxy)]
 public class ModuleDynamicProxy(ModuleDynamicProxyOption option)
     : MoModule<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.DynamicProxy;
-    }
 }
 
 public class

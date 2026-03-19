@@ -15,12 +15,9 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+[ModuleKey(EMoModuleKey.Swagger)]
 public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.Swagger;
-    }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
@@ -36,7 +33,6 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             Option.ExtendSwaggerUIAction?.Invoke(c);
         });
     }
-
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -63,7 +59,6 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             //巨坑：对于非法字符生成也会出现问题，所以需要过滤非法字符。.Replace('+', '.') 似乎不需要.Replace("`", "_")
             //最佳的方案当然是返回值均采用显式DTO类型
             options.CustomSchemaIds(type => type.GetCleanFullName());
-
 
             if(!Option.DisableXmlDocumentation)
             {
@@ -152,7 +147,6 @@ public static class ModuleSwaggerBuilderExtensions
 public class ModuleSwaggerGuide : MoModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
 {
 }
-
 
 public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
 {

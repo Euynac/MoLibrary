@@ -30,13 +30,10 @@ public static class ModuleHostedServiceBuilderExtensions
 /// HostedService observability module.
 /// Provides centralized HostedService state management, heartbeat monitoring, and coordination support.
 /// </summary>
+[ModuleKey(EMoModuleKey.HostedService)]
 public class ModuleHostedService(ModuleHostedServiceOption option)
     : MoModule<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
-    public override ModuleKey GetModuleKey()
-    {
-        return EMoModuleKey.HostedService;
-    }
 
     public override void ClaimDependencies()
     {
