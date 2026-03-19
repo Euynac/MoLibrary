@@ -66,6 +66,7 @@
         "CompletedAt": "完成时间",
         "Duration": "耗时",
         "Characters": "字符数",
+        "Tokens": "Token",
         "EstimatedTokens": "估算 Token"
       },
       "Subtitle": {
@@ -73,6 +74,16 @@
         "Completed": "共完成 {0} 个 Tool 调用",
         "Failed": "已完成 {0} 个，失败 {1} 个，执行中 {2} 个"
       }
+    },
+    "SourcePreview": {
+      "Title": "来源原文",
+      "FallbackTitle": "Markdown 原文",
+      "Loading": "正在加载来源文档原文...",
+      "Path": "路径：{0}",
+      "Unavailable": "当前未启用 Markdown 文档服务，无法打开来源原文。",
+      "NotFound": "未找到来源路径为 '{0}' 的 Markdown 文档。",
+      "LoadFailed": "加载来源文档失败：{0}",
+      "OpenFailed": "打开来源原文失败"
     }
   },
   "Provider": {

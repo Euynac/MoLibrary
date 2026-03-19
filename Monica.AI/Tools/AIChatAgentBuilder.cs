@@ -61,6 +61,14 @@ public sealed class AIChatAgentBuilder(string? instructions)
     }
 
     /// <summary>
+    /// Allow the model to invoke more than one tool during a single response.
+    /// </summary>
+    public void EnableMultipleToolCalling()
+    {
+        AllowMultipleToolCalls = true;
+    }
+
+    /// <summary>
     /// Restrict the model to a single tool call at a time for each response.
     /// </summary>
     public void DisableMultipleToolCalling()

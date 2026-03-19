@@ -1,6 +1,6 @@
-@using System.Text
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
+@inject ITokenCountProvider TokenCountProvider
 @inject IStringLocalizer<AIResource> L
 
 <MudDialog>
@@ -70,10 +70,10 @@
                         </MudText>
                         <div class="tool-call-dialog-metrics">
                             <span class="tool-call-dialog-metric">
-                                @L["Chat:ToolCalls:Fields:Characters"]: @GetCharacterCount(InputText)
+                                @L["Chat:ToolCalls:Fields:Characters"]: @InputTokenMetrics.CharacterCount
                             </span>
                             <span class="tool-call-dialog-metric">
-                                @L["Chat:ToolCalls:Fields:EstimatedTokens"]: @EstimateTokenCount(InputText)
+                                @GetTokenLabel(): @InputTokenMetrics.TokenCount
                             </span>
                         </div>
                     </div>
@@ -87,10 +87,10 @@
                         </MudText>
                         <div class="tool-call-dialog-metrics">
                             <span class="tool-call-dialog-metric">
-                                @L["Chat:ToolCalls:Fields:Characters"]: @GetCharacterCount(OutputText)
+                                @L["Chat:ToolCalls:Fields:Characters"]: @OutputTokenMetrics.CharacterCount
                             </span>
                             <span class="tool-call-dialog-metric">
-                                @L["Chat:ToolCalls:Fields:EstimatedTokens"]: @EstimateTokenCount(OutputText)
+                                @GetTokenLabel(): @OutputTokenMetrics.TokenCount
                             </span>
                         </div>
                     </div>
@@ -98,9 +98,12 @@
                 </section>
             </div>
 
-            <MudText Typo="Typo.caption" Class="tool-call-dialog-footnote">
-                @L["Chat:ToolCalls:Dialog:EstimatedTokenHint"]
-            </MudText>
+            @if (TokenCountProvider.IsEstimated)
+            {
+                <MudText Typo="Typo.caption" Class="tool-call-dialog-footnote">
+                    @L["Chat:ToolCalls:Dialog:EstimatedTokenHint"]
+                </MudText>
+            }
         </div>
     </DialogContent>
     <DialogActions>
@@ -120,6 +123,10 @@
     private string InputText => ToolCall.ArgumentsText ?? L["Chat:ToolCalls:NoInput"];
 
     private string OutputText => GetOutputText(ToolCall) ?? L["Chat:ToolCalls:NoOutput"];
+
+    private TokenCountResult InputTokenMetrics => TokenCountProvider.CountTokens(InputText);
+
+    private TokenCountResult OutputTokenMetrics => TokenCountProvider.CountTokens(OutputText);
 
     private void Close() => MudDialog.Close();
 
@@ -157,17 +164,8 @@
     private static string FormatDateTime(DateTimeOffset value)
         => value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
-    private static int GetCharacterCount(string? text)
-        => text?.Length ?? 0;
-
-    private static int EstimateTokenCount(string? text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0;
-        }
-
-        var byteCount = Encoding.UTF8.GetByteCount(text);
-        return Math.Max(1, (int)Math.Ceiling(byteCount / 4d));
-    }
+    private string GetTokenLabel()
+        => TokenCountProvider.IsEstimated
+            ? L["Chat:ToolCalls:Fields:EstimatedTokens"]
+            : L["Chat:ToolCalls:Fields:Tokens"];
 }

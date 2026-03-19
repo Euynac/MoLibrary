@@ -151,9 +151,12 @@
             return null;
         }
 
-        if (call.Arguments.TryGetValue("userQuestion", out var query) && query is not null)
+        foreach (var argumentKey in s_previewArgumentKeys)
         {
-            return query.ToString();
+            if (call.Arguments.TryGetValue(argumentKey, out var value) && value is not null)
+            {
+                return value.ToString();
+            }
         }
 
         return call.Arguments.FirstOrDefault(x => x.Value is not null).Value?.ToString();
@@ -169,6 +172,11 @@
         if (TryGetResultCount(call.ResultText, out var resultCount))
         {
             return L["Chat:ToolCalls:ResultCount", resultCount];
+        }
+
+        if (TryGetPayloadMessage(call.ResultText, out var message))
+        {
+            return TruncateText(message);
         }
 
         return string.IsNullOrWhiteSpace(call.ResultText)
@@ -203,6 +211,42 @@
             }
 
             return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetPayloadMessage(string? resultText, out string message)
+    {
+        message = string.Empty;
+        if (string.IsNullOrWhiteSpace(resultText))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(resultText);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (!document.RootElement.TryGetProperty("Message", out var messageProperty)
+                && !document.RootElement.TryGetProperty("message", out messageProperty))
+            {
+                return false;
+            }
+
+            if (messageProperty.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            message = messageProperty.GetString() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(message);
         }
         catch
         {
@@ -251,4 +295,19 @@
                 MaxWidth = MaxWidth.ExtraLarge
             });
     }
+
+    private static readonly string[] s_previewArgumentKeys =
+    [
+        "searchQuery",
+        "userQuestion",
+        "query",
+        "directoryPath",
+        "documentId",
+        "sourceLink",
+        "knowledgeBaseId",
+        "startCharacterIndex",
+        "maxTokens",
+        "maxDepth",
+        "maxEntries"
+    ];
 }

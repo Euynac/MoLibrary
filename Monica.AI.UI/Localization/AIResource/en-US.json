@@ -66,6 +66,7 @@
         "CompletedAt": "Completed",
         "Duration": "Duration",
         "Characters": "Characters",
+        "Tokens": "Tokens",
         "EstimatedTokens": "Estimated tokens"
       },
       "Subtitle": {
@@ -73,6 +74,16 @@
         "Completed": "{0} tool call(s) completed",
         "Failed": "{0} completed, {1} failed, {2} running"
       }
+    },
+    "SourcePreview": {
+      "Title": "Source Preview",
+      "FallbackTitle": "Markdown Source",
+      "Loading": "Loading source markdown...",
+      "Path": "Path: {0}",
+      "Unavailable": "Markdown document service is not available, so the source preview cannot be opened.",
+      "NotFound": "No markdown document matched source path '{0}'.",
+      "LoadFailed": "Failed to load source document: {0}",
+      "OpenFailed": "Failed to open the source preview"
     }
   },
   "Provider": {

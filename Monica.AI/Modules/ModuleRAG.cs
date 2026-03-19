@@ -8,6 +8,7 @@ using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
+using Monica.AI.Services;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Tools;
@@ -48,7 +49,9 @@ public class ModuleRAG(ModuleRAGOption option)
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.AddSingleton<RAGService>();
+        services.AddSingleton<KnowledgeToolService>();
         services.AddSingleton<RAGEmbeddingBindingResolver>();
         services.AddSingleton<RAGVectorCollectionCoordinator>();
         services.AddSingleton<RAGIndexStateCoordinator>();

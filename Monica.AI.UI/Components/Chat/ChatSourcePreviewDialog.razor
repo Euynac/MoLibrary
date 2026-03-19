@@ -1,0 +1,138 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.Markdown.Interfaces
+@using Monica.Markdown.Models
+@using Monica.UI.Components.Markdown
+@inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="chat-source-preview-root">
+            @if (_isLoading)
+            {
+                <div class="chat-source-preview-loading">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Chat:SourcePreview:Loading"]
+                    </MudText>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                    @_errorMessage
+                </MudAlert>
+            }
+            else
+            {
+                <div class="chat-source-preview-header">
+                    <div class="chat-source-preview-title-block">
+                        <MudText Typo="Typo.h6">@GetDocumentTitle()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["Chat:SourcePreview:Path", NormalizeSourcePath(SourcePath)]
+                        </MudText>
+                    </div>
+                </div>
+
+                <div class="chat-source-preview-content">
+                    <MoMarkdown Value="@_content"
+                                EnableMermaid="true"
+                                ScopeKey="@_document?.GroupKey"
+                                DocumentRelativePath="@_document?.RelativePath" />
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public required string SourcePath { get; set; }
+
+    private bool _isLoading = true;
+    private string _errorMessage = string.Empty;
+    private MarkdownDocument? _document;
+    private string _content = string.Empty;
+    private string _loadedSourcePath = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var normalizedSourcePath = NormalizeSourcePath(SourcePath);
+        if (string.Equals(_loadedSourcePath, normalizedSourcePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _loadedSourcePath = normalizedSourcePath;
+        _isLoading = true;
+        _errorMessage = string.Empty;
+        _document = null;
+        _content = string.Empty;
+
+        var markdownService = ServiceProvider.GetService(typeof(IMoMarkdownService)) as IMoMarkdownService;
+        if (markdownService is null)
+        {
+            _errorMessage = L["Chat:SourcePreview:Unavailable"];
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            _document = await FindDocumentByPathAsync(markdownService, normalizedSourcePath);
+            if (_document is null)
+            {
+                _errorMessage = L["Chat:SourcePreview:NotFound", normalizedSourcePath];
+                return;
+            }
+
+            _content = await markdownService.GetDocumentContentAsync(_document);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _errorMessage = L["Chat:SourcePreview:LoadFailed", ex.Message];
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+
+    private string GetDocumentTitle()
+        => _document?.Title is { Length: > 0 } title
+            ? title
+            : L["Chat:SourcePreview:FallbackTitle"];
+
+    private static async Task<MarkdownDocument?> FindDocumentByPathAsync(
+        IMoMarkdownService markdownService,
+        string documentPath)
+    {
+        var groups = await markdownService.GetAllDocumentGroupsAsync();
+        foreach (var group in groups)
+        {
+            var documents = await markdownService.GetDocumentsAsync(group.Key);
+            var matched = documents.FirstOrDefault(document =>
+                string.Equals(document.RelativePath, documentPath, StringComparison.OrdinalIgnoreCase));
+            if (matched is not null)
+            {
+                return matched;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeSourcePath(string value)
+        => Uri.UnescapeDataString(value.Replace('\\', '/')).Trim().TrimStart('/');
+}

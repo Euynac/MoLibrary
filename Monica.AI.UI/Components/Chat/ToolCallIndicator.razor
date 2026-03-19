@@ -94,9 +94,12 @@
             return null;
         }
 
-        if (call.Arguments.TryGetValue("userQuestion", out var query) && query is not null)
+        foreach (var argumentKey in s_previewArgumentKeys)
         {
-            return query.ToString();
+            if (call.Arguments.TryGetValue(argumentKey, out var value) && value is not null)
+            {
+                return value.ToString();
+            }
         }
 
         return call.Arguments.FirstOrDefault(x => x.Value is not null).Value?.ToString();
@@ -119,4 +122,14 @@
                 MaxWidth = MaxWidth.ExtraLarge
             });
     }
+
+    private static readonly string[] s_previewArgumentKeys =
+    [
+        "searchQuery",
+        "userQuestion",
+        "query",
+        "documentId",
+        "sourceLink",
+        "knowledgeBaseId"
+    ];
 }

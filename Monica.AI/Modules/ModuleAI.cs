@@ -67,6 +67,7 @@ public class ModuleAI(ModuleAIOption option)
         });
 
         // 注册 Provider 管理器
+        services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.AddSingleton<AIProviderManager>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
         services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();

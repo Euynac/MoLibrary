@@ -1,6 +1,12 @@
+@using System.Windows.Input
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
 @using Monica.UI.Components.Markdown
+@inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<AIResource> L
 
 <div class="message-wrapper @(IsUser ? "user-message" : "assistant-message")">
     <MudStack Row="true" Spacing="2" Class="message-content-stack">
@@ -72,7 +78,9 @@
                                 EnableDebugMode="@ToolDebugEnabled" />
                 @if (EnableMarkdown)
                 {
-                    <MoMarkdown Value="@Message.Content" EnableMermaid="true" />
+                    <MoMarkdown Value="@Message.Content"
+                                EnableMermaid="true"
+                                Props="@_assistantMarkdownProps" />
                 }
                 else
                 {
@@ -138,6 +146,14 @@
     private bool _isEditing;
     private string _editContent = string.Empty;
     private bool _reasoningExpanded;
+    private readonly MudMarkdownProps _assistantMarkdownProps = new();
+    private ICommand? _assistantMarkdownLinkCommand;
+
+    protected override void OnInitialized()
+    {
+        _assistantMarkdownLinkCommand = new AsyncCommand(HandleMarkdownLinkClickAsync);
+        _assistantMarkdownProps.Link.Command = _assistantMarkdownLinkCommand;
+    }
 
     private async Task HandleCopy()
     {
@@ -179,5 +195,119 @@
     private void ToggleReasoningExpanded()
     {
         _reasoningExpanded = !_reasoningExpanded;
+    }
+
+    private async Task HandleMarkdownLinkClickAsync(object? parameter)
+    {
+        try
+        {
+            if (parameter is not string targetUrl || string.IsNullOrWhiteSpace(targetUrl))
+            {
+                return;
+            }
+
+            if (TryResolveMarkdownSourcePath(targetUrl, out var sourcePath))
+            {
+                var parameters = new DialogParameters
+                {
+                    [nameof(ChatSourcePreviewDialog.SourcePath)] = sourcePath
+                };
+
+                await DialogService.ShowAsync<ChatSourcePreviewDialog>(
+                    L["Chat:SourcePreview:Title"],
+                    parameters,
+                    new DialogOptions
+                    {
+                        CloseButton = true,
+                        FullWidth = true,
+                        MaxWidth = MaxWidth.Large
+                    });
+                return;
+            }
+
+            if (IsExternalUrl(targetUrl))
+            {
+                await JSRuntime.InvokeVoidAsync("open", targetUrl, "_blank");
+                return;
+            }
+
+            NavigationManager.NavigateTo(targetUrl);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{L["Chat:SourcePreview:OpenFailed"]}: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static bool TryResolveMarkdownSourcePath(string rawUrl, out string sourcePath)
+    {
+        sourcePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return false;
+        }
+
+        var trimmedUrl = rawUrl.Trim();
+        if (trimmedUrl.StartsWith('#'))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(trimmedUrl, UriKind.Absolute, out var absoluteUri))
+        {
+            if (!string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var absolutePath = Uri.UnescapeDataString(absoluteUri.AbsolutePath);
+            if (!absolutePath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            sourcePath = NormalizeSourcePath(absolutePath);
+            return !string.IsNullOrWhiteSpace(sourcePath);
+        }
+
+        var withoutFragment = trimmedUrl.Split(['#', '?'], 2)[0];
+        if (!withoutFragment.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        sourcePath = NormalizeSourcePath(withoutFragment);
+        return !string.IsNullOrWhiteSpace(sourcePath);
+    }
+
+    private static bool IsExternalUrl(string targetUrl)
+        => Uri.TryCreate(targetUrl, UriKind.Absolute, out var absoluteUri)
+           && (string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(absoluteUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
+
+    private static string NormalizeSourcePath(string value)
+        => Uri.UnescapeDataString(value.Replace('\\', '/')).Trim().TrimStart('/');
+
+    private sealed class AsyncCommand(Func<object?, Task> executeAsync) : ICommand
+    {
+        public event EventHandler? CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool CanExecute(object? parameter) => true;
+
+        public async void Execute(object? parameter)
+        {
+            try
+            {
+                await executeAsync(parameter);
+            }
+            catch
+            {
+            }
+        }
     }
 }
