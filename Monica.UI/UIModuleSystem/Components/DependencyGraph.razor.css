@@ -28,6 +28,24 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
+.graph-filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.graph-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.dependency-filter-chipset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .dependency-graph-canvas {
     position: relative;
     overflow: hidden;

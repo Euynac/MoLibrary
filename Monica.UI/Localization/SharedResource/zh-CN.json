@@ -239,6 +239,10 @@
         "ClearAllFilters": "清除所有筛选",
         "CopyModuleName": "复制模块名称"
       },
+      "Actions": {
+        "SelectAll": "全选",
+        "Clear": "清除"
+      },
       "Messages": {
         "HoverToViewDetails": "鼠标悬停在节点上查看详情",
         "ShowingRelatedNodes": "正在显示与 {0} 连通的所有节点。",

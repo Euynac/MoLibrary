@@ -10,9 +10,11 @@ import { ForceLayoutManager } from './d3js/d3-force-layout.js';
 import { NodeInteractionHandler } from './d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from './d3js/d3-layout-algorithms.js';
 
+const ALL_TYPE_FILTERS = Object.freeze(['built-in', 'ui', 'third-party', 'disabled', 'cycle']);
+
 const DEFAULT_FILTERS = Object.freeze({
     edgeFilter: 'all',
-    typeFilter: 'all',
+    typeFilters: ALL_TYPE_FILTERS,
     searchText: '',
     relatedNodeId: null
 });
@@ -346,9 +348,13 @@ class ModuleDependencyGraph {
     }
 
     applyFilter(filterConfig) {
-        const filters = typeof filterConfig === 'string'
+        const rawFilters = typeof filterConfig === 'string'
             ? { ...this.currentFilters, edgeFilter: filterConfig }
             : { ...DEFAULT_FILTERS, ...this.currentFilters, ...(filterConfig || {}) };
+        const filters = {
+            ...rawFilters,
+            typeFilters: this.normalizeTypeFilters(rawFilters.typeFilters ?? rawFilters.typeFilter)
+        };
 
         this.currentFilters = filters;
 
@@ -374,8 +380,12 @@ class ModuleDependencyGraph {
             visibleNodes = visibleNodes.filter(node => connectedNodeIds.has(node.id));
         }
 
-        if (filters.typeFilter && filters.typeFilter !== 'all') {
-            visibleNodes = visibleNodes.filter(node => this.matchesTypeFilter(node, filters.typeFilter));
+        if (Array.isArray(filters.typeFilters)) {
+            if (filters.typeFilters.length === 0) {
+                visibleNodes = [];
+            } else if (filters.typeFilters.length < ALL_TYPE_FILTERS.length) {
+                visibleNodes = visibleNodes.filter(node => this.matchesTypeFilters(node, filters.typeFilters));
+            }
         }
 
         if (normalizedSearch) {
@@ -436,6 +446,26 @@ class ModuleDependencyGraph {
         }
 
         return connected;
+    }
+
+    normalizeTypeFilters(typeFilters) {
+        if (Array.isArray(typeFilters)) {
+            return [...new Set(typeFilters.filter(type => ALL_TYPE_FILTERS.includes(type)))];
+        }
+
+        if (typeof typeFilters === 'string') {
+            if (typeFilters === 'all') {
+                return [...ALL_TYPE_FILTERS];
+            }
+
+            return ALL_TYPE_FILTERS.includes(typeFilters) ? [typeFilters] : [...ALL_TYPE_FILTERS];
+        }
+
+        return [...ALL_TYPE_FILTERS];
+    }
+
+    matchesTypeFilters(node, typeFilters) {
+        return typeFilters.some(typeFilter => this.matchesTypeFilter(node, typeFilter));
     }
 
     matchesTypeFilter(node, typeFilter) {

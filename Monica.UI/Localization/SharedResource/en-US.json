@@ -239,6 +239,10 @@
         "ClearAllFilters": "Clear all filters",
         "CopyModuleName": "Copy module name"
       },
+      "Actions": {
+        "SelectAll": "Select all",
+        "Clear": "Clear"
+      },
       "Messages": {
         "HoverToViewDetails": "Hover over a node to view details",
         "ShowingRelatedNodes": "Showing all nodes connected to {0}.",

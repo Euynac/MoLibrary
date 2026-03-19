@@ -119,73 +119,7 @@
                                     </MudSelectItem>
                                 </MudSelect>
                             </MudItem>
-                            <MudItem xs="12" md="4">
-                                <MudSelect T="string" Value="selectedEdgeFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:Filter"]"
-                                         ValueChanged="OnEdgeFilterChanged" Variant="Variant.Outlined"
-                                         AnchorOrigin="Origin.BottomCenter">
-                                    <MudSelectItem Value="@("all")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Filters:ShowAll"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("direct")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.DirectionsRun" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Filters:DirectOnly"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("cycle")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Filters:CycleOnly"]
-                                        </div>
-                                    </MudSelectItem>
-                                </MudSelect>
-                            </MudItem>
-                            <MudItem xs="12" md="4">
-                                <MudSelect T="string" Value="selectedTypeFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:TypeFilter"]"
-                                         ValueChanged="OnTypeFilterChanged" Variant="Variant.Outlined"
-                                         AnchorOrigin="Origin.BottomCenter">
-                                    <MudSelectItem Value="@("all")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:All"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("built-in")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.SettingsInputComponent" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:BuiltIn"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("ui")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Web" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:UI"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("third-party")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:ThirdParty"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("disabled")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Block" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:Disabled"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("cycle")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.SyncProblem" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Types:Circular"]
-                                        </div>
-                                    </MudSelectItem>
-                                </MudSelect>
-                            </MudItem>
-                            <MudItem xs="12">
+                            <MudItem xs="12" md="8">
                                 <MudTextField T="string"
                                               Value="searchText"
                                               ValueChanged="OnSearchTextChanged"
@@ -196,6 +130,112 @@
                                               Clearable="true"
                                               Adornment="Adornment.Start"
                                               AdornmentIcon="@Icons.Material.Filled.Search" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <div class="graph-filter-group">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                                        @L["ModuleSystem:DependencyGraph:Labels:Filter"]
+                                    </MudText>
+                                    <MudChipSet T="string"
+                                                SelectedValue="selectedEdgeFilter"
+                                                SelectedValueChanged="OnEdgeFilterChipChanged"
+                                                SelectionMode="SelectionMode.SingleSelection"
+                                                CheckMark="true"
+                                                Class="dependency-filter-chipset">
+                                        <MudChip T="string"
+                                                 Value="@("all")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "all")"
+                                                 Color="@GetEdgeFilterColor("all")"
+                                                 Icon="@Icons.Material.Filled.Visibility">
+                                            @L["ModuleSystem:DependencyGraph:Filters:ShowAll"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("direct")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "direct")"
+                                                 Color="@GetEdgeFilterColor("direct")"
+                                                 Icon="@Icons.Material.Filled.DirectionsRun">
+                                            @L["ModuleSystem:DependencyGraph:Filters:DirectOnly"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("cycle")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "cycle")"
+                                                 Color="@GetEdgeFilterColor("cycle")"
+                                                 Icon="@Icons.Material.Filled.Warning">
+                                            @L["ModuleSystem:DependencyGraph:Filters:CycleOnly"]
+                                        </MudChip>
+                                    </MudChipSet>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <div class="graph-filter-group">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                                        @L["ModuleSystem:DependencyGraph:Labels:TypeFilter"]
+                                    </MudText>
+                                    <div class="graph-filter-actions">
+                                        <MudButton Size="Size.Small"
+                                                   Variant="Variant.Text"
+                                                   Color="Color.Primary"
+                                                   OnClick="SelectAllTypeFilters">
+                                            @L["ModuleSystem:DependencyGraph:Actions:SelectAll"]
+                                        </MudButton>
+                                        <MudButton Size="Size.Small"
+                                                   Variant="Variant.Text"
+                                                   Color="Color.Secondary"
+                                                   OnClick="ClearTypeFilters">
+                                            @L["ModuleSystem:DependencyGraph:Actions:Clear"]
+                                        </MudButton>
+                                    </div>
+                                    <MudChipSet T="string"
+                                                SelectedValues="selectedTypeFilters"
+                                                SelectedValuesChanged="OnSelectedTypeFiltersChanged"
+                                                SelectionMode="SelectionMode.MultiSelection"
+                                                CheckMark="true"
+                                                Class="dependency-filter-chipset">
+                                        <MudChip T="string"
+                                                 Value="@("built-in")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "built-in")"
+                                                 Color="@GetTypeFilterColor("built-in")"
+                                                 Icon="@Icons.Material.Filled.SettingsInputComponent">
+                                            @L["ModuleSystem:DependencyGraph:Types:BuiltIn"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("ui")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "ui")"
+                                                 Color="@GetTypeFilterColor("ui")"
+                                                 Icon="@Icons.Material.Filled.Web">
+                                            @L["ModuleSystem:DependencyGraph:Types:UI"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("third-party")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "third-party")"
+                                                 Color="@GetTypeFilterColor("third-party")"
+                                                 Icon="@Icons.Material.Filled.Extension">
+                                            @L["ModuleSystem:DependencyGraph:Types:ThirdParty"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("disabled")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "disabled")"
+                                                 Color="@GetTypeFilterColor("disabled")"
+                                                 Icon="@Icons.Material.Filled.Block">
+                                            @L["ModuleSystem:DependencyGraph:Types:Disabled"]
+                                        </MudChip>
+                                        <MudChip T="string"
+                                                 Value="@("cycle")"
+                                                 Size="Size.Small"
+                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "cycle")"
+                                                 Color="@GetTypeFilterColor("cycle")"
+                                                 Icon="@Icons.Material.Filled.SyncProblem">
+                                            @L["ModuleSystem:DependencyGraph:Types:Circular"]
+                                        </MudChip>
+                                    </MudChipSet>
+                                </div>
                             </MudItem>
                         </MudGrid>
                         <MudDivider Class="my-4" />
@@ -379,9 +419,10 @@
     private IJSObjectReference? jsModule;
     private DotNetObjectReference<DependencyGraph>? dotNetRef;
     private ModuleDependencyGraph? renderedGraphData;
+    private static readonly string[] AvailableTypeFilters = ["built-in", "ui", "third-party", "disabled", "cycle"];
     private string selectedLayout = "force";
     private string selectedEdgeFilter = "all";
-    private string selectedTypeFilter = "all";
+    private IReadOnlyCollection<string> selectedTypeFilters = CreateAllTypeFilters();
     private string searchText = string.Empty;
     private string? relatedNodeId;
     private bool contextMenuOpen;
@@ -519,13 +560,30 @@
         await ApplyCurrentGraphFilters();
     }
 
-    /// <summary>
-    /// Type filter change event.
-    /// </summary>
-    private async Task OnTypeFilterChanged(string filter)
+    private Task OnEdgeFilterChipChanged(string? filter)
     {
-        selectedTypeFilter = filter;
+        return OnEdgeFilterChanged(filter ?? "all");
+    }
+
+    private async Task OnSelectedTypeFiltersChanged(IReadOnlyCollection<string>? filters)
+    {
+        selectedTypeFilters = filters == null
+            ? []
+            : filters.Where(IsSupportedTypeFilter).Distinct(StringComparer.Ordinal).ToArray();
+
         await ApplyCurrentGraphFilters();
+    }
+
+    private Task SelectAllTypeFilters()
+    {
+        selectedTypeFilters = CreateAllTypeFilters();
+        return ApplyCurrentGraphFilters();
+    }
+
+    private Task ClearTypeFilters()
+    {
+        selectedTypeFilters = [];
+        return ApplyCurrentGraphFilters();
     }
 
     /// <summary>
@@ -598,7 +656,7 @@
         await jsModule.InvokeVoidAsync("applyFilter", new
         {
             edgeFilter = selectedEdgeFilter,
-            typeFilter = selectedTypeFilter,
+            typeFilters = selectedTypeFilters,
             searchText,
             relatedNodeId
         });
@@ -656,6 +714,38 @@
 
         return "built-in";
     }
+
+    private static Variant GetFilterChipVariant(string? selectedValue, string chipValue)
+    {
+        return string.Equals(selectedValue, chipValue, StringComparison.Ordinal)
+            ? Variant.Filled
+            : Variant.Outlined;
+    }
+
+    private static Variant GetFilterChipVariant(IReadOnlyCollection<string>? selectedValues, string chipValue)
+    {
+        return selectedValues?.Contains(chipValue) == true
+            ? Variant.Filled
+            : Variant.Outlined;
+    }
+
+    private static Color GetEdgeFilterColor(string filter) => filter switch
+    {
+        "all" => Color.Primary,
+        "direct" => Color.Success,
+        "cycle" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static Color GetTypeFilterColor(string filter) => filter switch
+    {
+        "built-in" => Color.Primary,
+        "ui" => Color.Info,
+        "third-party" => Color.Success,
+        "disabled" => Color.Default,
+        "cycle" => Color.Error,
+        _ => Color.Default
+    };
 
     /// <summary>
     /// Handles node click events coming from the graph.
@@ -821,7 +911,7 @@
             return;
         }
 
-        selectedTypeFilter = GetModuleCategoryKey(targetNode);
+        selectedTypeFilters = [GetModuleCategoryKey(targetNode)];
         await ApplyCurrentGraphFilters();
     }
 
@@ -831,7 +921,7 @@
     private async Task ClearAllFiltersAsync(ModuleDependencyNode? node)
     {
         searchText = string.Empty;
-        selectedTypeFilter = "all";
+        selectedTypeFilters = CreateAllTypeFilters();
         selectedEdgeFilter = "all";
         relatedNodeId = null;
         await ApplyCurrentGraphFilters();
@@ -866,6 +956,16 @@
     {
         relatedNodeId = null;
         return ApplyCurrentGraphFilters();
+    }
+
+    private static IReadOnlyCollection<string> CreateAllTypeFilters()
+    {
+        return [.. AvailableTypeFilters];
+    }
+
+    private static bool IsSupportedTypeFilter(string filter)
+    {
+        return AvailableTypeFilters.Contains(filter, StringComparer.Ordinal);
     }
 
     /// <summary>
