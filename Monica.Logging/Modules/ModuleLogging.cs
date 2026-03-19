@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoLogProvider;
@@ -37,7 +38,7 @@ public static class ModuleLoggingBuilderExtensions
 public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
 
-    public override void ConfigureBuilder(WebApplicationBuilder builder)
+    public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
         var logBuilder = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration);
@@ -46,7 +47,7 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
             ? customLoggerCreator.Invoke(logBuilder)
             : CreateLogger(logBuilder);
 
-        builder.Host.UseSerilog(Log.Logger); // 这里只注册了ILogger<T>的泛型日志，所以在依赖注入中使用需要使用泛型。
+        builder.Logging.AddSerilog(Log.Logger, dispose: true);
         //设置后，内置的微软日志系统的配置将失效
 
         GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");

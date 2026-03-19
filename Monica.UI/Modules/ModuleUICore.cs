@@ -55,13 +55,13 @@ public class ModuleUICore(ModuleUICoreOption option)
             .AddResource<SharedResource>();
     }
 
-    public override void ConfigureBuilder(WebApplicationBuilder builder)
+    public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        if (builder.Environment.IsStaging())
+        if (builder is WebApplicationBuilder webBuilder && builder.Environment.IsStaging())
         {
             //巨坑：使用下面语句，使得 WebAssets 在VS中debug环境可以获得css等资源文件用于调试，但副作用是编译后的debug环境会出现404错误。因为它会使得生产环境访问.nuget目录，导致异常 所以必须限定环境，不能用于生产，生产要通过dotnet publish命令发布静态资源。
             //https://github.com/MudBlazor/MudBlazor/issues/2793
-            builder.WebHost.UseStaticWebAssets();
+            webBuilder.WebHost.UseStaticWebAssets();
             //测试环境可以通过查看.StaticWebAssets.xml看生成的静态资源文件。
 
             //生产环境是运行dotnet publish，会自动将依赖的static web assets拷贝到wwwroot文件夹。（直接通过dotnet build release 模式是不会生成wwwroot的）
@@ -169,7 +169,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     {
         ConfigureApplicationBuilder(builder =>
         {
-            var app = builder.WebApplication;
+            var app = builder.RequireWebApplication();
 
             //app.UseExceptionHandler("/Error", createScopeForErrors: true);
 
@@ -192,6 +192,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
         ConfigureEndpoints(builder =>
         {
+            var app = builder.RequireWebApplication();
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
 
             if (!builder.ModuleOption.DisableModuleSystemUI)
@@ -204,10 +205,10 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             {
                 var fromPath = redirect.Key;
                 var toPath = redirect.Value;
-                builder.WebApplication.MapGet(fromPath, () => Results.LocalRedirect(toPath));
+                app.MapGet(fromPath, () => Results.LocalRedirect(toPath));
             }
 
-            builder.WebApplication.MapRazorComponents<MoApp>()
+            app.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
             //巨坑：如果缺少中间件中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
         });

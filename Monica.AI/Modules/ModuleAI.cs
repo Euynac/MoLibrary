@@ -194,7 +194,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     {
         ConfigureEndpoints(builder =>
         {
-            var endpoints = builder.WebApplication;
+            var endpoints = builder.RequireWebApplication();
             var providerFactory = endpoints.Services.GetRequiredService<IAIProviderFactory>();
 
             // Get all providers

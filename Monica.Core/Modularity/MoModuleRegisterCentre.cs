@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoLogProvider;
-using Monica.Core.Modularity.BuilderWrapper;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Interfaces;
@@ -23,23 +23,6 @@ public static class MoModuleRegisterCentre
     public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
     public static ILogger Logger { get; set; } = LogProvider.For(typeof(MoModuleRegisterCentre));
-    /// <summary>
-    /// Static constructor that wires the module lifecycle events.
-    /// </summary>
-    static MoModuleRegisterCentre()
-    {
-        // Register services before the application is built.
-        WebApplicationBuilderExtensions.BeforeBuild += RegisterServices;
-
-        // Configure middleware that should run before `UseRouting`.
-        WebApplicationBuilderExtensions.BeforeUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, false);
-
-        // Configure middleware that should run after `UseRouting`.
-        WebApplicationBuilderExtensions.AfterUseRouting += app => ConfigApplicationPipeline(app, ModuleOrder.MIDDLEWARE_USE_ROUTING, true);
-
-        // Configure endpoints before the application reaches endpoint mapping.
-        WebApplicationBuilderExtensions.BeginUseEndpoints += ConfigEndpoints;
-    }
 
     /// <summary>
     /// Module snapshots captured after successful registration.
@@ -98,9 +81,9 @@ public static class MoModuleRegisterCentre
     /// Registers services for all currently registered modules.
     /// This method must run before `builder.Build()`.
     /// </summary>
-    /// <param name="builder">The web application builder.</param>
+    /// <param name="builder">The host application builder.</param>
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-    internal static void RegisterServices(WebApplicationBuilder builder)
+    internal static void RegisterServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
 

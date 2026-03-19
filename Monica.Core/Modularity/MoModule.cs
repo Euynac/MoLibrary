@@ -2,6 +2,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Interfaces;
@@ -9,11 +10,11 @@ using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity;
 
-public abstract class MoModule : IMoModule
+public abstract class MoModule : IMoWebModule
 {
     public ModuleKey ModuleKey => ModuleAnalyser.ResolveModuleKey(GetType());
 
-    public virtual void ConfigureBuilder(WebApplicationBuilder builder)
+    public virtual void ConfigureBuilder(IHostApplicationBuilder builder)
     {
     }
 
@@ -38,7 +39,7 @@ public abstract class MoModule : IMoModule
 
 /// <summary>
 /// Base abstract class for Monica modules.
-/// Provides the default implementation of <see cref="IMoModule"/>.
+/// Provides the default implementation of <see cref="IMoWebModule"/>.
 /// </summary>
 public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : MoModule, IMoModuleGuideBridge, IDependsOnOtherModules
     where TModuleOption : MoModuleOption<TModuleSelf>, new() 
@@ -80,7 +81,7 @@ public abstract class MoModule<TModuleSelf, TModuleOption, TModuleGuide>(TModule
 
         guide.ConfigureBuilder(context =>
         {
-            ConfigureBuilder(context.WebApplicationBuilder);
+            ConfigureBuilder(context.HostApplicationBuilder);
         }, -1);
 
         guide.ConfigureServices(context =>

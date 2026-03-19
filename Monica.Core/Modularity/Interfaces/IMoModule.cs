@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Monica.Core.Modularity.Interfaces;
 
@@ -10,10 +10,10 @@ namespace Monica.Core.Modularity.Interfaces;
 public interface IMoModule
 {
     /// <summary>
-    /// Configures the <see cref="WebApplicationBuilder"/>.
+    /// Configures the <see cref="IHostApplicationBuilder"/>.
     /// </summary>
     /// <param name="builder">The application builder.</param>
-    void ConfigureBuilder(WebApplicationBuilder builder);
+    void ConfigureBuilder(IHostApplicationBuilder builder);
 
     /// <summary>
     /// Configures service registrations.
@@ -27,9 +27,4 @@ public interface IMoModule
     /// <param name="services">The service collection.</param>
     void PostConfigureServices(IServiceCollection services);
 
-    /// <summary>
-    /// Configures the application pipeline before `UseRouting`.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    void ConfigureApplicationBuilder(IApplicationBuilder app);
 }

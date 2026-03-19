@@ -17,7 +17,7 @@ public enum EMoModuleConfigMethods
     InitFinalConfigures,
     
     /// <summary>
-    /// Configures the WebApplicationBuilder for the module.
+    /// Configures the IHostApplicationBuilder for the module.
     /// </summary>
     ConfigureBuilder,
     

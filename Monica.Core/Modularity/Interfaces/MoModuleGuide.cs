@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Features.MoLogProvider;
 using Monica.Core.Modularity.Features;
@@ -291,7 +292,7 @@ public class MoModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : MoModuleG
     }
 
     /// <summary>
-    /// Configures the <see cref="WebApplicationBuilder"/> for the module.
+    /// Configures the <see cref="IHostApplicationBuilder"/> for the module.
     /// </summary>
     /// <param name="context">The builder configuration context action.</param>
     /// <param name="order">The concrete execution order value.</param>

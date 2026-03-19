@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity.Interfaces;
-using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Models;
 
@@ -10,9 +10,9 @@ namespace Monica.Core.Modularity.Models;
 /// </summary>
 /// <param name="services">The service collection.</param>
 /// <param name="applicationBuilder">The application builder.</param>
-/// <param name="webApplicationBuilder">The web application builder.</param>
+/// <param name="hostApplicationBuilder">The host application builder.</param>
 /// <param name="moduleRegisterInfo">The module registration information.</param>
-public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, WebApplicationBuilder? webApplicationBuilder, ModuleRegisterInfo moduleRegisterInfo)
+public class ModuleRegisterContext(IServiceCollection? services, IApplicationBuilder? applicationBuilder, IHostApplicationBuilder? hostApplicationBuilder, ModuleRegisterInfo moduleRegisterInfo)
 {
     /// <summary>
     /// The service collection.
@@ -25,14 +25,9 @@ public class ModuleRegisterContext(IServiceCollection? services, IApplicationBui
     public IApplicationBuilder? ApplicationBuilder { get; init; } = applicationBuilder;
 
     /// <summary>
-    /// Gets the application as a <see cref="WebApplication"/> when the current builder supports it.
+    /// The host application builder.
     /// </summary>
-    public WebApplication? WebApplication => ApplicationBuilder == null ? null : ApplicationBuilder as WebApplication ?? throw new InvalidOperationException($"当前{nameof(ApplicationBuilder)}是{ApplicationBuilder.GetType().GetCleanFullName()}类型，而不是{nameof(WebApplication)}类型！");
-    
-    /// <summary>
-    /// The web application builder.
-    /// </summary>
-    public WebApplicationBuilder? WebApplicationBuilder { get; init; } = webApplicationBuilder;
+    public IHostApplicationBuilder? HostApplicationBuilder { get; init; } = hostApplicationBuilder;
     
     /// <summary>
     /// The module registration information.
@@ -91,12 +86,23 @@ public class ModuleRegisterContextWrapperForServices<TModuleOption>(ModuleRegist
 public class ModuleRegisterContextWrapperForApplicationBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
 {
     public IApplicationBuilder ApplicationBuilder => Context.ApplicationBuilder!;
-    public WebApplication WebApplication => Context.WebApplication!;
+
+    /// <summary>
+    /// Gets the current application builder as a <see cref="WebApplication"/>.
+    /// </summary>
+    /// <returns>The current <see cref="WebApplication"/> instance.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the current application builder is not a <see cref="WebApplication"/>.</exception>
+    public WebApplication RequireWebApplication()
+    {
+        return ApplicationBuilder as WebApplication
+               ?? throw new InvalidOperationException(
+                   $"{Context.ModuleRegisterInfo.ModuleType.Name} requires {nameof(WebApplication)} during {Context.ModuleRegisterInfo.ModulePhase}.");
+    }
 }
 
 public class ModuleRegisterContextWrapperForBuilder<TModuleOption>(ModuleRegisterContext context) : ModuleRegisterContextWrapper<TModuleOption>(context) where TModuleOption : IMoModuleOption
 {
-    public WebApplicationBuilder WebApplicationBuilder => Context.WebApplicationBuilder!;
+    public IHostApplicationBuilder HostApplicationBuilder => Context.HostApplicationBuilder!;
 }
 
 

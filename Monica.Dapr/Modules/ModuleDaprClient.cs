@@ -1,7 +1,8 @@
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.JsonSerialization;
 using Monica.Core.Modularity;
@@ -32,9 +33,9 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
     : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
 
-    public override void ConfigureBuilder(WebApplicationBuilder builder)
+    public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        builder.WebHost.ConfigureKestrel(options =>
+        builder.Services.Configure<KestrelServerOptions>(options =>
         {
             options.Limits.MaxRequestBodySize = Option.MaxReceiveMessageSize;
         });

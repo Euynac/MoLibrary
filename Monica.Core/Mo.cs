@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.BuilderWrapper;
 using Monica.Core.Modularity.TypeFinder;
 
 namespace Monica.Core;
@@ -9,23 +8,13 @@ namespace Monica.Core;
 public static class Mo
 {
     /// <summary>
-    /// Initializes the Mo module system with Harmony patches for ASP.NET Core lifecycle interception.
-    /// This should be called early in the application startup, typically before configuring services.
-    /// </summary>
-    public static void Initialize()
-    {
-        // Initialize Harmony patches to intercept native ASP.NET Core methods
-        HarmonyPatchManager.EnsurePatched();
-    }
-
-    /// <summary>
     /// Registers already-loaded modules immediately.
     /// Use this when some modules must be available during registration, such as configuration or logging.
     /// Be careful with modules that have nested dependencies because later configuration may no longer take effect
     /// after those modules have already been registered.
     /// </summary>
-    /// <param name="builder">The application builder used to register module services.</param>
-    public static void RegisterInstantly(WebApplicationBuilder builder)
+    /// <param name="builder">The host application builder used to register module services.</param>
+    public static void RegisterInstantly(IHostApplicationBuilder builder)
     {
         MoModuleRegisterCentre.RegisterServices(builder);
     }
