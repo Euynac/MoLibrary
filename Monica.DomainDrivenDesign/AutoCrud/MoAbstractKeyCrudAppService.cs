@@ -1,4 +1,5 @@
 using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -74,7 +75,6 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             featureSetting = setting;
         }
 
-
         if (input is not IHasRequestPage { DisablePage: true }) //不分页则不需要Count
         {
             if (featureSetting?.ShouldJumpCount() is not true)
@@ -120,10 +120,10 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             };
         }
 
-        //var entities = await finalEntityQuery.ToListAsync();
+        var entities = await finalEntityQuery.ToListAsync();
+        var cursor = entities is { Count: > 0 } ? entities.Last()?.Id?.ToString() : null;
 
         var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(finalEntityQuery);
-
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
@@ -142,7 +142,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         {
             TotalCounts = totalCount ?? entityDtos.Count,
             PageSize = pageSize,
-            CurrentPage = curPage
+            CurrentPage = curPage,
+            Cursor = cursor
         };
     }
     /// <summary>
@@ -170,12 +171,11 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
         if (result.Results is not List<TGetListOutputDto> dtos)
             return new ResPaged<dynamic>(result.TotalCounts, result.Results, result.CurrentPage,
-                result.PageSize);
-        
+                result.PageSize, result.Cursor);
         
         if ((await ApplyCustomActionToResponseListAsync(input, dtos)).IsFailed(out var error, out var data)) return error;
         return new ResPaged<dynamic>(result.TotalCounts, (IReadOnlyList<dynamic>) data, result.CurrentPage,
-            result.PageSize);
+            result.PageSize, result.Cursor);
     }
 
     /// <summary>
@@ -362,6 +362,11 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             return query;
         }
 
+        if (input is IHasRequestKeysetPage requestKeysetPage && requestKeysetPage.HasUsingKeyset())
+        {
+            query = FilterByKeyset(query, requestKeysetPage.Cursor!);
+        }
+
         return input is IHasRequestLimitedResult ? ApplyDefaultSorting(query) : query;
     }
 
@@ -417,12 +422,31 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
         if (query is IQueryable<TEntity> entityQuery)
         {
+            if(input is IHasRequestKeysetPage requestKeysetPage && requestKeysetPage.HasUsingKeyset())
+            {
+                return (input switch
+                {
+                    IHasRequestSkipCount pagedResultRequest => entityQuery.Take(pagedResultRequest.MaxResultCount),
+                    IHasRequestLimitedResult limitedResultRequest => entityQuery.Take(limitedResultRequest.MaxResultCount),
+                    _ => entityQuery
+                }, curPage, pageSize);
+            }
 
             return (input switch
             {
                 IHasRequestSkipCount pagedResultRequest => entityQuery.Skip(pagedResultRequest.SkipCount ?? 0).Take(pagedResultRequest.MaxResultCount),
                 IHasRequestLimitedResult limitedResultRequest => entityQuery.Take(limitedResultRequest.MaxResultCount),
                 _ => entityQuery
+            }, curPage, pageSize);
+        }
+
+        if (input is IHasRequestKeysetPage keysetPage && keysetPage.HasUsingKeyset())
+        {
+            return (input switch
+            {
+                IHasRequestSkipCount pagedResultRequest => query.Take(pagedResultRequest.MaxResultCount),
+                IHasRequestLimitedResult limitedResultRequest => query.Take(limitedResultRequest.MaxResultCount),
+                _ => query
             }, curPage, pageSize);
         }
 
@@ -539,6 +563,21 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return queryable;
     }
 
+    protected virtual IQueryable<TEntity> FilterByKeyset(IQueryable<TEntity> queryable, string cursor)
+    {
+        if (string.IsNullOrEmpty(cursor)) return queryable;
+
+        var paramExpression = Expression.Parameter(typeof(TEntity), "a");
+        var memberExpression = Expression.PropertyOrField(paramExpression, "Id");
+
+        var cursorValue = (TKey) Convert.ChangeType(cursor, typeof(TKey));
+        var constant = Expression.Constant(cursorValue, typeof(TKey));
+
+        var lessThan = Expression.LessThan(memberExpression, constant);
+        var lamada = Expression.Lambda<Func<TEntity, bool>>(lessThan, paramExpression);
+
+        return queryable.Where(lamada);
+    }
     #region Mapper
 
     /// <summary>
@@ -606,6 +645,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         public int TotalCounts { get; set; }
         public int? PageSize { get; set; }
         public int? CurrentPage { get; set; }
+
+        public string? Cursor { get; set; }
     }
 }
 

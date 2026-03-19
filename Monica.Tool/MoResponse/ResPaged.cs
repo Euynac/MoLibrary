@@ -50,6 +50,8 @@ public class ResPaged<TDto> : IMoResponse
         /// 是否可以向后翻页
         /// </summary>
         public bool? HasNext => CurrentPage == null ? null : CurrentPage < TotalPages;
+
+        public string? Cursor { get; set; }
     }
     public ResPaged()
     {
@@ -65,6 +67,16 @@ public class ResPaged<TDto> : IMoResponse
         {
             CurrentPage = currentPage,
             PageSize = pageSize
+        };
+    }
+
+    public ResPaged(int sum, IReadOnlyList<TDto> items, int? currentPage, int? pageSize, string? cursor)
+    {
+        Data = new PageData(sum, items)
+        {
+            CurrentPage = currentPage,
+            PageSize = pageSize,
+            Cursor = cursor
         };
     }
     /// <summary>

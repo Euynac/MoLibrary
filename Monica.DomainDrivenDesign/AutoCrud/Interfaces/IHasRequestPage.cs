@@ -42,3 +42,16 @@ public interface IHasRequestSkipCount : IHasRequestLimitedResult
     [Range(0, 2147483647)]
     public int? SkipCount { get; set; }
 }
+
+/// <summary>
+/// 键值分页
+/// </summary>
+public interface IHasRequestKeysetPage : IHasRequestLimitedResult
+{
+    public string? Cursor { get; set; }
+
+    bool HasUsingKeyset()
+    {
+        return !string.IsNullOrWhiteSpace(Cursor);
+    }
+}

@@ -22,7 +22,7 @@ public class MoCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 /// <summary>
 /// 分页请求Dto
 /// </summary>
-public class MoCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IHasRequestSelect, IHasRequestPage, IHasRequestFeature, IHasRequestSorting
+public class MoCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IHasRequestSelect, IHasRequestPage, IHasRequestFeature, IHasRequestSorting, IHasRequestKeysetPage
 {
     /// <inheritdoc />
     public int? Page { get; set; }
@@ -46,6 +46,8 @@ public class MoCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, 
 
     /// <inheritdoc />
     public string? Sorting { get; set; }
+
+    public string? Cursor { get; set; }
 
     static MoCrudPageRequestDto()
     {
