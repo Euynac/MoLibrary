@@ -214,6 +214,7 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var graph = ModuleAnalyser.CalculateCompleteModuleDependencyGraph();
         var nodes = new List<ModuleDependencyNode>();
         var edges = new List<ModuleDependencyEdge>();
+        var edgeKeys = new HashSet<(ModuleKey Source, ModuleKey Target, DependencyType Type)>();
 
         // Create graph nodes.
         foreach (var moduleKey in graph.Nodes)
@@ -237,6 +238,8 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
                 ModuleName = moduleKey.ToString(),
                 ModuleTypeName = moduleType?.Name ?? "Unknown",
                 IsEnabled = isEnabled,
+                IsUIModule = moduleKey.IsUIModule,
+                IsThirdPartyModule = !moduleKey.IsBuiltIn,
                 DirectDependencyCount = directDeps,
                 TotalDependencyCount = dependencies.Count,
                 DependentModuleCount = dependentCount,
@@ -246,19 +249,45 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
             });
         }
 
-        // Create graph edges.
-        foreach (var (source, target) in graph.Edges)
+        // Create graph edges, including transitive dependencies.
+        foreach (var source in graph.Nodes)
         {
-            var dependencyType = DetermineEdgeType(source, target);
-            var isPartOfCycle = IsEdgePartOfCycle(source, target);
+            var dependencyInfo = ModuleAnalyser.GetModuleDependencyInfo(source);
 
-            edges.Add(new ModuleDependencyEdge
+            foreach (var target in dependencyInfo.DirectDependencies)
             {
-                SourceModule = source,
-                TargetModule = target,
-                DependencyType = dependencyType,
-                IsPartOfCycle = isPartOfCycle
-            });
+                var dependencyType = DetermineEdgeType(source, target);
+                var isPartOfCycle = IsEdgePartOfCycle(source, target);
+
+                if (edgeKeys.Add((source, target, dependencyType)))
+                {
+                    edges.Add(new ModuleDependencyEdge
+                    {
+                        SourceModule = source,
+                        TargetModule = target,
+                        DependencyType = dependencyType,
+                        IsPartOfCycle = isPartOfCycle
+                    });
+                }
+            }
+
+            var transitiveDependencies = dependencyInfo.AllDependencies
+                .Except(dependencyInfo.DirectDependencies)
+                .Where(target => target != source);
+
+            foreach (var target in transitiveDependencies)
+            {
+                if (edgeKeys.Add((source, target, DependencyType.Transitive)))
+                {
+                    edges.Add(new ModuleDependencyEdge
+                    {
+                        SourceModule = source,
+                        TargetModule = target,
+                        DependencyType = DependencyType.Transitive,
+                        IsPartOfCycle = false
+                    });
+                }
+            }
         }
 
         var hasCircularDependencies = graph.HasCycles();

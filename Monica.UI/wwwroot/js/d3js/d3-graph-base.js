@@ -312,6 +312,19 @@ export function resetView(svg, zoom, duration = 750) {
 }
 
 /**
+ * Scales the current zoom level by a multiplier.
+ * @param {Object} svg - SVG element
+ * @param {Object} zoom - D3 zoom behavior
+ * @param {number} scaleBy - Zoom multiplier
+ * @param {number} duration - Animation duration
+ */
+export function scaleView(svg, zoom, scaleBy, duration = 300) {
+    svg.transition()
+        .duration(duration)
+        .call(zoom.scaleBy, scaleBy);
+}
+
+/**
  * 聚焦到指定位置
  * @param {Object} svg - SVG 元素
  * @param {Object} zoom - zoom 行为对象
@@ -396,6 +409,18 @@ export class GraphBase {
     
     resetView(duration = 750) {
         resetView(this.svg, this.zoom, duration);
+    }
+
+    zoomBy(scaleBy, duration = 300) {
+        scaleView(this.svg, this.zoom, scaleBy, duration);
+    }
+
+    zoomIn(duration = 300) {
+        this.zoomBy(1.2, duration);
+    }
+
+    zoomOut(duration = 300) {
+        this.zoomBy(1 / 1.2, duration);
     }
     
     focusOnPosition(position, scale = 1.5) {

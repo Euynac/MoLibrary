@@ -179,6 +179,9 @@
         "GraphControls": "图表控制",
         "LayoutAlgorithm": "布局算法",
         "Filter": "过滤器",
+        "TypeFilter": "类型筛选",
+        "Search": "名称搜索",
+        "SearchPlaceholder": "按模块名称搜索",
         "ZoomIn": "放大",
         "ZoomOut": "缩小",
         "ResetView": "重置视图",
@@ -186,31 +189,60 @@
         "ExportImage": "导出图片",
         "Legend": "图例",
         "NodeTypes": "节点类型",
-        "EnabledModule": "启用模块",
+        "BuiltInModule": "内置模块",
+        "UIModule": "UI模块",
+        "ThirdPartyModule": "第三方模块",
         "DisabledModule": "禁用模块",
         "CircularDependencyModule": "循环依赖模块",
         "EdgeTypes": "连线类型",
         "DirectDependency": "直接依赖",
         "TransitiveDependency": "传递依赖",
+        "DependedBy": "被依赖",
         "CircularDependency": "循环依赖",
+        "ModuleCategory": "模块类别",
+        "ModuleStatus": "状态",
         "NodeDetails": "节点详情"
       },
       "States": {
         "Exists": "存在",
-        "None": "无"
+        "None": "无",
+        "Enabled": "启用",
+        "Disabled": "禁用",
+        "Yes": "是",
+        "No": "否"
       },
       "Layouts": {
         "Force": "力导向布局",
         "Hierarchical": "层次布局",
         "Circular": "环形布局"
       },
+      "Types": {
+        "All": "全部类型",
+        "BuiltIn": "内置模块",
+        "UI": "UI模块",
+        "ThirdParty": "第三方模块",
+        "Disabled": "禁用模块",
+        "Circular": "循环依赖模块"
+      },
       "Filters": {
         "ShowAll": "显示全部",
         "DirectOnly": "仅直接依赖",
         "CycleOnly": "仅循环依赖"
       },
+      "ContextMenu": {
+        "Details": "查看详情",
+        "FocusNode": "聚焦此节点",
+        "FilterByType": "筛选同类型",
+        "ClearRelatedFilter": "取消连通节点筛选",
+        "ShowOtherRelatedNodes": "显示其他连通节点",
+        "ShowRelatedNodes": "显示连通节点",
+        "ClearAllFilters": "清除所有筛选",
+        "CopyModuleName": "复制模块名称"
+      },
       "Messages": {
-        "HoverToViewDetails": "鼠标悬停在节点上查看详情"
+        "HoverToViewDetails": "鼠标悬停在节点上查看详情",
+        "ShowingRelatedNodes": "正在显示与 {0} 连通的所有节点。",
+        "CopiedToClipboard": "已复制到剪贴板。"
       },
       "Loading": {
         "DependencyOverview": "加载依赖关系概览...",

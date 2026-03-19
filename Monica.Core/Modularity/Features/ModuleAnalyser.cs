@@ -130,7 +130,7 @@ public class ModuleAnalyser
             return allDependencies;
         }
 
-        var visited = new HashSet<ModuleKey>();
+        var visited = new HashSet<ModuleKey> { moduleKey };
         var toVisit = new Queue<ModuleKey>();
 
         // Start with direct dependencies

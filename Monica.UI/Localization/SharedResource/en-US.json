@@ -179,6 +179,9 @@
         "GraphControls": "Graph Controls",
         "LayoutAlgorithm": "Layout Algorithm",
         "Filter": "Filter",
+        "TypeFilter": "Type Filter",
+        "Search": "Search by Name",
+        "SearchPlaceholder": "Search by module name",
         "ZoomIn": "Zoom In",
         "ZoomOut": "Zoom Out",
         "ResetView": "Reset View",
@@ -186,31 +189,60 @@
         "ExportImage": "Export Image",
         "Legend": "Legend",
         "NodeTypes": "Node Types",
-        "EnabledModule": "Enabled Module",
+        "BuiltInModule": "Built-in Module",
+        "UIModule": "UI Module",
+        "ThirdPartyModule": "Third-party Module",
         "DisabledModule": "Disabled Module",
         "CircularDependencyModule": "Circular Dependency Module",
         "EdgeTypes": "Edge Types",
         "DirectDependency": "Direct Dependency",
         "TransitiveDependency": "Transitive Dependency",
+        "DependedBy": "Depended By",
         "CircularDependency": "Circular Dependency",
+        "ModuleCategory": "Module Category",
+        "ModuleStatus": "Status",
         "NodeDetails": "Node Details"
       },
       "States": {
         "Exists": "Exists",
-        "None": "None"
+        "None": "None",
+        "Enabled": "Enabled",
+        "Disabled": "Disabled",
+        "Yes": "Yes",
+        "No": "No"
       },
       "Layouts": {
         "Force": "Force-Directed Layout",
         "Hierarchical": "Hierarchical Layout",
         "Circular": "Circular Layout"
       },
+      "Types": {
+        "All": "All Types",
+        "BuiltIn": "Built-in Module",
+        "UI": "UI Module",
+        "ThirdParty": "Third-party Module",
+        "Disabled": "Disabled Module",
+        "Circular": "Circular Dependency Module"
+      },
       "Filters": {
         "ShowAll": "Show All",
         "DirectOnly": "Direct Dependencies Only",
         "CycleOnly": "Circular Dependencies Only"
       },
+      "ContextMenu": {
+        "Details": "View details",
+        "FocusNode": "Focus this node",
+        "FilterByType": "Filter by type",
+        "ClearRelatedFilter": "Clear related-node filter",
+        "ShowOtherRelatedNodes": "Show other related nodes",
+        "ShowRelatedNodes": "Show related nodes",
+        "ClearAllFilters": "Clear all filters",
+        "CopyModuleName": "Copy module name"
+      },
       "Messages": {
-        "HoverToViewDetails": "Hover over a node to view details"
+        "HoverToViewDetails": "Hover over a node to view details",
+        "ShowingRelatedNodes": "Showing all nodes connected to {0}.",
+        "CopiedToClipboard": "Copied to clipboard."
       },
       "Loading": {
         "DependencyOverview": "Loading dependency overview...",

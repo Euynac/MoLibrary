@@ -1,136 +1,137 @@
 /**
- * 模块依赖关系图可视化
- * 使用模块化的 D3.js 组件
- * 
- * @module module-dependency-graph
+ * Module dependency graph visualization.
+ *
+ * This graph renders Monica module dependencies with D3.js and exposes
+ * interaction hooks back to the Blazor component.
  */
 
-import { GraphBase, getModernLinkStyle, getModernNodeStyle } from './d3js/d3-graph-base.js';
+import { GraphBase, getModernLinkStyle } from './d3js/d3-graph-base.js';
 import { ForceLayoutManager } from './d3js/d3-force-layout.js';
-import { NodeInteractionHandler, createStaticDragBehavior } from './d3js/d3-node-interaction.js';
+import { NodeInteractionHandler } from './d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from './d3js/d3-layout-algorithms.js';
 
-/**
- * 模块依赖图类
- */
+const DEFAULT_FILTERS = Object.freeze({
+    edgeFilter: 'all',
+    typeFilter: 'all',
+    searchText: '',
+    relatedNodeId: null
+});
+
 class ModuleDependencyGraph {
-    constructor(containerId) {
+    constructor(containerId, dotNetRef = null) {
         this.containerId = containerId;
         this.container = document.getElementById(containerId);
-        
+        this.dotNetRef = dotNetRef;
+        this.texts = this.getDefaultTexts();
+        this.currentLayout = 'force';
+        this.currentFilters = { ...DEFAULT_FILTERS };
+
         if (!this.container) {
             throw new Error(`Container with ID '${containerId}' not found`);
         }
-        
-        // 初始化基础图形
+
         this.graphBase = new GraphBase(containerId, {
-            showArrows: true
+            showArrows: true,
+            onBackgroundClick: () => this.handleBackgroundClick()
         });
-        
-        // 初始化力导向布局管理器
+
         this.forceManager = new ForceLayoutManager(
             this.graphBase.width,
             this.graphBase.height,
             {
-                linkDistance: 120,
-                chargeStrength: -400,
-                keepFixed: false // 拖拽结束后释放节点，使其参与力模拟
+                linkDistance: 140,
+                chargeStrength: -420,
+                keepFixed: false
             }
         );
-        
-        // 初始化布局算法
+
         this.layoutAlgorithms = createLayoutAlgorithms(
             this.graphBase.width,
             this.graphBase.height
         );
-        
-        // 初始化交互处理器
+
         this.interactionHandler = new NodeInteractionHandler({
-            onClick: (event, d) => this.handleNodeClick(d),
-            onRightClick: (event, d, position) => this.handleNodeRightClick(d, position),
-            onHover: (event, d) => this.showNodeInfo(d),
-            onLeave: (event, d) => this.hideNodeInfo(),
+            onClick: (event, node) => this.handleNodeClick(node),
+            onRightClick: (event, node, position) => this.handleNodeRightClick(node, position),
+            onHover: (event, node) => this.showNodeInfo(node),
+            onHoverOut: () => this.hideNodeInfo(),
             highlightOptions: {
-                fadeOpacity: 0.3,
-                normalOpacity: 0.8
+                fadeOpacity: 0.22,
+                normalOpacity: 1
             },
             markerIds: this.graphBase.markerIds
         });
-        
-        // 节点样式
-        this.nodeStyle = getModernNodeStyle(false, 'simple');
-        
-        // 当前布局类型
-        this.currentLayout = 'force';
     }
-    
-    /**
-     * 获取节点颜色 - 使用MudBlazor CSS变量
-     */
-    getNodeColorByType(d) {
-        // 基于节点状态返回CSS变量
-        if (d.isPartOfCycle) return 'var(--mud-palette-error)'; // 循环依赖 - 错误色
-        if (d.isDisabled) return 'var(--mud-palette-warning)'; // 禁用 - 警告色
-        return 'var(--mud-palette-primary)'; // 正常 - 主色
+
+    getDefaultTexts() {
+        return {
+            labels: {
+                directDependencies: 'Direct Dependencies',
+                transitiveDependencies: 'Transitive Dependencies',
+                dependedBy: 'Depended By',
+                circularDependency: 'Circular Dependency',
+                moduleStatus: 'Status',
+                moduleCategory: 'Module Category'
+            },
+            states: {
+                yes: 'Yes',
+                no: 'No'
+            },
+            messages: {
+                hoverToViewDetails: 'Hover over a node to view details'
+            }
+        };
     }
-    
-    /**
-     * 获取边颜色 - 使用MudBlazor CSS变量
-     */
-    getEdgeColorByType(type) {
-        switch (type) {
-            case 'Direct': return 'var(--mud-palette-success)'; // 直接依赖 - 成功色
-            case 'Transitive': return 'var(--mud-palette-secondary)'; // 传递依赖 - 次要色
-            case 'Circular': return 'var(--mud-palette-error)'; // 循环依赖 - 错误色
-            default: return 'var(--mud-palette-text-disabled)'; // 默认 - 禁用文本色
-        }
-    }
-    
-    /**
-     * 初始化数据
-     */
-    initialize(nodes, edges) {
-        this.nodes = nodes;
-        this.edges = edges;
-        
-        // 清空现有内容
-        this.graphBase.mainGroup.selectAll('.links').remove();
-        this.graphBase.mainGroup.selectAll('.nodes').remove();
-        this.graphBase.mainGroup.selectAll('.labels').remove();
-        
-        // 创建组
+
+    initialize(nodes, edges, texts) {
+        this.nodes = nodes.map(node => ({ ...node }));
+        this.edges = edges.map(edge => ({ ...edge }));
+        this.texts = texts || this.getDefaultTexts();
+
+        this.stopNodeStateAnimations();
+        this.graphBase.mainGroup.selectAll('*').remove();
+
         const linkGroup = this.graphBase.mainGroup.append('g').attr('class', 'links');
         const nodeGroup = this.graphBase.mainGroup.append('g').attr('class', 'nodes');
-        const labelGroup = this.graphBase.mainGroup.append('g').attr('class', 'labels');
-        
-        // 绘制连接线 - 使用path而不是line以支持箭头
+
         const linkStyle = getModernLinkStyle(false, false, this.graphBase.markerIds);
         this.linkSelection = linkGroup.selectAll('path')
-            .data(edges)
-            .enter().append('path')
+            .data(this.edges)
+            .enter()
+            .append('path')
             .attr('class', 'link')
-            .attr('stroke', d => this.getEdgeColorByType(d.dependencyType))
-            .attr('stroke-width', d => d.isPartOfCycle ? 3 : 2)
-            .attr('stroke-dasharray', d => d.dependencyType === 'Transitive' ? '5,5' : null)
             .attr('fill', 'none')
+            .attr('stroke', link => this.getEdgeColorByType(link.dependencyType))
+            .attr('stroke-width', link => link.isPartOfCycle ? 3 : 2)
+            .attr('stroke-dasharray', link => link.dependencyType === 'Transitive' ? '5,5' : null)
             .attr('marker-end', linkStyle.markerEnd)
-            .style('opacity', 0.8);
-        
-        // 绘制节点
-        this.nodeSelection = nodeGroup.selectAll('circle')
-            .data(nodes)
-            .enter().append('circle')
-            .attr('r', 25)
-            .attr('fill', d => this.getNodeColorByType(d))
-            .attr('stroke', 'var(--mud-palette-divider)')
-            .attr('stroke-width', 2)
+            .style('opacity', 0.82);
+
+        this.nodeSelection = nodeGroup.selectAll('g.node-item')
+            .data(this.nodes)
+            .enter()
+            .append('g')
+            .attr('class', 'node-item')
             .style('cursor', 'move');
-        
-        // 绘制标签
-        this.labelSelection = labelGroup.selectAll('text')
-            .data(nodes)
-            .enter().append('text')
-            .text(d => d.label)
+
+        this.nodeSelection.append('circle')
+            .attr('class', 'node-glow')
+            .attr('r', 31)
+            .attr('fill', node => this.getNodeGlowColor(node) || 'transparent')
+            .attr('data-base-opacity', node => this.hasPulseState(node) ? this.getPulseConfig(node).minOpacity : 0)
+            .style('opacity', node => this.hasPulseState(node) ? this.getPulseConfig(node).minOpacity : 0)
+            .style('pointer-events', 'none');
+
+        this.nodeSelection.append('circle')
+            .attr('class', 'node-core')
+            .attr('r', 25)
+            .attr('fill', node => this.getNodeFillColor(node))
+            .attr('stroke', node => this.getNodeStrokeColor(node))
+            .attr('stroke-width', 2);
+
+        this.nodeSelection.append('text')
+            .attr('class', 'node-label')
+            .text(node => node.label)
             .attr('font-size', 12)
             .attr('text-anchor', 'middle')
             .attr('dy', 40)
@@ -138,32 +139,88 @@ class ModuleDependencyGraph {
             .style('font-weight', 'bold')
             .style('pointer-events', 'none')
             .style('user-select', 'none');
-        
-        // 绑定交互事件
+
+        this.glowSelection = this.nodeSelection.select('.node-glow');
+        this.coreNodeSelection = this.nodeSelection.select('.node-core');
+
         this.interactionHandler.bindNodeEvents(this.nodeSelection, {
             nodes: this.nodes,
             links: this.edges,
             linkSelection: this.linkSelection
         });
-        
-        // 应用初始布局
+
+        this.startNodeStateAnimations();
         this.applyLayout(this.currentLayout);
+        this.applyFilter(this.currentFilters);
     }
-    
-    
-    /**
-     * 应用布局
-     */
+
+    getNodeFillColor(node) {
+        if (node.isDisabled) {
+            return 'var(--mud-palette-text-disabled)';
+        }
+
+        switch (node.categoryKey) {
+            case 'third-party':
+                return 'var(--mud-palette-success)';
+            case 'ui':
+                return 'var(--mud-palette-info)';
+            default:
+                return 'var(--mud-palette-primary)';
+        }
+    }
+
+    getNodeStrokeColor(node) {
+        if (node.isPartOfCycle) {
+            return 'var(--mud-palette-error)';
+        }
+
+        if (node.isDisabled) {
+            return 'var(--mud-palette-text-disabled)';
+        }
+
+        return 'var(--mud-palette-divider)';
+    }
+
+    getNodeGlowColor(node) {
+        if (node.isPartOfCycle) {
+            return 'var(--mud-palette-error)';
+        }
+
+        if (node.isDisabled) {
+            return 'var(--mud-palette-text-disabled)';
+        }
+
+        return null;
+    }
+
+    getEdgeColorByType(type) {
+        switch (type) {
+            case 'Direct':
+                return 'var(--mud-palette-success)';
+            case 'Transitive':
+                return 'var(--mud-palette-secondary)';
+            case 'Circular':
+                return 'var(--mud-palette-error)';
+            default:
+                return 'var(--mud-palette-text-disabled)';
+        }
+    }
+
+    hasPulseState(node) {
+        return node.isPartOfCycle || node.isDisabled;
+    }
+
+    getPulseConfig(node) {
+        return node.isPartOfCycle
+            ? { duration: 820, minRadius: 30, maxRadius: 40, minOpacity: 0.18, maxOpacity: 0.48 }
+            : { duration: 1200, minRadius: 29, maxRadius: 37, minOpacity: 0.12, maxOpacity: 0.28 };
+    }
+
     applyLayout(layoutType) {
         this.currentLayout = layoutType;
-        
-        // 停止之前的布局
         this.forceManager.stop();
-        
+
         switch (layoutType) {
-            case 'force':
-                this.applyForceLayout();
-                break;
             case 'hierarchical':
                 this.applyHierarchicalLayout();
                 break;
@@ -173,386 +230,569 @@ class ModuleDependencyGraph {
             case 'tree':
                 this.applyTreeLayout();
                 break;
+            case 'force':
             default:
                 this.applyForceLayout();
+                break;
         }
     }
-    
-    /**
-     * 应用力导向布局
-     */
+
     applyForceLayout() {
-        // 释放固定节点
         this.forceManager.releaseAllFixed(this.nodes);
-        
-        // 设置数据
         this.forceManager.setData(this.nodes, this.edges);
-        
-        // 应用拖拽
         this.nodeSelection.call(this.forceManager.getDragBehavior());
-        
-        // 启动模拟
+
         this.forceManager.start(() => {
-            // 使用path的d属性绘制连接线
-            this.linkSelection
-                .attr('d', d => {
-                    const dx = d.target.x - d.source.x;
-                    const dy = d.target.y - d.source.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance === 0) return '';
-                    
-                    const normX = dx / distance;
-                    const normY = dy / distance;
-                    const arrowOffset = 30; // 节点半径 + 箭头间距
-                    
-                    const endX = d.target.x - normX * arrowOffset;
-                    const endY = d.target.y - normY * arrowOffset;
-                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
-                });
-            
-            this.nodeSelection
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
-            
-            this.labelSelection
-                .attr('x', d => d.x)
-                .attr('y', d => d.y);
+            this.updateNodeTransforms();
+            this.updateLinks();
         });
     }
-    
-    /**
-     * 应用层次布局
-     */
+
     applyHierarchicalLayout() {
         this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.edges);
+        this.pinCurrentNodePositions();
         this.applyStaticLayout();
     }
-    
-    /**
-     * 应用环形布局
-     */
+
     applyCircularLayout() {
         this.layoutAlgorithms.circularLayout(this.nodes);
-        
-        // 固定所有节点位置（环形布局通常是固定的）
+        this.pinCurrentNodePositions();
+        this.applyStaticLayout();
+    }
+
+    applyTreeLayout() {
+        this.layoutAlgorithms.treeLayout(this.nodes, this.edges, { orientation: 'vertical' });
+        this.pinCurrentNodePositions();
+        this.applyStaticLayout();
+    }
+
+    pinCurrentNodePositions() {
         this.nodes.forEach(node => {
             node.fx = node.x;
             node.fy = node.y;
         });
-        
-        this.applyStaticLayout();
     }
-    
-    /**
-     * 应用树形布局
-     */
-    applyTreeLayout() {
-        this.layoutAlgorithms.treeLayout(this.nodes, this.edges, {
-            orientation: 'vertical'
-        });
-        this.applyStaticLayout();
-    }
-    
-    /**
-     * 应用静态布局
-     */
+
     applyStaticLayout() {
-        // 创建静态拖拽行为
-        const staticDrag = d3.drag()
-            .on('start', (event, d) => {
-                d3.select(event.sourceEvent.target).style('cursor', 'grabbing');
+        const dragBehavior = d3.drag()
+            .on('start', (event) => {
+                d3.select(event.sourceEvent.target.closest('.node-item') || event.sourceEvent.target)
+                    .style('cursor', 'grabbing');
             })
-            .on('drag', (event, d) => {
-                // 更新节点数据位置
-                d.x = event.x;
-                d.y = event.y;
-                
-                // 立即更新被拖拽节点的位置
-                this.nodeSelection
-                    .filter(node => node.id === d.id)
-                    .attr('cx', d.x)
-                    .attr('cy', d.y);
-                
-                // 更新标签位置
-                this.labelSelection
-                    .filter(node => node.id === d.id)
-                    .attr('x', d.x)
-                    .attr('y', d.y);
-                
-                // 更新连接线
-                this.linkSelection
-                    .attr('d', link => {
-                        const sourceId = link.source.id || link.source;
-                        const targetId = link.target.id || link.target;
-                        
-                        const source = sourceId === d.id ? d : 
-                                       this.nodes.find(n => n.id === sourceId);
-                        const target = targetId === d.id ? d : 
-                                       this.nodes.find(n => n.id === targetId);
-                        
-                        if (!source || !target) return '';
-                        
-                        const dx = target.x - source.x;
-                        const dy = target.y - source.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        
-                        if (distance === 0) return '';
-                        
-                        const normX = dx / distance;
-                        const normY = dy / distance;
-                        const arrowOffset = 30;
-                        
-                        const endX = target.x - normX * arrowOffset;
-                        const endY = target.y - normY * arrowOffset;
-                        return `M${source.x},${source.y} L${endX},${endY}`;
-                    });
+            .on('drag', (event, node) => {
+                node.x = event.x;
+                node.y = event.y;
+                node.fx = event.x;
+                node.fy = event.y;
+                this.updateNodeTransforms();
+                this.updateLinks();
             })
-            .on('end', (event, d) => {
-                d3.select(event.sourceEvent.target).style('cursor', 'move');
+            .on('end', (event) => {
+                d3.select(event.sourceEvent.target.closest('.node-item') || event.sourceEvent.target)
+                    .style('cursor', 'move');
             });
-        
-        this.nodeSelection.call(staticDrag);
-        
-        // 应用位置
+
+        this.nodeSelection.call(dragBehavior);
         this.updatePositions();
     }
-    
-    /**
-     * 更新位置
-     */
+
     updatePositions() {
         this.nodeSelection
             .transition()
             .duration(750)
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
-        
-        this.labelSelection
-            .transition()
-            .duration(750)
-            .attr('x', d => d.x)
-            .attr('y', d => d.y);
-        
+            .attr('transform', node => `translate(${node.x},${node.y})`);
+
         this.linkSelection
             .transition()
             .duration(750)
-            .attr('d', d => {
-                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                
-                if (!source || !target) return '';
-                
-                const dx = target.x - source.x;
-                const dy = target.y - source.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance === 0) return '';
-                
-                const normX = dx / distance;
-                const normY = dy / distance;
-                const arrowOffset = 30;
-                
-                const endX = target.x - normX * arrowOffset;
-                const endY = target.y - normY * arrowOffset;
-                return `M${source.x},${source.y} L${endX},${endY}`;
-            });
+            .attr('d', link => this.buildLinkPath(link));
     }
-    
-    /**
-     * 应用过滤器
-     */
-    applyFilter(filter) {
-        let visibleEdges = this.edges;
-        
-        switch (filter) {
+
+    updateNodeTransforms() {
+        this.nodeSelection.attr('transform', node => `translate(${node.x},${node.y})`);
+    }
+
+    updateLinks() {
+        this.linkSelection.attr('d', link => this.buildLinkPath(link));
+    }
+
+    buildLinkPath(link) {
+        const source = this.findNodeByEdgeRef(link.source);
+        const target = this.findNodeByEdgeRef(link.target);
+
+        if (!source || !target) {
+            return '';
+        }
+
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            return '';
+        }
+
+        const normX = dx / distance;
+        const normY = dy / distance;
+        const arrowOffset = 30;
+        const endX = target.x - normX * arrowOffset;
+        const endY = target.y - normY * arrowOffset;
+        return `M${source.x},${source.y} L${endX},${endY}`;
+    }
+
+    findNodeByEdgeRef(edgeNode) {
+        const nodeId = edgeNode?.id || edgeNode;
+        return this.nodes.find(node => node.id === nodeId);
+    }
+
+    applyFilter(filterConfig) {
+        const filters = typeof filterConfig === 'string'
+            ? { ...this.currentFilters, edgeFilter: filterConfig }
+            : { ...DEFAULT_FILTERS, ...this.currentFilters, ...(filterConfig || {}) };
+
+        this.currentFilters = filters;
+
+        const baseVisibleNodeIds = this.getBaseVisibleNodeIds(filters);
+        const visibleEdges = this.getVisibleEdges(filters, baseVisibleNodeIds);
+        const finalVisibleNodeIds = filters.edgeFilter === 'all'
+            ? baseVisibleNodeIds
+            : this.collectNodeIdsFromEdges(visibleEdges);
+        const visibleEdgeSet = new Set(visibleEdges);
+
+        this.linkSelection.style('display', edge => visibleEdgeSet.has(edge) ? null : 'none');
+        this.nodeSelection.style('display', node => finalVisibleNodeIds.has(node.id) ? null : 'none');
+
+        this.hideNodeInfo();
+    }
+
+    getBaseVisibleNodeIds(filters) {
+        const normalizedSearch = (filters.searchText || '').trim().toLowerCase();
+        let visibleNodes = this.nodes;
+
+        if (filters.relatedNodeId) {
+            const connectedNodeIds = this.getConnectedNodeIds(filters.relatedNodeId);
+            visibleNodes = visibleNodes.filter(node => connectedNodeIds.has(node.id));
+        }
+
+        if (filters.typeFilter && filters.typeFilter !== 'all') {
+            visibleNodes = visibleNodes.filter(node => this.matchesTypeFilter(node, filters.typeFilter));
+        }
+
+        if (normalizedSearch) {
+            visibleNodes = visibleNodes.filter(node => this.matchesSearch(node, normalizedSearch));
+        }
+
+        return new Set(visibleNodes.map(node => node.id));
+    }
+
+    getVisibleEdges(filters, visibleNodeIds) {
+        const edgesInVisibleNodes = this.edges.filter(edge => {
+            const sourceId = edge.source.id || edge.source;
+            const targetId = edge.target.id || edge.target;
+            return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
+        });
+
+        switch (filters.edgeFilter) {
             case 'direct':
-                visibleEdges = this.edges.filter(e => e.dependencyType === 'Direct');
-                break;
+                return edgesInVisibleNodes.filter(edge => edge.dependencyType === 'Direct');
             case 'cycle':
-                visibleEdges = this.edges.filter(e => e.isPartOfCycle);
-                break;
+                return edgesInVisibleNodes.filter(edge => edge.isPartOfCycle);
             case 'all':
             default:
-                visibleEdges = this.edges;
-                break;
+                return edgesInVisibleNodes;
         }
-        
-        // 更新边的可见性
-        this.linkSelection.style('display', d => visibleEdges.includes(d) ? 'block' : 'none');
-        
-        // 更新节点的可见性
-        const visibleNodeIds = new Set();
-        visibleEdges.forEach(edge => {
-            visibleNodeIds.add(edge.source.id || edge.source);
-            visibleNodeIds.add(edge.target.id || edge.target);
+    }
+
+    collectNodeIdsFromEdges(edges) {
+        const nodeIds = new Set();
+        edges.forEach(edge => {
+            nodeIds.add(edge.source.id || edge.source);
+            nodeIds.add(edge.target.id || edge.target);
         });
-        
-        this.nodeSelection.style('display', d => visibleNodeIds.has(d.id) ? 'block' : 'none');
-        this.labelSelection.style('display', d => visibleNodeIds.has(d.id) ? 'block' : 'none');
+        return nodeIds;
     }
-    
-    /**
-     * 处理节点点击
-     */
-    handleNodeClick(nodeData) {
-        console.log('Node clicked:', nodeData);
+
+    getConnectedNodeIds(nodeId) {
+        const connected = new Set([nodeId]);
+        const queue = [nodeId];
+
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+
+            this.edges.forEach(edge => {
+                const sourceId = edge.source.id || edge.source;
+                const targetId = edge.target.id || edge.target;
+
+                if (sourceId === currentId && !connected.has(targetId)) {
+                    connected.add(targetId);
+                    queue.push(targetId);
+                }
+
+                if (targetId === currentId && !connected.has(sourceId)) {
+                    connected.add(sourceId);
+                    queue.push(sourceId);
+                }
+            });
+        }
+
+        return connected;
     }
-    
-    /**
-     * 处理节点右键
-     */
-    handleNodeRightClick(nodeData, position) {
-        console.log('Node right-clicked:', nodeData, position);
+
+    matchesTypeFilter(node, typeFilter) {
+        switch (typeFilter) {
+            case 'built-in':
+            case 'ui':
+            case 'third-party':
+                return node.categoryKey === typeFilter;
+            case 'disabled':
+                return !!node.isDisabled;
+            case 'cycle':
+                return !!node.isPartOfCycle;
+            default:
+                return true;
+        }
     }
-    
-    /**
-     * 显示节点信息
-     */
-    showNodeInfo(d) {
-        const connected = this.edges.filter(edge => 
-            (edge.source.id || edge.source) === d.id || 
-            (edge.target.id || edge.target) === d.id
-        );
-        
-        const directDependencies = connected.filter(edge => 
-            edge.dependencyType === 'Direct' && (edge.source.id || edge.source) === d.id
-        );
-        
-        const transitiveDependencies = connected.filter(edge => 
-            edge.dependencyType === 'Transitive' && (edge.source.id || edge.source) === d.id
-        );
-        
-        const dependedBy = connected.filter(edge => (edge.target.id || edge.target) === d.id);
-        
+
+    matchesSearch(node, normalizedSearch) {
+        return [
+            node.label,
+            node.id,
+            node.moduleCategory,
+            node.statusText
+        ]
+            .filter(Boolean)
+            .some(value => String(value).toLowerCase().includes(normalizedSearch));
+    }
+
+    showNodeInfo(node) {
         const info = {
-            module: d.label,
-            directDependencies: directDependencies.length,
-            transitiveDependencies: transitiveDependencies.length,
-            dependedBy: dependedBy.length,
-            isPartOfCycle: d.isPartOfCycle,
-            isDisabled: d.isDisabled
+            module: node.label,
+            directDependencies: node.directDependencyCount ?? 0,
+            transitiveDependencies: node.transitiveDependencyCount ?? 0,
+            dependedBy: node.dependentModuleCount ?? 0,
+            isPartOfCycle: !!node.isPartOfCycle,
+            statusText: node.statusText,
+            moduleCategory: node.moduleCategory
         };
-        
+
         this.updateNodeInfoDisplay(info);
     }
-    
-    /**
-     * 隐藏节点信息
-     */
+
     hideNodeInfo() {
         this.updateNodeInfoDisplay(null);
     }
-    
-    /**
-     * 更新节点信息显示
-     */
+
     updateNodeInfoDisplay(info) {
         const nodeDetailElement = document.querySelector('.node-detail-content');
-        if (nodeDetailElement) {
-            if (info) {
-                nodeDetailElement.innerHTML = `
-                    <div class="node-info">
-                        <h4 style="margin: 0 0 12px 0; color: var(--mud-palette-primary);">${info.module}</h4>
-                        <div style="margin-bottom: 8px;">
-                            <strong>直接依赖:</strong> ${info.directDependencies}
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>传递依赖:</strong> ${info.transitiveDependencies}
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>被依赖:</strong> ${info.dependedBy}
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <strong>循环依赖:</strong> ${info.isPartOfCycle ? '是' : '否'}
-                        </div>
-                        <div>
-                            <strong>状态:</strong> ${info.isDisabled ? '禁用' : '启用'}
-                        </div>
-                    </div>
-                `;
-            } else {
-                nodeDetailElement.innerHTML = `
-                    <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
-                        <div class="text-center">
-                            <div style="font-size: 3rem; margin-bottom: 12px;">
-                                <i class="fas fa-mouse-pointer"></i>
-                            </div>
-                            <div>鼠标悬停在节点上查看详情</div>
-                        </div>
-                    </div>
-                `;
-            }
+        if (!nodeDetailElement) {
+            return;
         }
+
+        if (!info) {
+            nodeDetailElement.innerHTML = `
+                <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
+                    <div class="text-center">
+                        <div style="font-size: 3rem; margin-bottom: 12px;">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </div>
+                        <div>${this.texts.messages.hoverToViewDetails}</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        nodeDetailElement.innerHTML = `
+            <div class="node-info">
+                <h4 class="node-info__heading">${info.module}</h4>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.directDependencies}:</strong> ${info.directDependencies}
+                </div>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.transitiveDependencies}:</strong> ${info.transitiveDependencies}
+                </div>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.dependedBy}:</strong> ${info.dependedBy}
+                </div>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.circularDependency}:</strong> ${info.isPartOfCycle ? this.texts.states.yes : this.texts.states.no}
+                </div>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.moduleCategory}:</strong> ${info.moduleCategory}
+                </div>
+                <div class="node-info__row">
+                    <strong>${this.texts.labels.moduleStatus}:</strong> ${info.statusText}
+                </div>
+            </div>
+        `;
     }
-    
-    
-    /**
-     * 缩放控制
-     */
+
     zoomIn() {
         this.graphBase.zoomIn();
     }
-    
+
     zoomOut() {
         this.graphBase.zoomOut();
     }
-    
-    resetZoom() {
-        this.graphBase.resetView();
+
+    resetView() {
+        const visibleNodes = this.getVisibleNodes();
+        this.fitToNodes(visibleNodes);
     }
-    
-    /**
-     * 销毁
-     */
+
+    focusOnNode(nodeId) {
+        const node = this.nodes.find(item => item.id === nodeId);
+        if (!node) {
+            return;
+        }
+
+        this.graphBase.focusOnPosition({ x: node.x, y: node.y }, 1.35);
+
+        this.nodeSelection
+            .filter(item => item.id === nodeId)
+            .select('.node-core')
+            .transition()
+            .duration(220)
+            .attr('stroke-width', 5)
+            .transition()
+            .duration(220)
+            .attr('stroke-width', 2);
+    }
+
+    fitToNodes(nodes, duration = 500) {
+        if (!nodes || nodes.length === 0) {
+            this.graphBase.resetView(duration);
+            return;
+        }
+
+        const padding = 72;
+        const minX = d3.min(nodes, node => node.x);
+        const maxX = d3.max(nodes, node => node.x);
+        const minY = d3.min(nodes, node => node.y);
+        const maxY = d3.max(nodes, node => node.y);
+
+        const boundsWidth = Math.max(1, maxX - minX);
+        const boundsHeight = Math.max(1, maxY - minY);
+        const centerX = minX + boundsWidth / 2;
+        const centerY = minY + boundsHeight / 2;
+
+        const availableWidth = Math.max(1, this.graphBase.width - padding * 2);
+        const availableHeight = Math.max(1, this.graphBase.height - padding * 2);
+        const scale = Math.max(0.2, Math.min(2.2, Math.min(
+            availableWidth / boundsWidth,
+            availableHeight / boundsHeight
+        )));
+
+        const transform = d3.zoomIdentity
+            .translate(this.graphBase.width / 2, this.graphBase.height / 2)
+            .scale(scale)
+            .translate(-centerX, -centerY);
+
+        this.graphBase.svg
+            .transition()
+            .duration(duration)
+            .call(this.graphBase.zoom.transform, transform);
+    }
+
+    getVisibleNodes() {
+        const visibleNodeIds = new Set();
+        this.nodeSelection.each(function(node) {
+            if (d3.select(this).style('display') !== 'none') {
+                visibleNodeIds.add(node.id);
+            }
+        });
+
+        return this.nodes.filter(node => visibleNodeIds.has(node.id));
+    }
+
+    async exportGraph(filename) {
+        const svgElement = this.graphBase.svg.node();
+        if (!svgElement) {
+            return;
+        }
+
+        const clonedSvg = this.createExportSvg(svgElement);
+        const svgData = new XMLSerializer().serializeToString(clonedSvg);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const image = new Image();
+        const exportName = filename || 'dependency-graph.png';
+        const backgroundColor = getComputedStyle(this.container).backgroundColor || '#ffffff';
+
+        image.onload = () => {
+            const width = clonedSvg.width.baseVal.value || this.graphBase.width;
+            const height = clonedSvg.height.baseVal.value || this.graphBase.height;
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            context.scale(2, 2);
+            context.fillStyle = backgroundColor;
+            context.fillRect(0, 0, width, height);
+            context.drawImage(image, 0, 0, width, height);
+
+            const link = document.createElement('a');
+            link.download = exportName;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            URL.revokeObjectURL(svgUrl);
+        };
+
+        image.onerror = () => {
+            const link = document.createElement('a');
+            link.download = exportName.endsWith('.svg') ? exportName : exportName.replace(/\.png$/i, '') + '.svg';
+            link.href = svgUrl;
+            link.click();
+            URL.revokeObjectURL(svgUrl);
+        };
+
+        image.src = svgUrl;
+    }
+
+    createExportSvg(svgElement) {
+        const clone = svgElement.cloneNode(true);
+        const originalElements = [svgElement, ...svgElement.querySelectorAll('*')];
+        const clonedElements = [clone, ...clone.querySelectorAll('*')];
+        const width = svgElement.viewBox.baseVal?.width || svgElement.clientWidth || this.graphBase.width;
+        const height = svgElement.viewBox.baseVal?.height || svgElement.clientHeight || this.graphBase.height;
+
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        clone.setAttribute('width', `${width}`);
+        clone.setAttribute('height', `${height}`);
+
+        for (let index = 0; index < originalElements.length; index += 1) {
+            this.inlineComputedStyles(originalElements[index], clonedElements[index]);
+        }
+
+        return clone;
+    }
+
+    inlineComputedStyles(originalElement, clonedElement) {
+        const computed = window.getComputedStyle(originalElement);
+        const styleProperties = [
+            'fill',
+            'stroke',
+            'stroke-width',
+            'stroke-dasharray',
+            'opacity',
+            'filter',
+            'font-size',
+            'font-weight',
+            'font-family',
+            'text-anchor',
+            'dominant-baseline',
+            'letter-spacing'
+        ];
+
+        styleProperties.forEach(property => {
+            const value = computed.getPropertyValue(property);
+            if (value) {
+                clonedElement.style.setProperty(property, value);
+            }
+        });
+    }
+
+    startNodeStateAnimations() {
+        this.stopNodeStateAnimations();
+
+        this.glowSelection.each((nodeData, index, elements) => {
+            const glowElement = d3.select(elements[index]);
+
+            if (!this.hasPulseState(nodeData)) {
+                glowElement.interrupt().style('opacity', 0);
+                return;
+            }
+
+            const pulse = this.getPulseConfig(nodeData);
+            glowElement.attr('data-base-opacity', pulse.minOpacity);
+
+            const animate = () => {
+                glowElement
+                    .interrupt()
+                    .attr('r', pulse.minRadius)
+                    .style('opacity', pulse.minOpacity)
+                    .transition()
+                    .duration(pulse.duration / 2)
+                    .attr('r', pulse.maxRadius)
+                    .style('opacity', pulse.maxOpacity)
+                    .transition()
+                    .duration(pulse.duration / 2)
+                    .attr('r', pulse.minRadius)
+                    .style('opacity', pulse.minOpacity)
+                    .on('end', animate);
+            };
+
+            animate();
+        });
+    }
+
+    stopNodeStateAnimations() {
+        if (this.glowSelection) {
+            this.glowSelection.interrupt();
+        }
+    }
+
+    handleNodeClick(nodeData) {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnNodeClick', nodeData.id);
+        }
+    }
+
+    handleNodeRightClick(nodeData, position) {
+        if (!this.dotNetRef) {
+            return;
+        }
+
+        const x = position.clientX !== undefined ? position.clientX : position.pageX;
+        const y = position.clientY !== undefined ? position.clientY : position.pageY;
+        this.dotNetRef.invokeMethodAsync('OnNodeRightClick', nodeData.id, x, y);
+    }
+
+    handleBackgroundClick() {
+        if (this.dotNetRef) {
+            this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
+        }
+    }
+
     dispose() {
+        this.stopNodeStateAnimations();
+
         if (this.forceManager) {
             this.forceManager.dispose();
         }
+
         if (this.graphBase) {
             this.graphBase.dispose();
         }
     }
 }
 
-// 导出函数
 let graphInstance = null;
 
-/**
- * 初始化依赖关系图
- */
-export async function initializeDependencyGraph(containerId, nodes, edges) {
-    try {
-        graphInstance = new ModuleDependencyGraph(containerId);
-        graphInstance.initialize(nodes, edges);
-        console.log('Dependency graph initialized successfully');
-    } catch (error) {
-        console.error('Failed to initialize dependency graph:', error);
-        throw error;
+export async function initializeDependencyGraph(containerId, nodes, edges, texts = null, dotNetRef = null) {
+    if (graphInstance) {
+        graphInstance.dispose();
     }
+
+    graphInstance = new ModuleDependencyGraph(containerId, dotNetRef);
+    graphInstance.initialize(nodes, edges, texts);
+    console.log('Dependency graph initialized successfully');
 }
 
-/**
- * 改变布局
- */
 export async function changeLayout(layout) {
     if (graphInstance) {
         graphInstance.applyLayout(layout);
     }
 }
 
-/**
- * 应用过滤器
- */
-export async function applyFilter(filter) {
+export async function applyFilter(filterConfig) {
     if (graphInstance) {
-        graphInstance.applyFilter(filter);
+        graphInstance.applyFilter(filterConfig);
     }
 }
 
-/**
- * 缩放控制
- */
 export async function zoomIn() {
     if (graphInstance) {
         graphInstance.zoomIn();
@@ -567,17 +807,27 @@ export async function zoomOut() {
 
 export async function resetZoom() {
     if (graphInstance) {
-        graphInstance.resetZoom();
+        graphInstance.resetView();
     }
 }
 
+export async function focusOnNode(nodeId) {
+    if (graphInstance) {
+        graphInstance.focusOnNode(nodeId);
+    }
+}
 
-/**
- * 导出图片
- */
 export async function exportGraph(filename) {
-    // TODO: 实现导出功能
-    console.log('Export graph to:', filename);
+    if (graphInstance) {
+        await graphInstance.exportGraph(filename);
+    }
+}
+
+export async function disposeGraph() {
+    if (graphInstance) {
+        graphInstance.dispose();
+        graphInstance = null;
+    }
 }
 
 console.log('Module dependency graph module loaded');

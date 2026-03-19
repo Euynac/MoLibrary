@@ -72,12 +72,17 @@ export class NodeHighlightManager {
         nodeSelection.each(function(d) {
             const node = d3.select(this);
             const isRelated = relatedNodes.has(d.id);
+            const primaryShape = self.getPrimaryShapeSelection(node);
             
-            // 控制节点主体元素透明度和边框
-            node.select('circle, rect.card-background')
+            node
                 .transition()
                 .duration(200)
-                .attr('opacity', isRelated ? 1 : self.fadeOpacity)
+                .attr('opacity', isRelated ? 1 : self.fadeOpacity);
+
+            // 控制节点主体元素边框
+            primaryShape
+                .transition()
+                .duration(200)
                 .attr('stroke-width', isRelated ? self.highlightStrokeWidth : self.normalStrokeWidth);
             
             // 对于复杂节点，增强阴影效果
@@ -93,16 +98,6 @@ export class NodeHighlightManager {
             }
             
             // 控制所有文本元素透明度（包括标题、依赖数量、chip文字等）
-            node.selectAll('text')
-                .transition()
-                .duration(200)
-                .attr('opacity', isRelated ? 1 : self.fadeOpacity);
-                
-            // 控制复杂节点内所有矩形元素透明度（包括卡片背景、标题栏、状态栏、chip背景等）
-            node.selectAll('rect')
-                .transition()
-                .duration(200)
-                .attr('opacity', isRelated ? 1 : self.fadeOpacity);
         });
         
         // 高亮连接 - 根据方向使用不同颜色
@@ -155,11 +150,16 @@ export class NodeHighlightManager {
         // 恢复节点 - 确保所有节点恢复为完全不透明
         nodeSelection.each(function(d) {
             const node = d3.select(this);
+            const primaryShape = self.getPrimaryShapeSelection(node);
             
-            node.select('circle, rect.card-background')
+            node
                 .transition()
                 .duration(200)
-                .attr('opacity', 1)  // 恢复为完全不透明
+                .attr('opacity', 1);  // 恢复为完全不透明
+
+            primaryShape
+                .transition()
+                .duration(200)
                 .attr('stroke-width', self.normalStrokeWidth);
             
             // 对于复杂节点，恢复正常阴影
@@ -174,17 +174,6 @@ export class NodeHighlightManager {
                 }
             }
             
-            // 恢复所有文本元素透明度
-            node.selectAll('text')
-                .transition()
-                .duration(200)
-                .attr('opacity', 1);
-                
-            // 恢复复杂节点内所有矩形元素透明度
-            node.selectAll('rect')
-                .transition()
-                .duration(200)
-                .attr('opacity', 1);
         });
         
         // 恢复连接 - 使用现代化样式恢复
@@ -199,6 +188,17 @@ export class NodeHighlightManager {
         
         this.highlightedNodes.clear();
         this.highlightedLinks.clear();
+    }
+
+    /**
+     * Gets the primary drawable element for a node.
+     * Supports grouped nodes and direct shape selections.
+     * @param {Object} nodeSelection - D3 selection for the node root element
+     * @returns {Object} D3 selection for the primary node shape
+     */
+    getPrimaryShapeSelection(nodeSelection) {
+        const preferredShape = nodeSelection.select('.node-core, rect.card-background, circle, rect');
+        return preferredShape.empty() ? nodeSelection : preferredShape;
     }
 }
 

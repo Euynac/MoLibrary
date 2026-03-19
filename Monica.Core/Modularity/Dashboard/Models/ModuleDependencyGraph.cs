@@ -64,6 +64,16 @@ public class ModuleDependencyNode
     public bool IsEnabled { get; set; }
 
     /// <summary>
+    /// Indicates whether the module belongs to a UI module.
+    /// </summary>
+    public bool IsUIModule { get; set; }
+
+    /// <summary>
+    /// Indicates whether the module comes from a third-party source.
+    /// </summary>
+    public bool IsThirdPartyModule { get; set; }
+
+    /// <summary>
     /// Number of directly required modules.
     /// </summary>
     public int DirectDependencyCount { get; set; }

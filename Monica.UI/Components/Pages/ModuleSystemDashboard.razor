@@ -60,7 +60,8 @@
 
             <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
                 <div class="tab-content-panel">
-                    <DependencyGraph DependencyGraphData="dependencyGraph" />
+                    <DependencyGraph DependencyGraphData="dependencyGraph"
+                                     OnModuleDetailClicked="ViewModuleDetail" />
                 </div>
             </MudTabPanel>
         </MudTabs>

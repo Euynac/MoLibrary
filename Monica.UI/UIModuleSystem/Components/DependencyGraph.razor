@@ -1,13 +1,25 @@
 @using MudBlazor
 @using Microsoft.JSInterop
 @using Monica.UI.Localization
+@using Monica.UI.Components.ContextMenu
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Dashboard.Models
+@using Monica.Core.Modularity.Models
+@implements IAsyncDisposable
 @inject IStringLocalizer<SharedResource> L
+@inject ISnackbar Snackbar
 
 <div class="dependency-graph-container">
     @if (DependencyGraphData != null)
     {
+        @if (!string.IsNullOrEmpty(relatedNodeId))
+        {
+            var relatedNode = FindNode(relatedNodeId);
+            <MudAlert Severity="Severity.Info" Class="mb-3" CloseIconClicked="ClearRelatedFilterClick">
+                @L["ModuleSystem:DependencyGraph:Messages:ShowingRelatedNodes", relatedNode?.ModuleName ?? relatedNodeId]
+            </MudAlert>
+        }
+
         <MudGrid Spacing="4" Class="mb-4">
             <!-- 依赖关系概览 -->
             <MudItem xs="12" md="4">
@@ -83,7 +95,7 @@
                     </MudCardHeader>
                     <MudCardContent Class="pa-4">
                         <MudGrid Spacing="4">
-                            <MudItem xs="12" md="6">
+                            <MudItem xs="12" md="4">
                                 <MudSelect T="string" Value="selectedLayout" Label="@L["ModuleSystem:DependencyGraph:Labels:LayoutAlgorithm"]"
                                          ValueChanged="OnLayoutChanged" Variant="Variant.Outlined"
                                          AnchorOrigin="Origin.BottomCenter">
@@ -107,9 +119,9 @@
                                     </MudSelectItem>
                                 </MudSelect>
                             </MudItem>
-                            <MudItem xs="12" md="6">
-                                <MudSelect T="string" Value="selectedFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:Filter"]"
-                                         ValueChanged="OnFilterChanged" Variant="Variant.Outlined"
+                            <MudItem xs="12" md="4">
+                                <MudSelect T="string" Value="selectedEdgeFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:Filter"]"
+                                         ValueChanged="OnEdgeFilterChanged" Variant="Variant.Outlined"
                                          AnchorOrigin="Origin.BottomCenter">
                                     <MudSelectItem Value="@("all")">
                                         <div class="d-flex align-center">
@@ -130,6 +142,60 @@
                                         </div>
                                     </MudSelectItem>
                                 </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudSelect T="string" Value="selectedTypeFilter" Label="@L["ModuleSystem:DependencyGraph:Labels:TypeFilter"]"
+                                         ValueChanged="OnTypeFilterChanged" Variant="Variant.Outlined"
+                                         AnchorOrigin="Origin.BottomCenter">
+                                    <MudSelectItem Value="@("all")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:All"]
+                                        </div>
+                                    </MudSelectItem>
+                                    <MudSelectItem Value="@("built-in")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.SettingsInputComponent" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:BuiltIn"]
+                                        </div>
+                                    </MudSelectItem>
+                                    <MudSelectItem Value="@("ui")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Web" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:UI"]
+                                        </div>
+                                    </MudSelectItem>
+                                    <MudSelectItem Value="@("third-party")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:ThirdParty"]
+                                        </div>
+                                    </MudSelectItem>
+                                    <MudSelectItem Value="@("disabled")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Block" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:Disabled"]
+                                        </div>
+                                    </MudSelectItem>
+                                    <MudSelectItem Value="@("cycle")">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.SyncProblem" Class="mr-2" />
+                                            @L["ModuleSystem:DependencyGraph:Types:Circular"]
+                                        </div>
+                                    </MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField T="string"
+                                              Value="searchText"
+                                              ValueChanged="OnSearchTextChanged"
+                                              Label="@L["ModuleSystem:DependencyGraph:Labels:Search"]"
+                                              Placeholder="@L["ModuleSystem:DependencyGraph:Labels:SearchPlaceholder"]"
+                                              Variant="Variant.Outlined"
+                                              Immediate="true"
+                                              Clearable="true"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search" />
                             </MudItem>
                         </MudGrid>
                         <MudDivider Class="my-4" />
@@ -178,12 +244,16 @@
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent Class="pa-0">
-                        <MudPaper id="dependency-graph-container" 
-                                Class="dependency-graph-canvas"
-                                Style="height: 600px; width: 100%;" 
-                                Elevation="2">
-                            <!-- 图表将在这里渲染 -->
-                        </MudPaper>
+                        <div class="dependency-graph-host"
+                             @onclick="OnBackgroundClick"
+                             @oncontextmenu:preventDefault="true">
+                            <MudPaper id="dependency-graph-container"
+                                      Class="dependency-graph-canvas"
+                                      Style="height: 600px; width: 100%;"
+                                      Elevation="2">
+                                <!-- 图表将在这里渲染 -->
+                            </MudPaper>
+                        </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -204,16 +274,24 @@
                             <div>
                                 <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:NodeTypes"]</MudText>
                                 <MudStack Spacing="2">
-                                    <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #64B5F6; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:EnabledModule"]</MudText>
+                                    <div class="legend-item">
+                                        <div class="legend-circle legend-circle-built-in"></div>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:BuiltInModule"]</MudText>
                                     </div>
-                                    <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #FFB74D; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
+                                    <div class="legend-item">
+                                        <div class="legend-circle legend-circle-ui"></div>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:UIModule"]</MudText>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-circle legend-circle-third-party"></div>
+                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:ThirdPartyModule"]</MudText>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-circle legend-circle-disabled"></div>
                                         <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DisabledModule"]</MudText>
                                     </div>
-                                    <div class="d-flex align-center">
-                                        <div class="legend-circle" style="background-color: #E57373; width: 24px; height: 24px; border-radius: 50%; margin-right: 12px;"></div>
+                                    <div class="legend-item">
+                                        <div class="legend-circle legend-circle-cycle"></div>
                                         <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencyModule"]</MudText>
                                     </div>
                                 </MudStack>
@@ -288,15 +366,39 @@
     }
 </div>
 
+<MoContextMenu TItem="ModuleDependencyNode"
+               Items="@contextMenuItems"
+               Visible="@contextMenuOpen"
+               InitialX="@contextMenuX"
+               InitialY="@contextMenuY"
+               ContextItem="@contextMenuNode"
+               OnItemClick="@OnContextMenuItemClick"
+               OnClose="@CloseContextMenu" />
+
 @code {
     private IJSObjectReference? jsModule;
+    private DotNetObjectReference<DependencyGraph>? dotNetRef;
+    private ModuleDependencyGraph? renderedGraphData;
     private string selectedLayout = "force";
-    private string selectedFilter = "all";
+    private string selectedEdgeFilter = "all";
+    private string selectedTypeFilter = "all";
+    private string searchText = string.Empty;
+    private string? relatedNodeId;
+    private bool contextMenuOpen;
+    private double contextMenuX;
+    private double contextMenuY;
+    private ModuleDependencyNode? contextMenuNode;
+    private List<ContextMenuItem<ModuleDependencyNode>> contextMenuItems = [];
 
     /// <summary>
     /// 依赖关系图数据
     /// </summary>
     [Parameter] public ModuleDependencyGraph? DependencyGraphData { get; set; }
+
+    /// <summary>
+    /// Invoked when the user requests the module detail dialog for a node.
+    /// </summary>
+    [Parameter] public EventCallback<ModuleKey> OnModuleDetailClicked { get; set; }
 
     /// <summary>
     /// JavaScript运行时
@@ -309,10 +411,22 @@
     /// <returns></returns>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && DependencyGraphData != null)
+        if (DependencyGraphData == null)
         {
-			jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/Monica.UI/js/module-dependency-graph.js");
+            return;
+        }
+
+        if (jsModule == null)
+        {
+            jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/_content/Monica.UI/js/module-dependency-graph.js");
+        }
+
+        dotNetRef ??= DotNetObjectReference.Create(this);
+
+        if (!ReferenceEquals(renderedGraphData, DependencyGraphData))
+        {
             await InitializeGraph();
+            renderedGraphData = DependencyGraphData;
         }
     }
 
@@ -324,12 +438,24 @@
     {
         if (jsModule == null || DependencyGraphData == null) return;
 
+        string Text(string key) => L[key].Value;
+
         var nodes = DependencyGraphData.Nodes.Select(n => new
         {
             id = n.Module.ToString(),
-            label = n.Module.ToString(),
+            label = n.ModuleName,
             isPartOfCycle = n.IsPartOfCycle,
-            isDisabled = false // 这里需要根据实际情况设置
+            isDisabled = !n.IsEnabled,
+            isUIModule = n.IsUIModule,
+            isThirdPartyModule = n.IsThirdPartyModule,
+            categoryKey = GetModuleCategoryKey(n),
+            moduleCategory = GetModuleCategoryLabel(n),
+            directDependencyCount = n.DirectDependencyCount,
+            transitiveDependencyCount = Math.Max(0, n.TotalDependencyCount - n.DirectDependencyCount),
+            dependentModuleCount = n.DependentModuleCount,
+            statusText = n.IsEnabled
+                ? Text("ModuleSystem:DependencyGraph:States:Enabled")
+                : Text("ModuleSystem:DependencyGraph:States:Disabled")
         }).ToArray();
 
         var edges = DependencyGraphData.Edges.Select(e => new
@@ -340,7 +466,31 @@
             isPartOfCycle = e.IsPartOfCycle
         }).ToArray();
 
-        await jsModule.InvokeVoidAsync("initializeDependencyGraph", "dependency-graph-container", nodes, edges);
+        var texts = new
+        {
+            labels = new
+            {
+                directDependencies = Text("ModuleSystem:DependencyGraph:Labels:DirectDependency"),
+                transitiveDependencies = Text("ModuleSystem:DependencyGraph:Labels:TransitiveDependency"),
+                dependedBy = Text("ModuleSystem:DependencyGraph:Labels:DependedBy"),
+                circularDependency = Text("ModuleSystem:DependencyGraph:Labels:CircularDependency"),
+                moduleStatus = Text("ModuleSystem:DependencyGraph:Labels:ModuleStatus"),
+                moduleCategory = Text("ModuleSystem:DependencyGraph:Labels:ModuleCategory")
+            },
+            states = new
+            {
+                yes = Text("ModuleSystem:DependencyGraph:States:Yes"),
+                no = Text("ModuleSystem:DependencyGraph:States:No")
+            },
+            messages = new
+            {
+                hoverToViewDetails = Text("ModuleSystem:DependencyGraph:Messages:HoverToViewDetails")
+            }
+        };
+
+        await jsModule.InvokeVoidAsync("initializeDependencyGraph", "dependency-graph-container", nodes, edges, texts, dotNetRef);
+        await jsModule.InvokeVoidAsync("changeLayout", selectedLayout);
+        await ApplyCurrentGraphFilters();
     }
 
     /// <summary>
@@ -354,6 +504,7 @@
         if (jsModule != null)
         {
             await jsModule.InvokeVoidAsync("changeLayout", layout);
+            await jsModule.InvokeVoidAsync("resetZoom");
         }
     }
 
@@ -362,13 +513,28 @@
     /// </summary>
     /// <param name="filter">过滤器类型</param>
     /// <returns></returns>
-    private async Task OnFilterChanged(string filter)
+    private async Task OnEdgeFilterChanged(string filter)
     {
-        selectedFilter = filter;
-        if (jsModule != null)
-        {
-            await jsModule.InvokeVoidAsync("applyFilter", filter);
-        }
+        selectedEdgeFilter = filter;
+        await ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Type filter change event.
+    /// </summary>
+    private async Task OnTypeFilterChanged(string filter)
+    {
+        selectedTypeFilter = filter;
+        await ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Search text change event.
+    /// </summary>
+    private async Task OnSearchTextChanged(string value)
+    {
+        searchText = value;
+        await ApplyCurrentGraphFilters();
     }
 
     /// <summary>
@@ -420,17 +586,23 @@
     }
 
     /// <summary>
-    /// 获取依赖类型颜色
+    /// Applies the current graph filters to the JS graph instance.
     /// </summary>
-    /// <param name="type">依赖类型</param>
-    /// <returns>颜色</returns>
-    private Color GetDependencyTypeColor(DependencyType type) => type switch
+    private async Task ApplyCurrentGraphFilters()
     {
-        DependencyType.Direct => Color.Primary,
-        DependencyType.Transitive => Color.Info,
-        DependencyType.Circular => Color.Warning,
-        _ => Color.Default
-    };
+        if (jsModule == null)
+        {
+            return;
+        }
+
+        await jsModule.InvokeVoidAsync("applyFilter", new
+        {
+            edgeFilter = selectedEdgeFilter,
+            typeFilter = selectedTypeFilter,
+            searchText,
+            relatedNodeId
+        });
+    }
 
     /// <summary>
     /// 获取加载文本
@@ -448,6 +620,283 @@
     };
 
     /// <summary>
+    /// Gets the localized module category label used by the graph.
+    /// </summary>
+    /// <param name="node">The dependency graph node.</param>
+    /// <returns>The localized category label.</returns>
+    private string GetModuleCategoryLabel(ModuleDependencyNode node)
+    {
+        if (node.IsThirdPartyModule)
+        {
+            return L["ModuleSystem:DependencyGraph:Labels:ThirdPartyModule"].Value;
+        }
+
+        if (node.IsUIModule)
+        {
+            return L["ModuleSystem:DependencyGraph:Labels:UIModule"].Value;
+        }
+
+        return L["ModuleSystem:DependencyGraph:Labels:BuiltInModule"].Value;
+    }
+
+    /// <summary>
+    /// Gets the category key used for JS-side filtering.
+    /// </summary>
+    private static string GetModuleCategoryKey(ModuleDependencyNode node)
+    {
+        if (node.IsThirdPartyModule)
+        {
+            return "third-party";
+        }
+
+        if (node.IsUIModule)
+        {
+            return "ui";
+        }
+
+        return "built-in";
+    }
+
+    /// <summary>
+    /// Handles node click events coming from the graph.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnNodeClick(string nodeId)
+    {
+        var node = FindNode(nodeId);
+        if (node is null || !OnModuleDetailClicked.HasDelegate)
+        {
+            return;
+        }
+
+        await OnModuleDetailClicked.InvokeAsync(node.Module);
+    }
+
+    /// <summary>
+    /// Handles node right-click events coming from the graph.
+    /// </summary>
+    [JSInvokable]
+    public void OnNodeRightClick(string nodeId, double x, double y)
+    {
+        var node = FindNode(nodeId);
+        if (node is null)
+        {
+            return;
+        }
+
+        contextMenuNode = node;
+        contextMenuX = x;
+        contextMenuY = y;
+        contextMenuItems = BuildContextMenuItems(node);
+        contextMenuOpen = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles background clicks from the SVG graph.
+    /// </summary>
+    [JSInvokable]
+    public void OnSvgBackgroundClick()
+    {
+        if (!contextMenuOpen)
+        {
+            return;
+        }
+
+        contextMenuOpen = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Handles background clicks from the host container.
+    /// </summary>
+    private void OnBackgroundClick()
+    {
+        if (!contextMenuOpen)
+        {
+            return;
+        }
+
+        contextMenuOpen = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Closes the context menu.
+    /// </summary>
+    private void CloseContextMenu()
+    {
+        contextMenuOpen = false;
+    }
+
+    /// <summary>
+    /// Closes the related-node filter alert.
+    /// </summary>
+    private Task ClearRelatedFilterClick()
+    {
+        relatedNodeId = null;
+        return ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Handles root context-menu item clicks.
+    /// </summary>
+    private Task OnContextMenuItemClick(ContextMenuItem<ModuleDependencyNode> item)
+    {
+        contextMenuOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Builds the context menu for a graph node.
+    /// </summary>
+    private List<ContextMenuItem<ModuleDependencyNode>> BuildContextMenuItems(ModuleDependencyNode node)
+    {
+        var builder = ContextMenuBuilder<ModuleDependencyNode>.Create()
+            .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:Details"].Value, Icons.Material.Filled.Info, ShowContextDetailsAsync)
+            .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:FocusNode"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
+            .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:FilterByType"].Value, Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
+
+        if (!string.IsNullOrEmpty(relatedNodeId))
+        {
+            if (relatedNodeId == node.Module.ToString())
+            {
+                builder.AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:ClearRelatedFilter"].Value, Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
+            }
+            else
+            {
+                builder.AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:ShowOtherRelatedNodes"].Value, Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+            }
+        }
+        else
+        {
+            builder.AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:ShowRelatedNodes"].Value, Icons.Material.Filled.AccountTree, ShowRelatedNodesAsync);
+        }
+
+        builder
+            .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:ClearAllFilters"].Value, Icons.Material.Filled.ClearAll, ClearAllFiltersAsync)
+            .AddDivider()
+            .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:CopyModuleName"].Value, Icons.Material.Filled.ContentCopy, CopyModuleNameAsync);
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Opens the detail dialog for the context-menu node.
+    /// </summary>
+    private async Task ShowContextDetailsAsync(ModuleDependencyNode? node)
+    {
+        var targetNode = node ?? contextMenuNode;
+        if (targetNode is null || !OnModuleDetailClicked.HasDelegate)
+        {
+            return;
+        }
+
+        await OnModuleDetailClicked.InvokeAsync(targetNode.Module);
+    }
+
+    /// <summary>
+    /// Focuses the requested node in the graph.
+    /// </summary>
+    private async Task FocusOnNodeAsync(ModuleDependencyNode? node)
+    {
+        var targetNode = node ?? contextMenuNode;
+        if (targetNode is null || jsModule == null)
+        {
+            return;
+        }
+
+        await jsModule.InvokeVoidAsync("focusOnNode", targetNode.Module.ToString());
+    }
+
+    /// <summary>
+    /// Filters the graph to the selected node category.
+    /// </summary>
+    private async Task FilterByTypeAsync(ModuleDependencyNode? node)
+    {
+        var targetNode = node ?? contextMenuNode;
+        if (targetNode is null)
+        {
+            return;
+        }
+
+        selectedTypeFilter = GetModuleCategoryKey(targetNode);
+        await ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Clears all active graph filters.
+    /// </summary>
+    private async Task ClearAllFiltersAsync(ModuleDependencyNode? node)
+    {
+        searchText = string.Empty;
+        selectedTypeFilter = "all";
+        selectedEdgeFilter = "all";
+        relatedNodeId = null;
+        await ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Shows all nodes connected to the selected node.
+    /// </summary>
+    private async Task ShowRelatedNodesAsync(ModuleDependencyNode? node)
+    {
+        var targetNode = node ?? contextMenuNode;
+        if (targetNode is null)
+        {
+            return;
+        }
+
+        relatedNodeId = targetNode.Module.ToString();
+        await ApplyCurrentGraphFilters();
+
+        if (jsModule != null)
+        {
+            await jsModule.InvokeVoidAsync("focusOnNode", targetNode.Module.ToString());
+        }
+
+        Snackbar.Add(L["ModuleSystem:DependencyGraph:Messages:ShowingRelatedNodes", targetNode.ModuleName], Severity.Info);
+    }
+
+    /// <summary>
+    /// Clears the related-node filter.
+    /// </summary>
+    private Task ClearRelatedFilterAsync(ModuleDependencyNode? node)
+    {
+        relatedNodeId = null;
+        return ApplyCurrentGraphFilters();
+    }
+
+    /// <summary>
+    /// Copies the module name to the clipboard.
+    /// </summary>
+    private async Task CopyModuleNameAsync(ModuleDependencyNode? node)
+    {
+        var targetNode = node ?? contextMenuNode;
+        if (targetNode is null)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", targetNode.Module.ToString());
+        Snackbar.Add(L["ModuleSystem:DependencyGraph:Messages:CopiedToClipboard"], Severity.Success);
+    }
+
+    /// <summary>
+    /// Finds a graph node by its module key string.
+    /// </summary>
+    private ModuleDependencyNode? FindNode(string? nodeId)
+    {
+        if (DependencyGraphData == null || string.IsNullOrWhiteSpace(nodeId))
+        {
+            return null;
+        }
+
+        return DependencyGraphData.Nodes.FirstOrDefault(node => node.Module.ToString() == nodeId);
+    }
+
+    /// <summary>
     /// 资源释放
     /// </summary>
     /// <returns></returns>
@@ -455,9 +904,10 @@
     {
         if (jsModule != null)
         {
+            await jsModule.InvokeVoidAsync("disposeGraph");
             await jsModule.DisposeAsync();
         }
+
+        dotNetRef?.Dispose();
     }
 }
-
-@implements IAsyncDisposable 
