@@ -40,6 +40,23 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!--
+      Keep the standard obj/bin roots, but isolate artifacts under obj/<env> and bin/<env>.
+      Once outputs live under obj/, stale files from other environments can be picked up by
+      the SDK's implicit globs unless obj/** and bin/** stay explicitly excluded.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+
+    <BuildEnvironmentFolder>unix</BuildEnvironmentFolder>
+    <BuildEnvironmentFolder Condition="'$(OS)' == 'Windows_NT'">win</BuildEnvironmentFolder>
+    <BuildEnvironmentFolder Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' == 'true'">container</BuildEnvironmentFolder>
+
+    <BaseIntermediateOutputPath>obj/$(BuildEnvironmentFolder)/</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <BaseOutputPath>bin/$(BuildEnvironmentFolder)/</BaseOutputPath>
+  </PropertyGroup>
+
   <!-- Include Logo and README in All Packages -->
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)logo.png" Pack="true" PackagePath="\" />
