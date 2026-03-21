@@ -114,6 +114,15 @@ export async function clearMermaid(element) {
     }
 }
 
+function createDiagramId() {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+        return `mo-markdown-mermaid-${globalThis.crypto.randomUUID()}`;
+    }
+
+    const fallback = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return `mo-markdown-mermaid-${fallback}`;
+}
+
 export async function renderMermaid(element, definition, theme) {
     if (!element) {
         return;
@@ -128,7 +137,7 @@ export async function renderMermaid(element, definition, theme) {
     const mermaid = await ensureMermaid();
     mermaid.initialize(createConfig(theme));
 
-    const diagramId = `mo-markdown-mermaid-${crypto.randomUUID()}`;
+    const diagramId = createDiagramId();
     const result = await mermaid.render(diagramId, normalizedDefinition);
 
     element.innerHTML = result.svg;
