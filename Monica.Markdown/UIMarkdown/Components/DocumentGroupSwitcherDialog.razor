@@ -5,6 +5,7 @@
 @using Monica.Tool.MoResponse
 @inject IStringLocalizer<MarkdownResource> L
 @inject MarkdownUIService MarkdownService
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
@@ -96,13 +97,16 @@
         try
         {
             var refreshResult = await MarkdownService.RefreshAllAsync();
-            if (refreshResult.IsFailed(out _))
+            if (refreshResult.IsFailed(out var refreshError))
             {
+                Snackbar.Add(refreshError, Severity.Error);
                 return;
             }
 
-            if ((await MarkdownService.GetAllDocumentGroupsAsync()).IsFailed(out _, out var groups))
+            var groupsResult = await MarkdownService.GetAllDocumentGroupsAsync();
+            if (groupsResult.IsFailed(out var groupsError, out var groups))
             {
+                Snackbar.Add(groupsError, Severity.Error);
                 return;
             }
 
