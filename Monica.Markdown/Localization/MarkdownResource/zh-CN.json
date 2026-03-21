@@ -11,6 +11,9 @@
     "Documentation": "文档"
   },
   "MarkdownViewer": {
+    "Actions": {
+      "Refresh": "刷新"
+    },
     "Placeholders": {
       "SearchFiles": "搜索文件",
       "SearchKnowledgeBases": "查找知识库..."
@@ -18,6 +21,7 @@
     "States": {
       "LoadingDocuments": "正在加载文档...",
       "LoadingDocument": "正在加载文档内容...",
+      "RefreshingKnowledgeBases": "正在刷新知识库...",
       "NoKnowledgeBasesRegistered": "未注册任何知识库。",
       "NoKnowledgeBases": "没有可用的知识库。",
       "NoMatchingKnowledgeBases": "没有匹配的知识库。",
