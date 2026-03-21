@@ -1,23 +1,46 @@
 @using Microsoft.Extensions.Localization
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
+@using Monica.Markdown.UIMarkdown.Services
+@using Monica.Tool.MoResponse
 @inject IStringLocalizer<MarkdownResource> L
+@inject MarkdownUIService MarkdownService
 
 <MudDialog>
     <DialogContent>
         <div class="group-switcher-dialog">
-            <MudTextField T="string"
-                          @bind-Value="_searchText"
-                          Placeholder="@L["MarkdownViewer:Placeholders:SearchKnowledgeBases"]"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Class="group-switcher-search" />
+            <div class="group-switcher-search-row">
+                <MudTextField T="string"
+                              @bind-Value="_searchText"
+                              Placeholder="@L["MarkdownViewer:Placeholders:SearchKnowledgeBases"]"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Class="group-switcher-search" />
+
+                <MudTooltip Text="@L["MarkdownViewer:Actions:Refresh"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   Disabled="_refreshing"
+                                   OnClick="RefreshGroupsAsync"
+                                   Class="group-switcher-refresh" />
+                </MudTooltip>
+            </div>
 
             <div class="group-switcher-list">
-                @if (FilteredGroups.Count == 0)
+                @if (_refreshing)
+                {
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="group-switcher-empty">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.65;">
+                            @L["MarkdownViewer:Messages:RefreshingDocuments"]
+                        </MudText>
+                    </MudStack>
+                }
+                else if (FilteredGroups.Count == 0)
                 {
                     <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="group-switcher-empty">
                         <MudIcon Icon="@Icons.Material.Filled.SearchOff"
@@ -51,6 +74,7 @@
     public string? SelectedGroupKey { get; set; }
 
     private string? _searchText;
+    private bool _refreshing;
 
     private List<MarkdownDocumentGroup> FilteredGroups =>
         Groups.Where(MatchesSearch).ToList();
@@ -59,6 +83,36 @@
     {
         MudDialog.Close(DialogResult.Ok(groupKey));
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshGroupsAsync()
+    {
+        if (_refreshing)
+        {
+            return;
+        }
+
+        _refreshing = true;
+        try
+        {
+            var refreshResult = await MarkdownService.RefreshAllAsync();
+            if (refreshResult.IsFailed(out _))
+            {
+                return;
+            }
+
+            if ((await MarkdownService.GetAllDocumentGroupsAsync()).IsFailed(out _, out var groups))
+            {
+                return;
+            }
+
+            Groups = groups;
+            StateHasChanged();
+        }
+        finally
+        {
+            _refreshing = false;
+        }
     }
 
     private bool MatchesSearch(MarkdownDocumentGroup group)

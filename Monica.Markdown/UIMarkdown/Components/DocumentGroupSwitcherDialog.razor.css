@@ -4,8 +4,19 @@
     gap: 12px;
 }
 
+.group-switcher-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 ::deep .group-switcher-search {
     width: 100%;
+    flex: 1;
+}
+
+.group-switcher-refresh {
+    flex: 0 0 auto;
 }
 
 .group-switcher-list {
