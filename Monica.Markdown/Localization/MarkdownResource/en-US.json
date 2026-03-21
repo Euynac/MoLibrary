@@ -11,6 +11,9 @@
     "Documentation": "Documentation"
   },
   "MarkdownViewer": {
+    "Actions": {
+      "Refresh": "Refresh"
+    },
     "Placeholders": {
       "SearchFiles": "Search files",
       "SearchKnowledgeBases": "Find a knowledge base..."
@@ -18,6 +21,7 @@
     "States": {
       "LoadingDocuments": "Loading documents...",
       "LoadingDocument": "Loading document...",
+      "RefreshingKnowledgeBases": "Refreshing knowledge bases...",
       "NoKnowledgeBasesRegistered": "No knowledge bases registered",
       "NoKnowledgeBases": "No knowledge bases available",
       "NoMatchingKnowledgeBases": "No matching knowledge bases",

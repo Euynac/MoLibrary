@@ -37,7 +37,7 @@
                     <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="group-switcher-empty">
                         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
                         <MudText Typo="Typo.body2" Color="Color.Default" Style="opacity: 0.65;">
-                            @L["MarkdownViewer:Messages:RefreshingDocuments"]
+                            @L["MarkdownViewer:States:RefreshingKnowledgeBases"]
                         </MudText>
                     </MudStack>
                 }
@@ -111,7 +111,6 @@
             }
 
             Groups = groups;
-            StateHasChanged();
         }
         finally
         {
