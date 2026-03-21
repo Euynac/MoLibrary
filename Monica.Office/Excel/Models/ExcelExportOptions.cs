@@ -3,47 +3,47 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel导出配置
+    /// Excel export options.
     /// </summary>
     public class ExcelExportOptions
     {
         /// <summary>
-        /// 工作表名称，默认 Sheet1
+        /// Worksheet name. Default: Sheet1.
         /// </summary>
         [Display(Name = "工作表名称")]
         [StringLength(30, ErrorMessage = "{0}最大长度为{1}")]
         public string SheetName { get; set; }
 
         /// <summary>
-        /// 表头行编号,默认1
-        /// <para>从 1 开始</para>
+        /// Header row index. Default: 1.
+        /// <para>One-based index.</para>
         /// </summary>
         [Display(Name = "表头行编号")]
         [Range(1, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int HeaderRowIndex { get; set; }
 
         /// <summary>
-        /// 数据起始行编号，默认2
-        /// <para>从 1 开始</para>
+        /// Data start row index. Default: 2.
+        /// <para>One-based index.</para>
         /// </summary>
         [Display(Name = "数据起始行编号")]
         [Range(2, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int DataRowStartIndex { get; set; }
 
         /// <summary>
-        /// 文件格式，默认 Xlsx
+        /// File format. Default: Xlsx.
         /// </summary>
         [Display(Name = "文件格式")]
         [EnumDataType(typeof(ExcelTypeEnum), ErrorMessage = "{0}值不存在")]
         public ExcelTypeEnum ExcelType { get; set; }
 
         /// <summary>
-        /// 检查<see cref="ExcelHeaderRequest.QueryName"/>是否有重复列，不允许选择导出相同的列
+        /// Checks whether <see cref="ExcelHeaderRequest.QueryName"/> contains duplicate columns. Exporting the same column more than once is not allowed.
         /// </summary>
         public bool DisallowDuplicateHeader { get; set; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelExportOptions()
         {
@@ -54,7 +54,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 检查错误
+        /// Validates the options.
         /// </summary>
         public void CheckError()
         {
@@ -72,19 +72,19 @@ namespace Monica.Office.Excel.Models
     }
 
     /// <summary>
-    /// excel文件类型
+    /// Excel file type.
     /// </summary>
     public enum ExcelTypeEnum
     {
         /// <summary>
         /// Xlsx
-        /// <para>Excel为 >= 2007 的版本</para>
+        /// <para>Excel version &gt;= 2007.</para>
         /// <para>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</para>
         /// </summary>
         Xlsx,
         /// <summary>
         /// Xls
-        /// <para>Excel为 &lt;= 2003 的版本</para>
+        /// <para>Excel version &lt;= 2003.</para>
         /// <para>application/vnd.ms-excel</para>
         /// </summary>
         Xls,

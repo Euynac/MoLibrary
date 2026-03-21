@@ -3,24 +3,24 @@ using System.Reflection;
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 单元格样式信息
+    /// Excel cell style information.
     /// </summary>
     public class ExcelCellStyleInfo<TStyle, TFont>(MemberInfo propertyInfo, TStyle styleAttr, TFont fontAttr)
         where TStyle : Attribute
         where TFont : Attribute
     {
         /// <summary>
-        /// 表头对应的字段属性
+        /// Property mapped to the header cell.
         /// </summary>
         public MemberInfo PropertyInfo { get; } = propertyInfo;
 
         /// <summary>
-        /// 样式
+        /// Style attribute.
         /// </summary>
         public TStyle StyleAttr { get; } = styleAttr;
 
         /// <summary>
-        /// 字体
+        /// Font attribute.
         /// </summary>
         public TFont FontAttr { get; } = fontAttr;
     }

@@ -5,10 +5,10 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Npoi.Import
 {
     /// <summary>
-    /// Npoi Excel 导入实现
+    /// NPOI Excel import implementation
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class NpoiExcelImportBase(INpoiExcelHandle npoiExcelHandle) : ExcelImportBase<IWorkbook, ISheet, IRow, ICell>
     {

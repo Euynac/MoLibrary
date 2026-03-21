@@ -4,12 +4,12 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.EpPlus
 {
     /// <summary>
-    /// EpPlus 单元格样式处理
+    /// EpPlus cell style handler
     /// </summary>
     public interface IEpPlusCellStyleHandle
     {
         /// <summary>
-        /// 设置表头单元格样式和字体
+        /// Applies the header cell style and font.
         /// </summary>
         /// <param name="cellStyle"></param>
         /// <param name="fontAttr"></param>
@@ -19,7 +19,7 @@ namespace Monica.Office.Excel.EpPlus
             HeaderFontAttribute fontAttr);
 
         /// <summary>
-        /// 设置数据单元格样式和字体
+        /// Applies the data cell style and font.
         /// </summary>
         /// <param name="cellStyle"></param>
         /// <param name="styleAttr"></param>
@@ -30,22 +30,22 @@ namespace Monica.Office.Excel.EpPlus
             DataFontAttribute fontAttr);
 
         /// <summary>
-        /// 设置表头单元格样式
+        /// Applies the header cell style.
         /// </summary>
         void SetHeaderCellStyle(ExcelStyle cellStyle, HeaderStyleAttribute styleAttr);
 
         /// <summary>
-        /// 设置表头单元格的字体
+        /// Applies the header cell font.
         /// </summary>
         void SetHeaderCellFont(ExcelFont font, HeaderFontAttribute fontAttr);
 
         /// <summary>
-        /// 设置数据单元格样式
+        /// Applies the data cell style.
         /// </summary>
         void SetDataCellStyle(ExcelStyle cellStyle, DataStyleAttribute styleAttr);
 
         /// <summary>
-        /// 设置数据单元格的字体
+        /// Applies the data cell font.
         /// </summary>
         void SetDataCellFont(ExcelFont font, DataFontAttribute fontAttr);
     }

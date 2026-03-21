@@ -3,78 +3,78 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel工作表输出
+    /// Excel worksheet output.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class ExcelSheetDataOutput<T> where T : class, new()
     {
         /// <summary>
-        /// 工作表名称
+        /// Worksheet name.
         /// </summary>
         public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
-        /// 工作表编号
-        /// <para>从 1 开始</para>
+        /// Worksheet index
+        /// <para>One-based index.</para>
         /// </summary>
         public int SheetIndex { get; set; }
 
         /// <summary>
-        /// 总数据条数
+        /// Total row count.
         /// </summary>
         public int TotalCount => Rows.Count;
 
         /// <summary>
-        /// 无效数据数
+        /// Invalid row count.
         /// </summary>
         public int InvalidCount => Rows.Count(a => !a.IsValid);
 
         /// <summary>
-        /// 有效数据数
+        /// Valid row count.
         /// </summary>
         public int ValidCount => TotalCount - InvalidCount;
 
         /// <summary>
-        /// 数据集合
+        /// Row collection.
         /// </summary>
         public List<ExcelImportRowInfo<T>> Rows { get; set; } = [];
     }
 
     /// <summary>
-    /// 导入行信息
+    /// Imported row information.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class ExcelImportRowInfo<T> where T : class, new()
     {
         /// <summary>
-        /// 工作表名称
+        /// Worksheet name.
         /// </summary>
         public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
-        /// 工作表编号
-        /// <para>从 1 开始</para>
+        /// Worksheet index
+        /// <para>One-based index.</para>
         /// </summary>
         public int SheetIndex { get; set; }
 
         /// <summary>
-        /// 行数据
+        /// Row data.
         /// </summary>
         public T Row { get; set; } = new();
 
         /// <summary>
-        /// 行编号
-        /// <para>从 1 开始</para>
+        /// Row number
+        /// <para>One-based index.</para>
         /// </summary>
         public int RowNum { get; set; }
 
         /// <summary>
-        /// 是否有效
+        /// Whether the row is valid.
         /// </summary>
         public bool IsValid { get; set; }
 
         /// <summary>
-        /// 错误信息（当<see cref="IsValid"/>=false 时才有）
+        /// Validation errors (available only when <see cref="IsValid"/> = false).
         /// </summary>
         public List<ValidationResult> Errors { get; set; } = [];
     }

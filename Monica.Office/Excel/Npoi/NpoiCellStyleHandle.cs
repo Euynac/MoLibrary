@@ -4,19 +4,19 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Npoi
 {
     /// <summary>
-    /// Npoi 单元格样式处理
+    /// NPOI cell style handler
     /// </summary>
     public class NpoiCellStyleHandle : INpoiCellStyleHandle
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public NpoiCellStyleHandle()
         {
         }
 
         /// <summary>
-        /// 设置表头单元格样式和字体
+        /// Applies the header cell style and font.
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="fontAttr"></param>
@@ -24,14 +24,14 @@ namespace Monica.Office.Excel.Npoi
         /// <returns></returns>
         public virtual ICellStyle SetHeaderCellStyleAndFont(IWorkbook workbook, HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
         {
-            //表头默认样式
+            // Default header cell style
             var defaultStyle = CreateHeaderCellStyle(workbook, styleAttr);
             defaultStyle.SetFont(CreateHeaderCellFont(workbook, fontAttr));
             return defaultStyle;
         }
 
         /// <summary>
-        /// 设置数据单元格样式和字体
+        /// Applies the data cell style and font.
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="styleAttr"></param>
@@ -40,14 +40,14 @@ namespace Monica.Office.Excel.Npoi
 
         public virtual ICellStyle SetDataCellStyleAndFont(IWorkbook workbook, DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
         {
-            //数据单元格默认样式
+            // Default data cell style
             var defaultStyle = CreateDataCellStyle(workbook, styleAttr);
             defaultStyle.SetFont(CreateDataCellFont(workbook, fontAttr));
             return defaultStyle;
         }
 
         /// <summary>
-        /// 创建表头单元格样式
+        /// Creates the header cell style.
         /// </summary>
         public virtual ICellStyle CreateHeaderCellStyle(IWorkbook workbook, HeaderStyleAttribute? styleAttr)
         {
@@ -84,7 +84,7 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 创建表头单元格的字体
+        /// Creates the header cell font.
         /// </summary>
         public virtual IFont CreateHeaderCellFont(IWorkbook workbook, HeaderFontAttribute? fontAttr)
         {
@@ -108,7 +108,7 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 创建数据单元格样式
+        /// Creates the data cell style.
         /// </summary>
         public virtual ICellStyle CreateDataCellStyle(IWorkbook workbook, DataStyleAttribute? styleAttr)
         {
@@ -146,7 +146,7 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 创建数据单元格的字体
+        /// Creates the data cell font.
         /// </summary>
         public virtual IFont CreateDataCellFont(IWorkbook workbook, DataFontAttribute? fontAttr)
         {

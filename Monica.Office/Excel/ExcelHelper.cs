@@ -7,16 +7,16 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel
 {
     /// <summary>
-    /// excel 帮助器
+    /// Excel helper
     /// </summary>
     public static class ExcelHelper
     {
         public static string[] Extensions = [".xlsx", ".xls"];
 
         /// <summary>
-        /// 判断是否是Excel文件
+        /// Determines whether the file is an Excel file
         /// </summary>
-        /// <param name="fileName">有文件后缀的文件名</param>
+        /// <param name="fileName">The file name including the extension</param>
         /// <returns></returns>
         public static bool IsExcel(string fileName)
         {
@@ -30,9 +30,9 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 验证是否是 Excel文件，不是则抛出异常
+        /// Validates that the file is an Excel file and throws otherwise
         /// </summary>
-        /// <param name="physicalPath">excel文件物理路径</param>
+        /// <param name="physicalPath">The physical path of the Excel file</param>
         /// <returns></returns>
         public static void ValidationExcel(string physicalPath)
         {
@@ -53,10 +53,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取验证结果信息
+        /// Gets validation results
         /// </summary>
-        /// <param name="instance">对象</param>
-        /// <returns>如果无错误，则返回 null </returns>
+        /// <param name="instance">The object instance</param>
+        /// <returns>Returns <see langword="null"/> when there are no validation errors.</returns>
         public static List<ValidationResult>? GetValidationResult(object? instance)
         {
             if (instance == null) return null;
@@ -71,7 +71,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是数值类型
+        /// Determines whether the type is numeric
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
@@ -86,7 +86,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是日期类型
+        /// Determines whether the type is a date/time type
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
@@ -96,7 +96,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是时间类型
+        /// Determines whether the type is a time span type
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
@@ -106,7 +106,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是布尔类型
+        /// Determines whether the type is a Boolean type
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
@@ -116,9 +116,9 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取属性
+        /// Gets the properties
         /// </summary>
-        /// <typeparam name="TDto">导入或导出类</typeparam>
+        /// <typeparam name="TDto">The import or export DTO type</typeparam>
         public static PropertyInfo[] GetProperties<TDto>() where TDto : class
         {
             var dtoType = typeof(TDto);
@@ -129,11 +129,11 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 验证表头，并获取要导出的表头信息
+        /// Validates the headers and gets the header metadata to export
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="onlyExportHeaderName">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
-        /// <param name="optionsDisallowDuplicateHeader">检查导出字段选择重复性</param>
+        /// <param name="onlyExportHeaderName">The header names to export. If not specified, all headers are exported in <typeparamref name="TExportDto"/> property order. If specified, headers are exported in array order.</param>
+        /// <param name="optionsDisallowDuplicateHeader">Whether to validate duplicate export header selections</param>
         public static ExcelExportHeaderInfo[] CheckHeader<TExportDto>(ExcelHeaderRequest[] onlyExportHeaderName,
             bool optionsDisallowDuplicateHeader = false) where TExportDto : class
         {
@@ -205,7 +205,7 @@ namespace Monica.Office.Excel
             return headers.ToArray();
         }
         /// <summary>
-        /// 获取属性的 Display.Name 集合
+        /// Gets the collection of <c>Display.Name</c> values from the properties
         /// </summary>
         /// <returns></returns>
         public static List<string> GetDisplayNameListFromProperty<TDto>() where TDto : class
@@ -214,8 +214,8 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取属性的 Display.Name
-        /// <para>若未设置Display.Name，则返回 field.Name</para>
+        /// Gets the <c>Display.Name</c> value from the property
+        /// <para>If <c>Display.Name</c> is not set, returns <c>property.Name</c>.</para>
         /// </summary>
         /// <param name="property"></param>
         /// <returns></returns>
@@ -225,7 +225,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 转换单元格值
+        /// Converts a cell value
         /// </summary>
         /// <param name="cellValue"></param>
         /// <param name="valueType"></param>
@@ -251,7 +251,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取单元格值
+        /// Gets the typed cell value
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="value"></param>

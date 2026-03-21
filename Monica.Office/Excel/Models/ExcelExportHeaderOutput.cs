@@ -1,24 +1,24 @@
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 导出的表头输出
+    /// Exported Excel header output.
     /// </summary>
     public class ExcelExportHeaderOutput
     {
         /// <summary>
-        /// 显示的表头名称
+        /// Displayed header name.
         /// </summary>
         public string HeaderName { get; set; } = string.Empty;
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelExportHeaderOutput()
         {
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelExportHeaderOutput(string headerName)
         {

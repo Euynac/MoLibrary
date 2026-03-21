@@ -1,7 +1,7 @@
 namespace Monica.Office.Excel.Attributes
 {
     /// <summary>
-    /// Excel合并行（仅导出时用）
+    /// Merge Excel rows (for export only).
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class MergeRowAttribute : Attribute

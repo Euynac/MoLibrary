@@ -4,10 +4,10 @@ using Monica.StateStore.ProgressBar;
 namespace Monica.Office.Excel.EpPlus.Export
 {
     /// <summary>
-    /// EpPlus excel 导出服务
+    /// EpPlus Excel export provider
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class EpPlusExcelExportProvider(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportManager
     {

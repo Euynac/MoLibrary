@@ -3,10 +3,10 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel.EpPlus.Import
 {
     /// <summary>
-    /// EpPlus excel 导入服务
+    /// EpPlus Excel import provider
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class EpPlusExcelImportProvider(IEpPlusExcelHandle epPlusExcelHandle) : ExcelImportManager
     {

@@ -3,26 +3,26 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel
 {
     /// <summary>
-    /// Excel 导入服务
+    /// Excel import service
     /// </summary>
     public abstract class ExcelImportManager : IMoExcelImportManager
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance
         /// </summary>
         protected ExcelImportManager()
         {
         }
 
         /// <summary>
-        /// 导入
+        /// Imports data
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="filePhysicalPath">excel 文件路径</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="filePhysicalPath">The physical path of the Excel file</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public List<ExcelSheetDataOutput<TImportDto>> Import<TImportDto>(string filePhysicalPath, Action<ExcelImportOptions>? optionAction = null) where TImportDto : class, new()
         {
@@ -40,14 +40,14 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 导入
+        /// Imports data asynchronously
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="filePhysicalPath">excel 文件路径</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="filePhysicalPath">The physical path of the Excel file</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public Task<List<ExcelSheetDataOutput<TImportDto>>> ImportAsync<TImportDto>(string filePhysicalPath, Action<ExcelImportOptions>? optionAction = null) where TImportDto : class, new()
         {
@@ -55,14 +55,14 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 导入
+        /// Imports data
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="fileBytes">excel 文件字节</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileBytes">The Excel file bytes</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public List<ExcelSheetDataOutput<TImportDto>> Import<TImportDto>(byte[] fileBytes, Action<ExcelImportOptions>? optionAction = null) where TImportDto : class, new()
         {
@@ -80,14 +80,14 @@ namespace Monica.Office.Excel
 
 
         /// <summary>
-        /// 导入
+        /// Imports data asynchronously
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="fileBytes">excel 文件字节</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileBytes">The Excel file bytes</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public Task<List<ExcelSheetDataOutput<TImportDto>>> ImportAsync<TImportDto>(byte[] fileBytes, Action<ExcelImportOptions>? optionAction = null) where TImportDto : class, new()
         {
@@ -95,14 +95,14 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 导入
+        /// Imports data
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="fileStream">文件流</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileStream">The file stream</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public List<ExcelSheetDataOutput<TImportDto>> Import<TImportDto>(
             Stream fileStream,
@@ -121,14 +121,14 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 导入
+        /// Imports data asynchronously
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>1.表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性</para>
-        /// <para>2.字段验证可使用 <see cref="System.ComponentModel.DataAnnotations"/> 的所有特性，如 Required，StringLength，Range，RegularExpression，EnumDataType，DefaultValue 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>1. Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>.</para>
+        /// <para>2. Field validation can use any attribute in <see cref="System.ComponentModel.DataAnnotations"/>, such as Required, StringLength, Range, RegularExpression, EnumDataType, and DefaultValue.</para>
         /// </typeparam>
-        /// <param name="fileStream">文件流</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileStream">The file stream</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public Task<List<ExcelSheetDataOutput<TImportDto>>> ImportAsync<TImportDto>(Stream fileStream, Action<ExcelImportOptions>? optionAction = null) where TImportDto : class, new()
         {
@@ -136,7 +136,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 导入实现
+        /// Implements the import operation
         /// </summary>
         /// <typeparam name="TImportDto"></typeparam>
         /// <param name="fileStream"></param>

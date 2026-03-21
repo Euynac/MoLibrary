@@ -1,12 +1,12 @@
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 表头单元格信息
+    /// Excel header cell information.
     /// </summary>
     public class ExcelHeaderCellInfo : ExcelHeaderCellInfo<ExcelHeaderCell>
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCellInfo(string sheetName, int sheetIndex)
         {
@@ -15,7 +15,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCellInfo(string sheetName, int sheetIndex, List<ExcelHeaderCell> headerCells) : base(sheetName, sheetIndex, headerCells)
         {
@@ -23,34 +23,34 @@ namespace Monica.Office.Excel.Models
     }
 
     /// <summary>
-    /// excel 表头信息
+    /// Excel header information.
     /// </summary>
     public class ExcelHeaderCellInfo<T> where T : ExcelHeaderCell
     {
         /// <summary>
-        /// 工作表名称
+        /// Worksheet name.
         /// </summary>
         public string SheetName { get; set; } = string.Empty;
 
         /// <summary>
-        /// 工作表下标（起始：0）
+        /// Worksheet index (zero-based).
         /// </summary>
         public int SheetIndex { get; set; }
 
         /// <summary>
-        /// 表头单元格集合
+        /// Collection of header cells.
         /// </summary>
         public List<T> HeaderCells { get; set; } = [];
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCellInfo()
         {
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCellInfo(string sheetName, int sheetIndex)
         {
@@ -59,7 +59,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCellInfo(string sheetName, int sheetIndex, List<T> headerCells) : this(sheetName, sheetIndex)
         {
@@ -68,34 +68,34 @@ namespace Monica.Office.Excel.Models
     }
 
     /// <summary>
-    /// excel 表头单元格
+    /// Excel header cell.
     /// </summary>
     public class ExcelHeaderCell
     {
         /// <summary>
-        /// 表头名称
+        /// Header cell name.
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// 行下标（起始：原值）
+        /// Row index (uses the original index base).
         /// </summary>
         public int RowIndex { get; set; }
 
         /// <summary>
-        /// 列下标（起始：原值）
+        /// Column index (uses the original index base).
         /// </summary>
         public int ColumnIndex { get; set; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCell()
         {
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelHeaderCell(string name, int rowIndex, int columnIndex)
         {

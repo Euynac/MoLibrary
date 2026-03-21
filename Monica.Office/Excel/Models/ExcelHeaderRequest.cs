@@ -3,33 +3,33 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.Office.Excel.Models;
 
 /// <summary>
-/// 动态设置导出列请求
+/// Request for configuring exported columns dynamically.
 /// </summary>
 /// <param name="queryName"></param>
 public class ExcelHeaderRequest(string queryName)
 {
     /// <summary>
-    /// 用于查询的名字
+    /// Name used for lookup.
     /// </summary>
     public string QueryName { get; set; } = queryName;
 
     /// <summary>
-    /// 自定义列名
+    /// Custom column name.
     /// </summary>
     public string? CustomHeaderName { get; set; }
 
     /// <summary>
-    /// 自定义格式
+    /// Custom format.
     /// </summary>
     public string? DataFormat { get; set; }
     /// <summary>
-    /// 列自动调整大小
+    /// Whether the column width is adjusted automatically.
     /// </summary>
     public bool? ColumnAutoSize { get; set; }
     /// <summary>
-    /// 列宽
-    /// <para>单位：字符</para>
-    /// <para>取值区间： [0-255]</para>
+    /// Column width
+    /// <para>Unit: characters.</para>
+    /// <para>Range: [0-255].</para>
     /// </summary>
     [Range(0, 255)]
     public int? ColumnSize { get; set; }

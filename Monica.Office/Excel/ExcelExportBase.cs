@@ -8,25 +8,25 @@ using Monica.StateStore.ProgressBar;
 namespace Monica.Office.Excel
 {
     /// <summary>
-    /// 导出基类
+    /// Base class for Excel export
     /// </summary>
     public abstract class ExcelExportBase<TWorkbook, TSheet, TRow, TCell, TCellStyle>
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance
         /// </summary>
         protected ExcelExportBase()
         {
         }
 
         /// <summary>
-        /// 导出
+        /// Exports data
         /// </summary>
-        /// <typeparam name="TExportDto"><paramref name="data"/> 集合中元素的类（导出的表头顺序为字段顺序）</typeparam>
-        /// <param name="data">数据</param>
-        /// <param name="optionAction">配置选项</param>
-        /// <param name="requests">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
-        /// <param name="progressBar">进度条实例，可选，为null时不报告进度</param>
+        /// <typeparam name="TExportDto">The element type in <paramref name="data"/>. Header order follows property order.</typeparam>
+        /// <param name="data">The data to export</param>
+        /// <param name="optionAction">Configures export options</param>
+        /// <param name="requests">The header names to export. If not specified, all headers are exported in <typeparamref name="TExportDto"/> property order. If specified, headers are exported in request order.</param>
+        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
         public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, Action<ExcelExportOptions>? optionAction,
             ExcelHeaderRequest[] requests, ProgressBar? progressBar = null)
@@ -42,51 +42,51 @@ namespace Monica.Office.Excel
 
                 progressBar?.IncrementAsync(1, "初始化Excel导出", "导出Excel").Wait();
 
-                //获取工作册
+                // Get the workbook
                 var workbook = GetWorkbook(options);
                 progressBar?.IncrementAsync(4, "创建工作册").Wait();
 
-                //创建工作表
+                // Create the worksheet
                 var worksheet = CreateSheet(workbook, options);
 
                 progressBar?.IncrementAsync(5, "创建工作表").Wait();
 
-                //验证表头，并获取要导出的表头信息
+                // Validate the headers and get the export header metadata
                 var headers = CheckHeader<TExportDto>(requests, options);
 
                 progressBar?.IncrementAsync(5, "验证表头").Wait();
 
-                //表头行下标
+                // Header row index
                 var headerRowIndex = options.HeaderRowIndex - 1;
 
-                //先获取需要的表头列的样式和字体
+                // Create the styles and fonts for the selected header columns first
                 var infoBundle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet, headers);
 
                 progressBar?.IncrementAsync(10, "创建表头及数据样式").Wait();
 
-                //处理表头单元格
+                // Process header cells
                 ProcessHeaderCell<TExportDto>(workbook, worksheet, headerRowIndex, infoBundle);
                 progressBar?.IncrementAsync(10, "处理表头").Wait();
 
-                //数据起始行下标
+                // Data row start index
                 var dataRowIndex = options.DataRowStartIndex - 1;
 
                 progressBar?.IncrementAsync(5, "创建数据样式").Wait();
 
-                //处理数据单元格
+                // Process data cells
                 ProcessDataCell(workbook, worksheet, data, dataRowIndex, infoBundle, out var footerRowIndex, progressBar, 50);
 
-                //处理底部数据统计
+                // Process footer statistics
                 progressBar?.IncrementAsync(5, "处理数据统计").Wait();
                 ProcessFooterStatistics<TExportDto>(workbook, worksheet, dataRowIndex, footerRowIndex, infoBundle);
 
 
-                //处理列宽【有数据才能处理自动列宽，所以必须放到最后进行处理】
+                // Process column widths. Auto-fit requires data, so this must run last.
                 progressBar?.IncrementAsync(5, "处理列宽").Wait();
                 ProcessColumnWidth<TExportDto>(workbook, worksheet, headers);
 
 
-                //转换并获取工作册字节
+                // Convert the workbook to bytes
                 progressBar?.IncrementAsync(5, "生成Excel文件").Wait();
                 var result = GetAsByteArray(workbook, worksheet);
                 progressBar?.IncrementAsync(0, "Excel导出完成").Wait();
@@ -101,10 +101,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 验证表头，并获取要导出的表头信息
+        /// Validates the headers and gets the export header metadata
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="requests">只需要导出的表头名称（指定则按 <typeparamref name="TExportDto"/> 字段顺序导出全部，不指定空则按数组顺序导出）</param>
+        /// <param name="requests">The header names to export. If not specified, all headers are exported in <typeparamref name="TExportDto"/> property order. If specified, headers are exported in request order.</param>
         /// <param name="options"></param>
         public ExcelExportHeaderInfo[] CheckHeader<TExportDto>(ExcelHeaderRequest[] requests,
             ExcelExportOptions options) where TExportDto : class
@@ -112,52 +112,52 @@ namespace Monica.Office.Excel
             return ExcelHelper.CheckHeader<TExportDto>(requests, options.DisallowDuplicateHeader);
         }
 
-        #region 私有
+        #region Private
 
         /// <summary>
-        /// 处理表头单元格
+        /// Processes header cells
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="headerRowIndex">表头行下标（起始下标：0）</param>
-        /// <param name="infoBundle">列样式集合</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="headerRowIndex">The header row index (zero-based)</param>
+        /// <param name="infoBundle">The column style collection</param>
         private void ProcessHeaderCell<TExportDto>(TWorkbook workbook, TSheet worksheet, int headerRowIndex, List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>> infoBundle) where TExportDto : class
         {
-            //处理单元格 值、样式、字体、行高
+            // Process cell values, styles, fonts, and row height.
             for (var columnIndex = 0; columnIndex < infoBundle.Count; columnIndex++)
             {
                 var info = infoBundle[columnIndex].Header;
                 var headerStyle = infoBundle[columnIndex].HeaderStyle!;
                 var p = info.PropertyInfo;
 
-                //创建单元格
+                // Create the cell
                 var cell = CreateCell(workbook, worksheet, headerRowIndex, columnIndex);
 
-                //处理表头单元格值
+                // Process the header cell value
                 ProcessHeaderCellValue(workbook, worksheet, cell, p, info.HeaderName);
 
-                //处理表头单元格样式和字体
+                // Process the header cell style and font
                 SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, cell, headerStyle);
             }
 
-            //处理表头行 行高（必须先创建行，才能处理）
+            // Process the header row height. The row must exist first.
             ProcessRowHeight<TExportDto>(workbook, worksheet, headerRowIndex, true);
         }
 
         /// <summary>
-        /// 处理数据单元格
+        /// Processes data cells
         /// </summary>
-        /// <typeparam name="TExportDto"><paramref name="data"/>集合中元素的类</typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="data">数据集合</param>
-        /// <param name="rowIndex">下一行下标（起始下标： 0）</param>
-        /// <param name="infoBundle">数据样式</param>
-        /// <param name="nextRowIndex">下一行下标（起始下标： 0）</param>
-        /// <param name="progressBar">进度条（可选）</param>
-        /// <param name="progressWeight">数据处理在整体进度中的权重（仅当progressBar不为空时有效）</param>
-        /// <returns>下一行下标（从0开始）</returns>
+        /// <typeparam name="TExportDto">The element type in <paramref name="data"/></typeparam>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="data">The data collection</param>
+        /// <param name="rowIndex">The next row index (zero-based)</param>
+        /// <param name="infoBundle">The data style collection</param>
+        /// <param name="nextRowIndex">The next row index (zero-based)</param>
+        /// <param name="progressBar">Optional progress bar instance</param>
+        /// <param name="progressWeight">The weight of data processing in the overall progress. Only applies when <paramref name="progressBar"/> is not <see langword="null"/>.</param>
+        /// <returns>The next row index (zero-based)</returns>
         private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet,
             IReadOnlyList<TExportDto> data, int rowIndex,
             List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute,
@@ -165,25 +165,25 @@ namespace Monica.Office.Excel
             out int nextRowIndex, ProgressBar? progressBar = null, int progressWeight = 0)
             where TExportDto : class
         {
-            //可合并行区域信息
+            // Mergeable row regions
             var rowMergedList = new List<ExcelExportMergedRegionInfo>();
             var rowMergedHeader = GetHeaderProperties<TExportDto>().Where(a => a.GetCustomAttribute<MergeRowAttribute>() != null).Select(a => a.Name).ToList();
 
-            //可合并列区域信息
+            // Mergeable column regions
             var columnMergedList = new List<ExcelExportMergedRegionInfo>();
             var columnMergedHeader = typeof(TExportDto).GetCustomAttributes<MergeColumnAttribute>().Select(a => a.PropertyNames.Distinct().ToArray()).Where(a => a.Length > 1).ToList();
 
-            //验证合并特性值
+            // Validate merge attribute settings
             CheckMergeAttribute<TExportDto>(columnMergedHeader);
 
-            // 进度条相关变量
+            // Progress-related variables
             var dataCount = data.Count;
             var initialStep = progressBar?.Status.CurrentStep;
             var progressIncrement = dataCount > 0 && progressBar != null ? progressWeight / (double) dataCount : 0;
 
             progressBar?.UpdatePhaseAsync("处理数据", $"开始处理数据，共 {dataCount} 条").Wait();
 
-            //处理单元格 值、样式、字体、合并
+            // Process cell values, styles, fonts, and merged regions.
             var processedCount = 0;
             foreach (var d in data)
             {
@@ -195,57 +195,57 @@ namespace Monica.Office.Excel
                     var dataStyle = infoBundle[columnIndex].DataStyle!;
                     var p = info.PropertyInfo;
 
-                    //创建单元格
+                    // Create the cell
                     var cell = CreateCell(workbook, worksheet, rowIndex, columnIndex);
 
-                    //处理数据单元格值
+                    // Process the data cell value
                     var value = p.GetValue(d);
                     ProcessDataCellValue(workbook, worksheet, cell, p, value);
 
-                    //处理数据单元格样式和字体
+                    // Process the data cell style and font
                     SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, dataStyle);
 
-                    //处理列合并
+                    // Process column merging
                     ProcessMergeColumn(columnMergedHeader, columnMergedList, rowIndex, columnIndex, p, value);
 
-                    //处理行合并
+                    // Process row merging
                     ProcessMergeRow(rowMergedHeader, rowMergedList, rowIndex, columnIndex, p, value);
                 }
 
-                //处理数据行 行高（必须先创建行，才能处理）
+                // Process the data row height. The row must exist first.
                 ProcessRowHeight<TExportDto>(workbook, worksheet, rowIndex, false);
 
-                //下一行下标
+                // Next row index
                 rowIndex++;
 
-                // 更新进度（如果有进度条）
+                // Update progress when a progress bar is available.
                 if (progressBar != null)
                 {
                     processedCount++;
-                    if (processedCount % 50 == 0 || processedCount == dataCount) // 每处理50行或处理完所有数据更新一次进度
+                    if (processedCount % 50 == 0 || processedCount == dataCount) // Update after every 50 rows or when all rows are processed.
                     {
                         progressBar.UpdateStatusAsync(initialStep!.Value + (int) (progressIncrement * processedCount), $"已处理 {processedCount}/{dataCount} 条数据").Wait();
                     }
                 }
             }
 
-            //下一行下标
+            // Next row index
             nextRowIndex = rowIndex;
 
-            //移除不能合并的
+            // Remove regions that cannot be merged
             columnMergedList.RemoveAll(m => !m.IsCanMergedColumn());
             rowMergedList.RemoveAll(m => !m.IsCanMergedRow());
 
-            //若该属性存在列合并，则移除所有行合（优先列合并）
+            // If a property is merged by column, remove its row merges. Column merging takes precedence.
             rowMergedList.RemoveAll(m => columnMergedList.Any(a => a.PropertyNames.Intersect(m.PropertyNames).Any()));
 
-            //合并单元格区域
+            // Merge the cell regions
             progressBar?.IncrementAsync(0, "合并单元格").Wait();
 
-            //所有合并信息
+            // All merged region metadata
             var mergedRegion = rowMergedList.Concat(columnMergedList).ToList();
 
-            //处理数据合并区域
+            // Process merged regions
             foreach (var m in mergedRegion)
             {
                 SetMergedRegion(workbook, worksheet, m.FromRowIndex, m.ToRowIndex, m.FromColumnIndex, m.ToColumnIndex);
@@ -255,24 +255,24 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 验证合并特性值
+        /// Validates merge attribute settings
         /// </summary>
-        /// <typeparam name="TExportDto">集合中元素的类</typeparam>
-        /// <param name="columnMergedHeader">列合并表头信息</param>
-        /// <returns>下一行下标（从0开始）</returns>
+        /// <typeparam name="TExportDto">The element type in the collection</typeparam>
+        /// <param name="columnMergedHeader">The column-merge header metadata</param>
+        /// <returns>The next row index (zero-based)</returns>
         private void CheckMergeAttribute<TExportDto>(IReadOnlyList<string[]> columnMergedHeader) where TExportDto : class
         {
             var className = typeof(TExportDto).Name;
             var properties = GetHeaderProperties<TExportDto>();
             var attrName = nameof(MergeColumnAttribute);
 
-            //验证：不存在属性名称，单个属性在多个特性中重复，同一特性中属性类型不一致
+            // Validate missing property names, duplicated properties across attributes, and inconsistent property types within the same attribute.
             for (var index = 0; index < columnMergedHeader.Count; index++)
             {
                 var names = columnMergedHeader[index];
                 var num = index + 1;
 
-                //不存在属性名称
+                // Missing property names
                 var noExist = names.Where(a => properties.All(p => p.Name != a)).Select(a => a);
                 if (noExist.Any())
                 {
@@ -280,7 +280,7 @@ namespace Monica.Office.Excel
                         $"类【{className}】的第 {num} 个 {attrName} 指定的属性名称未找到：{string.Join(",", noExist)}");
                 }
 
-                //同一特性中属性类型不一致
+                // Inconsistent property types within the same attribute
                 var type = names.Select(n => properties.First(b => n == b.Name).PropertyType);
                 if (type.Distinct().Count() > 1)
                 {
@@ -289,7 +289,7 @@ namespace Monica.Office.Excel
                 }
             }
 
-            //单个属性在多个特性中重复
+            // A single property appears in multiple attributes
             var duplicate = columnMergedHeader.SelectMany(a => a).GroupBy(a => a)
                 .Where(a => a.Count() > 1)
                 .Select(a => a.Key).ToList();
@@ -301,14 +301,14 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理行合并
+        /// Processes row merging
         /// </summary>
-        /// <param name="rowMergedHeader">行合并表头</param>
-        /// <param name="mergedList">合并信息集合</param>
-        /// <param name="rowIndex">当前行下标（起始下标：0）</param>
-        /// <param name="columnIndex">当前列下标（起始下标：0）</param>
-        /// <param name="propertyInfo">字段属性</param>
-        /// <param name="value">值</param>
+        /// <param name="rowMergedHeader">The row-merge headers</param>
+        /// <param name="mergedList">The merged region metadata collection</param>
+        /// <param name="rowIndex">The current row index (zero-based)</param>
+        /// <param name="columnIndex">The current column index (zero-based)</param>
+        /// <param name="propertyInfo">The property metadata</param>
+        /// <param name="value">The value</param>
         private void ProcessMergeRow(IReadOnlyList<string> rowMergedHeader, ICollection<ExcelExportMergedRegionInfo> mergedList, int rowIndex, int columnIndex, PropertyInfo propertyInfo, object? value)
         {
             if (rowMergedHeader.All(a => a != propertyInfo.Name))
@@ -316,13 +316,14 @@ namespace Monica.Office.Excel
                 return;
             }
 
-            //获取最后一个当前列的合并信息
+            // Get the last merged region for the current column
             var merge = mergedList.LastOrDefault(a => a.PropertyNames.Contains(propertyInfo.Name));
 
-            //值是否相等
+            // Whether the values are equal
             var isValueEqual = merge?.IsValueEqual(value) == true;
 
-            //无该列合并信息、不是同一列，值不相等但可合并、值相等但不是相邻行 都要新建合并信息
+            // Create a new merged region when none exists, the column differs, the value changed after a mergeable range,
+            // or the value matches but the row is not adjacent.
             if (merge == null || !merge.IsSameColumn(columnIndex) || !isValueEqual && merge.IsCanMergedRow() || isValueEqual && !merge.IsSiblingRow(rowIndex))
             {
                 mergedList.Add(new ExcelExportMergedRegionInfo
@@ -335,7 +336,7 @@ namespace Monica.Office.Excel
                     ToColumnIndex = columnIndex
                 });
             }
-            else if (!isValueEqual) //不相等，则替换掉
+            else if (!isValueEqual) // Reset the region when the value changes.
             {
                 merge.Value = value;
                 merge.FromRowIndex = rowIndex;
@@ -343,7 +344,7 @@ namespace Monica.Office.Excel
                 merge.FromColumnIndex = columnIndex;
                 merge.ToColumnIndex = columnIndex;
             }
-            else //值相等，相邻行 ，则改变合并行下标
+            else // Extend the merged region when the value matches on an adjacent row.
             {
                 if (merge.IsOutRangeRowFrom(rowIndex))
                 {
@@ -357,29 +358,30 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理列合并
+        /// Processes column merging
         /// </summary>
-        /// <param name="columnMergedHeader">列合并表头</param>
-        /// <param name="mergedList">合并信息集合</param>
-        /// <param name="rowIndex">当前行下表（起始下标：0）</param>
-        /// <param name="columnIndex">当前列下标（起始下标：0）</param>
-        /// <param name="propertyInfo">字段属性</param>
-        /// <param name="value">值</param>
+        /// <param name="columnMergedHeader">The column-merge headers</param>
+        /// <param name="mergedList">The merged region metadata collection</param>
+        /// <param name="rowIndex">The current row index (zero-based)</param>
+        /// <param name="columnIndex">The current column index (zero-based)</param>
+        /// <param name="propertyInfo">The property metadata</param>
+        /// <param name="value">The value</param>
         private void ProcessMergeColumn(IReadOnlyList<string[]>? columnMergedHeader, ICollection<ExcelExportMergedRegionInfo> mergedList, int rowIndex, int columnIndex, PropertyInfo propertyInfo, object? value)
         {
-            //处理列合并
+            // Process column merging
             if (columnMergedHeader == null || !columnMergedHeader.Any(a => a.Contains(propertyInfo.Name)))
             {
                 return;
             }
 
-            //获取最后一个当前列的合并信息
+            // Get the last merged region for the current column
             var merge = mergedList.LastOrDefault(a => a.PropertyNames.Contains(propertyInfo.Name));
 
-            //值是否相等
+            // Whether the values are equal
             var isValueEqual = merge?.IsValueEqual(value) == true;
 
-            //无该列合并信息、不是同一行、值不相等但可合并、值相等但不是相邻列 都要新建合并信息
+            // Create a new merged region when none exists, the row differs, the value changed after a mergeable range,
+            // or the value matches but the column is not adjacent.
             if (merge == null || !merge.IsSameRow(rowIndex) || !isValueEqual && merge.IsCanMergedColumn() || isValueEqual && !merge.IsSiblingColumn(columnIndex))
             {
                 mergedList.Add(new ExcelExportMergedRegionInfo
@@ -392,7 +394,7 @@ namespace Monica.Office.Excel
                     ToColumnIndex = columnIndex
                 });
             }
-            else if (!isValueEqual) //值不相等，则替换掉
+            else if (!isValueEqual) // Reset the region when the value changes.
             {
                 merge.Value = value;
                 merge.FromRowIndex = rowIndex;
@@ -400,7 +402,7 @@ namespace Monica.Office.Excel
                 merge.FromColumnIndex = columnIndex;
                 merge.ToColumnIndex = columnIndex;
             }
-            else  //值相等，相邻列 ，则改变合并列下标
+            else  // Extend the merged region when the value matches in an adjacent column.
             {
                 if (merge.IsOutRangeColumnFrom(columnIndex))
                 {
@@ -414,11 +416,11 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理列宽（必须先创建列，才能处理；列宽自动调整，必须有列数据才能处理）
+        /// Processes column widths. Columns must exist first, and auto-fit requires data.
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="headers">要导出的表头信息</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="headers">The export header metadata</param>
 
         private void ProcessColumnWidth<TExportDto>(TWorkbook workbook, TSheet worksheet, ExcelExportHeaderInfo[] headers) where TExportDto : class
         {
@@ -428,19 +430,19 @@ namespace Monica.Office.Excel
                 var columnIndex = i;
                 var p = info.PropertyInfo;
 
-                //设置列宽
+                // Set the column width
                 var styleAttr = p.GetHeaderStyleAttr<TExportDto>();
                 SetColumnWidth(workbook, worksheet, columnIndex, styleAttr.ColumnSize, styleAttr.ColumnAutoSize);
             }
         }
 
         /// <summary>
-        /// 处理行高（必须先创建行，才能处理）
+        /// Processes row height. The row must exist first.
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="rowIndex">行下表</param>
-        /// <param name="isHeader">是否表头</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="rowIndex">The row index</param>
+        /// <param name="isHeader">Whether the row is a header row</param>
 
         private void ProcessRowHeight<TExportDto>(TWorkbook workbook, TSheet worksheet, int rowIndex, bool isHeader) where TExportDto : class
         {
@@ -450,18 +452,18 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理表头单元格值
+        /// Processes the header cell value
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="propertyInfo">当前正在处理的字段属性</param>
-        /// <param name="value">字段值</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="propertyInfo">The property currently being processed</param>
+        /// <param name="value">The property value</param>
         private void ProcessHeaderCellValue(TWorkbook workbook, TSheet worksheet, TCell cell, PropertyInfo propertyInfo, object value)
         {
             try
             {
-                //设置单元格值
+                // Set the cell value
                 SetCellValue(workbook, worksheet, cell, typeof(string), value);
 
             }
@@ -473,13 +475,13 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理数据单元格值
+        /// Processes the data cell value
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="propertyInfo">当前正在处理的字段属性</param>
-        /// <param name="value">字段值</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="propertyInfo">The property currently being processed</param>
+        /// <param name="value">The property value</param>
         private void ProcessDataCellValue(TWorkbook workbook, TSheet worksheet, TCell cell, PropertyInfo propertyInfo, object? value)
         {
             try
@@ -495,7 +497,7 @@ namespace Monica.Office.Excel
 
                 if (value != null)
                 {
-                    //设置单元格值
+                    // Set the cell value
                     SetCellValue(workbook, worksheet, cell, propertyInfo.PropertyType, value);
                 }
 
@@ -508,23 +510,23 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取所有表头列及其数据的样式和字体
+        /// Gets the styles and fonts for all exported header columns and their data cells
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
         /// <param name="headers"></param>
         private List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>> GetHeaderColumnStyleAndFont<TExportDto>(TWorkbook workbook,
                 TSheet worksheet, ExcelExportHeaderInfo[] headers) where TExportDto : class
         {
             var styles = new List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>>();
 
-            //表头默认样式
+            // Default header style
             var headerDefaultAttr = typeof(TExportDto).GetHeaderStyleFont<TExportDto>();
             var headerDefaultStyle =
                 CreateHeaderStyleAndFont<TExportDto>(workbook, worksheet, headerDefaultAttr.StyleAttr, headerDefaultAttr.FontAttr);
 
-            //数据默认样式
+            // Default data style
             var dataDefaultAttr = typeof(TExportDto).GetDataStyleFont<TExportDto>();
             var dataDefaultStyle = CreateDataStyleAndFont<TExportDto>(workbook, worksheet, dataDefaultAttr.StyleAttr,
                 dataDefaultAttr.FontAttr);
@@ -533,7 +535,7 @@ namespace Monica.Office.Excel
             {
                 var propertyInfo = info.PropertyInfo;
               
-                //添加
+                // Add the combined header/data style bundle
                 styles.Add(new ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute, DataFontAttribute>(info)
                 {
                     HeaderStyle = CreateHeaderStyle(propertyInfo, info),
@@ -545,12 +547,12 @@ namespace Monica.Office.Excel
             return styles;
             ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute> CreateHeaderStyle(PropertyInfo propertyInfo, ExcelExportHeaderInfo info)
             {
-                //表头样式
+                // Header style
                 var cellStyle = headerDefaultStyle;
 
                 var headerAttr = propertyInfo.GetHeaderStyleFont<TExportDto>();
 
-                //设置默认格式化
+                // Apply the default format
                 if (CanSetDefaultFormat<TExportDto>(propertyInfo))
                 {
                     headerAttr.StyleAttr.DataFormat = SetDefaultDataFormat(typeof(string));
@@ -559,24 +561,24 @@ namespace Monica.Office.Excel
                 headerAttr.StyleAttr.ColumnAutoSize = info.Option?.ColumnAutoSize ?? headerAttr.StyleAttr.ColumnAutoSize;
                 headerAttr.StyleAttr.ColumnSize = info.Option?.ColumnSize ?? headerAttr.StyleAttr.ColumnSize;
 
-                //属性上有样式、有字体样式，则重新创建样式
+                // Recreate the style when the property declares a style or font attribute.
                 if (propertyInfo.HasHeaderStyleAttr() || propertyInfo.HasHeaderFontAttr())
                 {
                     cellStyle = CreateHeaderStyleAndFont<TExportDto>(workbook, worksheet, headerAttr.StyleAttr, headerAttr.FontAttr);
                 }
 
 
-                //添加
+                // Add the style output
                 return new ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute>(propertyInfo, cellStyle, headerAttr.StyleAttr, headerAttr.FontAttr);
             }
             ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute> CreateCellStyle(PropertyInfo propertyInfo, ExcelExportHeaderInfo info)
             {
-                //数据样式
+                // Data style
                 var cellStyle = dataDefaultStyle;
 
                 var dataAttr = propertyInfo.GetDataStyleFont<TExportDto>();
 
-                //设置默认格式化
+                // Apply the default format
                 if (info.Option?.DataFormat is not { } dataFormat)
                 {
                     if (CanSetDefaultFormat<TExportDto>(propertyInfo) && SetDefaultDataFormat(propertyInfo.PropertyType) is { } defaultDataFormat)
@@ -589,22 +591,22 @@ namespace Monica.Office.Excel
                     dataAttr.StyleAttr.DataFormat = dataFormat;
                 }
 
-                //属性上有样式、有字体样式、属性为时间 则重新创建样式
+                // Recreate the style when the property declares a style or font attribute, or when the property type is DateTime.
                 if (propertyInfo.HasDataStyleAttr() || propertyInfo.HasDataFontAttr() || propertyInfo.PropertyType.IsDateTime())
                 {
                     cellStyle = CreateDataStyleAndFont<TExportDto>(workbook, worksheet, dataAttr.StyleAttr,
                         dataAttr.FontAttr);
                 }
 
-                //添加
+                // Add the style output
                 return new ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute>(propertyInfo, cellStyle, dataAttr.StyleAttr, dataAttr.FontAttr);
             }
         }
 
         /// <summary>
-        /// 设置默认数据格式化
+        /// Gets the default data format
         /// </summary>
-        /// <param name="type">数据类型</param>
+        /// <param name="type">The data type</param>
         /// <returns></returns>
         private string? SetDefaultDataFormat(Type type)
         {
@@ -617,7 +619,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是否可以设置默认数据格式
+        /// Determines whether the default data format can be applied
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <param name="propertyInfo"></param>
@@ -628,7 +630,9 @@ namespace Monica.Office.Excel
 
             var style = propertyInfo.GetDataStyleAttr<TExportDto>();
 
-            //设置默认格式化：1.属性上有样式，但格式化为空，2.属性上没有样式，类上格式化为空
+            // Apply the default format when:
+            // 1. The property has a style attribute but its format is empty.
+            // 2. The property has no style attribute and the type-level format is empty.
             if (propertyInfo.HasDataStyleAttr() && string.IsNullOrWhiteSpace(style.DataFormat) ||
                 !propertyInfo.HasDataStyleAttr() && string.IsNullOrWhiteSpace(dataDefaultAttr.StyleAttr.DataFormat))
             {
@@ -639,7 +643,7 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取表头属性
+        /// Gets the header properties
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
         /// <returns></returns>
@@ -649,13 +653,13 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理底部数据统计
+        /// Processes footer statistics
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="dataStartRowIndex">数据起始行下标（起始下标：0）</param>
-        /// <param name="nextRowIndex">下一行下标（起始下标：0）</param>
-        /// <param name="infoBundles">表头样式</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="dataStartRowIndex">The data start row index (zero-based)</param>
+        /// <param name="nextRowIndex">The next row index (zero-based)</param>
+        /// <param name="infoBundles">The header style bundles</param>
         private void ProcessFooterStatistics<TExportDto>(TWorkbook workbook, TSheet worksheet, int dataStartRowIndex,
             int nextRowIndex,
             List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute,
@@ -674,7 +678,7 @@ namespace Monica.Office.Excel
                 var headerStyle = infoBundles[i].HeaderStyle!;
                 var dataStyle = infoBundles[i].DataStyle!;
 
-                //公式
+                // Formula settings
                 var fxAttrs = p.GetCustomAttributes<ColumnStatsAttribute>();
                 foreach (var fxAttr in fxAttrs)
                 {
@@ -692,7 +696,7 @@ namespace Monica.Office.Excel
 
                     if (fxAttr.IsShowLabel)
                     {
-                        //获取标签文本
+                        // Get the label text
                         fxAttr.Label ??=
                             $"{info.HeaderName} {typeof(FunctionEnum).GetField(func.ToString())?.GetCustomAttribute<DisplayAttribute>()?.Name}";
                         if (!string.IsNullOrWhiteSpace(fxAttr.Unit))
@@ -700,13 +704,13 @@ namespace Monica.Office.Excel
                             fxAttr.Label += $"（{fxAttr.Unit}）";
                         }
 
-                        //处理标签文本
+                        // Process the label text
 
                         var textCell = CreateCell(workbook, worksheet, pRowIndex, pColumnIndex);
 
                         SetCellValue(workbook, worksheet, textCell, typeof(string), fxAttr.Label);
 
-                        //处理标签文本单元格样式和字体（采用表头样式）
+                        // Apply the label cell style and font using the header style
                         SetHeaderCellStyleAndFont<TExportDto>(workbook, worksheet, textCell, headerStyle);
 
                         pRowIndex++;
@@ -717,21 +721,21 @@ namespace Monica.Office.Excel
                         continue;
                     }
 
-                    //处理公式值
+                    // Process the formula value
                     var cell = CreateCell(workbook, worksheet, pRowIndex, pColumnIndex);
 
-                    //设置公式
+                    // Set the formula
                     var formula = GetCellFormula(workbook, worksheet, func, dataStartRowIndex, dataEndRowIndex, columnIndex, columnIndex);
                     SetCellFormula(workbook, worksheet, cell, formula);
 
-                    //处理统计单元格样式和字体（采用数据样式）
+                    // Apply the statistic cell style and font using the data style
                     SetDataCellStyleAndFont<TExportDto>(workbook, worksheet, cell, dataStyle);
                 }
             }
         }
 
         /// <summary>
-        /// 获取公式字符串
+        /// Gets the formula string
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="worksheet"></param>
@@ -762,141 +766,141 @@ namespace Monica.Office.Excel
 
         #endregion
 
-        #region 抽象方法
+        #region Abstract methods
 
         /// <summary>
-        /// 获取工作册【步骤 1】
+        /// Gets the workbook [Step 1]
         /// </summary>
-        /// <param name="options">配置选项</param>
+        /// <param name="options">The export options</param>
         /// <returns></returns>
         protected abstract TWorkbook GetWorkbook(ExcelExportOptions options);
 
         /// <summary>
-        /// 创建工作表【步骤 2】
+        /// Creates the worksheet [Step 2]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="options">配置选项</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="options">The export options</param>
         /// <returns></returns>
         protected abstract TSheet CreateSheet(TWorkbook workbook, ExcelExportOptions options);
 
         /// <summary>
-        /// 创建单元格【步骤 3】
+        /// Creates the cell [Step 3]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="rowIndex">行下标（起始下标： 0）</param>
-        /// <param name="columnIndex">列下标（起始下标： 0）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="rowIndex">The row index (zero-based)</param>
+        /// <param name="columnIndex">The column index (zero-based)</param>
         /// <returns></returns>
         protected abstract TCell CreateCell(TWorkbook workbook, TSheet worksheet, int rowIndex, int columnIndex);
 
         /// <summary>
-        /// 设置数据单元格值【步骤 4】
+        /// Sets the cell value [Step 4]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="valueType">单元格的值类型</param>
-        /// <param name="value">单元格值</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="valueType">The cell value type</param>
+        /// <param name="value">The cell value</param>
         protected abstract void SetCellValue(TWorkbook workbook, TSheet worksheet, TCell cell, Type valueType,
             object value);
 
         /// <summary>
-        /// 创建表头样式和字体【步骤 5】
+        /// Creates the header style and font [Step 5]
         /// </summary>
-        /// <typeparam name="TExportDto">集合中元素的类</typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="styleAttr">样式特征</param>
-        /// <param name="fontAttr">字体特征</param>
+        /// <typeparam name="TExportDto">The element type in the collection</typeparam>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="styleAttr">The style attribute</param>
+        /// <param name="fontAttr">The font attribute</param>
         /// <returns></returns>
         protected abstract TCellStyle CreateHeaderStyleAndFont<TExportDto>(TWorkbook workbook, TSheet worksheet,
             HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr);
 
         /// <summary>
-        /// 创建数据样式和字体【步骤 6】
+        /// Creates the data style and font [Step 6]
         /// </summary>
-        /// <typeparam name="TExportDto">集合中元素的类</typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="styleAttr">样式特征</param>
-        /// <param name="fontAttr">字体特征</param>
+        /// <typeparam name="TExportDto">The element type in the collection</typeparam>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="styleAttr">The style attribute</param>
+        /// <param name="fontAttr">The font attribute</param>
         /// <returns></returns>
         protected abstract TCellStyle CreateDataStyleAndFont<TExportDto>(TWorkbook workbook, TSheet worksheet,
             DataStyleAttribute styleAttr, DataFontAttribute fontAttr);
 
         /// <summary>
-        /// 设置表头单元格样式和字体【步骤 7】
+        /// Sets the header cell style and font [Step 7]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="cellStyleInfo">单元格样式信息</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="cellStyleInfo">The cell style metadata</param>
         protected abstract void SetHeaderCellStyleAndFont<TExportDto>(TWorkbook workbook, TSheet worksheet, TCell cell, ExcelCellStyleOutput<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute> cellStyleInfo);
 
         /// <summary>
-        /// 设置数据单元格样式和字体【步骤 8】
+        /// Sets the data cell style and font [Step 8]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="cellStyleInfo">单元格样式信息</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="cellStyleInfo">The cell style metadata</param>
         protected abstract void SetDataCellStyleAndFont<TExportDto>(TWorkbook workbook, TSheet worksheet, TCell cell, ExcelCellStyleOutput<TCellStyle, DataStyleAttribute, DataFontAttribute> cellStyleInfo);
 
         /// <summary>
-        /// 设置列宽【步骤 9】
+        /// Sets the column width [Step 9]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="columnIndex">列下标（起始下标： 0）</param>
-        /// <param name="columnSize">宽度（单位：字符，取值区间：[0-255]）</param>
-        /// <param name="columnAutoSize">是否自动调整</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="columnIndex">The column index (zero-based)</param>
+        /// <param name="columnSize">The width in characters. Valid range: [0-255].</param>
+        /// <param name="columnAutoSize">Whether to auto-fit the column</param>
         protected abstract void SetColumnWidth(TWorkbook workbook, TSheet worksheet, int columnIndex, int columnSize,
             bool columnAutoSize);
 
         /// <summary>
-        /// 设置行高【步骤 10】
+        /// Sets the row height [Step 10]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="rowIndex">行下标（起始下标： 0）</param>
-        /// <param name="rowHeight">行高（单位：磅，取值区间：[0-409]）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="rowIndex">The row index (zero-based)</param>
+        /// <param name="rowHeight">The row height in points. Valid range: [0-409].</param>
         protected abstract void SetRowHeight(TWorkbook workbook, TSheet worksheet, int rowIndex, short rowHeight);
 
         /// <summary>
-        /// 设置合并区域【步骤 11】
+        /// Sets the merged region [Step 11]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="fromRowIndex">起始行下标（起始下标： 0）</param>
-        /// <param name="toRowIndex">结束行下标（起始下标： 0）</param>
-        /// <param name="fromColumnIndex">起始列下标（起始下标： 0）</param>
-        /// <param name="toColumnIndex">结束列下标（起始下标： 0）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="fromRowIndex">The start row index (zero-based)</param>
+        /// <param name="toRowIndex">The end row index (zero-based)</param>
+        /// <param name="fromColumnIndex">The start column index (zero-based)</param>
+        /// <param name="toColumnIndex">The end column index (zero-based)</param>
         protected abstract void SetMergedRegion(TWorkbook workbook, TSheet worksheet, int fromRowIndex, int toRowIndex, int fromColumnIndex, int toColumnIndex);
 
         /// <summary>
-        /// 获取单元格地址文本（如：A1）【步骤 12】
+        /// Gets the cell address text, such as A1 [Step 12]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="rowIndex">行下标（起始下标： 0）</param>
-        /// <param name="columnIndex">列下标（起始下标： 0）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="rowIndex">The row index (zero-based)</param>
+        /// <param name="columnIndex">The column index (zero-based)</param>
         /// <returns></returns>
         protected abstract string GetCellAddress(TWorkbook workbook, TSheet worksheet, int rowIndex, int columnIndex);
 
         /// <summary>
-        /// 设置单元格公式（统计）【步骤 13】
+        /// Sets the cell formula for statistics [Step 13]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="cell">单元格</param>
-        /// <param name="cellFormula">单元格公式字符串</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="cell">The cell</param>
+        /// <param name="cellFormula">The cell formula string</param>
         protected abstract void SetCellFormula(TWorkbook workbook, TSheet worksheet, TCell cell, string cellFormula);
 
         /// <summary>
-        /// 把处理好的工作册转换为字节【步骤 13】
+        /// Converts the processed workbook to bytes [Step 13]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
         /// <returns></returns>
         protected abstract byte[] GetAsByteArray(TWorkbook workbook, TSheet worksheet);
 

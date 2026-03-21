@@ -3,7 +3,7 @@ namespace Monica.Office.Excel.Models
     public static class ExcelSheetDataOutputExtensions
     {
         /// <summary>
-        /// 获取错误消息
+        /// Gets the error message.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -19,7 +19,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 检查错误并抛出异常
+        /// Checks for errors and throws an exception.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -37,7 +37,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取无效数据
+        /// Gets invalid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -48,7 +48,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取有效数据
+        /// Gets valid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -59,7 +59,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取所有数据
+        /// Gets all data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -70,7 +70,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取错误消息
+        /// Gets the error message.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -85,7 +85,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 检查错误并抛出异常
+        /// Checks for errors and throws an exception.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -104,7 +104,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取无效数据
+        /// Gets invalid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -115,7 +115,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取有效数据
+        /// Gets valid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -126,7 +126,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取所有数据
+        /// Gets all data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -138,7 +138,7 @@ namespace Monica.Office.Excel.Models
 
 
         /// <summary>
-        /// 获取错误消息
+        /// Gets the error message.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -159,7 +159,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 检查错误并抛出异常
+        /// Checks for errors and throws an exception.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -177,7 +177,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取无效数据
+        /// Gets invalid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -187,7 +187,7 @@ namespace Monica.Office.Excel.Models
             return output?.GetData(false);
         }
         /// <summary>
-        /// 获取有效数据
+        /// Gets valid data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -197,7 +197,7 @@ namespace Monica.Office.Excel.Models
             return output?.GetData(true);
         }
         /// <summary>
-        /// 获取全部数据
+        /// Gets all data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
@@ -207,14 +207,14 @@ namespace Monica.Office.Excel.Models
             return output?.GetData(null);
         }
 
-        #region 私有
+        #region Private
 
         /// <summary>
-        /// 获取数据
+        /// Gets data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
-        /// <param name="isValid">是否有效数据，null则全部</param>
+        /// <param name="isValid">Whether the data is valid. <see langword="null"/> returns all data.</param>
         /// <returns></returns>
         public static T? GetData<T>(this ExcelImportRowInfo<T>? output, bool? isValid = true) where T : class, new()
         {
@@ -232,33 +232,33 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 获取无效数据
+        /// Gets data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
-        /// <param name="isValid">是否有效，null全部</param>
+        /// <param name="isValid">Whether the data is valid. <see langword="null"/> returns all data.</param>
         /// <returns></returns>
         private static IEnumerable<T>? GetData<T>(this IEnumerable<ExcelImportRowInfo<T>> output, bool? isValid) where T : class, new()
         {
             return output.Select(a => a.GetData(isValid)).OfType<T>();
         }
         /// <summary>
-        /// 获取无效数据
+        /// Gets data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
-        /// <param name="isValid">是否有效，null全部</param>
+        /// <param name="isValid">Whether the data is valid. <see langword="null"/> returns all data.</param>
         /// <returns></returns>
         private static IEnumerable<T>? GetData<T>(this ExcelSheetDataOutput<T>? output, bool? isValid) where T : class, new()
         {
             return output?.Rows?.GetData(isValid);
         }
         /// <summary>
-        /// 获取有效数据
+        /// Gets data.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="output"></param>
-        /// <param name="isValid">是否有效，null全部</param>
+        /// <param name="isValid">Whether the data is valid. <see langword="null"/> returns all data.</param>
         /// <returns></returns>
         private static IEnumerable<T>? GetData<T>(this IEnumerable<ExcelSheetDataOutput<T>>? output, bool? isValid) where T : class, new()
         {

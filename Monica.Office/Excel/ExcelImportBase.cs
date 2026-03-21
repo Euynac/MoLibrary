@@ -5,29 +5,29 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel
 {
     /// <summary>
-    ///  excel导入基类
+    /// Base class for Excel import
     /// </summary>
-    /// <typeparam name="TWorkbook">工作册</typeparam>
-    /// <typeparam name="TSheet">工作表</typeparam>
-    /// <typeparam name="TRow">行</typeparam>
-    /// <typeparam name="TCell">单元格</typeparam>
+    /// <typeparam name="TWorkbook">The workbook type</typeparam>
+    /// <typeparam name="TSheet">The worksheet type</typeparam>
+    /// <typeparam name="TRow">The row type</typeparam>
+    /// <typeparam name="TCell">The cell type</typeparam>
     public abstract class ExcelImportBase<TWorkbook, TSheet, TRow, TCell>
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance
         /// </summary>
         protected ExcelImportBase()
         {
         }
 
         /// <summary>
-        /// 处理excel文件
+        /// Processes an Excel file
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性，字段验证也可使用其下的所有特性，如 Required，StringLength，Range，RegularExpression 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>, and field validation can use attributes such as Required, StringLength, Range, and RegularExpression.</para>
         /// </typeparam>
-        /// <param name="fileBytes">excel 文件字节</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileBytes">The Excel file bytes</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public List<ExcelSheetDataOutput<TImportDto>> ProcessExcelFile<TImportDto>(
             byte[] fileBytes,
@@ -46,13 +46,13 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 处理excel文件
+        /// Processes an Excel file
         /// </summary>
-        /// <typeparam name="TImportDto">表头对应的类
-        /// <para>表头名称对应 <see cref="System.ComponentModel.DataAnnotations"/> 下的 DisplayName 特性，字段验证也可使用其下的所有特性，如 Required，StringLength，Range，RegularExpression 等】</para>
+        /// <typeparam name="TImportDto">The DTO type mapped to the header row
+        /// <para>Each header cell name maps to the <c>DisplayName</c> attribute in <see cref="System.ComponentModel.DataAnnotations"/>, and field validation can use attributes such as Required, StringLength, Range, and RegularExpression.</para>
         /// </typeparam>
-        /// <param name="fileStream">文件流</param>
-        /// <param name="optionAction">配置选项</param>
+        /// <param name="fileStream">The file stream</param>
+        /// <param name="optionAction">Configures import options</param>
         /// <returns></returns>
         public List<ExcelSheetDataOutput<TImportDto>> ProcessExcelFile<TImportDto>(
             Stream fileStream,
@@ -61,7 +61,7 @@ namespace Monica.Office.Excel
         {
             try
             {
-                //设置、验证 配置
+                // Apply and validate the options.
                 var options = new ExcelImportOptions();
                 optionAction?.Invoke(options);
                 options.CheckError();
@@ -74,22 +74,22 @@ namespace Monica.Office.Excel
             }
         }
 
-        #region 私有
+        #region Private
 
         /// <summary>
-        /// 处理excel文件
+        /// Processes the workbook
         /// </summary>
-        /// <param name="fileStream">文件流</param>
-        /// <param name="options">配置选项</param>
+        /// <param name="fileStream">The file stream</param>
+        /// <param name="options">The import options</param>
         /// <returns></returns>
         private List<ExcelSheetDataOutput<TImportDto>> ProcessWorkbook<TImportDto>(Stream fileStream, ExcelImportOptions options) where TImportDto : class, new()
         {
             var dataList = new List<ExcelSheetDataOutput<TImportDto>>();
 
-            //工作册
+            // Workbook
             var workbook = GetWorkbook(fileStream);
 
-            //工作表总数
+            // Worksheet count
             var sheetsCount = GetWorksheetNumber(workbook);
 
             if (options.SheetIndex > sheetsCount)
@@ -97,16 +97,16 @@ namespace Monica.Office.Excel
                 throw new Exception($"工作表 sheet 编号超出：最大只能为 {sheetsCount}");
             }
 
-            //设置工作表数据
+            // Load worksheet data
             if (options.SheetIndex <= 0)
             {
-                //全部 Sheet
+                // All worksheets
                 for (var i = 0; i < sheetsCount; i++)
                 {
                     var data = ProcessWorksheet<TImportDto>(workbook, i, options);
                     dataList.Add(data);
 
-                    //验证模式
+                    // Validation mode
                     if (data.InvalidCount > 0)
                     {
                         if (options.ValidateMode.Equals(ExcelValidateModeEnum.StopSheet))
@@ -122,11 +122,11 @@ namespace Monica.Office.Excel
             }
             else
             {
-                //单个 Sheet
+                // Single worksheet
                 var data = ProcessWorksheet<TImportDto>(workbook, options.SheetIndex - 1, options);
                 dataList.Add(data);
 
-                //验证模式
+                // Validation mode
                 if (dataList.Any(a => a.InvalidCount > 0))
                 {
                     if (options.ValidateMode.Equals(ExcelValidateModeEnum.ThrowSheet))
@@ -136,7 +136,7 @@ namespace Monica.Office.Excel
                 }
             }
 
-            //验证模式
+            // Validation mode
             if (dataList.Any(a => a.InvalidCount > 0))
             {
                 if (options.ValidateMode.Equals(ExcelValidateModeEnum.ThrowBook))
@@ -149,39 +149,39 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取工作表数据
+        /// Gets the worksheet data
         /// </summary>
         /// <typeparam name="TImportDto"></typeparam>
-        /// <param name="workbook">工作册</param>
-        /// <param name="sheetIndex">工作表下标（其实下表：0）</param>
-        /// <param name="options">选项配置</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="sheetIndex">The worksheet index (zero-based)</param>
+        /// <param name="options">The import options</param>
         /// <returns></returns>
         private ExcelSheetDataOutput<TImportDto> ProcessWorksheet<TImportDto>(TWorkbook workbook, int sheetIndex, ExcelImportOptions options) where TImportDto : class, new()
         {
-            //获取工作表
+            // Get the worksheet
             var worksheet = GetWorksheet(workbook, sheetIndex);
 
-            //工作表名称
+            // Worksheet name
             var sheetName = GetWorksheetName(workbook, worksheet);
 
             try
             {
-                //获取表头行
+                // Get the header row
                 var headerRow = GetHeaderRow(workbook, worksheet, options);
 
-                //获取表头单元格集合
+                // Get the header cells
                 var headerCells = GetHeaderCells(workbook, worksheet, headerRow);
 
-                //表头单元格信息
+                // Header cell metadata
                 var headerCellInfo = new ExcelHeaderCellInfo(sheetName, sheetIndex, headerCells);
 
-                //验证表头行
+                // Validate the header row
                 ValidateHeaderRow<TImportDto>(headerCellInfo);
 
-                //获取表头单元格属性信息
+                // Get the property mapping for the header cells
                 var headerCellProperties = GetHeaderCellProperties<TImportDto>(headerCellInfo);
 
-                //设置工作表数据
+                // Build the worksheet data
                 return new ExcelSheetDataOutput<TImportDto>
                 {
                     SheetName = sheetName,
@@ -196,31 +196,31 @@ namespace Monica.Office.Excel
             }
         }
         /// <summary>
-        /// 处理工作表
+        /// Processes a worksheet
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
         /// <param name="headerCellInfo"></param>
-        /// <param name="headerCellProperties">表头单元格信息集合</param>
-        /// <param name="options">配置选项</param>
+        /// <param name="headerCellProperties">The header cell metadata collection</param>
+        /// <param name="options">The import options</param>
         /// <returns></returns>
         private List<ExcelImportRowInfo<TImportDto>> ProcessWorksheetData<TImportDto>(TWorkbook workbook, TSheet worksheet, ExcelHeaderCellInfo headerCellInfo, ExcelHeaderCellPropertyInfo headerCellProperties, ExcelImportOptions options) where TImportDto : class, new()
         {
             var rows = new List<ExcelImportRowInfo<TImportDto>>();
 
-            //获取数据行区域索引
+            // Get the data row range
             var rowRangeIndex = GetDataRowStartAndEndRowIndex(workbook, worksheet, options);
 
             for (var i = rowRangeIndex.StartIndex; i <= rowRangeIndex.EndIndex; i++)
             {
-                //获取数据行
+                // Get the data row
                 var row = GetDataRow(workbook, worksheet, i);
 
-                //获取行数据
+                // Get the row data
                 var entity = GetRowData<TImportDto>(workbook, worksheet, headerCellProperties, row);
                 if (entity != null)
                 {
-                    //验证数据
+                    // Validate the row data
                     var errors = ExcelHelper.GetValidationResult(entity) ?? [];
 
                     var rowInfo = new ExcelImportRowInfo<TImportDto>
@@ -253,12 +253,12 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取行数据
+        /// Gets the row data
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="headerCellProperties">表头单元格信息集合</param>
-        /// <param name="dataRow">数据行</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="headerCellProperties">The header cell metadata collection</param>
+        /// <param name="dataRow">The data row</param>
         /// <returns></returns>
         private TImportDto GetRowData<TImportDto>(TWorkbook workbook, TSheet worksheet, ExcelHeaderCellPropertyInfo headerCellProperties, TRow dataRow) where TImportDto : class, new()
         {
@@ -274,7 +274,7 @@ namespace Monica.Office.Excel
                     //    continue;
                     //}
 
-                    //转换单元格数据
+                    // Convert the cell value
                     var value = ConvertCellValue(workbook, worksheet, dataRow, p.ColumnIndex, property);
                     if (value == null)
                     {
@@ -298,9 +298,9 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 验证表头行
+        /// Validates the header row
         /// </summary>
-        /// <param name="headerCellInfo">表头单元格信息集合</param>
+        /// <param name="headerCellInfo">The header cell metadata collection</param>
         private void ValidateHeaderRow<TImportDto>(ExcelHeaderCellInfo headerCellInfo) where TImportDto : class, new()
         {
             if (headerCellInfo.HeaderCells?.Any() != true)
@@ -308,7 +308,7 @@ namespace Monica.Office.Excel
                 throw new Exception($"表头行不能为空");
             }
 
-            //属性名称
+            // Property names
             var propertyNames = ExcelHelper.GetDisplayNameListFromProperty<TImportDto>();
 
             if (!propertyNames.Any())
@@ -321,7 +321,7 @@ namespace Monica.Office.Excel
                 throw new Exception($"类 {typeof(TImportDto).Name} 中 Display Name 重复（或与属性名称重复）：{string.Join(",", propertyDuplicate)}");
             }
 
-            //excel表头名称
+            // Excel header names
             var headerNames = headerCellInfo.HeaderCells.Select(a => a.Name).ToList();
             var headerDuplicate = headerNames.GroupBy(a => a).Where(a => a.Count() > 1).Select(a => a.Key).ToList();
             if (headerDuplicate.Any())
@@ -337,9 +337,9 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取表头单元格和属性
+        /// Gets the header cell to property mapping
         /// </summary>
-        /// <param name="headerCellInfo">表头单元格信息集合</param>
+        /// <param name="headerCellInfo">The header cell metadata collection</param>
         private ExcelHeaderCellPropertyInfo GetHeaderCellProperties<TImportDto>(ExcelHeaderCellInfo headerCellInfo) where TImportDto : class, new()
         {
             if (headerCellInfo.HeaderCells?.Any() != true)
@@ -353,7 +353,7 @@ namespace Monica.Office.Excel
                 SheetIndex = headerCellInfo.SheetIndex
             };
 
-            //属性名称
+            // Properties
             var properties = ExcelHelper.GetProperties<TImportDto>();
 
             foreach (var p in properties)
@@ -377,91 +377,91 @@ namespace Monica.Office.Excel
 
         #endregion
 
-        #region 抽象方法
+        #region Abstract methods
 
         /// <summary>
-        /// 获取工作册【步骤 1】
+        /// Gets the workbook [Step 1]
         /// </summary>
-        /// <param name="fileStream">文件流</param>
+        /// <param name="fileStream">The file stream</param>
         /// <returns></returns>
         protected abstract TWorkbook GetWorkbook(Stream fileStream);
 
         /// <summary>
-        /// 获取工作表数量【步骤 2】
+        /// Gets the worksheet count [Step 2]
         /// </summary>
-        /// <param name="workbook">工作册</param>
+        /// <param name="workbook">The workbook</param>
         /// <returns></returns>
         protected abstract int GetWorksheetNumber(TWorkbook workbook);
 
         /// <summary>
-        /// 获取工作表【步骤 3】
+        /// Gets the worksheet [Step 3]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="sheetIndex">工作表下标（起始下标： 0）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="sheetIndex">The worksheet index (zero-based)</param>
         /// <returns></returns>
         protected abstract TSheet GetWorksheet(TWorkbook workbook, int sheetIndex);
 
         /// <summary>
-        /// 获取工作表名称【步骤 4】
+        /// Gets the worksheet name [Step 4]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
         /// <returns></returns>
         protected abstract string GetWorksheetName(TWorkbook workbook, TSheet worksheet);
 
         /// <summary>
-        /// 获取表头行【步骤 5】
+        /// Gets the header row [Step 5]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="options">配置选项</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="options">The import options</param>
         /// <returns></returns>
         protected abstract TRow GetHeaderRow(TWorkbook workbook, TSheet worksheet, ExcelImportOptions options);
 
         /// <summary>
-        /// 获取表头单元格信息集合【步骤 6）
+        /// Gets the header cell metadata collection [Step 6]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="headerRow">表头行</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="headerRow">The header row</param>
         protected abstract List<ExcelHeaderCell> GetHeaderCells(TWorkbook workbook, TSheet worksheet, TRow headerRow);
 
         /// <summary>
-        /// 获取数据行的 起始、结束行下标编号（起始下标：0）【步骤 7】
+        /// Gets the start and end indexes of the data rows (zero-based) [Step 7]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="options">配置选项</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="options">The import options</param>
         /// <returns></returns>
         protected abstract ExcelDataRowRangeIndex GetDataRowStartAndEndRowIndex(TWorkbook workbook, TSheet worksheet, ExcelImportOptions options);
 
         /// <summary>
-        /// 获取数据行【步骤 8】
+        /// Gets the data row [Step 8]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="rowIndex">行下标（起始下标： 0）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="rowIndex">The row index (zero-based)</param>
         /// <returns></returns>
         protected abstract TRow GetDataRow(TWorkbook workbook, TSheet worksheet, int rowIndex);
 
         /// <summary>
-        /// 转换单元格数据【步骤 9】
+        /// Converts the cell value [Step 9]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="dataRow">数据行</param>
-        /// <param name="columnIndex">列下标（起始下标：原值）</param>
-        /// <param name="property">表头对应的 TImportDto 字段属性</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="dataRow">The data row</param>
+        /// <param name="columnIndex">The column index (source index)</param>
+        /// <param name="property">The <typeparamref name="TImportDto"/> property mapped from the header row</param>
         /// <returns></returns>
         protected abstract object? ConvertCellValue(TWorkbook workbook, TSheet worksheet, TRow dataRow, int columnIndex, PropertyInfo property);
 
         /// <summary>
-        /// 获取单元格地址，如 A1【步骤 10】
+        /// Gets the cell address, such as A1 [Step 10]
         /// </summary>
-        /// <param name="workbook">工作册</param>
-        /// <param name="worksheet">工作表</param>
-        /// <param name="dataRow">数据行</param>
-        /// <param name="columnIndex">列下标（起始下标：原值）</param>
+        /// <param name="workbook">The workbook</param>
+        /// <param name="worksheet">The worksheet</param>
+        /// <param name="dataRow">The data row</param>
+        /// <param name="columnIndex">The column index (source index)</param>
         /// <returns></returns>
         protected abstract string GetCellAddress(TWorkbook workbook, TSheet worksheet, TRow dataRow, int columnIndex);
 

@@ -3,27 +3,27 @@ using System.Reflection;
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 导出的表头信息
+    /// Exported Excel header information.
     /// </summary>
     public class ExcelExportHeaderInfo
     {
         /// <summary>
-        /// 对应的属性
+        /// Associated property.
         /// </summary>
         public required PropertyInfo PropertyInfo { get; set; }
 
         /// <summary>
-        /// 显示的表头名称
+        /// Displayed header name.
         /// </summary>
         public required string HeaderName { get; set; }
 
         /// <summary>
-        /// 动态的导出设置
+        /// Dynamic export settings.
         /// </summary>
         public ExcelHeaderRequest? Option { get; set; }
     }
     /// <summary>
-    /// excel 导出的表头及其数据设置信息
+    /// Exported Excel header information together with its data settings.
     /// </summary>
     public record ExcelExportHeaderInfoBundle<TCellStyle, THeaderStyleAttr, THeaderFontAttr, TDataStyleAttr, TDataFontAttr>(ExcelExportHeaderInfo Header)
         where THeaderStyleAttr : Attribute

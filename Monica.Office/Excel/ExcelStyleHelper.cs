@@ -5,12 +5,12 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel
 {
     /// <summary>
-    /// Excel 样式特性处理帮助器
+    /// Helper for processing Excel style attributes
     /// </summary>
     public static class ExcelStyleHelper
     {
         ///// <summary>
-        ///// 获取表头样式和字体集合
+        ///// Gets the header style and font collection
         ///// </summary>
         ///// <typeparam name="TExportDto"></typeparam>
         ///// <returns></returns>
@@ -27,7 +27,7 @@ namespace Monica.Office.Excel
         //}
 
         ///// <summary>
-        ///// 获取数据样式和字体集合
+        ///// Gets the data style and font collection
         ///// </summary>
         ///// <typeparam name="TExportDto"></typeparam>
         ///// <returns></returns>
@@ -44,10 +44,10 @@ namespace Monica.Office.Excel
         //}
 
         /// <summary>
-        /// 获取表头样式和字体
+        /// Gets the header style and font
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute> GetHeaderStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -58,10 +58,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取数据样式和字体
+        /// Gets the data style and font
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute> GetDataStyleFont<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -72,10 +72,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取表头样式
+        /// Gets the header style
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static HeaderStyleAttribute GetHeaderStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -88,10 +88,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取表头字体
+        /// Gets the header font
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static HeaderFontAttribute GetHeaderFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -104,10 +104,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取数据样式
+        /// Gets the data style
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static DataStyleAttribute GetDataStyleAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -120,10 +120,10 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 获取数据字体
+        /// Gets the data font
         /// </summary>
         /// <typeparam name="TExportDto"></typeparam>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static DataFontAttribute GetDataFontAttr<TExportDto>(this MemberInfo m) where TExportDto : class
         {
@@ -136,30 +136,30 @@ namespace Monica.Office.Excel
         }
 
         /// <summary>
-        /// 是否有数据字体特性
+        /// Determines whether a data font attribute exists
         /// </summary>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static bool HasDataFontAttr(this MemberInfo m) => m.GetCustomAttribute<DataFontAttribute>() != null;
 
         /// <summary>
-        /// 是否有数据样式特性
+        /// Determines whether a data style attribute exists
         /// </summary>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static bool HasDataStyleAttr(this MemberInfo m) => m.GetCustomAttribute<DataStyleAttribute>() != null;
 
         /// <summary>
-        /// 是否有表头样式特性
+        /// Determines whether a header style attribute exists
         /// </summary>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static bool HasHeaderStyleAttr(this MemberInfo m) => m.GetCustomAttribute<HeaderStyleAttribute>() != null;
 
         /// <summary>
-        /// 是否有表头字体特性
+        /// Determines whether a header font attribute exists
         /// </summary>
-        /// <param name="m">typeof(类)、PropertyInfo</param>
+        /// <param name="m"><c>typeof(Class)</c> or <see cref="PropertyInfo"/></param>
         /// <returns></returns>
         public static bool HasHeaderFontAttr(this MemberInfo m) => m.GetCustomAttribute<HeaderFontAttribute>() != null;
     }

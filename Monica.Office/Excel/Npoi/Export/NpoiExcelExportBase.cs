@@ -8,10 +8,10 @@ using NPOI.XSSF.UserModel;
 namespace Monica.Office.Excel.Npoi.Export
 {
     /// <summary>
-    /// Npoi Excel 导出实现
+    /// NPOI Excel export implementation
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class NpoiExcelExportBase(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportBase<IWorkbook, ISheet, IRow, ICell, ICellStyle>
     {

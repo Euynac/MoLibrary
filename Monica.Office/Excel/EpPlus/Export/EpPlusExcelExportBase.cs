@@ -7,10 +7,10 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.EpPlus.Export
 {
     /// <summary>
-    /// EpPlus Excel 导入实现（版本号5.0.0之前的为免费版）
+    /// EpPlus Excel export implementation. Versions earlier than 5.0.0 were free to use.
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class EpPlusExcelExportBase(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange, ExcelStyle>
     {

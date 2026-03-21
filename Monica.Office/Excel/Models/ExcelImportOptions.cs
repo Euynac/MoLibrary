@@ -3,51 +3,51 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel导入配置
+    /// Excel import options.
     /// </summary>
     public class ExcelImportOptions
     {
         /// <summary>
-        /// 工作表编号（默认1）
-        /// <para>从 1 开始</para>
-        /// <para>0：全部sheet，1：第一个sheet，2：第二个sheet，……</para>
+        /// Worksheet index (default: 1)
+        /// <para>Use a one-based index when selecting a specific worksheet.</para>
+        /// <para>0: all worksheets, 1: first worksheet, 2: second worksheet, and so on.</para>
         /// </summary>
         [Display(Name = "工作表编号")]
         [Range(0, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int SheetIndex { get; set; }
         /// <summary>
-        /// 表头行编号（默认1）
-        /// <para>从 1 开始</para>
+        /// Header row index (default: 1)
+        /// <para>One-based index.</para>
         /// </summary>
         [Display(Name = "表头行编号")]
         [Range(1, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int HeaderRowIndex { get; set; }
 
         /// <summary>
-        /// 数据起始行编号（默认2）
-        /// <para>从 1 开始</para>
+        /// Data start row index (default: 2)
+        /// <para>One-based index.</para>
         /// </summary>
         [Display(Name = "数据起始行编号")]
         [Range(2, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int DataRowStartIndex { get; set; }
 
         /// <summary>
-        /// 数据结束行编号（默认最后一行）
-        /// <para>从 1 开始</para>
+        /// Data end row index (default: last row)
+        /// <para>One-based index.</para>
         /// </summary>
         [Display(Name = "数据结束行编号")]
         [Range(2, int.MaxValue, ErrorMessage = "{0}最小值为{1}")]
         public int? DataRowEndIndex { get; set; }
 
         /// <summary>
-        /// 数据校验模式（默认：读取整个工作表后，有无效数据则 抛出异常）
+        /// Validation mode (default: after reading the entire worksheet, throw an exception if invalid data exists)
         /// </summary>
         [Display(Name = "数据校验模式")]
         [EnumDataType(typeof(ExcelValidateModeEnum), ErrorMessage = "{0}值不存在")]
         public ExcelValidateModeEnum ValidateMode { get; set; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelImportOptions()
         {
@@ -59,7 +59,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 检查错误
+        /// Validates the options.
         /// </summary>
         public void CheckError()
         {
@@ -81,37 +81,37 @@ namespace Monica.Office.Excel.Models
     }
 
     /// <summary>
-    /// 数据验证不通过的处理方式
+    /// Handling mode when data validation fails.
     /// </summary>
     public enum ExcelValidateModeEnum
     {
         /// <summary>
-        /// 读取某行后，有无效数据则 停止
+        /// After reading a row, stop if invalid data exists.
         /// </summary>
         StopRow,
 
         /// <summary>
-        /// 读取某行后，有无效数据则 抛出异常
+        /// After reading a row, throw an exception if invalid data exists.
         /// </summary>
         ThrowRow,
 
         /// <summary>
-        /// 读取整个工作表后，有无效数据则 停止
+        /// After reading the entire worksheet, stop if invalid data exists.
         /// </summary>
         StopSheet,
 
         /// <summary>
-        /// 读取整个工作表后，有无效数据则 抛出异常
+        /// After reading the entire worksheet, throw an exception if invalid data exists.
         /// </summary>
         ThrowSheet,
 
         /// <summary>
-        /// 读取所有工作表后，不抛异常
+        /// After reading all worksheets, do not throw exceptions.
         /// </summary>
         ReadBook,
 
         /// <summary>
-        /// 读取所有工作表后，有无效数据则 抛出所有异常
+        /// After reading all worksheets, throw all exceptions if invalid data exists.
         /// </summary>
         ThrowBook
     }

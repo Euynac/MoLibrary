@@ -10,21 +10,21 @@ using NPOI.XSSF.UserModel;
 namespace Monica.Office.Excel.Npoi
 {
     /// <summary>
-    /// NPOI excel 处理
+    /// NPOI workbook handler
     /// </summary>
     public class NpoiExcelHandle : INpoiExcelHandle
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public NpoiExcelHandle()
         {
         }
 
         /// <summary>
-        /// 获取 IWorkbook
+        /// Gets an <see cref="IWorkbook"/>.
         /// </summary>
-        /// <param name="physicalPath">物理路径</param>
+        /// <param name="physicalPath">The physical file path.</param>
         /// <returns></returns>
         public virtual IWorkbook GetWorkbook(string physicalPath)
         {
@@ -35,9 +35,9 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取 IWorkbook
+        /// Gets an <see cref="IWorkbook"/>.
         /// </summary>
-        /// <param name="fileStream">文件流</param>
+        /// <param name="fileStream">The file stream.</param>
         /// <returns></returns>
         public virtual IWorkbook GetWorkbook(Stream fileStream)
         {
@@ -47,14 +47,14 @@ namespace Monica.Office.Excel.Npoi
 
                 //try
                 //{
-                //    // XSSFWorkbook：Excel >= 2007  的版本： .xlsx【1048576行,16384列】
-                //    // SXSSFWorkbook：Excel >= 2007  的版本： .xlsx【硬盘空间换内存，适合处理大数据】
+                //    // XSSFWorkbook: Excel >= 2007, .xlsx, 1,048,576 rows and 16,384 columns
+                //    // SXSSFWorkbook: Excel >= 2007, .xlsx, trades disk space for memory and is suitable for large datasets
                 //    workbook = new XSSFWorkbook(fileStream);
                 //}
                 //catch
                 //{
                 //    fileStream.Position = 0;
-                //    // Excel <= 2003版 的版本：  .xls【65535行，256列】
+                //    // Excel <= 2003, .xls, 65,535 rows and 256 columns
                 //    workbook = new HSSFWorkbook(fileStream);
 
                 //}
@@ -68,21 +68,21 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取单元格合并信息
+        /// Gets merged-cell metadata for a cell.
         /// </summary>
-        /// <param name="sheet">sheet表</param>
-        /// <param name="cell">单元格</param>
+        /// <param name="sheet">The worksheet.</param>
+        /// <param name="cell">The cell.</param>
         /// <returns>MergedInfo</returns>
         public virtual ExcelCellMergedInfo GetCellMergedInfo(ISheet sheet, ICell? cell)
         {
             if (cell?.IsMergedCell == true)
             {
-                // 得到一个sheet中有多少个合并单元格
+                // Get the number of merged regions in the worksheet.
                 for (var i = 0; i < sheet.NumMergedRegions; i++)
                 {
-                    // 得出具体的合并单元格
+                    // Get the merged region.
                     var ca = sheet.GetMergedRegion(i);
-                    // 通过合并单元格的起始行, 结束行, 起始列, 结束列 来判断该单元格是否在合并单元格范围之内, 如果是, 则返回 true
+                    // Check whether the cell falls within the merged region bounds.
                     if (cell.ColumnIndex <= ca.LastColumn && cell.ColumnIndex >= ca.FirstColumn)
                     {
                         if (cell.RowIndex <= ca.LastRow && cell.RowIndex >= ca.FirstRow)
@@ -97,9 +97,9 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取单元格的值
+        /// Gets the cell value.
         /// </summary>
-        /// <param name="cell">单元格</param>
+        /// <param name="cell">The cell.</param>
         /// <returns></returns>
         public virtual object? GetCellValue(ICell? cell)
         {
@@ -113,17 +113,17 @@ namespace Monica.Office.Excel.Npoi
                 object? value = null;
                 switch (cell.CellType)
                 {
-                    case CellType.Blank: //空值 3
+                    case CellType.Blank: // Blank value 3
                         value = null;
                         break;
-                    case CellType.Unknown: //未知 -1
-                    case CellType.String: //字符串型 1
+                    case CellType.Unknown: // Unknown -1
+                    case CellType.String: // String 1
                         value = cell.StringCellValue;
                         break;
-                    case CellType.Boolean: //布尔 4
+                    case CellType.Boolean: // Boolean 4
                         value = cell.BooleanCellValue;
                         break;
-                    case CellType.Error: //错误 5
+                    case CellType.Error: // Error 5
                         try
                         {
                             value = ErrorConstant.ValueOf(cell.ErrorCellValue).Text;
@@ -133,7 +133,7 @@ namespace Monica.Office.Excel.Npoi
                             value = cell.ErrorCellValue;
                         }
                         break;
-                    case CellType.Numeric: //数值型 0
+                    case CellType.Numeric: // Numeric 0
 
                         if (DateUtil.IsCellDateFormatted(cell) || DateUtil.IsCellInternalDateFormatted(cell))
                         {
@@ -144,7 +144,7 @@ namespace Monica.Office.Excel.Npoi
                             value = cell.NumericCellValue;
                         }
                         break;
-                    case CellType.Formula: //公式型 2
+                    case CellType.Formula: // Formula 2
                         try
                         {
                             var eva = new HSSFFormulaEvaluator(cell.Sheet.Workbook);
@@ -169,7 +169,7 @@ namespace Monica.Office.Excel.Npoi
             }
         }
         /// <summary>
-        /// 得到公式单元格的值
+        /// Gets the value of a formula cell.
         /// </summary>
         /// <param name="formulaValue"></param>
         /// <param name="cell"></param>
@@ -227,11 +227,11 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取所在合并的单元格区域的值
+        /// Gets the value from the merged cell range that contains the cell.
         /// </summary>
-        /// <param name="sheet">sheet表</param>
-        /// <param name="cell">单元格</param>
-        /// <returns>若是合并的单元格：返回合并区域的第一个值。若是非合并单元格：返回当前表格的值</returns>
+        /// <param name="sheet">The worksheet.</param>
+        /// <param name="cell">The cell.</param>
+        /// <returns>Returns the first value in the merged range for a merged cell; otherwise returns the current cell value.</returns>
         public virtual object? GetMergedCellValue(ISheet sheet, ICell cell)
         {
             var info = GetCellMergedInfo(sheet, cell);
@@ -245,7 +245,7 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取单元格值的默认格式
+        /// Gets the default format for a cell value.
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="cellValue"></param>
@@ -260,7 +260,7 @@ namespace Monica.Office.Excel.Npoi
                 case CellValueDefaultFormatEnum.时间:
                     return format.GetFormat("HH:mm:ss");
                 case CellValueDefaultFormatEnum.数字:
-                    return format.GetFormat("0.00"); //小数点后有几个0表示精确到小数点后几位
+                    return format.GetFormat("0.00"); // Each trailing zero controls the number of decimal places.
                 case CellValueDefaultFormatEnum.金额:
                     return format.GetFormat("￥#,##0.00_ ");
                 case CellValueDefaultFormatEnum.百分比:
@@ -277,11 +277,11 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 转换列值
+        /// Converts a cell value.
         /// </summary>
-        /// <param name="row">行</param>
-        /// <param name="columnIndex">当前列下标,起始0</param>
-        /// <param name="valueType">值类型/属性类型，如 PropertyInfo.PropertyType ，typeof(int?)，typeof(bool),typeof(string)</param>
+        /// <param name="row">The row.</param>
+        /// <param name="columnIndex">The current column index, zero-based.</param>
+        /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
         public virtual object? ConverterCellValue(IRow? row, int columnIndex, Type valueType)
         {
@@ -296,8 +296,8 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 获取默认的单元格样式
-        /// <para>在.xls工作簿中最多可以定义4000种样式,所以该方法要在循环外定义</para>
+        /// Gets the default cell style.
+        /// <para>An <c>.xls</c> workbook can define at most 4000 styles, so call this outside loops.</para>
         /// </summary>
         /// <param name="workbook">Workbook</param>
         /// <param name="style">CellStyleEnum</param>
@@ -306,37 +306,37 @@ namespace Monica.Office.Excel.Npoi
         {
             var cellStyle = workbook.CreateCellStyle();
 
-            ////边框  
+            //// Border
             //cellStyle.BorderTop = BorderStyle.Dotted;
             //cellStyle.BorderBottom = BorderStyle.Dotted;
             //cellStyle.BorderLeft = BorderStyle.Hair;
             //cellStyle.BorderRight = BorderStyle.Hair;
 
-            ////边框颜色  
+            //// Border colors
             //cellStyle.BottomBorderColor = HSSFColor.Blue.Index;
             //cellStyle.TopBorderColor = HSSFColor.Blue.Index;
 
-            ////背景
+            //// Background
             //cellStyle.FillBackgroundColor = HSSFColor.Blue.Index;
             //cellStyle.FillForegroundColor = HSSFColor.Blue.Index;
             //cellStyle.FillForegroundColor = HSSFColor.White.Index;
             //cellStyle.FillPattern = FillPattern.NoFill;
             //cellStyle.FillBackgroundColor = HSSFColor.Blue.Index;
 
-            //水平对齐  
+            // Horizontal alignment
             cellStyle.Alignment = HorizontalAlignment.Center;
-            //垂直对齐  
+            // Vertical alignment
             cellStyle.VerticalAlignment = VerticalAlignment.Center;
-            //自动换行  
+            // Wrap text
             cellStyle.WrapText = true;
-            //缩进  
+            // Indentation
             cellStyle.Indention = 0;
 
-            //字体
+            // Font
             var font = workbook.CreateFont();
-            font.FontHeightInPoints = 10;//设置字体大小 
-            font.FontName = "微软雅黑";//字体名称
-            font.Color = HSSFColor.Black.Index;//字体颜色
+            font.FontHeightInPoints = 10;// Set font size.
+            font.FontName = "微软雅黑";// Font name
+            font.Color = HSSFColor.Black.Index;// Font color
 
             switch (style)
             {
@@ -362,71 +362,71 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 单列设置列宽（该方法必须在创建列后才能设置，不能在创建列前设置；列宽自动调整，必须有列数据才能处理））
+        /// Sets the width for a single column. Call this after creating the column. Auto-fit requires existing cell data.
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="columnIndex">列下标（起始下表：0）</param>
-        /// <param name="columnSize">列尺寸（单位：字符，[0-255]）</param>
-        /// <param name="columnAutoSize">是否自动调整</param>
+        /// <param name="columnIndex">The column index, zero-based.</param>
+        /// <param name="columnSize">The column width in characters, from 0 to 255.</param>
+        /// <param name="columnAutoSize">Whether to auto-fit the column.</param>
         public virtual void SetColumnWidth(ISheet sheet, int columnIndex, int columnSize, bool columnAutoSize)
         {
             if (columnSize > 0)
             {
-                //创建“列”后才能设置，不能在创建“列”前设置
+                // The column must already exist before setting the width.
                 sheet.SetColumnWidth(columnIndex, (columnSize > 255 ? 255 : columnSize) * 256);
             }
             else if (columnAutoSize)
             {
-                //列宽自动调整，必须有“列数据”才能处理）
+                // Auto-fit requires existing cell data in the column.
                 sheet.AutoSizeColumn(columnIndex);
             }
         }
 
         /// <summary>
-        /// 统一设置列宽（该方法必须在创建sheet后、创建列前 设置，不能在创建列后才设置）
+        /// Sets the default width for all columns. Call this after creating the worksheet and before creating columns.
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="columnSize">列尺寸（单位：字符，[0-255]）</param>
+        /// <param name="columnSize">The column width in characters, from 0 to 255.</param>
         public virtual void SetColumnWidth(ISheet sheet, int columnSize)
         {
             if (columnSize > 0)
             {
-                //必须在创建“sheet”后、创建“列“前设置，不能在创建列后才设置
-                sheet.DefaultColumnWidth = columnSize > 255 ? 255 : columnSize;//这里不*256
+                // Set this after creating the worksheet and before creating columns.
+                sheet.DefaultColumnWidth = columnSize > 255 ? 255 : columnSize;// No need to multiply by 256 here.
             }
         }
 
         /// <summary>
-        /// 单行设置行高（该方法必须在创建行后才能设置，不能在创建行前设置）
+        /// Sets the height for a single row. Call this after creating the row.
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="row">行</param>
-        /// <param name="rowHeight">行高（单位：磅，[0-409]））</param>
+        /// <param name="row">The row.</param>
+        /// <param name="rowHeight">The row height in points, from 0 to 409.</param>
         public virtual void SetRowHeight(ISheet sheet, IRow row, short rowHeight)
         {
             if (rowHeight > 0)
             {
-                //必须在创建“行”后才能设置，不能在创建“行”前设置
+                // The row must already exist before setting the height.
                 row.Height = (short)((rowHeight > 409 ? 409 : rowHeight) * 20.0);
             }
         }
 
         /// <summary>
-        /// 统一设置行高（该方法必须在创建sheet后马上设置，不能在创建行后才设置）
+        /// Sets the default height for all rows. Call this immediately after creating the worksheet, before creating rows.
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="rowHeight">行高（单位：磅，[0-409]））</param>
+        /// <param name="rowHeight">The row height in points, from 0 to 409.</param>
         public virtual void SetRowHeight(ISheet sheet, short rowHeight)
         {
             if (rowHeight > 0)
             {
-                //必须在创建“sheet”后马上设置，不能在创建“行”后才设置
+                // Set this immediately after creating the worksheet and before creating rows.
                 sheet.DefaultRowHeight = (short)((rowHeight > 409 ? 409 : rowHeight) * 20.0);
             }
         }
 
         /// <summary>
-        /// IWorkbook写入流并转换为字节
+        /// Writes the workbook to a stream and returns the bytes.
         /// </summary>
         /// <param name="workbook"></param>
         /// <returns></returns>
@@ -438,33 +438,33 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 合并区域
+        /// Merges a cell range.
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="firstRow">起始行（起始下标：0）</param>
-        /// <param name="lastRow">结束行（起始下标：0）</param>
-        /// <param name="firstCol">起始列（起始下标：0）</param>
-        /// <param name="lastCol">结束列（起始下标：0）</param>
+        /// <param name="firstRow">The start row index, zero-based.</param>
+        /// <param name="lastRow">The end row index, zero-based.</param>
+        /// <param name="firstCol">The start column index, zero-based.</param>
+        /// <param name="lastCol">The end column index, zero-based.</param>
         public virtual void MergedRegion(ISheet sheet, int firstRow, int lastRow, int firstCol, int lastCol)
         {
-            //合并列
+            // Merge the range.
             sheet.AddMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
         }
 
         /// <summary>
-        /// 获取区域字符串（如： "A1"）
+        /// Gets the address string for a cell, for example <c>A1</c>.
         /// </summary>
-        /// <param name="rowIndex">行下标（起始下标：0）</param>
-        /// <param name="columnIndex">列下标（起始下标：0）</param>
+        /// <param name="rowIndex">The row index, zero-based.</param>
+        /// <param name="columnIndex">The column index, zero-based.</param>
         public virtual string GetCellAddress(int rowIndex, int columnIndex)
         {
             return new CellReference(rowIndex, columnIndex).FormatAsString();
         }
 
         /// <summary>
-        /// 获取区域字符串（如： "A1"）
+        /// Gets the address string for a cell, for example <c>A1</c>.
         /// </summary>
-        /// <param name="cell">单元格</param>
+        /// <param name="cell">The cell.</param>
         public virtual string GetCellAddress(ICell cell)
         {
             return new CellReference(cell).FormatAsString();
@@ -474,25 +474,25 @@ namespace Monica.Office.Excel.Npoi
 
 
     /// <summary>
-    /// 合并的单元格区域信息类
+    /// Metadata for a merged cell range
     /// </summary>
     public class ExcelCellMergedInfo
     {
         /// <summary>
-        /// 是否合并区域
+        /// Gets a value indicating whether the cell belongs to a merged range.
         /// </summary>
         public bool IsMergedRegion { get; }
         /// <summary>
-        /// 单元格范围
+        /// Gets the cell range address.
         /// </summary>
         public CellRangeAddress? CellRangeAddress { get; }
         /// <summary>
-        /// 单元格
+        /// Gets the cell.
         /// </summary>
         public ICell? ICell { get; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelCellMergedInfo(ICell? cell)
         {
@@ -500,7 +500,7 @@ namespace Monica.Office.Excel.Npoi
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         /// <param name="cell"></param>
         /// <param name="cellRangeAddress"></param>
@@ -513,7 +513,7 @@ namespace Monica.Office.Excel.Npoi
     }
 
     /// <summary>
-    /// 单元格数据类型
+    /// Cell data format types
     /// </summary>
     public enum CellValueDefaultFormatEnum
     {
@@ -528,7 +528,7 @@ namespace Monica.Office.Excel.Npoi
     }
 
     /// <summary>
-    /// 单元格样式类型
+    /// Cell style types
     /// </summary>
     public enum ExcelCellStyleEnum
     {

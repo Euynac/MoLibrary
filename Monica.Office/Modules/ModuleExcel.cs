@@ -19,7 +19,7 @@ public static class ModuleExcelBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Excel 模块
+        /// Configures the Excel module
         /// </summary>
         public static ModuleExcelGuide AddExcel(Action<ModuleExcelOption>? action = null)
         {
@@ -39,7 +39,7 @@ public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, Modul
 }
 
 /// <summary>
-/// Excel模块配置指南
+/// Excel module configuration guide
 /// </summary>
 public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>
 {
@@ -49,7 +49,7 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
         return [SET_EXCEL_PROVIDER];
     }
     /// <summary>
-    /// 使用 NPOI excel导入导出
+    /// Uses NPOI for Excel import and export
     /// </summary>
     /// <returns></returns>
     public ModuleExcelGuide UseNpoiExcel()
@@ -66,7 +66,7 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     }
 
     /// <summary>
-    /// 使用 EpPlus excel导入导出
+    /// Uses EpPlus for Excel import and export
     /// </summary>
     /// <returns></returns>
     public ModuleExcelGuide UseEpPlusExcel()

@@ -1,28 +1,28 @@
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 数据行区间下表
+    /// Excel data row range indexes.
     /// </summary>
     public class ExcelDataRowRangeIndex
     {
         /// <summary>
-        /// 开始下标（起始为：0）
+        /// Start index (zero-based).
         /// </summary>
         public int StartIndex { get; set; }
         /// <summary>
-        /// 结束下标（起始为：0）
+        /// End index (zero-based).
         /// </summary>
         public int EndIndex { get; set; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelDataRowRangeIndex()
         {
         }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelDataRowRangeIndex(int startIndex, int endIndex)
         {

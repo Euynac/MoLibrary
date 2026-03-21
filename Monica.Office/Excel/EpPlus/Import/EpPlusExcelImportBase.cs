@@ -5,10 +5,10 @@ using OfficeOpenXml;
 namespace Monica.Office.Excel.EpPlus.Import
 {
     /// <summary>
-    /// EpPlus Excel 导入实现（版本号5.0.0之前的为免费版）
+    /// EpPlus Excel import implementation. Versions earlier than 5.0.0 were free to use.
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class EpPlusExcelImportBase(IEpPlusExcelHandle epPlusExcelHandle) : ExcelImportBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange>
     {

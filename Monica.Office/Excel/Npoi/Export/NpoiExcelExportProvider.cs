@@ -4,10 +4,10 @@ using Monica.StateStore.ProgressBar;
 namespace Monica.Office.Excel.Npoi.Export
 {   
     /// <summary>
-    /// Npoi excel 导出服务
+    /// NPOI Excel export provider
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class NpoiExcelExportProvider(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportManager
     {

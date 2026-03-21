@@ -4,19 +4,19 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.EpPlus
 {
     /// <summary>
-    /// EpPlus 单元格样式处理
+    /// EpPlus cell style handler
     /// </summary>
     public class EpPlusCellStyleHandle : IEpPlusCellStyleHandle
     {
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public EpPlusCellStyleHandle()
         {
         }
 
         /// <summary>
-        /// 设置表头单元格样式和字体
+        /// Applies the header cell style and font.
         /// </summary>
         /// <param name="cellStyle"></param>
         /// <param name="fontAttr"></param>
@@ -24,13 +24,13 @@ namespace Monica.Office.Excel.EpPlus
         /// <returns></returns>
         public virtual void SetHeaderCellStyleAndFont(ExcelStyle cellStyle, HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
         {
-            //表头默认样式
+            // Default header cell style
             SetHeaderCellStyle(cellStyle, styleAttr);
             SetHeaderCellFont(cellStyle.Font, fontAttr);
         }
 
         /// <summary>
-        /// 设置数据单元格样式和字体
+        /// Applies the data cell style and font.
         /// </summary>
         /// <param name="cellStyle"></param>
         /// <param name="styleAttr"></param>
@@ -39,13 +39,13 @@ namespace Monica.Office.Excel.EpPlus
 
         public virtual void SetDataCellStyleAndFont(ExcelStyle cellStyle, DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
         {
-            //表头默认样式
+            // Default data cell style
             SetDataCellStyle(cellStyle, styleAttr);
             SetDataCellFont(cellStyle.Font, fontAttr);
         }
 
         /// <summary>
-        /// 设置表头单元格样式
+        /// Applies the header cell style.
         /// </summary>
         public virtual void SetHeaderCellStyle(ExcelStyle? cellStyle, HeaderStyleAttribute? styleAttr)
         {
@@ -68,7 +68,7 @@ namespace Monica.Office.Excel.EpPlus
             if (styleAttr.Alignment > -1) cellStyle.HorizontalAlignment = (ExcelHorizontalAlignment)styleAttr.Alignment;
             if (styleAttr.VerticalAlignment >= -1) cellStyle.VerticalAlignment = (ExcelVerticalAlignment)styleAttr.VerticalAlignment;
 
-            //边框样式、颜色
+            // Border styles and colors
             if (styleAttr.BorderLeft > -1)
             {
                 cellStyle.Border.Left.Style = (ExcelBorderStyle)styleAttr.BorderLeft;
@@ -94,7 +94,7 @@ namespace Monica.Office.Excel.EpPlus
                 if (styleAttr.BottomBorderColor > -1) cellStyle.Border.Bottom.Color.Indexed = styleAttr.BottomBorderColor;
             }
 
-            //对角线
+            // Diagonal border
             //cellStyle.BorderDiagonal = (BorderDiagonal)styleAttr.BorderDiagonal;
             if (styleAttr.BorderDiagonalLineStyle > -1)
             {
@@ -103,7 +103,7 @@ namespace Monica.Office.Excel.EpPlus
                 if (styleAttr.BorderDiagonalColor > -1) cellStyle.Border.Diagonal.Color.Indexed = styleAttr.BorderDiagonalColor;
             }
 
-            //填充
+            // Fill
             if (styleAttr.FillPattern > -1)
             {
                 cellStyle.Fill.PatternType = (ExcelFillStyle)styleAttr.FillPattern;
@@ -114,7 +114,7 @@ namespace Monica.Office.Excel.EpPlus
         }
 
         /// <summary>
-        /// 设置表头单元格的字体
+        /// Applies the header cell font.
         /// </summary>
         public virtual void SetHeaderCellFont(ExcelFont? font, HeaderFontAttribute? fontAttr)
         {
@@ -140,7 +140,7 @@ namespace Monica.Office.Excel.EpPlus
         }
 
         /// <summary>
-        /// 设置数据单元格样式
+        /// Applies the data cell style.
         /// </summary>
         public virtual void SetDataCellStyle(ExcelStyle? cellStyle, DataStyleAttribute? styleAttr)
         {
@@ -163,7 +163,7 @@ namespace Monica.Office.Excel.EpPlus
             if (styleAttr.Alignment > -1) cellStyle.HorizontalAlignment = (ExcelHorizontalAlignment)styleAttr.Alignment;
             if (styleAttr.VerticalAlignment >= -1) cellStyle.VerticalAlignment = (ExcelVerticalAlignment)styleAttr.VerticalAlignment;
 
-            //边框样式、颜色
+            // Border styles and colors
             if (styleAttr.BorderLeft > -1)
             {
                 cellStyle.Border.Left.Style = (ExcelBorderStyle)styleAttr.BorderLeft;
@@ -189,7 +189,7 @@ namespace Monica.Office.Excel.EpPlus
                 if (styleAttr.BottomBorderColor > -1) cellStyle.Border.Bottom.Color.Indexed = styleAttr.BottomBorderColor;
             }
 
-            //对角线
+            // Diagonal border
             //cellStyle.BorderDiagonal = (BorderDiagonal)styleAttr.BorderDiagonal;
             if (styleAttr.BorderDiagonalLineStyle > -1)
             {
@@ -198,7 +198,7 @@ namespace Monica.Office.Excel.EpPlus
                 if (styleAttr.BorderDiagonalColor > -1) cellStyle.Border.Diagonal.Color.Indexed = styleAttr.BorderDiagonalColor;
             }
 
-            //填充
+            // Fill
             if (styleAttr.FillPattern > -1)
             {
                 cellStyle.Fill.PatternType = (ExcelFillStyle)styleAttr.FillPattern;
@@ -210,7 +210,7 @@ namespace Monica.Office.Excel.EpPlus
         }
 
         /// <summary>
-        /// 设置数据单元格的字体
+        /// Applies the data cell font.
         /// </summary>
         public virtual void SetDataCellFont(ExcelFont? font, DataFontAttribute? fontAttr)
         {

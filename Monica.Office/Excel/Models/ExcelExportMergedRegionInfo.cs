@@ -1,44 +1,44 @@
 namespace Monica.Office.Excel.Models
 {
     /// <summary>
-    /// excel 导出合并区域信息
+    /// Exported Excel merged-region information.
     /// </summary>
     public class ExcelExportMergedRegionInfo
     {
         /// <summary>
-        /// 起始行（起始下标：0）
+        /// Start row (zero-based).
         /// </summary>
         public int FromRowIndex { get; set; }
 
         /// <summary>
-        /// 结束行（起始下标：0）
+        /// End row (zero-based).
         /// </summary>
         public int ToRowIndex { get; set; }
 
         /// <summary>
-        /// 起始列（起始下标：0）
+        /// Start column (zero-based).
         /// </summary>
         public int FromColumnIndex { get; set; }
 
         /// <summary>
-        /// 结束列）（起始下标：0）
+        /// End column (zero-based).
         /// </summary>
         public int ToColumnIndex { get; set; }
 
         /// <summary>
-        /// 属性名称集合
+        /// Collection of property names.
         /// </summary>
         public string[] PropertyNames { get; set; }
 
         /// <summary>
-        /// 值
+        /// Value.
         /// </summary>
         public object? Value { get; set; }
 
-        #region 方法
+        #region Methods
 
         /// <summary>
-        /// 值是否相等
+        /// Checks whether the value matches.
         /// </summary>
         /// <returns></returns>
         public bool IsValueEqual(object? value)
@@ -51,7 +51,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否能够合并行
+        /// Whether rows can be merged.
         /// </summary>
         /// <returns></returns>
         public bool IsCanMergedRow()
@@ -60,7 +60,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否能够合并列
+        /// Whether columns can be merged.
         /// </summary>
         /// <returns></returns>
         public bool IsCanMergedColumn()
@@ -69,7 +69,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在行区域中
+        /// Whether the row is within the range.
         /// </summary>
         /// <returns></returns>
         public bool IsInRangeRow(int rowIndex)
@@ -78,7 +78,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在列区域中
+        /// Whether the column is within the range.
         /// </summary>
         /// <returns></returns>
         public bool IsInRangeColumn(int columnIndex)
@@ -87,7 +87,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在行列区域中
+        /// Whether the row and column are within the range.
         /// </summary>
         /// <returns></returns>
         public bool IsInRange(int rowIndex, int columnIndex)
@@ -96,7 +96,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在开始行区域外
+        /// Whether the row is before the start row.
         /// </summary>
         /// <returns></returns>
         public bool IsOutRangeRowFrom(int rowIndex)
@@ -105,7 +105,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在结束行区域外
+        /// Whether the row is after the end row.
         /// </summary>
         /// <returns></returns>
         public bool IsOutRangeRowTo(int rowIndex)
@@ -114,7 +114,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在开始列区域外
+        /// Whether the column is before the start column.
         /// </summary>
         /// <returns></returns>
         public bool IsOutRangeColumnFrom(int columnIndex)
@@ -123,7 +123,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否在结束列区域外
+        /// Whether the column is after the end column.
         /// </summary>
         /// <returns></returns>
         public bool IsOutRangeColumnTo(int columnIndex)
@@ -132,7 +132,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 与起始结束行是否是相邻行
+        /// Whether the row is adjacent to either boundary row.
         /// </summary>
         /// <returns></returns>
         public bool IsSiblingRow(int rowIndex)
@@ -141,7 +141,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 起始结束列是否是相邻列
+        /// Whether the column is adjacent to either boundary column.
         /// </summary>
         /// <returns></returns>
         public bool IsSiblingColumn(int columnIndex)
@@ -150,7 +150,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否同一行
+        /// Whether it is the same row.
         /// </summary>
         /// <returns></returns>
         public bool IsSameRow(int rowIndex)
@@ -159,7 +159,7 @@ namespace Monica.Office.Excel.Models
         }
 
         /// <summary>
-        /// 是否同一列
+        /// Whether it is the same column.
         /// </summary>
         /// <returns></returns>
         public bool IsSameColumn(int columnIndex)
@@ -170,7 +170,7 @@ namespace Monica.Office.Excel.Models
         #endregion
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public ExcelExportMergedRegionInfo()
         {

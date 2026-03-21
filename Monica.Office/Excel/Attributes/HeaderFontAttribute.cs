@@ -5,75 +5,75 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.Attributes
 {
     /// <summary>
-    /// Excel表头特性（导出时用）
-    /// <para>1.应用在类、字段、属性上，仅对表头有效</para>
-    /// <para>2.若类和属性上都存在，则属性上的有效，类上的无效</para>
+    /// Excel header font attribute (for export only)
+    /// <para>1. Apply to classes and properties. It affects the header row only.</para>
+    /// <para>2. If both the class and the property define it, the property-level setting takes precedence.</para>
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
     public sealed class HeaderFontAttribute : Attribute
     {
         /// <summary>
-        /// 颜色索引编号
-        /// <para>NPOI：<see cref="IndexedColors"/> <see cref="HSSFColor"/>，如：HSSFColor.Black.Index,IndexedColors.Black.Index</para>
+        /// Color index
+        /// <para>NPOI: <see cref="IndexedColors"/> <see cref="HSSFColor"/>, for example: HSSFColor.Black.Index, IndexedColors.Black.Index</para>
         /// <para>EpPlus：<see cref="System.Drawing.Color"/></para>
         /// </summary>
         public short Color { get; set; } = -1;
 
         /// <summary>
-        /// 字号大小
+        /// Font size in points
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
         public short FontHeightInPoints { get; set; } = -1;
 
         /// <summary>
-        /// 字体名称
+        /// Font name
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
         public string? FontName { get; set; }
         /// <summary>
-        /// 字体高
+        /// Font height
         /// <para>NPOI</para>
         /// </summary>
         public double FontHeight { get; set; } = -1;
         /// <summary>
-        /// 是否斜体
+        /// Whether italic is enabled
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
         public bool IsItalic { get; set; }
         /// <summary>
-        /// 是否有删除线
+        /// Whether strikethrough is enabled
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
         public bool IsStrikeout { get; set; }
         /// <summary>
-        /// 字体上标下标
+        /// Superscript or subscript setting
         /// <para>NPOI：<see cref="FontSuperScript"/></para>
         /// </summary>
         public short TypeOffset { get; set; } = -1;
         /// <summary>
-        /// 下划线类型
+        /// Underline type
         /// <para>NPOI：<see cref="FontUnderlineType"/></para>
         /// <para>EpPlus：<see cref="ExcelUnderLineType"/></para>
         /// </summary>
         public short Underline { get; set; } = -1;
         /// <summary>
-        /// 字符集
+        /// Character set
         /// <para>NPOI</para>
         /// </summary>
         public short Charset { get; set; } = -1;
         /// <summary>
-        /// 是否粗体
+        /// Whether bold is enabled
         /// <para>NPOI</para>
         /// <para>EpPlus</para>
         /// </summary>
         public bool IsBold { get; set; }
 
         /// <summary>
-        /// 构造
+        /// Initializes a new instance.
         /// </summary>
         public HeaderFontAttribute()
         {

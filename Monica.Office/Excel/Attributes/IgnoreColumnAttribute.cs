@@ -1,7 +1,7 @@
 namespace Monica.Office.Excel.Attributes
 {
     /// <summary>
-    /// Excel列字段导入/导出时忽略
+    /// Ignore this Excel column during import and export.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
     public sealed class IgnoreColumnAttribute : Attribute

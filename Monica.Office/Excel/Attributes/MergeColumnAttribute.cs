@@ -1,17 +1,17 @@
 namespace Monica.Office.Excel.Attributes
 {
     /// <summary>
-    /// Excel 合并列（仅导出时用）
+    /// Merge Excel columns (for export only).
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
-    /// <param name="propertyNames">属性名称集合</param>
+    /// <param name="propertyNames">Collection of property names.</param>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class MergeColumnAttribute(params string[] propertyNames) : Attribute
     {
         /// <summary>
-        /// 属性名称集合
+        /// Collection of property names.
         /// </summary>
         public string[] PropertyNames { get; } = propertyNames;
     }

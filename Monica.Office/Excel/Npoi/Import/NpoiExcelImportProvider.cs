@@ -3,10 +3,10 @@ using Monica.Office.Excel.Models;
 namespace Monica.Office.Excel.Npoi.Import
 {
     /// <summary>
-    /// Npoi excel 导入服务
+    /// NPOI Excel import provider
     /// </summary>
     /// <remarks>
-    /// 构造
+    /// Initializes a new instance.
     /// </remarks>
     public class NpoiExcelImportProvider(INpoiExcelHandle npoiExcelHandle) : ExcelImportManager
     {

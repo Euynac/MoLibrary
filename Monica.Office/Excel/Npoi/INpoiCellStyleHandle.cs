@@ -4,12 +4,12 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Npoi
 {
     /// <summary>
-    /// Npoi 单元格样式处理
+    /// NPOI cell style handler
     /// </summary>
     public interface INpoiCellStyleHandle
     {
         /// <summary>
-        /// 设置表头单元格样式和字体
+        /// Applies the header cell style and font.
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="fontAttr"></param>
@@ -20,7 +20,7 @@ namespace Monica.Office.Excel.Npoi
 
 
         /// <summary>
-        /// 设置数据单元格样式和字体
+        /// Applies the data cell style and font.
         /// </summary>
         /// <param name="workbook"></param>
         /// <param name="styleAttr"></param>
@@ -31,22 +31,22 @@ namespace Monica.Office.Excel.Npoi
             DataFontAttribute fontAttr);
 
         /// <summary>
-        /// 创建表头单元格样式
+        /// Creates the header cell style.
         /// </summary>
         ICellStyle CreateHeaderCellStyle(IWorkbook workbook, HeaderStyleAttribute styleAttr);
 
         /// <summary>
-        /// 创建表头单元格的字体
+        /// Creates the header cell font.
         /// </summary>
         IFont CreateHeaderCellFont(IWorkbook workbook, HeaderFontAttribute fontAttr);
 
         /// <summary>
-        /// 创建数据单元格样式
+        /// Creates the data cell style.
         /// </summary>
         ICellStyle CreateDataCellStyle(IWorkbook workbook, DataStyleAttribute styleAttr);
 
         /// <summary>
-        /// 创建数据单元格的字体
+        /// Creates the data cell font.
         /// </summary>
         IFont CreateDataCellFont(IWorkbook workbook, DataFontAttribute fontAttr);
     }
