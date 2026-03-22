@@ -1,0 +1,3 @@
+interface:
+  display_name: "Refactor MCP Core"
+  short_description: "Default refactor-mcp workflow for rename, usages, and type splitting"
