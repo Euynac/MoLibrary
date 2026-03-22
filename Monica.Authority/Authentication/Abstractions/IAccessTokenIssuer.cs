@@ -2,7 +2,7 @@
 
 namespace Monica.Authority.Authentication.Abstractions;
 
-public interface IMoAuthManager
+public interface IAccessTokenIssuer
 {
     string GenerateTokens(string username, Claim[] claims, DateTime? now = null);
 }

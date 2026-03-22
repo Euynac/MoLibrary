@@ -82,7 +82,7 @@ public class MoSignalRManageService(
                 ConnectionTime = conn.ConnectionTime,
                 IsAuthenticated = conn.ClaimsPrincipal.Identity?.IsAuthenticated ?? false,
                 UserName = conn.ClaimsPrincipal.Identity?.Name,
-                UserId = conn.ClaimsPrincipal.FindFirst(MoClaimTypes.UserId)?.Value,
+                UserId = conn.ClaimsPrincipal.FindFirst(AuthorityClaimTypes.UserId)?.Value,
                 Claims = conn.ClaimsPrincipal.Claims.ToDictionary(
                     c => c.Type,
                     c => c.Value

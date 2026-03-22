@@ -1,6 +1,6 @@
 ﻿namespace Monica.Authority.Identity.Models;
 
-public enum EMoDefaultSystemUser
+public enum EDefaultSystemUser
 {
     System = 0
 }

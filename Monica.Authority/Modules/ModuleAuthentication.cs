@@ -50,7 +50,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         services.AddHttpContextAccessor();
         services.AddScoped<IMoCurrentUser, MoCurrentUser>();
         services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
-        services.AddSingleton<IMoAuthManager, MoJwtAuthManager>();
+        services.AddSingleton<IAccessTokenIssuer, MoJwtAuthManager>();
         services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
 
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
@@ -160,7 +160,7 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
 
     public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<MoSystemUserOptions>? action = null)
     {
-        return ConfigSystemUser(EMoDefaultSystemUser.System, action);
+        return ConfigSystemUser(EDefaultSystemUser.System, action);
     }
 }
 

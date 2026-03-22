@@ -6,7 +6,7 @@ using Monica.Authority.Identity.Models;
 
 namespace Monica.Authority.Identity.Services;
 
-internal class MoSystemUserManager(IMoAuthManager manager, IOptions<MoSystemUserOptions> options) : IMoSystemUserManager
+internal class MoSystemUserManager(IAccessTokenIssuer manager, IOptions<MoSystemUserOptions> options) : IMoSystemUserManager
 {
     private readonly MoSystemUserOptions _options = options.Value;
 
@@ -70,9 +70,9 @@ internal class MoSystemUserManager(IMoAuthManager manager, IOptions<MoSystemUser
         var user = GetSystemUserInfoBase(userEnum);
         var list = new List<Claim>
         {
-            new(MoClaimTypes.Username, user.Username),
-            new(MoClaimTypes.UserId,user.UserId),
-            new(MoClaimTypes.Nickname, user.NickName),
+            new(AuthorityClaimTypes.Username, user.Username),
+            new(AuthorityClaimTypes.UserId,user.UserId),
+            new(AuthorityClaimTypes.Nickname, user.NickName),
         };
         return list;
     }

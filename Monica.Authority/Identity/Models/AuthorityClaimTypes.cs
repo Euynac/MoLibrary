@@ -2,7 +2,7 @@ using System.Security.Claims;
 
 namespace Monica.Authority.Identity.Models;
 
-public static class MoClaimTypes
+public static class AuthorityClaimTypes
 {
     /// <summary>
     /// 用户登录名

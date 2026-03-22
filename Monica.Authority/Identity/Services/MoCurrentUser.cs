@@ -19,12 +19,12 @@ public class MoCurrentUser : MoCurrentUserBase, IMoCurrentUser
     {
     }
 
-    public virtual string? RoleId => FindClaimValue(MoClaimTypes.RoleId);
+    public virtual string? RoleId => FindClaimValue(AuthorityClaimTypes.RoleId);
 
-    public virtual string? Nickname => FindClaimValue(MoClaimTypes.Nickname);
+    public virtual string? Nickname => FindClaimValue(AuthorityClaimTypes.Nickname);
 
 
-    public virtual string? Username => FindClaimValue(MoClaimTypes.Username);
+    public virtual string? Username => FindClaimValue(AuthorityClaimTypes.Username);
 
-    public virtual string? Id => FindClaimValue(MoClaimTypes.UserId);
+    public virtual string? Id => FindClaimValue(AuthorityClaimTypes.UserId);
 }

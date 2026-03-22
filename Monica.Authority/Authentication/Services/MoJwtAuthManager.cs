@@ -13,7 +13,7 @@ using Monica.Modules;
 
 namespace Monica.Authority.Authentication.Services;
 
-public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IMoJwtAuthManager, IMoAuthManager
+public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IMoJwtAuthManager, IAccessTokenIssuer
 {
     protected ModuleAuthenticationOption JwtTokenConfig => jwtTokenConfig.Value;
     public IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary => _usersRefreshTokens.ToImmutableDictionary();
@@ -128,7 +128,7 @@ public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfi
         return Convert.ToBase64String(randomNumber);
     }
 
-    string IMoAuthManager.GenerateTokens(string username, Claim[] claims, DateTime? now)
+    string IAccessTokenIssuer.GenerateTokens(string username, Claim[] claims, DateTime? now)
     {
         return GenerateTokens(username, claims, now).AccessToken;
     }
