@@ -1,0 +1,151 @@
+@using Monica.DevOps.K8S.Localization
+@using Monica.DevOps.K8S.Models
+@inject IStringLocalizer<K8SResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @L["RuntimeConfigDialog:Intro"]
+            </MudAlert>
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:MasterNodes"]"
+                          HelperText="@L["RuntimeConfigDialog:MultiValueHelper"]"
+                          @bind-Value="_masterNodesText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:WorkerNodes"]"
+                          HelperText="@L["RuntimeConfigDialog:MultiValueHelper"]"
+                          @bind-Value="_workerNodesText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:ExecutionNode"]"
+                          @bind-Value="_executionNode"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:SshUserName"]"
+                          @bind-Value="_userName"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:SshPassword"]"
+                          @bind-Value="_password"
+                          InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                          OnAdornmentClick="TogglePasswordVisibility"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:NamespaceScope"]"
+                          HelperText="@L["RuntimeConfigDialog:NamespaceScopeHelper"]"
+                          @bind-Value="_namespaceScopeText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+
+            @if (IsAllowAllNamespaces)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    @L["RuntimeConfigDialog:AllowAllNamespacesWarning"]
+                </MudAlert>
+            }
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:SensitiveRestrictions"]"
+                          HelperText="@L["RuntimeConfigDialog:SensitiveRestrictionsHelper"]"
+                          @bind-Value="_sensitiveRestrictionsText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+            @L["RuntimeConfigDialog:Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public K8SRuntimeConfig RuntimeConfig { get; set; } = new();
+
+    private bool _initialized;
+    private string _masterNodesText = string.Empty;
+    private string _workerNodesText = string.Empty;
+    private string _executionNode = string.Empty;
+    private string _userName = string.Empty;
+    private string _password = string.Empty;
+    private bool _showPassword;
+    private string _namespaceScopeText = string.Empty;
+    private string _sensitiveRestrictionsText = string.Empty;
+    private bool IsAllowAllNamespaces => K8SRuntimeConfig.ParseMultiValue(_namespaceScopeText).Count == 0;
+
+    protected override void OnParametersSet()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        var runtimeConfig = RuntimeConfig.Clone().Normalize();
+        _masterNodesText = K8SRuntimeConfig.ToMultilineText(runtimeConfig.MasterNodes);
+        _workerNodesText = K8SRuntimeConfig.ToMultilineText(runtimeConfig.WorkerNodes);
+        _executionNode = runtimeConfig.ExecutionNode;
+        _userName = runtimeConfig.UserName;
+        _password = runtimeConfig.Password;
+        _namespaceScopeText = K8SRuntimeConfig.ToMultilineText(runtimeConfig.NamespaceScope);
+        _sensitiveRestrictionsText = K8SRuntimeConfig.ToMultilineText(runtimeConfig.SensitiveOperationNameRestrictions);
+        _initialized = true;
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        _showPassword = !_showPassword;
+    }
+
+    private void Save()
+    {
+        var result = new K8SRuntimeConfig
+        {
+            Provider = RuntimeConfig.Provider,
+            MasterNodes = K8SRuntimeConfig.ParseMultiValue(_masterNodesText),
+            WorkerNodes = K8SRuntimeConfig.ParseMultiValue(_workerNodesText),
+            ExecutionNode = _executionNode,
+            UserName = _userName,
+            Password = _password,
+            NamespaceScope = K8SRuntimeConfig.ParseMultiValue(_namespaceScopeText),
+            SensitiveOperationNameRestrictions = K8SRuntimeConfig.ParseMultiValue(_sensitiveRestrictionsText)
+        }.Normalize();
+
+        MudDialog?.Close(DialogResult.Ok(result));
+    }
+}

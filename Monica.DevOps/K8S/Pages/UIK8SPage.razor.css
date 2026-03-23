@@ -1,0 +1,19 @@
+.page-root {
+    min-height: 100%;
+}
+
+.namespace-select {
+    min-width: 260px;
+}
+
+.actions-cell {
+    white-space: nowrap;
+}
+
+.page-root ::deep .resource-grid .mud-table-container {
+    max-height: 62vh;
+}
+
+.page-root ::deep .resource-grid .mud-table-cell {
+    vertical-align: top;
+}

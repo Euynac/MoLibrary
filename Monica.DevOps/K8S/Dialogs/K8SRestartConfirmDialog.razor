@@ -1,0 +1,159 @@
+@using Monica.DevOps.K8S.Localization
+@using Monica.DevOps.K8S.Models
+@inject IStringLocalizer<K8SResource> L
+
+<MudDialog Class="k8s-restart-dialog">
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="@(Preview.Workloads.Count > 0 ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body1">
+                    @if (Preview.Workloads.Count > 0)
+                    {
+                        <text>@L["RestartDialog:SummaryWithWorkloads", Preview.Workloads.Count, Preview.EligibleTargets.Count]</text>
+                    }
+                    else
+                    {
+                        <text>@L["RestartDialog:SummaryWithoutWorkloads"]</text>
+                    }
+                </MudText>
+            </MudAlert>
+
+            @if (Preview.RestrictionKeywords.Count > 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["RestartDialog:SensitiveRestrictionsActive", string.Join(", ", Preview.RestrictionKeywords)]
+                </MudAlert>
+            }
+
+            @if (Preview.ResourceType == K8SResourceType.Service)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["RestartDialog:ServiceExplanation"]
+                </MudAlert>
+            }
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4 list-panel" Outlined="true">
+                        <MudText Typo="Typo.subtitle2">@L["RestartDialog:EligibleTargets"]</MudText>
+                        @if (Preview.EligibleTargets.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["RestartDialog:NoEligibleTargets"]</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true">
+                                @foreach (var target in Preview.EligibleTargets)
+                                {
+                                    <MudListItem T="string">
+                                        <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4 list-panel" Outlined="true">
+                        <MudText Typo="Typo.subtitle2">@L["RestartDialog:IgnoredTargets"]</MudText>
+                        @if (Preview.IgnoredTargets.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["RestartDialog:NoIgnoredTargets"]</MudText>
+                        }
+                        else
+                        {
+                            <MudList T="string" Dense="true">
+                                @foreach (var target in Preview.IgnoredTargets)
+                                {
+                                    <MudListItem T="string">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2">@GetTargetDisplayName(target)</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@target.Reason</MudText>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudPaper Class="pa-4 list-panel" Outlined="true">
+                <MudText Typo="Typo.subtitle2">@L["RestartDialog:WorkloadsToRestart"]</MudText>
+                @if (Preview.Workloads.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["RestartDialog:NoWorkloads"]</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var workload in Preview.Workloads)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">@L["RestartDialog:WorkloadEntry", GetWorkloadDisplayName(workload), workload.ReplicaStatus, workload.LastRestartedAtDisplay]</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+
+            <MudPaper Class="command-output" Outlined="true">
+                <pre>@string.Join(Environment.NewLine, Preview.CommandPreview)</pre>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        @if (Preview.Workloads.Count > 0)
+        {
+            <MudButton OnClick="Confirm"
+                       Variant="Variant.Filled"
+                       Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.RestartAlt">
+                @ConfirmButtonText
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public K8SRestartPreview Preview { get; set; } = new();
+
+    [Parameter] public string ConfirmButtonText { get; set; } = string.Empty;
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void Confirm()
+    {
+        MudDialog?.Close(DialogResult.Ok(true));
+    }
+
+    private string GetTargetDisplayName(K8SRestartTarget target)
+    {
+        return $"{GetLocalizedKind(target.Kind)}/{target.Name}";
+    }
+
+    private string GetWorkloadDisplayName(K8SWorkloadReference workload)
+    {
+        return $"{GetLocalizedKind(workload.Kind)}/{workload.Name}";
+    }
+
+    private string GetLocalizedKind(string kind)
+    {
+        return kind switch
+        {
+            "Service" => L["ResourceTypes.Service"].Value,
+            "Deployment" => L["ResourceTypes.Deployment"].Value,
+            "StatefulSet" => L["ResourceTypes.StatefulSet"].Value,
+            "DaemonSet" => L["ResourceTypes.DaemonSet"].Value,
+            _ => kind
+        };
+    }
+}

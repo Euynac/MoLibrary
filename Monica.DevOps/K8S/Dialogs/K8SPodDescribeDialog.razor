@@ -1,0 +1,125 @@
+@using Monica.DevOps.K8S.Localization
+@using Monica.DevOps.K8S.Models
+@inject IStringLocalizer<K8SResource> L
+
+<MudDialog Class="k8s-pod-describe-dialog">
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Pod"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.Name</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Namespace"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.Namespace</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Workload"]</MudText>
+                        <MudText Typo="Typo.body1">@GetWorkloadDisplayName()</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Phase"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.PhaseDisplay</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Ready"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.ReadyDisplay</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Restarts"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.RestartCount</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Started"]</MudText>
+                        <MudText Typo="Typo.body1">@Details.Summary.StartTimeDisplay</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Node"]</MudText>
+                        <MudText Typo="Typo.body1">@DisplayValue(Details.Summary.NodeName)</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:PodIp"]</MudText>
+                        <MudText Typo="Typo.body1">@DisplayValue(Details.Summary.PodIp)</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2">@L["PodDialog:Issue"]</MudText>
+                        <MudText Typo="Typo.body1">@GetIssueText()</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <MudPaper Class="describe-output" Outlined="true">
+                <pre>@Details.DescriptionText</pre>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">
+            @L["Common:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public K8SPodDetails Details { get; set; } = new();
+
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+
+    private string GetIssueText()
+    {
+        var issueSegments = new[] { Details.Summary.Reason, Details.Summary.Message }
+            .Where(segment => !string.IsNullOrWhiteSpace(segment))
+            .ToList();
+
+        if (issueSegments.Count > 0)
+        {
+            return string.Join(" | ", issueSegments);
+        }
+
+        return Details.Summary.IsReady ? L["Common:Empty"] : L["DescribeDialog:ReadyStateNotReady"];
+    }
+
+    private string DisplayValue(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? L["Common:Empty"] : value;
+    }
+
+    private string GetWorkloadDisplayName()
+    {
+        if (!string.IsNullOrWhiteSpace(Details.Summary.WorkloadKind) && !string.IsNullOrWhiteSpace(Details.Summary.WorkloadName))
+        {
+            return GetResourceDisplayName(Details.Summary.WorkloadKind, Details.Summary.WorkloadName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(Details.Summary.OwnerKind) && !string.IsNullOrWhiteSpace(Details.Summary.OwnerName))
+        {
+            return GetResourceDisplayName(Details.Summary.OwnerKind, Details.Summary.OwnerName);
+        }
+
+        return L["Common:Empty"];
+    }
+
+    private string GetResourceDisplayName(string kind, string name)
+    {
+        return $"{GetLocalizedKind(kind)}/{name}";
+    }
+
+    private string GetLocalizedKind(string kind)
+    {
+        return kind switch
+        {
+            "Service" => L["ResourceTypes.Service"].Value,
+            "Deployment" => L["ResourceTypes.Deployment"].Value,
+            "StatefulSet" => L["ResourceTypes.StatefulSet"].Value,
+            "DaemonSet" => L["ResourceTypes.DaemonSet"].Value,
+            _ => kind
+        };
+    }
+}

@@ -1,0 +1,29 @@
+.k8s-describe-dialog .describe-output {
+    max-height: 42vh;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.k8s-describe-dialog .describe-output pre {
+    margin: 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85rem;
+}
+
+.k8s-describe-dialog .pods-panel {
+    max-height: 36vh;
+    overflow: auto;
+}
+
+.k8s-describe-dialog .issue-cell {
+    min-width: 260px;
+}
+
+.k8s-describe-dialog .pod-phase-chip {
+    min-width: 92px;
+    justify-content: center;
+}

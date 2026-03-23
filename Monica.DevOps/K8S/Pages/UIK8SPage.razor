@@ -1,0 +1,840 @@
+@using Monica.DevOps.K8S.Dialogs
+@using Monica.DevOps.K8S.Facades
+@using Monica.DevOps.K8S.Localization
+@using Monica.DevOps.K8S.Models
+@attribute [Route(PAGE_URL)]
+@inject K8SFacade K8SFacade
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IStringLocalizer<K8SResource> L
+
+<PageTitle>@L["Page.DocumentTitle"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="page-root pa-4">
+    <MudStack Spacing="3">
+        <MudPaper Class="pa-4">
+            <MudStack Spacing="3">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h4">@L["Page.Title"]</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["Page.Subtitle"]
+                        </MudText>
+                    </MudStack>
+                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Settings"
+                                   Disabled="@_busy"
+                                   OnClick="OpenRuntimeConfigDialogAsync">
+                            @L["Actions.RuntimeConfiguration"]
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   Disabled="@(_busy || _loadingResources)"
+                                   OnClick="RefreshEverythingAsync">
+                            @L["Actions.Refresh"]
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                                   Disabled="@(!CanRestartSelected)"
+                                   OnClick="RestartSelectedResourcesAsync">
+                            @L["Actions.RestartSelectedWorkloads"]
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                                   Disabled="@(!CanRestartNamespace)"
+                                   OnClick="RestartNamespaceAsync">
+                            @L["Actions.RestartNamespaceWorkloads"]
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                    <MudChip T="string" Value="@GetExecutionNodeChipText()" Variant="Variant.Outlined" Color="Color.Primary">
+                        @GetExecutionNodeChipText()
+                    </MudChip>
+                    <MudChip T="string" Value="@GetNamespaceScopeChipText()" Variant="Variant.Outlined" Color="Color.Info">
+                        @GetNamespaceScopeChipText()
+                    </MudChip>
+                    <MudChip T="string" Value="@GetRestrictionChipText()" Variant="Variant.Outlined" Color="Color.Warning">
+                        @GetRestrictionChipText()
+                    </MudChip>
+                    <MudChip T="string" Value="@GetListStatusChipText()" Variant="Variant.Outlined" Color="Color.Secondary">
+                        @GetListStatusChipText()
+                    </MudChip>
+                    <MudChip T="string" Value="@GetSelectionChipText()" Variant="Variant.Outlined" Color="Color.Success">
+                        @GetSelectionChipText()
+                    </MudChip>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <MudAlert Severity="@_statusSeverity" Variant="Variant.Outlined">
+                @_statusMessage
+            </MudAlert>
+        }
+
+        <MudPaper Class="pa-4">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="4">
+                    <MudSelect T="string"
+                               Label="@L["Forms.Namespace"]"
+                               Value="_selectedNamespace"
+                               ValueChanged="OnNamespaceChangedAsync"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Disabled="@(_busy || _namespaces.Count == 0)"
+                               Class="namespace-select">
+                        @foreach (var namespaceInfo in _namespaces)
+                        {
+                            <MudSelectItem T="string" Value="@namespaceInfo.Name">
+                                @GetNamespaceDisplayName(namespaceInfo)
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="5">
+                    <MudTextField T="string"
+                                  Label="@L["Forms.SearchCurrentList"]"
+                                  Value="_searchText"
+                                  ValueChanged="OnSearchTextChanged"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  Clearable="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  HelperText="@L["Page.SearchHelper"]" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudButton Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.AccountTree"
+                               Disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedNamespace))"
+                               FullWidth="true"
+                               OnClick="RefreshCurrentResourceListAsync">
+                        @L["Actions.RefreshCurrentList"]
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        @foreach (var resourceType in ResourceTypes)
+                        {
+                            <MudButton Variant="@(resourceType == _currentResourceType ? Variant.Filled : Variant.Outlined)"
+                                       Color="@(resourceType == _currentResourceType ? Color.Primary : Color.Default)"
+                                       Disabled="@(_busy || string.IsNullOrWhiteSpace(_selectedNamespace))"
+                                       OnClick="@(() => ChangeResourceTypeAsync(resourceType))">
+                                @GetResourceTypeLabel(resourceType)
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="pa-0">
+            @if (_loadingResources)
+            {
+                <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-6">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body1">@L["Page.LoadingResources", GetResourceTypeLabel(_currentResourceType), _selectedNamespace]</MudText>
+                </MudStack>
+            }
+            else if (string.IsNullOrWhiteSpace(_selectedNamespace))
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="ma-4">
+                    @L["Page.SelectNamespace"]
+                </MudAlert>
+            }
+            else if (_resourceList == null || _resourceList.Items.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="ma-4">
+                    @L["Page.NoResources", GetResourceTypeLabel(_currentResourceType)]
+                </MudAlert>
+            }
+            else
+            {
+                <MudDataGrid T="K8SResourceSummary"
+                             Items="_resourceList.Items"
+                             QuickFilter="ResourceMatchesSearch"
+                             SortMode="SortMode.Multiple"
+                             Filterable="true"
+                             Dense="true"
+                             Hover="true"
+                             MultiSelection="true"
+                             SelectOnRowClick="true"
+                             RowsPerPage="20"
+                             @bind-SelectedItems="_selectedResources"
+                             Class="resource-grid">
+                    <Columns>
+                        <SelectColumn T="K8SResourceSummary" />
+                        <PropertyColumn Property="x => x.Name" Title="@L["Columns.Name"]" />
+                        @if (_currentResourceType == K8SResourceType.Service)
+                        {
+                            <PropertyColumn Property="x => x.Type" Title="@L["Columns.ServiceType"]" />
+                            <PropertyColumn Property="x => x.ClusterIp" Title="@L["Columns.ClusterIp"]" />
+                            <PropertyColumn Property="x => x.PortsDisplay" Title="@L["Columns.Ports"]" />
+                            <PropertyColumn Property="x => x.SelectorDisplay" Title="@L["Columns.Selector"]" />
+                            <PropertyColumn Property="x => x.LastRestartedAtDisplay" Title="@L["Columns.BackingWorkloadRestart"]" />
+                        }
+                        else
+                        {
+                            <PropertyColumn Property="x => x.ImagesDisplay" Title="@L["Columns.Images"]" />
+                            <PropertyColumn Property="x => x.SelectorDisplay" Title="@L["Columns.Selector"]" />
+                            <PropertyColumn Property="x => x.ReplicaStatus" Title="@L["Columns.Replicas"]" />
+                            <PropertyColumn Property="x => x.LastRestartedAtDisplay" Title="@L["Columns.LastRestart"]" />
+                        }
+                        <TemplateColumn Title="@L["Columns.Actions"]" Sortable="false" Filterable="false">
+                            <CellTemplate>
+                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="actions-cell">
+                                    <MudButton Variant="Variant.Text"
+                                               StartIcon="@Icons.Material.Filled.Description"
+                                               Disabled="@_busy"
+                                               OnClick="@(() => OpenDescribeDialogAsync(context.Item))">
+                                        @L["Actions.Describe"]
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Warning"
+                                               StartIcon="@Icons.Material.Filled.RestartAlt"
+                                               Disabled="@_busy"
+                                               OnClick="@(() => RestartSingleResourceAsync(context.Item))">
+                                        @GetRestartActionText(context.Item)
+                                    </MudButton>
+                                </MudStack>
+                            </CellTemplate>
+                        </TemplateColumn>
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="K8SResourceSummary" PageSizeOptions="PageSizeOptions" />
+                    </PagerContent>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/ui/k8s";
+
+    private static readonly K8SResourceType[] ResourceTypes =
+    [
+        K8SResourceType.Service,
+        K8SResourceType.Deployment,
+        K8SResourceType.StatefulSet,
+        K8SResourceType.DaemonSet
+    ];
+
+    private static readonly int[] PageSizeOptions = [10, 20, 50, 100];
+
+    private bool _busy;
+    private bool _loadingResources;
+    private string _statusMessage = string.Empty;
+    private Severity _statusSeverity = Severity.Info;
+    private K8SRuntimeConfig _runtimeConfig = new();
+    private List<K8SNamespaceInfo> _namespaces = [];
+    private string _selectedNamespace = string.Empty;
+    private K8SResourceType _currentResourceType = K8SResourceType.Service;
+    private K8SResourceListResult? _resourceList;
+    private HashSet<K8SResourceSummary> _selectedResources = [];
+    private string _searchText = string.Empty;
+
+    private bool CanRestartNamespace => !_busy && !_loadingResources && !string.IsNullOrWhiteSpace(_selectedNamespace);
+
+    private bool CanRestartSelected => CanRestartNamespace && _selectedResources.Count > 0;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshEverythingAsync();
+        }
+    }
+
+    private async Task RefreshEverythingAsync()
+    {
+        await ExecuteBusyAsync(async () =>
+        {
+            await LoadRuntimeConfigAsync();
+            await LoadNamespacesAsync();
+
+            if (!string.IsNullOrWhiteSpace(_selectedNamespace))
+            {
+                await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+            }
+            else
+            {
+                _resourceList = null;
+                _selectedResources = [];
+            }
+        });
+    }
+
+    private async Task LoadRuntimeConfigAsync()
+    {
+        if ((await K8SFacade.GetRuntimeConfigAsync()).IsFailed(out var error, out var runtimeConfig))
+        {
+            Snackbar.Add(error, Severity.Error);
+            SetStatus(error, Severity.Error);
+            return;
+        }
+
+        _runtimeConfig = runtimeConfig.Normalize();
+    }
+
+    private async Task OpenRuntimeConfigDialogAsync()
+    {
+        var parameters = new DialogParameters<K8SRuntimeConfigDialog>
+        {
+            { dialog => dialog.RuntimeConfig, _runtimeConfig.Clone() }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<K8SRuntimeConfigDialog>(L["Actions.RuntimeConfiguration"], parameters, options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false } || result.Data is not K8SRuntimeConfig runtimeConfig)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await K8SFacade.SaveRuntimeConfigAsync(runtimeConfig)).IsFailed(out var error))
+            {
+                Snackbar.Add(error, Severity.Error);
+                SetStatus(error, Severity.Error);
+                return;
+            }
+
+            _runtimeConfig = runtimeConfig.Normalize();
+            var successMessage = BuildRuntimeConfigSavedMessage(_runtimeConfig);
+            Snackbar.Add(successMessage, Severity.Success);
+            SetStatus(successMessage, Severity.Success);
+
+            await LoadNamespacesAsync();
+            if (!string.IsNullOrWhiteSpace(_selectedNamespace))
+            {
+                await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+            }
+        });
+    }
+
+    private async Task LoadNamespacesAsync()
+    {
+        if ((await K8SFacade.ListNamespacesAsync()).IsFailed(out var error, out var namespaces))
+        {
+            Snackbar.Add(error, Severity.Error);
+            SetStatus(error, Severity.Error);
+            return;
+        }
+
+        _namespaces = namespaces
+            .OrderBy(namespaceInfo => namespaceInfo.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (_namespaces.Count == 0)
+        {
+            _selectedNamespace = string.Empty;
+            return;
+        }
+
+        var firstExistingNamespace = _namespaces.FirstOrDefault(namespaceInfo => namespaceInfo.Exists);
+
+        if (firstExistingNamespace == null)
+        {
+            _selectedNamespace = string.Empty;
+            _resourceList = null;
+            _selectedResources = [];
+            SetStatus(L["Messages.NamespaceScopeMismatch"], Severity.Warning);
+            return;
+        }
+
+        if (!_namespaces.Any(namespaceInfo => string.Equals(namespaceInfo.Name, _selectedNamespace, StringComparison.OrdinalIgnoreCase)))
+        {
+            _selectedNamespace = firstExistingNamespace.Name;
+        }
+    }
+
+    private async Task OnNamespaceChangedAsync(string namespaceName)
+    {
+        _selectedNamespace = namespaceName;
+        _selectedResources = [];
+
+        if (string.IsNullOrWhiteSpace(namespaceName))
+        {
+            _resourceList = null;
+            return;
+        }
+
+        await LoadResourceListAsync(namespaceName, _currentResourceType);
+    }
+
+    private async Task ChangeResourceTypeAsync(K8SResourceType resourceType)
+    {
+        if (_currentResourceType == resourceType)
+        {
+            return;
+        }
+
+        _currentResourceType = resourceType;
+        _selectedResources = [];
+
+        if (string.IsNullOrWhiteSpace(_selectedNamespace))
+        {
+            _resourceList = null;
+            return;
+        }
+
+        await LoadResourceListAsync(_selectedNamespace, resourceType);
+    }
+
+    private Task OnSearchTextChanged(string value)
+    {
+        _searchText = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshCurrentResourceListAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedNamespace))
+        {
+            return;
+        }
+
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
+    private async Task LoadResourceListAsync(string namespaceName, K8SResourceType resourceType)
+    {
+        _loadingResources = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if ((await K8SFacade.ListResourcesAsync(namespaceName, resourceType)).IsFailed(out var error, out var resourceList))
+            {
+                Snackbar.Add(error, Severity.Error);
+                SetStatus(error, Severity.Error);
+                _resourceList = null;
+                _selectedResources = [];
+                return;
+            }
+
+            _resourceList = resourceList;
+            _selectedResources = [];
+            SetStatus(
+                L["Page.ResourceListLoaded", resourceList.Items.Count, GetResourceTypeLabel(resourceType), namespaceName, resourceList.FetchedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")],
+                Severity.Info);
+        }
+        finally
+        {
+            _loadingResources = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private bool ResourceMatchesSearch(K8SResourceSummary resource)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        return resource.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task OpenDescribeDialogAsync(K8SResourceSummary resource)
+    {
+        var detailsResponse = await ExecuteBusyAsync(() => K8SFacade.DescribeResourceAsync(_selectedNamespace, resource.ResourceType, resource.Name));
+        if (detailsResponse == null)
+        {
+            return;
+        }
+
+        if (detailsResponse.IsFailed(out var error, out var details))
+        {
+            var errorMessage = error?.Message ?? L["Messages.FailedDescribeResource", GetLocalizedKind(resource.Kind), resource.Name].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<K8SDescribeDialog>
+        {
+            { dialog => dialog.Details, details }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<K8SDescribeDialog>(GetResourceDisplayName(details.Summary.Kind, details.Summary.Name), parameters, options);
+    }
+
+    private async Task RestartSingleResourceAsync(K8SResourceSummary resource)
+    {
+        var previewResponse = await ExecuteBusyAsync(() => K8SFacade.GetResourceRestartPreviewAsync(_selectedNamespace, resource.ResourceType, resource.Name));
+        if (previewResponse == null)
+        {
+            return;
+        }
+
+        if (previewResponse.IsFailed(out var error, out var preview))
+        {
+            var errorMessage = error?.Message ?? L["Messages.FailedBuildRestartPreview", GetResourceDisplayName(resource.Kind, resource.Name)].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var confirmed = await ShowRestartPreviewDialogAsync(
+            preview,
+            GetSingleRestartDialogTitle(resource),
+            GetSingleRestartConfirmButtonText(resource));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var resultResponse = await ExecuteBusyAsync(() => K8SFacade.RestartResourceAsync(_selectedNamespace, resource.ResourceType, resource.Name));
+        if (resultResponse == null)
+        {
+            return;
+        }
+
+        if (resultResponse.IsFailed(out var restartError, out var restartResult))
+        {
+            var errorMessage = restartError?.Message ?? L["Messages.FailedRestartResource", GetLocalizedKind(resource.Kind), resource.Name].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var successMessage = BuildRestartResultMessage(restartResult);
+        Snackbar.Add(successMessage, Severity.Success);
+        SetStatus(successMessage, Severity.Success);
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
+    private async Task RestartSelectedResourcesAsync()
+    {
+        var selectedNames = _selectedResources
+            .Select(resource => resource.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (selectedNames.Count == 0)
+        {
+            return;
+        }
+
+        var previewResponse = await ExecuteBusyAsync(() => K8SFacade.GetBatchRestartPreviewAsync(_selectedNamespace, _currentResourceType, selectedNames));
+        if (previewResponse == null)
+        {
+            return;
+        }
+
+        if (previewResponse.IsFailed(out var error, out var preview))
+        {
+            var errorMessage = error?.Message ?? L["Messages.FailedBuildRestartPreview", GetResourceTypeLabel(_currentResourceType)].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var confirmed = await ShowRestartPreviewDialogAsync(
+            preview,
+            GetBatchRestartDialogTitle(_currentResourceType),
+            L["Actions.RestartSelectedWorkloads"]);
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var resultResponse = await ExecuteBusyAsync(() => K8SFacade.RestartResourcesAsync(_selectedNamespace, _currentResourceType, selectedNames));
+        if (resultResponse == null)
+        {
+            return;
+        }
+
+        if (resultResponse.IsFailed(out var restartError, out var restartResult))
+        {
+            var errorMessage = restartError?.Message ?? L["Messages.FailedRestartSelectedResources", GetResourceTypeLabel(_currentResourceType)].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var successMessage = BuildRestartResultMessage(restartResult);
+        Snackbar.Add(successMessage, Severity.Success);
+        SetStatus(successMessage, Severity.Success);
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
+    private async Task RestartNamespaceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedNamespace))
+        {
+            return;
+        }
+
+        var previewResponse = await ExecuteBusyAsync(() => K8SFacade.GetNamespaceRestartPreviewAsync(_selectedNamespace));
+        if (previewResponse == null)
+        {
+            return;
+        }
+
+        if (previewResponse.IsFailed(out var error, out var preview))
+        {
+            var errorMessage = error?.Message ?? L["Messages.FailedNamespaceRestartPreview", _selectedNamespace].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var confirmed = await ShowRestartPreviewDialogAsync(
+            preview,
+            L["DialogTitles.NamespaceRestart", _selectedNamespace],
+            L["Actions.RestartNamespaceWorkloads"]);
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var resultResponse = await ExecuteBusyAsync(() => K8SFacade.RestartNamespaceAsync(_selectedNamespace));
+        if (resultResponse == null)
+        {
+            return;
+        }
+
+        if (resultResponse.IsFailed(out var restartError, out var restartResult))
+        {
+            var errorMessage = restartError?.Message ?? L["Messages.FailedNamespaceRestart", _selectedNamespace].Value;
+            Snackbar.Add(errorMessage, Severity.Error);
+            SetStatus(errorMessage, Severity.Error);
+            return;
+        }
+
+        var successMessage = BuildRestartResultMessage(restartResult);
+        Snackbar.Add(successMessage, Severity.Success);
+        SetStatus(successMessage, Severity.Success);
+        await LoadResourceListAsync(_selectedNamespace, _currentResourceType);
+    }
+
+    private async Task<bool> ShowRestartPreviewDialogAsync(K8SRestartPreview preview, string title, string confirmButtonText)
+    {
+        var parameters = new DialogParameters<K8SRestartConfirmDialog>
+        {
+            { dialog => dialog.Preview, preview },
+            { dialog => dialog.ConfirmButtonText, confirmButtonText }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<K8SRestartConfirmDialog>(title, parameters, options);
+        var result = await dialog.Result;
+        return result is { Canceled: false };
+    }
+
+    private async Task ExecuteBusyAsync(Func<Task> action)
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<T?> ExecuteBusyAsync<T>(Func<Task<T>> action) where T : class
+    {
+        if (_busy)
+        {
+            return null;
+        }
+
+        _busy = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void SetStatus(string message, Severity severity)
+    {
+        _statusMessage = message;
+        _statusSeverity = severity;
+    }
+
+    private string GetExecutionNodeChipText()
+    {
+        return string.IsNullOrWhiteSpace(_runtimeConfig.ExecutionNode)
+            ? L["Chips.ExecutionNodeMissing"]
+            : L["Chips.ExecutionNode", _runtimeConfig.ExecutionNode];
+    }
+
+    private string GetNamespaceScopeChipText()
+    {
+        return _runtimeConfig.NamespaceScope.Count == 0
+            ? L["Chips.NamespaceScopeAll"]
+            : L["Chips.NamespaceScopeCount", _runtimeConfig.NamespaceScope.Count];
+    }
+
+    private string GetRestrictionChipText()
+    {
+        return _runtimeConfig.SensitiveOperationNameRestrictions.Count == 0
+            ? L["Chips.SensitiveRestrictionsNone"]
+            : L["Chips.SensitiveRestrictionsCount", _runtimeConfig.SensitiveOperationNameRestrictions.Count];
+    }
+
+    private string GetListStatusChipText()
+    {
+        if (_loadingResources)
+        {
+            return L["Chips.CurrentListRefreshing"];
+        }
+
+        return _resourceList == null
+            ? L["Chips.CurrentListNotLoaded"]
+            : L["Chips.CurrentListAt", _resourceList.FetchedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")];
+    }
+
+    private string GetSelectionChipText()
+    {
+        return L["Chips.SelectedCount", _selectedResources.Count];
+    }
+
+    private string GetNamespaceDisplayName(K8SNamespaceInfo namespaceInfo)
+    {
+        return namespaceInfo.Exists
+            ? namespaceInfo.Name
+            : L["Forms.NamespaceMissingDisplay", namespaceInfo.Name];
+    }
+
+    private string GetResourceTypeLabel(K8SResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            K8SResourceType.Service => L["ResourceTypes.Services"],
+            K8SResourceType.Deployment => L["ResourceTypes.Deployments"],
+            K8SResourceType.StatefulSet => L["ResourceTypes.StatefulSets"],
+            K8SResourceType.DaemonSet => L["ResourceTypes.DaemonSets"],
+            _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null)
+        };
+    }
+
+    private string GetResourceTypeSingularLabel(K8SResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            K8SResourceType.Service => L["ResourceTypes.Service"],
+            K8SResourceType.Deployment => L["ResourceTypes.Deployment"],
+            K8SResourceType.StatefulSet => L["ResourceTypes.StatefulSet"],
+            K8SResourceType.DaemonSet => L["ResourceTypes.DaemonSet"],
+            _ => throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null)
+        };
+    }
+
+    private string BuildRuntimeConfigSavedMessage(K8SRuntimeConfig runtimeConfig)
+    {
+        return runtimeConfig.NamespaceScope.Count == 0
+            ? L["Messages.RuntimeConfigSavedAllNamespaces"]
+            : L["Messages.RuntimeConfigSaved"];
+    }
+
+    private string BuildRestartResultMessage(K8SRestartResult result)
+    {
+        var message = L["Messages.RestartResult", result.Workloads.Count, result.AffectedTargets.Count].Value;
+
+        if (result.IgnoredTargets.Count > 0)
+        {
+            message += " " + L["Messages.RestartIgnored", string.Join("; ", result.IgnoredTargets.Select(target => $"{GetResourceDisplayName(target.Kind, target.Name)}: {target.Reason}"))].Value;
+        }
+
+        return message;
+    }
+
+    private string GetRestartActionText(K8SResourceSummary resource)
+    {
+        return resource.ResourceType == K8SResourceType.Service
+            ? L["Actions.RestartWorkloads"]
+            : L["Actions.Restart"];
+    }
+
+    private string GetSingleRestartDialogTitle(K8SResourceSummary resource)
+    {
+        return resource.ResourceType == K8SResourceType.Service
+            ? L["DialogTitles.SingleServiceRestart", GetLocalizedKind(resource.Kind), resource.Name]
+            : L["DialogTitles.SingleResourceRestart", GetLocalizedKind(resource.Kind), resource.Name];
+    }
+
+    private string GetSingleRestartConfirmButtonText(K8SResourceSummary resource)
+    {
+        return resource.ResourceType == K8SResourceType.Service
+            ? L["Actions.RestartBackingWorkloads"]
+            : $"{L["Actions.Restart"]} {resource.Name}";
+    }
+
+    private string GetBatchRestartDialogTitle(K8SResourceType resourceType)
+    {
+        return resourceType == K8SResourceType.Service
+            ? L["DialogTitles.BatchServiceRestart"]
+            : L["DialogTitles.BatchResourceRestart", GetResourceTypeLabel(resourceType)];
+    }
+
+    private string GetResourceDisplayName(string kind, string name)
+    {
+        return $"{GetLocalizedKind(kind)}/{name}";
+    }
+
+    private string GetLocalizedKind(string kind)
+    {
+        return kind switch
+        {
+            "Service" => L["ResourceTypes.Service"].Value,
+            "Deployment" => L["ResourceTypes.Deployment"].Value,
+            "StatefulSet" => L["ResourceTypes.StatefulSet"].Value,
+            "DaemonSet" => L["ResourceTypes.DaemonSet"].Value,
+            _ => kind
+        };
+    }
+}

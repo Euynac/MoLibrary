@@ -1,0 +1,15 @@
+.k8s-pod-describe-dialog .describe-output {
+    max-height: 58vh;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.k8s-pod-describe-dialog .describe-output pre {
+    margin: 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85rem;
+}

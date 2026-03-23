@@ -1,0 +1,20 @@
+.k8s-restart-dialog .list-panel {
+    max-height: 30vh;
+    overflow: auto;
+}
+
+.k8s-restart-dialog .command-output {
+    max-height: 28vh;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+}
+
+.k8s-restart-dialog .command-output pre {
+    margin: 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85rem;
+}
