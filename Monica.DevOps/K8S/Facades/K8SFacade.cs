@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.DevOps.K8S.Exceptions;
-using Monica.DevOps.K8S.Localization;
+using Monica.DevOps.Localization;
 using Monica.DevOps.K8S.Models;
 using Monica.DevOps.K8S.Services;
 using Monica.DevOps.K8S.Services.Support;

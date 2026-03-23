@@ -1,0 +1,54 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.FileOps.Models
+@inject IStringLocalizer<FileOpsResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @L["DeleteDialog:Summary", Entry.IsDirectory ? L["Labels:Directory"].Value : L["Labels:File"].Value, Entry.Name]
+            </MudAlert>
+
+            @if (Entry.IsDirectory)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["DeleteDialog:DirectoryWarning"]
+                </MudAlert>
+
+                <MudSwitch T="bool" @bind-Value="_recursive" Color="Color.Warning">
+                    @L["DeleteDialog:Recursive"]
+                </MudSwitch>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        <MudButton OnClick="Confirm" Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            @L["DeleteDialog:Confirm"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public FileOpsEntrySummary Entry { get; set; } = new();
+
+    private bool _recursive = true;
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void Confirm()
+    {
+        MudDialog?.Close(DialogResult.Ok(new FileOpsDeleteRequest
+        {
+            Path = Entry.FullPath,
+            Recursive = Entry.IsDirectory && _recursive
+        }));
+    }
+}

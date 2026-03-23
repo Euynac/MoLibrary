@@ -1,0 +1,48 @@
+.file-ops-page {
+    min-height: 100%;
+    background: var(--mud-palette-background);
+}
+
+.file-ops-page__container {
+    height: 100%;
+}
+
+.file-ops-page__content {
+    display: grid;
+    gap: 1rem;
+    max-width: 1520px;
+    margin: 0 auto;
+}
+
+.page-banner ::deep .mud-paper {
+    padding: clamp(1.25rem, 2vw, 1.75rem);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 20px;
+    background: var(--mud-palette-surface);
+    box-shadow: none;
+}
+
+.page-banner__stack {
+    max-width: 72rem;
+}
+
+.page-eyebrow {
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
+.page-title {
+    line-height: 1.1;
+}
+
+.page-subtitle {
+    max-width: 72ch;
+    color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 960px) {
+    .file-ops-page__container {
+        padding-inline: 1rem !important;
+    }
+}

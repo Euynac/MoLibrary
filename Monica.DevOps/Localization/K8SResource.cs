@@ -1,6 +1,6 @@
 using Monica.Core.Localization;
 
-namespace Monica.DevOps.K8S.Localization;
+namespace Monica.DevOps.Localization;
 
 /// <summary>
 /// Marker class for K8S Monica module localization resources

@@ -1,0 +1,649 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Monica.DevOps.FileOps.Dialogs
+@using Monica.DevOps.FileOps.Facades
+@using Monica.DevOps.Localization
+@using Monica.DevOps.FileOps.Models
+@using Monica.Tool.General
+@inject FileOpsFacade FileOpsFacade
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IStringLocalizer<FileOpsResource> L
+
+<div class="workspace-root">
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <MudAlert Severity="@_statusSeverity" Variant="Variant.Outlined">
+            @_statusMessage
+        </MudAlert>
+    }
+
+    @if (_isLoading && _browseResult is null)
+    {
+        <div class="workspace-state-surface">
+            <MudPaper Elevation="0">
+                <div class="workspace-state">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.h6">@L["Workspace:Loading"]</MudText>
+                </div>
+            </MudPaper>
+        </div>
+    }
+    else
+    {
+        <MudGrid Spacing="2">
+            <MudItem xs="12" lg="7">
+                <div class="workspace-panel">
+                    <MudPaper Elevation="0">
+                        <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.subtitle1">@L["Labels:CurrentPath"]</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(_browseResult?.CurrentPath ?? _runtimeConfig.StartupPath)</MudText>
+                            </MudStack>
+
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.Settings"
+                                           Disabled="@_isBusy"
+                                           OnClick="OpenRuntimeConfigDialogAsync">
+                                    @L["Actions:RuntimeConfiguration"]
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.Refresh"
+                                           Disabled="@_isBusy"
+                                           OnClick="RefreshAsync">
+                                    @L["Actions:Refresh"]
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined"
+                                           StartIcon="@Icons.Material.Filled.ArrowUpward"
+                                           Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_browseResult?.ParentPath))"
+                                           OnClick="GoUpAsync">
+                                    @L["Actions:GoUp"]
+                                </MudButton>
+                            </MudStack>
+                        </MudStack>
+
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center">
+                            <MudChip T="string" Value="@(_browseResult?.CurrentRootPath ?? string.Empty)" Variant="Variant.Outlined" Color="Color.Primary">
+                                @L["Labels:CurrentRoot"]: @GetLocationName(_browseResult?.CurrentRootPath)
+                            </MudChip>
+                            <MudChip T="string" Value="@(_runtimeConfig.AllowWriteOperations.ToString())" Variant="Variant.Outlined" Color="@(_runtimeConfig.AllowWriteOperations ? Color.Success : Color.Default)">
+                                @(_runtimeConfig.AllowWriteOperations ? L["Labels:WriteModeEnabled"] : L["Labels:WriteModeDisabled"])
+                            </MudChip>
+                            <MudChip T="string" Value="@(_runtimeConfig.AllowDeleteOperations.ToString())" Variant="Variant.Outlined" Color="@(_runtimeConfig.AllowDeleteOperations ? Color.Warning : Color.Default)">
+                                @(_runtimeConfig.AllowDeleteOperations ? L["Labels:DeleteModeEnabled"] : L["Labels:DeleteModeDisabled"])
+                            </MudChip>
+                            <MudChip T="string" Value="@(_runtimeConfig.AllowHiddenEntries.ToString())" Variant="Variant.Outlined" Color="@(_runtimeConfig.AllowHiddenEntries ? Color.Info : Color.Default)">
+                                @(_runtimeConfig.AllowHiddenEntries ? L["Labels:HiddenVisible"] : L["Labels:HiddenHidden"])
+                            </MudChip>
+                        </MudStack>
+
+                        <MudTextField T="string"
+                                      Label="@L["Workspace:PathInput"]"
+                                      HelperText="@L["Workspace:PathHelper"]"
+                                      Value="_pathInput"
+                                      ValueChanged="OnPathChanged"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Immediate="true" />
+
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            @foreach (var rootPath in _runtimeConfig.AllowedRoots)
+                            {
+                                <MudButton Variant="Variant.Text"
+                                           Color="Color.Primary"
+                                           Disabled="@_isBusy"
+                                           OnClick="@(() => OpenRootAsync(rootPath))">
+                                    @GetLocationName(rootPath)
+                                </MudButton>
+                            }
+                        </MudStack>
+
+                        @if (_browseResult?.IsTruncated == true)
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                @L["Workspace:TruncatedEntries", _browseResult.EntryLimit]
+                            </MudAlert>
+                        }
+
+                        @if (_browseResult?.IsReadOnly == true)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                @L["Workspace:ReadOnlyDirectory"]
+                            </MudAlert>
+                        }
+
+                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                            <MudButton Variant="Variant.Filled"
+                                       StartIcon="@Icons.Material.Filled.FolderOpen"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_pathInput))"
+                                       OnClick="BrowsePathAsync">
+                                @L["Actions:Browse"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.CreateNewFolder"
+                                       Disabled="@(_isBusy || _browseResult is not { CanCreateDirectory: true })"
+                                       OnClick="OpenCreateDirectoryDialogAsync">
+                                @L["Actions:CreateDirectory"]
+                            </MudButton>
+                        </MudStack>
+
+                        <MudFileUpload T="IBrowserFile"
+                                       FilesChanged="HandleUploadAsync"
+                                       MaximumFileCount="1"
+                                       Disabled="@(_isBusy || _browseResult is not { CanUpload: true })">
+                            <CustomContent Context="upload">
+                                <div class="upload-drop-zone" @onclick="upload.OpenFilePickerAsync">
+                                    <MudPaper Outlined="true" Elevation="0">
+                                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Color="Color.Primary" />
+                                        <MudText Typo="Typo.subtitle2">@L["Workspace:DropZone"]</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:DropZoneHint"]</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Workspace:UploadHelper"]</MudText>
+                                    </MudPaper>
+                                </div>
+                            </CustomContent>
+                        </MudFileUpload>
+
+                        @if (_browseResult is { Entries.Count: > 0 })
+                        {
+                            <div class="entry-table">
+                                <div class="entry-table__header">
+                                    <span>@L["Columns:Name"]</span>
+                                    <span>@L["Columns:Type"]</span>
+                                    <span>@L["Columns:Size"]</span>
+                                    <span>@L["Columns:Modified"]</span>
+                                    <span>@L["Columns:Actions"]</span>
+                                </div>
+
+                                @foreach (var entry in _browseResult.Entries)
+                                {
+                                    <div class="@GetEntryRowClass(entry)">
+                                        <button type="button" class="entry-row__main" @onclick="() => OpenEntryAsync(entry)">
+                                            <span class="entry-row__name">
+                                                <MudIcon Icon="@(entry.IsDirectory ? Icons.Material.Filled.Folder : Icons.Material.Filled.Description)"
+                                                         Color="@(entry.IsDirectory ? Color.Primary : Color.Default)" />
+                                                <span>@entry.Name</span>
+                                            </span>
+                                            <span>@(entry.IsDirectory ? L["Labels:Directory"].Value : L["Labels:File"].Value)</span>
+                                            <span>@entry.SizeDisplay</span>
+                                            <span>@FormatTime(entry.LastModifiedAt)</span>
+                                        </button>
+
+                                        <span class="entry-row__actions">
+                                            <MudButton Variant="Variant.Text"
+                                                       Size="Size.Small"
+                                                       StartIcon="@(entry.IsDirectory ? Icons.Material.Filled.FolderOpen : Icons.Material.Filled.Visibility)"
+                                                       OnClick="@(() => OpenEntryAsync(entry))">
+                                                @L["Actions:Open"]
+                                            </MudButton>
+                                            @if (!entry.IsDirectory && entry.CanDownload)
+                                            {
+                                                <MudButton Variant="Variant.Text"
+                                                           Size="Size.Small"
+                                                           StartIcon="@Icons.Material.Filled.Download"
+                                                           Href="@BuildDownloadUrl(entry.FullPath)"
+                                                           Target="_blank">
+                                                    @L["Actions:Download"]
+                                                </MudButton>
+                                            }
+                                            @if (entry.CanDelete)
+                                            {
+                                                <MudButton Variant="Variant.Text"
+                                                           Size="Size.Small"
+                                                           Color="Color.Error"
+                                                           StartIcon="@Icons.Material.Filled.Delete"
+                                                           OnClick="@(() => OpenDeleteDialogAsync(entry))">
+                                                    @L["Actions:Delete"]
+                                                </MudButton>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (_browseResult is not null)
+                        {
+                            <div class="workspace-state-surface workspace-state-surface--compact">
+                                <MudPaper Elevation="0">
+                                    <div class="workspace-state workspace-state--compact">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.body1">@L["Workspace:EmptyDirectory"]</MudText>
+                                    </div>
+                                </MudPaper>
+                            </div>
+                        }
+                        </MudStack>
+                    </MudPaper>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" lg="5">
+                <div class="workspace-panel workspace-panel--preview">
+                    <MudPaper Elevation="0">
+                        @if (_selectedFileContent is not null)
+                        {
+                            <MudStack Spacing="2">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">@_selectedFileContent.Name</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:EditorSubtitle"]</MudText>
+                                </MudStack>
+
+                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudChip T="string" Value="@_selectedFileContent.EncodingName" Variant="Variant.Outlined">@L["Labels:Encoding"]: @_selectedFileContent.EncodingName</MudChip>
+                                    <MudChip T="string" Value="@_selectedFileContent.SizeBytes.ToString()" Variant="Variant.Outlined">@L["Labels:Size"]: @_selectedFileContent.SizeBytes.FormatBytes()</MudChip>
+                                    <MudChip T="string" Value="@_selectedFileContent.LineCount.ToString()" Variant="Variant.Outlined">@L["Labels:LineCount"]: @_selectedFileContent.LineCount</MudChip>
+                                    <MudChip T="string" Value="@_selectedFileContent.LastModifiedAt.ToString("O")" Variant="Variant.Outlined">@L["Labels:LastModified"]: @FormatTime(_selectedFileContent.LastModifiedAt)</MudChip>
+                                    <MudChip T="string" Value="@_selectedFileContent.CanSave.ToString()" Variant="Variant.Outlined" Color="@(_selectedFileContent.CanSave ? Color.Success : Color.Default)">
+                                        @(_selectedFileContent.CanSave ? L["Labels:EditorWritable"] : L["Labels:EditorReadOnly"])
+                                    </MudChip>
+                                </MudStack>
+
+                                <MudTextField T="string"
+                                              Label="@L["Workspace:EditorTitle"]"
+                                              @bind-Value="_editorContent"
+                                              Variant="Variant.Outlined"
+                                              Lines="22"
+                                              Immediate="true"
+                                              Disabled="@(!_selectedFileContent.CanSave || _isBusy)" />
+
+                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Save"
+                                               Disabled="@(!_selectedFileContent.CanSave || _isBusy)"
+                                               OnClick="SaveEditorAsync">
+                                        @L["Actions:Save"]
+                                    </MudButton>
+                                    @if (_selectedFileContent.CanDownload)
+                                    {
+                                        <MudButton Variant="Variant.Outlined"
+                                                   StartIcon="@Icons.Material.Filled.Download"
+                                                   Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
+                                                   Target="_blank">
+                                            @L["Actions:Download"]
+                                        </MudButton>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                        }
+                        else if (_selectedEntry is { IsDirectory: true })
+                        {
+                            <div class="workspace-state">
+                                <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Large" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6">@L["Workspace:DirectorySelectionTitle"]</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:DirectorySelectionSubtitle"]</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="workspace-state">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Color="Color.Secondary" />
+                                <MudText Typo="Typo.h6">@L["Workspace:NoSelectionTitle"]</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:NoSelectionSubtitle"]</MudText>
+                            </div>
+                        }
+                    </MudPaper>
+                </div>
+            </MudItem>
+        </MudGrid>
+    }
+</div>
+
+@code {
+    private bool _initialized;
+    private bool _isLoading;
+    private bool _isBusy;
+    private string _statusMessage = string.Empty;
+    private Severity _statusSeverity = Severity.Info;
+    private FileOpsRuntimeConfig _runtimeConfig = new();
+    private FileOpsBrowseResult? _browseResult;
+    private FileOpsEntrySummary? _selectedEntry;
+    private FileOpsFileTextContent? _selectedFileContent;
+    private string _editorContent = string.Empty;
+    private string _pathInput = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _initialized)
+        {
+            return;
+        }
+
+        _initialized = true;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.GetRuntimeConfigAsync()).IsFailed(out var configError, out var runtimeConfig))
+            {
+                SetStatus(configError, Severity.Error);
+                Snackbar.Add(configError, Severity.Error);
+                return;
+            }
+
+            _runtimeConfig = runtimeConfig.Normalize();
+            await LoadBrowseResultAsync(_browseResult?.CurrentPath ?? _runtimeConfig.StartupPath);
+        });
+    }
+
+    private Task OnPathChanged(string value)
+    {
+        _pathInput = value;
+        return Task.CompletedTask;
+    }
+
+    private async Task BrowsePathAsync()
+    {
+        await ExecuteBusyAsync(async () => await LoadBrowseResultAsync(_pathInput));
+    }
+
+    private async Task OpenRootAsync(string rootPath)
+    {
+        await ExecuteBusyAsync(async () => await LoadBrowseResultAsync(rootPath));
+    }
+
+    private async Task GoUpAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_browseResult?.ParentPath))
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () => await LoadBrowseResultAsync(_browseResult.ParentPath));
+    }
+
+    private async Task OpenEntryAsync(FileOpsEntrySummary entry)
+    {
+        if (entry.IsDirectory)
+        {
+            await ExecuteBusyAsync(async () =>
+            {
+                _selectedEntry = entry;
+                _selectedFileContent = null;
+                _editorContent = string.Empty;
+                await LoadBrowseResultAsync(entry.FullPath);
+            });
+
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            _selectedEntry = entry;
+            if ((await FileOpsFacade.ReadTextFileAsync(entry.FullPath)).IsFailed(out var error, out var content))
+            {
+                _selectedFileContent = null;
+                _editorContent = string.Empty;
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _selectedFileContent = content;
+            _editorContent = content.Content;
+            ClearStatus();
+        });
+    }
+
+    private async Task OpenRuntimeConfigDialogAsync()
+    {
+        var parameters = new DialogParameters<FileOpsRuntimeConfigDialog>
+        {
+            { dialog => dialog.RuntimeConfig, _runtimeConfig.Clone() }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<FileOpsRuntimeConfigDialog>(L["RuntimeConfigDialog:Title"], parameters, options);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false } || result.Data is not FileOpsRuntimeConfig runtimeConfig)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.SaveRuntimeConfigAsync(runtimeConfig)).IsFailed(out var error))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var successMessage = L["Messages:RuntimeConfigSaved", runtimeConfig.AllowedRoots.Count].Value;
+            Snackbar.Add(successMessage, Severity.Success);
+            SetStatus(successMessage, Severity.Success);
+            _runtimeConfig = runtimeConfig.Normalize();
+            _selectedEntry = null;
+            _selectedFileContent = null;
+            _editorContent = string.Empty;
+            await LoadBrowseResultAsync(_runtimeConfig.StartupPath);
+        });
+    }
+
+    private async Task OpenCreateDirectoryDialogAsync()
+    {
+        if (_browseResult is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<FileOpsCreateDirectoryDialog>
+        {
+            { dialog => dialog.ParentPath, _browseResult.CurrentPath }
+        };
+
+        var dialog = await DialogService.ShowAsync<FileOpsCreateDirectoryDialog>(L["CreateDirectoryDialog:Title"], parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false } || result.Data is not FileOpsCreateDirectoryRequest request)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.CreateDirectoryAsync(request)).IsFailed(out var error))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var successMessage = L["Messages:DirectoryCreated", request.DirectoryName].Value;
+            Snackbar.Add(successMessage, Severity.Success);
+            SetStatus(successMessage, Severity.Success);
+            await LoadBrowseResultAsync(_browseResult.CurrentPath);
+        });
+    }
+
+    private async Task OpenDeleteDialogAsync(FileOpsEntrySummary entry)
+    {
+        var parameters = new DialogParameters<FileOpsDeleteConfirmDialog>
+        {
+            { dialog => dialog.Entry, entry }
+        };
+
+        var dialog = await DialogService.ShowAsync<FileOpsDeleteConfirmDialog>(L["DeleteDialog:Title"], parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false } || result.Data is not FileOpsDeleteRequest request)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            if ((await FileOpsFacade.DeleteEntryAsync(request)).IsFailed(out var error))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var deletedMessage = L["Messages:EntryDeleted", entry.IsDirectory ? L["Labels:Directory"].Value : L["Labels:File"].Value, entry.Name].Value;
+            Snackbar.Add(deletedMessage, Severity.Success);
+            SetStatus(deletedMessage, Severity.Success);
+            _selectedEntry = null;
+            _selectedFileContent = null;
+            _editorContent = string.Empty;
+            await LoadBrowseResultAsync(_browseResult?.CurrentPath ?? _runtimeConfig.StartupPath);
+        });
+    }
+
+    private async Task HandleUploadAsync(IBrowserFile? file)
+    {
+        if (file is null || _browseResult is not { CanUpload: true })
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            await using var stream = file.OpenReadStream(_runtimeConfig.MaxUploadFileSizeBytes);
+            var payloads = new List<FileOpsUploadPayload>
+            {
+                new(file.Name, file.Size, stream)
+            };
+
+            if ((await FileOpsFacade.UploadAsync(_browseResult.CurrentPath, payloads, overwrite: true)).IsFailed(out var error, out _))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var uploadMessage = L["Messages:FilesUploaded", 1, _browseResult.CurrentPath].Value;
+            Snackbar.Add(uploadMessage, Severity.Success);
+            SetStatus(uploadMessage, Severity.Success);
+            await LoadBrowseResultAsync(_browseResult.CurrentPath);
+        });
+    }
+
+    private async Task SaveEditorAsync()
+    {
+        if (_selectedFileContent is null)
+        {
+            return;
+        }
+
+        await ExecuteBusyAsync(async () =>
+        {
+            var request = new FileOpsTextUpdateRequest
+            {
+                Path = _selectedFileContent.FullPath,
+                Content = _editorContent,
+                EncodingName = _selectedFileContent.EncodingName
+            };
+
+            if ((await FileOpsFacade.SaveTextFileAsync(request)).IsFailed(out var error))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            var successMessage = L["Messages:TextFileSaved", _selectedFileContent.Name].Value;
+            Snackbar.Add(successMessage, Severity.Success);
+            SetStatus(successMessage, Severity.Success);
+            await LoadBrowseResultAsync(_browseResult?.CurrentPath ?? _runtimeConfig.StartupPath);
+            await OpenEntryAsync(_selectedEntry ?? new FileOpsEntrySummary
+            {
+                FullPath = _selectedFileContent.FullPath,
+                Name = _selectedFileContent.Name,
+                Kind = FileOpsEntryKind.File
+            });
+        });
+    }
+
+    private async Task LoadBrowseResultAsync(string? path)
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if ((await FileOpsFacade.BrowseAsync(path)).IsFailed(out var error, out var browseResult))
+            {
+                SetStatus(error, Severity.Error);
+                Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            _browseResult = browseResult;
+            _pathInput = browseResult.CurrentPath;
+            ClearStatus();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string BuildDownloadUrl(string path)
+    {
+        return $"/file-ops/download?path={Uri.EscapeDataString(path)}";
+    }
+
+    private string GetLocationName(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return L["Common:Empty"].Value;
+        }
+
+        var normalized = Path.TrimEndingDirectorySeparator(path);
+        var name = Path.GetFileName(normalized);
+        return string.IsNullOrWhiteSpace(name) ? normalized : name;
+    }
+
+    private string FormatTime(DateTimeOffset value)
+    {
+        return value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    private string GetEntryRowClass(FileOpsEntrySummary entry)
+    {
+        return _selectedEntry?.FullPath == entry.FullPath ? "entry-row entry-row--selected" : "entry-row";
+    }
+
+    private async Task ExecuteBusyAsync(Func<Task> action)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _isBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetStatus(string message, Severity severity)
+    {
+        _statusMessage = message;
+        _statusSeverity = severity;
+        StateHasChanged();
+    }
+
+    private void ClearStatus()
+    {
+        _statusMessage = string.Empty;
+        _statusSeverity = Severity.Info;
+    }
+}

@@ -94,6 +94,9 @@
     "GitRepositories": {
       "Title": "Git Repositories"
     },
+    "FileOps": {
+      "Title": "FileOps Workspace"
+    },
     "K8S": {
       "Title": "K8S Operations"
     }

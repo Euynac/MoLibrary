@@ -8,7 +8,7 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey("BuildingBlocksPlatform.K8SUI")]
+[ModuleKey(EMoModuleKey.K8SUI)]
 public class ModuleK8SUI(ModuleK8SUIOption option)
     : MoModule<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>(option)
 {

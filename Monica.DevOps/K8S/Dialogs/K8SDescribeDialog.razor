@@ -1,5 +1,5 @@
 @using Monica.DevOps.K8S.Facades
-@using Monica.DevOps.K8S.Localization
+@using Monica.DevOps.Localization
 @using Monica.DevOps.K8S.Models
 @inject IStringLocalizer<K8SResource> L
 @inject K8SFacade K8SFacade
@@ -246,10 +246,10 @@
     {
         return kind switch
         {
-            "Service" => L["ResourceTypes.Service"].Value,
-            "Deployment" => L["ResourceTypes.Deployment"].Value,
-            "StatefulSet" => L["ResourceTypes.StatefulSet"].Value,
-            "DaemonSet" => L["ResourceTypes.DaemonSet"].Value,
+            "Service" => L["ResourceTypes:Service"].Value,
+            "Deployment" => L["ResourceTypes:Deployment"].Value,
+            "StatefulSet" => L["ResourceTypes:StatefulSet"].Value,
+            "DaemonSet" => L["ResourceTypes:DaemonSet"].Value,
             _ => kind
         };
     }

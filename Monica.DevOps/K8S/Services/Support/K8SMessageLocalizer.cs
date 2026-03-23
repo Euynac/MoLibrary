@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Localization;
 using Monica.DevOps.K8S.Exceptions;
-using Monica.DevOps.K8S.Localization;
+using Monica.DevOps.Localization;
 using Monica.DevOps.K8S.Models;
 
 namespace Monica.DevOps.K8S.Services.Support;
@@ -10,8 +10,8 @@ public class K8SMessageLocalizer(IStringLocalizer<K8SResource> localizer)
     public string GetRuntimeConfigSavedMessage(K8SRuntimeConfig runtimeConfig)
     {
         return runtimeConfig.NamespaceScope.Count == 0
-            ? localizer["Messages.RuntimeConfigSavedAllNamespaces"].Value
-            : localizer["Messages.RuntimeConfigSaved"].Value;
+            ? localizer["Messages:RuntimeConfigSavedAllNamespaces"].Value
+            : localizer["Messages:RuntimeConfigSaved"].Value;
     }
 
     public string GetUnsupportedResourceTypeMessage(string resourceType)
@@ -54,10 +54,10 @@ public class K8SMessageLocalizer(IStringLocalizer<K8SResource> localizer)
     {
         return resourceType switch
         {
-            "Service" => localizer["ResourceTypes.Service"].Value,
-            "Deployment" => localizer["ResourceTypes.Deployment"].Value,
-            "StatefulSet" => localizer["ResourceTypes.StatefulSet"].Value,
-            "DaemonSet" => localizer["ResourceTypes.DaemonSet"].Value,
+            "Service" => localizer["ResourceTypes:Service"].Value,
+            "Deployment" => localizer["ResourceTypes:Deployment"].Value,
+            "StatefulSet" => localizer["ResourceTypes:StatefulSet"].Value,
+            "DaemonSet" => localizer["ResourceTypes:DaemonSet"].Value,
             _ => resourceType
         };
     }

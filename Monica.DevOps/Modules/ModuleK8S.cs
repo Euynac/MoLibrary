@@ -13,14 +13,21 @@ using Monica.DevOps.K8S.Models;
 using Monica.DevOps.K8S.Providers.SshRemoteKubectl;
 using Monica.DevOps.K8S.Services;
 using Monica.DevOps.K8S.Services.Support;
+using Monica.DevOps.Localization;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey("BuildingBlocksPlatform.K8S")]
+[ModuleKey(EMoModuleKey.K8S)]
 public class ModuleK8S(ModuleK8SOption option)
     : MoModule<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
 {
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<K8SResource>();
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IK8SRuntimeConfigStore, K8SRuntimeConfigStore>();

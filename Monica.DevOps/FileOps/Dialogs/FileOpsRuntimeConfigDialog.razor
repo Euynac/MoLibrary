@@ -1,0 +1,159 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.FileOps.Models
+@inject IStringLocalizer<FileOpsResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @L["RuntimeConfigDialog:Intro"]
+            </MudAlert>
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:AllowedRoots"]"
+                          HelperText="@L["RuntimeConfigDialog:AllowedRootsHelper"]"
+                          @bind-Value="_allowedRootsText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:ReadOnlyPaths"]"
+                          HelperText="@L["RuntimeConfigDialog:ReadOnlyPathsHelper"]"
+                          @bind-Value="_readOnlyPathsText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="4"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:StartupPath"]"
+                          HelperText="@L["RuntimeConfigDialog:StartupPathHelper"]"
+                          @bind-Value="_startupPath"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true" />
+
+            <MudTextField T="string"
+                          Label="@L["RuntimeConfigDialog:EditableExtensions"]"
+                          HelperText="@L["RuntimeConfigDialog:EditableExtensionsHelper"]"
+                          @bind-Value="_editableExtensionsText"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3"
+                          Immediate="true" />
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="long"
+                                     Label="@L["RuntimeConfigDialog:MaxTextSize"]"
+                                     @bind-Value="_maxTextFileSizeBytes"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="long"
+                                     Label="@L["RuntimeConfigDialog:MaxUploadSize"]"
+                                     @bind-Value="_maxUploadFileSizeBytes"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="long"
+                                     Label="@L["RuntimeConfigDialog:MaxDownloadSize"]"
+                                     @bind-Value="_maxDownloadFileSizeBytes"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="int"
+                                     Label="@L["RuntimeConfigDialog:MaxDirectoryEntries"]"
+                                     @bind-Value="_maxDirectoryEntries"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Spacing="1">
+                <MudSwitch T="bool" @bind-Value="_allowWriteOperations" Color="Color.Primary">@L["RuntimeConfigDialog:AllowWrite"]</MudSwitch>
+                <MudSwitch T="bool" @bind-Value="_allowDeleteOperations" Color="Color.Warning">@L["RuntimeConfigDialog:AllowDelete"]</MudSwitch>
+                <MudSwitch T="bool" @bind-Value="_allowHiddenEntries" Color="Color.Info">@L["RuntimeConfigDialog:AllowHidden"]</MudSwitch>
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Common:Cancel"]
+        </MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+            @L["RuntimeConfigDialog:Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public FileOpsRuntimeConfig RuntimeConfig { get; set; } = new();
+
+    private bool _initialized;
+    private string _allowedRootsText = string.Empty;
+    private string _readOnlyPathsText = string.Empty;
+    private string _startupPath = string.Empty;
+    private string _editableExtensionsText = string.Empty;
+    private bool _allowWriteOperations = true;
+    private bool _allowDeleteOperations;
+    private bool _allowHiddenEntries;
+    private long _maxTextFileSizeBytes;
+    private long _maxUploadFileSizeBytes;
+    private long _maxDownloadFileSizeBytes;
+    private int _maxDirectoryEntries;
+
+    protected override void OnParametersSet()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        var runtimeConfig = RuntimeConfig.Clone().Normalize();
+        _allowedRootsText = FileOpsRuntimeConfig.ToMultilineText(runtimeConfig.AllowedRoots);
+        _readOnlyPathsText = FileOpsRuntimeConfig.ToMultilineText(runtimeConfig.ReadOnlyPaths);
+        _startupPath = runtimeConfig.StartupPath;
+        _editableExtensionsText = FileOpsRuntimeConfig.ToMultilineText(runtimeConfig.EditableExtensions);
+        _allowWriteOperations = runtimeConfig.AllowWriteOperations;
+        _allowDeleteOperations = runtimeConfig.AllowDeleteOperations;
+        _allowHiddenEntries = runtimeConfig.AllowHiddenEntries;
+        _maxTextFileSizeBytes = runtimeConfig.MaxTextFileSizeBytes;
+        _maxUploadFileSizeBytes = runtimeConfig.MaxUploadFileSizeBytes;
+        _maxDownloadFileSizeBytes = runtimeConfig.MaxDownloadFileSizeBytes;
+        _maxDirectoryEntries = runtimeConfig.MaxDirectoryEntries;
+        _initialized = true;
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void Save()
+    {
+        var runtimeConfig = new FileOpsRuntimeConfig
+        {
+            AllowedRoots = FileOpsRuntimeConfig.ParseMultiValue(_allowedRootsText),
+            ReadOnlyPaths = FileOpsRuntimeConfig.ParseMultiValue(_readOnlyPathsText),
+            StartupPath = _startupPath,
+            EditableExtensions = FileOpsRuntimeConfig.ParseMultiValue(_editableExtensionsText),
+            AllowWriteOperations = _allowWriteOperations,
+            AllowDeleteOperations = _allowDeleteOperations,
+            AllowHiddenEntries = _allowHiddenEntries,
+            MaxTextFileSizeBytes = _maxTextFileSizeBytes,
+            MaxUploadFileSizeBytes = _maxUploadFileSizeBytes,
+            MaxDownloadFileSizeBytes = _maxDownloadFileSizeBytes,
+            MaxDirectoryEntries = _maxDirectoryEntries
+        }.Normalize();
+
+        MudDialog?.Close(DialogResult.Ok(runtimeConfig));
+    }
+}

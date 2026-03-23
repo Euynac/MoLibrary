@@ -171,6 +171,22 @@ public enum EMoModuleKey
     /// </summary>
     GitUI,
     /// <summary>
+    /// K8S operations module.
+    /// </summary>
+    K8S,
+    /// <summary>
+    /// K8S operations UI module.
+    /// </summary>
+    K8SUI,
+    /// <summary>
+    /// Emergency file operations module.
+    /// </summary>
+    FileOps,
+    /// <summary>
+    /// Emergency file operations UI module.
+    /// </summary>
+    FileOpsUI,
+    /// <summary>
     /// RAG (Retrieval-Augmented Generation) module
     /// </summary>
     RAG,

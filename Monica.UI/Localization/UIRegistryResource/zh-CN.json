@@ -94,6 +94,9 @@
     "GitRepositories": {
       "Title": "Git 仓库"
     },
+    "FileOps": {
+      "Title": "文件运维工作区"
+    },
     "K8S": {
       "Title": "K8S 运维"
     }
