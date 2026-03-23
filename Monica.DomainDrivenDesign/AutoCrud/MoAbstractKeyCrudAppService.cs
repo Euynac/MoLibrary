@@ -123,7 +123,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         var entities = await finalEntityQuery.ToListAsync();
         var cursor = entities is { Count: > 0 } ? entities.Last()?.Id?.ToString() : null;
 
-        var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(finalEntityQuery);
+        var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(entities);
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
@@ -635,6 +635,11 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         //20240422 Mapster暂不支持复杂类型ProjectToType
         //return await ObjectMapper.ProjectToType<TCustomDto>(query).ToListAsync();
         return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
+    }
+
+    protected virtual async Task<List<TCustomDto>> MapToGetListOutputDtosAsync<TCustomDto>(List<TEntity> query)
+    {
+        return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(query);
     }
 
 
