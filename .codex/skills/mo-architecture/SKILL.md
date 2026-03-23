@@ -32,6 +32,10 @@ Split by feature at the project level first, then use standard layer folders ins
 
 This is **Feature-First + Layer-Inside-Feature** — it prevents any single folder from becoming a dumping ground.
 
+### Localization Placement Exception
+
+Localization resources are a project-level concern in Monica. Even when the rest of a module uses feature folders, keep resource marker classes and JSON files under the project root `Localization/` folder, not under feature subfolders. This keeps the resource namespace, embedded resource path, and Monica localization validation workflow consistent.
+
 ### 2. Facades Are the Only Public Entry Point for API and UI
 
 Every module exposes capabilities through `Facades/`:

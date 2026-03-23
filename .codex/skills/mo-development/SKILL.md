@@ -23,6 +23,32 @@ Every module follows a consistent pattern with four components in one `Module{Na
 | `Module{Name}Guide` | Configuration guide/builder for fluent API | `ModuleSignalRGuide` |
 | `Module{Name}BuilderExtensions` | Extension methods for `WebApplicationBuilder` | `ModuleSignalRBuilderExtensions` |
 
+### ModuleKey Rules
+
+- For Monica first-party modules in this repository, add new keys to `Monica.Core/Modularity/Models/EMoModuleKey.cs` and use `[ModuleKey(EMoModuleKey.YourModule)]`.
+- Do not introduce ad-hoc string keys such as `BuildingBlocksPlatform.*` for Monica-owned modules unless the module is intentionally external to Monica's built-in key set.
+
+### Localization Registration Rules
+
+- If a module uses `IStringLocalizer<TResource>` directly or indirectly, some participating module in that dependency chain must declare:
+
+```csharp
+DependsOnModule<ModuleLocalizationGuide>().Register()
+    .AddResource<TResource>();
+```
+
+- For Monica project-local resources, keep the marker class and JSON files under the project root `Localization/` folder so resource namespace, embedded resource path, and validation tooling stay aligned.
+- Preferred layout:
+
+```text
+Monica.{Project}/
+└── Localization/
+    ├── {Resource}.cs
+    └── {Resource}/
+        ├── zh-CN.json
+        └── en-US.json
+```
+
 ### Core Dependencies
 
 **Monica.Core** is the foundation for all other modules, containing:

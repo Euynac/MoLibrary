@@ -197,6 +197,9 @@ See:
 
 - Do not hardcode user-facing text.
 - Use decentralized module resources with marker class + JSON resource files.
+- Keep module resource marker classes and JSON folders under the project root `Localization/` directory.
+- Prefer nested JSON objects and access them with colon-separated keys such as `Page:Title` or `RuntimeConfigDialog:Intro`.
+- Do not use flat dot-style keys such as `Page.Title` for new Monica UI work.
 - Keep `zh-CN.json` and `en-US.json` synchronized.
 - For page content, use the module-local resource marker and JSON files.
 - For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
