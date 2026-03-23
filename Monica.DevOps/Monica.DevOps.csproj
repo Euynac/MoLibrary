@@ -21,4 +21,12 @@
     <EmbeddedResource Include="**\Localization\**\*.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\UIFileOpsPage.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="FileOps\Pages\UIFileOpsPage.razor" />
+  </ItemGroup>
+
 </Project>
