@@ -16,6 +16,13 @@
     box-shadow: none;
 }
 
+.workspace-panel--preview ::deep .mud-paper {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .upload-drop-zone {
     cursor: pointer;
 }
@@ -171,6 +178,57 @@
     gap: 0.25rem;
 }
 
+.preview-editor {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.preview-editor__header {
+    row-gap: 0.75rem;
+}
+
+.preview-editor__title {
+    min-width: 0;
+}
+
+.preview-editor__actions {
+    justify-content: flex-end;
+}
+
+.preview-editor__meta {
+    flex: 0 0 auto;
+}
+
+.preview-editor__text-field {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.preview-editor__text-field ::deep .mud-input-control {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.preview-editor__text-field ::deep .mud-input-control .mud-input {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: stretch;
+    min-height: 0;
+}
+
+.preview-editor__text-field ::deep .mud-input-control textarea {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    resize: vertical;
+}
+
 .workspace-state {
     display: grid;
     gap: 0.75rem;
@@ -198,6 +256,11 @@
     }
 
     .entry-row__actions {
+        justify-content: flex-start;
+    }
+
+    .preview-editor__actions {
+        width: 100%;
         justify-content: flex-start;
     }
 }

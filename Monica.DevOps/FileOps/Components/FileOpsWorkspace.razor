@@ -54,12 +54,6 @@
                                            OnClick="RefreshAsync">
                                     @L["Actions:Refresh"]
                                 </MudButton>
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.ArrowUpward"
-                                           Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_browseResult?.ParentPath))"
-                                           OnClick="GoUpAsync">
-                                    @L["Actions:GoUp"]
-                                </MudButton>
                             </MudStack>
                         </MudStack>
 
@@ -119,6 +113,12 @@
                                        Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_pathInput))"
                                        OnClick="BrowsePathAsync">
                                 @L["Actions:Browse"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.ArrowUpward"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_browseResult?.ParentPath))"
+                                       OnClick="GoUpAsync">
+                                @L["Actions:GoUp"]
                             </MudButton>
                             <MudButton Variant="Variant.Outlined"
                                        StartIcon="@Icons.Material.Filled.CreateNewFolder"
@@ -239,13 +239,38 @@
                     <MudPaper Elevation="0">
                         @if (_selectedFileContent is not null)
                         {
-                            <MudStack Spacing="2">
-                                <MudStack Spacing="0">
-                                    <MudText Typo="Typo.h6">@_selectedFileContent.Name</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:EditorSubtitle"]</MudText>
+                            <MudStack Spacing="2" Class="preview-editor">
+                                <MudStack Row="true"
+                                          Justify="Justify.SpaceBetween"
+                                          AlignItems="AlignItems.Start"
+                                          Wrap="Wrap.Wrap"
+                                          Class="preview-editor__header">
+                                    <MudStack Spacing="0" Class="preview-editor__title">
+                                        <MudText Typo="Typo.h6">@_selectedFileContent.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:EditorSubtitle"]</MudText>
+                                    </MudStack>
+
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="preview-editor__actions">
+                                        <MudButton Variant="Variant.Filled"
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                   Disabled="@(!_selectedFileContent.CanSave || _isBusy)"
+                                                   OnClick="SaveEditorAsync">
+                                            @L["Actions:Save"]
+                                        </MudButton>
+                                        @if (_selectedFileContent.CanDownload)
+                                        {
+                                            <MudButton Variant="Variant.Outlined"
+                                                       StartIcon="@Icons.Material.Filled.Download"
+                                                       Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
+                                                       Target="_blank">
+                                                @L["Actions:Download"]
+                                            </MudButton>
+                                        }
+                                    </MudStack>
                                 </MudStack>
 
-                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="preview-editor__meta">
                                     <MudChip T="string" Value="@_selectedFileContent.EncodingName" Variant="Variant.Outlined">@L["Labels:Encoding"]: @_selectedFileContent.EncodingName</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.SizeBytes.ToString()" Variant="Variant.Outlined">@L["Labels:Size"]: @_selectedFileContent.SizeBytes.FormatBytes()</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.LineCount.ToString()" Variant="Variant.Outlined">@L["Labels:LineCount"]: @_selectedFileContent.LineCount</MudChip>
@@ -259,28 +284,10 @@
                                               Label="@L["Workspace:EditorTitle"]"
                                               @bind-Value="_editorContent"
                                               Variant="Variant.Outlined"
-                                              Lines="22"
+                                              Lines="20"
                                               Immediate="true"
+                                              Class="preview-editor__text-field"
                                               Disabled="@(!_selectedFileContent.CanSave || _isBusy)" />
-
-                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                    <MudButton Variant="Variant.Filled"
-                                               Color="Color.Primary"
-                                               StartIcon="@Icons.Material.Filled.Save"
-                                               Disabled="@(!_selectedFileContent.CanSave || _isBusy)"
-                                               OnClick="SaveEditorAsync">
-                                        @L["Actions:Save"]
-                                    </MudButton>
-                                    @if (_selectedFileContent.CanDownload)
-                                    {
-                                        <MudButton Variant="Variant.Outlined"
-                                                   StartIcon="@Icons.Material.Filled.Download"
-                                                   Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
-                                                   Target="_blank">
-                                            @L["Actions:Download"]
-                                        </MudButton>
-                                    }
-                                </MudStack>
                             </MudStack>
                         }
                         else if (_selectedEntry is { IsDirectory: true })

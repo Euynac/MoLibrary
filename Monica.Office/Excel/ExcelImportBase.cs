@@ -451,7 +451,7 @@ namespace Monica.Office.Excel
         /// <param name="worksheet">The worksheet</param>
         /// <param name="dataRow">The data row</param>
         /// <param name="columnIndex">The column index (source index)</param>
-        /// <param name="property">The <typeparamref name="TImportDto"/> property mapped from the header row</param>
+        /// <param name="property">The import target property mapped from the header row</param>
         /// <returns></returns>
         protected abstract object? ConvertCellValue(TWorkbook workbook, TSheet worksheet, TRow dataRow, int columnIndex, PropertyInfo property);
 
