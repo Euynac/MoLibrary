@@ -208,7 +208,15 @@ public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAcc
         {
             if (context.Request.Headers.Authorization is { } authorization && !string.IsNullOrWhiteSpace(authorization.ToString()))
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authorization!);
+                var authorizationValue = authorization.ToString();
+                if (AuthenticationHeaderValue.TryParse(authorizationValue, out var parsedAuthorization))
+                {
+                    request.Headers.Authorization = parsedAuthorization;
+                }
+                else
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authorizationValue.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase));
+                }
             }
 
             else if (await context.GetTokenAsync("access_token") is { } token && !string.IsNullOrEmpty(token))
