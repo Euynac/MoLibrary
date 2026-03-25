@@ -54,12 +54,6 @@
                                            OnClick="RefreshAsync">
                                     @L["Actions:Refresh"]
                                 </MudButton>
-                                <MudButton Variant="Variant.Outlined"
-                                           StartIcon="@Icons.Material.Filled.ArrowUpward"
-                                           Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_browseResult?.ParentPath))"
-                                           OnClick="GoUpAsync">
-                                    @L["Actions:GoUp"]
-                                </MudButton>
                             </MudStack>
                         </MudStack>
 
@@ -121,6 +115,12 @@
                                 @L["Actions:Browse"]
                             </MudButton>
                             <MudButton Variant="Variant.Outlined"
+                                       StartIcon="@Icons.Material.Filled.ArrowUpward"
+                                       Disabled="@(_isBusy || string.IsNullOrWhiteSpace(_browseResult?.ParentPath))"
+                                       OnClick="GoUpAsync">
+                                @L["Actions:GoUp"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
                                        StartIcon="@Icons.Material.Filled.CreateNewFolder"
                                        Disabled="@(_isBusy || _browseResult is not { CanCreateDirectory: true })"
                                        OnClick="OpenCreateDirectoryDialogAsync">
@@ -147,15 +147,32 @@
                         @if (_browseResult is { Entries.Count: > 0 })
                         {
                             <div class="entry-table">
-                                <div class="entry-table__header">
-                                    <span>@L["Columns:Name"]</span>
-                                    <span>@L["Columns:Type"]</span>
-                                    <span>@L["Columns:Size"]</span>
-                                    <span>@L["Columns:Modified"]</span>
-                                    <span>@L["Columns:Actions"]</span>
+                                <div class="entry-table__sort-toolbar">
+                                    @foreach (var sortField in _sortableFields)
+                                    {
+                                        <button type="button"
+                                                class="@GetSortButtonClass(sortField, forToolbar: true)"
+                                                @onclick="@(() => ChangeSort(sortField))">
+                                            <span>@GetSortFieldLabel(sortField)</span>
+                                            <MudIcon Icon="@GetSortIcon(sortField)" Size="Size.Small" />
+                                        </button>
+                                    }
                                 </div>
 
-                                @foreach (var entry in _browseResult.Entries)
+                                <div class="entry-table__header">
+                                    @foreach (var sortField in _sortableFields)
+                                    {
+                                        <button type="button"
+                                                class="@GetSortButtonClass(sortField)"
+                                                @onclick="@(() => ChangeSort(sortField))">
+                                            <span>@GetSortFieldLabel(sortField)</span>
+                                            <MudIcon Icon="@GetSortIcon(sortField)" Size="Size.Small" />
+                                        </button>
+                                    }
+                                    <span class="entry-table__header-label">@L["Columns:Actions"]</span>
+                                </div>
+
+                                @foreach (var entry in _sortedEntries)
                                 {
                                     <div class="@GetEntryRowClass(entry)">
                                         <button type="button" class="entry-row__main" @onclick="() => OpenEntryAsync(entry)">
@@ -222,13 +239,38 @@
                     <MudPaper Elevation="0">
                         @if (_selectedFileContent is not null)
                         {
-                            <MudStack Spacing="2">
-                                <MudStack Spacing="0">
-                                    <MudText Typo="Typo.h6">@_selectedFileContent.Name</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:EditorSubtitle"]</MudText>
+                            <MudStack Spacing="2" Class="preview-editor">
+                                <MudStack Row="true"
+                                          Justify="Justify.SpaceBetween"
+                                          AlignItems="AlignItems.Start"
+                                          Wrap="Wrap.Wrap"
+                                          Class="preview-editor__header">
+                                    <MudStack Spacing="0" Class="preview-editor__title">
+                                        <MudText Typo="Typo.h6">@_selectedFileContent.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Workspace:EditorSubtitle"]</MudText>
+                                    </MudStack>
+
+                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="preview-editor__actions">
+                                        <MudButton Variant="Variant.Filled"
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                   Disabled="@(!_selectedFileContent.CanSave || _isBusy)"
+                                                   OnClick="SaveEditorAsync">
+                                            @L["Actions:Save"]
+                                        </MudButton>
+                                        @if (_selectedFileContent.CanDownload)
+                                        {
+                                            <MudButton Variant="Variant.Outlined"
+                                                       StartIcon="@Icons.Material.Filled.Download"
+                                                       Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
+                                                       Target="_blank">
+                                                @L["Actions:Download"]
+                                            </MudButton>
+                                        }
+                                    </MudStack>
                                 </MudStack>
 
-                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="preview-editor__meta">
                                     <MudChip T="string" Value="@_selectedFileContent.EncodingName" Variant="Variant.Outlined">@L["Labels:Encoding"]: @_selectedFileContent.EncodingName</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.SizeBytes.ToString()" Variant="Variant.Outlined">@L["Labels:Size"]: @_selectedFileContent.SizeBytes.FormatBytes()</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.LineCount.ToString()" Variant="Variant.Outlined">@L["Labels:LineCount"]: @_selectedFileContent.LineCount</MudChip>
@@ -242,28 +284,10 @@
                                               Label="@L["Workspace:EditorTitle"]"
                                               @bind-Value="_editorContent"
                                               Variant="Variant.Outlined"
-                                              Lines="22"
+                                              Lines="20"
                                               Immediate="true"
+                                              Class="preview-editor__text-field"
                                               Disabled="@(!_selectedFileContent.CanSave || _isBusy)" />
-
-                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                    <MudButton Variant="Variant.Filled"
-                                               Color="Color.Primary"
-                                               StartIcon="@Icons.Material.Filled.Save"
-                                               Disabled="@(!_selectedFileContent.CanSave || _isBusy)"
-                                               OnClick="SaveEditorAsync">
-                                        @L["Actions:Save"]
-                                    </MudButton>
-                                    @if (_selectedFileContent.CanDownload)
-                                    {
-                                        <MudButton Variant="Variant.Outlined"
-                                                   StartIcon="@Icons.Material.Filled.Download"
-                                                   Href="@BuildDownloadUrl(_selectedFileContent.FullPath)"
-                                                   Target="_blank">
-                                            @L["Actions:Download"]
-                                        </MudButton>
-                                    }
-                                </MudStack>
                             </MudStack>
                         }
                         else if (_selectedEntry is { IsDirectory: true })
@@ -301,6 +325,10 @@
     private FileOpsFileTextContent? _selectedFileContent;
     private string _editorContent = string.Empty;
     private string _pathInput = string.Empty;
+    private IReadOnlyList<FileOpsEntrySummary> _sortedEntries = [];
+    private FileOpsEntrySortField _sortField = FileOpsEntrySortField.Name;
+    private bool _sortDescending;
+    private static readonly FileOpsEntrySortField[] _sortableFields = Enum.GetValues<FileOpsEntrySortField>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -579,6 +607,7 @@
 
             _browseResult = browseResult;
             _pathInput = browseResult.CurrentPath;
+            UpdateSortedEntries();
             ClearStatus();
         }
         finally
@@ -615,6 +644,99 @@
         return _selectedEntry?.FullPath == entry.FullPath ? "entry-row entry-row--selected" : "entry-row";
     }
 
+    private void ChangeSort(FileOpsEntrySortField sortField)
+    {
+        if (_sortField == sortField)
+        {
+            _sortDescending = !_sortDescending;
+        }
+        else
+        {
+            _sortField = sortField;
+            _sortDescending = false;
+        }
+
+        UpdateSortedEntries();
+    }
+
+    private void UpdateSortedEntries()
+    {
+        _sortedEntries = _browseResult is null
+            ? []
+            : SortEntries(_browseResult.Entries).ToList();
+    }
+
+    private IOrderedEnumerable<FileOpsEntrySummary> SortEntries(IEnumerable<FileOpsEntrySummary> entries)
+    {
+        var pathComparer = GetPathComparer();
+        var orderedEntries = entries.OrderByDescending(static entry => entry.IsDirectory);
+
+        return (_sortField, _sortDescending) switch
+        {
+            (FileOpsEntrySortField.Name, false) => orderedEntries
+                .ThenBy(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Name, true) => orderedEntries
+                .ThenByDescending(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Type, false) => orderedEntries
+                .ThenBy(GetEntryTypeSortKey, pathComparer)
+                .ThenBy(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Type, true) => orderedEntries
+                .ThenByDescending(GetEntryTypeSortKey, pathComparer)
+                .ThenBy(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Size, false) => orderedEntries
+                .ThenBy(static entry => entry.SizeBytes ?? -1L)
+                .ThenBy(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Size, true) => orderedEntries
+                .ThenByDescending(static entry => entry.SizeBytes ?? -1L)
+                .ThenBy(static entry => entry.Name, pathComparer),
+            (FileOpsEntrySortField.Modified, false) => orderedEntries
+                .ThenBy(static entry => entry.LastModifiedAt)
+                .ThenBy(static entry => entry.Name, pathComparer),
+            _ => orderedEntries
+                .ThenByDescending(static entry => entry.LastModifiedAt)
+                .ThenBy(static entry => entry.Name, pathComparer)
+        };
+    }
+
+    private string GetSortFieldLabel(FileOpsEntrySortField sortField)
+    {
+        return sortField switch
+        {
+            FileOpsEntrySortField.Name => L["Columns:Name"].Value,
+            FileOpsEntrySortField.Type => L["Columns:Type"].Value,
+            FileOpsEntrySortField.Size => L["Columns:Size"].Value,
+            _ => L["Columns:Modified"].Value
+        };
+    }
+
+    private string GetSortButtonClass(FileOpsEntrySortField sortField, bool forToolbar = false)
+    {
+        var classes = forToolbar ? "entry-table__sort-toolbar-button" : "entry-table__sort-button";
+        return _sortField == sortField ? $"{classes} {classes}--active" : classes;
+    }
+
+    private string GetSortIcon(FileOpsEntrySortField sortField)
+    {
+        if (_sortField != sortField)
+        {
+            return Icons.Material.Filled.UnfoldMore;
+        }
+
+        return _sortDescending
+            ? Icons.Material.Filled.ArrowDownward
+            : Icons.Material.Filled.ArrowUpward;
+    }
+
+    private static string GetEntryTypeSortKey(FileOpsEntrySummary entry)
+    {
+        return entry.IsDirectory ? string.Empty : entry.Extension;
+    }
+
+    private static StringComparer GetPathComparer()
+    {
+        return OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    }
+
     private async Task ExecuteBusyAsync(Func<Task> action)
     {
         if (_isBusy)
@@ -645,5 +767,13 @@
     {
         _statusMessage = string.Empty;
         _statusSeverity = Severity.Info;
+    }
+
+    private enum FileOpsEntrySortField
+    {
+        Name,
+        Type,
+        Size,
+        Modified
     }
 }

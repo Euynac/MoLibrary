@@ -10,7 +10,6 @@
 .file-ops-page__content {
     display: grid;
     gap: 1rem;
-    max-width: 1520px;
     margin: 0 auto;
 }
 

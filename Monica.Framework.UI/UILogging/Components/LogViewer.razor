@@ -66,15 +66,15 @@
     }
 
     <div class="log-viewer-scroll" @ref="_scrollContainer">
-        @if (Lines is null || Lines.Count == 0)
+        @if (CurrentLines.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Dense="true">暂无日志内容</MudAlert>
         }
         else
         {
-            @for (var i = 0; i < Lines.Count; i++)
+            @for (var i = 0; i < CurrentLines.Count; i++)
             {
-                var line = Lines[i];
+                var line = CurrentLines[i];
                 var lineIndex = i;
                 var isCurrentMatch = line.IsMatch && _matchedLineIndices.Count > 0 &&
                                      _currentMatchIndex >= 0 && _currentMatchIndex < _matchedLineIndices.Count &&
@@ -116,7 +116,7 @@
     private IJSRuntime JsRuntime { get; set; } = default!;
 
     [Parameter]
-    public IReadOnlyList<LogLineViewModel> Lines { get; set; } = Array.Empty<LogLineViewModel>();
+    public IReadOnlyList<LogLineViewModel>? Lines { get; set; }
 
     [Parameter]
     public long Version { get; set; }
@@ -171,9 +171,12 @@
     // Selected line state
     private int? _selectedLineIndex = null;
 
+    private IReadOnlyList<LogLineViewModel> CurrentLines => Lines ?? Array.Empty<LogLineViewModel>();
+
     protected override void OnParametersSet()
     {
-        _linesCount = Lines?.Count ?? 0;
+        var lines = CurrentLines;
+        _linesCount = lines.Count;
 
         var filterChanged = !Equals(_lastFilter, Filter);
         if (filterChanged || Version != _lastVersion)
@@ -182,8 +185,8 @@
             UpdateMatchTracking();
         }
 
-        var firstLine = Lines.Count > 0 ? Lines[0] : null;
-        var lastLine = Lines.Count > 0 ? Lines[^1] : null;
+        var firstLine = _linesCount > 0 ? lines[0] : null;
+        var lastLine = _linesCount > 0 ? lines[^1] : null;
         var currentFirstAbsoluteLineNumber = firstLine?.AbsoluteLineNumber;
         var currentLastAbsoluteLineNumber = lastLine?.AbsoluteLineNumber;
 
@@ -204,12 +207,13 @@
     private void UpdateMatchTracking()
     {
         _matchedLineIndices.Clear();
+        var lines = CurrentLines;
 
-        if (Filter?.IsActive == true && !Filter.OnlyCapture && Lines != null)
+        if (Filter?.IsActive == true && !Filter.OnlyCapture)
         {
-            for (int i = 0; i < Lines.Count; i++)
+            for (int i = 0; i < lines.Count; i++)
             {
-                if (Lines[i].IsMatch)
+                if (lines[i].IsMatch)
                 {
                     _matchedLineIndices.Add(i);
                 }
@@ -242,7 +246,7 @@
             BuildContextMenu();
             await SetupScrollListenerAsync();
 
-            if (AutoScroll && Lines.Count > 0)
+            if (AutoScroll && CurrentLines.Count > 0)
             {
                 _pendingScrollToBottom = true;
             }
@@ -295,8 +299,9 @@
             _isLoadingMore = true;
             await InvokeAsync(StateHasChanged);
 
-            var anchorLineNumber = Lines.Count > 0
-                ? Lines[0]?.AbsoluteLineNumber
+            var lines = CurrentLines;
+            var anchorLineNumber = lines.Count > 0
+                ? lines[0].AbsoluteLineNumber
                 : null;
             var loadedCount = await LoadMoreRequested.Invoke(50);
 
