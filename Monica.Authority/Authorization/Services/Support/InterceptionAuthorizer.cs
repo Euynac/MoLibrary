@@ -6,7 +6,7 @@ using Monica.DependencyInjection.DynamicProxy.Abstract;
 
 namespace Monica.Authority.Authorization.Services.Support;
 
-public class InterceptionAuthorizer(IMethodInvocationAuthorizationService methodInvocationAuthorizationService, IMoCurrentPrincipalAccessor accessor)
+public class InterceptionAuthorizer(IMethodInvocationAuthorizationService methodInvocationAuthorizationService, ICurrentPrincipalAccessor accessor)
     : MoInterceptor
 {
     public override async Task InterceptAsync(IMoMethodInvocation invocation)

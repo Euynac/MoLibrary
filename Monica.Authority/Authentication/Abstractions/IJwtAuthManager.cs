@@ -5,7 +5,7 @@ using Monica.Authority.Authentication.Models;
 
 namespace Monica.Authority.Authentication.Abstractions;
 
-public interface IMoJwtAuthManager
+public interface IJwtAuthManager
 {
     IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary { get; }
     JwtAuthResult GenerateTokens(string username, Claim[] claims, DateTime? now = null);

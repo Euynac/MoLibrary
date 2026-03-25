@@ -3,7 +3,7 @@ using Monica.Authority.Authorization.Abstractions;
 
 namespace Monica.Authority.Authorization.Services.Support;
 
-public class PolicyEnumPermissionRequirementHandler(IMoPermissionChecker permissionChecker)
+public class PolicyEnumPermissionRequirementHandler(IPermissionChecker permissionChecker)
     : AuthorizationHandler<PolicyEnumPermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(

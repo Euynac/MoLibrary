@@ -8,7 +8,7 @@ using Monica.Tool.MoResponse;
 
 namespace Monica.Authority.Authorization.Exceptions;
 
-internal class MoAuthorizationExceptionHandler : IMoExceptionHandlerPack
+internal class AuthorizationExceptionHandler : IMoExceptionHandlerPack
 {
     public bool TryHandleAsync(HttpContext? httpContext, Exception exception, CancellationToken cancellationToken,
         [NotNullWhen(true)] out Res? res)
@@ -19,15 +19,15 @@ internal class MoAuthorizationExceptionHandler : IMoExceptionHandlerPack
                 res = Res.Fail(businessError.Message);
                 return true;
 
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.NotLogin }:
+            case AuthorizationException { Type: AuthorizationException.ExceptionType.NotLogin }:
                 res = ResultsAuthorization.NotLogin();
                 return true;
 
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.RefreshTokenExpired }:
+            case AuthorizationException { Type: AuthorizationException.ExceptionType.RefreshTokenExpired }:
                 res = ResultsAuthorization.RefreshTokenExpired();
                 return true;
 
-            case MoAuthorizationException { Type: MoAuthorizationException.ExceptionType.AccessTokenExpired } e:
+            case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired } e:
                 res = ResultsAuthorization.AccessTokenExpired(e.Reason);
                 return true;
 
@@ -35,7 +35,7 @@ internal class MoAuthorizationExceptionHandler : IMoExceptionHandlerPack
                 res = ResultsAuthorization.AccessTokenExpired(expired.Message);
                 return true;
 
-            case MoAuthorizationException authorizationException:
+            case AuthorizationException authorizationException:
             {
                 var problemDetail = new ProblemDetails { Title = authorizationException.Reason };
                 res = new ResError<ProblemDetails>(problemDetail, authorizationException.Title, ResponseCode.Forbidden);

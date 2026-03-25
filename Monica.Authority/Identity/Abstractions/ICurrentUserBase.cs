@@ -2,7 +2,7 @@ using System.Security.Claims;
 
 namespace Monica.Authority.Identity.Abstractions;
 
-public interface IMoCurrentUserBase
+public interface ICurrentUserBase
 {
     /// <summary>
     /// 是否认证成功

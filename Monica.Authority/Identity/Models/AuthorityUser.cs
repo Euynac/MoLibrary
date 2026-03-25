@@ -2,7 +2,7 @@
 
 namespace Monica.Authority.Identity.Models;
 
-public class MoUser : IMoUser
+public class AuthorityUser : IAuthorityUser
 {
     public string? Id { get; set; }
     public string? RoleId { get; set; }

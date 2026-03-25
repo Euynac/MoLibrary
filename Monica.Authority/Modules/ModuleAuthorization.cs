@@ -43,11 +43,11 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
         services.AddSingleton<IAuthorizationHandler, PolicyEnumPermissionRequirementHandler>();
         services.AddTransient<DefaultAuthorizationPolicyProvider>();
 
-        services.AddSingleton<IAuthorizationService, MoAuthorizationService>();
-        services.AddSingleton<IMoAuthorizationService, MoAuthorizationService>();
-        services.AddSingleton<IMethodInvocationAuthorizationService, MoMethodInvocationAuthorizationService>();
+        services.AddSingleton<IAuthorizationService, AuthorityAuthorizationService>();
+        services.AddSingleton<IAuthorityAuthorizationService, AuthorityAuthorizationService>();
+        services.AddSingleton<IMethodInvocationAuthorizationService, MethodInvocationAuthorizationService>();
 
-        services.AddTransient<IMoAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
+        services.AddTransient<IAuthorityAuthorizationPolicyProvider, PolicyEnumAuthorizationProvider>();
 
         var manager = new PermissionBitCheckerManager();
         var checker = new PermissionBitChecker(manager);
@@ -60,7 +60,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
     {
         if (!Option.DisableGlobalExceptionHandler)
         {
-            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<MoAuthorizationExceptionHandler>();
+            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<AuthorizationExceptionHandler>();
         }
         DependsOnModule<ModuleAuthenticationGuide>().Register();
     }
@@ -95,7 +95,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
             var checker = new PermissionBitChecker<TEnum>(claimTypeDefinition);
             PermissionBitCheckerManager.AddChecker(checker);
             context.Services.AddSingleton<IPermissionBitChecker<TEnum>, PermissionBitChecker<TEnum>>(_ => checker);
-            context.Services.AddSingleton<IMoPermissionChecker, MoPermissionChecker<TEnum>>();
+            context.Services.AddSingleton<IPermissionChecker, PermissionChecker<TEnum>>();
         });
         return this;
     }
@@ -121,10 +121,10 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
         ConfigureServices(context =>
         {
             context.Services.Replace(ServiceDescriptor.Singleton<IAuthorizationService, AlwaysAllowAuthorizationService>());
-            context.Services.Replace(ServiceDescriptor.Singleton<IMoAuthorizationService, AlwaysAllowAuthorizationService>());
+            context.Services.Replace(ServiceDescriptor.Singleton<IAuthorityAuthorizationService, AlwaysAllowAuthorizationService>());
             context.Services.Replace(ServiceDescriptor
                 .Singleton<IMethodInvocationAuthorizationService, AlwaysAllowMethodInvocationAuthorizationService>());
-            context.Services.Replace(ServiceDescriptor.Singleton<IMoPermissionChecker, AlwaysAllowPermissionChecker>());
+            context.Services.Replace(ServiceDescriptor.Singleton<IPermissionChecker, AlwaysAllowPermissionChecker>());
         }, EMoModuleOrder.PostConfig);
         return this;
     }

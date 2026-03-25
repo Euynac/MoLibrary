@@ -6,14 +6,14 @@ namespace Monica.Authority.Identity.Abstractions;
 /// <summary>
 /// 当前系统用户管理接口
 /// </summary>
-public interface IMoSystemUserManager
+public interface ISystemUserManager
 {
     /// <summary>
     /// 判断当前用户信息是否是系统用户
     /// </summary>
     /// <param name="userInfo"></param>
     /// <returns></returns>
-    public bool IsSystemUser(IMoUser userInfo);
+    public bool IsSystemUser(IAuthorityUser userInfo);
     /// <summary>
     /// 获取当前系统用户Token
     /// </summary>
@@ -29,9 +29,9 @@ public interface IMoSystemUserManager
     /// </summary>
     /// <returns></returns>
     public ClaimsPrincipal GetCurSystemUserPrinciple();
-    MoSystemUserOptions.SystemUserInfo GetSystemUserInfo<T>(T userEnum) where T : struct, Enum;
+    SystemUserOptions.SystemUserInfo GetSystemUserInfo<T>(T userEnum) where T : struct, Enum;
     string GetTokenOfSystemUser<T>(T userEnum) where T : struct, Enum;
     List<Claim> GetSystemUserClaims<T>(T userEnum) where T : struct, Enum;
     ClaimsPrincipal GetSystemUserPrinciple<T>(T userEnum) where T : struct, Enum;
-    IEnumerable<MoSystemUserOptions.SystemUserInfo> GetAllSystemUserInfos();
+    IEnumerable<SystemUserOptions.SystemUserInfo> GetAllSystemUserInfos();
 }

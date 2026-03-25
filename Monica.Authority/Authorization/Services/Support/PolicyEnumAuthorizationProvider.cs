@@ -6,7 +6,7 @@ namespace Monica.Authority.Authorization.Services.Support;
 
 public class PolicyEnumAuthorizationProvider(
     IOptions<AuthorizationOptions> options)
-    : DefaultAuthorizationPolicyProvider(options), IMoAuthorizationPolicyProvider
+    : DefaultAuthorizationPolicyProvider(options), IAuthorityAuthorizationPolicyProvider
 {
     private readonly AuthorizationOptions _options = options.Value;
 

@@ -7,6 +7,6 @@ public class MoUserIdProvider : IUserIdProvider
 {
     public string? GetUserId(HubConnectionContext connection)
     {
-        return new MoCurrentUser(connection.User).Id;
+        return new CurrentUser(connection.User).Id;
     }
 }

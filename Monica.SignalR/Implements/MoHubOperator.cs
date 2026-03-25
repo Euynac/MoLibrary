@@ -8,19 +8,19 @@ namespace Monica.SignalR.Implements;
 
 public class MoUserHubOperator<TIContract, THubServer>(
     IHubContext<THubServer, TIContract> hub,
-    IMoSignalRConnectionManager connection) : MoHubOperator<TIContract, THubServer, IMoCurrentUser>(hub, connection)
+    IMoSignalRConnectionManager connection) : MoHubOperator<TIContract, THubServer, ICurrentUser>(hub, connection)
     where TIContract : class, IMoHubContract where THubServer : MoHubServer<TIContract>
 {
-    public override IMoCurrentUser ConvertToCurrentUser(ClaimsPrincipal cp)
+    public override ICurrentUser ConvertToCurrentUser(ClaimsPrincipal cp)
     {
-        return cp.AsMoCurrentUser();
+        return cp.AsCurrentUser();
     }
 }
 
 public abstract class MoHubOperator<TIContract, THubServer, TIUser>(
     IHubContext<THubServer, TIContract> hub,
     IMoSignalRConnectionManager connection) : IMoHubOperator<TIContract, TIUser>
-    where TIUser : IMoCurrentUser where TIContract : class, IMoHubContract where THubServer : MoHubServer<TIContract>
+    where TIUser : ICurrentUser where TIContract : class, IMoHubContract where THubServer : MoHubServer<TIContract>
 {
     public IHubClients<TIContract> Clients => hub.Clients;
     public IGroupManager Groups => hub.Groups;
@@ -73,7 +73,7 @@ public abstract class MoHubOperator<TIContract, THubServer, TIUser>(
 
     public bool IsUserStillOnline(TIUser user)
     {
-        return GetConnectionInfos().Any(p => p.ClaimsPrincipal.AsMoCurrentUser().Id == user.Id);
+        return GetConnectionInfos().Any(p => p.ClaimsPrincipal.AsCurrentUser().Id == user.Id);
     }
 
     public TIContract Users(Predicate<TIUser> judge)

@@ -5,8 +5,8 @@ using Monica.Authority.Identity.Abstractions;
 
 namespace Monica.Authority.Authorization.Services;
 
-public class MoPermissionChecker<TEnum>(IMoCurrentPrincipalAccessor accessor, IPermissionBitChecker<TEnum> checker)
-    : IMoPermissionChecker where TEnum : struct, Enum
+public class PermissionChecker<TEnum>(ICurrentPrincipalAccessor accessor, IPermissionBitChecker<TEnum> checker)
+    : IPermissionChecker where TEnum : struct, Enum
 {
     public Task<bool> IsGrantedAsync(string name)
     {

@@ -197,7 +197,7 @@ public interface IMoRpcHttpClientRegisterProvider
     void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid);
 }
 
-public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUserManager) : DelegatingHandler
+public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAccessor, ISystemUserManager systemUserManager) : DelegatingHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {

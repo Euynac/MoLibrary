@@ -48,10 +48,10 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         }
         //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
         services.AddHttpContextAccessor();
-        services.AddScoped<IMoCurrentUser, MoCurrentUser>();
-        services.AddSingleton<IMoJwtAuthManager, MoJwtAuthManager>();
-        services.AddSingleton<IAccessTokenIssuer, MoJwtAuthManager>();
-        services.AddSingleton<IMoCurrentPrincipalAccessor, MoCurrentPrincipalAccessor>(); //为何用单例就行？
+        services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddSingleton<IJwtAuthManager, JwtAuthManager>();
+        services.AddSingleton<IAccessTokenIssuer, JwtAuthManager>();
+        services.AddSingleton<ICurrentPrincipalAccessor, CurrentPrincipalAccessor>(); //为何用单例就行？
 
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
@@ -111,7 +111,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
 
             endpoints.MapGet("/jwt/decode/{token}", async (HttpResponse response, HttpContext context, string token) =>
             {
-                var jwt = context.RequestServices.GetRequiredService<IMoJwtAuthManager>();
+                var jwt = context.RequestServices.GetRequiredService<IJwtAuthManager>();
                 var (claims, tokenInfo) = jwt.DecodeJwtToken(token);
                 await context.Response.WriteAsJsonAsync(new
                 {
@@ -143,22 +143,22 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
     {
         return [nameof(ConfigSystemUser)];
     }
-    public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<MoSystemUserOptions>? action = null) where T : struct, Enum
+    public ModuleAuthenticationGuide ConfigSystemUser<T>(T curSystemEnum, Action<SystemUserOptions>? action = null) where T : struct, Enum
     {
         ConfigureServices(context =>
         {
-            context.Services.Configure((MoSystemUserOptions o) =>
+            context.Services.Configure((SystemUserOptions o) =>
             {
                 o.SetCurSystemUser(curSystemEnum);
                 action?.Invoke(o);
             });
-            context.Services.AddSingleton<IMoSystemUserManager, MoSystemUserManager>();
+            context.Services.AddSingleton<ISystemUserManager, SystemUserManager>();
         });
         return this;
         
     }
 
-    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<MoSystemUserOptions>? action = null)
+    public ModuleAuthenticationGuide ConfigDefaultSystemUser(Action<SystemUserOptions>? action = null)
     {
         return ConfigSystemUser(EDefaultSystemUser.System, action);
     }

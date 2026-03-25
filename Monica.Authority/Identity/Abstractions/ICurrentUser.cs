@@ -3,7 +3,7 @@
 /// <summary>
 /// (Scoped)当前用户信息
 /// </summary>
-public interface IMoCurrentUser : IMoCurrentUserBase, IMoUser
+public interface ICurrentUser : ICurrentUserBase, IAuthorityUser
 {
  
 }

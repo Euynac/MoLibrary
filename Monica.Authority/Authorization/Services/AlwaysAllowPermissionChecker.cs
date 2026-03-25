@@ -10,7 +10,7 @@ namespace Monica.Authority.Authorization.Services;
 /// Use IServiceCollection.AddAlwaysAllowAuthorization() to replace
 /// IPermissionChecker with this class. This is useful for tests.
 /// </summary>
-public class AlwaysAllowPermissionChecker : IMoPermissionChecker
+public class AlwaysAllowPermissionChecker : IPermissionChecker
 {
     public Task<bool> IsGrantedAsync(string name)
     {

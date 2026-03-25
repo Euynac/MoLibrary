@@ -6,7 +6,7 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Authority.Authorization.Exceptions;
 
-public class MoAuthorizationException : Exception
+public class AuthorizationException : Exception
 {
     public AuthorizationFailure? Failure { get; }
     public Exception? FailureException { get; }
@@ -32,12 +32,12 @@ public class MoAuthorizationException : Exception
         TokenException
     }
 
-    public MoAuthorizationException(ExceptionType type) : base($"权限异常：{type}")
+    public AuthorizationException(ExceptionType type) : base($"权限异常：{type}")
     {
         Type = type;
     }
 
-    public MoAuthorizationException(AuthorizationFailure? failure) : base("认证失败")
+    public AuthorizationException(AuthorizationFailure? failure) : base("认证失败")
     {
         Type = ExceptionType.PermissionDenied;
         Failure = failure;
@@ -55,7 +55,7 @@ public class MoAuthorizationException : Exception
         }
 
     }
-    public MoAuthorizationException(Exception? failure) : base($"认证失败：{failure?.Message}")
+    public AuthorizationException(Exception? failure) : base($"认证失败：{failure?.Message}")
     {
         FailureException = failure;
         if (failure != null)

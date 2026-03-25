@@ -1,6 +1,6 @@
 ﻿namespace Monica.Authority.Identity.Abstractions;
 
-public interface IMoUser
+public interface IAuthorityUser
 {
     /// <summary>
     /// 用户Id

@@ -7,7 +7,7 @@ using Monica.Authority.Authorization.Exceptions;
 
 namespace Monica.Authority.Authorization.Services;
 
-public class MoAuthorizationService(
+public class AuthorityAuthorizationService(
     IAuthorizationPolicyProvider policyProvider,
     IAuthorizationHandlerProvider handlers,
     ILogger<DefaultAuthorizationService> logger,
@@ -19,14 +19,14 @@ public class MoAuthorizationService(
         logger,
         contextFactory,
         evaluator,
-        options), IMoAuthorizationService
+        options), IAuthorityAuthorizationService
 {
     public override async Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object? resource, IEnumerable<IAuthorizationRequirement> requirements)
     {
         var result = await base.AuthorizeAsync(user, resource, requirements);
         if (!result.Succeeded)
         {
-            throw new MoAuthorizationException(result.Failure);
+            throw new AuthorizationException(result.Failure);
         }
         return result;
     }
@@ -36,7 +36,7 @@ public class MoAuthorizationService(
         var result = await base.AuthorizeAsync(user, resource, policyName);
         if (!result.Succeeded)
         {
-            throw new MoAuthorizationException(result.Failure);
+            throw new AuthorizationException(result.Failure);
         }
         return result;
     }

@@ -2,9 +2,9 @@ using Monica.Authority.Identity.Abstractions;
 using Monica.Repository.EntityInterfaces.Auditing;
 
 namespace Monica.Repository.EntityInterfaces;
-public class MoAuditPropertySetter(IMoCurrentUser currentUser) : IMoAuditPropertySetter
+public class MoAuditPropertySetter(ICurrentUser currentUser) : IMoAuditPropertySetter
 {
-    protected IMoCurrentUser CurrentUser { get; } = currentUser;
+    protected ICurrentUser CurrentUser { get; } = currentUser;
 
     public virtual void SetCreationProperties(object targetObject)
     {

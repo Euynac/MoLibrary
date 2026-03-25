@@ -7,7 +7,7 @@ public interface IMoHubContract
 {
 }
 
-public interface IMoHubOperator<TIContract, TIUser> where TIContract : IMoHubContract where TIUser : IMoCurrentUser
+public interface IMoHubOperator<TIContract, TIUser> where TIContract : IMoHubContract where TIUser : ICurrentUser
 {
     /// <summary>
     ///     Gets a <see cref="T:Microsoft.AspNetCore.SignalR.IHubClients`1" /> that can be used to invoke methods on clients

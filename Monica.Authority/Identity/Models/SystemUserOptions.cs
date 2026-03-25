@@ -2,7 +2,7 @@
 
 namespace Monica.Authority.Identity.Models;
 
-public class MoSystemUserOptions
+public class SystemUserOptions
 {
     public Type? SystemUserEnums { get; private set; } 
     public object? CurrentSystemUserEnum { get; set; }

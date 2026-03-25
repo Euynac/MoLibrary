@@ -5,7 +5,7 @@ using Monica.Authority.Authorization.Abstractions;
 namespace Monica.Authority.Authorization.Services;
 
 public class AlwaysAllowAuthorizationService
-    : IMoAuthorizationService
+    : IAuthorityAuthorizationService
 {
     
     public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object? resource, IEnumerable<IAuthorizationRequirement> requirements)

@@ -6,17 +6,17 @@ using Monica.Authority.Identity.Models;
 
 namespace Monica.Authority.Identity.Services;
 
-internal class MoSystemUserManager(IAccessTokenIssuer manager, IOptions<MoSystemUserOptions> options) : IMoSystemUserManager
+internal class SystemUserManager(IAccessTokenIssuer manager, IOptions<SystemUserOptions> options) : ISystemUserManager
 {
-    private readonly MoSystemUserOptions _options = options.Value;
+    private readonly SystemUserOptions _options = options.Value;
 
-    public MoSystemUserOptions.SystemUserInfo GetCurSystemUserInfo()
+    public SystemUserOptions.SystemUserInfo GetCurSystemUserInfo()
     {
         if (_options.CurrentSystemUserEnum == null) throw new InvalidOperationException("未设置当前系统用户！");
 
         return GetSystemUserInfoBase(_options.CurrentSystemUserEnum);
     }
-    private MoSystemUserOptions.SystemUserInfo GetSystemUserInfoBase(object userEnum)
+    private SystemUserOptions.SystemUserInfo GetSystemUserInfoBase(object userEnum)
     {
         if (_options.InfoDict.TryGetValue(userEnum, out var systemUserInfo))
         {
@@ -28,17 +28,17 @@ internal class MoSystemUserManager(IAccessTokenIssuer manager, IOptions<MoSystem
 
 
 
-    public MoSystemUserOptions.SystemUserInfo GetSystemUserInfo<T>(T userEnum) where T : struct, Enum
+    public SystemUserOptions.SystemUserInfo GetSystemUserInfo<T>(T userEnum) where T : struct, Enum
     {
         return GetSystemUserInfoBase(userEnum);
     }
 
-    public IEnumerable<MoSystemUserOptions.SystemUserInfo> GetAllSystemUserInfos()
+    public IEnumerable<SystemUserOptions.SystemUserInfo> GetAllSystemUserInfos()
     {
         return _options.InfoDict.Values;
     }
 
-    public bool IsSystemUser(IMoUser userInfo)
+    public bool IsSystemUser(IAuthorityUser userInfo)
     {
         if (userInfo.Id is { } id && id.StartsWith("00000000-0000-0000-0000-"))
         {

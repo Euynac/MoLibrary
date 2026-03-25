@@ -9,9 +9,9 @@ using MethodInvocationAuthorizationContext = Monica.Authority.Authorization.Mode
 
 namespace Monica.Authority.Authorization.Services;
 
-public class MoMethodInvocationAuthorizationService(
-    IMoAuthorizationPolicyProvider moAuthorizationPolicyProvider,
-    IMoAuthorizationService moAuthorizationService, IHttpContextAccessor accessor)
+public class MethodInvocationAuthorizationService(
+    IAuthorityAuthorizationPolicyProvider moAuthorizationPolicyProvider,
+    IAuthorityAuthorizationService moAuthorizationService, IHttpContextAccessor accessor)
     : IMethodInvocationAuthorizationService
 {
     public async Task CheckAsync(MethodInvocationAuthorizationContext context)
@@ -28,12 +28,12 @@ public class MoMethodInvocationAuthorizationService(
                 var authResult = await httpContext.AuthenticateAsync();
                 if (authResult is { Succeeded: false, Failure: not null})
                 {
-                    throw new MoAuthorizationException(authResult.Failure);
+                    throw new AuthorizationException(authResult.Failure);
                 }
 
             }
 
-            throw new MoAuthorizationException(MoAuthorizationException.ExceptionType.NotLogin);
+            throw new AuthorizationException(AuthorizationException.ExceptionType.NotLogin);
         }
 
 
@@ -50,7 +50,7 @@ public class MoMethodInvocationAuthorizationService(
         var result = await moAuthorizationService.AuthorizeAsync(context.User, null, authorizationPolicy);
         if (!result.Succeeded)
         {
-            throw new MoAuthorizationException(result.Failure);
+            throw new AuthorizationException(result.Failure);
         }
     }
 

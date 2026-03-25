@@ -4,7 +4,7 @@ using Monica.Authority.Identity.Abstractions;
 
 namespace Monica.Authority.Identity.Services;
 
-public class MoCurrentPrincipalAccessor(IHttpContextAccessor httpContextAccessor, IMoSystemUserManager systemUser) : IMoCurrentPrincipalAccessor
+public class CurrentPrincipalAccessor(IHttpContextAccessor httpContextAccessor, ISystemUserManager systemUser) : ICurrentPrincipalAccessor
 {
     private static readonly AsyncLocal<ClaimsPrincipal> _currentPrincipal = new();
 

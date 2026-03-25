@@ -13,7 +13,7 @@ using Monica.Modules;
 
 namespace Monica.Authority.Authentication.Services;
 
-public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IMoJwtAuthManager, IAccessTokenIssuer
+public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IJwtAuthManager, IAccessTokenIssuer
 {
     protected ModuleAuthenticationOption JwtTokenConfig => jwtTokenConfig.Value;
     public IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary => _usersRefreshTokens.ToImmutableDictionary();
@@ -78,14 +78,14 @@ public class MoJwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfi
             throw new SecurityTokenException("Invalid token");
         }
 
-        var username = principal.AsMoCurrentUser().Username;
+        var username = principal.AsCurrentUser().Username;
         if (!_usersRefreshTokens.TryGetValue(refreshToken, out var existingRefreshToken))
         {
-            throw new MoAuthorizationException(MoAuthorizationException.ExceptionType.RefreshTokenExpired);
+            throw new AuthorizationException(AuthorizationException.ExceptionType.RefreshTokenExpired);
         }
         if (existingRefreshToken.Username != username || existingRefreshToken.ExpireAt < now)
         {
-            throw new MoAuthorizationException(MoAuthorizationException.ExceptionType.RefreshTokenExpired);
+            throw new AuthorizationException(AuthorizationException.ExceptionType.RefreshTokenExpired);
         }
 
         return GenerateTokens(username, principal.Claims.ToArray(), now); // need to recover the original claims

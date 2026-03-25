@@ -6,7 +6,7 @@ namespace Monica.Authority.Authorization.Extensions;
 /// <summary>
 /// 相关授权扩展方法
 /// </summary>
-public static class MoCurrentUserExtensions
+public static class CurrentUserExtensions
 {
     /// <summary>
     /// 判断当前用户是否有此权限
@@ -14,7 +14,7 @@ public static class MoCurrentUserExtensions
     /// <param name="user"></param>
     /// <param name="permission"></param>
     /// <returns></returns>
-    public static bool IsGranted<TEnum>(this IMoCurrentUserBase user, TEnum permission) where TEnum : struct, Enum
+    public static bool IsGranted<TEnum>(this ICurrentUserBase user, TEnum permission) where TEnum : struct, Enum
     {
         var checker = PermissionBitCheckerManager.Singleton;
         return checker.IsGranted(user.ClaimsPrincipal, permission);
@@ -25,7 +25,7 @@ public static class MoCurrentUserExtensions
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
-    public static HashSet<TEnum> GrantedList<TEnum>(this IMoCurrentUserBase user) where TEnum : struct, Enum
+    public static HashSet<TEnum> GrantedList<TEnum>(this ICurrentUserBase user) where TEnum : struct, Enum
     {
         var checker = PermissionBitCheckerManager.Singleton;
         return [.. checker.GrantedList<TEnum>(user.ClaimsPrincipal)];
@@ -35,7 +35,7 @@ public static class MoCurrentUserExtensions
     /// 获取在给定范围内已赋权的权限枚举列表
     /// </summary>
     /// <returns></returns>
-    public static HashSet<TEnum> GrantedList<TEnum>(this IMoCurrentUserBase user, params TEnum[] permissionScope)
+    public static HashSet<TEnum> GrantedList<TEnum>(this ICurrentUserBase user, params TEnum[] permissionScope)
         where TEnum : struct, Enum
     {
         var checker = PermissionBitCheckerManager.Singleton;

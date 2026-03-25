@@ -6,7 +6,7 @@ namespace Monica.Authority.Authorization.Abstractions;
 /// <summary>
 /// 判断授权
 /// </summary>
-public interface IMoPermissionChecker
+public interface IPermissionChecker
 {
     /// <summary>
     /// 判断当前用户是否有此权限

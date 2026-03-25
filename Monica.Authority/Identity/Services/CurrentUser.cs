@@ -5,17 +5,17 @@ using Monica.Authority.Identity.Models;
 
 namespace Monica.Authority.Identity.Services;
 
-public class MoCurrentUser : MoCurrentUserBase, IMoCurrentUser
+public class CurrentUser : CurrentUserBase, ICurrentUser
 {
     //巨坑：当多个构造函数时，需要指定Constructor
     //https://stackoverflow.com/a/57016321
     [ActivatorUtilitiesConstructor]
-    public MoCurrentUser(IMoCurrentPrincipalAccessor principalAccessor): base(principalAccessor.Principal)
+    public CurrentUser(ICurrentPrincipalAccessor principalAccessor): base(principalAccessor.Principal)
     {
         
     }
 
-    public MoCurrentUser(ClaimsPrincipal principal) : base(principal)
+    public CurrentUser(ClaimsPrincipal principal) : base(principal)
     {
     }
 

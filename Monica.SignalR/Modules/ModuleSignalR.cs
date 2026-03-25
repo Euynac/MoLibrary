@@ -97,7 +97,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
         where THubOperator : class, IMoHubOperator<TIContract, TIUser>, TIHubOperator
         where TIHubOperator : class, IMoHubOperator<TIContract, TIUser>
         where TIContract : IMoHubContract
-        where TIUser : IMoCurrentUser
+        where TIUser : ICurrentUser
     {
         ConfigureServices(context =>
         {

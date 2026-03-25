@@ -4,7 +4,7 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Authority.Identity.Services;
 
-public abstract class MoCurrentUserBase(ClaimsPrincipal principal) : IMoCurrentUserBase
+public abstract class CurrentUserBase(ClaimsPrincipal principal) : ICurrentUserBase
 {
     private static readonly Claim[] _emptyClaimsArray = [];
     public ClaimsPrincipal ClaimsPrincipal { get; } = principal;
