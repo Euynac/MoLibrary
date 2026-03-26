@@ -163,11 +163,11 @@ public enum EMoModuleKey
     /// </summary>
     MarkdownUI,
     /// <summary>
-    /// Git synchronization module for markdown workspaces
+    /// Git repository synchronization module.
     /// </summary>
     Git,
     /// <summary>
-    /// Git synchronization dashboard UI module
+    /// Git repository dashboard UI module.
     /// </summary>
     GitUI,
     /// <summary>

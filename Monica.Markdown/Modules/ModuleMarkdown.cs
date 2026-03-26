@@ -4,6 +4,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Markdown.Events;
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Markdown.Services;
@@ -38,6 +39,7 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
         services.TryAddSingleton<IMarkdownDocumentProvider,
             FileMarkdownDocumentProvider>();
         services.AddSingleton<IMoMarkdownService, MoMarkdownService>();
+        services.AddTransient<MarkdownGitBindingRefreshEventHandler>();
     }
 }
 
@@ -70,6 +72,18 @@ public class ModuleMarkdownGuide
                 ExcludedFolders = excludedFolders
             });
         }, secondKey: key);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Binds a Git repository to Markdown document groups that should refresh after Git changes.
+    /// </summary>
+    public ModuleMarkdownGuide BindGitRepository(string repositoryId, params string[] documentGroupKeys)
+    {
+        ConfigureModuleOption(
+            option => option.BindGitRepository(repositoryId, documentGroupKeys),
+            secondKey: $"git-binding:{repositoryId}:{string.Join(",", documentGroupKeys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))}");
 
         return this;
     }
@@ -158,6 +172,11 @@ public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
     public List<DocumentGroupRegistration> DocumentGroupRegistrations { get; set; } = [];
 
     /// <summary>
+    /// Git to Markdown refresh bindings configured by the guide.
+    /// </summary>
+    public List<MarkdownGitRepositoryBinding> GitRepositoryBindings { get; set; } = [];
+
+    /// <summary>
     /// File extensions recognized as markdown files.
     /// </summary>
     public string[] MarkdownFileExtensions { get; set; } = [".md", ".markdown"];
@@ -185,4 +204,42 @@ public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
         ".attachments",
         ".obsidian"
     ];
+
+    /// <summary>
+    /// Adds Markdown refresh bindings for a Git repository.
+    /// </summary>
+    public void BindGitRepository(string repositoryId, IEnumerable<string> documentGroupKeys)
+    {
+        foreach (var groupKey in documentGroupKeys
+                     .Where(x => !string.IsNullOrWhiteSpace(x))
+                     .Select(x => x.Trim())
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (GitRepositoryBindings.Any(x =>
+                    string.Equals(x.RepositoryId, repositoryId, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(x.DocumentGroupKey, groupKey, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            GitRepositoryBindings.Add(new MarkdownGitRepositoryBinding
+            {
+                RepositoryId = repositoryId,
+                DocumentGroupKey = groupKey
+            });
+        }
+    }
+
+    /// <summary>
+    /// Gets all Markdown document group keys bound to the specified Git repository.
+    /// </summary>
+    public IReadOnlyList<string> GetBoundDocumentGroupKeys(string repositoryId)
+    {
+        return GitRepositoryBindings
+            .Where(x => string.Equals(x.RepositoryId, repositoryId, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.DocumentGroupKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 }

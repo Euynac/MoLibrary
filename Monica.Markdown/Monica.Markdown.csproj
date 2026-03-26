@@ -4,11 +4,11 @@
     <PackageDescription>Markdown document management module with document groups, hierarchical navigation, YAML front matter parsing, and metadata search.</PackageDescription>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DevOps\Monica.DevOps.csproj" />
     <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
   </ItemGroup>

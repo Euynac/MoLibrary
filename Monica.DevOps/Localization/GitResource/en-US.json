@@ -1,0 +1,96 @@
+{
+  "Pages": {
+    "GitRepositories": {
+      "Title": "Git Repositories"
+    }
+  },
+  "Categories": {
+    "Infrastructure": "Infrastructure"
+  },
+  "GitDashboard": {
+    "PageTitle": "Git Repositories",
+    "Title": "Git Repositories",
+    "Sections": {
+      "Repositories": "Repositories",
+      "Details": "Repository Details",
+      "Credentials": "Credentials",
+      "Resolvers": "Credential Resolvers"
+    },
+    "Columns": {
+      "Id": "Id",
+      "Provider": "Provider",
+      "Branch": "Branch",
+      "State": "State",
+      "Commit": "Commit",
+      "Updated": "Updated",
+      "Actions": "Actions",
+      "CredentialId": "Credential",
+      "Type": "Type",
+      "UserName": "User Name",
+      "HasSecret": "Has Secret",
+      "Resolver": "Resolver",
+      "Order": "Order",
+      "Size": "Size"
+    },
+    "Labels": {
+      "RemoteUrl": "Remote URL",
+      "LocalPath": "Local Path",
+      "ResolvedLocalPath": "Resolved Local Path",
+      "ConfiguredBranch": "Configured Branch",
+      "ResolvedBranch": "Resolved Branch",
+      "LastError": "Last Error",
+      "LastMessage": "Last Message",
+      "Available": "Available",
+      "Dirty": "Dirty",
+      "Credential": "Credential",
+      "CurrentCommit": "Current Commit",
+      "LastSync": "Last Sync",
+      "WorkingDirectorySize": "Working Directory Size",
+      "Progress": "Progress"
+    },
+    "Actions": {
+      "Refresh": "Refresh",
+      "SyncAll": "Sync All",
+      "Sync": "Sync",
+      "Select": "View",
+      "DeleteLocal": "Delete Local"
+    },
+    "States": {
+      "NotReady": "Not Ready",
+      "Syncing": "Syncing",
+      "Ready": "Ready",
+      "Failed": "Failed",
+      "Yes": "Yes",
+      "No": "No",
+      "None": "(None)"
+    },
+    "Dialogs": {
+      "DeleteLocalRepository": {
+        "Title": "Delete Local Repository",
+        "Message": "Delete the local working copy for repository '{0}'? You can sync again later to clone it back.",
+        "Confirm": "Delete",
+        "Cancel": "Cancel"
+      }
+    },
+    "Messages": {
+      "LoadFailed": "Failed to load Git dashboard: {0}",
+      "SyncAllSuccess": "All repositories synchronized successfully.",
+      "SyncAllInProgress": "Synchronizing all repositories...",
+      "SyncRepositorySuccess": "Repository '{0}' synchronized successfully.",
+      "SyncInProgress": "Repository '{0}' is synchronizing...",
+      "DeleteRepositorySuccess": "Repository '{0}' local working copy deleted successfully.",
+      "OperationFailed": "Operation failed: {0}",
+      "NoRepositories": "No Git repositories configured.",
+      "NoCredentials": "No Git credentials configured.",
+      "NoResolvers": "No credential resolvers registered.",
+      "NoSelection": "Select a repository to inspect details."
+    },
+    "ProgressStages": {
+      "Preparing": "Preparing",
+      "Cloning": "Cloning repository",
+      "Fetching": "Fetching remote changes",
+      "Checkout": "Checking out files",
+      "Deleting": "Deleting local repository"
+    }
+  }
+}

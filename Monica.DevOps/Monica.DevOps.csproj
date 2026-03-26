@@ -5,15 +5,17 @@
   <PropertyGroup>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
-    <PackageDescription>DevOps and infrastructure operation modules for Monica framework, including K8S management APIs and UI components.</PackageDescription>
+    <PackageDescription>DevOps and infrastructure operation modules for Monica framework, including Git, K8S, and file operation APIs and UI components.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
     <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
   </ItemGroup>
 

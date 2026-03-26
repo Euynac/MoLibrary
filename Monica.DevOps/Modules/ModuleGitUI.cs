@@ -1,0 +1,77 @@
+using Monica.Core;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
+using Monica.DevOps.Git.Pages;
+using Monica.DevOps.Localization;
+using MudBlazor;
+
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
+
+/// <summary>
+/// Builder extensions for the Git dashboard UI module.
+/// </summary>
+public static class ModuleGitUIBuilderExtensions
+{
+    extension(Mo)
+    {
+        /// <summary>
+        /// Configures the Git dashboard UI module.
+        /// </summary>
+        public static ModuleGitUIGuide AddGitUI(Action<ModuleGitUIOption>? action = null)
+        {
+            return new ModuleGitUIGuide().Register(action);
+        }
+    }
+}
+
+/// <summary>
+/// Git dashboard UI module.
+/// </summary>
+[ModuleKey(EMoModuleKey.GitUI)]
+public class ModuleGitUI(ModuleGitUIOption option)
+    : MoModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
+{
+    /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleGitGuide>().Register();
+
+        if (!Option.DisableGitDashboardPage)
+        {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<GitResource>();
+
+            DependsOnModule<ModuleUICoreGuide>().Register()
+                .RegisterUIComponents(registry =>
+                {
+                    registry.RegisterLocalizedComponent<UIGitRepositoriesPage>(
+                        UIGitRepositoriesPage.PAGE_URL,
+                        "Pages:GitRepositories:Title",
+                        Icons.Material.Filled.Source,
+                        "Categories:Infrastructure",
+                        addToNav: true,
+                        navOrder: 55);
+                });
+        }
+    }
+}
+
+/// <summary>
+/// Fluent guide for the Git dashboard UI module.
+/// </summary>
+public class ModuleGitUIGuide : MoModuleGuide<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>
+{
+}
+
+/// <summary>
+/// Options for the Git dashboard UI module.
+/// </summary>
+public class ModuleGitUIOption : MoModuleOption<ModuleGitUI>
+{
+    /// <summary>
+    /// Gets or sets whether the dashboard page should be disabled.
+    /// </summary>
+    public bool DisableGitDashboardPage { get; set; }
+}

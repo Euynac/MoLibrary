@@ -1,0 +1,96 @@
+{
+  "Pages": {
+    "GitRepositories": {
+      "Title": "Git 仓库"
+    }
+  },
+  "Categories": {
+    "Infrastructure": "基础设施"
+  },
+  "GitDashboard": {
+    "PageTitle": "Git 仓库",
+    "Title": "Git 仓库",
+    "Sections": {
+      "Repositories": "仓库列表",
+      "Details": "仓库详情",
+      "Credentials": "凭据列表",
+      "Resolvers": "凭据解析器"
+    },
+    "Columns": {
+      "Id": "标识",
+      "Provider": "提供商",
+      "Branch": "分支",
+      "State": "状态",
+      "Commit": "提交",
+      "Updated": "更新时间",
+      "Actions": "操作",
+      "CredentialId": "凭据",
+      "Type": "类型",
+      "UserName": "用户名",
+      "HasSecret": "已配置密钥",
+      "Resolver": "解析器",
+      "Order": "顺序",
+      "Size": "大小"
+    },
+    "Labels": {
+      "RemoteUrl": "远端地址",
+      "LocalPath": "本地路径",
+      "ResolvedLocalPath": "解析后路径",
+      "ConfiguredBranch": "配置分支",
+      "ResolvedBranch": "实际分支",
+      "LastError": "最近错误",
+      "LastMessage": "最近消息",
+      "Available": "可用",
+      "Dirty": "脏工作区",
+      "Credential": "凭据",
+      "CurrentCommit": "当前提交",
+      "LastSync": "最近同步",
+      "WorkingDirectorySize": "工作区大小",
+      "Progress": "进度"
+    },
+    "Actions": {
+      "Refresh": "刷新",
+      "SyncAll": "全部同步",
+      "Sync": "同步",
+      "Select": "查看",
+      "DeleteLocal": "删除本地副本"
+    },
+    "States": {
+      "NotReady": "未就绪",
+      "Syncing": "同步中",
+      "Ready": "就绪",
+      "Failed": "失败",
+      "Yes": "是",
+      "No": "否",
+      "None": "(无)"
+    },
+    "Dialogs": {
+      "DeleteLocalRepository": {
+        "Title": "删除本地仓库",
+        "Message": "是否删除仓库 '{0}' 的本地工作副本？后续仍可通过同步重新克隆。",
+        "Confirm": "删除",
+        "Cancel": "取消"
+      }
+    },
+    "Messages": {
+      "LoadFailed": "加载 Git 面板失败: {0}",
+      "SyncAllSuccess": "全部仓库同步成功。",
+      "SyncAllInProgress": "正在同步全部仓库...",
+      "SyncRepositorySuccess": "仓库 '{0}' 同步成功。",
+      "SyncInProgress": "仓库 '{0}' 正在同步...",
+      "DeleteRepositorySuccess": "仓库 '{0}' 的本地工作副本已删除。",
+      "OperationFailed": "操作失败: {0}",
+      "NoRepositories": "未配置任何 Git 仓库。",
+      "NoCredentials": "未配置任何 Git 凭据。",
+      "NoResolvers": "未注册任何凭据解析器。",
+      "NoSelection": "请选择一个仓库查看详情。"
+    },
+    "ProgressStages": {
+      "Preparing": "准备中",
+      "Cloning": "正在克隆仓库",
+      "Fetching": "正在拉取远端变更",
+      "Checkout": "正在检出文件",
+      "Deleting": "正在删除本地仓库"
+    }
+  }
+}
