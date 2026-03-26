@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoLogProvider;
@@ -47,8 +48,8 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
             ? customLoggerCreator.Invoke(logBuilder)
             : CreateLogger(logBuilder);
 
-        builder.Logging.AddSerilog(Log.Logger, dispose: true);
-        //设置后，内置的微软日志系统的配置将失效
+        builder.Logging.ClearProviders();
+        builder.Services.AddSerilog(Log.Logger, dispose: true);
 
         GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
         LogProvider.Provider = new SerilogProvider(Log.Logger);
