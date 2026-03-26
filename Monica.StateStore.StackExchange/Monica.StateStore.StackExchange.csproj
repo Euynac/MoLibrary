@@ -13,7 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
-    <ProjectReference Include="..\Monica.RegisterCentre\Monica.RegisterCentre.csproj" />
+    <ProjectReference Include="..\Monica.ServiceDiscovery\Monica.ServiceDiscovery.csproj" />
   </ItemGroup>
 
 </Project>

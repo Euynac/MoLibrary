@@ -31,7 +31,7 @@
   <Project Path="Monica.Markdown/Monica.Markdown.csproj" />
   <Project Path="Monica.Office/Monica.Office.csproj" />
   <Project Path="Monica.Profiling/Monica.Profiling.csproj" />
-  <Project Path="Monica.RegisterCentre/Monica.RegisterCentre.csproj" />
+  <Project Path="Monica.ServiceDiscovery/Monica.ServiceDiscovery.csproj" />
   <Project Path="Monica.Repository/Monica.Repository.csproj" />
   <Project Path="Monica.SignalR/Monica.SignalR.csproj" />
   <Project Path="Monica.StateStore.StackExchange/Monica.StateStore.StackExchange.csproj" />
