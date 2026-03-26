@@ -15,7 +15,8 @@ public class PermissionBitChecker(PermissionBitCheckerManager manager) : IPermis
     {
         if (!manager.TryGetChecker<TEnum>(out var checker))
         {
-            throw new InvalidOperationException($"未加载{typeof(TEnum).FullName}二进制权限枚举检查器的支持，请检查代码是否加载");
+            throw new InvalidOperationException(
+                $"Binary permission bit checker support for {typeof(TEnum).FullName} has not been loaded. Verify the module registration.");
         }
         return checker;
     }
@@ -242,7 +243,7 @@ public class PermissionBitChecker<TEnum>(string claimTypes) : IPermissionBitChec
         var data = GetAttribute(permissionEnum);
         if (data == null)
             throw new InvalidOperationException(
-                $"{typeof(TEnum).Name}枚举的{permissionEnum}未设置{nameof(IPermissionBitData)}类特性，无法读取权限位信息");
+                $"Enum value {typeof(TEnum).Name}.{permissionEnum} is missing the {nameof(IPermissionBitData)} attribute, so permission bit metadata cannot be read.");
         return (permissionEnum, data);
     }
 
@@ -252,7 +253,7 @@ public class PermissionBitChecker<TEnum>(string claimTypes) : IPermissionBitChec
         var data = GetAttribute(key);
         if (data == null)
             throw new InvalidOperationException(
-                $"{typeof(TEnum).Name}枚举的{key}未设置{nameof(IPermissionBitData)}类特性，无法读取权限位信息");
+                $"Enum value {typeof(TEnum).Name}.{key} is missing the {nameof(IPermissionBitData)} attribute, so permission bit metadata cannot be read.");
         return data;
     }
 }

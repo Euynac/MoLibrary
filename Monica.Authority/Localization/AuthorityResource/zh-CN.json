@@ -1,0 +1,22 @@
+{
+  "Messages": {
+    "NotLoggedIn": "用户未登录",
+    "AccessTokenExpired": "用户访问令牌已过期",
+    "RefreshTokenExpired": "用户刷新令牌已过期",
+    "TokenException": "用户令牌异常",
+    "InvalidToken": "无效的令牌。",
+    "MissingPermission": "无“{0}”权限"
+  },
+  "Errors": {
+    "CurrentSystemUserNotConfigured": "未设置当前系统用户。",
+    "SystemUserEnumNotConfigured": "枚举类型“{1}”的值“{0}”未配置为系统用户。"
+  },
+  "AuthorizationExceptionTitles": {
+    "Unknown": "未知异常",
+    "PermissionDenied": "权限不足",
+    "NotLogin": "用户未登录",
+    "AccessTokenExpired": "访问令牌已过期",
+    "RefreshTokenExpired": "刷新令牌已过期",
+    "TokenException": "用户令牌异常"
+  }
+}

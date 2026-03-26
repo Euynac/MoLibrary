@@ -3,16 +3,23 @@ using Microsoft.Extensions.Options;
 using Monica.Authority.Authentication.Abstractions;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Authority.Identity.Models;
+using Monica.Authority.Localization;
 
 namespace Monica.Authority.Identity.Services;
 
-internal class SystemUserManager(IAccessTokenIssuer manager, IOptions<SystemUserOptions> options) : ISystemUserManager
+internal class SystemUserManager(
+    IAccessTokenIssuer manager,
+    IOptions<SystemUserOptions> options,
+    AuthorityMessageLocalizer authorityLocalizer) : ISystemUserManager
 {
     private readonly SystemUserOptions _options = options.Value;
 
     public SystemUserOptions.SystemUserInfo GetCurSystemUserInfo()
     {
-        if (_options.CurrentSystemUserEnum == null) throw new InvalidOperationException("未设置当前系统用户！");
+        if (_options.CurrentSystemUserEnum == null)
+        {
+            throw new InvalidOperationException(authorityLocalizer.GetCurrentSystemUserNotConfiguredMessage());
+        }
 
         return GetSystemUserInfoBase(_options.CurrentSystemUserEnum);
     }
@@ -23,7 +30,7 @@ internal class SystemUserManager(IAccessTokenIssuer manager, IOptions<SystemUser
             return systemUserInfo;
         }
 
-        throw new InvalidOperationException($"未设置当前枚举{userEnum.GetType().FullName}为系统用户枚举！");
+        throw new InvalidOperationException(authorityLocalizer.GetSystemUserEnumNotConfiguredMessage(userEnum));
     }
 
 
@@ -62,7 +69,11 @@ internal class SystemUserManager(IAccessTokenIssuer manager, IOptions<SystemUser
     }
     public List<Claim> GetCurSystemUserClaims()
     {
-        if (_options.CurrentSystemUserEnum == null) throw new InvalidOperationException("未设置当前系统用户！");
+        if (_options.CurrentSystemUserEnum == null)
+        {
+            throw new InvalidOperationException(authorityLocalizer.GetCurrentSystemUserNotConfiguredMessage());
+        }
+
         return GetSystemUserClaimsBase(_options.CurrentSystemUserEnum);
     }
     private List<Claim> GetSystemUserClaimsBase(object userEnum)

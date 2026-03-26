@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Monica.Authority.Authorization.Abstractions;
+using Monica.Authority.Localization;
 
 namespace Monica.Authority.Authorization.Services.Support;
 
-public class PolicyEnumPermissionRequirementHandler(IPermissionChecker permissionChecker)
+public class PolicyEnumPermissionRequirementHandler(
+    IPermissionChecker permissionChecker,
+    AuthorityMessageLocalizer authorityLocalizer)
     : AuthorizationHandler<PolicyEnumPermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(
@@ -16,7 +19,9 @@ public class PolicyEnumPermissionRequirementHandler(IPermissionChecker permissio
         }
         else
         {
-            context.Fail(new AuthorizationFailureReason(this, $"无{requirement.PermissionName}权限"));
+            context.Fail(new AuthorizationFailureReason(
+                this,
+                authorityLocalizer.GetMissingPermissionMessage(requirement.PermissionName)));
         }
     }
 }

@@ -10,6 +10,7 @@ public class PermissionBitCheckerManager
 {
     private static readonly Dictionary<Type, object> _dict = [];
     public static IPermissionBitChecker Singleton { get; internal set; } = null!;
+
     public static void AddChecker<TEnum>(IPermissionBitChecker<TEnum> checker) where TEnum : struct, Enum
     {
         _dict.Add(typeof(TEnum), checker);

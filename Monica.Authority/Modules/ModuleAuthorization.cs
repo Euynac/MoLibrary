@@ -7,6 +7,7 @@ using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
 using Monica.Authority.Authorization.Services;
 using Monica.Authority.Authorization.Services.Support;
+using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -37,6 +38,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddSingleton<AuthorityMessageLocalizer>();
         services.AddAuthorization();
         //services.AddAuthorizationCore();
         services.AddSingleton<IAuthorizationHandler, PolicyEnumPermissionRequirementHandler>();
@@ -57,6 +59,9 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
 
     public override void ClaimDependencies()
     {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<AuthorityResource>();
+
         if (!Option.DisableExceptionHandling)
         {
             DependsOnModule<ModuleExceptionHandlingGuide>().Register()

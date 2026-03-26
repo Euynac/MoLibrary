@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Authority.Authentication;
@@ -12,6 +13,7 @@ using Monica.Authority.Authentication.Services;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Authority.Identity.Models;
 using Monica.Authority.Identity.Services;
+using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -37,9 +39,16 @@ public static class ModuleAuthenticationBuilderExtensions
 [ModuleKey(EMoModuleKey.Authentication)]
 public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<AuthorityResource>();
+    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddSingleton<AuthorityMessageLocalizer>();
+
         if (option.IsDebugging)
         {
             //https://aka.ms/IdentityModel/PII
@@ -123,10 +132,10 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
                     tokenInfo
                 });
             })
-            .WithName("JWT解码")
+            .WithName("DecodeJwtToken")
             .WithTags(tagName)
-            .WithSummary("JWT解码")
-            .WithDescription("JWT解码");
+            .WithSummary("Decode a JWT token")
+            .WithDescription("Decode a JWT token and return its claims and token metadata.");
         });
     }
 
