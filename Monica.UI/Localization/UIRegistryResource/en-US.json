@@ -40,8 +40,8 @@
     "ProfilingDashboard": {
       "Title": "Memory Profiling"
     },
-    "RegisterCentre": {
-      "Title": "Register Centre"
+    "ServiceDiscovery": {
+      "Title": "Service Discovery"
     },
     "TimekeeperDebug": {
       "Title": "Timekeeper Debug"

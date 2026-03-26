@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Monica.Core.JsonSerialization.Converters;
 
-namespace Monica.RegisterCentre.Models;
+namespace Monica.ServiceDiscovery.Models;
 
 /// <summary>
 /// 实例注册状态

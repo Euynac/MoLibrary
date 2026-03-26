@@ -45,7 +45,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
-        services.TryAddSingleton<IMoProjectCatalog, RegisterCentreProjectCatalog>();//TODO 抽离RegisterCentre依赖，设置项目结构最佳实践（单体、微服务）
+        services.TryAddSingleton<IMoProjectCatalog, ServiceDiscoveryProjectCatalog>();//TODO 抽离 ServiceDiscovery 依赖，设置项目结构最佳实践（单体、微服务）
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})

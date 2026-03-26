@@ -1,0 +1,232 @@
+@using Microsoft.Extensions.Options
+@using Monica.Modules
+@using Monica.ServiceDiscovery.Abstractions
+@using Monica.ServiceDiscovery.Localization
+@using Monica.ServiceDiscovery.Models
+@using Monica.ServiceDiscovery.UIServiceDiscovery.Dialogs
+@using Monica.ServiceDiscovery.UIServiceDiscovery.Support
+@using Monica.Tool.Extensions
+@using Monica.UI.Components.ContextMenu
+@inject IOptionsSnapshot<ModuleServiceDiscoveryOption> ServiceDiscoveryOptions
+@inject IOptionsSnapshot<ModuleServiceDiscoveryUIOption> ServiceDiscoveryUIOptions
+@inject IDialogService DialogService
+@inject IStringLocalizer<ServiceDiscoveryResource> L
+
+<div>
+    <MudDataGrid T="RegisteredServiceStatus" Items="@Services" Hover="true" Dense="true" Loading="@IsLoading"
+                 RowContextMenuClick="OnRowContextMenuClick">
+        <Columns>
+            <PropertyColumn Property="x => x.AppId" Title="@L["ServiceList:Columns:AppId"]" />
+            <PropertyColumn Property="x => x.AppName" Title="@L["ServiceList:Columns:ServiceName"]" />
+            <PropertyColumn Property="x => x.DomainName" Title="@L["ServiceList:Columns:Domain"]" />
+            <PropertyColumn Property="x => x.ProjectName" Title="@L["ServiceList:Columns:ProjectName"]" />
+            <TemplateColumn Title="@L["ServiceList:Columns:InstanceCount"]">
+                <CellTemplate>
+                    <MudText>@($"{context.Item.RunningInstanceCount}/{context.Item.TotalInstanceCount}")</MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="@L["ServiceList:Columns:OverallStatus"]">
+                <CellTemplate>
+                    <MudChip T="string" Color="@context.Item.OverallStatus.GetColor()" Size="Size.Small" Icon="@context.Item.OverallStatus.GetIcon()">
+                        @context.Item.OverallStatus.GetText(L)
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="@L["ServiceList:Columns:AssemblyVersion"]">
+                <CellTemplate>
+                    @{
+                        var runningInstance = context.Item.GetValidInstanceInfo();
+                    }
+                    <MudText Typo="Typo.body2">
+                        @(runningInstance?.AssemblyVersion ?? L["Shared:Values:NotAvailable"].Value)
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="@L["ServiceList:Columns:BuildTime"]">
+                <CellTemplate>
+                    @{
+                        var runningInstance = context.Item.GetValidInstanceInfo();
+                        var value = runningInstance?.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value;
+                    }
+                    <MudTooltip Text="@value">
+                        <MudText Typo="Typo.body2">
+                            @(runningInstance?.BuildTime.FromUtcToLocal().ToString("MM-dd HH:mm") ?? L["Shared:Values:NotAvailable"].Value)
+                        </MudText>
+                    </MudTooltip>
+                </CellTemplate>
+            </TemplateColumn>
+            @foreach (var metadataKey in GetDisplayMetadataKeys())
+            {
+                <TemplateColumn Title="@metadataKey">
+                    <CellTemplate>
+                        @{
+                            var runningInstance = context.Item.GetValidInstanceInfo();
+                            var metadataValue = runningInstance?.Metadata.GetValueOrDefault(metadataKey) ?? L["Shared:Values:NotAvailable"].Value;
+                        }
+                        <MetadataValueDisplay Value="@metadataValue" IsCompactMode="true" />
+                    </CellTemplate>
+                </TemplateColumn>
+            }
+            <TemplateColumn Title="@L["ServiceList:Columns:LastHeartbeat"]">
+                <CellTemplate>
+                    @{
+                        var runningInstance = context.Item.GetValidInstanceInfo();
+                        var value = runningInstance?.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value;
+                    }
+                    <MudTooltip Text="@value">
+                        <MudText Typo="Typo.body2">
+                            @(runningInstance?.LastHeartbeatTime.FromUtcToLocal().ToString("MM-dd HH:mm:ss") ?? L["Shared:Values:NotAvailable"].Value)
+                        </MudText>
+                    </MudTooltip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="@L["ServiceList:Columns:InstanceStatus"]">
+                <CellTemplate>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        @foreach (var instance in context.Item.Instances.Values.Take(3))
+                        {
+                            var leaderBadge = instance.IsLeader ? $" · {L["Shared:LeaderStatuses:Leader"]}" : string.Empty;
+                            var tooltipText = $"{instance.InstanceId}: {instance.Status.GetText(L)}{leaderBadge}";
+
+                            <MudStack Row="false" Spacing="0" AlignItems="AlignItems.Center" Style="position: relative;">
+                                <MudTooltip Text="@tooltipText">
+                                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="@instance.Status.GetColor()" Size="Size.Small" />
+                                </MudTooltip>
+                                @if (instance.IsLeader)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium"
+                                             Color="Color.Warning"
+                                             Size="Size.Small"
+                                             Style="position: absolute; top: -4px; right: -4px; font-size: 0.75rem;" />
+                                }
+                            </MudStack>
+                        }
+                        @if (context.Item.Instances.Count > 3)
+                        {
+                            <MudText Typo="Typo.caption">+@(context.Item.Instances.Count - 3)</MudText>
+                        }
+                    </MudStack>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </MudDataGrid>
+
+    <MoContextMenu TItem="RegisteredServiceStatus"
+                   Items="@_contextMenuItems"
+                   Visible="@_isContextMenuVisible"
+                   InitialX="@_contextMenuX"
+                   InitialY="@_contextMenuY"
+                   ContextItem="@_contextMenuItem"
+                   OnItemClick="@OnContextMenuItemClick"
+                   OnClose="@CloseContextMenu" />
+</div>
+
+@code {
+    [Parameter] public List<RegisteredServiceStatus> Services { get; set; } = [];
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
+
+    private bool _isContextMenuVisible = false;
+    private double _contextMenuX = 0;
+    private double _contextMenuY = 0;
+    private RegisteredServiceStatus? _contextMenuItem;
+    private List<ContextMenuItem<RegisteredServiceStatus>> _contextMenuItems = [];
+
+    private Task OnRowContextMenuClick(DataGridRowClickEventArgs<RegisteredServiceStatus> args)
+    {
+        _contextMenuItems = GetContextMenuItems(args.Item);
+        _contextMenuItem = args.Item;
+        _contextMenuX = args.MouseEventArgs.ClientX;
+        _contextMenuY = args.MouseEventArgs.ClientY;
+        _isContextMenuVisible = true;
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnContextMenuItemClick(ContextMenuItem<RegisteredServiceStatus> item)
+        => Task.CompletedTask;
+
+    private Task CloseContextMenu()
+    {
+        _isContextMenuVisible = false;
+        _contextMenuItem = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private List<ContextMenuItem<RegisteredServiceStatus>> GetContextMenuItems(RegisteredServiceStatus service)
+    {
+        return ContextMenuBuilder<RegisteredServiceStatus>.Create()
+            .AddItem(L["ServiceList:ContextMenu:ViewDetails"].Value, Icons.Material.Filled.Info, async item =>
+            {
+                if (item != null)
+                    await ShowServiceDetailAsync(item);
+            }, "Enter")
+            .AddSubMenu(L["ServiceList:ContextMenu:Management"].Value, Icons.Material.Filled.Settings, subMenu =>
+            {
+                subMenu.AddItem(L["ServiceList:ContextMenu:RestartService"].Value, Icons.Material.Filled.Refresh)
+                       .AddItem(L["ServiceList:ContextMenu:StopService"].Value, Icons.Material.Filled.Stop)
+                       .AddDivider()
+                       .AddItem(L["ServiceList:ContextMenu:ViewLogs"].Value, Icons.Material.Filled.Article);
+            })
+            .AddItem(L["ServiceList:ContextMenu:CopyServiceId"].Value, Icons.Material.Filled.ContentCopy, async item =>
+            {
+                if (item != null)
+                {
+                    await Task.CompletedTask;
+                }
+            }, "Ctrl+C")
+            .AddDivider()
+            .AddItem(L["ServiceList:ContextMenu:RefreshList"].Value, Icons.Material.Filled.Refresh, async item =>
+            {
+                await OnRefresh.InvokeAsync();
+            }, "F5")
+            .AddSubMenu(L["ServiceList:ContextMenu:Export"].Value, Icons.Material.Filled.Download, exportMenu =>
+            {
+                exportMenu.AddItem(L["ServiceList:ContextMenu:ExportJson"].Value, Icons.Material.Filled.Code)
+                         .AddItem(L["ServiceList:ContextMenu:ExportCsv"].Value, Icons.Material.Filled.TableChart)
+                         .AddItem(L["ServiceList:ContextMenu:ExportExcel"].Value, Icons.Material.Filled.GridOn);
+            })
+            .Build();
+    }
+
+    private async Task ShowServiceDetailAsync(RegisteredServiceStatus service)
+    {
+        var parameters = new DialogParameters<ServiceDiscoveryServiceDetailDialog>
+        {
+            { x => x.Service, service }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ServiceDiscoveryServiceDetailDialog>(L["ServiceList:Dialogs:ServiceDetailTitle"].Value, parameters, options);
+    }
+
+    private List<string> GetDisplayMetadataKeys()
+    {
+        var configuredKeys = new List<string>(ServiceDiscoveryUIOptions.Value.DisplayMetadataKeys);
+        if (!ServiceDiscoveryUIOptions.Value.DisableListeningAddressDisplay)
+        {
+            configuredKeys.Add(IServiceDiscoveryClientInfo.LISTENING_ADDRESS_METADATA_KEY);
+        }
+
+        if (!configuredKeys.Any())
+            return [];
+
+        var hasMetadata = Services.Any(service =>
+        {
+            var runningInstance = service.GetValidInstanceInfo();
+            return runningInstance?.Metadata != null &&
+                   configuredKeys.Any(key => runningInstance.Metadata.ContainsKey(key));
+        });
+
+        return hasMetadata ? configuredKeys : [];
+    }
+}

@@ -40,8 +40,8 @@
     "ProfilingDashboard": {
       "Title": "内存分析"
     },
-    "RegisterCentre": {
-      "Title": "注册中心"
+    "ServiceDiscovery": {
+      "Title": "服务发现"
     },
     "TimekeeperDebug": {
       "Title": "性能监控"

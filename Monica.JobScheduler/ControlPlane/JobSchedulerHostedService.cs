@@ -10,15 +10,15 @@ using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.WorkerPlane;
-using Monica.RegisterCentre.Core;
-using Monica.RegisterCentre.Events;
-using Monica.RegisterCentre.Interfaces;
+using Monica.ServiceDiscovery.Abstractions;
+using Monica.ServiceDiscovery.Events;
+using Monica.ServiceDiscovery.Services.Support;
 
 namespace Monica.JobScheduler.ControlPlane;
 
 /// <summary>
 /// Central orchestrator for job scheduling and execution requests.
-/// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
+/// Extends CoordinatedLeaderService for consistent initialization with service registration coordination and leader-only execution.
 /// Coordinates RecurringJobScheduler and TriggeredJobScheduler.
 /// Supports dynamic leader status changes - stops schedulers on leader loss and re-initializes on leader gain.
 /// </summary>
@@ -33,7 +33,7 @@ public class JobSchedulerHostedService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleRegisterCentreOption> registerCentreOptions) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 

@@ -75,7 +75,7 @@ Monica 提供 30+ 个按类别组织的模块。标有 ⭐ 的模块是常用的
 - **Dapr** ⭐ - Dapr 集成，用于分布式应用
 
 ### 分布式系统
-- **RegisterCentre** - 服务注册和发现
+- **ServiceDiscovery** - 服务注册和发现
 - **Locker** - 分布式锁机制
 - **Resilience** - 弹性模式（重试、熔断器等）
 

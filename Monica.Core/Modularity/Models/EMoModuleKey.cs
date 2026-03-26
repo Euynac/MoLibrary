@@ -16,7 +16,7 @@ public enum EMoModuleKey
     Configuration,
     Authentication,
     ConfigurationDashboard,
-    RegisterCentre,
+    ServiceDiscovery,
     /// <summary>
     /// Service invocation module.
     /// </summary>
@@ -90,7 +90,7 @@ public enum EMoModuleKey
     DataChannelUI,
     ConfigurationUI,
     MapperUI,
-    RegisterCentreUI,
+    ServiceDiscoveryUI,
     FrameworkMonitorUI,
     /// <summary>
     /// Text diff highlight UI module.

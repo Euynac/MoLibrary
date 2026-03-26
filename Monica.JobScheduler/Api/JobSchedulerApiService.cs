@@ -30,7 +30,7 @@ public class JobSchedulerApiService(
     JobDispatcher jobDispatcher,
     JobHistoryCleanupExecutor cleanupExecutor,
     IOptions<ModuleJobSchedulerOption> options,
-    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     ILogger<JobSchedulerApiService> logger)
 {
@@ -70,15 +70,15 @@ public class JobSchedulerApiService(
                 return Res.Fail($"Job {jobKey} not found");
             }
 
-            var centreOption = registerCentreOptions.Value;
+            var serviceDiscoveryOption = serviceDiscoveryOptions.Value;
 
-            // On Worker nodes, delegate to Centre via event bus
-            if (!centreOption.IsCentreServer && !centreOption.IsStandaloneMode)
+            // On worker nodes, delegate to the registry via the event bus.
+            if (!serviceDiscoveryOption.IsRegistryServer && !serviceDiscoveryOption.IsStandaloneMode)
             {
-                return await CreateJobInstanceViaCentreAsync(definition, jobArgs, cancellationToken);
+                return await CreateJobInstanceViaRegistryAsync(definition, jobArgs, cancellationToken);
             }
 
-            // Centre/Standalone: execute locally (existing flow)
+            // Registry/standalone: execute locally.
             var jobArgsJson = jobArgs != null
                 ? JsonSerializer.Serialize(jobArgs, options.Value.JobArgsSerializerOptions)
                 : null;
@@ -88,7 +88,7 @@ public class JobSchedulerApiService(
                 jobArgs,
                 JobState.Enqueued,
                 cancellationToken,
-                initDescription: "Centre/Standalone API manual trigger");
+                initDescription: "Registry/standalone API manual trigger");
 
             await jobDispatcher.PublishJobExecutionEventAsync(
                 instance,
@@ -110,7 +110,7 @@ public class JobSchedulerApiService(
         }
     }
 
-    private async Task<Res<string>> CreateJobInstanceViaCentreAsync(
+    private async Task<Res<string>> CreateJobInstanceViaRegistryAsync(
         JobDefinition definition,
         object? jobArgs,
         CancellationToken cancellationToken)
@@ -125,7 +125,7 @@ public class JobSchedulerApiService(
             JobState.Enqueued,
             cancellationToken,
             instanceId,
-            initDescription: "Worker API manual trigger delegated to Centre");
+            initDescription: "Worker API manual trigger delegated to the registry");
 
         var requestEvent = new ManualJobExecutionRequestEvent
         {
@@ -144,7 +144,7 @@ public class JobSchedulerApiService(
                 cancellationToken);
 
             logger.LogInformation(
-                "Delegated manual job execution to Centre: {JobKey}, InstanceId: {InstanceId}",
+                "Delegated manual job execution to the registry: {JobKey}, InstanceId: {InstanceId}",
                 definition.JobKey, instance.InstanceId);
 
             return Res.Ok(instance.InstanceId);
@@ -153,7 +153,7 @@ public class JobSchedulerApiService(
         {
             logger.LogError(
                 ex,
-                "Failed to publish manual execution request to Centre for {JobKey}, InstanceId: {InstanceId}",
+                "Failed to publish manual execution request to the registry for {JobKey}, InstanceId: {InstanceId}",
                 definition.JobKey,
                 instance.InstanceId);
 

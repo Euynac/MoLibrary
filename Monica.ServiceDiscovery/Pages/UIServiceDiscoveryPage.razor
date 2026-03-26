@@ -1,0 +1,257 @@
+@namespace Monica.ServiceDiscovery.Pages
+@attribute [Route(SERVICE_DISCOVERY_DEBUG_URL)]
+@using Monica.ServiceDiscovery.UIServiceDiscovery.Components
+@using Monica.ServiceDiscovery.Facades
+@using Monica.ServiceDiscovery.Localization
+@using Monica.ServiceDiscovery.Models
+@using Monica.ServiceDiscovery.UIServiceDiscovery.Dialogs
+@using Monica.ServiceDiscovery.UIServiceDiscovery.State
+@using Monica.Tool.MoResponse
+@using CurrentInstanceInfo = Monica.ServiceDiscovery.UIServiceDiscovery.Components.CurrentInstanceInfo
+@inject ServiceDiscoveryPageState PageState
+@inject ServiceDiscoveryFacade ServiceDiscoveryFacade
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IStringLocalizer<ServiceDiscoveryResource> L
+@implements IDisposable
+
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
+
+<div class="service-discovery-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+        <MudText Typo="Typo.h4" Class="mb-4">@L["Page:HeaderTitle"]</MudText>
+
+        <MudTabs @bind-ActivePanelIndex="PageState.ActiveTabIndex"
+                 Elevation="4"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 Class="mb-6 service-discovery-tabs">
+            <MudTabPanel Text="@L["Page:Tabs:ServiceList"]" Icon="@Icons.Material.Filled.List">
+                <div class="tab-content-panel">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudPaper Class="pa-4">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudText Typo="Typo.h6">@L["Page:ServiceList:Title"]</MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudSwitch T="bool" @bind-Value="PageState.AutoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="@L["Shared:Labels:AutoRefresh"]" />
+                                            <MudNumericField T="int" @bind-Value="PageState.RefreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="@L["Shared:Labels:RefreshIntervalSeconds"]" Min="1" Max="60"
+                                                             Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"
+                                                             Disabled="!PageState.AutoRefreshEnabled" Immediate="true" />
+                                        </MudStack>
+                                    </MudStack>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => RefreshServicesAsync())" Disabled="@PageState.IsLoading">
+                                        <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                                        @L["Shared:Actions:Refresh"]
+                                    </MudButton>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <ServiceFilterPanel
+                                AllServices="@PageState.Services"
+                                FilterText="@PageState.FilterText"
+                                FilterTextChanged="@OnFilterTextChanged"
+                                SelectedStatuses="@PageState.SelectedStatuses"
+                                SelectedStatusesChanged="@OnSelectedStatusesChanged"
+                                SelectedDomains="@PageState.SelectedDomains"
+                                SelectedDomainsChanged="@OnSelectedDomainsChanged"
+                                ShowOnlyWithInstances="@PageState.ShowOnlyWithInstances"
+                                ShowOnlyWithInstancesChanged="@OnShowOnlyWithInstancesChanged"
+                                OnFiltersChanged="@ApplyFilters" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <ServiceDiscoveryServiceList Services="PageState.FilteredServices" OnRefresh="@(() => RefreshServicesAsync())" IsLoading="PageState.IsLoading" />
+
+                            @if (!PageState.IsLoading && !PageState.Services.Any())
+                            {
+                                <MudPaper Class="pa-4 mt-2">
+                                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
+                                        @L["Page:States:NoServices"]
+                                    </MudText>
+                                </MudPaper>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Page:Tabs:ServiceGraph"]" Icon="@Icons.Material.Filled.AccountTree">
+                <div class="tab-content-panel">
+                    <ServiceVisualization OnServiceClick="OnServiceClickFromVisualization" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Page:Tabs:DomainDependencyGraph"]" Icon="@Icons.Material.Filled.Hub">
+                <div class="tab-content-panel">
+                    <DomainDependencyVisualization OnDomainClick="OnDomainClickFromVisualization" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Page:Tabs:DomainManagement"]" Icon="@Icons.Material.Filled.Domain">
+                <div class="tab-content-panel">
+                    @if (PageState.SelectedDomain == null)
+                    {
+                        <DomainList OnDomainSelected="OnDomainSelected" />
+                    }
+                    else
+                    {
+                        <DomainDetail DomainName="@PageState.SelectedDomain.Name" OnBackClick="OnBackToDomainList" OnServiceDetailClick="OnServiceDetailFromDomain" />
+                    }
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["Page:Tabs:CurrentInstance"]" Icon="@Icons.Material.Filled.Computer">
+                <div class="tab-content-panel">
+                    <CurrentInstanceInfo />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+</div>
+
+@code {
+    public const string SERVICE_DISCOVERY_DEBUG_URL = "/service-discovery-manage";
+    private const int DomainManagementTabIndex = 3;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        PageState.Initialize(
+            L["Shared:Values:Unknown"].Value,
+            () => InvokeAsync(() => RefreshServicesAsync(false, false)));
+
+        await RefreshServicesAsync(showNotification: false);
+    }
+
+    private void OnAutoRefreshToggled()
+    {
+        PageState.UpdateAutoRefresh();
+    }
+
+    private void OnRefreshIntervalChanged()
+    {
+        PageState.UpdateAutoRefresh();
+    }
+
+    private async Task RefreshServicesAsync(bool showNotification = true, bool showLoading = true)
+    {
+        var result = await PageState.RefreshServicesAsync(showLoading);
+        if (result.IsFailed(out var error, out _))
+        {
+            if (showNotification)
+            {
+                Snackbar.Add(L["Page:Messages:LoadServicesFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
+            }
+        }
+        else if (showNotification)
+        {
+            Snackbar.Add(L["Page:Messages:ServiceListRefreshed"].Value, Severity.Success);
+        }
+
+        StateHasChanged();
+    }
+
+    private Task OnFilterTextChanged(string text)
+    {
+        PageState.SetFilterText(text);
+        return Task.CompletedTask;
+    }
+
+    private Task OnSelectedStatusesChanged(IReadOnlyCollection<ServiceStatus> statuses)
+    {
+        PageState.SetSelectedStatuses(statuses);
+        return Task.CompletedTask;
+    }
+
+    private Task OnSelectedDomainsChanged(IReadOnlyCollection<string> domains)
+    {
+        PageState.SetSelectedDomains(domains);
+        return Task.CompletedTask;
+    }
+
+    private Task OnShowOnlyWithInstancesChanged(bool value)
+    {
+        PageState.SetShowOnlyWithInstances(value);
+        return Task.CompletedTask;
+    }
+
+    private Task OnServiceClickFromVisualization(RegisteredServiceStatus service)
+        => OpenServiceDetailAsync(service);
+
+    private Task OnServiceDetailFromDomain(RegisteredServiceStatus service)
+        => OpenServiceDetailAsync(service);
+
+    private async Task OpenServiceDetailAsync(RegisteredServiceStatus service)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Service"] = service
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<ServiceDiscoveryServiceDetailDialog>(L["Page:Dialogs:ServiceDetailTitle", service.AppName].Value, parameters, options);
+    }
+
+    private Task OnDomainSelected(DomainInfo domain)
+    {
+        PageState.SelectDomain(domain);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnBackToDomainList()
+    {
+        PageState.ClearSelectedDomain();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnDomainClickFromVisualization(string domainName)
+    {
+        if (!(await ServiceDiscoveryFacade.GetDomainsAsync()).IsFailed(out var error, out var domains))
+        {
+            var domain = domains?.FirstOrDefault(d => d.Name == domainName);
+            if (domain != null)
+            {
+                PageState.OpenDomainManagement(domain, DomainManagementTabIndex);
+                StateHasChanged();
+                Snackbar.Add(L["Page:Messages:SwitchedToDomainDetail", domain.DisplayName ?? domain.Name].Value, Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add(L["Page:Messages:DomainNotFound", domainName].Value, Severity.Warning);
+            }
+        }
+        else
+        {
+            Snackbar.Add(L["Page:Messages:LoadDomainsFailed", error.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Error);
+        }
+        await Task.CompletedTask;
+    }
+
+    private Task ApplyFilters()
+    {
+        PageState.ApplyFilters();
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        PageState.Dispose();
+    }
+}

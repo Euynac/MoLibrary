@@ -13,15 +13,15 @@ using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.WorkerPlane;
-using Monica.RegisterCentre.Core;
-using Monica.RegisterCentre.Events;
-using Monica.RegisterCentre.Interfaces;
+using Monica.ServiceDiscovery.Abstractions;
+using Monica.ServiceDiscovery.Events;
+using Monica.ServiceDiscovery.Services.Support;
 
 namespace Monica.JobScheduler.ControlPlane;
 
 /// <summary>
 /// Manages job concurrency limits by tracking running instances and listening to lifecycle events.
-/// Extends CoordinatedLeaderService for consistent initialization with RegisterCentre coordination and leader-only execution.
+/// Extends CoordinatedLeaderService for consistent initialization with service registration coordination and leader-only execution.
 /// Supports dynamic leader status changes - cleans up subscriptions on leader loss and re-initializes on leader gain.
 /// </summary>
 public class JobConcurrencyGuardHostedService(
@@ -34,9 +34,9 @@ public class JobConcurrencyGuardHostedService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IOptions<ModuleJobSchedulerOption> jobSchedulerOptions
-) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = jobSchedulerOptions.Value;
     private ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();
@@ -177,7 +177,7 @@ public class JobConcurrencyGuardHostedService(
         await SubscribeLifecycleEventsAsync();
 
         // Note: Worker offline detection is now handled by the zombie detector service through timeout-based detection
-        // The previous RegisterCentre server-based offline event mechanism has been removed in the StateStore refactoring
+        // The previous registry-server-based offline event mechanism was removed during the state store refactoring.
 
         RecordState(
             $"JobConcurrencyGuard initialized with {_statistics.Count} job definitions, {_statistics.Values.Sum(s => s.PendingReservations.Count)} pending reservations, and {_statistics.Values.Sum(s => s.RunningInstances.Count)} running instances",

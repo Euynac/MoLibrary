@@ -1,7 +1,7 @@
 using Monica.Configuration.Model;
 using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
-using Monica.RegisterCentre.ServiceInvocation.Interfaces;
+using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Configuration.UI.Implements;

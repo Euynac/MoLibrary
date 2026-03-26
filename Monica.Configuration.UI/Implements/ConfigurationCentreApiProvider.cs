@@ -3,7 +3,7 @@ using Monica.Configuration.Interfaces;
 using Monica.Configuration.Model;
 using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
-using Monica.RegisterCentre.Interfaces;
+using Monica.ServiceDiscovery.Abstractions;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Configuration.UI.Implements;
@@ -17,7 +17,7 @@ public class ConfigurationCentreApiProvider(
     IMoConfigurationStores stores,
     IConfigurationCentreServiceInvoker invoker,
     IRegistrationStateManager stateManager,
-    IRegisterCentreClientInfo clientInfo,
+    IServiceDiscoveryClientInfo clientInfo,
     ILogger<ConfigurationClientApiProvider> logger)
     : ConfigurationClientApiProvider(modifier, manager, stores, logger)
 {

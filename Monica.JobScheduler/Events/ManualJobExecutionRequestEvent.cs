@@ -1,8 +1,8 @@
 namespace Monica.JobScheduler.Events;
 
 /// <summary>
-/// Event published when a manual job execution is requested from a non-Centre node.
-/// The requester creates and persists the job instance first, then the Centre node dispatches it.
+/// Event published when a manual job execution is requested from a non-registry node.
+/// The requester creates and persists the job instance first, then the registry node dispatches it.
 /// </summary>
 public class ManualJobExecutionRequestEvent
 {

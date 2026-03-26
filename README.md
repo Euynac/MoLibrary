@@ -77,7 +77,7 @@ Monica provides 30+ modules organized by category. Modules marked with ⭐ are c
 - **Dapr** ⭐ - Dapr integration for distributed applications
 
 ### Distributed Systems
-- **RegisterCentre** - Service registration and discovery
+- **ServiceDiscovery** - Service registration and discovery
 - **Locker** - Distributed locking mechanisms
 - **Resilience** - Resilience patterns (retry, circuit breaker, etc.)
 

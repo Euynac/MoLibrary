@@ -45,7 +45,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // 依赖配置模块
         DependsOnModule<ModuleConfigurationGuide>().Register();
-        DependsOnModule<ModuleRegisterCentreGuide>().Register();
+        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
         DependsOnModule<ModuleServiceInvocationGuide>().Register();
         
         if (!option.DisableConfigurationPage)
@@ -77,15 +77,15 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
         services.TryAddSingleton<ConfigurationClientApiProvider>();
         
-        if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
+        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
         {
-            // Dashboard mode: register centre API provider
+            // Dashboard mode: register the configuration API provider.
             services.TryAddSingleton<ConfigurationCentreApiProvider>();
             services.TryAddSingleton<IMoConfigurationApi>(p =>
                 p.GetRequiredService<ConfigurationCentreApiProvider>());
 
             // Register service invoker based on standalone mode
-            if (GetOptions<ModuleRegisterCentreOption>().IsStandaloneMode)
+            if (GetOptions<ModuleServiceDiscoveryOption>().IsStandaloneMode)
             {
                 services.TryAddSingleton<IConfigurationCentreServiceInvoker,
                     ConfigurationCentreServiceInvokerStandaloneProvider>();
@@ -106,7 +106,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        // Dashboard centre mode endpoints
+        // Dashboard mode endpoints.
         UseEndpoints(app, endpoints =>
         {
             var tagName = option.GetApiGroupName();

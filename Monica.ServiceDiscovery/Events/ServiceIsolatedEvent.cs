@@ -1,4 +1,4 @@
-namespace Monica.RegisterCentre.Events;
+namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
 /// 服务孤立事件

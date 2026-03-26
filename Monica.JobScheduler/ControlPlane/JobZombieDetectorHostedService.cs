@@ -6,9 +6,9 @@ using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
-using Monica.RegisterCentre.Core;
-using Monica.RegisterCentre.Events;
-using Monica.RegisterCentre.Interfaces;
+using Monica.ServiceDiscovery.Abstractions;
+using Monica.ServiceDiscovery.Events;
+using Monica.ServiceDiscovery.Services.Support;
 
 namespace Monica.JobScheduler.ControlPlane;
 
@@ -29,9 +29,9 @@ public class JobZombieDetectorHostedService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceManager observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleRegisterCentreOption> registerCentreOptions,
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IRegistrationStateManager? registrationStateManager = null
-) : CoordinatedLeaderService(leaderService, registerCentreOptions, logger, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
@@ -353,7 +353,7 @@ public class JobZombieDetectorHostedService(
     }
 
     /// <summary>
-    /// Checks if a worker is online via RegisterCentre's registration state manager.
+    /// Checks whether a worker is online through the service discovery registration state manager.
     /// </summary>
     private async Task<bool> IsWorkerOnlineAsync(string workerId, CancellationToken cancellationToken)
     {
@@ -361,7 +361,7 @@ public class JobZombieDetectorHostedService(
         {
             if (registrationStateManager == null)
             {
-                return true; // Assume online if RegisterCentre unavailable
+                return true; // Assume online if service discovery is unavailable.
             }
 
             var instances = await registrationStateManager.GetAllInstancesAsync(cancellationToken);
@@ -371,7 +371,7 @@ public class JobZombieDetectorHostedService(
 
             if (!workerExists)
             {
-                // Worker not found in RegisterCentre - it's offline
+                // Worker not found in the service registry, so it is offline.
                 return false;
             }
 

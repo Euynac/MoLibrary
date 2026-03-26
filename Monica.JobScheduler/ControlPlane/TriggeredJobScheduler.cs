@@ -141,8 +141,8 @@ public class TriggeredJobScheduler(
     }
 
     /// <summary>
-    /// Handles ManualJobExecutionRequestEvent from Worker nodes.
-    /// Loads the pre-created job instance and dispatches it for execution on the Centre node.
+    /// Handles ManualJobExecutionRequestEvent from worker nodes.
+    /// Loads the pre-created job instance and dispatches it for execution on the registry node.
     /// </summary>
     private async Task OnManualJobExecutionRequestAsync(ManualJobExecutionRequestEvent evt)
     {
@@ -174,7 +174,7 @@ public class TriggeredJobScheduler(
             await jobDispatcher.PublishJobExecutionEventAsync(instance, definition, evt.JobArgsJson);
 
             logger.LogInformation(
-                "Centre processed manual execution request: {JobKey}, InstanceId: {InstanceId}",
+                "Registry processed manual execution request: {JobKey}, InstanceId: {InstanceId}",
                 evt.JobKey, instance.InstanceId);
         }
         catch (Exception ex)

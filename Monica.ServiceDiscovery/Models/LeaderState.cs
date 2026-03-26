@@ -1,4 +1,4 @@
-namespace Monica.RegisterCentre.Models;
+namespace Monica.ServiceDiscovery.Models;
 
 /// <summary>
 /// Leader 状态

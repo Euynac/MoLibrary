@@ -115,7 +115,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             .AddCheck<JobSchedulerHealthCheck>("JobScheduler", tags: ["ready", "scheduler"]);
 
         
-        if (GetOptions<ModuleRegisterCentreOption>().IsCentreServer)
+        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
         {
             services.AddHostedService<JobSchedulerHostedService>();
             services.AddHostedService(provider => provider.GetRequiredService<IJobConcurrencyGuard>() as JobConcurrencyGuardHostedService
@@ -300,7 +300,7 @@ public class ModuleJobSchedulerGuide
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: true);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
-        DependsOnModule<ModuleRegisterCentreGuide>().Register();
+        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
         return this;
     }
    
@@ -315,7 +315,7 @@ public class ModuleJobSchedulerGuide
             .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: false);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
-        DependsOnModule<ModuleRegisterCentreGuide>().Register().UseInMemoryStateStore();
+        DependsOnModule<ModuleServiceDiscoveryGuide>().Register().UseInMemoryStateStore();
         return this;
     }
 }

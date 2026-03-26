@@ -1,13 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <Import Project="..\common.xml"/>
 
   <PropertyGroup>
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <PackageDescription>Service registration and discovery for Monica framework, providing service registry capabilities for microservices architecture with health checking and load balancing.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
   </ItemGroup>
 </Project>

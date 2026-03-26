@@ -1,4 +1,4 @@
-namespace Monica.RegisterCentre.Events;
+namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
 /// Leader 丢失原因

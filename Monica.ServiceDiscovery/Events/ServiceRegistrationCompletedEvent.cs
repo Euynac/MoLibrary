@@ -1,7 +1,7 @@
-namespace Monica.RegisterCentre.Events;
+namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
-/// Event published when service registration to the register centre completes (successfully or after all retries)
+/// Event published when service registration to the registry completes, either successfully or after all retries.
 /// </summary>
 public class ServiceRegistrationCompletedEvent
 {

@@ -63,7 +63,7 @@ using Monica.Core;
 - **Monica.Logging** - Structured logging with Serilog
 - **Monica.Office** - Excel operations
 - **Monica.Profiling** - Performance profiling
-- **Monica.RegisterCentre** - Service discovery
+- **Monica.ServiceDiscovery** - Service discovery
 - **Monica.Resilience** - Resilience patterns
 - **Monica.Validation** - Validation infrastructure
 

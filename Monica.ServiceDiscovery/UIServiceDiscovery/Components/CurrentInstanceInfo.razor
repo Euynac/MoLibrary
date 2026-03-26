@@ -1,0 +1,176 @@
+@using Monica.ServiceDiscovery.UIServiceDiscovery.Support
+@using Monica.Tool.Extensions
+@implements IDisposable
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.h6">@L["CurrentInstance:HeaderTitle"]</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudSwitch T="bool" @bind-Value="_autoRefreshEnabled" @bind-Value:after="OnAutoRefreshToggled" Color="Color.Primary" Label="@L["Shared:Labels:AutoRefresh"]" />
+                    <MudNumericField T="int" @bind-Value="_refreshInterval" @bind-Value:after="OnRefreshIntervalChanged" Label="@L["Shared:Labels:RefreshIntervalSeconds"]" Min="1" Max="60"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 120px"
+                                   Disabled="!_autoRefreshEnabled" Immediate="true" />
+                </MudStack>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@RefreshAsync" Disabled="@_isLoading">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-1" />
+                    @L["Shared:Actions:Refresh"]
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudItem>
+
+    @if (_isLoading)
+    {
+        <MudItem xs="12">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        </MudItem>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning">@_errorMessage</MudAlert>
+        </MudItem>
+    }
+
+    @if (_currentInstance != null)
+    {
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-1" />
+                    @L["CurrentInstance:Sections:InstanceDetails"]
+                </MudText>
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:ServiceName"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.ServiceName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:AppName"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.AppName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:InstanceId"]</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_currentInstance.InstanceId</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:ProjectName"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.ProjectName</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:DomainName"]</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.DomainName ?? L["Shared:Values:NotSpecified"].Value)</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:BuildTime"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.BuildTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:AssemblyVersion"]</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.AssemblyVersion ?? L["Shared:Values:Unknown"].Value)</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:ReleaseVersion"]</MudText>
+                        <MudText Typo="Typo.body1">@(_currentInstance.ReleaseVersion ?? L["Shared:Values:Unknown"].Value)</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:RegistrationTime"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.RegistrationTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+                    <MudDivider />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:LastHeartbeat"]</MudText>
+                        <MudText Typo="Typo.body1">@_currentInstance.LastHeartbeatTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudStack>
+
+                    @if (_currentInstance.Metadata.Any())
+                    {
+                        <MudExpansionPanels Class="mt-3">
+                            <MudExpansionPanel Text="@L["CurrentInstance:Fields:Metadata"]">
+                                <MudStack Spacing="1">
+                                    @foreach (var kvp in _currentInstance.Metadata)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-family: monospace;">@kvp.Key</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-family: monospace;">@kvp.Value</MudText>
+                                        </MudStack>
+                                        <MudDivider />
+                                    }
+                                </MudStack>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.WorkspacePremium" Class="mr-1" />
+                    @L["CurrentInstance:Sections:LeaderStatus"]
+                </MudText>
+
+                @if (_snapshot?.IsLeaderElectionEnabled == true)
+                {
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:CurrentStatus"]</MudText>
+                            <MudChip T="string" Color="@_snapshot.CurrentLeaderStatus.GetColor()" Icon="@_snapshot.CurrentLeaderStatus.GetIcon()">
+                                @_snapshot.CurrentLeaderStatus.GetText(L)
+                            </MudChip>
+                        </MudStack>
+                        <MudDivider />
+
+                        @if (_snapshot.IsLeader && _snapshot.LeaderBecomeTime.HasValue)
+                        {
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:LeaderBecomeTime"]</MudText>
+                                <MudText Typo="Typo.body1">@_snapshot.LeaderBecomeTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudStack>
+                            <MudDivider />
+                        }
+
+                        @if (_snapshot.IsLeader && !string.IsNullOrEmpty(_snapshot.CurrentETag))
+                        {
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:CurrentETag"]</MudText>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@_snapshot.CurrentETag</MudText>
+                            </MudStack>
+                            <MudDivider />
+                        }
+
+                        @if (_clusterLeaderState != null)
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mt-2 mb-1">@L["CurrentInstance:Sections:ClusterLeaderInfo"]</MudText>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:LeaderInstanceId"]</MudText>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@_clusterLeaderState.InstanceId</MudText>
+                            </MudStack>
+                            <MudDivider />
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["CurrentInstance:Fields:LeaderBecomeTime"]</MudText>
+                                <MudText Typo="Typo.body1">@_clusterLeaderState.BecomeLeaderTime.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudStack>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">@L["CurrentInstance:States:LeaderElectionDisabled"]</MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>

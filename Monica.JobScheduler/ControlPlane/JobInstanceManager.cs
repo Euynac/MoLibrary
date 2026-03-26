@@ -8,7 +8,7 @@ using Monica.JobScheduler.Events;
 using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
-using Monica.RegisterCentre.Interfaces;
+using Monica.ServiceDiscovery.Abstractions;
 
 namespace Monica.JobScheduler.ControlPlane;
 
@@ -20,7 +20,7 @@ namespace Monica.JobScheduler.ControlPlane;
 public class JobInstanceManager(
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
-    IRegisterCentreClientInfo clientInfo,
+    IServiceDiscoveryClientInfo clientInfo,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobInstanceManager> logger)
 {

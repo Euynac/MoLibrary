@@ -7,7 +7,7 @@ using Monica.Core.JsonSerialization.Interfaces;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.RegisterCentre.ServiceInvocation.Interfaces;
+using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 using Monica.Tool.MoResponse;
 
 // ReSharper disable once CheckNamespace

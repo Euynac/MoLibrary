@@ -11,7 +11,7 @@ This project contains examples for using the various Monica modules. Each direct
 - `Core/` - Examples for using the Monica.Core module
 - `Authority/` - Examples for using the Monica.Authority module
 - `SignalR/` - Examples for using the Monica.SignalR module
-- `RegisterCentre/` - Examples for using the Monica.RegisterCentre module
+- `ServiceDiscovery/` - Examples for using the Monica.ServiceDiscovery module
 - `DomainDrivenDesign/` - Examples for using the Monica.DomainDrivenDesign module
 - `AutoModel/` - Examples for using the Monica.AutoModel module
 - `Framework/` - Examples for using the Monica.Framework module

@@ -111,7 +111,7 @@ public static class ResiliencePipelineNames
     public const string Default = "default";
 
     /// <summary>
-    /// RegisterCentre heartbeat pipeline name
+    /// Service discovery heartbeat pipeline name
     /// </summary>
-    public const string RegisterCentre = "register-centre";
+    public const string ServiceDiscovery = "service-discovery";
 }

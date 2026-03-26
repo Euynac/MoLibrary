@@ -8,7 +8,7 @@
 @using Monica.Modules
 @inject ConfigurationUIService ConfigurationUIService
 @inject ISnackbar Snackbar
-@inject IOptions<ModuleRegisterCentreOption> Options
+@inject IOptions<ModuleServiceDiscoveryOption> Options
 
 <PageTitle>@DashboardTitle</PageTitle>
 
@@ -99,8 +99,8 @@
     private int activeTabIndex = 0;
     private ConfigurationDebugView? debugViewComponent;
     private ConfigurationProviderView? providerViewComponent;
-    private string DashboardTitle => Options.Value.IsCentreServer ? "配置中心面板" : "配置客户端面板";
-    private string DashboardDescription => Options.Value.IsCentreServer
+    private string DashboardTitle => Options.Value.IsRegistryServer ? "配置中心面板" : "配置客户端面板";
+    private string DashboardDescription => Options.Value.IsRegistryServer
         ? "集中查看配置状态、变更历史、配置概览、调试视图和提供者信息。"
         : "查看客户端配置状态、变更历史、配置概览、调试视图和提供者信息。";
 

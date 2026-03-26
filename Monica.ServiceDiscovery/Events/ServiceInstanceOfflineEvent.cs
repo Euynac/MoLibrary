@@ -1,4 +1,4 @@
-namespace Monica.RegisterCentre.Events;
+namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
 /// Event published when a service instance goes offline (detected via heartbeat timeout or explicit deregistration)
