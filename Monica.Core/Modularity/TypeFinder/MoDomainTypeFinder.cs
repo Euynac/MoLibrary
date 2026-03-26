@@ -1,6 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 
 namespace Monica.Core.Modularity.TypeFinder;
 
@@ -13,7 +13,7 @@ namespace Monica.Core.Modularity.TypeFinder;
 /// <param name="options">The type finder options.</param>
 public class MoDomainTypeFinder(ModuleCoreOptionTypeFinder options) : IDomainTypeFinder
 {
-    public ILogger? Logger { get; set; } = LogProvider.For<MoDomainTypeFinder>(); 
+    public ILogger? Logger { get; set; } = LogManager.For<MoDomainTypeFinder>(); 
 
     #region Fields
 

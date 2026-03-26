@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 
 namespace Monica.SignalR.Interfaces;
 
 public abstract class MoHubServer<TIContract>(IMoSignalRConnectionManager connectionManager)
     : Hub<TIContract> where TIContract : class, IMoHubContract
 {
-    protected static ILogger Logger => LogProvider.For<MoHubServer<TIContract>>();
+    protected static ILogger Logger => LogManager.For<MoHubServer<TIContract>>();
     public override async Task OnConnectedAsync()
     {
         Logger.LogInformation("客户端连接: ConnectionId={ConnectionId}, User={User}, UserIdentifier={UserIdentifier}",

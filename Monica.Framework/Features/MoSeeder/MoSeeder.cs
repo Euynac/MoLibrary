@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Features.MoSeeder;
@@ -22,7 +22,7 @@ public abstract class MoSeeder : IMoSeeder
 
     protected MoSeeder()
     {
-        _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
     }
 
     public virtual async Task SeedAsync()

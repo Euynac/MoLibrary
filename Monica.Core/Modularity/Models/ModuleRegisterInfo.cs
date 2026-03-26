@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Tool.Extensions;
@@ -220,7 +220,7 @@ public class ModuleRegisterInfo(Type moduleType)
     public IEnumerable<ModuleRegisterRequest> DeduplicateRequests(
         IEnumerable<ModuleRegisterRequest> requests)
     {
-        var logger = LogProvider.For(typeof(ModuleRegisterInfo));
+        var logger = LogManager.For<ModuleRegisterInfo>();
         var seenKeys = new HashSet<string>();
 
         foreach (var request in requests.Reverse())

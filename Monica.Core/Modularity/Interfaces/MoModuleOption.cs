@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 
 namespace Monica.Core.Modularity.Interfaces;
 
@@ -9,7 +9,7 @@ public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : 
     /// <summary>
     /// Logger used during module registration and initialization.
     /// </summary>
-    public ILogger Logger { get; set; } = LogProvider.For<TModule>(Mo.Options.DefaultModuleLogLevel);
+    public ILogger Logger { get; set; } = LogManager.For<TModule>(Mo.Options.DefaultModuleLogLevel);
 
     /// <summary>
     /// Disables the module instead of throwing when registration fails.
@@ -42,7 +42,7 @@ public class MoModuleOption<TModule> : IMoModuleOption<TModule> where TModule : 
     /// <param name="logLevel">The minimum log level to set for this module.</param>
     public void SetModuleLogLevel(LogLevel logLevel)
     {
-        Logger = LogProvider.For<TModule>(logLevel);
+        Logger = LogManager.For<TModule>(logLevel);
     }
 
     /// <summary>

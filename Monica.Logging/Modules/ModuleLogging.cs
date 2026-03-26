@@ -5,14 +5,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Extensions;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Logging;
-using Monica.Logging.Middlewares;
-using Monica.Logging.ProviderSerilog;
-using Monica.Logging.ProviderSerilog.Enrichers;
+using Monica.Logging.Providers.Serilog;
+using Monica.Logging.Services;
 using Monica.Tool.General;
 using Serilog;
 using Serilog.Core;
@@ -38,59 +36,19 @@ public static class ModuleLoggingBuilderExtensions
 [ModuleKey(EMoModuleKey.Logging)]
 public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
-
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        var logBuilder = new LoggerConfiguration()
-            .ReadFrom.Configuration(builder.Configuration);
-
-        Log.Logger = option.CustomLoggerCreator is { } customLoggerCreator
-            ? customLoggerCreator.Invoke(logBuilder)
-            : CreateLogger(logBuilder);
+        Log.Logger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, option);
 
         builder.Logging.ClearProviders();
         builder.Services.AddSerilog(Log.Logger, dispose: true);
 
-        GlobalLog.Logger = new SerilogLoggerFactory(Log.Logger).CreateLogger("Global");
-        LogProvider.Provider = new SerilogProvider(Log.Logger);
-        MoModuleRegisterCentre.Logger = LogProvider.For(typeof(MoModuleRegisterCentre));
-        //LoggerFactory.Create(builder =>
-        //{
-        //    builder.AddFilter("Microsoft", LogLevel.Warning)
-        //        .AddFilter("System", LogLevel.Warning)
-        //        .AddFilter("MoConfiguration", LogLevel.Debug)
-        //        .AddConsole();
-        //}).CreateLogger("Test")
+        LogManager.UseFactory(new SerilogLoggerFactory(Log.Logger));
+        MoModuleRegisterCentre.Logger = LogManager.For(typeof(MoModuleRegisterCentre));
+
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
         Log.Logger.Information("Set logging level: {LoggingLevel}", level);
-    }
-
-    protected Logger CreateLogger(LoggerConfiguration configuration)
-    {
-        var path = option.LogFilePath ?? Path.Combine(option.LogFileDirectory ?? AppContext.BaseDirectory, "Logs", option.LogFileName);
-
-        if (!option.DisableEnrichThreadId)
-        {
-            configuration = configuration.Enrich.WithThreadId();
-        }
-
-        if (option.EnableEnrichThreadName)
-        {
-            configuration = configuration.Enrich.WithThreadName();
-        }
-
-        if (!option.DisableWriteToConsole)
-        {
-            configuration = configuration.WriteTo.Async(s => s.Console(outputTemplate: option.SerilogTemplate));
-        }
-
-        if (!option.DisableWriteToFile)
-        {
-            configuration = configuration.WriteTo.Async(s => s.File(path, outputTemplate: option.SerilogTemplate));
-        }
-
-        return configuration.CreateLogger();
     }
 }
 
@@ -100,52 +58,51 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
     {
         ConfigureServices(context =>
         {
-            context.Services.AddTransient<RequestLoggingMiddleware>();
-            context.Services.AddTransient<ResponseLoggingMiddleware>();
+            context.Services.AddTransient<HttpRequestLoggingMiddleware>();
+            context.Services.AddTransient<HttpResponseLoggingMiddleware>();
         });
         ConfigureApplicationBuilder(context =>
         {
             if (!disableRequest)
             {
-                context.ApplicationBuilder.UseMiddleware<RequestLoggingMiddleware>();
+                context.ApplicationBuilder.UseMiddleware<HttpRequestLoggingMiddleware>();
             }
 
             if (!disableResponse)
             {
-                context.ApplicationBuilder.UseMiddleware<ResponseLoggingMiddleware>();
+                context.ApplicationBuilder.UseMiddleware<HttpResponseLoggingMiddleware>();
             }
 
-            //builder.UseHttpLogging(); //asp.net 8后启用
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting); 
+        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
         return this;
     }
 }
 
 public class ModuleLoggingOption : MoModuleOption<ModuleLogging>
 {
-    
-
     /// <summary>
-    /// 若使用此配置，则构造Logger的默认配置均失效
+    /// Replaces the default Monica Serilog setup with a custom logger factory.
     /// </summary>
-    public Func<LoggerConfiguration, Logger>? CustomLoggerCreator  { get; set; }
+    public Func<LoggerConfiguration, Logger>? CustomLoggerFactory { get; set; }
 
     /// <summary>
-    /// <a href="https://github.com/serilog/serilog/wiki/Formatting-Output">Serilog模板文档</a>
+    /// <a href="https://github.com/serilog/serilog/wiki/Formatting-Output">Serilog output template documentation</a>
     /// </summary>
-    public string SerilogTemplate { get; set; } = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {ThreadName}TID{ThreadId}] {Message:lj}{Exception}{NewLine}";
+    public string OutputTemplate { get; set; } = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3} {ThreadName}TID{ThreadId}] {Message:lj}{Exception}{NewLine}";
 
-    public bool DisableWriteToConsole { get; set; }
-    public bool DisableWriteToFile { get; set; }
+    public bool EnableConsoleSink { get; set; } = true;
+    public bool EnableFileSink { get; set; } = true;
 
     /// <summary>
-    /// 设定Serilog的日志文件路径，包含文件名，设置后则LogFileDirectory和LogFileName设定失效。
+    /// Sets the explicit log file path including file name. When specified, <see cref="LogDirectory"/> and
+    /// <see cref="LogFileName"/> are ignored.
     /// </summary>
     public string? LogFilePath { get; set; }
-    
-    public string? LogFileDirectory { get; set; }
+
+    public string? LogDirectory { get; set; }
     public string LogFileName { get; set; } = $"{Assembly.GetEntryAssembly()!.GetName().Name}.log";
 
-    public bool EnableEnrichThreadName { get; set; }
-    public bool DisableEnrichThreadId { get; set; }
+    public bool EnableThreadNameEnricher { get; set; }
+    public bool EnableThreadIdEnricher { get; set; } = true;
+    public bool EnableTraceIdEnricher { get; set; }
 }

@@ -365,7 +365,7 @@ public sealed class LogTailService(
         }
 
         {
-            var directory = option.LogFileDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
+            var directory = option.LogDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
             var logDirectory = Path.GetFullPath(directory);
             return Path.Combine(logDirectory, option.LogFileName);
         }

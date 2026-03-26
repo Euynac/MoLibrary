@@ -183,7 +183,7 @@ public sealed class LogFileQueryService(
             return directory ?? AppContext.BaseDirectory;
         }
 
-        var fallbackDirectory = option.LogFileDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
+        var fallbackDirectory = option.LogDirectory ?? Path.Combine(AppContext.BaseDirectory, "Logs");
         return Path.GetFullPath(fallbackDirectory);
     }
 }

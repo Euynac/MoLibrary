@@ -2,8 +2,8 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
 using Monica.Core.JsonSerialization;
+using Monica.Core.Logging;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 using Monica.Tool.MoResponse;
@@ -12,7 +12,7 @@ namespace Monica.Framework.Extensions;
 
 public static class HttpApiExtensions
 {
-    private static readonly ILogger _logger = LogProvider.For(typeof(HttpApiExtensions));
+    private static readonly ILogger _logger = LogManager.For(typeof(HttpApiExtensions));
     /// <summary>
     /// 统一获取内部微服务调用API响应
     /// </summary>

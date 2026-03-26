@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Interfaces;
@@ -22,7 +22,7 @@ public static class MoModuleRegisterCentre
     /// </summary>
     public static List<ModuleRegisterError> ModuleRegisterErrors { get; } = [];
 
-    public static ILogger Logger { get; set; } = LogProvider.For(typeof(MoModuleRegisterCentre));
+    public static ILogger Logger { get; set; } = LogManager.For(typeof(MoModuleRegisterCentre));
 
     /// <summary>
     /// Module snapshots captured after successful registration.
