@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 namespace Monica.Authority.Identity.Abstractions;
 
 /// <summary>
-/// 密码加密接口
+/// Interface for password encryption
 /// </summary>
 public interface IPasswordCrypto
 {

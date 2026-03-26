@@ -7,7 +7,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
-/// 二进制权限枚举检查器，首个枚举以占位符表示，不算入权限
+/// Binary permission bit checker where the first enum member acts as a placeholder and is excluded from permissions
 /// </summary>
 public class PermissionBitChecker(PermissionBitCheckerManager manager) : IPermissionBitChecker
 {
@@ -111,7 +111,7 @@ public class PermissionBitChecker(PermissionBitCheckerManager manager) : IPermis
     }
 }
 /// <summary>
-/// 二进制权限枚举检查器，首个枚举以占位符表示，不算入权限
+/// Binary permission bit checker where the first enum member acts as a placeholder and is excluded from permissions
 /// </summary>
 /// <typeparam name="TEnum"></typeparam>
 /// <param name="claimTypes"></param>

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Monica.Authority.Authorization.Abstractions;
 
 /// <summary>
-/// 对于Policy-based认证进行扩展，作用于Authorize标签
+/// Extend policy-based authorization for use with the Authorize attribute
 /// </summary>
 public interface IAuthorityAuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {

@@ -5,11 +5,11 @@ namespace Monica.Authority.Identity.Abstractions;
 public interface ICurrentUserBase
 {
     /// <summary>
-    /// 是否认证成功
+    /// Indicates whether the user is authenticated
     /// </summary>
     bool IsAuthenticated { get; }
     /// <summary>
-    /// 当前用户Claims信息
+    /// Claims information for the current user
     /// </summary>
     ClaimsPrincipal ClaimsPrincipal { get; }
 

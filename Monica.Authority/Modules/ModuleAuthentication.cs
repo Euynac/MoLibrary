@@ -25,7 +25,7 @@ public static class ModuleAuthenticationBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Authentication 模块
+        /// Configure the Authentication module
         /// </summary>
         public static ModuleAuthenticationGuide AddAuthentication(Action<ModuleAuthenticationOption>? action = null)
         {
@@ -46,12 +46,12 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
             IdentityModelEventSource.ShowPII = true;
             IdentityModelEventSource.LogCompleteSecurityArtifact = true;
         }
-        //依赖于AsyncLocal技术，异步static单例，不同的请求线程会有不同的HttpContext
+        // Relies on AsyncLocal so the async static singleton keeps a separate HttpContext per request thread
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddSingleton<IJwtAuthManager, JwtAuthManager>();
         services.AddSingleton<IAccessTokenIssuer, JwtAuthManager>();
-        services.AddSingleton<ICurrentPrincipalAccessor, CurrentPrincipalAccessor>(); //为何用单例就行？
+        services.AddSingleton<ICurrentPrincipalAccessor, CurrentPrincipalAccessor>(); // Singleton is sufficient here
 
         services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
         services.AddAuthentication(x =>
@@ -93,8 +93,8 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
             };
         });
 
-        #region Controller处理
-        //还可以通过AddJwtBearer中的Options中的Event实现？
+        #region Controller handling
+        // Could also implement this through the Options.Event in AddJwtBearer?
         //services.AddControllers(o =>
         //{
         //    o.Filters.Add(new CustomAuthorizeFilter());
@@ -130,7 +130,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
         });
     }
 
-    //必须在CORS中间件之后，不然会使得CORS失效
+    // Must be registered after the CORS middleware; otherwise CORS stops working
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
         app.UseAuthentication();
@@ -166,7 +166,7 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
 
 public class ModuleAuthenticationOption : MoModuleOptionWithMinimalApi<ModuleAuthentication>
 {
-    //巨坑：Secret的长度必须大于128bit，否则需要补全到该长度。而且Secret必须一致，不可动态生成
+    // Dangerous pitfall: the secret must exceed 128 bits, otherwise pad it to that length, and keep the same secret instead of generating it dynamically
     public SymmetricSecurityKey SecurityKey => new(Encoding.ASCII.GetBytes(Secret.PadRight(512 / 8, '\0')));
     public string Secret { get; set; } = nameof(Secret) + nameof(Secret);
     /// <summary>

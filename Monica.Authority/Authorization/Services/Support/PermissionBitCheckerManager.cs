@@ -4,7 +4,7 @@ using Monica.Authority.Authorization.Abstractions;
 namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
-/// 二进制权限枚举检查器管理器
+/// Manager for binary permission bit checkers
 /// </summary>
 public class PermissionBitCheckerManager
 {

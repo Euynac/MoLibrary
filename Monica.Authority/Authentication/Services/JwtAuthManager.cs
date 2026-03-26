@@ -113,7 +113,7 @@ public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig)
                     IssuerSigningKey = JwtTokenConfig.SecurityKey,
                     ValidAudience = JwtTokenConfig.Audience,
                     ValidateAudience = true,
-                    ValidateLifetime = false,//不校验Token有效期
+                    ValidateLifetime = false, // Skip token lifetime validation
                     ClockSkew = TimeSpan.FromMinutes(1),
                 },
                 out var validatedToken);

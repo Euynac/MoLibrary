@@ -21,7 +21,7 @@ public static class ModuleAuthorizationBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Authorization 模块
+        /// Configure the Authorization module
         /// </summary>
         public static ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
         {
@@ -83,7 +83,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     }
 
     /// <summary>
-    /// 专用于判断权限的PermissionBit
+    /// Register the PermissionBit definition used for authorization checks
     /// </summary>
     /// <typeparam name="TEnum"></typeparam>
     /// <param name="claimTypeDefinition"></param>
@@ -100,7 +100,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
         return this;
     }
     /// <summary>
-    /// 额外增加新的PermissionBit
+    /// Register an additional PermissionBit definition
     /// </summary>
     /// <typeparam name="TEnum"></typeparam>
     /// <param name="claimTypeDefinition"></param>
@@ -137,9 +137,9 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
             {
                 if (InterceptionRegistrar.ShouldIntercept(descriptor.ImplementationType))
                 {
-                    //TODO 支持对Controller、OurCRUD进行权限验证
-                    //TODO 输出日志
-                    //GlobalLog.LogInformation("注入权限验证：{name}", descriptor.ImplementationType.Name);
+                    //TODO: support permission enforcement on Controller and OurCRUD types
+                    //TODO: emit diagnostics for authorization registration
+                    //GlobalLog.LogInformation("Injected authorization checks: {name}", descriptor.ImplementationType.Name);
                     return true;
                 }
 

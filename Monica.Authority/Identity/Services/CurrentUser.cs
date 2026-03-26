@@ -7,7 +7,7 @@ namespace Monica.Authority.Identity.Services;
 
 public class CurrentUser : CurrentUserBase, ICurrentUser
 {
-    //巨坑：当多个构造函数时，需要指定Constructor
+    // Important: specify the constructor when multiple overloads exist
     //https://stackoverflow.com/a/57016321
     [ActivatorUtilitiesConstructor]
     public CurrentUser(ICurrentPrincipalAccessor principalAccessor): base(principalAccessor.Principal)

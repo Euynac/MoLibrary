@@ -1,20 +1,20 @@
 ﻿namespace Monica.Authority.Authorization.Annotations;
 
 /// <summary>
-/// 权限Bit信息
+/// Permission bit metadata
 /// </summary>
 public interface IPermissionBitData
 {
     /// <summary>
-    /// 权限显示名
+    /// Permission display name
     /// </summary>
     public string PermissionName { get; }
     /// <summary>
-    /// 权限描述
+    /// Permission description
     /// </summary>
     public string? Description { get;  }
     /// <summary>
-    /// 父权限Key
+    /// Parent permission key
     /// </summary>
     public string? ParentKey { get; }
 }

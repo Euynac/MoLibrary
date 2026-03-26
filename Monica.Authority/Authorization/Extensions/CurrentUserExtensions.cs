@@ -4,12 +4,12 @@ using Monica.Authority.Identity.Abstractions;
 namespace Monica.Authority.Authorization.Extensions;
 
 /// <summary>
-/// 相关授权扩展方法
+/// Authorization-related helper extensions
 /// </summary>
 public static class CurrentUserExtensions
 {
     /// <summary>
-    /// 判断当前用户是否有此权限
+    /// Determine whether the current user has the specified permission
     /// </summary>
     /// <param name="user"></param>
     /// <param name="permission"></param>
@@ -21,7 +21,7 @@ public static class CurrentUserExtensions
     }
 
     /// <summary>
-    /// 获取当前用户拥有的权限
+    /// Get the permissions granted to the current user
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
@@ -32,7 +32,7 @@ public static class CurrentUserExtensions
     }
 
     /// <summary>
-    /// 获取在给定范围内已赋权的权限枚举列表
+    /// Get the granted permissions for the current user within the specified scope
     /// </summary>
     /// <returns></returns>
     public static HashSet<TEnum> GrantedList<TEnum>(this ICurrentUserBase user, params TEnum[] permissionScope)

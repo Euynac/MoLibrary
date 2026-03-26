@@ -7,7 +7,7 @@ namespace Monica.Authority.Identity.Extensions;
 public static class CurrentUserExtensions
 {
     /// <summary>
-    /// 转换为当前用户对象
+    /// Converts the principal into a current user abstraction
     /// </summary>
     public static ICurrentUser AsCurrentUser(this ClaimsPrincipal user)
     {

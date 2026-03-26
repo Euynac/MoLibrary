@@ -3,19 +3,19 @@
 public interface IAuthorityUser
 {
     /// <summary>
-    /// 用户Id
+    /// User Id
     /// </summary>
     string? Id { get; }
     /// <summary>
-    /// 角色Id
+    /// Role Id
     /// </summary>
     string? RoleId { get; }
     /// <summary>
-    /// 用户昵称
+    /// User nickname
     /// </summary>
     string? Nickname { get; }
     /// <summary>
-    /// 用户登录名
+    /// Username
     /// </summary>
     string? Username { get; }
 }

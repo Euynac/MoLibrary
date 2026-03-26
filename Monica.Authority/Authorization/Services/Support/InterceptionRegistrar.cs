@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
-/// 注册非Controller的，用于DomainService、ApplicationService等Authorize标签中间件
+/// Register non-controller types so DomainService, ApplicationService, and similar services can leverage Authorize-based middleware
 /// </summary>
 public static class InterceptionRegistrar
 {
