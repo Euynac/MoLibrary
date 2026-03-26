@@ -8,7 +8,6 @@ using Monica.Authority.Authorization.Exceptions;
 using Monica.Authority.Authorization.Services;
 using Monica.Authority.Authorization.Services.Support;
 using Monica.Core;
-using Monica.Core.ExceptionHandler;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -58,9 +57,10 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableGlobalExceptionHandler)
+        if (!Option.DisableExceptionHandling)
         {
-            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register().AddMoExceptionHandlerPack<AuthorizationExceptionHandler>();
+            DependsOnModule<ModuleExceptionHandlingGuide>().Register()
+                .AddExceptionMapper<AuthorizationExceptionMapper>();
         }
         DependsOnModule<ModuleAuthenticationGuide>().Register();
     }
@@ -150,7 +150,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     }
 }
 
-public class ModuleAuthorizationOption : MoModuleOption<ModuleAuthorization>, IMoModuleOptionUseGlobalException
+public class ModuleAuthorizationOption : MoModuleOption<ModuleAuthorization>
 {
-    public bool DisableGlobalExceptionHandler { get; set; }
+    public bool DisableExceptionHandling { get; set; }
 }

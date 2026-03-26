@@ -3,59 +3,62 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Authority.Authorization.Services.Support;
-using Monica.Core.ExceptionHandler;
+using Monica.Core.ExceptionHandling.Exceptions;
+using Monica.Core.ExceptionHandling.Interfaces;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Authority.Authorization.Exceptions;
 
-internal class AuthorizationExceptionHandler : IMoExceptionHandlerPack
+internal class AuthorizationExceptionMapper : IExceptionResponseMapper
 {
-    public bool TryHandleAsync(HttpContext? httpContext, Exception exception, CancellationToken cancellationToken,
-        [NotNullWhen(true)] out Res? res)
+    public bool TryMap(
+        HttpContext? httpContext,
+        Exception exception,
+        CancellationToken cancellationToken,
+        [NotNullWhen(true)] out Res? response)
     {
         switch (exception)
         {
-            case MoExceptionBusinessError businessError:
-                res = Res.Fail(businessError.Message);
+            case BusinessException businessError:
+                response = Res.Fail(businessError.Message);
                 return true;
 
             case AuthorizationException { Type: AuthorizationException.ExceptionType.NotLogin }:
-                res = ResultsAuthorization.NotLogin();
+                response = ResultsAuthorization.NotLogin();
                 return true;
 
             case AuthorizationException { Type: AuthorizationException.ExceptionType.RefreshTokenExpired }:
-                res = ResultsAuthorization.RefreshTokenExpired();
+                response = ResultsAuthorization.RefreshTokenExpired();
                 return true;
 
             case AuthorizationException { Type: AuthorizationException.ExceptionType.AccessTokenExpired } e:
-                res = ResultsAuthorization.AccessTokenExpired(e.Reason);
+                response = ResultsAuthorization.AccessTokenExpired(e.Reason);
                 return true;
 
             case SecurityTokenExpiredException expired:
-                res = ResultsAuthorization.AccessTokenExpired(expired.Message);
+                response = ResultsAuthorization.AccessTokenExpired(expired.Message);
                 return true;
 
             case AuthorizationException authorizationException:
             {
                 var problemDetail = new ProblemDetails { Title = authorizationException.Reason };
-                res = new ResError<ProblemDetails>(problemDetail, authorizationException.Title, ResponseCode.Forbidden);
+                response = new ResError<ProblemDetails>(problemDetail, authorizationException.Title, ResponseCode.Forbidden);
                 return true;
             }
 
             case SecurityTokenArgumentException tokenMalformedException:
-                res = new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
+                response = new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
                     tokenMalformedException.Message);
                 return true;
 
             case SecurityTokenException:
-                res = new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
+                response = new Res("用户Token异常", ResponseCode.Unauthorized).AppendExtraInfo("detail",
                     exception.Message);
                 return true;
 
             default:
-                res = null;
+                response = null;
                 return false;
         }
     }
 }
-

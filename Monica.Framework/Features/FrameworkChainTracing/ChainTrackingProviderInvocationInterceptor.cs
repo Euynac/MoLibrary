@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using Monica.Core.ExceptionHandler;
+using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.Features.MoTimekeeper;
@@ -91,8 +91,8 @@ public class ChainTrackingProviderInvocationInterceptor(
             }
             catch (Exception ex)
             {
-                // 对于不记录调用链的方法，使用 MoWrapperException 包装异常并附加上下文信息
-                throw new MoWrapperException(
+                // For methods excluded from chain tracing, wrap the exception and attach invocation context.
+                throw new ContextualException(
                     $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常",
                     ex)
                     .WithExtraInfo("declaringType", invocation.Method.DeclaringType?.Name)

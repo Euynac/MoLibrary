@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Implements;
 using Monica.AutoModel.Interfaces;
 using Monica.Core;
-using Monica.Core.ExceptionHandler;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -76,9 +75,9 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableGlobalExceptionHandler)
+        if (!Option.DisableExceptionHandling)
         {
-            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
+            DependsOnModule<ModuleExceptionHandlingGuide>().Register();
         }
     }
 }
@@ -88,7 +87,7 @@ public class ModuleAutoModelGuide : MoModuleGuide<ModuleAutoModel, ModuleAutoMod
 
 }
 
-public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoModel>, IMoModuleOptionUseGlobalException
+public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoModel>
 {
     /// <summary>
     /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
@@ -123,5 +122,5 @@ public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoMode
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 
-    public bool DisableGlobalExceptionHandler { get; set; }
+    public bool DisableExceptionHandling { get; set; }
 }

@@ -1,17 +1,17 @@
-using Monica.Core.ExceptionHandler;
+using Monica.Core.ExceptionHandling.Exceptions;
 
 namespace Monica.AutoModel.Exceptions;
 
 /// <summary>
-/// AutoModel 调用执行错误基类
+/// Base exception for AutoModel execution failures.
 /// </summary>
-public class AutoModelBaseException : MoDisplayMessageException
+public class AutoModelBaseException : DisplayMessageException
 {
     /// <summary>
-    /// 创建 AutoModel 异常
+    /// Creates a new AutoModel exception.
     /// </summary>
-    /// <param name="displayMessage">用户友好的错误消息（显示给前端）</param>
-    /// <param name="technicalDetail">技术细节（可选，用于开发者调试）</param>
+    /// <param name="displayMessage">User-facing message displayed to clients.</param>
+    /// <param name="technicalDetail">Optional technical detail for diagnostics.</param>
     public AutoModelBaseException(string displayMessage, string? technicalDetail = null)
         : base(displayMessage, technicalDetail)
     {

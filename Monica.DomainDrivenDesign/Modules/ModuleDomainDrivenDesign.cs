@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
-using Monica.Core.ExceptionHandler;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -41,19 +40,16 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register();
-        DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
-            .AddDefaultExceptionHandler();
         DependsOnModule<ModuleSwaggerGuide>().Register();
-        DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register();
         //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
         DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
         DependsOnModule<ModuleMediatorGuide>().Register();
         DependsOnModule<ModuleMapperGuide>().Register();
         DependsOnModule<ModuleRepositoryGuide>().Register();
-        if (!Option.DisableGlobalExceptionHandler)
+        if (!Option.DisableExceptionHandling)
         {
-            DependsOnModule<ModuleGlobalExceptionHandlerGuide>().Register()
-                .AddMoExceptionHandlerPack<MoValidationExceptionHandler>();
+            DependsOnModule<ModuleExceptionHandlingGuide>().Register()
+                .AddExceptionMapper<ValidationExceptionMapper>();
         }
     }
 }
@@ -76,7 +72,7 @@ public class ModuleDomainDrivenDesignGuide : MoModuleGuide<ModuleDomainDrivenDes
 
 }
 
-public class ModuleDomainDrivenDesignOption : MoModuleOption<ModuleDomainDrivenDesign>, IMoModuleOptionUseGlobalException
+public class ModuleDomainDrivenDesignOption : MoModuleOption<ModuleDomainDrivenDesign>
 {
-    public bool DisableGlobalExceptionHandler { get; set; }
+    public bool DisableExceptionHandling { get; set; }
 }

@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.ExceptionHandler;
+using Monica.Core.ExceptionHandling.Interfaces;
 using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.JsonSerialization.Interfaces;
@@ -28,9 +28,9 @@ public static class MoDaprRpcHttpInfoExtensions
 
 
 /// <summary>
-/// 用于扩展Dapr调用相关功能，如自定义Header、链路追踪。注意该中间件是添加给Dapr ActorHost服务。
+/// Extends Dapr actor HTTP processing with custom headers and chain tracing.
 /// </summary>
-internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider jsonSerializerOptionsProvider, IMoExceptionHandler handler, IMoChainTracing tracing) : IMiddleware
+internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider jsonSerializerOptionsProvider, IExceptionHandlerService handler, IMoChainTracing tracing) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -94,14 +94,12 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider 
 
             scope.EndWithSuccess();
 
-            // 检查返回结果
             if (tracing.GetCurrentChain() is { } chain)
             {
                 chain.MarkComplete();
 
                 if (jsonNode is JsonObject jsonObject)
                 {
-                    // 获取或创建 extraInfo 对象
                     var extraInfoKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(nameof(Res.ExtraInfo));
                     var chainKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
 
@@ -126,14 +124,14 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider 
         }
         catch (Exception e)
         {
-            var exRes = await handler.TryHandleAsync(context, e, CancellationToken.None);
+            var exRes = await handler.HandleAsync(context, e, CancellationToken.None);
             handler.LogException(context, e);
             using var exceptionStream = new MemoryStream();
             context.Response.Body = exceptionStream;
             await context.Response.WriteAsJsonAsync(exRes);
             exceptionStream.Position = 0;
             await exceptionStream.CopyToAsync(originalBodyStream);
-            //巨坑：必须使用原有HTTPContext的Stream，猜想：因为独自开的Stream被using自动Dispose掉了，返回后无法读取。
+            // The original HTTP response stream must be restored because the temporary stream is disposed here.
 
         }
         finally

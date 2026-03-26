@@ -1,11 +1,11 @@
-namespace Monica.Core.ExceptionHandler;
+namespace Monica.Core.ExceptionHandling.Exceptions;
 
 /// <summary>
 /// Exception wrapper that attaches extra contextual information to another exception.
 /// The handler unwraps this type automatically, merges its metadata into response <c>ExtraInfo</c>,
 /// and continues processing the inner exception.
 /// </summary>
-public class MoWrapperException : Exception
+public class ContextualException : Exception
 {
     /// <summary>
     /// Gets the extra contextual values stored on the wrapper.
@@ -18,7 +18,7 @@ public class MoWrapperException : Exception
     /// </summary>
     /// <param name="message">The wrapper message.</param>
     /// <param name="innerException">The actual exception being wrapped.</param>
-    public MoWrapperException(string message, Exception innerException)
+    public ContextualException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
@@ -28,7 +28,7 @@ public class MoWrapperException : Exception
     /// </summary>
     /// <param name="innerException">The actual exception being wrapped.</param>
     /// <param name="message">An optional wrapper message. When omitted, the inner exception message is used.</param>
-    public MoWrapperException(Exception innerException, string? message = null)
+    public ContextualException(Exception innerException, string? message = null)
         : base(message ?? innerException.Message, innerException)
     {
     }
@@ -39,7 +39,7 @@ public class MoWrapperException : Exception
     /// <param name="key">The metadata key.</param>
     /// <param name="value">The metadata value.</param>
     /// <returns>The current instance.</returns>
-    public MoWrapperException WithExtraInfo(string key, object? value)
+    public ContextualException WithExtraInfo(string key, object? value)
     {
         _extraInfo[key] = value;
         return this;
@@ -50,7 +50,7 @@ public class MoWrapperException : Exception
     /// </summary>
     /// <param name="extraInfo">The metadata entries to add.</param>
     /// <returns>The current instance.</returns>
-    public MoWrapperException WithExtraInfo(IDictionary<string, object?> extraInfo)
+    public ContextualException WithExtraInfo(IDictionary<string, object?> extraInfo)
     {
         foreach (var kvp in extraInfo)
         {

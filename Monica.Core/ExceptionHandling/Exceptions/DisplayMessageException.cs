@@ -1,7 +1,7 @@
 using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Core.ExceptionHandler;
+namespace Monica.Core.ExceptionHandling.Exceptions;
 
 /// <summary>
 /// Base exception type that carries a user-facing message.
@@ -11,7 +11,7 @@ namespace Monica.Core.ExceptionHandler;
 /// <para><see cref="DisplayMessage"/> is written to <c>Res.Message</c> for UI display.</para>
 /// <para><see cref="TechnicalDetail"/> is written to <c>Res.ExtraInfo["detail"]</c> for diagnostics.</para>
 /// </remarks>
-public abstract class MoDisplayMessageException : Exception
+public abstract class DisplayMessageException : Exception
 {
     /// <summary>
     /// Gets the user-friendly message shown to the client.
@@ -34,7 +34,7 @@ public abstract class MoDisplayMessageException : Exception
     /// </summary>
     /// <param name="displayMessage">The user-facing error message.</param>
     /// <param name="technicalDetail">Optional technical detail for debugging.</param>
-    protected MoDisplayMessageException(string displayMessage, string? technicalDetail = null)
+    protected DisplayMessageException(string displayMessage, string? technicalDetail = null)
         : base($"{displayMessage}{technicalDetail?.BeAfter(": ")}")
     {
         DisplayMessage = displayMessage;

@@ -37,7 +37,7 @@ public enum EMoModuleKey
     DaprStateStore,
     DaprEventBus,
     DaprLocker,
-    GlobalExceptionHandler,
+    ExceptionHandling,
     AutoControllers,
     JsonSerialization,
     Mediator,
