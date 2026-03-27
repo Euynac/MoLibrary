@@ -34,11 +34,11 @@ public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOp
         if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IResultEnvelope serviceResponse)
         {
             chain.MarkComplete();
-            serviceResponse.ExtraInfo ??= new ExpandoObject();
-            serviceResponse.ExtraInfo.Append(MoChainContext.CHAIN_KEY, chain.Root);
+            serviceResponse.Metadata ??= new ExpandoObject();
+            serviceResponse.Metadata.Append(MoChainContext.CHAIN_KEY, chain.Root);
             if(chain.IsolatedNodes is not null)
             {
-                serviceResponse.ExtraInfo.Append(MoChainContext.CHAIN_KEY+"_error", chain.IsolatedNodes.Select(p => new
+                serviceResponse.Metadata.Append(MoChainContext.CHAIN_KEY+"_error", chain.IsolatedNodes.Select(p => new
                 {
                     p.Operation,
                     p.Handler,

@@ -13,12 +13,15 @@ namespace Monica.Tool.Results;
 [DebuggerDisplay("{GetDebugValue()}")]
 public class Res : IResultEnvelope
 {
+    [JsonPropertyName(ResJsonFieldNames.Message)]
     public string? Message { get; set; }
 
-    public ResStatus? Code { get; set; }
+    [JsonPropertyName(ResJsonFieldNames.Status)]
+    public ResStatus? Status { get; set; }
 
+    [JsonPropertyName(ResJsonFieldNames.Metadata)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ExpandoObject? ExtraInfo { get; set; }
+    public ExpandoObject? Metadata { get; set; }
 
     /// <summary>
     /// 创建异常返回
@@ -27,7 +30,7 @@ public class Res : IResultEnvelope
     public Res(Exception e)
     {
         Message = $"服务出现异常：{e}";
-        Code = ResStatus.InternalError;
+        Status = ResStatus.InternalError;
     }
 
     /// <summary>
@@ -42,11 +45,11 @@ public class Res : IResultEnvelope
     /// 创建消息返回
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="code"></param>
-    public Res(string message, ResStatus code)
+    /// <param name="status"></param>
+    public Res(string message, ResStatus status)
     {
         Message = message;
-        Code = code;
+        Status = status;
     }
 
     public static implicit operator Res(string res) => new(res, ResStatus.BadRequest);
@@ -73,26 +76,28 @@ public class Res : IResultEnvelope
     {
         return new Res(string.Format(format, args), ResStatus.Ok);
     }
+
     /// <summary>
     /// 创建一个失败的响应
     /// </summary>
     /// <param name="format"></param>
-    /// <param name="code"></param>
+    /// <param name="status"></param>
     /// <param name="args"></param>
     /// <returns></returns>
-    public static Res Fail(ResStatus code, [StringSyntax("CompositeFormat")] string format, params object?[] args)
+    public static Res Fail(ResStatus status, [StringSyntax("CompositeFormat")] string format, params object?[] args)
     {
-        return new Res(string.Format(format, args), code);
+        return new Res(string.Format(format, args), status);
     }
+
     /// <summary>
     /// 创建一个失败的响应
     /// </summary>
     /// <param name="failDesc"></param>
-    /// <param name="code"></param>
+    /// <param name="status"></param>
     /// <returns></returns>
-    public static Res Fail(string failDesc, ResStatus code = ResStatus.BadRequest)
+    public static Res Fail(string failDesc, ResStatus status = ResStatus.BadRequest)
     {
-        return new Res(failDesc, code);
+        return new Res(failDesc, status);
     }
 
     public static Res<T> Ok<T>(T data)
@@ -108,11 +113,11 @@ public class Res : IResultEnvelope
     /// <returns>数据不为空时返回成功响应，否则返回错误响应</returns>
     public static Res<T> OkOrFailWhenNull<T>(T? data, string errorWhenNull) => data == null ? errorWhenNull : data;
 
-    public static Res<T> Create<T>(T data, ResStatus code)
+    public static Res<T> Create<T>(T data, ResStatus status)
     {
         return new Res<T>(data)
         {
-            Code = code
+            Status = status
         };
     }
 
@@ -126,8 +131,8 @@ public class Res : IResultEnvelope
     {
         var res = new Res<T>(data)
         {
-            Code = Code,
-            ExtraInfo = ExtraInfo,
+            Status = Status,
+            Metadata = Metadata,
             Message = Message
         };
         return res;
@@ -144,14 +149,15 @@ public class Res : IResultEnvelope
     /// <returns></returns>
     internal string GetDebugValue()
     {
-        if (ExtraInfo is not null)
+        if (Metadata is not null)
         {
-            return $"{Message}({Code})\n{ExtraInfo.ToJsonString()!}";
+            return $"{Message}({Status})\n{Metadata.ToJsonString()!}";
         }
 
-        return $"{Message}({Code})";
+        return $"{Message}({Status})";
     }
 }
+
 /// <summary>
 /// 统一响应模型
 /// </summary>
@@ -159,15 +165,22 @@ public class Res : IResultEnvelope
 [DebuggerDisplay("{GetDebugValue()}")]
 public record Res<T> : IResultEnvelope
 {
+    [JsonPropertyName(ResJsonFieldNames.Message)]
     public string? Message { get; set; }
-    public ResStatus? Code { get; set; }
 
+    [JsonPropertyName(ResJsonFieldNames.Status)]
+    public ResStatus? Status { get; set; }
+
+    [JsonPropertyName(ResJsonFieldNames.Metadata)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ExpandoObject? ExtraInfo { get; set; }
+    public ExpandoObject? Metadata { get; set; }
+
     /// <summary>
     /// Response的响应数据项
     /// </summary>
+    [JsonPropertyName(ResJsonFieldNames.Data)]
     public T? Data { get; set; }
+
     /// <summary>
     /// 创建空返回（并不代表成功）
     /// </summary>
@@ -183,42 +196,41 @@ public record Res<T> : IResultEnvelope
     public Res(T data)
     {
         Data = data;
-        Code = ResStatus.Ok;
+        Status = ResStatus.Ok;
     }
 
-    public Res(string message, ResStatus code)
+    public Res(string message, ResStatus status)
     {
         Message = message;
-        Code = code;
+        Status = status;
     }
 
     public Res(Exception e)
     {
         Message = $"服务出现异常：{e}";
-        Code = ResStatus.InternalError;
+        Status = ResStatus.InternalError;
     }
 
     public static implicit operator Res<T>(string res) => new(res, ResStatus.BadRequest);
 
     public static implicit operator Res<T>(T data) => new(data);
-   
 
     /// <summary>
     /// 提取为新响应数据
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Code ?? ResStatus.BadRequest)
+    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
     {
-        ExtraInfo = res.ExtraInfo
+        Metadata = res.Metadata
     };
 
     /// <summary>
     /// 提取为新响应数据
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Code ?? ResStatus.BadRequest)
+    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
     {
-        ExtraInfo = res.ExtraInfo
+        Metadata = res.Metadata
     };
 
     /// <summary>
@@ -233,11 +245,11 @@ public record Res<T> : IResultEnvelope
     /// <returns></returns>
     internal string GetDebugValue()
     {
-        if (ExtraInfo is not null)
+        if (Metadata is not null)
         {
-            return $"{Message}({Code}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}\n{ExtraInfo.ToJsonString()?.LimitMaxLength(500, "...")}";
+            return $"{Message}({Status}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}\n{Metadata.ToJsonString()?.LimitMaxLength(500, "...")}";
         }
 
-        return $"{Message}({Code}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}";
+        return $"{Message}({Status}) Data: {Data?.ToJsonStringForce()?.LimitMaxLength(500, "...")}";
     }
 }

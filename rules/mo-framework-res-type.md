@@ -9,17 +9,17 @@
 - 当方法返回值是 `Res<T>` 时：
 ```cs
 //返回错误
-return "error desc"; // string => Res<T> ，Data 为 null，含有错误描述和Code 400代码
+return "error desc"; // string => Res<T> ，Data 为 null，含有错误描述和Status 400代码
 //等同于：
-return Res.Fail("error desc"); // Res => Res<T> ，Data 为 null，含有错误描述和Code 400代码
+return Res.Fail("error desc"); // Res => Res<T> ，Data 为 null，含有错误描述和Status 400代码
 
 //返回正确
-return T; // 实例T => Res<T>，Code 200
+return T; // 实例T => Res<T>，Status 200
 ```
 - 当方法返回值是 `Res` 时：
 ```cs
 //返回错误
-return "error desc"; // string => Res，含有错误描述和Code 400代码
+return "error desc"; // string => Res，含有错误描述和Status 400代码
 //等同于：
 return Res.Fail("error desc")
     

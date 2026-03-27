@@ -46,17 +46,17 @@ internal class AuthorizationExceptionMapper(AuthorityMessageLocalizer authorityL
                 response = Res.Fail(
                         authorizationException.GetTitle(authorityLocalizer),
                         ResStatus.Forbidden)
-                    .AppendExtraInfo("error", problemDetail);
+                    .AppendMetadata("error", problemDetail);
                 return true;
             }
 
             case SecurityTokenArgumentException tokenMalformedException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendExtraInfo("detail",
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendMetadata("detail",
                     tokenMalformedException.Message);
                 return true;
 
             case SecurityTokenException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendExtraInfo("detail",
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendMetadata("detail",
                     exception.Message);
                 return true;
 

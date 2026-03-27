@@ -100,16 +100,16 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider 
 
                 if (jsonNode is JsonObject jsonObject)
                 {
-                    var extraInfoKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(nameof(Res.ExtraInfo));
+                    var metadataKey = ResJsonFieldNames.Metadata;
                     var chainKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
 
-                    if (!jsonObject.ContainsKey(extraInfoKey) || jsonObject[extraInfoKey] is not JsonObject)
+                    if (!jsonObject.ContainsKey(metadataKey) || jsonObject[metadataKey] is not JsonObject)
                     {
-                        jsonObject[extraInfoKey] = new JsonObject();
+                        jsonObject[metadataKey] = new JsonObject();
                     }
 
-                    var extraInfoObj = jsonObject[extraInfoKey]!.AsObject();
-                    extraInfoObj[chainKey] = JsonSerializer.SerializeToNode(chain.Root, jsonSerializerOptionsProvider.SerializerOptions);
+                    var metadataObject = jsonObject[metadataKey]!.AsObject();
+                    metadataObject[chainKey] = JsonSerializer.SerializeToNode(chain.Root, jsonSerializerOptionsProvider.SerializerOptions);
                 }
             }
 

@@ -45,7 +45,7 @@ public static class HttpApiExtensions
 
         var errorRes = new TResponse
         {
-            Code = ResStatus.InternalError,
+            Status = ResStatus.InternalError,
             Message = "接口响应出错",
         };
 
@@ -53,16 +53,16 @@ public static class HttpApiExtensions
         {
             if (e is JsonException jsonEx)
             {
-                errorRes.AppendExtraInfo("jsonException", jsonEx.GetJsonErrorDetails(resContent));
+                errorRes.AppendMetadata("jsonException", jsonEx.GetJsonErrorDetails(resContent));
             }
             else
             {
-                errorRes.AppendExtraInfo("exception", e.ToString().Split('\n'));
+                errorRes.AppendMetadata("exception", e.ToString().Split('\n'));
             }
             var innerException = e.InnerException;
             while (innerException != null)
             {
-                errorRes.AppendExtraInfo("exception", innerException.ToString().Split('\n'));
+                errorRes.AppendMetadata("exception", innerException.ToString().Split('\n'));
                 innerException = innerException.InnerException;
             }
         }
@@ -77,7 +77,7 @@ public static class HttpApiExtensions
             contentJson = resContent;
         }
 
-        errorRes.AppendExtraInfo("response", new
+        errorRes.AppendMetadata("response", new
         {
             Content = res,
             contentJson,
@@ -90,7 +90,7 @@ public static class HttpApiExtensions
 
         if (httpResponse is { IsSuccessStatusCode: false })
         {
-            errorRes.AppendExtraInfo("request", await FormatSource(httpResponse));
+            errorRes.AppendMetadata("request", await FormatSource(httpResponse));
         }
 
         _logger.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");
@@ -154,23 +154,23 @@ public static class HttpApiExtensions
         }
 
         var errorRes = (IResultEnvelope?)Activator.CreateInstance(responseType)!;
-        errorRes.Code = ResStatus.InternalError;
+        errorRes.Status = ResStatus.InternalError;
         errorRes.Message = "接口响应出错";
 
         if (e != null)
         {
             if (e is JsonException jsonEx)
             {
-                errorRes.AppendExtraInfo("jsonException", jsonEx.GetJsonErrorDetails(resContent));
+                errorRes.AppendMetadata("jsonException", jsonEx.GetJsonErrorDetails(resContent));
             }
             else
             {
-                errorRes.AppendExtraInfo("exception", e.ToString().Split('\n'));
+                errorRes.AppendMetadata("exception", e.ToString().Split('\n'));
             }
             var innerException = e.InnerException;
             while (innerException != null)
             {
-                errorRes.AppendExtraInfo("exception", innerException.ToString().Split('\n'));
+                errorRes.AppendMetadata("exception", innerException.ToString().Split('\n'));
                 innerException = innerException.InnerException;
             }
         }
@@ -185,7 +185,7 @@ public static class HttpApiExtensions
             contentJson = resContent;
         }
 
-        errorRes.AppendExtraInfo("response", new
+        errorRes.AppendMetadata("response", new
         {
             Content = res,
             contentJson,
@@ -197,7 +197,7 @@ public static class HttpApiExtensions
 
         if (httpResponse is { IsSuccessStatusCode: false })
         {
-            errorRes.AppendExtraInfo("request", await FormatSource(httpResponse));
+            errorRes.AppendMetadata("request", await FormatSource(httpResponse));
         }
 
         _logger.LogError($"{httpResponse?.RequestMessage?.RequestUri}接口响应出错：{errorRes.ToJsonStringForce()}");

@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.ApiProjection;
 using Monica.Tool.Extensions;
 using Monica.Tool.Results;
 
@@ -47,4 +49,31 @@ public static class MinimalApiExtensions
         return Results.Json(response, statusCode: (int?)response.ToHttpStatusCode());
     }
 
+    /// <summary>
+    /// Wraps an <see cref="IResultEnvelope"/> as a projected external API JSON result.
+    /// </summary>
+    /// <typeparam name="T">The response type.</typeparam>
+    /// <param name="response">The Monica response instance.</param>
+    /// <param name="httpContext">The current HTTP context used to resolve projection options.</param>
+    /// <returns>An <see cref="IResult"/> with the projected payload and HTTP status code.</returns>
+    public static IResult GetProjectedResponse<T>(this T response, HttpContext httpContext) where T : IResultEnvelope
+    {
+        var payload = httpContext.RequestServices
+            .GetRequiredService<IResultProjector>()
+            .ProjectToObject(response);
+        return Results.Json(payload, statusCode: (int?)response.ToHttpStatusCode());
+    }
+
+    /// <summary>
+    /// Awaits a task result and wraps the Monica response as a projected external API JSON result.
+    /// </summary>
+    /// <typeparam name="T">The Monica response type.</typeparam>
+    /// <param name="response">The task that returns the Monica response.</param>
+    /// <param name="httpContext">The current HTTP context used to resolve projection options.</param>
+    /// <returns>An <see cref="IResult"/> with the projected payload and HTTP status code.</returns>
+    public static async Task<IResult> GetProjectedResponse<T>(this Task<T> response, HttpContext httpContext)
+        where T : IResultEnvelope
+    {
+        return (await response).GetProjectedResponse(httpContext);
+    }
 }

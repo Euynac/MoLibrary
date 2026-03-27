@@ -13,12 +13,12 @@ public interface IResultEnvelope
     public string? Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the result status code.
+    /// Gets or sets the result status.
     /// </summary>
-    public ResStatus? Code { get; set; }
+    public ResStatus? Status { get; set; }
 
     /// <summary>
     /// Gets or sets additional debug metadata such as chain-tracing details.
     /// </summary>
-    public ExpandoObject? ExtraInfo { get; set; }
+    public ExpandoObject? Metadata { get; set; }
 }

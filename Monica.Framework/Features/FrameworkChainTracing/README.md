@@ -76,7 +76,7 @@ Mo.AddChainTracing(options =>
 ### 方法调用链信息：
 - **Handler**: 服务类名
 - **Operation**: 方法名或请求类型名
-- **ExtraInfo**: 
+- **Metadata**: 
   - `MethodName`: 实际方法名
   - `ParameterCount`: 参数个数
   - `Arguments`: 前3个参数的概要信息
@@ -84,7 +84,7 @@ Mo.AddChainTracing(options =>
 ### 数据库调用链信息：
 - **Handler**: "Database"
 - **Operation**: "SELECT(TableName)" 或 "INSERT(TableName)" 等
-- **ExtraInfo**:
+- **Metadata**:
   - `CommandTimeout`: 命令超时时间
   - `ParameterCount`: 参数个数
   - `CommandText`: SQL语句（截断后）

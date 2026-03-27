@@ -15,7 +15,7 @@ public static class ResExtensions
     public static HttpStatusCode? ToHttpStatusCode(this IResultEnvelope? response)
     {
         if (response == null) return null;
-        switch (response.Code)
+        switch (response.Status)
         {
             case ResStatus.Ok:
                 return HttpStatusCode.OK;
@@ -45,7 +45,7 @@ public static class ResExtensions
             case ResStatus.Unknown:
                 return null;
             default:
-                throw new ArgumentOutOfRangeException(response.ToString(), $"未填写当前状态码{response.Code}对应HTTP状态码的值！");
+                throw new ArgumentOutOfRangeException(response.ToString(), $"未填写当前状态码{response.Status}对应HTTP状态码的值！");
         }
     }
 
@@ -53,12 +53,12 @@ public static class ResExtensions
     /// [500] 微服务调用后需要检查，如果为False，应为服务调用出错，需要记录到微服务调用日志中去。接口调用异常由Mediator自动进行AOP，try catch进行日志记录
     /// </summary>
     public static bool IsRemoteResultHealthy(this IResultEnvelope res) =>
-        res.Code != ResStatus.InternalError && !IsMalformed(res);
+        res.Status != ResStatus.InternalError && !IsMalformed(res);
 
     /// <summary>
     ///  [200] 代表请求正常处理
     /// </summary>
-    public static bool IsOk(this IResultEnvelope res) => res.Code == ResStatus.Ok;
+    public static bool IsOk(this IResultEnvelope res) => res.Status == ResStatus.Ok;
 
     /// <summary>
     /// 从远程调用请求结果 自动验证并附加信息
@@ -70,7 +70,7 @@ public static class ResExtensions
     {
         if (IsMalformed(res))
         {
-            res.AppendExtraInfo("originRes", originInfo);
+            res.AppendMetadata("originRes", originInfo);
         }
     }
 
@@ -80,7 +80,7 @@ public static class ResExtensions
     public static bool IsMalformed(this IResultEnvelope res)
     {
         //TODO 需要判断 Res<T> 当OK的情况 Data = null时有规范问题
-        return res.Code == null;
+        return res.Status == null;
     }
     /// <summary>
     /// 接口设置额外信息(重复会覆盖)
@@ -88,10 +88,10 @@ public static class ResExtensions
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T SetExtraInfo<T>(this T res, string name, object? info = null) where T : IResultEnvelope
+    public static T SetMetadata<T>(this T res, string name, object? info = null) where T : IResultEnvelope
     {
-        res.ExtraInfo ??= new ExpandoObject();
-        res.ExtraInfo.Set(name, info);
+        res.Metadata ??= new ExpandoObject();
+        res.Metadata.Set(name, info);
         return res;
     }
     /// <summary>
@@ -100,10 +100,10 @@ public static class ResExtensions
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T AppendExtraInfo<T>(this T res, string name, object? info = null) where T : IResultEnvelope
+    public static T AppendMetadata<T>(this T res, string name, object? info = null) where T : IResultEnvelope
     {
-        res.ExtraInfo ??= new ExpandoObject();
-        res.ExtraInfo.Append(name, info);
+        res.Metadata ??= new ExpandoObject();
+        res.Metadata.Append(name, info);
         return res;
     }
 
@@ -223,7 +223,7 @@ public static class ResExtensions
     /// <returns></returns>
     public static T Ok<T>(this T self, string hint) where T : IResultEnvelope
     {
-        self.Code = ResStatus.Ok;
+        self.Status = ResStatus.Ok;
         self.Message = hint;
         return self;
     }
@@ -239,7 +239,7 @@ public static class ResExtensions
         var list = new List<T?>();
         var result = new Res<List<T>>()
         {
-            Code = ResStatus.Ok,
+            Status = ResStatus.Ok,
             Message = ""
         };
         var sb = new StringBuilder();
@@ -250,14 +250,14 @@ public static class ResExtensions
                 sb.AppendLine(msg);
             }
 
-            if (res.ExtraInfo is { } extraInfo)
+            if (res.Metadata is { } metadata)
             {
-                result.ExtraInfo ??= new ExpandoObject();
-                result.ExtraInfo.Append("bulk", extraInfo);
+                result.Metadata ??= new ExpandoObject();
+                result.Metadata.Append("bulk", metadata);
             }
-            if (!res.IsOk(out var data) && result.Code == ResStatus.Ok)
+            if (!res.IsOk(out var data) && result.Status == ResStatus.Ok)
             {
-                result.Code = res.Code;
+                result.Status = res.Status;
             }
             list.Add(data);
         }
@@ -275,12 +275,12 @@ public static class ResExtensions
     /// <param name="response"></param>
     public static T Merge<T>(this T self, IResultEnvelope response) where T : IResultEnvelope
     {
-        self.AppendExtraInfo("oriMsg", self.Message);
-        self.AppendExtraInfo("oriCode", self.Code);
-        response.ExtraInfo ??= new ExpandoObject();
-        self.ExtraInfo!.Merge(response.ExtraInfo);
+        self.AppendMetadata("originalMessage", self.Message);
+        self.AppendMetadata("originalStatus", self.Status);
+        response.Metadata ??= new ExpandoObject();
+        self.Metadata!.Merge(response.Metadata);
         self.Message = response.Message;
-        self.Code = response.Code;
+        self.Status = response.Status;
         return self;
     }
     /// <summary>
@@ -298,8 +298,8 @@ public static class ResExtensions
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
-    /// <param name="code"></param>
-    private static T Append<T>(this T self, string? message, ResStatus? code)
+    /// <param name="status"></param>
+    private static T Append<T>(this T self, string? message, ResStatus? status)
         where T : IResultEnvelope
     {
         if (!string.IsNullOrWhiteSpace(message))
@@ -308,9 +308,9 @@ public static class ResExtensions
             self.Message = self.Message.TrimStart(';');
         }
 
-        if (code != null)
+        if (status != null)
         {
-            self.Code = code;
+            self.Status = status;
         }
         return self;
     }
@@ -319,11 +319,11 @@ public static class ResExtensions
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
-    /// <param name="code"></param>
-    public static T AppendFailure<T>(this T self, string? message, ResStatus code = ResStatus.BadRequest)
+    /// <param name="status"></param>
+    public static T AppendFailure<T>(this T self, string? message, ResStatus status = ResStatus.BadRequest)
         where T : IResultEnvelope
     {
-        return Append(self, message, code);
+        return Append(self, message, status);
     }
 
     /// <summary>

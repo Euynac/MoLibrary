@@ -19,7 +19,7 @@ internal class ValidationExceptionMapper : IExceptionResponseMapper
         {
             case MoValidationException validationException:
                 response = Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
-                    .AppendExtraInfo("error", validationException.ValidationErrors);
+                    .AppendMetadata("error", validationException.ValidationErrors);
                 return true;
             default:
                 response = null;

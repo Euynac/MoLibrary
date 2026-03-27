@@ -1,6 +1,6 @@
 # MoChainTracing 调用链追踪模块
 
-MoChainTracing 是一个基于 `AsyncLocal` 技术的应用层调用链追踪模块，用于记录接口调用过程中的各种行为，包括领域服务调用、数据库调用、Redis 调用、外部 API 调用等，并将调用链信息附加到 `IResultEnvelope` 的 `ExtraInfo` 中。
+MoChainTracing 是一个基于 `AsyncLocal` 技术的应用层调用链追踪模块，用于记录接口调用过程中的各种行为，包括领域服务调用、数据库调用、Redis 调用、外部 API 调用等，并将调用链信息附加到 `IResultEnvelope` 的 `Metadata` 中。
 
 ## 主要特性
 
@@ -370,12 +370,12 @@ public class OrderService
             var result = await response.Content.ReadFromJsonAsync<ServiceResponse<InventoryStatus>>();
             
             // 手动合并远程调用链
-            if (result.ExtraInfo != null)
+            if (result.Metadata != null)
             {
-                _chainTracing.MergeRemoteChain(traceId, result.ExtraInfo);
+                _chainTracing.MergeRemoteChain(traceId, result);
             }
             
-            _chainTracing.EndTrace(traceId, $"Code: {result.Code}", result.Code == ResStatus.Ok);
+            _chainTracing.EndTrace(traceId, $"Status: {result.Status}", result.Status == ResStatus.Ok);
             return result;
         }
         catch (Exception ex)
@@ -563,10 +563,10 @@ builder.Services.AddMoChainTracing(options =>
     // 最大节点数量（防止内存泄漏）
     options.MaxNodeCount = 1000;
     
-    // 是否在 ExtraInfo 中包含调用链的详细信息
+    // 是否在 Metadata 中包含调用链的详细信息
     options.IncludeDetailedChainInfo = true;
     
-    // 是否在 ExtraInfo 中包含调用链的汇总信息
+    // 是否在 Metadata 中包含调用链的汇总信息
     options.IncludeChainSummary = true;
     
     // 需要跳过的路径模式
@@ -579,7 +579,7 @@ builder.Services.AddMoChainTracing(options =>
 
 ## 响应格式
 
-调用链信息会自动附加到 `IResultEnvelope.ExtraInfo` 中，支持微服务调用链的合并：
+调用链信息会自动附加到 `IResultEnvelope.Metadata` 中，支持微服务调用链的合并：
 
 ```json
 {

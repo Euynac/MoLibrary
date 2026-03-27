@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.ApiProjection;
 using Monica.Tool.Results;
 
 namespace Monica.Core.Extensions;
@@ -51,6 +53,60 @@ public static class RESTfulApiExtensions
         where T : IResultEnvelope
     {
         return new ObjectResult(response)
+        {
+            StatusCode = (int?)response.ToHttpStatusCode()
+        };
+    }
+
+    /// <summary>
+    /// Awaits a task result and wraps Monica responses as projected <see cref="ObjectResult"/> instances.
+    /// </summary>
+    /// <param name="response">The task that returns an object.</param>
+    /// <param name="controller">The controller instance used to resolve projection options.</param>
+    /// <returns>The original result or a projected <see cref="ObjectResult"/> for Monica responses.</returns>
+    public static async Task<object> GetProjectedResponse(this Task<object> response, ControllerBase controller)
+    {
+        var res = await response;
+        if (res is IResultEnvelope serviceResponse)
+        {
+            return ToProjectedObjectResult(serviceResponse, controller);
+        }
+
+        return res;
+    }
+
+    /// <summary>
+    /// Awaits a task result and wraps the Monica response as a projected <see cref="ObjectResult"/>.
+    /// </summary>
+    /// <typeparam name="T">The Monica response type.</typeparam>
+    /// <param name="response">The task that returns the Monica response.</param>
+    /// <param name="controller">The controller instance used to resolve projection options.</param>
+    /// <returns>A projected <see cref="ObjectResult"/> with the HTTP status code.</returns>
+    public static async Task<ObjectResult> GetProjectedResponse<T>(this Task<T> response, ControllerBase controller)
+        where T : IResultEnvelope
+    {
+        return ToProjectedObjectResult(await response, controller);
+    }
+
+    /// <summary>
+    /// Wraps the Monica response as a projected <see cref="ObjectResult"/>.
+    /// </summary>
+    /// <typeparam name="T">The Monica response type.</typeparam>
+    /// <param name="response">The Monica response instance.</param>
+    /// <param name="controller">The controller instance used to resolve projection options.</param>
+    /// <returns>A projected <see cref="ObjectResult"/> with the HTTP status code.</returns>
+    public static ObjectResult GetProjectedResponse<T>(this T response, ControllerBase controller)
+        where T : IResultEnvelope
+    {
+        return ToProjectedObjectResult(response, controller);
+    }
+
+    private static ObjectResult ToProjectedObjectResult(IResultEnvelope response, ControllerBase controller)
+    {
+        var payload = controller.HttpContext.RequestServices
+            .GetRequiredService<IResultProjector>()
+            .ProjectToObject(response);
+        return new ObjectResult(payload)
         {
             StatusCode = (int?)response.ToHttpStatusCode()
         };

@@ -12,7 +12,7 @@ public static class ResultsAuthorization
     public static Res AccessTokenExpired(AuthorityMessageLocalizer authorityLocalizer, string? msg = null)
     {
         return new Res(authorityLocalizer.GetAccessTokenExpiredMessage(), ResStatus.AccessTokenExpired)
-            .AppendExtraInfo("detail", msg);
+            .AppendMetadata("detail", msg);
     }
     public static Res RefreshTokenExpired(AuthorityMessageLocalizer authorityLocalizer)
     {

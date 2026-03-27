@@ -178,12 +178,12 @@ public class ModuleFileOps(ModuleFileOpsOption option)
             logger.LogError(ex, "Failed to download FileOps file {Path}.", path);
             var response = Res.Fail(
                 localizer["ServiceMessages:DownloadFailed", path, messageLocalizer.TranslateExceptionMessage(ex)].Value,
-                GetResponseCode(ex));
+                GetResultStatus(ex));
             return response.GetResponse();
         }
     }
 
-    private static ResStatus GetResponseCode(Exception exception)
+    private static ResStatus GetResultStatus(Exception exception)
     {
         return exception switch
         {

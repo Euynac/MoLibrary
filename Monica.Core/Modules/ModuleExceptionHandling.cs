@@ -53,7 +53,7 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
             options.InvalidModelStateResponseFactory = context =>
                 new BadRequestObjectResult(
                     Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
-                        .AppendExtraInfo("error", new SerializableError(context.ModelState)));
+                        .AppendMetadata("error", new SerializableError(context.ModelState)));
         });
 
         var currentDomain = AppDomain.CurrentDomain;

@@ -27,13 +27,13 @@ internal class ExceptionHandlerService(
 
     public Task<Res> HandleAsync(HttpContext? httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        var (actualException, extraInfoList) = UnwrapException(exception);
+        var (actualException, metadataEntries) = UnwrapException(exception);
 
         foreach (var mapper in mappers)
         {
             if (mapper.TryMap(httpContext, actualException, cancellationToken, out var response))
             {
-                return Task.FromResult(AppendExtraInfoList(response!));
+                return Task.FromResult(AppendMetadataEntries(response!));
             }
         }
 
@@ -44,13 +44,13 @@ internal class ExceptionHandlerService(
             _ => CreateUnexpectedErrorResponse(httpContext, actualException)
         };
 
-        return Task.FromResult(AppendExtraInfoList(result));
+        return Task.FromResult(AppendMetadataEntries(result));
 
-        T AppendExtraInfoList<T>(T response) where T : IResultEnvelope
+        T AppendMetadataEntries<T>(T response) where T : IResultEnvelope
         {
-            foreach (var kvp in extraInfoList)
+            foreach (var kvp in metadataEntries)
             {
-                response.AppendExtraInfo(kvp.Key, kvp.Value);
+                response.AppendMetadata(kvp.Key, kvp.Value);
             }
             return response;
         }
@@ -60,15 +60,15 @@ internal class ExceptionHandlerService(
     /// Unwraps nested <see cref="ContextualException"/> instances and collects their extra metadata.
     /// </summary>
     /// <param name="exception">The original exception.</param>
-    /// <returns>The actual exception together with all collected extra info entries.</returns>
-    private static (Exception ActualException, List<KeyValuePair<string, object?>> ExtraInfo) UnwrapException(Exception exception)
+    /// <returns>The actual exception together with all collected metadata entries.</returns>
+    private static (Exception ActualException, List<KeyValuePair<string, object?>> Metadata) UnwrapException(Exception exception)
     {
-        var extraInfoList = new List<KeyValuePair<string, object?>>();
+        var metadataEntries = new List<KeyValuePair<string, object?>>();
         var currentException = exception;
 
         while (currentException is ContextualException contextualException)
         {
-            extraInfoList.AddRange(contextualException.ExtraInfo);
+            metadataEntries.AddRange(contextualException.Metadata);
 
             if (contextualException.InnerException == null)
             {
@@ -78,15 +78,15 @@ internal class ExceptionHandlerService(
             currentException = contextualException.InnerException;
         }
 
-        return (currentException, extraInfoList);
+        return (currentException, metadataEntries);
     }
 
     private static Res CreateDisplayMessageResponse(DisplayMessageException exception)
     {
-        var response = new Res(exception.DisplayMessage, exception.ResponseCode);
+        var response = new Res(exception.DisplayMessage, exception.ResultStatus);
         if (exception.TechnicalDetail != null)
         {
-            response.AppendExtraInfo("detail", exception.TechnicalDetail);
+            response.AppendMetadata("detail", exception.TechnicalDetail);
         }
 
         return response;
@@ -112,6 +112,6 @@ internal class ExceptionHandlerService(
         };
 
         return Res.Fail("服务器出现异常", ResStatus.InternalError)
-            .AppendExtraInfo("error", problemDetails);
+            .AppendMetadata("error", problemDetails);
     }
 }

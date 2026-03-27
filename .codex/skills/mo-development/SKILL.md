@@ -189,7 +189,7 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 3. **Use implicit conversions** for cleaner code when returning success or error from result-envelope entry points
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
 5. **Required using**: Include `using Monica.Tool.Results;` where `Res` is used
-6. **Typed error details**: Use `AppendExtraInfo("error", payload)` rather than introducing a separate `ResError` model
+6. **Typed error details**: Use `AppendMetadata("error", payload)` rather than introducing a separate `ResError` model
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 

@@ -272,7 +272,7 @@ public class K8SFacade(
         catch (Exception ex)
         {
             logger.LogError(ex, "{LogMessage}", logMessage);
-            return Res.Fail(failureMessageFactory(ex), GetResponseCode(ex));
+            return Res.Fail(failureMessageFactory(ex), GetResultStatus(ex));
         }
     }
 
@@ -290,11 +290,11 @@ public class K8SFacade(
         catch (Exception ex)
         {
             logger.LogError(ex, "{LogMessage}", logMessage);
-            return Res.Fail(failureMessageFactory(ex), GetResponseCode(ex));
+            return Res.Fail(failureMessageFactory(ex), GetResultStatus(ex));
         }
     }
 
-    private static ResStatus GetResponseCode(Exception exception)
+    private static ResStatus GetResultStatus(Exception exception)
     {
         return exception switch
         {

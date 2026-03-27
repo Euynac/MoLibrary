@@ -95,9 +95,9 @@ public class ChainTrackingProviderInvocationInterceptor(
                 throw new ContextualException(
                     $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常",
                     ex)
-                    .WithExtraInfo("declaringType", invocation.Method.DeclaringType?.Name)
-                    .WithExtraInfo("methodName", invocation.Method.Name)
-                    .WithExtraInfo("invocationContext", "ChainTrackingProviderInvocationInterceptor");
+                    .WithMetadata("declaringType", invocation.Method.DeclaringType?.Name)
+                    .WithMetadata("methodName", invocation.Method.Name)
+                    .WithMetadata("invocationContext", "ChainTrackingProviderInvocationInterceptor");
             }
             return;
         }
@@ -122,9 +122,9 @@ public class ChainTrackingProviderInvocationInterceptor(
             
             if (invocation.ReturnValue is IResultEnvelope response)
             {
-                var success = response.Code == ResStatus.Ok;
+                var success = response.Status == ResStatus.Ok;
                 var resultDescription =
-                    $"{responseTypeName}({response.Code}){(response.Message?.LimitMaxLength(1000, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
+                    $"{responseTypeName}({response.Status}){(response.Message?.LimitMaxLength(1000, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
 
                 if (isRemoteCall)
                 {
