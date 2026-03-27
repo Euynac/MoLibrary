@@ -3,8 +3,8 @@ namespace Monica.EventBus.Abstractions.Handlers;
 public interface IMoDistributedEventHandler<in TEvent> : IMoEventHandler<TEvent>
 {
     /// <summary>
-    /// Handler handles the event by implementing this method.
+    /// Handles the event.
     /// </summary>
-    /// <param name="eventData">Event data</param>
+    /// <param name="eventData">Event payload.</param>
     Task HandleEventAsync(TEvent eventData);
 }

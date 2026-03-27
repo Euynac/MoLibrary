@@ -21,7 +21,7 @@
         </MudStack>
 
         <MudGrid Spacing="2">
-            <!-- Provider 选择器 -->
+            <!-- Provider selector -->
             @if (Providers.Any())
             {
                 <MudItem xs="12" sm="6" md="3">
@@ -40,7 +40,7 @@
                 </MudItem>
             }
 
-            <!-- 状态过滤 -->
+            <!-- Status filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
                           Label="状态"
@@ -54,7 +54,7 @@
                 </MudSelect>
             </MudItem>
 
-            <!-- 范围过滤 -->
+            <!-- Range filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
                           Label="范围"
@@ -66,7 +66,7 @@
                 </MudSelect>
             </MudItem>
 
-            <!-- 自动发现过滤 -->
+            <!-- Automatic discovery filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
                           Label="发现方式"
@@ -78,7 +78,7 @@
                 </MudSelect>
             </MudItem>
 
-            <!-- 搜索文本 -->
+            <!-- Search text -->
             <MudItem xs="12" sm="6" md="3">
                 <MudTextField T="string"
                              Label="搜索"

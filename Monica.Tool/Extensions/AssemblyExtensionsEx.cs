@@ -5,7 +5,7 @@ namespace Monica.Tool.Extensions;
 public static class AssemblyExtensionsEx
 {
     /// <summary>
-    /// 获取程序集的版本号。
+    /// Gets the version number of the assembly.
     /// <br/>English: Get the version number of the assembly.
     /// </summary>
     /// <param name="assembly"></param>

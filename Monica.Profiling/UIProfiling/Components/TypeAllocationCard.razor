@@ -4,7 +4,7 @@
 @implements IDisposable
 
 <MudGrid Spacing="3">
-    @* 控制面板 *@
+    @* control Panel *@
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="2">
             <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-3">
@@ -95,7 +95,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 数据来源标签 *@
+    @* Data source tag *@
     @if (snapshot != null && snapshot.DataSource != TypeAllocationDataSource.None)
     {
         <MudItem xs="12">
@@ -108,7 +108,7 @@
         </MudItem>
     }
 
-    @* 类型分配表格 *@
+    @* Type assignment table *@
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="2">
             <div class="d-flex justify-space-between align-center mb-3">
@@ -197,7 +197,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 丢弃事件警告 *@
+    @* Discard event warning *@
     @if (snapshot?.DroppedEventCount > 0)
     {
         <MudItem xs="12">
@@ -208,7 +208,7 @@
         </MudItem>
     }
 
-    @* 使用说明 *@
+    @* Instructions for use *@
     <MudItem xs="12">
         <MudExpansionPanels>
             <MudExpansionPanel Text="使用说明">
@@ -250,7 +250,7 @@
 
     private void OnSnapshotUpdated(TypeAllocationSnapshot newSnapshot)
     {
-        // 只在收集中时自动更新
+        // Automatically updated only while in collection
         if (TypeAllocationService.IsCollecting)
         {
             snapshot = newSnapshot;

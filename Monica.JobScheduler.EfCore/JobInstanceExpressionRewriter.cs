@@ -6,8 +6,8 @@ using Monica.JobScheduler.Models;
 namespace Monica.JobScheduler.EfCore;
 
 /// <summary>
-/// 将 Expression&lt;Func&lt;JobInstance, TResult&gt;&gt; 转换为 Expression&lt;Func&lt;JobInstanceEntity, TResult&gt;&gt;
-/// 由于两个类型的属性名称完全相同，只需替换参数类型和成员访问
+/// Converts Expression&lt;Func&lt;JobInstance, TResult&gt;&gt; to Expression&lt;Func&lt;JobInstanceEntity, TResult&gt;&gt;.
+/// Since both types have identical property names, only parameter and member access replacements are required.
 /// </summary>
 internal sealed class JobInstanceExpressionRewriter : ExpressionVisitor
 {
@@ -40,11 +40,11 @@ internal sealed class JobInstanceExpressionRewriter : ExpressionVisitor
     }
 
     /// <summary>
-    /// 将 JobInstance 的投影表达式重写为 JobInstanceEntity 的投影表达式
+    /// Rewrites a JobInstance projection expression into a JobInstanceEntity projection expression.
     /// </summary>
-    /// <typeparam name="TResult">投影结果类型</typeparam>
-    /// <param name="selector">基于 JobInstance 的投影表达式</param>
-    /// <returns>重写后的基于 JobInstanceEntity 的投影表达式</returns>
+    /// <typeparam name="TResult">The projection result type.</typeparam>
+    /// <param name="selector">A projection expression based on JobInstance.</param>
+    /// <returns>The rewritten projection expression based on JobInstanceEntity.</returns>
     public static Expression<Func<JobInstanceEntity, TResult>> Rewrite<TResult>(
         Expression<Func<JobInstance, TResult>> selector)
     {

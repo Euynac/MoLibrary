@@ -8,7 +8,7 @@ using Monica.ServiceDiscovery.Models;
 namespace Monica.ServiceDiscovery.Services.Support;
 
 /// <summary>
-/// Leader 选举服务实现
+/// Leader election service implementation
 /// </summary>
 public class LeaderElectionService(
     IServiceDiscoveryClientInfo clientInfo,
@@ -51,7 +51,7 @@ public class LeaderElectionService(
         {
             if (_currentStatus == LeaderStatus.Leader)
             {
-                // 已经是 Leader，只更新 ETag
+                // Already the Leader, only update the ETag
                 _currentETag = eTag;
                 return;
             }
@@ -63,7 +63,7 @@ public class LeaderElectionService(
 
         logger.LogInformation("成为 Leader，时间: {Time}", becomeTime);
 
-        // 触发事件
+        // trigger event
         var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderGained?.Invoke(this, new LeaderGainedEvent
         {
@@ -100,7 +100,7 @@ public class LeaderElectionService(
 
         logger.LogWarning("失去 Leader 地位，原因: {Reason}", reason);
 
-        // 触发事件
+        // trigger event
         var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderLost?.Invoke(this, new LeaderLostEvent
         {

@@ -4,13 +4,13 @@ using Monica.Tool.Extensions;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// Kou开发常用字符串工具类
+/// Kou develops common string tool classes
 /// </summary>
 public static class KouStringTool
 {
     #region KouType类型适配
     /// <summary>
-    /// 将字符串类型的数字转换为bool类型，支持中文以及英文、数字
+    /// Convert string type numbers to bool type, supports Chinese, English, and numbers
     /// </summary>
     /// <param name="str"></param>
     /// <param name="boolResult"></param>
@@ -25,7 +25,7 @@ public static class KouStringTool
     }
 
     /// <summary>
-    /// 将字符串类型的数字转换为enum类型，支持KouEnumName标签特性别名枚举
+    /// Convert string type numbers to enum type, support KouEnumName label specific alias enumeration
     /// </summary>
     /// <param name="str"></param>
     /// <param name="enumResult"></param>
@@ -45,7 +45,7 @@ public static class KouStringTool
     }
 
     /// <summary>
-    /// 将字符串类型的数字转换为enum类型，支持KouEnumName标签特性别名枚举
+    /// Convert string type numbers to enum type, support KouEnumName label specific alias enumeration
     /// </summary>
     /// <param name="str"></param>
     /// <param name="enumType"></param>
@@ -74,7 +74,7 @@ public static class KouStringTool
     #region 插件参数处理常用
 
     /// <summary>
-    /// 转换为英文标点符号
+    /// Convert to English punctuation marks
     /// </summary>
     /// <returns></returns>
     public static string ToEnPunctuation(this string str)
@@ -86,7 +86,7 @@ public static class KouStringTool
     }
 
     /// <summary>
-    /// 转换为中文标点符号
+    /// Convert to Chinese punctuation marks
     /// </summary>
     /// <returns></returns>
     public static string ToZhPunctuation(this string str)
@@ -101,7 +101,7 @@ public static class KouStringTool
     #region 区间格式转区间
 
     /// <summary>
-    /// 获取TimeSpan型区间值（格式为[7位天数.][00-23小时:][00-59分钟:]00-59秒[.7位毫秒数]）
+    /// Get the TimeSpan interval value (the format is [7-digit days.][00-23 hours:][00-59 minutes:]00-59 seconds[.7-digit milliseconds])
     /// </summary>
     /// <param name="str"></param>
     /// <param name="left"></param>
@@ -113,7 +113,7 @@ public static class KouStringTool
         right = new TimeSpan();
         if (str.IsNullOrWhiteSpace()) return false;
         str = str.Trim();
-        //该正则表达式匹配[leftime]lday(7位天数).lhour(0-23):lminute(0-23):lsecond(0-59).lmillisecond(7位毫秒数) 分隔符 [righttime]rday(7位天数).rhour(0-23):rminute(0-23):rsecond(0-59).rmillisecond(7位毫秒数)
+        //This regular expression matches [leftime]lday(7-digit number of days).lhour(0-23):lminute(0-23):lsecond(0-59).lmillisecond(7-digit number of milliseconds) delimiter [righttime]rday(7-digit number of days).rhour(0-23):rminute(0-23):rsecond(0-59).rmillisecond(7-digit number of milliseconds)
         var regex = new Regex(@"^(?<lefttime>(?:(?:(?<lday>\d{1,7})\.)?(?:(?<lhour>2[0-3]|[0-1]\d|\d):)?(?:(?<lminute>[0-5]\d|\d):))?(?<lsecond>[0-5]\d|\d)(?:(?:\.)?(?<lmillisecond>\d{1,7}))?)[^.:\d]+?(?<righttime>(?:(?:(?<rday>[0-5]\d|\d)\.)?(?:(?<rhour>2[0-3]|[0-1]\d|\d):)?(?:(?<rminute>[0-5]\d|\d):))?(?<rsecond>[0-5]\d|\d))(?:(?:\.)?(?<rmillisecond>\d{1,7}))?$");
         if (regex.IsMatch(str))
         {

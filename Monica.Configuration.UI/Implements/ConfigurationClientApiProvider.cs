@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.Configuration.UI.Implements;
 
 /// <summary>
-/// 配置客户端API提供者，提供客户端模式下的配置管理功能
+/// Configure the client API provider to provide configuration management functions in client mode
 /// </summary>
 public class ConfigurationClientApiProvider(
     IMoConfigurationModifier modifier,

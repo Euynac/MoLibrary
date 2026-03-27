@@ -5,39 +5,39 @@ namespace Monica.AutoModel.Annotations;
 public class AutoFieldAttribute : Attribute
 {
     /// <summary>
-    /// 字段额外激活名(默认包含反射名)
+    /// Additional activation names for the field. The reflected name is included by default.
     /// </summary>
     public List<string>? ActivateNames { get; set; }
 
     /// <summary>
-    /// 字段显示名
+    /// Display name of the field.
     /// </summary>
     public string? Title { get; set; }
 
     /// <summary>
-    /// <inheritdoc cref="ModuleAutoModelOption.EnableTitleAsActivateName"/>，若为null运用上层设置
+    /// Whether to use the field title as an activation name. If <c>null</c>, the parent setting is used.
     /// </summary>
     [Obsolete("暂未实现")]
     public bool? TitleAsActivateName { get; set; }
 
     /// <summary>
-    /// 全字段模糊查询时是否忽略该字段
+    /// Whether to ignore this field during full-field fuzzy searches.
     /// </summary>
     public bool IgnoreFuzzColumn { get; set; }
 
     /// <summary>
-    /// 字段过滤时必填
+    /// Whether this field is required in filter expressions.
     /// </summary>
     [Obsolete("暂未实现")]
     public bool IsRequired { get; set; }
 
     /// <summary>
-    /// 忽略该字段，不进行自动模型字段的构建
+    /// Ignores this field and skips AutoModel field generation.
     /// </summary>
     public bool Ignore { get; set; }
 
     /// <summary>
-    /// <inheritdoc cref="ModuleAutoModelOption.EnableIgnorePrefix"/>，若为null运用上层设置
+    /// Whether to ignore the prefix for this field. If <c>null</c>, the parent setting is used.
     /// </summary>
     public bool? EnableIgnorePrefix { get; set; }
 }

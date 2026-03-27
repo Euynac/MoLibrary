@@ -5,7 +5,7 @@ using Monica.AI.Models;
 namespace Monica.AI.Services;
 
 /// <summary>
-/// AI Provider 管理器实现
+/// AI Provider Manager Implementation
 /// </summary>
 public class AIProviderManager : IAIProviderFactory, IDisposable
 {
@@ -14,14 +14,14 @@ public class AIProviderManager : IAIProviderFactory, IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// 注册 Provider
+    /// Register Provider
     /// </summary>
-    /// <param name="provider">Provider 实例</param>
+    /// <param name="provider">Provider instance</param>
     public void RegisterProvider(IAIProvider provider)
     {
         _providers[provider.ProviderId] = provider;
 
-        // 如果是默认 Provider 或者是第一个注册的 Provider
+        // If it is the default Provider or the first registered Provider
         if (provider.Info.IsDefault || _defaultProviderId == null)
         {
             _defaultProviderId = provider.ProviderId;
@@ -29,7 +29,7 @@ public class AIProviderManager : IAIProviderFactory, IDisposable
     }
 
     /// <summary>
-    /// 设置默认 Provider
+    /// Set default Provider
     /// </summary>
     /// <param name="providerId">Provider ID</param>
     public void SetDefaultProvider(string providerId)

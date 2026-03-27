@@ -5,7 +5,8 @@ namespace Monica.DomainDrivenDesign.AutoController.Extensions;
 
 internal static class MoMvcOptionsExtensions
 {
-    //https://stackoverflow.com/a/54148525  巨坑：service.Configure支持叠加
+    // https://stackoverflow.com/a/54148525
+    // Important: service.Configure calls are additive.
     public static void ConfigAutoController(this MvcOptions options, IServiceProvider provider)
     {
         AddConventions(options, provider);

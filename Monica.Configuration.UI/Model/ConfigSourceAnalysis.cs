@@ -1,69 +1,69 @@
 namespace Monica.Configuration.UI.Model;
 
 /// <summary>
-/// 配置来源分析结果
+/// Configure source analysis results
 /// </summary>
 public class ConfigSourceAnalysis
 {
     /// <summary>
-    /// 配置类名
+    /// Configuration class name
     /// </summary>
     public string ConfigName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 配置类标题
+    /// Configuration class title
     /// </summary>
     public string ConfigTitle { get; set; } = string.Empty;
 
     /// <summary>
-    /// 配置项来源是否一致
+    /// Are the sources of configuration items consistent?
     /// </summary>
     public bool IsConsistent { get; set; }
 
     /// <summary>
-    /// 按来源分组的配置项
+    /// Configuration items grouped by source
     /// </summary>
     public List<ConfigSourceGroup> SourceGroups { get; set; } = new();
 }
 
 /// <summary>
-/// 配置来源分组
+/// Configure source grouping
 /// </summary>
 public class ConfigSourceGroup
 {
     /// <summary>
-    /// Provider类型
+    /// Provider type
     /// </summary>
     public string Provider { get; set; } = string.Empty;
 
     /// <summary>
-    /// 来源信息
+    /// Source information
     /// </summary>
     public string Source { get; set; } = string.Empty;
 
     /// <summary>
-    /// 该来源下的配置项
+    /// Configuration items under this source
     /// </summary>
     public List<ConfigItemSourceInfo> Items { get; set; } = new();
 }
 
 /// <summary>
-/// 配置项来源信息
+/// Configuration item source information
 /// </summary>
 public class ConfigItemSourceInfo
 {
     /// <summary>
-    /// 配置项Key
+    /// Configuration item Key
     /// </summary>
     public string Key { get; set; } = string.Empty;
 
     /// <summary>
-    /// 配置项标题
+    /// Configuration item title
     /// </summary>
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// 配置项名称
+    /// Configuration item name
     /// </summary>
     public string Name { get; set; } = string.Empty;
 }

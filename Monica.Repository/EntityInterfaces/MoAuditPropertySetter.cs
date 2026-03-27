@@ -107,7 +107,7 @@ public class MoAuditPropertySetter(ICurrentUser currentUser) : IMoAuditPropertyS
         {
             return;
         }
-        //巨坑：不能直接改，否则会报：A second operation was started on this context instance before a previous operation completed. This is usually caused by different threads concurrently using the same instance of DbContext. For more information on how to avoid threading issues with DbContext, see https://go.microsoft.com/fwlink/?linkid=2097913."
+        //Huge pit: It cannot be changed directly, otherwise it will report: A second operation was started on this context instance before a previous operation completed. This is usually caused by different threads concurrently using the same instance of DbContext. For more information on how to avoid threading issues with DbContext, see https://go.microsoft.com/fwlink/?linkid=2097913."
         if (targetObject is IHasDeleterName deleter)
         {
             ObjectHelper.TrySetProperty(deleter, x => x.Deleter, () => CurrentUser.Username);

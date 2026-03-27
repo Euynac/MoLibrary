@@ -63,7 +63,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     }
 
     /// <summary>
-    /// 获取字段的选择表达式
+    /// Gets the select expression for a field.
     /// </summary>
     /// <param name="field"></param>
     /// <returns></returns>
@@ -128,7 +128,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
 
     public NormalizedResult NormalizeFuzzy(string fuzzy, string? fuzzyColumns = null)
     {
-        //TODO 检查是否包含""、括号等注入
+        // TODO: check for quotes, parentheses, or other injection patterns.
         List<AutoField> fuzzyColumnsList;
         if (!string.IsNullOrWhiteSpace(fuzzyColumns))
         {

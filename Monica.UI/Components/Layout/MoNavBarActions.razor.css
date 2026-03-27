@@ -20,7 +20,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 用户按钮样式 */
+/* User button style */
 .navbar-actions ::deep .user-button {
     height: 40px;
     padding: 0 12px;
@@ -45,7 +45,7 @@
     max-width: 140px;
 }
 
-/* 分隔线 */
+/* divider */
 .navbar-actions::before {
     content: '';
     width: 1px;

@@ -111,7 +111,7 @@ public class ModuleAnalyser
         //// Check for circular dependencies.
         //if (HasCircularDependencies())
         //{
-        //    throw new InvalidOperationException("检测到模块间存在循环依赖，无法确定正确的注册顺序。请检查模块依赖关系。");
+        //    throw new InvalidOperationException("Circular dependencies were detected between modules. The correct registration order cannot be determined. Check the module dependency graph.");
         //}
         
         RefreshModuleOrders();

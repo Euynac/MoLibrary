@@ -227,27 +227,27 @@
     {
         if (!AutoRefresh) return;
         
-        // 取消之前的防抖任务
+        // Cancel the previous debounce task.
         _debounceTokenSource?.Cancel();
         _debounceTokenSource = new CancellationTokenSource();
         
         try
         {
-            // 计算总字符数
+            // Calculate the total number of characters
             var totalChars = (OriginText?.Length ?? 0) + (NewText?.Length ?? 0);
             
-            // 100000字符以上才延迟300ms，否则不延迟
+            // Delay for 300ms only if it exceeds 100,000 characters, otherwise no delay
             if (totalChars > 100000)
             {
                 await Task.Delay(300, _debounceTokenSource.Token);
             }
             
-            // 触发自动刷新
+            // Trigger automatic refresh
             await RefreshDiffAsync();
         }
         catch (OperationCanceledException)
         {
-            // 防抖被取消，忽略
+            // Debounce cancellation is expected and can be ignored.
         }
     }
 
@@ -264,7 +264,7 @@
             }
             else
             {
-                // 非HTML格式直接调用服务
+                // Call the service directly in non-HTML format
                 var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
 
                 if (result.IsFailed(out var error, out var data))
@@ -330,7 +330,7 @@
 {
     public int Add(int a, int b)
     {
-        // 添加输入验证
+        // Add input validation
         return a + b;
     }
 

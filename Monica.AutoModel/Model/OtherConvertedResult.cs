@@ -10,7 +10,7 @@ public class FieldResult
 
 
 /// <summary>
-/// 需要跳过此字段条件（如必定为False的）
+/// Indicates that this field condition should be skipped, for example when it always evaluates to false.
 /// </summary>
 public class ResultJumpThisField
 {

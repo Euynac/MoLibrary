@@ -1,12 +1,12 @@
-/* Monica Aurora Flow Theme - 极光流彩主题 */
-/* 现代渐变主题，灵感来自北极光 */
+/* Monica Aurora Flow Theme - Aurora flow color theme */
+/* Modern gradient theme inspired by the Northern Lights */
 
-/* Aurora Flow Theme CSS Variables - 明暗模式通用 */
+/* Aurora Flow Theme CSS Variables - Universal for light and dark modes */
 :root[data-theme="aurora-flow-light"],
 :root[data-theme="aurora-flow-dark"],
 .mo-theme-aurora-flow-light,
 .mo-theme-aurora-flow-dark {
-    /* 极光效果变量 */
+    /* Aurora effect variables */
     --mo-aurora-primary: #667eea;
     --mo-aurora-secondary: #00d4ff;
     --mo-aurora-accent: #f093fb;
@@ -14,7 +14,7 @@
     --mo-aurora-shimmer-speed: 3s;
     --mo-aurora-glow-intensity: 0.6;
     
-    /* 组件样式变量 - 现代流畅风格 */
+    /* Component style variables - modern smooth style */
     --mo-button-border-radius: 12px;
     --mo-button-padding-x: 20px;
     --mo-button-padding-y: 10px;
@@ -38,26 +38,26 @@
     
     --mo-table-border-radius: 12px;
     
-    /* 间距变量 */
+    /* spacing variable */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* 动画变量 */
+    /* Animation variables */
     --mo-transition-fast: 150ms;
     --mo-transition-normal: 300ms;
     --mo-transition-slow: 450ms;
     --mo-animation-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
     --mo-animation-bounce: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
-    /* 极光渐变变量 */
+    /* Aurora Gradient Variable */
     --mo-aurora-gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
     --mo-aurora-gradient-2: linear-gradient(225deg, #00d4ff 0%, #667eea 25%, #8b5cf6 50%, #f093fb 75%, #ff006e 100%);
     --mo-aurora-gradient-3: linear-gradient(45deg, #4facfe 0%, #00f2fe 25%, #667eea 50%, #764ba2 75%, #f093fb 100%);
     
-    /* 光晕变量 */
+    /* halo variable */
     --mo-glow-primary: 0 0 20px rgba(102, 126, 234, var(--mo-aurora-glow-intensity));
     --mo-glow-secondary: 0 0 20px rgba(0, 212, 255, var(--mo-aurora-glow-intensity));
     --mo-glow-accent: 0 0 20px rgba(240, 147, 251, var(--mo-aurora-glow-intensity));
@@ -95,7 +95,7 @@
     --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary);
 }
 
-/* 动态极光背景 - Light Mode */
+/* Dynamic Aurora Background - Light Mode */
 .mo-theme-aurora-flow-light::before {
     content: '';
     position: fixed;
@@ -123,7 +123,7 @@
     z-index: -19;
 }
 
-/* 动态极光背景 - Dark Mode */
+/* Dynamic Aurora Background - Dark Mode */
 .mo-theme-aurora-flow-dark::before {
     content: '';
     position: fixed;
@@ -151,7 +151,7 @@
     z-index: -19;
 }
 
-/* 极光流动动画 */
+/* Aurora flow animation */
 @keyframes mo-aurora-flow {
     0%, 100% { 
         background-position: 0% 50%; 
@@ -190,13 +190,13 @@
     }
 }
 
-/* 微光闪烁动画 */
+/* shimmer animation */
 @keyframes mo-aurora-shimmer {
     0%, 100% { opacity: 0.8; }
     50% { opacity: 1; }
 }
 
-/* 极光脉冲动画 */
+/* Aurora pulse animation */
 @keyframes mo-aurora-pulse {
     0%, 100% { 
         box-shadow: var(--mo-glow-primary);
@@ -208,7 +208,7 @@
     }
 }
 
-/* 浮动动画 */
+/* floating animation */
 @keyframes mo-aurora-float {
     0%, 100% { transform: translateY(0px) rotate(0deg); }
     33% { transform: translateY(-6px) rotate(0.5deg); }
@@ -218,7 +218,7 @@
 /* Light and Dark Theme Styles */
 .mo-theme-aurora-flow-light,
 .mo-theme-aurora-flow-dark {
-    /* Cards - 极光玻璃卡片 */
+    /* Cards - Aurora Glass Cards */
     .mud-card {
         background: var(--mo-background-elevated) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -254,7 +254,7 @@
         left: 100%;
     }
     
-    /* Buttons - 极光渐变按钮 */
+    /* Buttons - Aurora Gradient Buttons */
     .mud-button {
         border-radius: var(--mo-button-border-radius) !important;
         padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
@@ -315,7 +315,7 @@
         box-shadow: var(--mo-glow-primary) !important;
     }
     
-    /* Inputs - 极光输入框 */
+    /* Inputs - Aurora input box */
     .mud-input-outlined .mud-input-outlined-border {
         border-color: var(--mo-border-light) !important;
         border-radius: var(--mo-input-border-radius) !important;
@@ -337,7 +337,7 @@
         background: var(--mo-background-elevated) !important;
     }
     
-    /* AppBar - 极光导航栏 */
+    /* AppBar – Aurora Navigation Bar */
     .mud-app-bar {
         background: var(--mo-background-primary) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -359,7 +359,7 @@
         animation: mo-aurora-flow calc(var(--mo-aurora-flow-speed) * 3) ease infinite;
     }
     
-    /* Drawer - 极光侧边栏 */
+    /* Drawer - Aurora Sidebar */
     .mud-drawer .mud-drawer-content {
         background: var(--mo-background-primary) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -367,7 +367,7 @@
         border-right: 1px solid var(--mo-border-light) !important;
     }
     
-    /* Dialog - 极光对话框 */
+    /* Dialog - Aurora dialog box */
     .mud-dialog {
         background: var(--mo-background-elevated) !important;
         backdrop-filter: blur(30px) saturate(180%) !important;
@@ -395,7 +395,7 @@
         padding: var(--mo-dialog-padding) !important;
     }
     
-    /* Tables - 极光表格 */
+    /* Tables – Aurora Tables */
     .mud-table {
         background: var(--mo-background-elevated) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -428,7 +428,7 @@
         animation: mo-aurora-shimmer var(--mo-aurora-shimmer-speed) ease infinite;
     }
     
-    /* Chips - 极光标签 */
+    /* Chips - Aurora Tags */
     .mud-chip {
         background: var(--mo-surface-glass) !important;
         backdrop-filter: blur(10px) !important;
@@ -466,7 +466,7 @@
         left: 100%;
     }
     
-    /* Popovers and Menus - 极光弹出框 */
+    /* Popovers and Menus - Aurora pop-up box */
     .mud-popover,
     .mud-menu {
         background: var(--mo-background-elevated) !important;
@@ -477,7 +477,7 @@
         box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
     }
     
-    /* Tooltips - 极光提示框 */
+    /* Tooltips - Aurora tooltips */
     .mud-tooltip {
         background: var(--mo-background-elevated) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -487,7 +487,7 @@
         box-shadow: var(--mo-shadow-aurora), var(--mo-glow-primary) !important;
     }
     
-    /* Snackbars - 极光通知栏 */
+    /* Snackbars – Aurora Notification Bar */
     .mud-snackbar {
         background: var(--mo-background-elevated) !important;
         backdrop-filter: blur(30px) saturate(180%) !important;
@@ -497,7 +497,7 @@
         box-shadow: var(--mo-shadow-aurora-hover), var(--mo-glow-primary) !important;
     }
     
-    /* Tabs - 极光标签页 */
+    /* Tabs - Aurora tab page */
     .mud-tabs-toolbar {
         background: var(--mo-background-primary) !important;
         backdrop-filter: blur(20px) saturate(180%) !important;
@@ -527,7 +527,7 @@
         box-shadow: var(--mo-glow-primary) !important;
     }
     
-    /* List Items - 极光列表项 */
+    /* List Items – Aurora list items */
     .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
@@ -557,7 +557,7 @@
         width: 3px;
     }
     
-    /* 工具类 */
+    /* Tools */
     .mo-aurora-bg {
         background: var(--mo-aurora-gradient-1) !important;
         background-size: 200% 200% !important;
@@ -583,7 +583,7 @@
 
 /* Light Theme Specific Styles */
 .mo-theme-aurora-flow-light {
-    /* 明亮模式特殊效果 */
+    /* Bright mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -611,9 +611,9 @@
     }
 }
 
-/* Dark Theme Specific Styles - 极光霓虹效果 */
+/* Dark Theme Specific Styles – Aurora Neon Effect */
 .mo-theme-aurora-flow-dark {
-    /* 暗色模式特殊效果 */
+    /* Dark mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -640,20 +640,20 @@
         box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(0, 212, 255, 0.1) !important;
     }
     
-    /* 霓虹按钮效果 */
+    /* neon button effect */
     .mud-button-filled-primary:hover {
         animation: mo-aurora-pulse 2s ease-in-out infinite;
         text-shadow: var(--mo-neon-text-shadow);
     }
     
-    /* 霓虹标题效果 */
+    /* neon title effect */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3 {
         text-shadow: var(--mo-text-glow);
     }
     
-    /* 导航链接霓虹悬停效果 */
+    /* Navigation links neon hover effect */
     .mud-nav-link:hover {
         background: var(--mo-surface-hover) !important;
         border-radius: var(--mo-button-border-radius) !important;
@@ -662,7 +662,7 @@
     }
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 960px) {
     .mo-theme-aurora-flow-light,
     .mo-theme-aurora-flow-dark {
@@ -696,7 +696,7 @@
     }
 }
 
-/* 无障碍支持 */
+/* Accessibility support */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-aurora-flow-light *,
     .mo-theme-aurora-flow-dark * {
@@ -713,7 +713,7 @@
     }
 }
 
-/* 性能优化 */
+/* Performance optimization */
 .mo-theme-aurora-flow-light .mud-table *,
 .mo-theme-aurora-flow-light .mud-data-grid *,
 .mo-theme-aurora-flow-light .mud-treeview *,

@@ -1,7 +1,7 @@
 namespace Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 
 /// <summary>
-/// 请求含排序规则
+/// Indicates that the request supports sorting.
 /// </summary>
 public interface IHasRequestSorting
 {

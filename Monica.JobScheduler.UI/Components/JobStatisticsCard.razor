@@ -20,7 +20,7 @@
         @if (_statistics != null)
         {
             <MudStack Spacing="2">
-                <!-- 执行次数 -->
+                <!-- Number of executions -->
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                     <MudText Typo="Typo.body2">@L["JobDetail:Statistics:TotalExecutions"]</MudText>
                     <MudLink OnClick="NavigateToAllInstances" Typo="Typo.body2">
@@ -28,7 +28,7 @@
                     </MudLink>
                 </MudStack>
 
-                <!-- 失败次数 -->
+                <!-- Number of failures -->
                 <MudStack Row="true" Justify="Justify.SpaceBetween">
                     <MudText Typo="Typo.body2">@L["JobDetail:Statistics:FailedExecutions"]</MudText>
                     <MudLink OnClick="NavigateToFailedInstances" Typo="Typo.body2" Color="Color.Error">
@@ -38,7 +38,7 @@
 
                 <MudDivider />
 
-                <!-- 平均执行时间 -->
+                <!-- average execution time -->
                 @if (_statistics.AverageExecutionTime.HasValue)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -47,7 +47,7 @@
                     </MudStack>
                 }
 
-                <!-- 最快执行时间 -->
+                <!-- Fastest execution time -->
                 @if (_statistics.FastestExecutionTime.HasValue && _statistics.FastestInstanceId != null)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -58,7 +58,7 @@
                     </MudStack>
                 }
 
-                <!-- 最慢执行时间 -->
+                <!-- Slowest execution time -->
                 @if (_statistics.SlowestExecutionTime.HasValue && _statistics.SlowestInstanceId != null)
                 {
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -73,13 +73,13 @@
                 {
                     <MudDivider />
 
-                    <!-- 最后执行时间 -->
+                    <!-- last execution time -->
                     <MudStack Row="true" Justify="Justify.SpaceBetween">
                         <MudText Typo="Typo.body2">@L["JobDetail:Statistics:LastExecutionTime"]</MudText>
                         <MudText Typo="Typo.body2">@_statistics.LastExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
                     </MudStack>
 
-                    <!-- 最后执行状态 -->
+                    <!-- last execution status -->
                     @if (_statistics.LastExecutionState.HasValue)
                     {
                         <MudStack Row="true" Justify="Justify.SpaceBetween">

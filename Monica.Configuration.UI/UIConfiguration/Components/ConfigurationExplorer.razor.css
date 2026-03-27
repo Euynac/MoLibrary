@@ -2,13 +2,13 @@
     cursor: pointer;
 }
 
-/* 导航菜单选中状态 - using ::deep with wrapper */
+/* Navigation menu selected state - using ::deep with wrapper */
 .nav-menu-wrapper ::deep .mud-nav-link-active {
     background-color: var(--mud-palette-action-default-hover) !important;
     border-left: 3px solid var(--mud-palette-primary) !important;
 }
 
-/* 配置类表格选中行 - 使用包裹div穿透CSS隔离 */
+/* Configuration class table selected row - use wrapping div to penetrate CSS isolation */
 .config-table-wrapper ::deep tr.mud-selected {
     background-color: var(--mud-palette-action-default-hover) !important;
 }
@@ -34,13 +34,13 @@
     word-break: break-all;
 }
 
-/* 配置浏览器网格布局 */
+/* Configure browser grid layout */
 .config-explorer-grid {
     min-height: 70vh;
     align-items: stretch;
 }
 
-/* 配置导航面板 */
+/* Configure navigation panel */
 .config-navigation-panel {
     min-height: 70vh;
     max-height: 85vh;
@@ -49,7 +49,7 @@
     flex-direction: column;
 }
 
-/* 配置类面板 */
+/* Configuration panel */
 .config-class-panel {
     min-height: 70vh;
     max-height: 85vh;
@@ -58,7 +58,7 @@
     flex-direction: column;
 }
 
-/* 配置项面板 */
+/* Configuration item panel */
 .config-item-panel {
     min-height: 70vh;
     max-height: 85vh;

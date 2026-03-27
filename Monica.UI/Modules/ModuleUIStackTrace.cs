@@ -13,7 +13,7 @@ public static class ModuleUIStackTraceBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 UIStackTrace 模块
+        /// Configure the UIStackTrace module
         /// </summary>
         public static ModuleUIStackTraceGuide AddUIStackTrace(Action<ModuleUIStackTraceOption>? action = null)
         {

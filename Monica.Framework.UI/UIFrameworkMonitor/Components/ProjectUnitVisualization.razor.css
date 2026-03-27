@@ -27,7 +27,7 @@
     transition: opacity 0.3s ease;
 }
 
-/* 移除hover opacity，由JavaScript控制 */
+/* Remove hover opacity, controlled by JavaScript */
 
 .visualization-shell ::deep .link {
     transition: stroke-opacity 0.3s ease;

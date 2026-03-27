@@ -3,62 +3,62 @@ using System.Runtime;
 namespace Monica.Profiling.Models;
 
 /// <summary>
-///     内存快照 - 某一时刻的内存状态
+/// Memory snapshot - memory state at a certain moment
 /// </summary>
 public class MemorySnapshot
 {
     /// <summary>
-    ///     快照时间戳
+    /// snapshot timestamp
     /// </summary>
     public DateTime Timestamp { get; init; }
 
     /// <summary>
-    ///     工作集大小 (字节)
+    /// Working set size (bytes)
     /// </summary>
     public long WorkingSetBytes { get; init; }
 
     /// <summary>
-    ///     托管内存总量 (字节)
+    /// Total managed memory (bytes)
     /// </summary>
     public long TotalManagedMemory { get; init; }
 
     /// <summary>
-    ///     GC 堆大小 (字节)
+    /// GC heap size (bytes)
     /// </summary>
     public long GcHeapSizeBytes { get; init; }
 
     /// <summary>
-    ///     已提交内存 (字节)
+    /// Committed memory (bytes)
     /// </summary>
     public long CommittedBytes { get; init; }
 
     /// <summary>
-    ///     Gen0 回收次数
+    /// Gen0 recycling times
     /// </summary>
     public int Gen0Collections { get; init; }
 
     /// <summary>
-    ///     Gen1 回收次数
+    /// Gen1 recycling times
     /// </summary>
     public int Gen1Collections { get; init; }
 
     /// <summary>
-    ///     Gen2 回收次数
+    /// Gen2 recycling times
     /// </summary>
     public int Gen2Collections { get; init; }
 
     /// <summary>
-    ///     是否为服务器 GC 模式
+    /// Whether it is server GC mode
     /// </summary>
     public bool IsServerGC { get; init; }
 
     /// <summary>
-    ///     GC 延迟模式
+    /// GC delay mode
     /// </summary>
     public GCLatencyMode LatencyMode { get; init; }
 
     /// <summary>
-    ///     GC 延迟模式显示名称
+    /// GC delay mode display name
     /// </summary>
     public string LatencyModeDisplayName => LatencyMode switch
     {

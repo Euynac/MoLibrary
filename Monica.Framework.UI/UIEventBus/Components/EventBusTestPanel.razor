@@ -8,7 +8,7 @@
 
 <div class="test-panel-wrapper">
     <MudStack Spacing="4">
-        <!-- 发布测试消息 -->
+        <!-- Publish test message -->
         <div class="publish-section-wrapper">
             <MudPaper Class="pa-4" Elevation="2">
                 <MudStack Spacing="3">
@@ -59,7 +59,7 @@
             </MudPaper>
         </div>
 
-        <!-- 订阅测试消息 -->
+        <!-- Subscribe to test messages -->
         <div class="subscribe-section-wrapper">
             <MudPaper Class="pa-4" Elevation="2">
                 <MudStack Spacing="3">
@@ -111,7 +111,7 @@
                         </MudItem>
                     </MudGrid>
 
-                    <!-- 订阅状态指示器 -->
+                    <!-- Subscription status indicator -->
                     <div class="status-indicator-wrapper">
                         <MudPaper Class="@(_isListening ? "subscribed" : "unsubscribed")" Elevation="0" Style="padding: 0.75rem; border-radius: var(--mud-default-borderradius); border: 1px solid var(--mud-palette-lines-default);">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -133,7 +133,7 @@
                         </MudPaper>
                     </div>
 
-                    <!-- 消息列表 -->
+                    <!-- Message list -->
                     @if (_isListening)
                     {
                         <MudDivider />
@@ -160,7 +160,7 @@
                                             <MudCard Elevation="2">
                                                 <MudCardContent>
                                                     <MudStack Spacing="2">
-                                                        <!-- 消息头部 -->
+                                                        <!-- Message header -->
                                                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                                                 <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Info" Size="Size.Small" />
@@ -175,7 +175,7 @@
 
                                                         <MudDivider />
 
-                                                        <!-- 消息内容 -->
+                                                        <!-- Message content -->
                                                         <MudStack Spacing="1">
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                                 消息内容:
@@ -187,7 +187,7 @@
                                                             </MudPaper>
                                                         </MudStack>
 
-                                                        <!-- 消息元数据 -->
+                                                        <!-- message metadata -->
                                                         <MudStack Row="true" Spacing="3">
                                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                                                 <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Secondary" />
@@ -215,7 +215,7 @@
             </MudPaper>
         </div>
 
-        <!-- 使用说明 -->
+        <!-- Instructions for use -->
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
             <MudText Typo="Typo.body2">
                 <strong>使用说明：</strong>
@@ -297,7 +297,7 @@
             return;
         }
 
-        // 订阅主题
+        // Subscribe to topics
         var subscribeResult = await TestService.SubscribeToTestTopicAsync(_subscribeTopicName);
 
         if (subscribeResult.IsFailed(out var error, out var subscription))
@@ -309,7 +309,7 @@
         _isListening = true;
         Snackbar.Add("订阅成功，开始监听消息...", Severity.Success);
 
-        // 启动定时刷新
+        // Start scheduled refresh
         StartRefreshTimer();
 
         StateHasChanged();
@@ -373,7 +373,7 @@
     {
         StopRefreshTimer();
 
-        // 如果还在监听，自动取消订阅
+        // If still listening, automatically unsubscribe
         if (_isListening)
         {
             _ = TestService.UnsubscribeFromTestTopicAsync();

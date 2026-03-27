@@ -3,72 +3,72 @@ using Monica.JobScheduler.Models;
 namespace Monica.JobScheduler.Metadata;
 
 /// <summary>
-/// JobInstance 查询条件
+/// JobInstance query conditions
 /// </summary>
 public record JobInstanceQuery
 {
     /// <summary>
-    /// JobKey 精确匹配
+    /// JobKey exact match
     /// </summary>
     public string? JobKey { get; init; }
 
     /// <summary>
-    /// JobKey 批量精确匹配（优先级高于 JobKey 属性）
+    /// JobKey batch exact matching (priority is higher than JobKey attribute)
     /// </summary>
     public List<string>? JobKeys { get; init; }
 
     /// <summary>
-    /// JobKey 模糊匹配（包含关系，不区分大小写）
+    /// JobKey fuzzy matching (inclusive relationship, case-insensitive)
     /// </summary>
     public string? JobKeyContains { get; init; }
 
     /// <summary>
-    /// InstanceId 模糊匹配（包含关系，不区分大小写）
+    /// InstanceId fuzzy matching (inclusive relationship, case-insensitive)
     /// </summary>
     public string? InstanceIdContains { get; init; }
 
     /// <summary>
-    /// 按状态过滤（单一状态）
+    /// Filter by status (single status)
     /// </summary>
     public JobState? State { get; init; }
 
     /// <summary>
-    /// 按多个状态过滤（优先级高于 State 属性）
+    /// Filter by multiple states (takes precedence over State property)
     /// </summary>
     public List<JobState>? States { get; init; }
 
     /// <summary>
-    /// 创建时间起始（包含）
+    /// Creation time start (inclusive)
     /// </summary>
     public DateTime? CreatedAfter { get; init; }
 
     /// <summary>
-    /// 创建时间结束（包含）
+    /// End of creation time (inclusive)
     /// </summary>
     public DateTime? CreatedBefore { get; init; }
 
     /// <summary>
-    /// 按创建时间排序方向
+    /// Sort directions by creation time
     /// </summary>
     public SortDirection SortByCreatedAt { get; init; } = SortDirection.Descending;
 
     /// <summary>
-    /// 排序字段名称（支持: InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, Duration）
+    /// Sorting field name (supported: InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, Duration)
     /// </summary>
     public string? SortBy { get; init; }
 
     /// <summary>
-    /// 是否降序排序
+    /// Whether to sort in descending order
     /// </summary>
     public bool SortDescending { get; init; } = true;
 
     /// <summary>
-    /// 页码（从 1 开始）
+    /// Page number (starting from 1)
     /// </summary>
     public int PageNumber { get; init; } = 1;
 
     /// <summary>
-    /// 每页大小
+    /// page size
     /// </summary>
     public int PageSize { get; init; } = 20;
 }

@@ -4,17 +4,17 @@ using MudBlazor;
 namespace Monica.Framework.UI.UIEventBus.Models;
 
 /// <summary>
-/// 订阅变更视图模型
+/// Subscribe to change view model
 /// </summary>
 public class SubscriptionChangeViewModel
 {
     /// <summary>
-    /// 变更类型
+    /// Change type
     /// </summary>
     public SubscriptionChangeType ChangeType { get; set; }
 
     /// <summary>
-    /// 变更类型显示文本
+    /// Change type display text
     /// </summary>
     public string ChangeTypeDisplay => ChangeType switch
     {
@@ -26,7 +26,7 @@ public class SubscriptionChangeViewModel
     };
 
     /// <summary>
-    /// 变更类型对应的颜色
+    /// The color corresponding to the change type
     /// </summary>
     public Color ChangeTypeColor => ChangeType switch
     {
@@ -38,7 +38,7 @@ public class SubscriptionChangeViewModel
     };
 
     /// <summary>
-    /// 变更类型对应的图标
+    /// Icon corresponding to the change type
     /// </summary>
     public string ChangeTypeIcon => ChangeType switch
     {
@@ -50,27 +50,27 @@ public class SubscriptionChangeViewModel
     };
 
     /// <summary>
-    /// 相关订阅
+    /// Related subscriptions
     /// </summary>
     public SubscriptionViewModel Subscription { get; set; } = new();
 
     /// <summary>
-    /// 变更时间戳
+    /// Change timestamp
     /// </summary>
     public DateTime Timestamp { get; set; }
 
     /// <summary>
-    /// 时间戳显示文本（时分秒毫秒）
+    /// Timestamp display text (hours minutes seconds milliseconds)
     /// </summary>
     public string TimestampDisplay => Timestamp.ToLocalTime().ToString("HH:mm:ss.fff");
 
     /// <summary>
-    /// 完整时间显示文本
+    /// Full time display text
     /// </summary>
     public string FullTimestampDisplay => Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff");
 
     /// <summary>
-    /// 相对时间显示（如："2分钟前"）
+    /// Relative time display (eg: "2 minutes ago")
     /// </summary>
     public string RelativeTimeDisplay
     {

@@ -5,57 +5,57 @@ using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.Models;
 
 /// <summary>
-/// 实时执行信息
+/// real-time execution information
 /// </summary>
 public class LiveExecution
 {
     /// <summary>
-    /// 实例ID
+    /// Instance ID
     /// </summary>
     public required string InstanceId { get; set; }
 
     /// <summary>
-    /// 任务Key
+    /// TaskKey
     /// </summary>
     public required string JobKey { get; set; }
 
     /// <summary>
-    /// 任务名称
+    /// Task name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 当前状态
+    /// Current status
     /// </summary>
     public JobState State { get; set; }
 
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// 开始执行时间（仅Processing状态）
+    /// Start execution time (Processing state only)
     /// </summary>
     public DateTime? StartedAt { get; set; }
 
     /// <summary>
-    /// 已运行时间（仅Processing状态）
+    /// Elapsed time (Processing status only)
     /// </summary>
     public TimeSpan? ElapsedTime { get; set; }
 
     /// <summary>
-    /// 执行该任务的Worker客户端ID
+    /// Worker client ID that performs the task
     /// </summary>
     public string? WorkerClientId { get; set; }
 
     /// <summary>
-    /// 最大执行超时时间
+    /// Maximum execution timeout
     /// </summary>
     public TimeSpan MaxExecutionTimeout { get; set; }
 
     /// <summary>
-    /// 超时进度百分比 (0-100)
+    /// Timeout progress percentage (0-100)
     /// </summary>
     public double TimeoutProgress => ElapsedTime.HasValue && MaxExecutionTimeout.TotalSeconds > 0
         ? Math.Min(100, (ElapsedTime.Value.TotalSeconds / MaxExecutionTimeout.TotalSeconds) * 100)
@@ -63,132 +63,132 @@ public class LiveExecution
 }
 
 /// <summary>
-/// 队列状态
+/// queue status
 /// </summary>
 public class QueueStatus
 {
     /// <summary>
-    /// 已入队等待执行的实例数
+    /// Number of instances queued for execution
     /// </summary>
     public int EnqueuedCount { get; set; }
 
     /// <summary>
-    /// 已调度等待触发的实例数
+    /// Number of instances scheduled waiting to be triggered
     /// </summary>
     public int ScheduledCount { get; set; }
 
     /// <summary>
-    /// 正在处理的实例数
+    /// Number of instances being processed
     /// </summary>
     public int ProcessingCount { get; set; }
 
     /// <summary>
-    /// 等待中的总数 (Enqueued + Scheduled)
+    /// Total number of items waiting (Enqueued + Scheduled)
     /// </summary>
     public int PendingCount => EnqueuedCount + ScheduledCount;
 
     /// <summary>
-    /// 活跃实例总数 (所有非终态)
+    /// Total number of active instances (all non-final states)
     /// </summary>
     public int ActiveCount => EnqueuedCount + ScheduledCount + ProcessingCount;
 }
 
 /// <summary>
-/// 并发使用情况
+/// Concurrent usage
 /// </summary>
 public class ConcurrencyUsage
 {
     /// <summary>
-    /// 任务Key
+    /// TaskKey
     /// </summary>
     public required string JobKey { get; set; }
 
     /// <summary>
-    /// 任务名称
+    /// Task name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 当前运行中的实例数
+    /// Number of instances currently running
     /// </summary>
     public int CurrentRunning { get; set; }
 
     /// <summary>
-    /// 等待中的实例数（已预留槽位）
+    /// Number of instances waiting (slots reserved)
     /// </summary>
     public int PendingCount { get; set; }
 
     /// <summary>
-    /// 当前占用的总数 (Running + Pending)
+    /// Total number currently occupied (Running + Pending)
     /// </summary>
     public int CurrentExecuting => CurrentRunning + PendingCount;
 
     /// <summary>
-    /// 最大并发数
+    /// Maximum number of concurrencies
     /// </summary>
     public int MaxConcurrency { get; set; }
 
     /// <summary>
-    /// 利用率百分比 (0-100)
+    /// Utilization percentage (0-100)
     /// </summary>
     public double UtilizationPercent => MaxConcurrency > 0
         ? Math.Min(100, ((double)CurrentExecuting / MaxConcurrency) * 100)
         : 0;
 
     /// <summary>
-    /// 是否达到最大并发
+    /// Whether the maximum concurrency is reached
     /// </summary>
     public bool IsAtCapacity => CurrentExecuting >= MaxConcurrency;
 }
 
 /// <summary>
-/// 监控页面的刷新间隔选项
+/// Monitor page refresh interval options
 /// </summary>
 public enum RefreshInterval
 {
     /// <summary>
-    /// 3秒
+    /// 3 seconds
     /// </summary>
     ThreeSeconds = 3000,
 
     /// <summary>
-    /// 5秒
+    /// 5 seconds
     /// </summary>
     FiveSeconds = 5000,
 
     /// <summary>
-    /// 10秒
+    /// 10 seconds
     /// </summary>
     TenSeconds = 10000,
 
     /// <summary>
-    /// 30秒
+    /// 30 seconds
     /// </summary>
     ThirtySeconds = 30000
 }
 
 /// <summary>
-/// 监控页面状态
+/// Monitor page status
 /// </summary>
 public class MonitorState
 {
     /// <summary>
-    /// 实时执行列表
+    /// real-time execution list
     /// </summary>
     public List<LiveExecution> LiveExecutions { get; set; } = [];
 
     /// <summary>
-    /// 队列状态
+    /// queue status
     /// </summary>
     public QueueStatus QueueStatus { get; set; } = new();
 
     /// <summary>
-    /// 并发使用情况列表（仅显示有活跃执行的任务）
+    /// Concurrent usage list (shows only tasks with active execution)
     /// </summary>
     public List<ConcurrencyUsage> ConcurrencyUsages { get; set; } = [];
 
     /// <summary>
-    /// 上次刷新时间
+    /// Last refresh time
     /// </summary>
     public DateTime LastRefreshTime { get; set; }
 }
@@ -196,50 +196,50 @@ public class MonitorState
 #region Concurrency Monitor Models
 
 /// <summary>
-/// 带 JobName 的并发状态（用于 UI 显示）
+/// Concurrency status with JobName (for UI display)
 /// </summary>
 public class ConcurrencyStatusWithName
 {
     /// <summary>
-    /// 任务名称
+    /// Task name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 原始统计数据
+    /// raw statistics
     /// </summary>
     public required JobExecutionStatistic Statistic { get; set; }
 
     /// <summary>
-    /// 利用率百分比
+    /// Utilization percentage
     /// </summary>
     public double UtilizationPercent => Statistic.MaxConcurrency > 0
         ? Math.Min(100, (double)Statistic.CurrentExecutingCount / Statistic.MaxConcurrency * 100)
         : 0;
 
     /// <summary>
-    /// 是否达到最大并发
+    /// Whether the maximum concurrency is reached
     /// </summary>
     public bool IsAtCapacity => Statistic.CurrentExecutingCount >= Statistic.MaxConcurrency;
 }
 
 /// <summary>
-/// 并发监控状态（包含详细信息和一致性检测）
+/// Concurrency monitoring status (including detailed information and consistency checks)
 /// </summary>
 public class ConcurrencyMonitorState
 {
     /// <summary>
-    /// 详细的并发状态列表（带名称）
+    /// Detailed list of concurrent states (with names)
     /// </summary>
     public List<ConcurrencyStatusWithName> Details { get; set; } = [];
 
     /// <summary>
-    /// 一致性检测结果
+    /// Consistency test results
     /// </summary>
     public required ConsistencyCheckResult Consistency { get; set; }
 
     /// <summary>
-    /// 上次刷新时间
+    /// Last refresh time
     /// </summary>
     public DateTime LastRefreshTime { get; set; }
 }

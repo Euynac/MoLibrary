@@ -19,7 +19,7 @@ public static class ModuleDaprClientBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DaprClient 模块
+        /// Configuring the DaprClient module
         /// </summary>
         public static ModuleDaprClientGuide AddDaprClient(Action<ModuleDaprClientOption>? action = null)
         {

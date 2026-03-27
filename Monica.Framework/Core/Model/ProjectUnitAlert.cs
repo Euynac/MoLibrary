@@ -1,48 +1,48 @@
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 项目单元告警信息
+/// Project unit alarm information
 /// </summary>
 public class ProjectUnitAlert
 {
     /// <summary>
-    /// 告警级别
+    /// Alarm level
     /// </summary>
     public EAlertLevel Level { get; set; }
     
     /// <summary>
-    /// 告警内容
+    /// Alarm content
     /// </summary>
     public string Message { get; set; } = string.Empty;
     
     /// <summary>
-    /// 告警来源
+    /// Alarm source
     /// </summary>
     public string? Source { get; set; }
     
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 }
 
 /// <summary>
-/// 告警级别枚举
+/// Alarm level enumeration
 /// </summary>
 public enum EAlertLevel
 {
     /// <summary>
-    /// 信息级别
+    /// information level
     /// </summary>
     Info,
     
     /// <summary>
-    /// 警告级别
+    /// warning level
     /// </summary>
     Warning,
     
     /// <summary>
-    /// 错误级别
+    /// error level
     /// </summary>
     Error
 }

@@ -1,160 +1,160 @@
 namespace Monica.UI.UIStackTrace.Models;
 
 /// <summary>
-/// 堆栈跟踪行的类型枚举
+/// Type enum for stack trace lines
 /// </summary>
 public enum StackLineType
 {
     /// <summary>
-    /// 异常头部（异常类型和消息）
+    /// Exception header (exception type and message)
     /// </summary>
     ExceptionHeader,
 
     /// <summary>
-    /// 堆栈帧（   at ...）
+    /// stack frame (at...)
     /// </summary>
     StackFrame,
 
     /// <summary>
-    /// 内部异常分隔符
+    /// Internal exception separator
     /// </summary>
     InnerException,
 
     /// <summary>
-    /// 普通文本行
+    /// plain text line
     /// </summary>
     PlainText,
 
     /// <summary>
-    /// 解析错误
+    /// Parse error
     /// </summary>
     ParseError
 }
 
 /// <summary>
-/// 方法参数信息
+/// Method parameter information
 /// </summary>
 public class MethodParameter
 {
     /// <summary>
-    /// 参数类型（如 string, int, object 等）
+    /// Parameter type (such as string, int, object, etc.)
     /// </summary>
     public string? Type { get; set; }
 
     /// <summary>
-    /// 参数名
+    /// Parameter name
     /// </summary>
     public string? Name { get; set; }
 }
 
 /// <summary>
-/// 表示堆栈跟踪中的一行信息
+/// Represents a line of information in the stack trace
 /// </summary>
 public class StackTraceLine
 {
     /// <summary>
-    /// 行的类型
+    /// row type
     /// </summary>
     public StackLineType LineType { get; set; }
 
     /// <summary>
-    /// 异常类型（如 System.InvalidOperationException）
+    /// Exception type (such as System.InvalidOperationException)
     /// </summary>
     public string? ExceptionType { get; set; }
 
     /// <summary>
-    /// 异常消息
+    /// Exception message
     /// </summary>
     public string? Message { get; set; }
 
     /// <summary>
-    /// 完整的方法名（包括命名空间、类名、方法名）
+    /// Complete method name (including namespace, class name, method name)
     /// </summary>
     public string? FullMethod { get; set; }
 
     /// <summary>
-    /// 命名空间和类名
+    /// Namespaces and class names
     /// </summary>
     public string? Namespace { get; set; }
 
     /// <summary>
-    /// 类名
+    /// Class name
     /// </summary>
     public string? ClassName { get; set; }
 
     /// <summary>
-    /// 方法名
+    /// method name
     /// </summary>
     public string? MethodName { get; set; }
 
     /// <summary>
-    /// 参数列表（包括括号）
+    /// Parameter list (including parentheses)
     /// </summary>
     public string? Parameters { get; set; }
 
     /// <summary>
-    /// 解析后的方法参数列表
+    /// Parsed method parameter list
     /// </summary>
     public List<MethodParameter> ParsedParameters { get; set; } = new();
 
     /// <summary>
-    /// 文件路径（完整路径）
+    /// File path (full path)
     /// </summary>
     public string? FilePath { get; set; }
 
     /// <summary>
-    /// 文件名（从路径中提取）
+    /// Filename (extracted from path)
     /// </summary>
     public string? FileName { get; set; }
 
     /// <summary>
-    /// 行号
+    /// Line number
     /// </summary>
     public int? LineNumber { get; set; }
 
     /// <summary>
-    /// 原始内容（用于降级显示或错误情况）
+    /// Original content (for degraded display or error conditions)
     /// </summary>
     public string? RawContent { get; set; }
 
     /// <summary>
-    /// 内部异常是否展开（用于可折叠功能）
+    /// Whether the inner exception is expanded (for collapsible functions)
     /// </summary>
     public bool IsExpanded { get; set; } = true;
 
     /// <summary>
-    /// 所属的内部异常块索引（-1 表示不属于任何内部异常块）
+    /// Index of the inner exception block it belongs to (-1 means it does not belong to any inner exception block)
     /// </summary>
     public int BelongToInnerExceptionIndex { get; set; } = -1;
 
     /// <summary>
-    /// 错误消息（仅用于 ParseError 类型）
+    /// Error message (only for ParseError type)
     /// </summary>
     public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
-/// 堆栈跟踪解析结果
+/// Stack trace parsing results
 /// </summary>
 public class ParseResult
 {
     /// <summary>
-    /// 解析是否成功
+    /// Is parsing successful?
     /// </summary>
     public bool Success { get; set; }
 
     /// <summary>
-    /// 解析得到的行列表
+    /// parsed line list
     /// </summary>
     public List<StackTraceLine> Lines { get; set; } = new();
 
     /// <summary>
-    /// 错误消息（仅当解析失败时有效）
+    /// Error message (only valid if parsing fails)
     /// </summary>
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// 原始输入文本（用于降级显示）
+    /// Original input text (for degraded display)
     /// </summary>
     public string? OriginalText { get; set; }
 }

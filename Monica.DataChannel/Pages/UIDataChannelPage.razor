@@ -11,7 +11,7 @@
 <PageTitle>DataChannel管理</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- 标题栏 -->
+    <!-- Header bar -->
     <MudPaper Class="title-header pa-4 mb-4">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -48,7 +48,7 @@
     }
     else
     {
-        <!-- 统计信息卡片 -->
+        <!-- Statistics cards -->
         @if (_exceptionSummary != null)
         {
             <MudGrid Spacing="3" Class="stats-grid mb-4">
@@ -107,7 +107,7 @@
             </MudGrid>
         }
 
-        <!-- Channel列表 -->
+        <!-- Channel list -->
         @if (_channels != null && _channels.Any())
         {
             <MudGrid Spacing="3" Class="channel-grid">
@@ -156,7 +156,7 @@
 
         try
         {
-            // 加载Channel状态
+            // Load channel status
             if ((await DataChannelService.GetChannelsStatusAsync()).IsFailed(out var error1, out var channels))
             {
                 Snackbar.Add("加载DataChannel状态失败: " + error1, Severity.Error);
@@ -166,7 +166,7 @@
                 _channels = channels;
             }
 
-            // 加载异常统计
+            // Load exception summary
             if ((await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error2, out var summary))
             {
                 Snackbar.Add("加载异常统计失败: " + error2, Severity.Error);
@@ -203,7 +203,7 @@
                 return;
             }
 
-            // 显示异常统计详细对话框
+            // Show the detailed exception summary dialog
             var parameters = new DialogParameters
             {
                 ["ExceptionSummary"] = summary,
@@ -211,7 +211,7 @@
                 ["OnClearChannelExceptions"] = new Func<string, Task>(async channelId => await ClearChannelExceptions(channelId)),
                 ["OnGetRefreshData"] = new Func<Task<ExceptionSummaryInfo?>>(async () => 
                 {
-                    // 重新加载异常统计数据
+                    // Refresh the exception summary data
                     if (!(await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error, out var newSummary))
                     {
                         return newSummary;
@@ -233,7 +233,7 @@
 
             if (!result?.Canceled is true)
             {
-                // 对话框关闭后刷新数据
+                // Refresh data after the dialog closes
                 await LoadData();
             }
         }
@@ -292,7 +292,7 @@
 
             if (!result?.Canceled is true)
             {
-                // 如果需要，可以在这里处理对话框的返回结果
+                // Handle the dialog result here if needed
                 await LoadData();
             }
         }

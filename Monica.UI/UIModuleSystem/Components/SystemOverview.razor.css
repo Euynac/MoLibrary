@@ -40,7 +40,7 @@
     margin-top: auto;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 960px) {
     .overview-summary-item ::deep .modern-card {
         min-height: auto;

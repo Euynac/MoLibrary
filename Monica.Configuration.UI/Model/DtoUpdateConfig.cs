@@ -5,15 +5,15 @@ namespace Monica.Configuration.UI.Model;
 public class DtoUpdateConfig
 {
     /// <summary>
-    /// 配置项/配置类所对应AppID
+    /// AppID corresponding to the configuration item/configuration class
     /// </summary>
     public required string AppId { get; set; }
     /// <summary>
-    /// 配置项/配置类Key
+    /// Configuration item/configuration class Key
     /// </summary>
     public required string Key { get; set; }
     /// <summary>
-    /// 配置项/配置类修改值
+    /// Configuration item/configuration class modification value
     /// </summary>
     public JsonNode? Value { get; set; }
 }
@@ -21,23 +21,23 @@ public class DtoUpdateConfig
 public class DtoUpdateConfigRes
 {
     /// <summary>
-    /// 相应配置项/配置类所对应AppID
+    /// AppID corresponding to the corresponding configuration item/configuration class
     /// </summary>
     public string? AppId { get; set; }
     /// <summary>
-    /// 相应配置项/配置类Key
+    /// Corresponding configuration item/configuration class Key
     /// </summary>
     public required string Key { get; set; }
     /// <summary>
-    /// 配置类标题
+    /// Configuration class title
     /// </summary>
     public required string Title { get; set; }
     /// <summary>
-    /// 最终配置类/配置项值
+    /// Final configuration class/configuration item value
     /// </summary>
     public required JsonNode? NewValue { get; set; }
     /// <summary>
-    /// 原始配置类/配置项值
+    /// Original configuration class/configuration item value
     /// </summary>
     public required JsonNode? OldValue { get; set; }
    

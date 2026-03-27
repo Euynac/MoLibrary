@@ -1,74 +1,74 @@
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI 模型元数据信息基类
+/// AI model metadata information base class
 /// </summary>
 public abstract class AIModelInfo
 {
     /// <summary>
-    /// 模型名称
+    /// Model name
     /// </summary>
     public required string ModelName { get; init; }
 
     /// <summary>
-    /// 模型描述
+    /// Model description
     /// </summary>
     public string? Description { get; init; }
 }
 
 /// <summary>
-/// 大语言模型元数据信息
+/// Large language model metadata information
 /// </summary>
 public class LLMModelInfo : AIModelInfo
 {
     /// <summary>
-    /// 是否支持图像输入
+    /// Whether to support image input
     /// </summary>
     public bool SupportsImage { get; init; }
 
     /// <summary>
-    /// 是否支持深度思考/推理
+    /// Whether it supports deep thinking/reasoning
     /// </summary>
     public bool SupportsReasoning { get; init; }
 
     /// <summary>
-    /// 上下文窗口大小（可选）
+    /// Context window size (optional)
     /// </summary>
     public int? ContextWindow { get; init; }
 
     /// <summary>
-    /// 最大输出 Token 数量（可选）
+    /// Maximum number of output tokens (optional)
     /// </summary>
     public int? MaxOutputTokens { get; init; }
 
     /// <summary>
-    /// 输入费用（USD / 1M tokens）
+    /// Enter fee (USD/1M tokens)
     /// </summary>
     public decimal InputCostPerMillionTokens { get; init; }
 
     /// <summary>
-    /// 输出费用（USD / 1M tokens）
+    /// Output fee (USD/1M tokens)
     /// </summary>
     public decimal OutputCostPerMillionTokens { get; init; }
 
     /// <summary>
-    /// 缓存命中输入费用（USD / 1M tokens）
+    /// Cache hit input fee (USD/1M tokens)
     /// </summary>
     public decimal CachedInputCostPerMillionTokens { get; init; }
 }
 
 /// <summary>
-/// 图像模型元数据信息
+/// Image model metadata information
 /// </summary>
 public class ImageModelInfo : AIModelInfo
 {
     /// <summary>
-    /// 最大图像尺寸（可选，例如 1024 表示 1024x1024）
+    /// Maximum image size (optional, e.g. 1024 for 1024x1024)
     /// </summary>
     public int? MaxImageSize { get; init; }
 
     /// <summary>
-    /// 是否支持编辑/变换
+    /// Whether to support editing/transformation
     /// </summary>
     public bool SupportsEditing { get; init; }
 }
@@ -96,17 +96,17 @@ public class EmbeddingModelInfo : AIModelInfo
 }
 
 /// <summary>
-/// 文本转语音模型元数据信息
+/// Text-to-speech model metadata information
 /// </summary>
 public class TextToSpeechModelInfo : AIModelInfo
 {
     /// <summary>
-    /// 可用音色列表
+    /// Available sounds list
     /// </summary>
     public IReadOnlyList<string>? Voices { get; init; }
 
     /// <summary>
-    /// 是否支持流式输出
+    /// Whether to support streaming output
     /// </summary>
     public bool SupportsStreaming { get; init; }
 }

@@ -1,6 +1,6 @@
 /**
- * 子域依赖关系图可视化
- * 基于 d3.js 实现的子域依赖关系图表
+ * Subdomain dependency graph visualization
+ * Subdomain dependency chart implemented based on d3.js
  * 
  * @module domainDependencyGraph
  */
@@ -13,10 +13,10 @@ import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.U
 let graphInstance = null;
 
 /**
- * 初始化域依赖关系图
- * @param {string} containerId - 容器ID
- * @param {boolean} isDarkMode - 是否为暗色模式
- * @param {Object} dotNetHelper - .NET回调对象
+ * Initialize domain dependency graph
+ * @param {string} containerId - container ID
+ * @param {boolean} isDarkMode - whether it is dark mode
+ * @param {Object} dotNetHelper - .NET callback object
  */
 export function initializeGraph(containerId, isDarkMode = false, dotNetHelper = null, texts = {}) {
     dispose();
@@ -24,8 +24,8 @@ export function initializeGraph(containerId, isDarkMode = false, dotNetHelper = 
 }
 
 /**
- * 更新图表数据
- * @param {Object} data - 图表数据 {nodes, links}
+ * Update chart data
+ * @param {Object} data - chart data {nodes, links}
  */
 export function updateGraph(data) {
     if (graphInstance) {
@@ -34,7 +34,7 @@ export function updateGraph(data) {
 }
 
 /**
- * 重置视图
+ * reset view
  */
 export function resetView() {
     if (graphInstance) {
@@ -43,8 +43,8 @@ export function resetView() {
 }
 
 /**
- * 设置布局类型
- * @param {string} layoutType - 布局类型
+ * Set layout type
+ * @param {string} layoutType - layout type
  */
 export function setLayout(layoutType) {
     if (graphInstance) {
@@ -53,8 +53,8 @@ export function setLayout(layoutType) {
 }
 
 /**
- * 设置力导向距离
- * @param {number} distance - 距离值
+ * Set force guide distance
+ * @param {number} distance - distance value
  */
 export function setForceDistance(distance) {
     if (graphInstance) {
@@ -63,8 +63,8 @@ export function setForceDistance(distance) {
 }
 
 /**
- * 设置力导向强度
- * @param {number} strength - 强度值
+ * Set force guide strength
+ * @param {number} strength - strength value
  */
 export function setForceStrength(strength) {
     if (graphInstance) {
@@ -73,8 +73,8 @@ export function setForceStrength(strength) {
 }
 
 /**
- * 聚焦到指定节点
- * @param {string} nodeId - 节点ID
+ * Focus on specified node
+ * @param {string} nodeId - node ID
  */
 export function focusOnNode(nodeId) {
     if (graphInstance) {
@@ -83,7 +83,7 @@ export function focusOnNode(nodeId) {
 }
 
 /**
- * 销毁图表实例
+ * Destroy chart instance
  */
 export function dispose() {
     if (graphInstance) {
@@ -93,7 +93,7 @@ export function dispose() {
 }
 
 /**
- * 域依赖关系图类
+ * Domain Dependency Graph Class
  */
 class DomainDependencyGraph extends GraphBase {
     constructor(containerId, options = {}) {
@@ -141,17 +141,17 @@ class DomainDependencyGraph extends GraphBase {
             };
         }
         
-        // 创建力导向布局管理器
+        // Create a force-directed layout manager
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
             linkDistance: 200,
             chargeStrength: -800,
             collisionRadius: 80  // 增加碰撞半径以为下方文本留出空间
         });
 
-        // 初始化布局算法管理器
+        // Initialize layout algorithm manager
         this.layoutAlgorithms = createLayoutAlgorithms(this.width, this.height);
         
-        // 初始化交互处理器
+        // Initialize interaction handler
         this.interactionHandler = new NodeInteractionHandler({
             onClick: (event, d) => this.handleNodeClick(d),
             onRightClick: (event, d, position) => this.handleNodeRightClick(d, position.clientX, position.clientY),
@@ -165,35 +165,35 @@ class DomainDependencyGraph extends GraphBase {
             markerIds: this.markerIds // 传递marker IDs
         });
         
-        // 静态布局拖拽行为
+        // Static layout dragging behavior
         this.staticDragBehavior = null;
 
-        // 创建图层
+        // Create layer
         this.createLayers();
         
-        // 绑定事件
+        // Binding events
         this.bindEvents();
     }
 
     createLayers() {
-        // 创建连接线层
+        // Create connection line layer
         this.linkLayer = this.mainGroup.append('g')
             .attr('class', 'links-layer');
             
-        // 创建节点层
+        // Create node layer
         this.nodeLayer = this.mainGroup.append('g')
             .attr('class', 'nodes-layer');
     }
 
     bindEvents() {
-        // 监听窗口大小变化
+        // Listen for window size changes
         window.addEventListener('resize', () => {
             this.handleResize();
         });
         
-        // 添加背景点击事件处理
+        // Add background click event handling
         this.svg.on('click', (event) => {
-            // 只有当点击的是背景（svg本身）时才处理
+            // Only processed when the click is on the background (svg itself)
             if (event.target === this.svg.node()) {
                 this.handleBackgroundClick();
             }
@@ -201,10 +201,10 @@ class DomainDependencyGraph extends GraphBase {
     }
     
     /**
-     * 处理背景点击事件
+     * Handling background click events
      */
     handleBackgroundClick() {
-        // 如果有.NET回调对象，通知背景被点击
+        // If there is a .NET callback object, notify that the background was clicked
         if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
             this.dotNetHelper.invokeMethodAsync('OnSvgBackgroundClick');
         }
@@ -214,13 +214,13 @@ class DomainDependencyGraph extends GraphBase {
         this.nodes = data.nodes || [];
         this.links = data.links || [];
         
-        // 更新力导向布局数据
+        // Update force-directed layout data
         this.forceLayout.setData(this.nodes, this.links);
         
-        // 渲染图表
+        // Render chart
         this.render();
         
-        // 启动布局动画
+        // Start layout animation
         this.forceLayout.start(() => {
             this.updatePositions();
         });
@@ -232,24 +232,24 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     renderLinks() {
-        // 绑定数据
+        // Bind data
         this.linkElements = this.linkLayer
             .selectAll('.domain-link')
             .data(this.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
 
-        // 移除旧元素
+        // Remove old elements
         this.linkElements.exit().remove();
 
-        // 创建新元素 - 使用path而不是line以支持更好的箭头显示
+        // Create new elements - use path instead of line to support better arrow display
         const linkEnter = this.linkElements.enter()
             .append('path')
             .attr('class', 'domain-link modern-link')
             .style('opacity', 0);
 
-        // 合并选择
+        // Merge selection
         this.linkElements = linkEnter.merge(this.linkElements);
 
-        // 设置现代化样式 - 完全参考ProjectUnit实现，不使用域颜色
+        // Set modern styles - completely refer to ProjectUnit implementation, do not use field colors
         const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.markerIds);
         this.linkElements
             .transition()
@@ -265,7 +265,7 @@ class DomainDependencyGraph extends GraphBase {
             .style('filter', linkStyle.filter)
             .style('pointer-events', 'stroke'); // 允许path元素响应鼠标事件
 
-        // 添加交互 - 只保留tooltip显示
+        // Add interaction - keep only tooltip displayed
         this.linkElements
             .style('cursor', 'pointer')
             .on('mouseenter', (event, d) => {
@@ -277,42 +277,42 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     renderNodes() {
-        // 绑定数据
+        // Bind data
         this.nodeElements = this.nodeLayer
             .selectAll('.domain-node')
             .data(this.nodes, d => d.id);
 
-        // 移除旧元素
+        // Remove old elements
         this.nodeElements.exit().remove();
 
-        // 创建新元素组
+        // Create a new element group
         const nodeEnter = this.nodeElements.enter()
             .append('g')
             .attr('class', 'domain-node')
             .style('opacity', 0);
 
-        // 添加圆形节点
+        // Add circle node
         nodeEnter.append('circle')
             .attr('class', 'node-circle')
             .attr('r', 0);
 
-        // 添加文本标签（移动到节点下方）
+        // Add text label (move below node)
         nodeEnter.append('text')
             .attr('class', 'node-text')
             .attr('dy', '50px')
             .attr('text-anchor', 'middle')
             .style('font-size', '0px');
 
-        // 合并选择
+        // Merge selection
         this.nodeElements = nodeEnter.merge(this.nodeElements);
 
-        // 动画显示
+        // animation display
         this.nodeElements
             .transition()
             .duration(500)
             .style('opacity', 1);
 
-        // 更新圆形节点
+        // Update circle node
         this.nodeElements.select('.node-circle')
             .transition()
             .duration(500)
@@ -322,7 +322,7 @@ class DomainDependencyGraph extends GraphBase {
             .attr('stroke-width', 2)
             .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
 
-        // 更新文本
+        // Update text
         this.nodeElements.select('.node-text')
             .transition()
             .duration(500)
@@ -332,17 +332,17 @@ class DomainDependencyGraph extends GraphBase {
             .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
             .text(d => this.truncateText(d.name, 15));
 
-        // 添加拖拽行为
+        // Add dragging behavior
         this.nodeElements.call(this.forceLayout.getDragBehavior());
 
-        // 绑定交互事件 - 使用NodeInteractionHandler
+        // Binding interaction events - using NodeInteractionHandler
         this.interactionHandler.bindNodeEvents(this.nodeElements, {
             nodes: this.nodes,
             links: this.links,
             linkSelection: this.linkElements
         });
 
-        // 设置鼠标样式
+        // Set mouse style
         this.nodeElements.style('cursor', 'pointer');
     }
 
@@ -355,7 +355,7 @@ class DomainDependencyGraph extends GraphBase {
         if (this.linkElements) {
             this.linkElements
                 .attr('d', d => {
-                    // 计算从源到目标的路径，根据目标节点调整终点以避免箭头覆盖节点
+                    // Calculate the path from source to destination, adjusting the end point according to the destination node to avoid arrows covering the node
                     const dx = d.target.x - d.source.x;
                     const dy = d.target.y - d.source.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -365,10 +365,10 @@ class DomainDependencyGraph extends GraphBase {
                     const normX = dx / distance;
                     const normY = dy / distance;
                     
-                    // 为箭头留出空间，圆形节点半径30 + 一些间距
+                    // Leave space for arrows, circle node radius 30 + some spacing
                     const arrowOffset = 35;
                     
-                    // 缩短路径末端，为箭头留出空间
+                    // Shorten path ends to make room for arrows
                     const endX = d.target.x - normX * arrowOffset;
                     const endY = d.target.y - normY * arrowOffset;
                     
@@ -379,7 +379,7 @@ class DomainDependencyGraph extends GraphBase {
 
 
     showTooltip(event, content) {
-        // 创建或更新tooltip
+        // Create or update tooltip
         let tooltip = d3.select('body').select('.domain-tooltip');
         if (tooltip.empty()) {
             tooltip = d3.select('body')
@@ -425,39 +425,39 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     /**
-     * 处理节点点击事件
-     * @param {Object} node - 被点击的节点数据
+     * Handle node click events
+     * @param {Object} node - the clicked node data
      */
     handleNodeClick(node) {
-        // 先聚焦到节点
+        // Focus on the node first
         this.focusOnNode(node.id);
         
-        // 如果有.NET回调对象，调用域详情显示方法
+        // If there is a .NET callback object, call the domain details display method
         if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
             this.dotNetHelper.invokeMethodAsync('OnDomainClickFromJS', node.id || node.name);
         }
     }
     
     /**
-     * 处理节点右键事件
-     * @param {Object} node - 被右键点击的节点数据
-     * @param {number} x - 客户端X坐标
-     * @param {number} y - 客户端Y坐标
+     * Handle node right-click events
+     * @param {Object} node - the node data that was right-clicked
+     * @param {number} x - Client X coordinate
+     * @param {number} y - Client Y coordinate
      */
     handleNodeRightClick(node, x, y) {
-        // 隐藏工具提示
+        // Hide tooltip
         this.hideTooltip();
         
-        // 如果有.NET回调对象，调用右键菜单显示方法
+        // If there is a .NET callback object, call the right-click menu display method
         if (this.dotNetHelper && typeof this.dotNetHelper.invokeMethodAsync === 'function') {
             this.dotNetHelper.invokeMethodAsync('OnDomainRightClick', node.id || node.name, x, y);
         }
     }
 
     /**
-     * 构建领域节点的tooltip内容
-     * @param {Object} domain - 领域节点数据
-     * @returns {string} HTML格式的tooltip内容
+     * Construct the tooltip content of the domain node
+     * @param {Object} domain - Domain node data
+     * @returns {string} tooltip content in HTML format
      */
     buildDomainTooltipContent(domain) {
         let content = `<strong>${domain.name}</strong>`;
@@ -466,11 +466,11 @@ class DomainDependencyGraph extends GraphBase {
             content += `<br/><span style="color: #ccc;">${domain.description}</span>`;
         }
 
-        // 显示相关微服务信息
+        // Display related microservice information
         if (domain.services && domain.services.length > 0) {
             content += `<br/><br/><strong>${this.formatText(this.texts.labels.relatedServices, domain.services.length)}:</strong>`;
             
-            // 按状态分组显示服务
+            // Show services grouped by status
             const servicesByStatus = this.groupServicesByStatus(domain.services);
             
             Object.entries(servicesByStatus).forEach(([status, services]) => {
@@ -478,7 +478,7 @@ class DomainDependencyGraph extends GraphBase {
                 const statusColor = this.getServiceStatusColor(status);
                 content += `<br/><span style="color: ${statusColor};">• ${this.formatText(this.texts.labels.statusCount, statusText, services.length)}</span>`;
                 
-                // 显示前3个服务名称
+                // Show first 3 service names
                 if (services.length > 0) {
                     const serviceNames = services.slice(0, 3).map(s => s.name || s.appName).join(', ');
                     content += `<br/><span style="font-size: 11px; color: #aaa; margin-left: 12px;">${serviceNames}`;
@@ -497,9 +497,9 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     /**
-     * 按状态分组服务
-     * @param {Array} services - 服务列表
-     * @returns {Object} 按状态分组的服务
+     * Group services by status
+     * @param {Array} services - list of services
+     * @returns {Object} Services grouped by status
      */
     groupServicesByStatus(services) {
         const groups = {};
@@ -514,9 +514,9 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     /**
-     * 获取服务状态显示文本
-     * @param {string} status - 服务状态
-     * @returns {string} 状态显示文本
+     * Get service status display text
+     * @param {string} status - service status
+     * @returns {string} Status display text
      */
     getServiceStatusText(status) {
         switch (status) {
@@ -533,9 +533,9 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     /**
-     * 获取服务状态颜色
-     * @param {string} status - 服务状态
-     * @returns {string} 状态颜色
+     * Get service status color
+     * @param {string} status - service status
+     * @returns {string} status color
      */
     getServiceStatusColor(status) {
         switch (status) {
@@ -560,7 +560,7 @@ class DomainDependencyGraph extends GraphBase {
                 .attr('height', this.height)
                 .attr('viewBox', [0, 0, this.width, this.height]);
             
-            // 更新力导向布局中心
+            // Update Force Directed Layout Center
             if (this.forceLayout) {
                 this.forceLayout.simulation
                     .force('center', d3.forceCenter(this.width / 2, this.height / 2));
@@ -570,12 +570,12 @@ class DomainDependencyGraph extends GraphBase {
     }
 
     /**
-     * 设置布局
+     * Set layout
      */
     setLayout(layoutType) {
         this.currentLayout = layoutType;
         
-        // 移除之前的拖拽行为
+        // Remove previous dragging behavior
         if (this.nodeElements) {
             this.nodeElements.on('.drag', null);
         }
@@ -599,98 +599,98 @@ class DomainDependencyGraph extends GraphBase {
     }
     
     /**
-     * 应用力导向布局
+     * Apply force-directed layout
      */
     applyForceLayout() {
-        // 释放所有固定节点
+        // Release all pinned nodes
         this.forceLayout.releaseAllFixed(this.nodes);
         
-        // 设置数据
+        // Set data
         this.forceLayout.setData(this.nodes, this.links);
         
-        // 应用拖拽行为
+        // Apply drag behavior
         if (this.nodeElements) {
             this.nodeElements.call(this.forceLayout.getDragBehavior());
             
-            // 重新绑定交互事件 - 使用NodeInteractionHandler
+            // Rebind interaction events - use NodeInteractionHandler
             this.interactionHandler.bindNodeEvents(this.nodeElements, {
                 nodes: this.nodes,
                 links: this.links,
                 linkSelection: this.linkElements
             });
             
-            // 设置鼠标样式
+            // Set mouse style
             this.nodeElements.style('cursor', 'pointer');
         }
         
-        // 启动模拟
+        // Start simulation
         this.forceLayout.start(() => {
             this.updatePositions();
         });
     }
     
     /**
-     * 应用层次布局
+     * Apply hierarchical layout
      */
     applyHierarchyLayout() {
         this.forceLayout.stop();
         
-        // 计算层次布局
+        // Compute hierarchical layout
         this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用环形布局
+     * Apply ring layout
      */
     applyCircularLayout() {
         this.forceLayout.stop();
         
-        // 计算环形布局
+        // Calculate ring layout
         this.layoutAlgorithms.circularLayout(this.nodes, {
             avgNodeSize: 60,
             complexNodeCount: 0
         });
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用径向树布局
+     * Apply radial tree layout
      */
     applyRadialTreeLayout() {
         this.forceLayout.stop();
         
-        // 计算径向树布局
+        // Compute radial tree layout
         this.layoutAlgorithms.radialTreeLayout(this.nodes, this.links, {
             radiusStep: 80
         });
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用静态拖拽
+     * Apply static drag
      */
     applyStaticDrag() {
         const self = this;
         
         this.staticDragBehavior = createStaticDragBehavior({
             updateLinks: (draggedNode) => {
-                // 实时更新连接线 - 使用path的d属性而不是x1,y1,x2,y2
+                // Live update of connecting lines - use path's d attribute instead of x1,y1,x2,y2
                 if (self.linkElements) {
                     self.linkElements
                         .attr('d', d => {
@@ -704,7 +704,7 @@ class DomainDependencyGraph extends GraphBase {
                             
                             if (!source || !target) return '';
                             
-                            // 计算从源到目标的路径
+                            // Calculate the path from source to destination
                             const dx = target.x - source.x;
                             const dy = target.y - source.y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -714,7 +714,7 @@ class DomainDependencyGraph extends GraphBase {
                             const normX = dx / distance;
                             const normY = dy / distance;
                             
-                            // 为箭头留出空间，圆形节点半径30 + 一些间距
+                            // Leave space for arrows, circle node radius 30 + some spacing
                             const arrowOffset = 35;
                             
                             const endX = target.x - normX * arrowOffset;
@@ -728,20 +728,20 @@ class DomainDependencyGraph extends GraphBase {
         if (this.nodeElements) {
             this.nodeElements.call(this.staticDragBehavior);
             
-            // 重新绑定交互事件 - 使用NodeInteractionHandler
+            // Rebind interaction events - use NodeInteractionHandler
             this.interactionHandler.bindNodeEvents(this.nodeElements, {
                 nodes: this.nodes,
                 links: this.links,
                 linkSelection: this.linkElements
             });
             
-            // 设置鼠标样式
+            // Set mouse style
             this.nodeElements.style('cursor', 'pointer');
         }
     }
     
     /**
-     * 更新静态位置
+     * Update static location
      */
     updateStaticPositions() {
         if (this.nodeElements) {
@@ -761,7 +761,7 @@ class DomainDependencyGraph extends GraphBase {
                     
                     if (!source || !target) return '';
                     
-                    // 计算从源到目标的路径，根据目标节点调整终点以避免箭头覆盖节点
+                    // Calculate the path from source to destination, adjusting the end point according to the destination node to avoid arrows covering the node
                     const dx = target.x - source.x;
                     const dy = target.y - source.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -771,10 +771,10 @@ class DomainDependencyGraph extends GraphBase {
                     const normX = dx / distance;
                     const normY = dy / distance;
                     
-                    // 为箭头留出空间，圆形节点半径30 + 一些间距
+                    // Leave space for arrows, circle node radius 30 + some spacing
                     const arrowOffset = 35;
                     
-                    // 缩短路径末端，为箭头留出空间
+                    // Shorten path ends to make room for arrows
                     const endX = target.x - normX * arrowOffset;
                     const endY = target.y - normY * arrowOffset;
                     
@@ -784,32 +784,32 @@ class DomainDependencyGraph extends GraphBase {
     }
     
     /**
-     * 设置力导向距离
+     * Set force guide distance
      */
     setForceDistance(distance) {
         this.forceLayout.updateLinkDistance(distance);
     }
     
     /**
-     * 设置力导向强度
+     * Set force guide strength
      */
     setForceStrength(strength) {
         this.forceLayout.updateChargeStrength(strength);
     }
 
     dispose() {
-        // 清理tooltip
+        // Clean tooltip
         d3.select('.domain-tooltip').remove();
         
-        // 停止力导向布局
+        // Stop force oriented layout
         if (this.forceLayout) {
             this.forceLayout.dispose();
         }
         
-        // 移除窗口事件监听器
+        // Remove window event listener
         window.removeEventListener('resize', this.handleResize);
         
-        // 调用基类的dispose
+        // Call dispose of the base class
         super.dispose();
     }
 }

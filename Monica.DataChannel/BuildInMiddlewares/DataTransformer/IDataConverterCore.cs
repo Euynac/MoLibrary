@@ -1,7 +1,7 @@
 namespace Monica.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
-/// 数据协议双向(Bidirectional)转换核心接口
+/// Core contract for bidirectional data conversion.
 /// </summary>
 public interface IDataBiConverterCore<T1, T2> : IDataConverterCore
 {
@@ -10,7 +10,7 @@ public interface IDataBiConverterCore<T1, T2> : IDataConverterCore
 }
 
 /// <summary>
-/// 数据协议单向(Unidirectional)转换核心接口
+/// Core contract for unidirectional data conversion.
 /// </summary>
 public interface IDataUniConverterCore<in TSource, out TDestination> : IDataConverterCore
 {

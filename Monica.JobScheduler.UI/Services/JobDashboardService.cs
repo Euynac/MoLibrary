@@ -12,7 +12,7 @@ using Monica.JobScheduler.UI.Localization;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 仪表盘数据服务 - 基于预加载数据进行纯内存处理
+/// Dashboard data service - pure in-memory processing based on preloaded data
 /// </summary>
 public class JobDashboardService(
     IJobConcurrencyGuard concurrencyGuard,
@@ -24,7 +24,7 @@ public class JobDashboardService(
     private readonly ModuleJobSchedulerUIOption _options = uiOptions.Value;
 
     /// <summary>
-    /// 构建仪表盘总览数据（基于预加载数据，纯内存处理）
+    /// Build dashboard overview data (based on preloaded data, pure memory processing)
     /// </summary>
     public async Task<Res<DashboardSummary>> BuildDashboardSummaryAsync(
         DashboardDataContext context,
@@ -91,7 +91,7 @@ public class JobDashboardService(
     }
 
     /// <summary>
-    /// 构建最近活动列表（基于预加载数据，纯内存处理）
+    /// Build a list of recent activities (based on preloaded data, purely in-memory processing)
     /// </summary>
     public Res<List<RecentActivity>> BuildRecentActivities(
         DashboardDataContext context,
@@ -126,7 +126,7 @@ public class JobDashboardService(
     }
 
     /// <summary>
-    /// 查找问题任务（基于预加载数据，纯内存处理）
+    /// Find problem tasks (based on preloaded data, pure memory processing)
     /// </summary>
     public Res<ProblemJobs> FindProblemJobs(DashboardDataContext context)
     {
@@ -179,7 +179,7 @@ public class JobDashboardService(
     }
 
     /// <summary>
-    /// 查找连续失败的任务（纯内存处理）
+    /// Find consecutive failed tasks (pure memory processing)
     /// </summary>
     private List<ConsecutiveFailureJob> FindConsecutiveFailures(DashboardDataContext context)
     {
@@ -221,7 +221,7 @@ public class JobDashboardService(
     }
 
     /// <summary>
-    /// 查找长时间运行的任务（纯内存处理）
+    /// Find long-running tasks (pure memory processing)
     /// </summary>
     private List<LongRunningJob> FindLongRunningJobs(DashboardDataContext context)
     {
@@ -258,7 +258,7 @@ public class JobDashboardService(
     }
 
     /// <summary>
-    /// 查找跳过率过高的任务（纯内存处理）
+    /// Find tasks with high skip rates (pure memory processing)
     /// </summary>
     private List<HighSkipRateJob> FindHighSkipRateJobs(DashboardDataContext context)
     {

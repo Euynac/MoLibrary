@@ -21,7 +21,7 @@ public static class ModuleEventBusBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 EventBus 模块
+        /// Configures the EventBus module.
         /// </summary>
         public static ModuleEventBusGuide AddEventBus(Action<ModuleEventBusOption>? action = null)
         {
@@ -113,7 +113,8 @@ public class ModuleEventBus(ModuleEventBusOption option)
 public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
 {
     /// <summary>
-    /// 设置统一分布式事件总线Provider（默认，ServiceKey = null）
+    /// Registers the shared distributed event bus provider for the default EventBus instance
+    /// where <c>ServiceKey</c> is <see langword="null"/>.
     /// </summary>
     public ModuleEventBusGuide SetDistributedEventBusProvider<TProvider>() where TProvider : DistributedEventBusBase
     {
@@ -128,7 +129,8 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
     }
 
     /// <summary>
-    /// 设置空的分布式事件总线（空实现），用于测试或不需要实际发布事件的场景
+    /// Registers a no-op distributed event bus for testing or scenarios where external event
+    /// publishing is not required.
     /// </summary>
     public ModuleEventBusGuide SetDistributedEventBusNullProvider()
     {
@@ -140,10 +142,13 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
     }
 
     /// <summary>
-    /// 添加指定键的事件总线服务，根据useDistributed参数决定使用本地或分布式实现
+    /// Registers a keyed <see cref="IMoEventBus"/> and maps it to either the local or distributed
+    /// implementation based on <paramref name="useDistributed"/>.
     /// </summary>
-    /// <param name="key">服务键</param>
-    /// <param name="useDistributed">是否使用分布式EventBus，false则使用本地EventBus</param>
+    /// <param name="key">Service key.</param>
+    /// <param name="useDistributed">
+    /// <see langword="true"/> to use the distributed event bus; otherwise, the local event bus.
+    /// </param>
     public ModuleEventBusGuide AddKeyedCommonEventBus(string key, bool useDistributed = false)
     {
         ConfigureServices(context =>
@@ -168,9 +173,10 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
     }
 
     /// <summary>
-    /// 添加Keyed本地事件总线（带ServiceKey的LocalEventBus实例）
+    /// Registers a keyed local event bus backed by a <see cref="LocalEventBus"/> instance that
+    /// carries the specified service key.
     /// </summary>
-    /// <param name="key">服务键</param>
+    /// <param name="key">Service key.</param>
     public ModuleEventBusGuide AddKeyedLocalEventBus(string key)
     {
         ConfigureServices(context =>
@@ -188,7 +194,9 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
 public class ModuleEventBusOption : MoModuleOptionWithMinimalApi<ModuleEventBus>
 {
     /// <summary>
-    /// 是否禁止自动注册实现了 <see cref="IMoDistributedEventHandler{TEvent}"/>以及 <see cref="IMoLocalEventHandler{TEvent}"/> 的类型
+    /// Gets or sets a value indicating whether automatic discovery is disabled for types that
+    /// implement <see cref="IMoDistributedEventHandler{TEvent}"/> or
+    /// <see cref="IMoLocalEventHandler{TEvent}"/>.
     /// </summary>
     public bool DisableAutoDiscovery { get; set; }
 }

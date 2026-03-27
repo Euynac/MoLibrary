@@ -12,7 +12,7 @@ public static class ModuleFrameworkChainTracingBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 FrameworkChainTracing 模块
+        /// Configuring the FrameworkChainTracing module
         /// </summary>
         public static ModuleFrameworkChainTracingGuide AddFrameworkChainTracing(Action<ModuleFrameworkChainTracingOption>? action = null)
         {
@@ -56,7 +56,7 @@ public class ModuleFrameworkChainTracingOption : MoModuleOption<ModuleFrameworkC
 {
     
     /// <summary>
-    /// 是否启用StateStore的调用链追踪
+    /// Whether to enable call chain tracking of StateStore
     /// </summary>
     public bool EnableStateStoreTracing { get; set; }
 

@@ -11,7 +11,7 @@ using Monica.Core.Extensions;
 namespace Monica.StateStore.ProgressBar;
 
 /// <summary>
-/// 进度条服务实现
+/// Progress bar service implementation
 /// </summary>
 public class MoProgressBarService(
     [FromKeyedServices(nameof(ModuleProgressBar))] IMoStateStore stateStore,
@@ -46,10 +46,10 @@ public class MoProgressBarService(
 
         var status = await GetProgressBarStatusAsync<TCustomStatus>(id);
 
-        // 创建进度条实例
+        // Create a progress bar instance
         var progressBar = (TCustomProgressBar)Activator.CreateInstance(typeof(TCustomProgressBar), setting, this, id)!;
 
-        // 获取或创建分布式取消令牌
+        // Obtain or create a distributed cancellation token
         var cancellationToken = await cancellationManager.GetOrCreateTokenAsync(id);
         progressBar.SetCancellationToken(cancellationToken);
         progressBar.InitProgressBarStatus(status);
@@ -58,7 +58,7 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 创建自定义进度条任务
+    /// Create a custom progress bar task
     /// </summary>
     public async Task<TCustom> CreateProgressBarAsync<TCustom>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
         where TCustom : ProgressBar
@@ -69,10 +69,10 @@ public class MoProgressBarService(
 
         try
         {
-            // 创建进度条实例
+            // Create a progress bar instance
             var progressBar = (TCustom)Activator.CreateInstance(typeof(TCustom), setting, this, taskId)!;
 
-            // 获取或创建分布式取消令牌
+            // Obtain or create a distributed cancellation token
             var cancellationToken = await cancellationManager.GetOrCreateTokenAsync(taskId);
             progressBar.SetCancellationToken(cancellationToken);
             progressBar.InitProgressBarStatus();
@@ -82,10 +82,10 @@ public class MoProgressBarService(
                 progressBar.DistributedStamp = GenerateDistributedStamp();
             }
 
-            // 保存初始状态
+            // Save initial state
             await SaveProgressBarStateAsync(progressBar, saveInstantly: true);
 
-            // 设置自动更新
+            // Set up automatic updates
             if (setting.AutoUpdateDuration.HasValue)
             {
                 SetupAutoUpdate(progressBar, setting.AutoUpdateDuration.Value);
@@ -111,7 +111,7 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 获取进度条状态
+    /// Get progress bar status
     /// </summary>
     public async Task<ProgressBarStatus?> GetProgressBarStatusAsync(string id)
     {
@@ -127,10 +127,10 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 获取指定进度条的自定义状态
+    /// Get the custom status of the specified progress bar
     /// </summary>
-    /// <typeparam name="T">自定义状态类型</typeparam>
-    /// <param name="id">进度条ID</param>
+    /// <typeparam name="T">Custom status type</typeparam>
+    /// <param name="id">Progress bar ID</param>
     /// <returns></returns>
     public async Task<T?> GetProgressBarStatusAsync<T>(string id) where T : ProgressBarStatus
     {
@@ -156,7 +156,7 @@ public class MoProgressBarService(
                 await stateStore.SaveStateAsync(SETTING_PREFIX + progressBar.TaskId, progressBar.Setting, ttl: progressBar.Setting.TimeToLive);
             }
 
-            // 如果设置了自动更新且不要求立即保存，则跳过保存
+            // Skip saving if auto-update is set and does not require immediate saving
             if (progressBar.Setting.AutoUpdateDuration.HasValue && !saveInstantly)
             {
                 logger.LogTrace("Skipped saving progress bar state due to auto-update: {TaskId}", progressBar.TaskId);
@@ -175,18 +175,18 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 完成进度条任务
+    /// Complete progress bar task
     /// </summary>
     public async Task FinishProgressBarAsync(ProgressBar progressBar)
     {
         try
         {
-            // 停止自动更新
+            // Stop automatic updates
             StopAutoUpdate(progressBar.TaskId);
 
             await SaveProgressBarStateAsync(progressBar, true, true);
 
-            // 通过取消管理器删除CancelToken
+            // Delete CancelToken via Cancel Manager
             await cancellationManager.DeleteTokenAsync(progressBar.TaskId);
 
             logger.LogInformation("Finished progress bar task: {TaskId}", progressBar.TaskId);
@@ -198,16 +198,16 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 取消进度条任务
+    /// Cancel progress bar task
     /// </summary>
     public async Task CancelProgressBarAsync(ProgressBar progressBar, string? reason = null)
     {
         try
         {
-            // 停止自动更新
+            // Stop automatic updates
             StopAutoUpdate(progressBar.TaskId);
 
-            // 通过取消管理器发送取消信号
+            // Send cancellation signal via cancellation manager
             await cancellationManager.CancelTokenAsync(progressBar.TaskId);
 
             await SaveProgressBarStateAsync(progressBar, true, true);
@@ -221,7 +221,7 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 设置自动更新
+    /// Set up automatic updates
     /// </summary>
     private void SetupAutoUpdate(ProgressBar progressBar, TimeSpan interval)
     {
@@ -236,7 +236,7 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 停止自动更新
+    /// Stop automatic updates
     /// </summary>
     private void StopAutoUpdate(string taskId)
     {
@@ -248,11 +248,11 @@ public class MoProgressBarService(
     }
 
     /// <summary>
-    /// 自动更新回调
+    /// Automatic update callback
     /// </summary>
     private async Task AutoUpdateCallback(ProgressBar progressBar)
     {
-        // 如果任务已完成或取消，停止自动更新
+        // Stop automatic updates if task is completed or canceled
         if (progressBar.IsCompleted || progressBar.IsCancelled)
         {
             StopAutoUpdate(progressBar.TaskId);
@@ -266,7 +266,7 @@ public class MoProgressBarService(
 
         try
         {
-            // 自动更新时强制保存
+            // Force save during automatic update
             await SaveProgressBarStateAsync(progressBar, true);
 
             logger.LogTrace("Auto-updated progress bar state: {TaskId}, Progress: {Progress}%",
@@ -280,13 +280,13 @@ public class MoProgressBarService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        //// 后台服务主循环，可以用于监控和维护
+        //// Background service main loop, which can be used for monitoring and maintenance
         //while (!stoppingToken.IsCancellationRequested)
         //{
         //    try
         //    {
         //        await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-        //        // 这里可以添加定期维护逻辑
+        // //You can add regular maintenance logic here
         //    }
         //    catch (TaskCanceledException)
         //    {
@@ -301,7 +301,7 @@ public class MoProgressBarService(
 
     public override void Dispose()
     {
-        // 停止所有自动更新任务
+        // Stop all automatic update tasks
         foreach (var info in _autoUpdateTasks.Values)
         {
             info.Timer?.Dispose();
@@ -313,7 +313,7 @@ public class MoProgressBarService(
 }
 
 /// <summary>
-/// 自动更新信息
+/// Automatically update information
 /// </summary>
 internal class ProgressBarAutoUpdateInfo
 {

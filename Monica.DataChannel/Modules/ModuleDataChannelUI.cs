@@ -11,36 +11,37 @@ using MudBlazor;
 namespace Monica.Modules;
 
 /// <summary>
-/// DataChannel UI模块，提供DataChannel的管理界面
+/// UI module for DataChannel.
+/// Provides the management interface for DataChannel.
 /// </summary>
 [ModuleKey(EMoModuleKey.DataChannelUI)]
 public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     : MoModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
 {
     /// <summary>
-    /// 配置服务
+    /// Configures services.
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">The service collection.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册DataChannel服务
+        // Register DataChannel services.
         services.AddScoped<DataChannelUIService>();
     }
 
     /// <summary>
-    /// 声明依赖
+    /// Declares module dependencies.
     /// </summary>
     public override void ClaimDependencies()
     {
         if (!Option.DisableDataChannelPage)
         {
-            // 依赖DataChannel核心模块
+            // Depend on the core DataChannel module.
             DependsOnModule<ModuleDataChannelGuide>().Register();
 
-            // 依赖UIStackTrace模块（用于异常堆栈跟踪可视化）
+            // Depend on the UIStackTrace module for exception stack visualization.
             DependsOnModule<ModuleUIStackTraceGuide>().Register();
 
-            // 依赖UI核心模块，并注册UI页面
+            // Depend on the UI core module and register the DataChannel page.
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIDataChannelPage>(
                     UIDataChannelPage.PAGE_URL,
@@ -58,7 +59,7 @@ public static class ModuleDataChannelUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DataChannelUI 模块
+        /// Configures the DataChannelUI module.
         /// </summary>
         public static ModuleDataChannelUIGuide AddDataChannelUI(Action<ModuleDataChannelUIOption>? action = null)
         {
@@ -68,14 +69,14 @@ public static class ModuleDataChannelUIBuilderExtensions
 }
 
 /// <summary>
-/// DataChannel UI模块指导
+/// Guide for the DataChannel UI module.
 /// </summary>
 public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>
 {
     /// <summary>
-    /// 获取请求的配置方法键
+    /// Gets the requested configuration method keys.
     /// </summary>
-    /// <returns>配置方法键数组</returns>
+    /// <returns>An array of configuration method keys.</returns>
     protected override string[] GetRequestedConfigMethodKeys()
     {
         return [];
@@ -83,12 +84,12 @@ public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, Modul
 }
 
 /// <summary>
-/// DataChannel UI模块选项
+/// Options for the DataChannel UI module.
 /// </summary>
 public class ModuleDataChannelUIOption : MoModuleOptionWithMinimalApi<ModuleDataChannelUI>
 {
     /// <summary>
-    /// 是否禁用DataChannel页面
+    /// Gets or sets a value indicating whether the DataChannel page is disabled.
     /// </summary>
     public bool DisableDataChannelPage { get; set; } = false;
-} 
+}

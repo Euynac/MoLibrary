@@ -1,7 +1,7 @@
 namespace Monica.StateStore.ProgressBar;
 
 /// <summary>
-/// 进度条更新事件参数
+/// Progress bar update event parameters
 /// </summary>
 public class ProgressBarEventArgs(ProgressBar status) : EventArgs
 {
@@ -9,7 +9,7 @@ public class ProgressBarEventArgs(ProgressBar status) : EventArgs
 }
 
 /// <summary>
-/// 进度条取消事件参数
+/// Progress bar cancellation event parameters
 /// </summary>
 public class ProgressBarCancelledEventArgs(ProgressBar status, string? reason = null) : EventArgs
 {

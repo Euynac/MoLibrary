@@ -4,15 +4,15 @@ using System.Text.RegularExpressions;
 namespace Monica.Tool.Web;
 
 /// <summary>
-/// 字符集工具
+/// Character set tools
 /// </summary>
 public class CharsetTool
 {
     /// <summary>
-    /// 字符串转Unicode
+    /// Convert string to Unicode
     /// </summary>
-    /// <param name="source">源字符串</param>
-    /// <returns>Unicode编码后的字符串</returns>
+    /// <param name="source">source string</param>
+    /// <returns>Unicode encoded string</returns>
     public static string String2Unicode(string source)
     {
         var bytes = Encoding.Unicode.GetBytes(source);
@@ -25,10 +25,10 @@ public class CharsetTool
     }
 
     /// <summary>
-    /// Unicode转字符串
+    /// Convert Unicode escape text to a regular string
     /// </summary>
-    /// <param name="source">经过Unicode编码的字符串</param>
-    /// <returns>正常字符串</returns>
+    /// <param name="source">Unicode encoded string</param>
+    /// <returns>normal string</returns>
     public static string Unicode2String(string source)
     {
         return new Regex(@"\\u([0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled).Replace(

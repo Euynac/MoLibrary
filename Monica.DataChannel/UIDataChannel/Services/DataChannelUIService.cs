@@ -6,20 +6,20 @@ using Monica.Tool.Results;
 namespace Monica.DataChannel.UIDataChannel.Services;
 
 /// <summary>
-/// DataChannel服务，提供DataChannel管理的核心业务逻辑
+/// Provides the UI service surface for managing DataChannels.
 /// </summary>
 /// <remarks>
-/// 构造函数
+/// Initializes the service dependencies.
 /// </remarks>
-/// <param name="manager">DataChannel管理器</param>
-/// <param name="logger">日志记录器</param>
+/// <param name="manager">Manager that exposes registered DataChannels.</param>
+/// <param name="logger">Logger used for auditing and error reporting.</param>
 public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChannelUIService> logger)
 {
 
     /// <summary>
-    /// 获取所有DataChannel的状态信息
+    /// Retrieves the status snapshot for every registered DataChannel.
     /// </summary>
-    /// <returns>DataChannel状态信息列表</returns>
+    /// <returns>A list of channel status models.</returns>
     public async Task<Res<List<ChannelStatusInfo>>> GetChannelsStatusAsync()
     {
         try
@@ -48,11 +48,11 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
     }
 
     /// <summary>
-    /// 重新初始化指定的DataChannel
+    /// Reinitializes the specified DataChannel pipeline.
     /// </summary>
-    /// <param name="id">DataChannel ID</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>操作结果</returns>
+    /// <param name="id">Identifier of the DataChannel to reinitialize.</param>
+    /// <param name="cancellationToken">Token that can cancel the operation.</param>
+    /// <returns>The operation result.</returns>
     public async Task<Res> ReInitializeChannelAsync(string id, CancellationToken cancellationToken = default)
     {
         try
@@ -74,11 +74,11 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
     }
 
     /// <summary>
-    /// 获取指定DataChannel的异常信息
+    /// Retrieves recent exception details for the given DataChannel.
     /// </summary>
-    /// <param name="id">DataChannel ID</param>
-    /// <param name="count">获取的异常数量</param>
-    /// <returns>异常信息</returns>
+    /// <param name="id">Identifier of the DataChannel whose exceptions are requested.</param>
+    /// <param name="count">Maximum number of exceptions to return.</param>
+    /// <returns>Exception metadata for the channel.</returns>
     public async Task<Res<ChannelExceptionInfo>> GetChannelExceptionsAsync(string id, int count = 10)
     {
         try
@@ -121,9 +121,9 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
     }
 
     /// <summary>
-    /// 获取所有DataChannel的异常统计信息
+    /// Builds an aggregate summary of exception statistics across all DataChannels.
     /// </summary>
-    /// <returns>异常统计信息</returns>
+    /// <returns>The aggregated exception summary.</returns>
     public async Task<Res<ExceptionSummaryInfo>> GetExceptionSummaryAsync()
     {
         try
@@ -158,10 +158,10 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
     }
 
     /// <summary>
-    /// 清空指定DataChannel的异常信息
+    /// Clears the exception history for the specified DataChannel.
     /// </summary>
-    /// <param name="id">DataChannel ID</param>
-    /// <returns>操作结果</returns>
+    /// <param name="id">Identifier of the DataChannel.</param>
+    /// <returns>The operation result.</returns>
     public async Task<Res> ClearChannelExceptionsAsync(string id)
     {
         try
@@ -183,11 +183,11 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
     }
 
     /// <summary>
-    /// 获取指定DataChannel中的特定中间件实例
+    /// Fetches a middleware instance by name from a DataChannel.
     /// </summary>
-    /// <param name="channelId">DataChannel ID</param>
-    /// <param name="middlewareName">中间件名称</param>
-    /// <returns>中间件实例</returns>
+    /// <param name="channelId">Identifier of the DataChannel that owns the middleware.</param>
+    /// <param name="middlewareName">Name of the middleware to retrieve.</param>
+    /// <returns>The requested middleware instance, if found.</returns>
     public async Task<Res<T?>> GetMiddlewareAsync<T>(string channelId, string middlewareName) where T : class
     {
         try

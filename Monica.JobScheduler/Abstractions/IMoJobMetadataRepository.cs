@@ -5,38 +5,38 @@ using Monica.JobScheduler.Models;
 namespace Monica.JobScheduler.Abstractions;
 
 /// <summary>
-/// Job 元数据仓储接口，提供 Job 定义和实例的持久化与查询能力
+/// Job metadata warehousing interface, providing persistence and query capabilities of Job definitions and instances
 /// </summary>
 /// <remarks>
-/// 实现必须是线程安全的，并支持多种存储后端（内存、SQL、NoSQL 等）
+/// Implementation must be thread-safe and support multiple storage backends (in-memory, SQL, NoSQL, etc.)
 /// </remarks>
 public interface IMoJobMetadataRepository
 {
     #region JobDefinition Operations
 
     /// <summary>
-    /// 根据 JobKey 获取单个 Job 定义
+    /// Get a single Job definition based on JobKey
     /// </summary>
-    /// <param name="jobKey">Job 唯一标识符（通常是类型全名）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>找到返回 JobDefinition，否则返回 null</returns>
+    /// <param name="jobKey">Job unique identifier (usually the full name of the type)</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Returns JobDefinition if found, otherwise returns null</returns>
     Task<JobDefinition?> GetDefinitionAsync(string jobKey, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 保存 Job 定义（创建或更新）
+    /// Save Job Definition (Create or Update)
     /// </summary>
-    /// <param name="definition">要保存的 Job 定义</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <exception cref="ArgumentNullException">definition 为 null</exception>
-    /// <exception cref="ArgumentException">definition.JobKey 为 null 或空</exception>
+    /// <param name="definition">Job definition to save</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <exception cref="ArgumentNullException">definition is null</exception>
+    /// <exception cref="ArgumentException">definition.JobKey is null or empty</exception>
     Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 查询 Job 定义列表
+    /// Query Job definition list
     /// </summary>
-    /// <param name="query">查询条件</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>查询结果，包含项列表和总数</returns>
+    /// <param name="query">Query conditions</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Query results, including list of items and total number</returns>
     Task<QueryResult<JobDefinition>> QueryDefinitionsAsync(
         JobDefinitionQuery query,
         CancellationToken cancellationToken = default);
@@ -46,43 +46,43 @@ public interface IMoJobMetadataRepository
     #region JobInstance Operations
 
     /// <summary>
-    /// 根据实例 ID 获取单个 Job 实例
+    /// Get a single Job instance based on instance ID
     /// </summary>
-    /// <param name="instanceId">实例唯一标识符（GUID）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>找到返回 JobInstance，否则返回 null</returns>
+    /// <param name="instanceId">Instance unique identifier (GUID)</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Returns JobInstance if found, otherwise returns null</returns>
     Task<JobInstance?> GetInstanceAsync(string instanceId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 保存 Job 实例（创建或更新）
+    /// Save Job instance (create or update)
     /// </summary>
-    /// <param name="instance">要保存的 Job 实例</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <exception cref="ArgumentNullException">instance 为 null</exception>
-    /// <exception cref="ArgumentException">instance.InstanceId 为 null 或空</exception>
+    /// <param name="instance">Job instance to save</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <exception cref="ArgumentNullException">instance is null</exception>
+    /// <exception cref="ArgumentException">instance.InstanceId is null or empty</exception>
     Task SaveInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 查询 Job 实例列表
+    /// Query Job instance list
     /// </summary>
-    /// <param name="query">查询条件</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>查询结果，包含项列表和总数</returns>
+    /// <param name="query">Query conditions</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Query results, including list of items and total number</returns>
     Task<QueryResult<JobInstance>> QueryInstancesAsync(
         JobInstanceQuery query,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 查询 Job 实例列表并投影到自定义类型（支持数据库端 SELECT 投影）
+    /// Query the Job instance list and project it to a custom type (supports database-side SELECT projection)
     /// </summary>
-    /// <typeparam name="TResult">投影结果类型</typeparam>
-    /// <param name="query">查询条件</param>
-    /// <param name="selector">投影表达式，基于 JobInstance 属性</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>查询结果，包含投影后的项列表和总数</returns>
+    /// <typeparam name="TResult">Projection result type</typeparam>
+    /// <param name="query">Query conditions</param>
+    /// <param name="selector">Projection expression, based on JobInstance property</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Query results, including projected item list and total number</returns>
     /// <remarks>
-    /// 对于 EF Core 实现，投影在数据库端执行（生成对应的 SELECT 语句）
-    /// 支持的属性：InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, RetryAttempt 等
+    /// For EF Core implementations, projection is performed on the database side (generating the corresponding SELECT statement)
+    /// Supported attributes: InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, RetryAttempt, etc.
     /// </remarks>
     Task<QueryResult<TResult>> QueryInstancesAsync<TResult>(
         JobInstanceQuery query,
@@ -90,54 +90,54 @@ public interface IMoJobMetadataRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 获取指定时间范围内各状态的实例统计数量（使用数据库端 GROUP BY）
+    /// Get the number of instance statistics in each status within a specified time range (using database-side GROUP BY)
     /// </summary>
-    /// <param name="startTime">起始时间（可选）</param>
-    /// <param name="endTime">结束时间（可选）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>各状态对应的实例数量字典</returns>
+    /// <param name="startTime">Starting time (optional)</param>
+    /// <param name="endTime">End time (optional)</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>A dictionary of the number of instances corresponding to each state</returns>
     Task<Dictionary<JobState, int>> GetStateStatisticsAsync(
         DateTime? startTime = null,
         DateTime? endTime = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 批量获取多个作业的最后一次执行实例（优化N+1查询问题）
+    /// Obtain the last execution instances of multiple jobs in batches (optimizing the N+1 query problem)
     /// </summary>
-    /// <param name="jobKeys">作业键集合</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>字典，Key为JobKey，Value为最后一次执行实例（如果没有则为null）</returns>
+    /// <param name="jobKeys">Job key collection</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Dictionary, Key is JobKey, Value is the last execution instance (null if none)</returns>
     Task<Dictionary<string, JobInstance?>> GetLatestInstancesAsync(
         IEnumerable<string> jobKeys,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 批量删除 Job 实例
+    /// Delete Job instances in batches
     /// </summary>
-    /// <param name="instanceIds">要删除的实例 ID 集合</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>成功删除的实例数量</returns>
+    /// <param name="instanceIds">The set of instance IDs to delete</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>Number of successfully deleted instances</returns>
     /// <remarks>
-    /// 实现应优雅处理部分失败，不存在的实例应被静默忽略
+    /// Implementations should handle partial failures gracefully and non-existent instances should be silently ignored
     /// </remarks>
     Task<int> DeleteInstancesAsync(
         IEnumerable<string> instanceIds,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 查询需要清理的实例ID列表（优化的批量清理查询）
+    /// Query the list of instance IDs that need to be cleaned (optimized batch cleaning query)
     /// </summary>
-    /// <param name="retentionPolicies">作业保留策略字典 (JobKey -> (MaxRecords, MaxDays))</param>
-    /// <param name="maxRetainedOrphanedInstances">孤立实例的最大保留记录数（默认10）</param>
-    /// <param name="maxDeletionsPerCycle">每次清理最大删除数量限制（0=无限制）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>需要删除的实例ID列表</returns>
+    /// <param name="retentionPolicies">Job retention policy dictionary (JobKey -> (MaxRecords, MaxDays))</param>
+    /// <param name="maxRetainedOrphanedInstances">Maximum number of records to keep for orphaned instances (default 10)</param>
+    /// <param name="maxDeletionsPerCycle">Maximum number of deletions per cleanup (0 = no limit)</param>
+    /// <param name="cancellationToken">cancel token</param>
+    /// <returns>List of instance IDs to be deleted</returns>
     /// <remarks>
-    /// 实现应在数据库层面完成以下过滤：
-    /// 1. 只考虑终态实例 (Succeeded, Terminated, Cancelled, Skipped, Failed)
-    /// 2. 对每个JobKey，保留最近N条记录（N=MaxRecords）
-    /// 3. 删除超过MaxDays天的记录
-    /// 4. 孤立实例（JobKey不在retentionPolicies中）保留最近maxRetainedOrphanedInstances条
+    /// Implementations should accomplish the following filtering at the database level:
+    /// 1. Only consider final state instances (Succeeded, Terminated, Canceled, Skipped, Failed)
+    /// 2. For each JobKey, keep the most recent N records (N=MaxRecords)
+    /// 3. Delete records older than MaxDays days
+    /// 4. Orphaned instances (JobKey is not in retentionPolicies) retain the most recent maxRetainedOrphanedInstances entries
     /// </remarks>
     Task<List<string>> GetCleanupCandidatesAsync(
         IReadOnlyDictionary<string, (int MaxRecords, int? MaxDays)> retentionPolicies,

@@ -1,12 +1,12 @@
 /**
- * D3.js 力导向布局模块
- * 提供力导向图的布局算法和配置
+ * D3.js force-directed layout module
+ * Provides layout algorithms and configurations for force-directed graphs
  * 
  * @module d3-force-layout
  */
 
 /**
- * 力导向布局配置
+ * Force-directed layout configuration
  */
 export class ForceLayoutConfig {
     constructor(options = {}) {
@@ -21,16 +21,16 @@ export class ForceLayoutConfig {
 }
 
 /**
- * 创建力导向模拟器
- * @param {Object} config - 力导向配置
- * @returns {Object} D3 力导向模拟器
+ * Create a force-directed simulator
+ * @param {Object} config - force-directed configuration
+ * @returns {Object} D3 force-directed simulator
  */
 export function createForceSimulation(config = new ForceLayoutConfig()) {
     const simulation = d3.forceSimulation()
         .alphaDecay(config.alphaDecay)
         .velocityDecay(config.velocityDecay);
     
-    // 设置各种力
+    // Set various forces
     simulation
         .force('link', d3.forceLink()
             .id(d => d.id)
@@ -45,10 +45,10 @@ export function createForceSimulation(config = new ForceLayoutConfig()) {
 }
 
 /**
- * 更新力导向参数
- * @param {Object} simulation - 力导向模拟器
- * @param {string} forceName - 力的名称
- * @param {Object} params - 参数配置
+ * Update force steering parameters
+ * @param {Object} simulation - force-directed simulator
+ * @param {string} forceName - the name of the force
+ * @param {Object} params - parameter configuration
  */
 export function updateForceParameter(simulation, forceName, params) {
     const force = simulation.force(forceName);
@@ -77,12 +77,12 @@ export function updateForceParameter(simulation, forceName, params) {
             break;
     }
     
-    // 重新加热模拟
+    // Reheat simulation
     simulation.alpha(0.3).restart();
 }
 
 /**
- * 力导向拖拽行为
+ * Force-directed drag behavior
  */
 export class ForceDragBehavior {
     constructor(simulation, options = {}) {
@@ -99,7 +99,7 @@ export class ForceDragBehavior {
                 if (!event.active) {
                     self.simulation.alphaTarget(0.3).restart();
                 }
-                // 双击释放固定
+                // Double click to release pin
                 if (event.sourceEvent && event.sourceEvent.detail === 2) {
                     d.fx = null;
                     d.fy = null;
@@ -125,7 +125,7 @@ export class ForceDragBehavior {
                     self.simulation.alphaTarget(0);
                 }
                 
-                // 如果不保持固定，释放节点
+                // If not held fixed, release the node
                 if (!self.keepFixed) {
                     d.fx = null;
                     d.fy = null;
@@ -139,24 +139,24 @@ export class ForceDragBehavior {
 }
 
 /**
- * 力导向布局管理器
+ * Force-directed layout manager
  */
 export class ForceLayoutManager {
     constructor(width, height, options = {}) {
         this.width = width;
         this.height = height;
         
-        // 创建配置
+        // Create configuration
         this.config = new ForceLayoutConfig({
             centerX: width / 2,
             centerY: height / 2,
             ...options
         });
         
-        // 创建模拟器
+        // Create emulator
         this.simulation = createForceSimulation(this.config);
         
-        // 创建拖拽行为
+        // Create drag behavior
         this.dragBehavior = new ForceDragBehavior(this.simulation, {
             keepFixed: options.keepFixed || false,
             onStart: options.onDragStart,
@@ -166,7 +166,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 设置数据
+     * Set data
      */
     setData(nodes, links) {
         this.simulation.nodes(nodes);
@@ -177,7 +177,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 更新连接距离
+     * Update connection distance
      */
     updateLinkDistance(distance) {
         this.config.linkDistance = distance;
@@ -186,7 +186,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 更新斥力强度
+     * Update repulsion strength
      */
     updateChargeStrength(strength) {
         this.config.chargeStrength = strength;
@@ -195,7 +195,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 设置是否保持节点固定
+     * Set whether to keep nodes fixed
      */
     setKeepFixed(keepFixed) {
         this.dragBehavior.keepFixed = keepFixed;
@@ -203,7 +203,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 释放所有固定节点
+     * Release all pinned nodes
      */
     releaseAllFixed(nodes) {
         nodes.forEach(node => {
@@ -215,7 +215,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 开始模拟
+     * Start simulation
      */
     start(onTick) {
         this.simulation.on('tick', onTick);
@@ -224,7 +224,7 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 停止模拟
+     * Stop simulation
      */
     stop() {
         this.simulation.stop();
@@ -232,14 +232,14 @@ export class ForceLayoutManager {
     }
     
     /**
-     * 获取拖拽行为
+     * Get drag behavior
      */
     getDragBehavior() {
         return this.dragBehavior.createDrag();
     }
     
     /**
-     * 销毁
+     * destroy
      */
     dispose() {
         this.stop();

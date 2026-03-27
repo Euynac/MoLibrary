@@ -6,17 +6,17 @@ using Monica.Tool.Algorithm;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// 通用字符串工具类
+/// Universal string utility class
 /// </summary>
 public static class StringTool
 {
     #region 全角转换半角以及半角转换为全角
-    ///字符串转换为全角(full-width)
-    ///全角空格为12288，半角空格为32
-    ///其他字符半角(33-126)与全角(65281-65374)的对应关系是：均相差65248
+    ///Convert string to full-width
+    ///Full-width spaces are 12288, half-width spaces are 32
+    ///The corresponding relationship between half-width (33-126) and full-width (65281-65374) of other characters is: the difference is 65248
     public static string ToFullWidth(string input)
     {
-        // 半角转全角：
+        // Half-width to full-width:
         var array = input.ToCharArray();
         for (var i = 0; i < array.Length; i++)
         {
@@ -40,9 +40,9 @@ public static class StringTool
     public static bool ContainsChinese(string input) => Regex.IsMatch(input, @"[\u4e00-\u9fa5]");
 
     /// <summary>
-    /// 字符串转换为半角(half-width)
-    /// 全角空格为12288，半角空格为32;
-    /// 其他字符半角(33-126)与全角(65281-65374)的对应关系是：均相差65248
+    /// Convert string to half-width
+    /// Full-width spaces are 12288, half-width spaces are 32;
+    /// The corresponding relationship between half-width (33-126) and full-width (65281-65374) of other characters is: the difference is 65248
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
@@ -66,7 +66,7 @@ public static class StringTool
     #endregion
 
     /// <summary>
-    /// Convert string to unicode representation string. e.g. 你好 -> \u4F60\u597D
+    /// Convert string to unicode representation string. e.g. Hello -> \u4F60\u597D
     /// </summary>
     /// <param name="value"></param>
     /// <param name="encoding"></param>
@@ -95,7 +95,7 @@ public static class StringTool
         }
     }
     /// <summary>
-    /// Convert unicode representation string to string. e.g. \u4F60\u597D -> 你好
+    /// Convert unicode representation string to string. e.g. \u4F60\u597D -> Hello
     /// </summary>
     /// <param name="value"></param>
     /// <param name="encoding"></param>

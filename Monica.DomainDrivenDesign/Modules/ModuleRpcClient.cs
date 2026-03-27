@@ -22,7 +22,7 @@ public static class ModuleRpcClientBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 RpcClient 模块
+        /// Configure the RpcClient module.
         /// </summary>
         public static ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
         {
@@ -177,7 +177,7 @@ public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClie
 public class ModuleRpcClientOption : MoModuleOption<ModuleRpcClient>
 {
     /// <summary>
-    /// 实现使用Grpc Client进行注册，默认使用HttpClient
+    /// Enable gRPC client registration (HttpClient is used by default).
     /// </summary>
     public bool UseGrpc { get; set; }
 
@@ -201,10 +201,10 @@ public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAcc
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        // 1. 获取当前 HttpContext
+        // 1. Acquire the current HttpContext
         var context = httpContextAccessor.HttpContext;
 
-        if (context != null)//请求从前端发起
+        if (context != null)// request initiated from the frontend
         {
             if (context.Request.Headers.Authorization is { } authorization && !string.IsNullOrWhiteSpace(authorization.ToString()))
             {
@@ -224,13 +224,13 @@ public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAcc
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
-        else //请求从后端发起
+        else // request initiated from the backend
         {
             var token = systemUserManager.GetTokenOfCurSystemUser();
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        // 4. 继续执行请求
+        // 4. Continue sending the request
         return await base.SendAsync(request, cancellationToken);
     }
 }

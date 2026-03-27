@@ -1,7 +1,7 @@
 namespace Monica.EventBus.Abstractions;
 
 /// <summary>
-/// Defines interface of the event bus.
+/// Defines the contract for the local, in-process event bus.
 /// </summary>
 public interface IMoLocalEventBus : IMoEventBus
 {

@@ -5,17 +5,17 @@ using Monica.AutoModel.Model;
 namespace Monica.AutoModel.Interfaces;
 
 /// <summary>
-/// 自动模型类型转换器
+/// AutoModel type converter.
 /// </summary>
 public interface IAutoModelTypeConverter
 {
     /// <summary>
-    /// 转换字段值
+    /// Converts a field value.
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="typeSetting"></param>
-    /// <param name="features"></param>
-    /// <exception cref="AutoModelValueConvertException"></exception>
-    /// <returns></returns>
+    /// <param name="value">The raw string value.</param>
+    /// <param name="typeSetting">The field type settings.</param>
+    /// <param name="features">Additional condition features that affect conversion.</param>
+    /// <exception cref="AutoModelValueConvertException">Thrown when the value cannot be converted.</exception>
+    /// <returns>The converted value.</returns>
     dynamic? ConvertEntrance(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features);
 }

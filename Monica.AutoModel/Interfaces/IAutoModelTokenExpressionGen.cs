@@ -5,14 +5,14 @@ namespace Monica.AutoModel.Interfaces;
 public interface IAutoModelTokenExpressionGen
 {
     /// <summary>
-    /// 按照单个字段的条件生成对应的表达式
+    /// Generates the expression for a single field condition.
     /// </summary>
-    /// <param name="token"></param>
-    /// <param name="num">是第几个字段</param>
-    /// <param name="totalParamCount"></param>
-    /// <param name="supplementParamObjects"></param>
+    /// <param name="token">The field token.</param>
+    /// <param name="num">The index of the field within the expression.</param>
+    /// <param name="totalParamCount">The total number of existing parameters.</param>
+    /// <param name="supplementParamObjects">Additional parameter objects produced during generation.</param>
     /// <remarks>https://dynamic-linq.net/expression-language#calling-method-and-constructor</remarks>
-    /// <returns></returns>
+    /// <returns>The generated token expression.</returns>
     string GenerateTokenExpression(FieldToken token, int num, int totalParamCount,
         out List<object> supplementParamObjects);
 

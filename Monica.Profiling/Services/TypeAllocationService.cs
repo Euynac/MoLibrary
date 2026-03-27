@@ -6,7 +6,7 @@ using Monica.Tool.Results;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     类型分配跟踪服务实现
+/// Type allocation tracking service implementation
 /// </summary>
 public class TypeAllocationService(
     TypeAllocationCollector collector,
@@ -84,7 +84,7 @@ public class TypeAllocationService(
     }
 
     /// <summary>
-    ///     使用 ClrMD 获取堆快照
+    /// Use ClrMD to get a heap snapshot
     /// </summary>
     public async Task<Res<TypeAllocationSnapshot>> TakeHeapSnapshotAsync()
     {

@@ -5,15 +5,15 @@ namespace Monica.Configuration.Interfaces;
 public interface IMoConfigurationCardManager
 {
     /// <summary>
-    /// 获取已注册的所有配置卡片信息
+    /// Gets all registered configuration cards.
     /// </summary>
     /// <returns></returns>
     IEnumerable<MoConfigurationCard> GetConfigCards();
 
     /// <summary>
-    /// 获取当前服务内配置信息
+    /// Gets configuration information within the current service.
     /// </summary>
-    /// <param name="onlyCurDomain">只获取当前子域的配置信息</param>
+    /// <param name="onlyCurDomain">Whether to only return configurations in the current domain.</param>
     /// <returns></returns>
     List<DtoDomainGroup> GetConfigs(bool onlyCurDomain = false);
 }

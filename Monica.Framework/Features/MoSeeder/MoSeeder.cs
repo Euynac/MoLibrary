@@ -5,7 +5,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Features.MoSeeder;
 
 /// <summary>
-/// 指定该类是种子类，启动服务后将会自动执行一遍
+/// Specify that this class is a seed class, which will be automatically executed after starting the service.
 /// </summary>
 public abstract class MoSeeder : IMoSeeder
 {

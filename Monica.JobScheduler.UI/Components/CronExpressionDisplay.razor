@@ -55,31 +55,31 @@ else
 
 @code {
     /// <summary>
-    /// Cron 表达式
+    /// Cron expression
     /// </summary>
     [Parameter]
     public string? Expression { get; set; }
 
     /// <summary>
-    /// 显示模式
+    /// display mode
     /// </summary>
     [Parameter]
     public CronDisplayMode DisplayMode { get; set; } = CronDisplayMode.Compact;
 
     /// <summary>
-    /// 点击事件
+    /// click event
     /// </summary>
     [Parameter]
     public EventCallback OnClick { get; set; }
 
     /// <summary>
-    /// Chip 颜色
+    /// chip color
     /// </summary>
     [Parameter]
     public Color ChipColor { get; set; } = Color.Info;
 
     /// <summary>
-    /// Chip 大小
+    /// Chip size
     /// </summary>
     [Parameter]
     public Size ChipSize { get; set; } = Size.Small;

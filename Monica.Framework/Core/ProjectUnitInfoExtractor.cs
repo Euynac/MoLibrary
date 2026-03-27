@@ -39,15 +39,15 @@ public static class ProjectUnitInfoExtractor
     }
 
     /// <summary>
-    /// 提取枚举信息到项目单元存储中
+    /// Extract enumeration information into project unit storage
     /// </summary>
-    /// <param name="types">要处理的类型集合</param>
-    /// <returns>处理后的类型集合</returns>
+    /// <param name="types">The collection of types to process</param>
+    /// <returns>Processed type collection</returns>
     internal static IEnumerable<Type> ExtractEnumInfo(this IEnumerable<Type> types)
     {
         foreach (var type in types)
         {
-            // 只处理具体的枚举类型，排除开放泛型类型(放在泛型类下的枚举类型)
+            // Only handle specific enumeration types, excluding open generic types (enumeration types placed under generic classes)
             if (type.IsEnum && type is { IsGenericTypeDefinition: false, ContainsGenericParameters: false})
             {
                 ProjectUnitStores.EnumTypes.AddOrIgnore(type.Name, type);

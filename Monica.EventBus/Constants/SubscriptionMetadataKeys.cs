@@ -1,27 +1,27 @@
 namespace Monica.EventBus.Constants;
 
 /// <summary>
-/// 订阅元数据的标准键名
+/// Standard metadata keys used for subscriptions.
 /// </summary>
 public static class SubscriptionMetadataKeys
 {
     /// <summary>
-    /// Action处理器的方法名称
+    /// Method name of an action-based handler.
     /// </summary>
     public const string ActionMethodName = "ActionMethodName";
 
     /// <summary>
-    /// Action处理器的声明类型全名
+    /// Fully qualified declaring type name of an action-based handler.
     /// </summary>
     public const string ActionDeclaringType = "ActionDeclaringType";
 
     /// <summary>
-    /// Action处理器的方法签名
+    /// Human-readable method signature of an action-based handler.
     /// </summary>
     public const string ActionMethodSignature = "ActionMethodSignature";
 
     /// <summary>
-    /// Action处理器的方法是否为静态方法
+    /// Indicates whether the action-based handler method is static.
     /// </summary>
     public const string ActionIsStatic = "ActionIsStatic";
 }

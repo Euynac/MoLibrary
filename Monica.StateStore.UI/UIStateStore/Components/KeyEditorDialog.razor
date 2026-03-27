@@ -8,7 +8,7 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
-            @* Key 名称 *@
+            @* Key name *@
             <MudTextField Value="@KeyInfo.Key"
                           Label="@L["KeyEditor:Labels:KeyName"]"
                           Variant="Variant.Outlined"
@@ -25,7 +25,7 @@
                               Style="font-family: monospace;" />
             }
 
-            @* TTL (仅编辑模式) *@
+            @* TTL (edit mode only) *@
             @if (!ReadOnly)
             {
                 <MudNumericField @bind-Value="ttlSeconds"
@@ -36,7 +36,7 @@
                                  AdornmentText="@L["KeyEditor:Labels:TTLUnit"]" />
             }
 
-            @* JSON 值编辑器 *@
+            @* JSON value editor *@
             <MudTextField @bind-Value="editedValue"
                           Label="@L["KeyEditor:Labels:JsonValue"]"
                           Variant="Variant.Outlined"

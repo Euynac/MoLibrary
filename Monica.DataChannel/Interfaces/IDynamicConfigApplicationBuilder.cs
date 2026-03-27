@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Builder;
 namespace Monica.DataChannel.Interfaces;
 
 /// <summary>
-/// 动态应用配置接口
-/// 允许组件在ASP.NET Core注册阶段自动配置应用程序
-/// 适用于需要动态配置ASP.NET Core管道的中间件和端点
+/// Defines dynamic application configuration hooks.
+/// Allows components to configure the ASP.NET Core application during registration.
+/// Intended for middleware and endpoints that need to extend the ASP.NET Core pipeline dynamically.
 /// </summary>
 public interface IDynamicConfigApplicationBuilder
 {
     /// <summary>
-    /// 执行应用程序配置
-    /// 通过组件实例配置应用程序构建器
-    /// 注意：同种类型的组件可能会被多次调用此方法
+    /// Applies application-level configuration.
+    /// Uses the component instance to configure the application builder.
+    /// Note that this method may be invoked multiple times for components of the same type.
     /// </summary>
-    /// <param name="app">应用程序构建器实例</param>
+    /// <param name="app">The application builder instance.</param>
     public void ConfigApplicationBuilder(IApplicationBuilder app);
 
     public void ConfigEndpoints(IApplicationBuilder app);

@@ -5,35 +5,35 @@ namespace Monica.AutoModel.Interfaces;
 public interface IAutoModelSnapshotFactory
 {
     /// <summary>
-    /// 获取所有泛型AutoModel快照
+    /// Gets all generic AutoModel snapshots.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>All registered snapshots.</returns>
     IReadOnlyList<AutoModelSnapshot> GetSnapshots();
 }
 
 /// <summary>
-/// 泛型AutoModel快照接口
+/// Generic AutoModel snapshot interface.
 /// </summary>
-/// <typeparam name="TModel"></typeparam>
+/// <typeparam name="TModel">The model type.</typeparam>
 public interface IAutoModelSnapshot<TModel>
 {
     /// <summary>
-    /// 获取所有字段支持的激活名
+    /// Gets all activation names supported by the fields.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>All supported activation names.</returns>
     IReadOnlyList<string> GetAllActivateNames();
 
     /// <summary>
-    /// 根据传入字段激活名获取字段设置
+    /// Gets field settings by the specified activation name.
     /// </summary>
-    /// <param name="fieldActivateName"></param>
-    /// <returns></returns>
+    /// <param name="fieldActivateName">The activation name of the field.</param>
+    /// <returns>The matching field settings, or <c>null</c> if no match exists.</returns>
     AutoField? GetField(string fieldActivateName);
 
     /// <summary>
-    /// 获取所有字段设置
+    /// Gets all field settings.
     /// </summary>
-    /// <param name="fieldActivateNames"></param>
-    /// <returns></returns>
+    /// <param name="fieldActivateNames">Optional field activation names used to filter the result.</param>
+    /// <returns>The matching field settings.</returns>
     IReadOnlyList<AutoField> GetFields(IReadOnlyList<string>? fieldActivateNames = null);
 }

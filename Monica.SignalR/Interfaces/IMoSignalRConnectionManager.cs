@@ -6,26 +6,26 @@ namespace Monica.SignalR.Interfaces;
 public interface IMoSignalRConnectionManager
 {
     /// <summary>
-    ///     增加连接
+    /// increase connection
     /// </summary>
     /// <param name="connectionId"></param>
     /// <param name="cp"></param>
     void AddConnection(string connectionId, ClaimsPrincipal cp);
 
     /// <summary>
-    ///     移除连接
+    /// Remove connection
     /// </summary>
     /// <param name="connectionId"></param>
     void RemoveConnection(string connectionId);
 
     /// <summary>
-    ///     获取所有正在连接的信息
+    /// Get information about all connections
     /// </summary>
     /// <returns></returns>
     IReadOnlyList<SignalRConnectionInfo> GetConnectionInfos();
 
     /// <summary>
-    ///     获取SignalR连接信息
+    /// Get SignalR connection information
     /// </summary>
     /// <returns></returns>
     SignalRConnectionInfo? GetConnectionInfo(string connectionId);
@@ -68,7 +68,7 @@ public class SignalRConnectionInfo
     public ConcurrentDictionary<string, object?> Dictionary { get; set; } = [];
 
     /// <summary>
-    ///     保存用户状态
+    /// Save user status
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="state"></param>
@@ -78,7 +78,7 @@ public class SignalRConnectionInfo
     }
 
     /// <summary>
-    ///     获取用户状态
+    /// Get user status
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>

@@ -4,16 +4,16 @@ using System.Reflection;
 namespace Monica.Tool.Extensions;
 
 /// <summary>
-/// 反射相关
+/// Reflection related
 /// </summary>
 public static partial class ObjectExtensions
 {
     /// <summary>
-    /// 克隆某个对象中所有可写的属性值到对象（引用类型依然是同个引用，值类型则是复制）
+    /// Clone all writable attribute values ​​in an object to the object (the reference type is still the same reference, and the value type is copied)
     /// </summary>
     /// <typeparam name="TTarget"></typeparam>
     /// <param name="fromObj"></param>
-    /// <param name="ignoreParameterNames">设定忽略克隆的属性名</param>
+    /// <param name="ignoreParameterNames">Set attribute names to ignore clones</param>
     /// <returns>Return given cloned object for convenient.</returns>
     public static TTarget CloneAs<TTarget>(
         this object fromObj,
@@ -37,28 +37,28 @@ public static partial class ObjectExtensions
 
     private static readonly BindingFlags _bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
-    /// <summary>获取某字段值</summary>
-    /// <param name="type">类型</param>
-    /// <param name="obj">对象</param>
-    /// <param name="fieldName">字段名</param>
+    /// <summary>Get a field value</summary>
+    /// <param name="type">type</param>
+    /// <param name="obj">object</param>
+    /// <param name="fieldName">Field name</param>
     /// <returns></returns>
     public static object? GetTypeFieldValue(this Type type, object obj, string fieldName)
     {
         return type.GetField(fieldName, _bindingFlags)?.GetValue(obj);
     }
 
-    /// <summary>获取某字段值</summary>
-    /// <param name="obj">对象</param>
-    /// <param name="fieldName">字段名</param>
+    /// <summary>Get a field value</summary>
+    /// <param name="obj">object</param>
+    /// <param name="fieldName">Field name</param>
     /// <returns></returns>
     public static object? GetFieldValue(this object obj, string fieldName)
     {
         return obj.GetType().GetField(fieldName, _bindingFlags)?.GetValue(obj);
     }
 
-    /// <summary>获取某属性值</summary>
-    /// <param name="obj">对象</param>
-    /// <param name="propertyName">属性名</param>
+    /// <summary>Get an attribute value</summary>
+    /// <param name="obj">object</param>
+    /// <param name="propertyName">attribute name</param>
     /// <returns></returns>
     public static object? GetPropertyValue(this object obj, string propertyName)
     {
@@ -66,10 +66,10 @@ public static partial class ObjectExtensions
         return shadowingProperty != null ? shadowingProperty.GetValue(obj) : null;
     }
 
-    /// <summary>获取某字段值</summary>
-    /// <param name="type">类型</param>
-    /// <param name="obj">对象</param>
-    /// <param name="propertyName">属性名</param>
+    /// <summary>Get a field value</summary>
+    /// <param name="type">type</param>
+    /// <param name="obj">object</param>
+    /// <param name="propertyName">attribute name</param>
     /// <returns></returns>
     public static object? GetTypePropertyValue(this Type type, object obj, string propertyName)
     {
@@ -82,7 +82,7 @@ public static partial class ObjectExtensions
         return obj.GetType().GetUltimateShadowingProperty(propertyName, _bindingFlags);
     }
 
-    /// <summary>类型X是否包含某个属性</summary>
+    /// <summary>Whether type X contains a certain attribute</summary>
     /// <param name="type"></param>
     /// <param name="propertyName"></param>
     /// <returns></returns>

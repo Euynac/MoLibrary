@@ -53,8 +53,7 @@
     }
 </div>
 
-<!-- 子菜单 -->
-@if (_subMenuVisible && _hoveredItem?.HasSubMenu == true && _hoveredItem.SubItems?.Any() == true)
+<!-- submenu -->@if (_subMenuVisible && _hoveredItem?.HasSubMenu == true && _hoveredItem.SubItems?.Any() == true)
 {
     <div @onmouseenter="@OnSubMenuMouseEnter" @onmouseleave="@OnSubMenuMouseLeave">
         <MoContextMenu TItem="TItem" 
@@ -70,8 +69,7 @@
     </div>
 }
 
-<!-- 只有根菜单才渲染透明遮罩 -->
-@if (IsRootMenu && Visible)
+<!-- Only root menu renders transparency mask -->@if (IsRootMenu && Visible)
 {
     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: @(ZIndex - 1);" 
          @onclick="CloseMenu"
@@ -128,16 +126,16 @@
     {
         if (item.Disabled || item.HasSubMenu) return;
         
-        // 执行项目的点击事件
+        // Execute the click event of the project
         if (item.OnClick != null)
         {
             await item.OnClick.Invoke(ContextItem);
         }
         
-        // 触发外部点击事件
+        // Trigger external click event
         await OnItemClick.InvokeAsync(item);
         
-        // 关闭菜单
+        // Close menu
         await CloseMenu();
     }
     
@@ -145,23 +143,22 @@
     {
         if (item.Disabled || item.HasSubMenu) return;
         
-        // 执行项目的点击事件
+        // Execute the click event of the project
         if (item.OnClick != null)
         {
             await item.OnClick.Invoke(ContextItem);
         }
         
-        // 触发外部点击事件
+        // Trigger external click event
         await OnItemClick.InvokeAsync(item);
         
-        // 关闭所有菜单
+        // Close all menus
         await CloseMenu();
     }
     
     private void OnItemMouseEnter(ContextMenuItem<TItem> item, MouseEventArgs e)
     {
-        // 取消所有定时器
-        _hideSubMenuTimer?.Dispose();
+        // Cancel all timers        _hideSubMenuTimer?.Dispose();
         _showSubMenuTimer?.Dispose();
         
         if (_hoveredItem != item)
@@ -171,7 +168,7 @@
             
             if (item.HasSubMenu)
             {
-                // 延迟显示子菜单
+                // Delay display of submenu.
                 _showSubMenuTimer = new Timer(_ => 
                 {
                     if (_hoveredItem == item)
@@ -182,7 +179,7 @@
             }
             else
             {
-                // 隐藏子菜单
+                // Hide submenu.
                 _subMenuVisible = false;
                 StateHasChanged();
             }
@@ -195,7 +192,7 @@
         
         if (item.HasSubMenu)
         {
-            // 延迟隐藏子菜单，给用户时间移动到子菜单
+            // Delay hiding the submenu to give the user time to move into it.
             _hideSubMenuTimer = new Timer(_ => 
             {
                 InvokeAsync(() => 
@@ -211,14 +208,13 @@
     {
         if (item.HasSubMenu && item.SubItems?.Any() == true)
         {
-            // 计算子菜单位置
-            _subMenuX = _x + _menuWidth + 1;
+            // Calculate submenu position            _subMenuX = _x + _menuWidth + 1;
             
-            // 计算当前项目在菜单中的索引位置
+            // Calculate the index position of the current item in the menu
             var itemIndex = Items.Where(i => !i.IsDivider).ToList().IndexOf(item);
             if (itemIndex >= 0)
             {
-                // 每个菜单项高度约40px，分割线12px，顶部padding 8px
+                // The height of each menu item is about 40px, the dividing line is 12px, and the top padding is 8px.
                 var dividersBefore = Items.Take(Items.IndexOf(item)).Count(i => i.IsDivider);
                 _subMenuY = _y + 8 + (itemIndex * 40) + (dividersBefore * 12);
             }
@@ -273,7 +269,7 @@
             var menuHeight = Items.Count(i => !i.IsDivider) * 40 + Items.Count(i => i.IsDivider) * 12 + 20;
             var margin = 10;
             
-            // 调整位置确保菜单在视窗内
+            // Adjust the position to ensure that the menu is within the window
             if (_x + _menuWidth > windowSize.Width)
             {
                 _x = Math.Max(margin, windowSize.Width - _menuWidth - margin);
@@ -291,7 +287,7 @@
         }
         catch
         {
-            // 忽略JS调用失败
+            // Ignore JS interop failures when querying window size.
         }
     }
     
@@ -303,13 +299,13 @@
     
     private void OnSubMenuMouseEnter()
     {
-        // 取消隐藏子菜单的定时器
+        // Cancel any pending hide timer when the pointer re-enters the submenu.
         _hideSubMenuTimer?.Dispose();
     }
     
     private void OnSubMenuMouseLeave()
     {
-        // 当离开子菜单区域时，延迟隐藏
+        // Delay hiding when leaving the submenu area.
         _hideSubMenuTimer = new Timer(_ => 
         {
             InvokeAsync(() => 

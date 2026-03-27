@@ -8,7 +8,7 @@ namespace Monica.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
 /// AlterItemData Source Generator
-/// 自动生成实体类对应的 AlterItemData 类和 Apply 方法
+/// Automatically generate the AlterItemData class and Apply method corresponding to the entity class
 /// </summary>
 [Generator]
 public class AlterItemDataGenerator : IIncrementalGenerator
@@ -19,9 +19,9 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         //Debugger.Launch();
-        // 不再需要生成属性文件，使用接口检测
+        // No need to generate properties files anymore, use interface detection
 
-        // 查找实现了 IMoTracingDataEntity 接口的类，优先检查这些类
+        // Find classes that implement the IMoTracingDataEntity interface and check these classes first
         var tracingDataEntities = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax,
@@ -32,7 +32,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
         // Generate code for all detected entities (with deduplication for partial classes)
         context.RegisterSourceOutput(tracingDataEntities.Collect(), (ctx, entities) =>
         {
-            // 去重：使用HashSet确保每个实体只处理一次
+            // Deduplication: Use HashSet to ensure each entity is processed only once
             var uniqueEntities = new HashSet<EntityGenerationInfo>(entities);
             
             foreach (var entity in uniqueEntities)
@@ -43,7 +43,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
                 }
                 catch (Exception ex)
                 {
-                    // 生成诊断信息而不是抛出异常
+                    // Generate diagnostic information instead of throwing exceptions
                     var diagnostic = Diagnostic.Create(
                         new DiagnosticDescriptor(
                             "MOGEN001", 
@@ -61,7 +61,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// 优化的实体信息获取方法：优先检查IMoTracingDataEntity接口，然后检查GenerateAlterItemData属性
+    /// Optimized entity information acquisition method: first check the IMoTracingDataEntity interface, and then check the GenerateAlterItemData property
     /// </summary>
     private static EntityGenerationInfo? GetOptimizedEntityInfo(GeneratorSyntaxContext context)
     {
@@ -71,17 +71,17 @@ public class AlterItemDataGenerator : IIncrementalGenerator
         if (context.SemanticModel.GetDeclaredSymbol(classSyntax) is not INamedTypeSymbol entitySymbol)
             return null;
 
-        // 首先检查是否实现了 IMoTracingDataEntity 接口
+        // First check whether the IMoTracingDataEntity interface is implemented
         if (!ImplementsInterface(entitySymbol, IMoTracingDataEntityInterfaceName))
             return null;
 
-        // 然后检查是否有 GenerateAlterItemData 属性，如果有，使用属性中的设置
+        // Then check if there is a GenerateAlterItemData property and if so, use the settings in the property
         var generateAttribute = entitySymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == GenerateAlterItemDataAttributeName);
 
         if (generateAttribute != null)
         {
-            // 如果有属性，获取属性参数
+            // If there are attributes, get the attribute parameters
             var customNamespace = GetAttributeArgumentValue<string>(generateAttribute, "Namespace");
             var customClassName = GetAttributeArgumentValue<string>(generateAttribute, "ClassName");
             var includeDebugInfo = GetAttributeArgumentValue<bool>(generateAttribute, "IncludeDebugInfo");
@@ -95,7 +95,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
             );
         }
 
-        // 如果没有属性，使用默认设置
+        // If there are no attributes, use the default settings
         return new EntityGenerationInfo(
             entitySymbol,
             classSyntax,
@@ -107,7 +107,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 
 
     /// <summary>
-    /// 为实体生成 AlterItemData 代码
+    /// Generate AlterItemData code for entities
     /// </summary>
     private static void GenerateAlterItemDataForEntity(SourceProductionContext context, EntityGenerationInfo entityInfo)
     {
@@ -123,7 +123,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
         
         if (analysisResult == null)
         {
-            // 报告分析失败
+            // Report analysis failed
             var diagnostic = Diagnostic.Create(
                 new DiagnosticDescriptor(
                     "MOGEN002", 
@@ -138,11 +138,11 @@ public class AlterItemDataGenerator : IIncrementalGenerator
             return;
         }
 
-        // 扁平化属性
+        // flat attribute
         var flattener = new PropertyFlattener();
         var flattenedResult = flattener.FlattenProperties(analysisResult);
 
-        // 生成代码
+        // Generate code
         var codeBuilder = new CodeBuilder();
         var generatedCode = codeBuilder.BuildAlterItemDataClass(
             analysisResult,
@@ -151,13 +151,13 @@ public class AlterItemDataGenerator : IIncrementalGenerator
             entityInfo.CustomClassName,
             entityInfo.IncludeDebugInfo);
 
-        // 添加生成的源文件
+        // Add generated source files
         var fileName = $"{entityInfo.CustomClassName ?? $"{entitySymbol.Name}AlterItemDataGen"}.g.cs";
         context.AddSource(fileName, generatedCode);
     }
 
     /// <summary>
-    /// 检查类型是否实现了指定接口
+    /// Check whether the type implements the specified interface
     /// </summary>
     private static bool ImplementsInterface(INamedTypeSymbol type, string interfaceName)
     {
@@ -166,14 +166,14 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 
 
     /// <summary>
-    /// 获取属性参数值
+    /// Get attribute parameter value
     /// </summary>
     private static T GetAttributeArgumentValue<T>(AttributeData? attribute, string parameterName)
     {
         if (attribute == null)
             return default(T)!;
 
-        // 查找命名参数
+        // Find named parameters
         var namedArg = attribute.NamedArguments
             .FirstOrDefault(kvp => kvp.Key == parameterName);
 
@@ -186,7 +186,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 }
 
 /// <summary>
-/// 实体生成信息
+/// Entity generation information
 /// </summary>
 internal class EntityGenerationInfo(
     INamedTypeSymbol entitySymbol,

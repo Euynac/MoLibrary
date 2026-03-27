@@ -127,7 +127,7 @@ public static class NumericExtensions
     /// <returns>Epsilon maybe up to 1-16e.</returns>
     public static bool IsInteger(this double num) => num % 1 == 0;
     /// <summary>
-    /// 返回大于或等于指定double的最小整数值。
+    /// Returns the smallest integer value greater than or equal to the specified double.
     /// Returns the smallest integer value greater than or equal to the specified double.
     /// </summary>
     /// <param name="num"></param>

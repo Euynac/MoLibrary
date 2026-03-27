@@ -5,17 +5,17 @@ using Monica.Tool.Extensions;
 namespace Monica.AutoModel;
 
 /// <summary>
-/// 适用于AutoModel的表达式树生成器
+/// Expression tree generator for AutoModel.
 /// </summary>
 internal class AutoModelExpressionGenerator
 {
 
     /// <summary>
-    /// 生成排序规则字符串
+    /// Generates an order-by expression string.
     /// </summary>
-    /// <param name="descend"></param>
-    /// <param name="ascend"></param>
-    /// <returns></returns>
+    /// <param name="descend">Descending fields and their sort priorities.</param>
+    /// <param name="ascend">Ascending fields and their sort priorities.</param>
+    /// <returns>The combined order expression, or <c>null</c> when no sorting is specified.</returns>
     public static string? GenerateOrderConditionString(Dictionary<string, int>? descend, Dictionary<string, int>? ascend)
     {
         Dictionary<string, int> combinedList = new();
@@ -39,12 +39,12 @@ internal class AutoModelExpressionGenerator
     }
 
     /// <summary>
-    /// 生成谓语委托，用于删、查、检查元组是否存在时使用
+    /// Generates a predicate delegate for delete, query, and existence-check operations.
     /// </summary>
-    /// <param name="modelType"></param>
-    /// <param name="fieldCondition">字符串型条件</param>
-    /// <param name="fieldValues">条件中对应的值</param>
-    /// <returns></returns>
+    /// <param name="modelType">The target model type.</param>
+    /// <param name="fieldCondition">The string-based condition expression.</param>
+    /// <param name="fieldValues">The values referenced by the condition expression.</param>
+    /// <returns>The generated predicate delegate, or <c>null</c> if the generic method cannot be resolved.</returns>
     public static object? GeneratePredicate(Type modelType, string fieldCondition, object?[]? fieldValues)
     {
         return typeof(AutoModelExpressionGenerator).GetMethod(nameof(GeneratePredicateGeneric))?
@@ -52,12 +52,12 @@ internal class AutoModelExpressionGenerator
     }
 
     /// <summary>
-    /// 生成谓语委托（即条件），用于删、查、检查元组是否存在时使用
+    /// Generates a predicate delegate from a condition expression.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="fieldExpressions">字符串型条件</param>
-    /// <param name="fieldValues">条件中对应的值</param>
-    /// <returns></returns>
+    /// <typeparam name="T">The model type.</typeparam>
+    /// <param name="fieldExpressions">The string-based condition expression.</param>
+    /// <param name="fieldValues">The values referenced by the condition expression.</param>
+    /// <returns>A compiled predicate delegate.</returns>
     public static Func<T, bool> GeneratePredicateGeneric<T>(string fieldExpressions, object[] fieldValues)
     {
         return (Func<T, bool>)DynamicExpressionParser
@@ -65,22 +65,22 @@ internal class AutoModelExpressionGenerator
     }
 
     /// <summary>
-    /// 生成动作委托（即是赋值），在增，改元组时使用
+    /// Generates an assignment delegate for insert and update operations.
     /// </summary>
-    /// <param name="modelType"></param>
-    /// <param name="fieldKeyValuePairs"></param>
-    /// <returns></returns>
+    /// <param name="modelType">The target model type.</param>
+    /// <param name="fieldKeyValuePairs">The field-value pairs to assign.</param>
+    /// <returns>The generated assignment delegate, or <c>null</c> if the generic method cannot be resolved.</returns>
     public static object? GenerateAction(Type modelType, IEnumerable<KeyValuePair<string, object>> fieldKeyValuePairs)
     {
         return typeof(AutoModelExpressionGenerator).GetMethod(nameof(GenerateActionGeneric))?
             .MakeGenericMethod(modelType).Invoke(null, new object[] { fieldKeyValuePairs });
     }
     /// <summary>
-    /// 生成动作委托（即是赋值），在增，改元组时使用
+    /// Generates an assignment delegate for insert and update operations.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="fieldKeyValuePairs"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">The model type.</typeparam>
+    /// <param name="fieldKeyValuePairs">The field-value pairs to assign.</param>
+    /// <returns>A compiled assignment delegate.</returns>
     public static Action<T>? GenerateActionGeneric<T>(IEnumerable<KeyValuePair<string, object>> fieldKeyValuePairs) where T : new()
     {
         var p = Expression.Parameter(typeof(T), "p");

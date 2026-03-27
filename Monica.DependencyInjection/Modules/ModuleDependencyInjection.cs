@@ -15,7 +15,7 @@ public static class ModuleDependencyInjectionBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DependencyInjection 模块
+        /// Configures the DependencyInjection module.
         /// </summary>
         public static ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
         {

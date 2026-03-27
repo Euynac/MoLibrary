@@ -1,7 +1,7 @@
-/* 健康指标卡片样式 */
-/* 使用 ::deep 选择器穿透 MudBlazor 组件 */
+/* Health indicator card style */
+/* Use the ::deep selector to penetrate MudBlazor components */
 
-/* MudPaper hover 效果 */
+/* MudPaper hover effect */
 .state-grid-wrapper ::deep .mud-paper {
     transition: transform 0.2s ease-in-out;
 }
@@ -10,7 +10,7 @@
     transform: translateY(-2px);
 }
 
-/* 状态统计卡片样式 - 按 JobState 枚举顺序 */
+/* Status statistics card style - in order of JobState enumeration */
 .state-grid-wrapper ::deep .state-scheduled {
     background-color: var(--mud-palette-surface);
 }

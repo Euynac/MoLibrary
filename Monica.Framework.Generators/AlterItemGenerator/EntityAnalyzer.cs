@@ -8,14 +8,14 @@ using Microsoft.CodeAnalysis;
 namespace Monica.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
-/// 实体分析器，用于分析实体类及其属性
+/// Entity analyzer, used to analyze entity classes and their properties
 /// </summary>
 internal class EntityAnalyzer(Compilation compilation, CancellationToken cancellationToken)
 {
     private readonly Compilation _compilation = compilation;
 
     /// <summary>
-    /// 分析实体类，提取所有需要生成的属性信息
+    /// Analyze entity classes and extract all attribute information that needs to be generated
     /// </summary>
     public EntityAnalysisResult? AnalyzeEntity(INamedTypeSymbol entitySymbol)
     {
@@ -26,7 +26,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
             var properties = new List<PropertyInfo>();
             var ownedTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
-            // 分析实体的所有公共属性
+            // Analyze all public properties of an entity
             AnalyzePropertiesRecursive(entitySymbol, properties, ownedTypes, "", entitySymbol, false);
 
             return new EntityAnalysisResult(
@@ -46,7 +46,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 递归分析属性，处理嵌套的 Owned 类型和可选导航属性
+    /// Recursively parse properties, handle nested Owned types and optional navigation properties
     /// </summary>
     private void AnalyzePropertiesRecursive(
         INamedTypeSymbol typeSymbol,
@@ -73,30 +73,30 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
                 ? property.Name 
                 : $"{propertyPathPrefix}.{property.Name}";
 
-            // 检查是否是 Owned 类型
+            // Check if it is of type Owned
             if (IsOwnedType(property.Type))
             {
                 if (property.Type is INamedTypeSymbol namedType)
                 {
                     ownedTypes.Add(namedType);
                     
-                    // 递归分析 Owned 类型的属性，扁平化处理
+                    // Recursively analyze properties of Owned type and flatten them
                     AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, rootEntitySymbol, isFromOptionalNavigation);
                 }
             }
-            // 检查是否是可选导航属性（如 DepInfo、ArrInfo）
+            // Check if optional navigation properties (such as DepInfo, ArrInfo)
             else if (IsOptionalNavigationProperty(property))
             {
                 var underlyingType = GetUnderlyingType(property.Type);
                 if (underlyingType is INamedTypeSymbol namedType)
                 {
-                    // 递归分析可选导航属性的属性
+                    // Recursively analyze properties of optional navigation properties
                     AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, rootEntitySymbol, true);
                 }
             }
             else
             {
-                // 普通属性
+                // Common properties
                 var propertyInfo = CreatePropertyInfo(property, propertyPath, rootEntitySymbol, isFromOptionalNavigation);
                 if (propertyInfo != null)
                 {
@@ -107,7 +107,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 创建属性信息
+    /// Create attribute information
     /// </summary>
     private PropertyInfo? CreatePropertyInfo(IPropertySymbol property, string propertyPath, INamedTypeSymbol rootEntitySymbol, bool isFromOptionalNavigation = false)
     {
@@ -136,11 +136,11 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 提取 XML 文档注释
+    /// Extract XML document comments
     /// </summary>
     private string? ExtractXmlDocumentation(IPropertySymbol property)
     {
-        // 使用XML文档注释
+        // Using XML document comments
         var xmlDoc = property.GetDocumentationCommentXml();
         if (string.IsNullOrWhiteSpace(xmlDoc))
             return null;
@@ -158,32 +158,32 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
         }
         catch
         {
-            // 忽略解析错误
+            // Ignore parsing errors
         }
 
         return null;
     }
 
     /// <summary>
-    /// 检查是否是 Owned 类型
+    /// Check if it is of type Owned
     /// </summary>
     private bool IsOwnedType(ITypeSymbol type)
     {
         if (type is not INamedTypeSymbol namedType)
             return false;
 
-        // 检查是否有 [Owned] 属性
+        // Check if there is an [Owned] attribute
         return namedType.GetAttributes()
             .Any(attr => attr.AttributeClass?.Name == "OwnedAttribute" || 
                         attr.AttributeClass?.ToDisplayString().Contains("Microsoft.EntityFrameworkCore.OwnedAttribute") == true);
     }
 
     /// <summary>
-    /// 检查是否是可选导航属性
+    /// Check if optional navigation attribute
     /// </summary>
     private bool IsOptionalNavigationProperty(IPropertySymbol property)
     {
-        // 如果类型是可空的复杂类型，且不是 Owned，则认为是可选导航属性
+        // If the type is a nullable complex type and is not Owned, it is considered an optional navigation property.
         if (!IsNullableType(property.Type))
             return false;
 
@@ -194,7 +194,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 检查是否是内置类型
+    /// Check if it is a built-in type
     /// </summary>
     private bool IsBuiltInType(INamedTypeSymbol type)
     {
@@ -222,7 +222,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 检查是否是可空类型
+    /// Check if it is a nullable type
     /// </summary>
     private bool IsNullableType(ITypeSymbol type)
     {
@@ -234,28 +234,28 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 获取属性类型字符串
+    /// Get attribute type string
     /// </summary>
     private string GetPropertyType(ITypeSymbol type)
     {
-        // 如果已经是可空类型，直接返回
+        // If it is already a nullable type, return directly
         if (IsNullableType(type))
         {
             return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
 
-        // 对于值类型，添加可空修饰符
+        // For value types, add the nullable modifier
         if (type.IsValueType)
         {
             return $"{type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}?";
         }
 
-        // 引用类型返回可空版本
+        // Reference type returns nullable version
         return $"{type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}?";
     }
 
     /// <summary>
-    /// 获取底层类型（如果是可空类型）
+    /// Get the underlying type (if it is a nullable type)
     /// </summary>
     private ITypeSymbol GetUnderlyingType(ITypeSymbol type)
     {
@@ -270,15 +270,15 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
 
     /// <summary>
-    /// 检查是否应该忽略的属性
+    /// Check if a property should be ignored
     /// </summary>
     private bool IsIgnoredProperty(IPropertySymbol property)
     {
-        // 忽略索引器
+        // Ignore indexer
         if (property.IsIndexer)
             return true;
 
-        // 检查AlterItemPropertyAttribute的Ignore设置
+        // Check the Ignore setting of AlterItemPropertyAttribute
         var alterItemAttr = property.GetAttributes()
             .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute" ||
                                   attr.AttributeClass?.ToDisplayString().Contains("Monica.Framework.Generators.Attributes.AlterItemPropertyAttribute") == true);
@@ -290,19 +290,19 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
                 return true;
         }
 
-        // 忽略有 [NotMapped] 属性的属性
+        // Ignore properties with the [NotMapped] attribute
         if (property.GetAttributes().Any(attr => 
             attr.AttributeClass?.Name == "NotMappedAttribute" ||
             attr.AttributeClass?.ToDisplayString().Contains("System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute") == true))
             return true;
 
-        // 忽略有 [JsonIgnore] 属性的属性
+        // Ignore properties with [JsonIgnore] attribute
         if (property.GetAttributes().Any(attr => 
             attr.AttributeClass?.Name == "JsonIgnoreAttribute" ||
             attr.AttributeClass?.ToDisplayString().Contains("System.Text.Json.Serialization.JsonIgnoreAttribute") == true))
             return true;
 
-        // 忽略常见的基类属性
+        // Ignore common base class properties
         var ignoredNames = new[] { "Id", "ExtraProperties", "ConcurrencyStamp" };
         if (ignoredNames.Contains(property.Name))
             return true;
@@ -311,11 +311,11 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     }
     
     /// <summary>
-    /// 获取属性参数值
+    /// Get attribute parameter value
     /// </summary>
     private static T GetAttributeArgumentValue<T>(AttributeData attribute, string parameterName)
     {
-        // 查找命名参数
+        // Find named parameters
         var namedArg = attribute.NamedArguments
             .FirstOrDefault(kvp => kvp.Key == parameterName);
 
@@ -327,7 +327,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
 }
 
 /// <summary>
-/// 实体分析结果
+/// Entity analysis results
 /// </summary>
 internal class EntityAnalysisResult(
     INamedTypeSymbol entitySymbol,
@@ -340,7 +340,7 @@ internal class EntityAnalysisResult(
 }
 
 /// <summary>
-/// 属性信息
+/// Attribute information
 /// </summary>
 internal class PropertyInfo(
     string name,

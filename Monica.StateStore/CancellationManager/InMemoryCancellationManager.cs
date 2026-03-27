@@ -5,37 +5,37 @@ using Monica.Tool.Extensions;
 namespace Monica.StateStore.CancellationManager;
 
 /// <summary>
-/// 内存版取消令牌管理器实现
-/// 使用内存存储和事件机制，无需轮询，提供即时响应
+/// Implementation of memory version cancellation token manager
+/// Uses memory storage and event mechanism to provide instant response without polling
 /// </summary>
 /// <remarks>
-/// 注意：此实现仅适用于单进程/单实例场景，不支持跨进程的分布式取消
+/// Note: This implementation is only applicable to single-process/single-instance scenarios and does not support cross-process distributed cancellation.
 /// </remarks>
-/// <param name="logger">日志记录器</param>
+/// <param name="logger">Logger</param>
 public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> logger) : IMoCancellationManager
 {
     /// <summary>
-    /// 内存中的取消令牌状态存储
+    /// In-memory storage of cancellation token state
     /// </summary>
     private readonly ConcurrentDictionary<string, InMemoryTokenState> _tokenStates = new();
     
     /// <summary>
-    /// 本地取消令牌源缓存
+    /// Local cancellation token source cache
     /// </summary>
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _tokenSources = new();
 
     /// <summary>
-    /// 创建或获取指定键的取消令牌
+    /// Create or obtain a cancellation token for the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>返回与指定键关联的取消令牌</returns>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns the cancellation token associated with the specified key</returns>
     public Task<CancellationToken> GetOrCreateTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        // 获取或创建令牌状态
+        // Get or create token status
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
@@ -43,12 +43,12 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
             LastUpdatedAt = DateTime.Now
         });
 
-        // 获取或创建取消令牌源
+        // Get or create a cancellation token source
         var tokenSource = _tokenSources.GetOrAdd(key, k =>
         {
             var source = new CancellationTokenSource();
             
-            // 如果状态已被取消，立即取消新创建的令牌源
+            // If the status has been canceled, immediately cancel the newly created token source
             if (tokenState.IsCancelled)
             {
                 source.Cancel();
@@ -63,16 +63,16 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 取消指定键的取消令牌
+    /// Cancels the cancellation token for the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public Task CancelTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        // 更新状态
+        // update status
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
@@ -83,7 +83,7 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         tokenState.LastUpdatedAt = DateTime.Now;
         tokenState.Version++;
 
-        // 取消本地令牌源（如果存在）
+        // Cancel the local token source (if it exists)
         if (_tokenSources.TryGetValue(key, out var tokenSource))
         {
             if (!tokenSource.Token.IsCancellationRequested)
@@ -97,11 +97,11 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 检查指定键的取消令牌是否已被取消
+    /// Checks whether the cancellation token for the specified key has been canceled
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>如果已取消返回true，否则返回false</returns>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns true if canceled, false otherwise</returns>
     public Task<bool> IsCancelledAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -112,16 +112,16 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 重置指定键的取消令牌状态
+    /// Resets the cancellation token status of the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public Task ResetTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        // 重置状态
+        // reset state
         var tokenState = _tokenStates.GetOrAdd(key, k => new InMemoryTokenState
         {
             Key = k,
@@ -132,7 +132,7 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
         tokenState.LastUpdatedAt = DateTime.Now;
         tokenState.Version++;
 
-        // 移除并重新创建取消令牌源
+        // Remove and recreate the cancellation token source
         if (_tokenSources.TryRemove(key, out var oldTokenSource))
         {
             oldTokenSource.SafeCancelAndDispose();
@@ -146,19 +146,19 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 删除指定键的取消令牌
+    /// Removes the cancellation token for the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public Task DeleteTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        // 移除状态
+        // Remove status
         _tokenStates.TryRemove(key, out _);
 
-        // 移除并清理取消令牌源
+        // Remove and clean the cancellation token source
         if (_tokenSources.TryRemove(key, out var tokenSource))
         {
             tokenSource.SafeCancelAndDispose();
@@ -169,10 +169,10 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 获取所有活动取消令牌的键列表
+    /// Get a list of keys for all active cancellation tokens
     /// </summary>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>返回所有活动取消令牌的键列表</returns>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns a list of keys for all active cancellation tokens</returns>
     public Task<IReadOnlyList<string>> GetActiveTokenKeysAsync(CancellationToken cancellationToken = default)
     {
         var activeKeys = _tokenStates
@@ -184,10 +184,10 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 批量取消多个取消令牌
+    /// Cancel multiple cancellation tokens in batches
     /// </summary>
-    /// <param name="keys">要取消的取消令牌键列表</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="keys">List of cancellation token keys to cancel</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public async Task CancelTokensAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
     {
         if (keys == null || keys.Count == 0)
@@ -200,32 +200,32 @@ public class InMemoryCancellationManager(ILogger<InMemoryCancellationManager> lo
     }
 
     /// <summary>
-    /// 内存令牌状态数据模型
+    /// Memory Token State Data Model
     /// </summary>
     private class InMemoryTokenState
     {
         /// <summary>
-        /// 取消令牌键
+        /// cancel token key
         /// </summary>
         public string Key { get; set; } = string.Empty;
 
         /// <summary>
-        /// 是否已取消
+        /// Has it been cancelled?
         /// </summary>
         public bool IsCancelled { get; set; }
 
         /// <summary>
-        /// 创建时间
+        /// creation time
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// 最后更新时间
+        /// Last updated
         /// </summary>
         public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// 版本号，用于状态变更追踪
+        /// Version number, used for status change tracking
         /// </summary>
         public long Version { get; set; } = 1;
     }

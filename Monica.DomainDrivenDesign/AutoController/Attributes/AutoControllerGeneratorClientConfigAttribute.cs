@@ -3,22 +3,24 @@ using Monica.DomainDrivenDesign.AutoController.MoRpc;
 namespace Monica.DomainDrivenDesign.AutoController.Attributes;
 
 /// <summary>
-/// 生成客户端侧调用接口设置
+/// Configures generation settings for client-side API callers.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly)]
 public class AutoControllerGeneratorClientConfigAttribute : Attribute
 {
     /// <summary>
-    /// 是否添加GRPC实现
+    /// Whether to generate gRPC implementations.
     /// </summary>
     public bool AddGrpcImplementations { get; set; } = false;
     /// <summary>
-    /// 是否添加HTTP实现
+    /// Whether to generate HTTP implementations.
     /// </summary>
     public bool AddHttpImplementations { get; set; } = true;
 
     /// <summary>
-    /// HTTP实现接口类型，为空默认使用 <see cref="MoHttpApi"/>。用于生成时的基类以及获取相关命名空间。若使用自定义实现，需继承自 <see cref="MoHttpApi"/>，且不能有多余的构造参数。
+    /// HTTP implementation base type. Defaults to <see cref="MoHttpApi"/> when not specified.
+    /// This type is used as the generated base class and to resolve the required namespaces.
+    /// Custom implementations must inherit from <see cref="MoHttpApi"/> and must not introduce extra constructor parameters.
     /// </summary>
     public Type? HttpImplementationType { get; set; }
 }

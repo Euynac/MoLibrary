@@ -4,27 +4,27 @@ using Monica.Framework.Core.Model;
 namespace Monica.Framework.Core;
 
 /// <summary>
-/// 字典均使用FullName进行匹配
+/// Dictionaries all use FullName for matching
 /// </summary>
 public static class ProjectUnitStores
 {
     /// <summary>
-    /// 项目单元列表 项目单元类型FullName
+    /// Project Unit List Project Unit TypeFullName
     /// </summary>
     internal static Dictionary<string, ProjectUnit> ProjectUnitsByFullName { get; } = [];
 
     /// <summary>
-    /// 项目单元列表 项目单元类型Name
+    /// Project unit list Project unit type Name
     /// </summary>
     internal static Dictionary<string, ProjectUnit> ProjectUnitsByName { get; } = [];
 
     /// <summary>
-    /// 项目所有枚举信息 枚举类型Name，非FullName
+    /// All enumeration information of the project Enumeration type Name, not FullName
     /// </summary>
     internal static Dictionary<string, Type> EnumTypes { get; }= [];
 
     /// <summary>
-    /// 获取指定项目单元特性
+    /// Get the specified project unit properties
     /// </summary>
     /// <typeparam name="TAttribute"></typeparam>
     /// <param name="typeFullName"></param>
@@ -36,7 +36,7 @@ public static class ProjectUnitStores
         return !ProjectUnitsByFullName.TryGetValue(typeFullName, out var unit) ? null : unit.Attributes.OfType<TAttribute>().FirstOrDefault();
     }
     /// <summary>
-    /// 获取指定项目单元特性
+    /// Get the specified project unit properties
     /// </summary>
     /// <typeparam name="TAttribute"></typeparam>
     /// <param name="typeName"></param>
@@ -48,7 +48,7 @@ public static class ProjectUnitStores
         return !ProjectUnitsByName.TryGetValue(typeName, out var unit) ? null : unit.Attributes.OfType<TAttribute>().FirstOrDefault();
     }
     /// <summary>
-    /// 获取所有项目单元
+    /// Get all project units
     /// </summary>
     /// <returns></returns>
     public static List<ProjectUnit> GetAllUnits()
@@ -56,7 +56,7 @@ public static class ProjectUnitStores
         return [.. ProjectUnitsByFullName.Values];
     }
     /// <summary>
-    /// 获取指定类型的项目单元（实体需继承IMoEntity）
+    /// Get the project unit of the specified type (the entity needs to inherit IMoEntity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
@@ -70,7 +70,7 @@ public static class ProjectUnitStores
         return null;
     }
     /// <summary>
-    /// 获取指定类型的项目单元（实体需继承IMoEntity）
+    /// Get the project unit of the specified type (the entity needs to inherit IMoEntity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
@@ -84,7 +84,7 @@ public static class ProjectUnitStores
         return null;
     }
     /// <summary>
-    /// 获取指定类型的项目单元
+    /// Get the project unit of the specified type
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>

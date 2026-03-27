@@ -14,7 +14,7 @@ public static class ModuleDynamicProxyBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DynamicProxy 模块
+        /// Configures the DynamicProxy module.
         /// </summary>
         public static ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
         {

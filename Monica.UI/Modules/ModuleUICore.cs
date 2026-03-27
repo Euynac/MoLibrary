@@ -28,7 +28,7 @@ public static class ModuleUICoreBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 UICore 模块
+        /// Configure the UICore module
         /// </summary>
         public static ModuleUICoreGuide AddUICore(Action<ModuleUICoreOption>? action = null)
         {
@@ -38,15 +38,15 @@ public static class ModuleUICoreBuilderExtensions
 }
 
 /// <summary>
-/// UI核心模块
-/// 提供基于MudBlazor的UI基础设施
+/// UI core module
+/// Provides MudBlazor-based UI infrastructure
 /// </summary>
 [ModuleKey(EMoModuleKey.UICore)]
 public class ModuleUICore(ModuleUICoreOption option)
     : MoModule<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>(option)
 {
     /// <summary>
-    /// 声明模块依赖
+    /// Declare module dependencies
     /// </summary>
     public override void ClaimDependencies()
     {
@@ -59,41 +59,43 @@ public class ModuleUICore(ModuleUICoreOption option)
     {
         if (builder is WebApplicationBuilder webBuilder && builder.Environment.IsStaging())
         {
-            //巨坑：使用下面语句，使得 WebAssets 在VS中debug环境可以获得css等资源文件用于调试，但副作用是编译后的debug环境会出现404错误。因为它会使得生产环境访问.nuget目录，导致异常 所以必须限定环境，不能用于生产，生产要通过dotnet publish命令发布静态资源。
-            //https://github.com/MudBlazor/MudBlazor/issues/2793
+            // Important pitfall:
+            // UseStaticWebAssets is useful for debugging static resources (CSS/JS) from referenced RCLs in Visual Studio,
+            // but it can cause 404 behavior in certain build/debug combinations and must not be relied on for production.
+            // In production, static web assets should come from published output (`dotnet publish`).
+            // https://github.com/MudBlazor/MudBlazor/issues/2793
             webBuilder.WebHost.UseStaticWebAssets();
-            //测试环境可以通过查看.StaticWebAssets.xml看生成的静态资源文件。
-
-            //生产环境是运行dotnet publish，会自动将依赖的static web assets拷贝到wwwroot文件夹。（直接通过dotnet build release 模式是不会生成wwwroot的）
-            //https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-stuido#consume-content-from-a-referenced-rcl
+            // In local/testing scenarios, generated static-web-asset mappings can be inspected via .StaticWebAssets.xml.
+            // In production publish output, dependent static web assets are copied into the deployed wwwroot content.
+            // https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-studio#consume-content-from-a-referenced-rcl
             
-            //如果遇到DEBUG 环境中http://localhost:5000/_framework/blazor.web.js 404错误，一般是因为没使用以上语句导致的。还有可能就是launchSettings.json没有被IDE读取到（缺少"$schema": "http://json.schemastore.org/launchsettings.json" ？），导致环境变量默认是Production，出现上述描述的问题。
-            //
-            //注意：现在发现似乎引起404的问题就只是因为 .csproj中没有配置<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>，和上述代码无关
+            // If `/_framework/blazor.web.js` returns 404 in Debug, one possible cause is static-web-asset setup.
+            // Another cause is an unexpected environment (for example, launchSettings.json not being applied).
+            // Also verify `<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>` in the host .csproj when needed.
         }
     }
 
     /// <summary>
-    /// 配置服务
+    /// Configuration service
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">Service collection</param>
     public override void ConfigureServices(IServiceCollection services)
     {
 
-        // 注册模块系统状态服务
+        // Register module system status service
         if (!Option.DisableModuleSystemUI)
         {
             services.AddSingleton<IModuleSystemStatusService, ModuleSystemStatusService>();
         }
 
-        // 添加MudBlazor服务
+        // Add MudBlazor service
         services.AddMudServices();
         if(Option.EnableMarkdown)
         {
             services.AddMudMarkdownServices();   
         }
 
-        // 添加Razor组件和交互式服务器组件服务
+        // Add Razor component and interactive server component services
         services.AddRazorComponents()
             .AddInteractiveServerComponents(o =>
             {
@@ -103,38 +105,38 @@ public class ModuleUICore(ModuleUICoreOption option)
                 options.EnableDetailedErrors = Option.EnableDebug;
             });
 
-        // 注册UI组件管理服务
+        // Register UI component management service
         services.AddSingleton<IUIComponentRegistry, UIComponentRegistry>();
 
-        // 注册浏览器存储服务
+        // Register for browser storage service
         services.AddScoped<IMoBrowserStorage, MoBrowserStorage>();
 
-        // 注册主题服务 (Scoped: each Blazor circuit gets its own theme state)
+        // Register theme service (Scoped: each Blazor circuit gets its own theme state)
         services.AddScoped<MoThemeService>();
         services.AddScoped<IMoThemeService>(sp => sp.GetRequiredService<MoThemeService>());
 
         // Register the default markdown asset resolver so Markdown components work without optional modules.
         services.TryAddScoped<IMoMarkdownAssetResolver, PassThroughMarkdownAssetResolver>();
 
-        // 注册用户上下文服务
+        // Register user context service
         services.AddScoped<MoUserContextService>();
     }
 }
 
 /// <summary>
-/// UI核心模块配置引导器
+/// UI core module configuration guide
 /// </summary>
 public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption, ModuleUICoreGuide>
 {
 
     /// <summary>
-    /// 注册UI组件
+    /// Register UI components
     /// </summary>
-    /// <param name="registrationAction">组件注册配置操作</param>
-    /// <returns>配置引导器</returns>
+    /// <param name="registrationAction">Component registration configuration action</param>
+    /// <returns>Configuration Director</returns>
     public ModuleUICoreGuide RegisterUIComponents(Action<IUIComponentRegistry> registrationAction)
     {
-        // 在应用程序启动时执行组件注册
+        // Perform component registration at application startup.
         ConfigureApplicationBuilder(builder =>
         {
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IUIComponentRegistry>();
@@ -145,11 +147,11 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     }
 
     /// <summary>
-    /// 添加路由重定向规则
+    /// Add route redirection rules
     /// </summary>
-    /// <param name="fromPath">源路径（例如 "/"）</param>
-    /// <param name="toPath">目标路径（例如 "/swagger" 或 "~/swagger"）</param>
-    /// <returns>配置引导器</returns>
+    /// <param name="fromPath">Source path (such as "/")</param>
+    /// <param name="toPath">Target path (such as "/swagger" or "~/swagger")</param>
+    /// <returns>Configuration Director</returns>
     public ModuleUICoreGuide AddRouteRedirect(string fromPath, string toPath)
     {
         ConfigureModuleOption(option =>
@@ -161,10 +163,10 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
     }
 
     /// <summary>
-    /// 添加UI基础中间件
-    /// 注意：这些中间件应该由宿主应用程序调用
+    /// Add UI basic middleware
+    /// NOTE: These middlewares should be called by the host application
     /// </summary>
-    /// <returns>配置引导器</returns>
+    /// <returns>Configuration Director</returns>
     public ModuleUICoreGuide AddBasicMiddlewares()
     {
         ConfigureApplicationBuilder(builder =>
@@ -173,9 +175,9 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             //app.UseExceptionHandler("/Error", createScopeForErrors: true);
 
-            app.MapStaticAssets();  // .NET 9支持
+            app.MapStaticAssets();  // .NET 9 support
 
-            // // 静态文件支持（用于MudBlazor资源和Razor类库静态资源）
+            // //Static file support (for MudBlazor resources and Razor class library static resources)
             // app.UseStaticFiles();
             
             //app.UseStaticFiles(new StaticFileOptions()
@@ -184,8 +186,8 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
             //    RequestPath = new PathString("/CustomStyles")
             //});
 
-            // 防伪令牌
-            // Configure your application startup by adding app.UseAntiforgery() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAntiforgery() must go between them. Calls to app.UseAntiforgery() must be placed after calls to app.UseAuthentication() and app.UseAuthorization()."
+            // Antiforgery middleware:
+            // Call app.UseAntiforgery() after authentication/authorization and within the routing pipeline.
             builder.ApplicationBuilder.UseAntiforgery();
 
         }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
@@ -200,7 +202,7 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
                 registry.RegisterLocalizedComponent<ModuleSystemDashboard>(ModuleSystemDashboard.MODULE_SYSTEM_DASHBOARD_URL, "Pages:ModuleSystemDashboard:Title", Icons.Material.Filled.Dashboard, "Categories:Module", true, navOrder: 10);
             }
 
-            // 配置路由重定向
+            // Configure route redirection
             foreach (var redirect in builder.ModuleOption.RouteRedirects)
             {
                 var fromPath = redirect.Key;
@@ -210,7 +212,8 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 
             app.MapRazorComponents<MoApp>()
                 .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
-            //巨坑：如果缺少中间件中的AddAdditionalAssemblies，那么通过F5刷新将会导致404。但通过Router中访问却不会404。
+            // Huge pitfall: if AddAdditionalAssemblies is missing here, pressing F5 refresh may return 404,
+            // while navigation through Router may still work.
         });
 
         return this;
@@ -218,52 +221,52 @@ public class ModuleUICoreGuide : MoModuleGuide<ModuleUICore, ModuleUICoreOption,
 }
 
 /// <summary>
-/// UI核心模块选项
+/// UI core module options
 /// </summary>
 public class ModuleUICoreOption : MoModuleOption<ModuleUICore>
 {
     /// <summary>
-    /// 应用栏名称
+    /// App bar name
     /// </summary>
     public string UIAppBarName { get; set; } = nameof(Monica);
 
     /// <summary>
-    /// 应用版本号
+    /// Application version number
     /// </summary>
     public string UIAppVersion { get; set; } = "v1.0";
 
     /// <summary>
-    /// 禁用模块系统UI界面
+    /// Disable module system UI interface
     /// </summary>
     public bool DisableModuleSystemUI { get; set; }
 
     /// <summary>
-    /// 开启Debug模式
+    /// Turn on Debug mode
     /// </summary>
     public bool EnableDebug { get; set; }
 
     /// <summary>
-    /// 启用Markdown支持
+    /// Enable Markdown support
     /// </summary>
     public bool EnableMarkdown { get; set; }
 
     /// <summary>
-    /// 顶部导航栏显示的最大分类数量（超出部分放入"更多"菜单）
+    /// The maximum number of categories displayed in the top navigation bar (the excess will be placed in the "More" menu)
     /// </summary>
     public int MaxVisibleCategories { get; set; } = 6;
 
     /// <summary>
-    /// 是否启用导航栏搜索功能
+    /// Whether to enable the navigation bar search function
     /// </summary>
     public bool EnableNavBarSearch { get; set; } = true;
 
     /// <summary>
-    /// 路由重定向规则集合，键为源路径，值为目标路径
+    /// A collection of routing redirection rules, where the key is the source path and the value is the target path.
     /// </summary>
     internal Dictionary<string, string> RouteRedirects { get; set; } = new();
 
     /// <summary>
-    /// 是否显示语言切换器
+    /// Whether to show the language switcher
     /// </summary>
     public bool ShowLanguageSwitcher { get; set; } = true;
 }

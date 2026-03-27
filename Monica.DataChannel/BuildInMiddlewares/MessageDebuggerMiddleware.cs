@@ -7,13 +7,13 @@ using Monica.Tool.General;
 namespace Monica.DataChannel.BuildInMiddlewares;
 
 /// <summary>
-/// 消息调试中间件
-/// 用于监听和调试通过管道传输的消息内容
+/// Middleware for inspecting messages in transit.
+/// Captures and formats message content for debugging purposes.
 /// </summary>
 public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
 {
     /// <summary>
-    /// 调试消息记录
+    /// Represents a captured debug message.
     /// </summary>
     public class DebugMessage
     {
@@ -26,32 +26,32 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 是否激活调试
+    /// Indicates whether debugging is enabled.
     /// </summary>
     private bool _isActive;
-    
+
     /// <summary>
-    /// 监听的关键字
+    /// Keyword used to filter captured messages.
     /// </summary>
     private string _filterKeyword = string.Empty;
-    
+
     /// <summary>
-    /// 队列最大长度
+    /// Maximum number of messages retained in the queue.
     /// </summary>
     private int _maxQueueSize = 100;
-    
+
     /// <summary>
-    /// 调试消息队列
+    /// Queue that stores captured debug messages.
     /// </summary>
     private readonly ConcurrentQueue<DebugMessage> _debugMessages = new();
-    
+
     /// <summary>
-    /// 锁对象，用于同步队列操作
+    /// Synchronization lock for queue operations.
     /// </summary>
     private readonly object _queueLock = new();
 
     /// <summary>
-    /// 获取或设置是否激活调试
+    /// Gets or sets a value indicating whether debugging is active.
     /// </summary>
     public bool IsActive
     {
@@ -65,7 +65,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 获取或设置过滤关键字
+    /// Gets or sets the filter keyword.
     /// </summary>
     public string FilterKeyword
     {
@@ -78,7 +78,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 获取或设置队列最大长度
+    /// Gets or sets the maximum queue size.
     /// </summary>
     public int MaxQueueSize
     {
@@ -92,7 +92,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 获取调试消息列表
+    /// Gets the captured debug messages.
     /// </summary>
     public List<DebugMessage> GetDebugMessages()
     {
@@ -103,7 +103,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 清空调试消息
+    /// Clears all captured debug messages.
     /// </summary>
     public void ClearDebugMessages()
     {
@@ -116,7 +116,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 同步处理数据上下文
+    /// Processes the data context synchronously.
     /// </summary>
     public override DataContext Pass(DataContext context)
     {
@@ -153,7 +153,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 异步处理数据上下文
+    /// Processes the data context asynchronously.
     /// </summary>
     public override async Task<DataContext> PassAsync(DataContext context)
     {
@@ -161,11 +161,11 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 格式化消息内容
-    /// 可由子类重写以实现自定义格式化逻辑
+    /// Formats the message content.
+    /// Derived types can override this to provide custom formatting logic.
     /// </summary>
-    /// <param name="data">原始数据</param>
-    /// <returns>格式化后的字符串</returns>
+    /// <param name="data">The raw payload.</param>
+    /// <returns>The formatted string representation.</returns>
     protected virtual string FormatMessage(object? data)
     {
         if (data == null)
@@ -184,11 +184,11 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 判断是否应该捕获消息
-    /// 可由子类重写以实现自定义匹配逻辑
+    /// Determines whether the current message should be captured.
+    /// Derived types can override this to implement custom matching logic.
     /// </summary>
-    /// <param name="formattedContent">格式化后的消息内容</param>
-    /// <returns>是否应该捕获</returns>
+    /// <param name="formattedContent">The formatted message content.</param>
+    /// <returns><see langword="true"/> if the message should be captured; otherwise, <see langword="false"/>.</returns>
     protected virtual bool ShouldCapture(string formattedContent)
     {
         if (string.IsNullOrWhiteSpace(FilterKeyword))
@@ -200,7 +200,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 添加调试消息到队列
+    /// Adds a debug message to the queue.
     /// </summary>
     private void AddDebugMessage(DebugMessage message)
     {
@@ -216,7 +216,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 修剪队列以保持在最大长度限制内
+    /// Trims the queue so it stays within the configured size limit.
     /// </summary>
     private void TrimQueue()
     {
@@ -226,7 +226,7 @@ public class MessageDebuggerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 初始化中间件
+    /// Initializes middleware state and statistics.
     /// </summary>
     public void Initialize()
     {

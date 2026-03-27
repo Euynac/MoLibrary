@@ -8,20 +8,20 @@ using Monica.Tool.Extensions;
 
 namespace Monica.StateStore.CancellationManager;
 
-//TODO 是不是应该用分布式锁
-//TODO 使用EventBus替代轮询
-//TODO 替代InMemoryCancellationManager
+//Should TODO use distributed locks?
+//TODO Use EventBus instead of polling
+//TODO replace InMemoryCancellationManager
 
 /// <summary>
-/// 默认分布式取消令牌管理器实现
-/// 使用 IStateStore 作为底层存储，实现跨微服务实例的取消令牌管理
+/// Default distributed cancellation token manager implementation
+/// Use IStateStore as the underlying storage to implement cancellation token management across microservice instances
 /// </summary>
 /// <remarks>
-/// 初始化默认分布式取消令牌管理器
+/// Initialize the default distributed cancellation token manager
 /// </remarks>
-/// <param name="stateStore">状态存储服务</param>
-/// <param name="logger">日志记录器</param>
-/// <param name="options">配置选项</param>
+/// <param name="stateStore">State storage service</param>
+/// <param name="logger">Logger</param>
+/// <param name="options">Configuration options</param>
 public class DistributedCancellationManager(
     IMoStateStore stateStore,
     ILogger<DistributedCancellationManager> logger,
@@ -32,12 +32,12 @@ public class DistributedCancellationManager(
     private readonly ModuleCancellationManagerOption _options = options.Value;
 
     /// <summary>
-    /// 本地取消令牌源缓存，避免重复轮询状态存储
+    /// Locally cancel token source cache to avoid repeated polling of state storage
     /// </summary>
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _localTokenSources = new();
 
     /// <summary>
-    /// 轮询任务缓存，每个键对应一个后台轮询任务
+    /// Polling task cache, each key corresponds to a background polling task
     /// </summary>
     private readonly ConcurrentDictionary<string, Task> _pollingTasks = new();
 
@@ -47,17 +47,17 @@ public class DistributedCancellationManager(
     private static string GetPrefixedKey(string key) => StateKeyPrefix + key;
 
     /// <summary>
-    /// 创建或获取指定键的分布式取消令牌
+    /// Create or obtain a distributed cancellation token for the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>返回与指定键关联的取消令牌</returns>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns the cancellation token associated with the specified key</returns>
     public async Task<CancellationToken> GetOrCreateTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
             throw new ArgumentException("Token key cannot be null or empty", nameof(key));
 
-        // 如果本地已存在且未取消，直接返回
+        // If the local already exists and has not been canceled, return directly.
         if (_localTokenSources.TryGetValue(key, out var existingSource) && !existingSource.Token.IsCancellationRequested)
         {
             if (_options.EnableVerboseLogging)
@@ -65,15 +65,15 @@ public class DistributedCancellationManager(
             return existingSource.Token;
         }
 
-        // 创建新的本地取消令牌源
+        // Create a new local cancellation token source
         var tokenSource = new CancellationTokenSource();
         _localTokenSources.AddOrUpdate(key, tokenSource, (_, _) => tokenSource);
 
-        // 初始化或获取分布式状态
+        // Initialize or obtain distributed state
         var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
         if (state == null)
         {
-            // 创建新的分布式状态
+            // Create new distributed state
             state = new DistributedCancellationTokenState
             {
                 Key = key,
@@ -87,7 +87,7 @@ public class DistributedCancellationManager(
             logger.LogInformation("Created new distributed cancellation token for key: {Key}", key);
         }
 
-        // 如果分布式状态已取消，立即取消本地令牌
+        // If the distributed state has been canceled, immediately cancel the local token
         if (state.IsCancelled)
         {
             await tokenSource.CancelAsync();
@@ -95,17 +95,17 @@ public class DistributedCancellationManager(
                 logger.LogDebug("Local token immediately cancelled due to distributed state for key: {Key}", key);
         }
 
-        // 启动后台轮询任务监听分布式状态变化
+        // Start a background polling task to monitor distributed status changes
         StartPollingTask(key);
 
         return tokenSource.Token;
     }
 
     /// <summary>
-    /// 取消指定键的分布式取消令牌
+    /// Cancels a distributed cancellation token for a specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public async Task CancelTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -113,7 +113,7 @@ public class DistributedCancellationManager(
 
         try
         {
-            // 更新分布式状态
+            // Update distributed status
             var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
             if (state != null)
             {
@@ -125,7 +125,7 @@ public class DistributedCancellationManager(
                 logger.LogInformation("Cancelled distributed cancellation token for key: {Key}", key);
             }
 
-            // 取消本地令牌
+            // Cancel local token
             if (_localTokenSources.TryGetValue(key, out var tokenSource))
             {
                 await tokenSource.CancelAsync();
@@ -138,11 +138,11 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 检查指定键的取消令牌是否已被取消
+    /// Checks whether the cancellation token for the specified key has been canceled
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>如果已取消返回true，否则返回false</returns>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns true if canceled, false otherwise</returns>
     public async Task<bool> IsCancelledAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -153,10 +153,10 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 重置指定键的取消令牌状态
+    /// Resets the cancellation token status of the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public async Task ResetTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -164,7 +164,7 @@ public class DistributedCancellationManager(
 
         try
         {
-            // 重置分布式状态
+            // Reset distributed state
             var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key), cancellationToken);
             if (state != null)
             {
@@ -175,11 +175,11 @@ public class DistributedCancellationManager(
                 await stateStore.SaveStateAsync(GetPrefixedKey(key), state, cancellationToken, _options.StateTtl);
             }
 
-            // 重置本地令牌源
+            // Reset local token source
             var newTokenSource = new CancellationTokenSource();
             _localTokenSources.AddOrUpdate(key, newTokenSource, (_, _) => newTokenSource);
 
-            // 重新启动轮询任务
+            // Restart polling task
             StartPollingTask(key);
 
             logger.LogInformation("Reset distributed cancellation token for key: {Key}", key);
@@ -191,10 +191,10 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 删除指定键的取消令牌
+    /// Removes the cancellation token for the specified key
     /// </summary>
-    /// <param name="key">取消令牌的唯一标识键</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="key">Unique identification key for cancellation token</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public async Task DeleteTokenAsync(string key, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -202,10 +202,10 @@ public class DistributedCancellationManager(
 
         try
         {
-            // 删除分布式状态
+            // Delete distributed state
             await stateStore.DeleteStateAsync(GetPrefixedKey(key), cancellationToken);
 
-            // 清理本地资源
+            // Clean up local resources
             if (_localTokenSources.TryRemove(key, out var tokenSource))
             {
                 await tokenSource.SafeCancelAndDisposeAsync();
@@ -220,29 +220,29 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 获取所有活动取消令牌的键列表
+    /// Get a list of keys for all active cancellation tokens
     /// </summary>
-    /// <param name="cancellationToken">操作的取消令牌</param>
-    /// <returns>返回所有活动取消令牌的键列表</returns>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
+    /// <returns>Returns a list of keys for all active cancellation tokens</returns>
     public async Task<IReadOnlyList<string>> GetActiveTokenKeysAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            // 由于StateStore的QueryBuilder不支持通用的前缀查询，我们需要通过其他方式获取所有状态
-            // 这里采用简化的实现，实际使用中可能需要根据具体的IStateStore实现调整
+            // Since StateStore's QueryBuilder does not support universal prefix queries, we need to obtain all states through other means
+            // A simplified implementation is used here. In actual use, it may need to be adjusted according to the specific IStateStore implementation.
             var result = new List<string>();
 
-            // 这是一个权宜之计，实际生产环境中应该通过更高效的方式实现
-            // 例如：维护一个活动token键的索引，或者使用支持前缀查询的存储实现
+            // This is a stop-gap measure and should be implemented in a more efficient way in actual production environments.
+            // For example: maintain an index of active token keys, or use a storage implementation that supports prefix queries
             logger.LogWarning("GetActiveTokenKeysAsync is using a simplified implementation. " +
                              "Consider implementing a more efficient solution for production use.");
 
-            // 返回当前本地缓存中的活动令牌键
+            // Returns the active token key currently in the local cache
             foreach (var kvp in _localTokenSources)
             {
                 if (!kvp.Value.Token.IsCancellationRequested)
                 {
-                    // 双重检查分布式状态
+                    // Double checking distributed state
                     var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(kvp.Key), cancellationToken);
                     if (state != null && !state.IsCancelled)
                     {
@@ -260,10 +260,10 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 批量取消多个取消令牌
+    /// Cancel multiple cancellation tokens in batches
     /// </summary>
-    /// <param name="keys">要取消的取消令牌键列表</param>
-    /// <param name="cancellationToken">操作的取消令牌</param>
+    /// <param name="keys">List of cancellation token keys to cancel</param>
+    /// <param name="cancellationToken">Cancellation token for the operation</param>
     public async Task CancelTokensAsync(IReadOnlyList<string> keys, CancellationToken cancellationToken = default)
     {
         if (keys == null || !keys.Any())
@@ -274,9 +274,9 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 启动后台轮询任务监听分布式状态变化
+    /// Start a background polling task to monitor distributed status changes
     /// </summary>
-    /// <param name="key">取消令牌键</param>
+    /// <param name="key">cancel token key</param>
     private void StartPollingTask(string key)
     {
         if (_pollingTasks.ContainsKey(key))
@@ -297,7 +297,7 @@ public class DistributedCancellationManager(
                     var state = await stateStore.GetStateAsync<DistributedCancellationTokenState>(GetPrefixedKey(key));
                     if (state == null)
                     {
-                        // 分布式状态已被删除，清理本地资源
+                        // The distributed state has been deleted and local resources have been cleaned up.
                         if (_localTokenSources.TryRemove(key, out var localSource))
                         {
                             await localSource.SafeCancelAndDisposeAsync();
@@ -307,7 +307,7 @@ public class DistributedCancellationManager(
                         break;
                     }
 
-                    // 检查版本变化和取消状态
+                    // Check version changes and cancellation status
                     if (state.Version > lastVersion)
                     {
                         lastVersion = state.Version;
@@ -324,7 +324,7 @@ public class DistributedCancellationManager(
                 }
                 catch (OperationCanceledException)
                 {
-                    // 正常取消，退出轮询
+                    // Cancel normally and exit polling
                     if (_options.EnableVerboseLogging)
                         logger.LogDebug("Polling task cancelled for key: {Key}", key);
                     break;
@@ -336,7 +336,7 @@ public class DistributedCancellationManager(
                 }
             }
 
-            // 清理轮询任务
+            // Cleanup polling tasks
             _pollingTasks.TryRemove(key, out _);
             if (_options.EnableVerboseLogging)
                 logger.LogDebug("Polling task completed for key: {Key}", key);
@@ -346,32 +346,32 @@ public class DistributedCancellationManager(
     }
 
     /// <summary>
-    /// 分布式取消令牌状态数据模型
+    /// Distributed Cancellation Token State Data Model
     /// </summary>
     private class DistributedCancellationTokenState
     {
         /// <summary>
-        /// 取消令牌键
+        /// cancel token key
         /// </summary>
         public string Key { get; set; } = string.Empty;
 
         /// <summary>
-        /// 是否已取消
+        /// Has it been cancelled?
         /// </summary>
         public bool IsCancelled { get; set; }
 
         /// <summary>
-        /// 创建时间
+        /// creation time
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// 最后更新时间
+        /// Last updated
         /// </summary>
         public DateTime LastUpdatedAt { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// 版本号，用于乐观锁控制
+        /// Version number, used for optimistic lock control
         /// </summary>
         public long Version { get; set; } = 1;
     }

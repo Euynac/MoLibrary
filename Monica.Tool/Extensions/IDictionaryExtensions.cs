@@ -60,12 +60,12 @@ public static class IDictionaryExtensions
     public static Dictionary<string, TValue> ToIgnoreCaseDictionary<TValue>(this Dictionary<string, TValue> oldDictionary) => new(oldDictionary, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 获取与指定的键相关联的值，如果没有则返回指定的默认值或Value类的默认值（引用类型默认值null，值类型返回0或false或'\0'等）（好处：不用写ContainsKey）
+    /// Get the value associated with the specified key, if not, return the specified default value or the default value of the Value class (reference type default value is null, value type returns 0 or false or '\0', etc.) (Benefit: No need to write ContainsKey)
     /// <br/>English: Gets the value associated with the specified key, or returns the specified default value or the default value of the Value class if not (reference type default value null, value type returns 0 or false or '\0', etc.) (advantage: no need to write ContainsKey)
     /// </summary>
     /// <param name="dict"></param>
-    /// <param name="key">如果是null也会返回默认值</param>
-    /// <param name="defaultValue">指定默认值</param>
+    /// <param name="key">If it is null, the default value will be returned.</param>
+    /// <param name="defaultValue">Specify default value</param>
     /// <returns></returns>
     public static TValue? GetValueOrCustom<TKey, TValue>(this IDictionary<TKey, TValue>? dict, TKey? key, TValue? defaultValue = default)
     {
@@ -74,7 +74,7 @@ public static class IDictionaryExtensions
     }
 
     /// <summary>
-    /// 检查指定字典中是否存在任意一个给定的元素
+    /// Checks whether any given element exists in the specified dictionary
     /// <br/>English: Check if any of the given elements exist in the specified dictionary
     /// </summary>
     /// <param name="dict"></param>
@@ -87,7 +87,7 @@ public static class IDictionaryExtensions
         return keys.Any(dict.ContainsKey);
     }
     /// <summary>
-    /// 检查指定字典中是否存在任意一个给定的元素
+    /// Checks whether any given element exists in the specified dictionary
     /// <br/>English: Check if any of the given elements exist in the specified dictionary
     /// </summary>
     /// <param name="dict"></param>

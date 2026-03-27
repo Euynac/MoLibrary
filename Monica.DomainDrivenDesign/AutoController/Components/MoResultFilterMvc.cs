@@ -6,7 +6,7 @@ using Monica.Tool.Results;
 namespace Monica.DomainDrivenDesign.AutoController.Components;
 
 /// <summary>
-/// 使得Res的Status code与Http响应的Code一致。
+/// Keeps the HTTP status code aligned with the <see cref="Res" /> status code.
 /// </summary>
 public class MoResultFilterMvc: IResultFilter
 {

@@ -50,9 +50,9 @@ public class AsyncEventBuffer
 
 public class AsyncLocalEventStore(IMoUnitOfWorkManager uow) : IAsyncLocalEventStore
 {
-    //TODO 测试潜在内存泄漏情况
+    // TODO: Verify potential memory leak scenarios.
     //private static readonly AsyncLocal<AsyncEventBuffer> _asyncBuffer = new();
-    //由于ABP interceptor会影响AsyncLocal的功能，待分离后使用
+    // ABP interceptors may affect AsyncLocal behavior; enable this after separation.
 
 
     public AsyncEventBuffer? GetBuffer()
@@ -273,7 +273,7 @@ public class AsyncLocalEventPublisher(
         var eventRecord = new TransactionEventRecord(eventType, eventData, originalEntity);
 
         var buffer = bufferStore.GetOrNewBuffer();
-        //buffer.Records.Add(eventRecord); //暂时用于测试
+        //buffer.Records.Add(eventRecord); // Temporarily kept for testing.
         if (eventPublisher == DistributedEventBus)
         {
             AddOrReplaceEvent(buffer.DistributedEvents, buffer.DistributedEventsHash, eventRecord);
@@ -304,7 +304,7 @@ public class AsyncLocalEventPublisher(
         }
         else
         {
-            //若产生Hash碰撞
+            // In case of a hash collision.
             var foundIndex = events.FindIndex(p => IsSameEntityEventRecord(p, eventRecord));
             if (foundIndex < 0)
             {

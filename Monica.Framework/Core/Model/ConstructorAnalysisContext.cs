@@ -1,8 +1,8 @@
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 构造函数分析上下文
+/// Constructor analysis context
 /// </summary>
-/// <param name="ParameterType">参数类型</param>
-/// <param name="DependentUnit">依赖此参数的项目单元</param>
+/// <param name="ParameterType">Parameter type</param>
+/// <param name="DependentUnit">Project units that depend on this parameter</param>
 public record ConstructorAnalysisContext(Type ParameterType, ProjectUnit DependentUnit);

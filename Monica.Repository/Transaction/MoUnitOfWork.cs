@@ -138,7 +138,7 @@ public class MoUnitOfWork(
     {
         try
         {
-            if (IsDisposed) //Scoped ServiceProvider结束后也会触发一次
+            if (IsDisposed) // This can also be triggered once when the scoped ServiceProvider is disposed.
             {
                 return;
             }
@@ -148,9 +148,9 @@ public class MoUnitOfWork(
                 OnFailed();
             }
 
-            //在CreateDbContextWithTransactionAsync中对事务对象进行Dispose对于未提交的事务会自动回滚
-            //事务回滚后，事务已经结束，不用再提交
-            //强制结束程序，数据库检测到客户端连接断开也会自动回滚事务（实测发现不一定）
+            // In CreateDbContextWithTransactionAsync, disposing an uncommitted transaction usually triggers an automatic rollback.
+            // After rollback, the transaction is already finished and should not be committed again.
+            // Forcibly terminating the process may also trigger rollback when the DB detects a disconnected client (not always reliable in practice).
             OnDisposed();
 
             IsDisposed = true;
@@ -167,7 +167,7 @@ public class MoUnitOfWork(
                 //dispose all db contexts
                 foreach (var dbContext in _dbContexts.Values)
                 {
-                    dbContext.Dispose();//对于未提交的事务会自动回滚
+                    dbContext.Dispose(); // Disposing the DbContext usually rolls back uncommitted transactions.
                 }
             }
             catch (Exception e)

@@ -21,7 +21,7 @@ public static class ModuleFrameworkMonitorBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 FrameworkMonitor 模块
+        /// Configuring the FrameworkMonitor module
         /// </summary>
         public static ModuleFrameworkMonitorGuide AddFrameworkMonitor(Action<ModuleFrameworkMonitorOption>? action = null)
         {
@@ -62,7 +62,7 @@ public class ModuleFrameworkMonitor(ModuleFrameworkMonitorOption option)
      
         ProjectUnit.Option = option;
         
-        // 注册框架监控服务
+        // Register framework monitoring service
         services.AddScoped<IFrameworkMonitorService, FrameworkMonitorService>();
     }
 
@@ -167,17 +167,17 @@ public class ModuleFrameworkMonitorGuide : MoModuleGuide<ModuleFrameworkMonitor,
 public class ModuleFrameworkMonitorOption : MoModuleOptionWithMinimalApi<ModuleFrameworkMonitor>
 {
     /// <summary>
-    /// 惯例命名设置
+    /// Convention naming settings
     /// </summary>
     public UnitNameConventionOptions ConventionOptions { get; set; } = new();
 
     /// <summary>
-    /// 开启请求过滤器
+    /// Enable request filter
     /// </summary>
     public bool EnableRequestFilter { get; set; }
 
     /// <summary>
-    /// 是否解析项目单元具体信息（如XML文档注释等）
+    /// Whether to parse project unit specific information (such as XML document comments, etc.)
     /// </summary>
     public bool ParseUnitDetails { get; set; } = true;
 }
@@ -186,12 +186,12 @@ public class UnitNameConventionOptions
 {
     public Dictionary<EProjectUnitType, UnitNameConventionOption> Dict { get; set; } = [];
     /// <summary>
-    /// 全局惯例命名模式
+    /// Global convention naming patterns
     /// </summary>
     public ENameConventionMode NameConventionMode { get; set; } = ENameConventionMode.Warning;
 
     /// <summary>
-    /// 使用惯例名称检查
+    /// Use convention name checking
     /// </summary>
     public bool EnableNameConvention { get; set; }
 }
@@ -199,23 +199,23 @@ public class UnitNameConventionOptions
 public class UnitNameConventionOption
 {
     /// <summary>
-    /// 后缀名
+    /// suffix
     /// </summary>
     public string? Postfix { get; set; }
     /// <summary>
-    /// 前缀名
+    /// prefix name
     /// </summary>
     public string? Prefix { get; set; }
     /// <summary>
-    /// 包含名
+    /// Contains name
     /// </summary>
     public string? Contains { get; set; }
     /// <summary>
-    /// 命名空间包含，如必须放入文件夹名
+    /// Namespace contains, if you must put the folder name
     /// </summary>
     public string? NamespaceContains { get; set; }
     /// <summary>
-    /// 惯例命名模式，不设置使用全局模式
+    /// Conventional naming pattern, use global pattern if not set
     /// </summary>
     public ENameConventionMode? NameConventionMode { get; set; } = ENameConventionMode.Warning;
 
@@ -228,15 +228,15 @@ public class UnitNameConventionOption
 public enum ENameConventionMode
 {
     /// <summary>
-    /// 警告模式，仅提醒
+    /// Warning mode, reminder only
     /// </summary>
     Warning,
     /// <summary>
-    /// 严格模式，错误直接无法运行
+    /// Strict mode, error directly cannot run
     /// </summary>
     Strict,
     /// <summary>
-    /// 禁用Convention
+    /// DisableConvention
     /// </summary>
     Disable
 }

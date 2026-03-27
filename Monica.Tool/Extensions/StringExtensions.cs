@@ -9,7 +9,7 @@ using Monica.Tool.General;
 
 namespace Monica.Tool.Extensions;
 
-//TODO 以下很多方法可以通过Span优化
+// TODO: Many methods below can be optimized further with Span.
 public static class StringExtensions
 {
     public static readonly string[] DATE_FORMATS = ["yyyy-MM-dd", "yyyyMMdd", "MMdd"];
@@ -73,7 +73,7 @@ public static class StringExtensions
 
 
        
-    #region ABP移植
+    #region ABP Port
     /// <summary>
     /// Concatenates the members of a constructed <see cref="IEnumerable{T}"/> collection of type System.String, using the specified separator between each member.
     /// This is a shortcut for string.Join(...)
@@ -433,7 +433,7 @@ public static class StringExtensions
     /// </summary>
     /// <param name="value">The string to test.</param>
     /// <returns>true if the <paramref name="value">value</paramref> parameter is null or an empty string (""); otherwise, false.</returns>
-    [ContractAnnotation("null => true")] //能够教会ReSharper空判断(传入的是null，返回true)https://www.jetbrains.com/help/resharper/Contract_Annotations.html#syntax
+    [ContractAnnotation("null => true")] // Helps ReSharper infer null checks: when the input is null, the result is true.
     public static bool IsNullOrEmpty([NotNullWhen(false)] this string? value) => string.IsNullOrEmpty(value);
 
     /// <summary>
@@ -458,17 +458,17 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// 判断是否能够被转换为int型
+    /// Determine whether it can be converted to int type
     /// </summary>
     /// <param name="s"></param>
     /// <returns></returns>
     public static bool IsInt(this string? s) => s != null && int.TryParse(s, out _);
 
     /// <summary>
-    /// 判断是否能够被转换为int型
+    /// Determine whether it can be converted to int type
     /// </summary>
     /// <param name="s"></param>
-    /// <param name="num">成功返回转换的int</param>
+    /// <param name="num">Returns the converted int on success</param>
     /// <returns></returns>
     public static bool IsInt(this string? s, out int num)
     {
@@ -478,12 +478,12 @@ public static class StringExtensions
 
 
     /// <summary>
-    /// 将某段字符串按照某指定字符串分割成数组后，查找一个字符串是否在数组中
+    /// After splitting a certain string into an array according to a specified string, find whether a string is in the array
     /// </summary>
-    /// <param name="source">要分割的字符串</param>
-    /// <param name="comparisonType">指定搜索规则的枚举值之一</param>
-    /// <param name="searchStr">要查找的字符串</param>
-    /// <param name="splitArray">分割字符串，输入多个就将其都作为分割符</param>
+    /// <param name="source">the string to split</param>
+    /// <param name="comparisonType">One of the enumeration values ​​that specifies search rules</param>
+    /// <param name="searchStr">string to find</param>
+    /// <param name="splitArray">Split the string. If you input multiple characters, use them as separators.</param>
     /// <returns></returns>
     public static bool SplitContain(this string? source, StringComparison comparisonType, string searchStr,
         params string[] splitArray)
@@ -491,12 +491,12 @@ public static class StringExtensions
         return !string.IsNullOrEmpty(source) && source.Split(splitArray, StringSplitOptions.RemoveEmptyEntries).Any(item => item.Equals(searchStr, comparisonType));
     }
     /// <summary>
-    /// 将某段字符串按照某指定字符分割成数组后，查找一个字符串是否在数组中
+    /// After splitting a certain string into an array according to a specified character, find whether a string is in the array
     /// </summary>
-    /// <param name="source">要分割的字符串</param>
-    /// <param name="comparisonType">指定搜索规则的枚举值之一</param>
-    /// <param name="searchStr">要查找的字符串</param>
-    /// <param name="splitArray">分割字符，输入多个就将其都作为分割符</param>
+    /// <param name="source">the string to split</param>
+    /// <param name="comparisonType">One of the enumeration values ​​that specifies search rules</param>
+    /// <param name="searchStr">string to find</param>
+    /// <param name="splitArray">Split characters. If you enter multiple characters, they will be used as separators.</param>
     /// <returns></returns>
     public static bool SplitContain(this string? source, StringComparison comparisonType, string searchStr,
         params char[] splitArray)
@@ -505,11 +505,11 @@ public static class StringExtensions
         return source.Split(splitArray, StringSplitOptions.RemoveEmptyEntries).Any(item => item.Equals(searchStr, comparisonType));
     }
     /// <summary>
-    /// 指定字符串在某字符串中出现的所有Index集合（可用于判断出现次数），没有则返回count=0的list
+    /// Specifies a collection of all Indexes that the string appears in a certain string (can be used to determine the number of occurrences), if not, a list with count=0 is returned.
     /// </summary>
-    /// <param name="source">源字符串</param>
-    /// <param name="value">要搜索的字符串</param>
-    /// <param name="repeat">可以重复判断已经出现过的字符（即包括子序列）</param>
+    /// <param name="source">source string</param>
+    /// <param name="value">String to search for</param>
+    /// <param name="repeat">Characters that have already appeared can be repeatedly judged (including subsequences)</param>
     /// <returns></returns>
     public static List<int> AllIndexOf(this string? source, string value, bool repeat = false)
     {
@@ -527,12 +527,12 @@ public static class StringExtensions
         return list;
     }
     /// <summary>
-    /// 返回一个值，该值指示指定的子串是否出现在此字符串中。
+    /// Returns a value indicating whether the specified substring occurs in this string.
     /// </summary>
-    /// <param name="source">源字符串</param>
-    /// <param name="value">要搜寻的字符串。</param>
-    /// <param name="comparisonType">指定搜索规则的枚举值之一</param>
-    /// <returns>如果 true 参数出现在此字符串中，或者 value 为空字符串 ("")，则为 value；否则为 false。</returns>
+    /// <param name="source">source string</param>
+    /// <param name="value">The string to search for.</param>
+    /// <param name="comparisonType">One of the enumeration values ​​that specifies search rules</param>
+    /// <returns>value if the true argument appears in this string or value is the empty string (""); otherwise, false.</returns>
     public static bool Contains(this string source, string value, StringComparison comparisonType) => source.IndexOf(value, comparisonType) >= 0;
 
     /// <summary>
@@ -717,7 +717,7 @@ public static class StringExtensions
     /// <param name="str"></param>
     /// <param name="length">the return string's length.</param>
     /// <param name="paddingChar">default append blank space.</param>
-    /// /// <param name="padStart">default is append to end.</param>
+    /// <param name="padStart">Defaults to appending at the end.</param>
     /// <exception cref="InvalidOperationException"></exception>
     /// <returns>if not enough will append with blank space or given char, else if exceed length will cut of to match max length.</returns>
     public static string LimitLengthTo(this string str, int length, char paddingChar = ' ', bool padStart = false)
@@ -726,11 +726,11 @@ public static class StringExtensions
         return str.LimitMaxLength(length).LimitMinLength(length, paddingChar, padStart);
     }
     /// <summary>
-    /// 将一个string中与提供的键值对集合中的键相同的全部替换为对应的值（注意若是提供的集合中值与键相包含会造成重复替换）
+    /// Replace all the keys in a string that are the same as the keys in the provided key-value pair set with the corresponding values ​​(note that if the values ​​and keys in the provided set are included, it will cause repeated substitutions)
     /// </summary>
-    /// <param name="source">原文</param>
-    /// <param name="pairList">提供的键值对集合</param>
-    /// <param name="reverse">默认正向Key替换为Value，为true则Value替换Key</param>
+    /// <param name="source">original</param>
+    /// <param name="pairList">The provided collection of key-value pairs</param>
+    /// <param name="reverse">By default, the forward Key is replaced by Value. If it is true, Value replaces Key.</param>
     /// <returns></returns>
     /// https://github.com/Caballero77/FlashText.NET
     public static string ReplaceBasedOnDict(this string source, IEnumerable<KeyValuePair<string, string>> pairList, bool reverse = false)

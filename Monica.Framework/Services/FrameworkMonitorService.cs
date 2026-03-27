@@ -13,7 +13,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.Services;
 
 /// <summary>
-/// 框架监控服务实现
+/// Framework monitoring service implementation
 /// </summary>
 public class FrameworkMonitorService(
     ILogger<FrameworkMonitorService> logger,
@@ -23,9 +23,9 @@ public class FrameworkMonitorService(
     IRequestFilter? requestFilter = null) : IFrameworkMonitorService
 {
     /// <summary>
-    /// 获取所有项目单元信息
+    /// Get all project unit information
     /// </summary>
-    /// <returns>项目单元列表</returns>
+    /// <returns>Project unit list</returns>
     public async Task<Res<List<DtoProjectUnit>>> GetAllProjectUnitsAsync()
     {
         try
@@ -33,7 +33,7 @@ public class FrameworkMonitorService(
             var units = ProjectUnitStores.GetAllUnits();
             var result = mapper.Map<List<DtoProjectUnit>>(units);
             
-            // 计算每个单元被依赖的数量
+            // Calculate the number of dependencies of each unit
             var dependencyCountMap = new Dictionary<string, int>();
             foreach (var unit in result)
             {
@@ -45,7 +45,7 @@ public class FrameworkMonitorService(
                 }
             }
             
-            // 更新每个单元的被依赖数量
+            // Update the number of dependencies for each unit
             foreach (var unit in result)
             {
                 if (dependencyCountMap.TryGetValue(unit.Key, out var count))
@@ -64,9 +64,9 @@ public class FrameworkMonitorService(
     }
 
     /// <summary>
-    /// 获取领域事件信息
+    /// Get domain event information
     /// </summary>
-    /// <returns>领域事件信息列表</returns>
+    /// <returns>Domain event information list</returns>
     public async Task<Res<List<DtoDomainEventInfo>>> GetDomainEventsAsync()
     {
         try
@@ -87,11 +87,11 @@ public class FrameworkMonitorService(
     }
 
     /// <summary>
-    /// 发布领域事件
+    /// Publish domain events
     /// </summary>
-    /// <param name="eventKey">事件键</param>
-    /// <param name="eventContent">事件内容</param>
-    /// <returns>发布结果</returns>
+    /// <param name="eventKey">event key</param>
+    /// <param name="eventContent">Event content</param>
+    /// <returns>publish results</returns>
     public async Task<Res> PublishDomainEventAsync(string eventKey, JsonNode eventContent)
     {
         try
@@ -116,11 +116,11 @@ public class FrameworkMonitorService(
     }
 
     /// <summary>
-    /// 管理请求过滤
+    /// Manage request filtering
     /// </summary>
-    /// <param name="urls">URL列表</param>
-    /// <param name="disable">是否禁用</param>
-    /// <returns>被禁用的URL列表</returns>
+    /// <param name="urls">URL list</param>
+    /// <param name="disable">Whether to disable</param>
+    /// <returns>List of banned URLs</returns>
     public async Task<Res<List<string>>> ManageRequestFilterAsync(List<string>? urls, bool? disable)
     {
         try
@@ -157,10 +157,10 @@ public class FrameworkMonitorService(
     }
 
     /// <summary>
-    /// 获取枚举信息
+    /// Get enumeration information
     /// </summary>
-    /// <param name="name">枚举名称</param>
-    /// <returns>枚举信息</returns>
+    /// <param name="name">enum name</param>
+    /// <returns>Enumeration information</returns>
     public async Task<Res<List<DtoAssemblyEnumInfo>>> GetEnumInfoAsync(string? name = null)
     {
         try
@@ -222,10 +222,10 @@ public class FrameworkMonitorService(
     }
 
     /// <summary>
-    /// 通过键值获取项目单元
+    /// Get project unit by key value
     /// </summary>
-    /// <param name="key">项目单元键值</param>
-    /// <returns>项目单元</returns>
+    /// <param name="key">Project unit key value</param>
+    /// <returns>project unit</returns>
     public ProjectUnit? GetProjectUnitByKey(string key)
     {
         return ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(key, out var unit) ? unit : null;

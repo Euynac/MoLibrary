@@ -1,22 +1,22 @@
 namespace Monica.Framework.UI.UIEventBus.Models;
 
 /// <summary>
-/// 测试事件消息，用于分布式事件总线测试
+/// Test event messages for distributed event bus testing
 /// </summary>
 public class TestEventMessage
 {
     /// <summary>
-    /// 消息内容
+    /// Message content
     /// </summary>
     public string Message { get; set; } = string.Empty;
 
     /// <summary>
-    /// 消息创建时间（UTC）
+    /// Message creation time (UTC)
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 消息ID，用于追踪
+    /// Message ID, used for tracking
     /// </summary>
     public string MessageId { get; set; } = Guid.NewGuid().ToString();
 }

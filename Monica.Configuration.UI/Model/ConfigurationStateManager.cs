@@ -5,21 +5,21 @@ using System.Text.Json;
 namespace Monica.Configuration.UI.Model;
 
 /// <summary>
-/// 配置状态管理器 - 统一管理所有配置状态和操作
+/// Configuration Status Manager - Unified management of all configuration status and operations
 /// </summary>
 public class ConfigurationStateManager
 {
     private readonly Dictionary<string, ConfigurationViewModel> _configurations = new();
     
-    // 选择状态管理
+    // Select status management
     private SelectionState _selectionState = new();
     
     /// <summary>
-    /// 初始化配置数据
+    /// Initialize configuration data
     /// </summary>
     public void Initialize(List<DtoDomainGroup> domainConfigs)
     {
-        // 保存当前的选择状态
+        // Save current selection state
         var previousSelection = _selectionState.Clone();
         
         _configurations.Clear();
@@ -36,12 +36,12 @@ public class ConfigurationStateManager
             }
         }
         
-        // 尝试恢复选择状态
+        // Try to restore selection state
         RestoreSelectionState(domainConfigs, previousSelection);
     }
     
     /// <summary>
-    /// 获取配置视图模型
+    /// Get configuration view model
     /// </summary>
     public ConfigurationViewModel? GetConfiguration(string configName)
     {
@@ -49,7 +49,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 更新配置项
+    /// Update configuration items
     /// </summary>
     public void UpdateItem(string configName, string itemKey, object? newValue)
     {
@@ -60,7 +60,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 撤销配置项修改
+    /// Undo configuration item modification
     /// </summary>
     public void UndoItem(string configName, string itemKey)
     {
@@ -71,7 +71,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 获取所有已修改的配置
+    /// Get all modified configurations
     /// </summary>
     public List<ConfigurationViewModel> GetModifiedConfigurations()
     {
@@ -79,7 +79,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 生成更新请求
+    /// Generate update request
     /// </summary>
     public List<DtoUpdateConfig> BuildUpdateRequests()
     {
@@ -89,7 +89,7 @@ public class ConfigurationStateManager
         {
             var configJson = new Dictionary<string, object?>();
             
-            // 构建完整的配置JSON，包含所有项（修改的和未修改的）
+            // Build the complete configuration JSON, including all items (modified and unmodified)
             foreach (var item in config.Items)
             {
                 configJson[item.OriginalItem.Name] = item.CurrentValue;
@@ -107,7 +107,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 清空所有修改
+    /// Clear all changes
     /// </summary>
     public void ClearAllModifications()
     {
@@ -118,7 +118,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 获取API调用预览
+    /// Get API call preview
     /// </summary>
     public string GetApiCallPreview(string configName)
     {
@@ -152,12 +152,12 @@ public class ConfigurationStateManager
     #region 选择状态管理
     
     /// <summary>
-    /// 获取当前选择状态
+    /// Get the current selection status
     /// </summary>
     public SelectionState GetSelectionState() => _selectionState;
     
     /// <summary>
-    /// 更新选择状态
+    /// Update selection status
     /// </summary>
     public void UpdateSelection(string? domainName = null, string? serviceName = null, string? configName = null)
     {
@@ -167,7 +167,7 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 清空选择状态
+    /// Clear selection status
     /// </summary>
     public void ClearSelection()
     {
@@ -175,20 +175,20 @@ public class ConfigurationStateManager
     }
     
     /// <summary>
-    /// 恢复选择状态
+    /// Restore selection state
     /// </summary>
     private void RestoreSelectionState(List<DtoDomainGroup> domainConfigs, SelectionState previousSelection)
     {
         if (string.IsNullOrEmpty(previousSelection.SelectedDomainName)) 
             return;
             
-        // 尝试找到之前选择的域
+        // Try to find the previously selected domain
         var domain = domainConfigs.FirstOrDefault(d => d.Name == previousSelection.SelectedDomainName);
         if (domain == null) return;
         
         _selectionState.SelectedDomainName = domain.Name;
         
-        // 尝试恢复服务选择
+        // Try restoring service options
         if (!string.IsNullOrEmpty(previousSelection.SelectedServiceName))
         {
             var service = domain.Children.FirstOrDefault(s => s.Name == previousSelection.SelectedServiceName);
@@ -196,7 +196,7 @@ public class ConfigurationStateManager
             {
                 _selectionState.SelectedServiceName = service.Name;
                 
-                // 尝试恢复配置类选择
+                // Try to restore configuration class selection
                 if (!string.IsNullOrEmpty(previousSelection.SelectedConfigName))
                 {
                     var config = service.Children.FirstOrDefault(c => c.Name == previousSelection.SelectedConfigName);
@@ -213,7 +213,7 @@ public class ConfigurationStateManager
 }
 
 /// <summary>
-/// 配置视图模型
+/// Configure view model
 /// </summary>
 public class ConfigurationViewModel
 {
@@ -258,7 +258,7 @@ public class ConfigurationViewModel
 }
 
 /// <summary>
-/// 配置项视图模型
+/// Configuration item view model
 /// </summary>
 public class ConfigurationItemViewModel
 {
@@ -294,7 +294,7 @@ public class ConfigurationItemViewModel
     }
     
     /// <summary>
-    /// 获取原始JSON
+    /// Get raw JSON
     /// </summary>
     public string GetOriginalJson()
     {
@@ -302,7 +302,7 @@ public class ConfigurationItemViewModel
     }
     
     /// <summary>
-    /// 获取当前JSON
+    /// Get the current JSON
     /// </summary>
     public string GetCurrentJson()
     {
@@ -314,7 +314,7 @@ public class ConfigurationItemViewModel
         if (value1 == null && value2 == null) return true;
         if (value1 == null || value2 == null) return false;
         
-        // 使用JSON序列化进行深度比较
+        // Deep comparison using JSON serialization
         try
         {
             var json1 = JsonSerializer.Serialize(value1, JsonFileProviderConventions.JsonSerializerOptions);
@@ -329,7 +329,7 @@ public class ConfigurationItemViewModel
 }
 
 /// <summary>
-/// 选择状态模型
+/// Select state model
 /// </summary>
 public class SelectionState
 {
@@ -338,7 +338,7 @@ public class SelectionState
     public string? SelectedConfigName { get; set; }
     
     /// <summary>
-    /// 克隆选择状态
+    /// Clone selection status
     /// </summary>
     public SelectionState Clone()
     {

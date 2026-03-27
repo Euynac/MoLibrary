@@ -6,7 +6,7 @@ public class InformationUnitConverter : UnitConverterBase
     {
         var bit = new Unit("bit", 1, "比特");
         var @byte = new Unit("bytes", 8, bit, "字节");
-        //国际单位制（SI）decimal
+        //International System of Units (SI) decimal
         var kb = new Unit("kB", 1000, @byte, "千字节|kilobyte");
         var mb = new Unit("MB", 1000, kb, "兆|MegaByte");
         var gb = new Unit("GB", 1000, mb, "GigaByte");

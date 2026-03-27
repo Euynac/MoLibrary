@@ -16,7 +16,7 @@ namespace Monica.Modules;
 public static class ModuleDaprEventBusBuilderExtensions
 {
     /// <summary>
-    /// 使用Dapr作为分布式事件总线Provider
+    /// Using Dapr as a distributed event bus provider
     /// </summary>
     public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
@@ -70,11 +70,11 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
 {
     /// <summary>
-    /// 添加Keyed分布式Dapr事件总线
-    /// 注册带有指定ServiceKey的DaprEventBus实例和对应的HostedService
+    /// Add Keyed distributed Dapr event bus
+    /// Register the DaprEventBus instance with the specified ServiceKey and the corresponding HostedService
     /// </summary>
-    /// <param name="key">服务键</param>
-    /// <param name="configureOptions">可选的Dapr配置（如不同的PubSubName）</param>
+    /// <param name="key">service key</param>
+    /// <param name="configureOptions">Optional Dapr configuration (like different PubSubName)</param>
     [RequiresPreviewFeatures]
     public ModuleDaprEventBusGuide AddKeyedDaprEventBus(string key, Action<ModuleDaprEventBusOption> configureOptions)
     {

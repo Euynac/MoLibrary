@@ -4,12 +4,12 @@ using System.Text.RegularExpressions;
 namespace Monica.UI.UIStackTrace.Services;
 
 /// <summary>
-/// .NET 堆栈跟踪解析服务
+/// .NET Stack Trace Resolution Service
 /// </summary>
 public class StackTraceParserService
 {
     /// <summary>
-    /// 异常头部正则表达式（ExceptionType: Message）
+    /// Exception header regular expression (ExceptionType: Message)
     /// </summary>
     private static readonly Regex ExceptionHeaderRegex = new(
         @"^(?<exceptionType>[\w\.]+(?:\[\w+\])?)\s*:\s*(?<message>.*)$",
@@ -17,7 +17,7 @@ public class StackTraceParserService
     );
 
     /// <summary>
-    /// 堆栈帧正则表达式（   at Namespace.Class.Method(Params) in File.cs:line 123）
+    /// Stack frame regular expression (at Namespace.Class.Method(Params) in File.cs:line 123)
     /// </summary>
     private static readonly Regex StackFrameRegex = new(
         @"^\s+at\s+(?<method>(?<namespace>[\w\.<>]+)\.(?<methodname>[\w<>]+))\s*(?<params>\([^\)]*\))?\s*(?:in\s+(?<file>.+?)\s*:line\s+(?<line>\d+))?",
@@ -25,7 +25,7 @@ public class StackTraceParserService
     );
 
     /// <summary>
-    /// 内部异常结束标记正则表达式
+    /// Internal abend marker regular expression
     /// </summary>
     private static readonly Regex InnerExceptionEndRegex = new(
         @"^\s*---+\s*(?:End of\s+)?(?:Inner\s+)?[Ee]xception(?:\s+stack trace)?\s*---+",
@@ -33,10 +33,10 @@ public class StackTraceParserService
     );
 
     /// <summary>
-    /// 解析 .NET 堆栈跟踪信息
+    /// Parse .NET stack trace information
     /// </summary>
-    /// <param name="stackTraceText">堆栈跟踪文本</param>
-    /// <returns>解析结果</returns>
+    /// <param name="stackTraceText">Stack trace text</param>
+    /// <returns>Analysis results</returns>
     public ParseResult Parse(string? stackTraceText)
     {
         if (string.IsNullOrWhiteSpace(stackTraceText))
@@ -61,11 +61,10 @@ public class StackTraceParserService
             {
                 string line = lines[i];
 
-                // 检查是否为内部异常开始（---> ExceptionType: Message）
+                // Check if it started with an internal exception (---> ExceptionType: Message)
                 if (line.TrimStart().StartsWith("--->"))
                 {
-                    // 增加内部异常块索引
-                    currentInnerExceptionIndex++;
+                    // Increase internal exception block index                    currentInnerExceptionIndex++;
 
                     var innerExceptionLine = new StackTraceLine
                     {
@@ -75,7 +74,7 @@ public class StackTraceParserService
                     };
                     result.Lines.Add(innerExceptionLine);
 
-                    // 继续处理该行的异常头部（去掉 ---> 这4个字符）
+                    // Continue to process the exception header of this line (remove the 4 characters --->)
                     string cleanLine = line.TrimStart().Substring(4).TrimStart();
                     var exceptionMatch = ExceptionHeaderRegex.Match(cleanLine);
                     if (exceptionMatch.Success && IsValidExceptionType(exceptionMatch.Groups["exceptionType"].Value))
@@ -94,7 +93,7 @@ public class StackTraceParserService
                     continue;
                 }
 
-                // 检查是否为异常头部
+                // Check if it is an abnormal header
                 var exceptionMatch2 = ExceptionHeaderRegex.Match(line);
                 if (exceptionMatch2.Success && IsValidExceptionType(exceptionMatch2.Groups["exceptionType"].Value))
                 {
@@ -111,7 +110,7 @@ public class StackTraceParserService
                     continue;
                 }
 
-                // 检查是否为堆栈帧
+                // Check if it is a stack frame
                 var frameMatch = StackFrameRegex.Match(line);
                 if (frameMatch.Success)
                 {
@@ -122,7 +121,7 @@ public class StackTraceParserService
                     continue;
                 }
 
-                // 检查是否为内部异常结束标记
+                // Check if it is an internal abnormal end tag
                 if (InnerExceptionEndRegex.IsMatch(line))
                 {
                     result.Lines.Add(new StackTraceLine
@@ -132,14 +131,13 @@ public class StackTraceParserService
                         BelongToInnerExceptionIndex = currentInnerExceptionIndex
                     });
 
-                    // 结束当前内部异常块
-                    currentInnerExceptionIndex = -1;
+                    // End the current inner exception block                    currentInnerExceptionIndex = -1;
 
                     i++;
                     continue;
                 }
 
-                // 其他行视为普通文本
+                // Other lines are treated as normal text
                 if (!string.IsNullOrWhiteSpace(line))
                 {
                     result.Lines.Add(new StackTraceLine
@@ -177,7 +175,7 @@ public class StackTraceParserService
     }
 
     /// <summary>
-    /// 解析单个堆栈帧
+    /// Parse a single stack frame
     /// </summary>
     private static StackTraceLine ParseStackFrame(Match match, string rawContent)
     {
@@ -192,29 +190,29 @@ public class StackTraceParserService
             RawContent = rawContent
         };
 
-        // 提取文件名
+        // Extract file name
         if (!string.IsNullOrEmpty(filePath))
         {
             line.FileName = System.IO.Path.GetFileName(filePath);
         }
 
-        // 尝试提取行号
+        // Try to extract the line number
         if (int.TryParse(match.Groups["line"].Value, out int lineNumber))
         {
             line.LineNumber = lineNumber;
         }
 
-        // 解析方法参数
+        // Parse method parameters
         if (!string.IsNullOrEmpty(line.Parameters))
         {
             line.ParsedParameters = ParseMethodParameters(line.Parameters);
         }
 
-        // 提取命名空间和类名
+        // Extract namespace and class names
         string namespaceValue = match.Groups["namespace"].Value;
         if (!string.IsNullOrEmpty(namespaceValue))
         {
-            // 分离命名空间和类名
+            // Separate namespaces and class names
             int lastDotIndex = namespaceValue.LastIndexOf('.');
             if (lastDotIndex > 0)
             {
@@ -231,7 +229,7 @@ public class StackTraceParserService
     }
 
     /// <summary>
-    /// 解析方法参数字符串，提取参数类型和名称
+    /// Parse method parameter string, extract parameter type and name
     /// </summary>
     private static List<MethodParameter> ParseMethodParameters(string parametersStr)
     {
@@ -240,7 +238,7 @@ public class StackTraceParserService
         if (string.IsNullOrWhiteSpace(parametersStr))
             return result;
 
-        // 移除括号
+        // remove brackets
         var content = parametersStr.Trim();
         if (content.StartsWith("(") && content.EndsWith(")"))
         {
@@ -250,7 +248,7 @@ public class StackTraceParserService
         if (string.IsNullOrWhiteSpace(content))
             return result;
 
-        // 按逗号分割参数（需要考虑泛型中的逗号）
+        // Split parameters by comma (need to consider commas in generics)
         var parameters = SplitParameters(content);
 
         foreach (var param in parameters)
@@ -259,7 +257,7 @@ public class StackTraceParserService
             if (string.IsNullOrEmpty(trimmedParam))
                 continue;
 
-            // 分离参数类型和名称
+            // Separate parameter types and names
             var parts = SplitParameterTypeAndName(trimmedParam);
             result.Add(new MethodParameter
             {
@@ -272,7 +270,7 @@ public class StackTraceParserService
     }
 
     /// <summary>
-    /// 按逗号分割参数字符串，考虑泛型中的逗号
+    /// Split argument string by comma, accounting for commas in generics
     /// </summary>
     private static List<string> SplitParameters(string content)
     {
@@ -311,13 +309,13 @@ public class StackTraceParserService
     }
 
     /// <summary>
-    /// 从参数字符串分离类型和名称
+    /// Separate types and names from parameter strings
     /// </summary>
     private static (string type, string name) SplitParameterTypeAndName(string param)
     {
         var trimmed = param.Trim();
 
-        // 处理 ref/out/in 修饰符
+        // Handling ref/out/in modifiers
         if (trimmed.StartsWith("ref "))
             trimmed = trimmed.Substring(4);
         else if (trimmed.StartsWith("out "))
@@ -325,12 +323,12 @@ public class StackTraceParserService
         else if (trimmed.StartsWith("in "))
             trimmed = trimmed.Substring(3);
 
-        // 从右到左找最后一个空格，作为类型和名称的分隔符
+        // Find the last space from right to left as the separator between type and name
         int lastSpaceIndex = trimmed.LastIndexOf(' ');
 
         if (lastSpaceIndex <= 0)
         {
-            // 没有找到空格，整个字符串是类型（不应该发生）
+            // No spaces found, the whole string is type (shouldn't happen)
             return (trimmed, string.Empty);
         }
 
@@ -341,33 +339,33 @@ public class StackTraceParserService
     }
 
     /// <summary>
-    /// 检查是否为有效的异常类型
+    /// Check if it is a valid exception type
     /// </summary>
     private static bool IsValidExceptionType(string exceptionType)
     {
         if (string.IsNullOrWhiteSpace(exceptionType))
             return false;
 
-        // 包含 "Exception" 或 "Error"，或者是标准的命名空间格式
+        // Contains "Exception" or "Error", or the standard namespace format
         if (exceptionType.Contains("Exception") || exceptionType.Contains("Error"))
             return true;
 
-        // 检查常见的异常类型前缀
+        // Check common exception type prefixes
         var validPrefixes = new[] { "System.", "Microsoft.", "Monica.", "Namespace.", "ApplicationException" };
         return validPrefixes.Any(prefix => exceptionType.StartsWith(prefix)) ||
-               // 也接受任何包含点的格式（通常是命名空间.类名）
+               // Also accept any format containing dots (usually namespace.classname).
                exceptionType.Contains(".");
     }
 
     /// <summary>
-    /// 检查给定的文本是否看起来像堆栈跟踪
+    /// Checks if the given text looks like a stack trace
     /// </summary>
     public bool IsLikelyStackTrace(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        // 检查是否包含常见的堆栈跟踪特征
+        // Check for common stack trace characteristics
         return text.Contains("\n   at ") ||
                text.Contains("Exception:") ||
                text.Contains("StackTrace:") ||

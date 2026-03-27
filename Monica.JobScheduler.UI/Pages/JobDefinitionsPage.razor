@@ -12,7 +12,7 @@
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
 
-    <!-- 筛选器 -->
+    <!-- filter -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudGrid Spacing="2">
             <MudItem xs="12" sm="6" md="4">
@@ -60,7 +60,7 @@
         </MudGrid>
     </MudPaper>
 
-    <!-- 批量操作工具栏（仅在 RecurringJob 选项卡且有选择时显示） -->
+    <!-- Batch Operation Toolbar (only shown when RecurringJob tab is selected) -->
     @if (_selectedRecurringJobs.Any() && _activeTabIndex == 0)
     {
         <MudPaper Class="pa-3 mb-3 batch-toolbar" Elevation="2">
@@ -536,7 +536,7 @@
 
     private async Task ExecuteJobAsync(string jobKey)
     {
-        // 获取 JobDefinition
+        // Get JobDefinition
         var defResult = await UIService.GetJobDefinitionAsync(jobKey);
         if (defResult.IsFailed(out var error, out var definition))
         {
@@ -550,7 +550,7 @@
             return;
         }
 
-        // 显示执行确认对话框
+        // Show execution confirmation dialog
         var parameters = new DialogParameters<JobExecuteDialog>
         {
             { x => x.JobDefinition, definition }
@@ -567,7 +567,7 @@
         var dialog = await DialogService.ShowAsync<JobExecuteDialog>(L["Dialogs:JobExecute:Title"], parameters, options);
         var dialogResult = await dialog.Result;
 
-        // 执行结果已在对话框中处理，刷新列表
+        // The execution results have been processed in the dialog box, refresh the list
         if (dialogResult is { Canceled: false })
         {
             await RefreshTriggerJobsAsync();

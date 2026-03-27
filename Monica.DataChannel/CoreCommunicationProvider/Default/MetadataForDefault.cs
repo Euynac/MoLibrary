@@ -3,7 +3,7 @@ using Monica.DataChannel.CoreCommunication;
 namespace Monica.DataChannel.CoreCommunicationProvider.Default;
 
 /// <summary>
-/// 默认配置
+/// Default metadata configuration for the built-in endpoint.
 /// </summary>
 public class MetadataForDefault : CommunicationMetadata<DefaultCore>
 {

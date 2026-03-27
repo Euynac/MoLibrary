@@ -15,7 +15,7 @@ public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : Communi
         //if (_udpClient != null)
         //{
         //    var result = await _udpClient.ReceiveAsync();
-        //    msg.Properties.SetString("Type", data.DataType.ToString()); //设置消息种类
+        //    msg.Properties.SetString("Type", data.DataType.ToString()); // Sets the message type.
         //    await producer.SendAsync(msg);
         //}
     }
@@ -46,4 +46,4 @@ public class UDPCore(MetadataForUDP metadata, ILogger<UDPCore> logger) : Communi
     {
         return EConnectionDirection.InputAndOutput;
     }
-} 
+}

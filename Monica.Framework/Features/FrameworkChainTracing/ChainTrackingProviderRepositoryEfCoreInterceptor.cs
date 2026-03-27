@@ -9,30 +9,30 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Features.FrameworkChainTracing;
 
 /// <summary>
-/// 基于新的 ChainTracking 系统的 EF Core 数据库操作链路追踪拦截器
-/// 用于自动记录数据库命令的执行情况到调用链中
+/// EF Core database operation link tracking interceptor based on the new ChainTracking system
+/// Used to automatically record the execution of database commands into the call chain
 /// </summary>
-/// <param name="chainTracing">调用链追踪服务</param>
-/// <param name="logger">日志记录器</param>
+/// <param name="chainTracing">Call chain tracking service</param>
+/// <param name="logger">Logger</param>
 public class ChainTrackingProviderRepositoryEfCoreInterceptor(
     IMoChainTracing chainTracing, 
     ILogger<ChainTrackingProviderRepositoryEfCoreInterceptor> logger) : DbCommandInterceptor
 {
     /// <summary>
-    /// 存储命令和调用链 TraceId 的映射关系
+    /// Store the mapping relationship between command and call chain TraceId
     /// </summary>
     private readonly ConcurrentDictionary<object, string> _commandTraceMap = new();
     /// <summary>
-    /// 记录数据库命令开始执行
+    /// Record database command starts execution
     /// </summary>
-    /// <param name="command">数据库命令</param>
-    /// <param name="eventData">事件数据</param>
-    /// <returns>调用链节点标识</returns>
+    /// <param name="command">Database commands</param>
+    /// <param name="eventData">event data</param>
+    /// <returns>Call chain node ID</returns>
     private string RecordDatabaseCommandStart(DbCommand command, CommandEventData eventData)
     {
         try
         {
-            // 解析 SQL 命令类型
+            // Parsing SQL command types
             var commandText = command.CommandText;
             //var operationType = GetCommandType(commandText);
             //var tableName = ExtractTableName(commandText, operationType);
@@ -41,7 +41,7 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
             //    ? operationType 
             //    : $"{operationType}({tableName})";
 
-            // 准备额外信息
+            // Prepare additional information
             var extraInfo = new
             {
                 command.CommandTimeout,
@@ -57,10 +57,10 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
                     .ToArray()
             };
 
-            // 开始调用链追踪
+            // Start call chain tracing
             var traceId = chainTracing.BeginTrace(commandText.LimitMaxLength(1000, "..."), null, extraInfo, EChainTracingType.Database);
             
-            // 存储命令和 TraceId 的映射关系
+            // Store the mapping relationship between commands and TraceId
             _commandTraceMap[command] = traceId;
             
             return traceId;
@@ -73,12 +73,12 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
     }
 
     /// <summary>
-    /// 记录数据库命令执行结果
+    /// Record database command execution results
     /// </summary>
-    /// <param name="traceId">调用链节点标识</param>
-    /// <param name="eventData">事件数据</param>
-    /// <param name="result">执行结果</param>
-    /// <param name="isCanceled">是否被取消</param>
+    /// <param name="traceId">Call chain node ID</param>
+    /// <param name="eventData">event data</param>
+    /// <param name="result">Execution result</param>
+    /// <param name="isCanceled">Whether it was canceled</param>
     private void RecordDatabaseCommandEnd(string traceId, CommandEventData eventData, object? result = null, bool isCanceled = false)
     {
         if (string.IsNullOrEmpty(traceId))
@@ -129,10 +129,10 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
     }
 
     /// <summary>
-    /// 获取 SQL 命令类型
+    /// Get SQL command type
     /// </summary>
-    /// <param name="commandText">SQL 命令文本</param>
-    /// <returns>命令类型</returns>
+    /// <param name="commandText">SQL command text</param>
+    /// <returns>Command type</returns>
     private static string GetCommandType(string commandText)
     {
         if (string.IsNullOrWhiteSpace(commandText))
@@ -161,11 +161,11 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
     }
 
     /// <summary>
-    /// 提取表名
+    /// Extract table name
     /// </summary>
-    /// <param name="commandText">SQL 命令文本</param>
-    /// <param name="commandType">命令类型</param>
-    /// <returns>表名</returns>
+    /// <param name="commandText">SQL command text</param>
+    /// <param name="commandType">Command type</param>
+    /// <returns>table name</returns>
     private static string? ExtractTableName(string commandText, string commandType)
     {
         if (string.IsNullOrWhiteSpace(commandText))
@@ -235,7 +235,7 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
 
     #region 数据库命令拦截方法
 
-    // 写操作拦截
+    // Write operation interception
     public override InterceptionResult<int> NonQueryExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<int> result)
     {
         RecordDatabaseCommandStart(command, eventData);
@@ -266,7 +266,7 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
         return base.NonQueryExecutedAsync(command, eventData, result, cancellationToken);
     }
 
-    // 读操作拦截
+    // Read operation interception
     public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
     {
         RecordDatabaseCommandStart(command, eventData);
@@ -297,7 +297,7 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
         return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
     }
 
-    // 异常处理
+    // Exception handling
     public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData, CancellationToken cancellationToken = default)
     {
         if (_commandTraceMap.TryRemove(command, out var traceId))
@@ -307,7 +307,7 @@ public class ChainTrackingProviderRepositoryEfCoreInterceptor(
         return base.CommandFailedAsync(command, eventData, cancellationToken);
     }
 
-    // 取消处理
+    // Cancel processing
     public override Task CommandCanceledAsync(DbCommand command, CommandEndEventData eventData, CancellationToken cancellationToken = default)
     {
         if (_commandTraceMap.TryRemove(command, out var traceId))

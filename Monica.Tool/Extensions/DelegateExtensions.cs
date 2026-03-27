@@ -6,24 +6,24 @@
 public static class DelegateExtensions
 {
     /// <summary>
-    /// 判断一个方法是否有任意一个元素满足。
+    /// Determine whether any element of a method is satisfied.
     /// <br/>English: Determine whether a method satisfies any element.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="predicate"></param>
-    /// <param name="objects">当元素有为null时，必不满足</param>
+    /// <param name="objects">When the element is null, it will not be satisfied.</param>
     /// <returns></returns>
     public static bool SatisfyAny<T>(Func<T, bool>? predicate, params T[] objects)
     {
         return predicate != null && objects.Any(predicate);
     }
     /// <summary>
-    /// 判断一个方法是否所有元素都满足
+    /// Determine whether all elements of a method are satisfied
     /// <br/>English: Determine whether a method satisfies all elements.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="predicate"></param>
-    /// <param name="objects">当元素有为null时，必不满足</param>
+    /// <param name="objects">When the element is null, it will not be satisfied.</param>
     /// <returns></returns>
     public static bool SatisfyAll<T>(Func<T, bool>? predicate, params T[] objects)
     {

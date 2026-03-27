@@ -173,7 +173,9 @@ public class MoRepository<TDbContext, TEntity>(
         }
     }
 
-    //巨坑：ChangeTracker是在调用ChangeTracker.Entries()（内部调用了ChangeTracker.DetectChanges）时才会刷新状态是Modified，如果发现值没有变化，将还是UnChanged，所以在数据同步场景中进行Delete操作，并不会触发更新。
+    // Pitfall: ChangeTracker only refreshes entity states to Modified when ChangeTracker.Entries() is called
+    // (internally invoking ChangeTracker.DetectChanges). If no value changes are detected, the state remains Unchanged.
+    // In data synchronization scenarios, Delete operations may therefore not trigger an update as expected.
     public override async Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
     {
         var entityArray = entities.ToArray();
@@ -231,7 +233,7 @@ public class MoRepository<TDbContext, TEntity>(
         return queryable;
     }
 
-    //TODO 优化为FirstOrDefault？
+    // TODO: Evaluate whether this can be optimized to FirstOrDefault.
     public override async Task<TEntity?> FindAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool includeDetails = true,

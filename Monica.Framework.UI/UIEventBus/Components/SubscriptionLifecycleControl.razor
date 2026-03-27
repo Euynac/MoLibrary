@@ -6,7 +6,7 @@
     <MudStack Row="true" Spacing="1">
         @if (Subscription.State == SubscriptionState.Active)
         {
-            <!-- 活跃状态：显示停用和移除按钮 -->
+            <!-- Active state: Show deactivate and remove buttons -->
             <MudTooltip Text="停用订阅">
                 <MudIconButton Icon="@Icons.Material.Filled.PauseCircle"
                              Color="Color.Warning"
@@ -22,7 +22,7 @@
         }
         else if (Subscription.State == SubscriptionState.Inactive || Subscription.State == SubscriptionState.Pending)
         {
-            <!-- 未激活/待激活状态：显示激活和移除按钮 -->
+            <!-- Inactive/pending activation status: Show activation and removal buttons -->
             <MudTooltip Text="激活订阅">
                 <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
                              Color="Color.Success"
@@ -40,7 +40,7 @@
 }
 else if (Subscription?.State == SubscriptionState.Disposed)
 {
-    <!-- 已释放状态：不显示任何按钮 -->
+    <!-- Released state: no buttons are displayed -->
     <MudChip T="string" Color="Color.Default" Size="Size.Small">已释放</MudChip>
 }
 

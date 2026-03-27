@@ -1,6 +1,6 @@
 @using Monica.Framework.UI.UISignalr.Models
 
-<!-- 消息列表 -->
+<!-- Message list -->
 <MudPaper Class="pa-4" Elevation="2">
     <MudText Typo="Typo.h5" Class="mb-3">消息日志</MudText>
     <MudButton Variant="Variant.Outlined" 
@@ -34,17 +34,17 @@
 
 @code {
     /// <summary>
-    /// 消息列表
+    /// Message list
     /// </summary>
     [Parameter] public List<SignalRMessage> Messages { get; set; } = [];
 
     /// <summary>
-    /// 清空消息回调
+    /// Clear message callback
     /// </summary>
     [Parameter] public EventCallback OnClearMessages { get; set; }
 
     /// <summary>
-    /// 清空消息
+    /// Clear messages
     /// </summary>
     private async Task ClearMessagesAsync()
     {
@@ -52,10 +52,10 @@
     }
 
     /// <summary>
-    /// 获取消息图标
+    /// Get message icon
     /// </summary>
-    /// <param name="type">消息类型</param>
-    /// <returns>图标</returns>
+    /// <param name="type">Message type</param>
+    /// <returns>icon</returns>
     private string GetMessageIcon(MessageType type)
     {
         return type switch
@@ -71,10 +71,10 @@
     }
 
     /// <summary>
-    /// 获取消息颜色
+    /// Get message color
     /// </summary>
-    /// <param name="type">消息类型</param>
-    /// <returns>颜色</returns>
+    /// <param name="type">Message type</param>
+    /// <returns>Color</returns>
     private Color GetMessageColor(MessageType type)
     {
         return type switch

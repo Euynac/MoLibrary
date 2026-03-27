@@ -123,7 +123,7 @@ public static class ModuleDataChannelBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DataChannel 模块
+        /// Configures the DataChannel module.
         /// </summary>
         public static ModuleDataChannelGuide AddDataChannel(Action<ModuleDataChannelOption>? action = null)
         {
@@ -150,19 +150,18 @@ public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDat
 }
 
 /// <summary>
-/// 数据通道配置类
-/// 用于配置数据通道的全局设置和选项
-/// 实现了IMoModuleOptions接口，支持模块化配置
+/// Configuration options for the DataChannel module.
+/// Defines global settings and module-level behavior for data channels.
 /// </summary>
 public class ModuleDataChannelOption : MoModuleOptionWithMinimalApi<ModuleDataChannel>
 {
     /// <summary>
-    /// 最近异常保留数量
+    /// Gets or sets how many recent exceptions to retain.
     /// </summary>
     public int RecentExceptionToKeep { get; set; } = 10;
 
     /// <summary>
-    /// 初始化线程数
+    /// Gets or sets the number of initialization threads.
     /// </summary>
     public int InitThreadCount { get; set; } = 10;
 

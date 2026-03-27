@@ -104,7 +104,8 @@ public class ModuleRegisterInfo(Type moduleType)
     }
 
     /// <summary>
-    /// 初始化最终配置，根据排序后的配置项获得最终配置对象，最后清空配置操作。
+    /// Initializes the final configuration instances by applying the sorted configuration actions
+    /// and then clears the pending configuration actions.
     /// </summary>
     public void InitFinalConfigures()
     {

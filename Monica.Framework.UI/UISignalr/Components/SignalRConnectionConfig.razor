@@ -1,6 +1,6 @@
 @using Monica.SignalR.Models
 
-<!-- 连接配置 -->
+<!-- Connection configuration -->
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudText Typo="Typo.h5" Class="mb-3">连接配置</MudText>
     <MudGrid>
@@ -59,57 +59,57 @@
 
 @code {
     /// <summary>
-    /// 访问令牌
+    /// access token
     /// </summary>
     [Parameter] public string AccessToken { get; set; } = "";
 
     /// <summary>
-    /// 访问令牌变化回调
+    /// Access token change callback
     /// </summary>
     [Parameter] public EventCallback<string> AccessTokenChanged { get; set; }
 
     /// <summary>
-    /// 选中的Hub路由
+    /// Selected Hub route
     /// </summary>
     [Parameter] public string SelectedHubRoute { get; set; } = "";
 
     /// <summary>
-    /// 选中的Hub路由变化回调
+    /// Selected Hub routing change callback
     /// </summary>
     [Parameter] public EventCallback<string> SelectedHubRouteChanged { get; set; }
 
     /// <summary>
-    /// 可用的Hub列表
+    /// Available Hub List
     /// </summary>
     [Parameter] public List<SignalRServerGroupInfo> AvailableHubs { get; set; } = [];
 
     /// <summary>
-    /// 是否正在连接
+    /// Is connecting
     /// </summary>
     [Parameter] public bool IsConnecting { get; set; }
 
     /// <summary>
-    /// 是否已连接
+    /// Is it connected?
     /// </summary>
     [Parameter] public bool IsConnected { get; set; }
 
     /// <summary>
-    /// 连接回调
+    /// Connection callback
     /// </summary>
     [Parameter] public EventCallback OnConnect { get; set; }
 
     /// <summary>
-    /// 断开连接回调
+    /// Disconnect callback
     /// </summary>
     [Parameter] public EventCallback OnDisconnect { get; set; }
 
     /// <summary>
-    /// 刷新Hub信息回调
+    /// Refresh Hub information callback
     /// </summary>
     [Parameter] public EventCallback OnRefreshHubs { get; set; }
 
     /// <summary>
-    /// 连接异步
+    /// Connection asynchronous
     /// </summary>
     private async Task ConnectAsync()
     {
@@ -117,7 +117,7 @@
     }
 
     /// <summary>
-    /// 断开连接异步
+    /// Disconnect async
     /// </summary>
     private async Task DisconnectAsync()
     {
@@ -125,7 +125,7 @@
     }
 
     /// <summary>
-    /// 刷新Hub信息异步
+    /// Refresh Hub information asynchronously
     /// </summary>
     private async Task RefreshHubsAsync()
     {

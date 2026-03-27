@@ -38,7 +38,7 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
     {
         services.AddSwaggerGen(options =>
         {
-            // // 添加GroupName到Tags的转换过滤器
+            // // Add a filter that maps ApiExplorer.GroupName values to Swagger tags.
             // options.OperationFilter<GroupNameToTagsOperationFilter>();
             
             options.SwaggerDoc(Option.Version, new OpenApiInfo
@@ -49,20 +49,20 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
             });
             options.AddEnumDocumentation();
 
-            //巨坑： 这个方法其实是swagger右上角分组时判断是否显示的。但是如果不调用，会导致ABP(以及自己定义的CrudAutoController约定生成的)生成的所有的接口都不显示。
+            // Pitfall: this API guards the visibility toggle in the Swagger UI's top-right group picker, and if omitted ABP (and our CrudAutoController-generated endpoints) will hide every controller.
             options.DocInclusionPredicate((docName, description) => true);
 
             //https://github.com/swagger-api/swagger-ui/issues/7911
             //https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet/issues/285
 
-            //巨坑：默认情况下，Swagger使用类型的全名来生成schemaId，但如果遇到匿名类型，可能会因为类型名称不稳定或者重复而产生冲突。特别是在返回匿名类型的多个方法中，如果结构相同但Swagger认为它们不同，可能会生成相同的schemaId，从而导致冲突
-            //巨坑：对于非法字符生成也会出现问题，所以需要过滤非法字符。.Replace('+', '.') 似乎不需要.Replace("`", "_")
-            //最佳的方案当然是返回值均采用显式DTO类型
+            // Pitfall: Swagger uses a type's full name for schema IDs by default, so anonymous types with unstable or duplicated names can collide when multiple methods return structurally identical payloads.
+            // Pitfall: illegal characters also crash schema generation, so we filter them out. Replacing '+' with '.' is necessary; `.Replace("`", "_")` appears redundant.
+            // Best practice is to expose explicit DTO types instead of anonymous results.
             options.CustomSchemaIds(type => type.GetCleanFullName());
 
             if(!Option.DisableXmlDocumentation)
             {
-                //巨坑：要显示swagger文档，需要设置项目<GenerateDocumentationFile>True</GenerateDocumentationFile> XML文档用于生成swagger api注释。另外还要在设置中指定xml文档地址
+                // Pitfall: to generate Swagger docs you must enable `<GenerateDocumentationFile>True</GenerateDocumentationFile>` in each project and supply the resulting XML documents.
                 var documentAssemblies = (Option.DocumentAssemblies ?? []).ToList();
                 if (!Option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
                 {
@@ -135,7 +135,7 @@ public static class ModuleSwaggerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Swagger 模块
+        /// Configure the Swagger module.
         /// </summary>
         public static ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
         {
@@ -153,54 +153,54 @@ public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
 
     /// <summary>
-    /// 扩展 Swagger UI 配置的回调，允许其他模块（如 SwaggerUI 模块）自定义 Swagger UI 的行为
+    /// Callback to extend Swagger UI configuration, allowing other modules (such as the SwaggerUI module) to customize its behavior.
     /// </summary>
     public Action<SwaggerUIOptions>? ExtendSwaggerUIAction { get; set; }
 
     /// <summary>
-    /// 应用名
+    /// Application name.
     /// </summary>
     public string? AppName { get; set; } = "ApplicationName";
 
     /// <summary>
-    /// 接口版本
+    /// API version.
     /// </summary>
     public string? Version { get; set; } = "v1";
 
     /// <summary>
-    /// 文档描述
+    /// Document description.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 是否禁用Swagger模块自动读取XML文档生成。
+    /// Disable Swagger's automatic XML documentation loading.
     /// </summary>
     public bool DisableXmlDocumentation { get; set; }
 
     /// <summary>
-    /// 服务项目名，用于Swagger文档生成。注意需要设置项目&lt;GenerateDocumentationFile&gt;True&lt;/GenerateDocumentationFile&gt; XML文档用于生成注释
+    /// Names of the service projects whose XML documentation should be picked up for Swagger; each project must set `<GenerateDocumentationFile>True</GenerateDocumentationFile>`.
     /// </summary>
     public string[]? DocumentAssemblies { get; set; }
 
     /// <summary>
-    /// 是否禁用自动使用模块系统加载的相关程序集作为Swagger文档生成的入口。
+    /// Disable automatically adding module-system-related assemblies to the Swagger generation pipeline.
     /// </summary>
     public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
     
     
 
     /// <summary>
-    /// 是否使用认证
+    /// Require authentication for Swagger UI.
     /// </summary>
     public bool UseAuth { get; set; }
 
     /// <summary>
-    /// 是否禁用inheritdoc标签处理，支持从被引用的方法继承XML文档注释。
+    /// Disable the inheritdoc filter that imports XML comments from referenced methods.
     /// </summary>
     public bool DisableInheritDocFilter { get; set; }
 
     /// <summary>
-    /// Swagger UI的路由前缀，默认为"swagger"。设置为空字符串可在根路径访问Swagger UI。
+    /// Swagger UI route prefix (defaults to "swagger"); set to an empty string to expose Swagger at the application root.
     /// </summary>
     public string RoutePrefix { get; set; } = "swagger";
 }

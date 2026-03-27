@@ -4,69 +4,69 @@ using Monica.AutoModel.Model;
 namespace Monica.AutoModel.Interfaces;
 
 /// <summary>
-/// 适用于内存的自动模型功能接口
+/// AutoModel operations for in-memory queries.
 /// </summary>
-/// <typeparam name="TModel"></typeparam>
+/// <typeparam name="TModel">The model type.</typeparam>
 public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
 {
     /// <summary>
-    /// 获取过滤器
+    /// Gets a filter predicate from a normalized result.
     /// </summary>
-    /// <param name="result"></param>
-    /// <returns></returns>
+    /// <param name="result">The normalized filter result.</param>
+    /// <returns>The generated predicate.</returns>
     Func<TModel, bool> GetFilter(NormalizedResult result);
     /// <summary>
-    /// 获取过滤器
+    /// Gets a filter predicate from a filter expression.
     /// </summary>
-    /// <param name="filter"></param>
-    /// <returns></returns>
+    /// <param name="filter">The filter expression.</param>
+    /// <returns>The generated predicate.</returns>
     Func<TModel, bool> GetFilter(string filter);
     /// <summary>
-    /// 应用过滤器
+    /// Applies a filter expression.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="filter"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="filter">The filter expression.</param>
+    /// <returns>The filtered sequence.</returns>
     IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, string filter);
 
     /// <summary>
-    /// 应用过滤器
+    /// Applies a normalized filter.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="result"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="result">The normalized filter result.</param>
+    /// <returns>The filtered sequence.</returns>
     IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, NormalizedResult result);
     /// <summary>
-    /// 应用过滤器
+    /// Applies a filter for a single field.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="selector"></param>
-    /// <param name="condition"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="selector">The field selector.</param>
+    /// <param name="condition">The field condition.</param>
+    /// <param name="value">The raw field value.</param>
+    /// <returns>The filtered sequence.</returns>
     IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, Expression<Func<TModel, object>> selector,
         EFieldConditions condition, string value);
     /// <summary>
-    /// 应用模糊查询过滤器
+    /// Applies a fuzzy-search filter.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="fuzzy"></param>
-    /// <param name="fuzzyColumns"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="fuzzy">The fuzzy-search value.</param>
+    /// <param name="fuzzyColumns">Optional fields to include in fuzzy searching.</param>
+    /// <returns>The filtered sequence.</returns>
     IEnumerable<TModel> ApplyFuzzy(IEnumerable<TModel> queryable, string fuzzy, string? fuzzyColumns = null);
 
     /// <summary>
-    /// 选择指定字段
+    /// Selects the specified fields.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="selectColumns"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="selectColumns">The selected fields.</param>
+    /// <returns>A dynamically projected sequence.</returns>
     IEnumerable<dynamic> DynamicSelect(IEnumerable<TModel> queryable, string selectColumns);
     /// <summary>
-    /// 选择除了指定字段的字段
+    /// Selects all fields except the specified ones.
     /// </summary>
-    /// <param name="queryable"></param>
-    /// <param name="selectExceptColumns"></param>
-    /// <returns></returns>
+    /// <param name="queryable">The source sequence.</param>
+    /// <param name="selectExceptColumns">The fields to exclude.</param>
+    /// <returns>A dynamically projected sequence.</returns>
     IEnumerable<dynamic> DynamicSelectExcept(IEnumerable<TModel> queryable, string selectExceptColumns);
 }

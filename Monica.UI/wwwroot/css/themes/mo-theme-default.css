@@ -1,12 +1,12 @@
-/* Monica Default Theme - 合并的日间/夜间模式主题 */
-/* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
+/* Monica Default Theme - Combined Day/Night Mode Theme */
+/* Contains only component styles, colors are managed by the MudBlazor theme system */
 
-/* Default Theme CSS Variables - 明暗模式通用 */
+/* Default Theme CSS Variables - Common to light and dark modes */
 :root[data-theme="default-light"],
 :root[data-theme="default-dark"],
 .mo-theme-default-light,
 .mo-theme-default-dark {
-    /* 共享组件样式变量 */
+    /* Shared component style variables */
     /* Button Styles */
     --mo-button-border-radius: 6px;
     --mo-button-padding-x: 16px;
@@ -38,14 +38,14 @@
     /* Table Styles */
     --mo-table-border-radius: 8px;
     
-    /* 全局间距 */
+    /* global spacing */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* 动画时长 */
+    /* Animation duration */
     --mo-transition-fast: 150ms;
     --mo-transition-normal: 300ms;
     --mo-transition-slow: 450ms;
@@ -229,7 +229,7 @@
     }
 }
 
-/* Dark Theme Specific Styles - 深邃紫色风格 */
+/* Dark Theme Specific Styles - deep purple style */
 .mo-theme-default-dark {
     .mud-card {
         background: linear-gradient(145deg, var(--mud-palette-surface), rgba(26, 26, 46, 0.9));
@@ -257,7 +257,7 @@
         border-color: rgba(183, 148, 246, 0.8);
     }
     
-    /* 特殊效果 - Dark Mode */
+    /* Special Effects - Dark Mode */
     .mud-elevation-1 {
         background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(26, 26, 46, 0.95));
         box-shadow: 0 2px 8px rgba(15, 15, 26, 0.4), inset 0 1px 0 rgba(138, 126, 169, 0.1);
@@ -278,14 +278,14 @@
         box-shadow: 0 16px 40px rgba(15, 15, 26, 0.7), inset 0 1px 0 rgba(138, 126, 169, 0.1);
     }
     
-    /* Dark Mode卡片悬停效果 - 神秘紫色光晕 */
+    /* Dark Mode Card Hover Effect - Mysterious Purple Glow */
     .mud-card:hover {
         box-shadow: var(--mo-shadow-mystical), var(--mo-glow-primary);
         transform: translateY(-2px);
         border-color: rgba(183, 148, 246, 0.3);
     }
     
-    /* AppBar 深邃效果 */
+    /* AppBar depth effect */
     .mud-app-bar {
         background: linear-gradient(135deg, var(--mud-palette-appbar-background), rgba(22, 33, 62, 0.95));
         backdrop-filter: blur(10px);
@@ -293,25 +293,25 @@
         box-shadow: 0 2px 10px rgba(15, 15, 26, 0.3);
     }
     
-    /* Drawer 神秘风格 */
+    /* Drawer mysterious style */
     .mud-drawer .mud-drawer-content {
         background: linear-gradient(180deg, var(--mud-palette-drawer-background), rgba(22, 33, 62, 0.98));
         border-right: 1px solid rgba(138, 126, 169, 0.2);
     }
     
-    /* 导航链接悬停效果 */
+    /* Navigation link hover effect */
     .mud-nav-link:hover {
         background-color: rgba(183, 148, 246, 0.1);
         box-shadow: inset 0 0 10px rgba(183, 148, 246, 0.1);
     }
     
-    /* 输入框聚焦效果 */
+    /* Input box focus effect */
     .mud-input-outlined.mud-input-focused .mud-input-outlined-border {
         border-color: var(--mud-palette-primary);
         box-shadow: 0 0 0 2px rgba(183, 148, 246, 0.2);
     }
     
-    /* 选择器和下拉框 */
+    /* Selectors and dropdowns */
     .mud-popover {
         background: rgba(37, 37, 72, 0.95);
         border: 1px solid rgba(138, 126, 169, 0.2);

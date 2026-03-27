@@ -6,16 +6,16 @@ using Monica.Tool.Extensions;
 namespace Monica.EventBus.Helpers;
 
 /// <summary>
-/// 委托元数据提取器，用于从委托中提取方法信息
+/// Extracts method metadata from delegates.
 /// </summary>
 internal static class DelegateMetadataExtractor
 {
     /// <summary>
-    /// 从委托中提取元数据
+    /// Extracts metadata from an event handler delegate.
     /// </summary>
-    /// <typeparam name="TEvent">事件类型</typeparam>
-    /// <param name="handler">事件处理委托</param>
-    /// <returns>包含元数据的字典</returns>
+    /// <typeparam name="TEvent">Event type.</typeparam>
+    /// <param name="handler">Event handler delegate.</param>
+    /// <returns>A dictionary containing the extracted metadata.</returns>
     public static Dictionary<string, object> ExtractMetadata<TEvent>(Func<TEvent, Task> handler)
     {
         var metadata = new Dictionary<string, object>();
@@ -24,50 +24,50 @@ internal static class DelegateMetadataExtractor
         {
             var method = handler.Method;
 
-            // 提取方法名称
+            // Extract the method name.
             metadata[SubscriptionMetadataKeys.ActionMethodName] = method.Name;
 
-            // 提取声明类型
+            // Extract the declaring type.
             if (method.DeclaringType != null)
             {
                 metadata[SubscriptionMetadataKeys.ActionDeclaringType] =
                     method.DeclaringType.FullName ?? method.DeclaringType.Name;
             }
 
-            // 构建方法签名
+            // Build a human-readable method signature.
             var signature = BuildMethodSignature(method);
             metadata[SubscriptionMetadataKeys.ActionMethodSignature] = signature;
 
-            // 标识是否为静态方法
+            // Record whether the method is static.
             metadata[SubscriptionMetadataKeys.ActionIsStatic] = method.IsStatic;
         }
         catch (Exception)
         {
-            // 如果提取失败，返回部分元数据
-            // 这确保元数据提取失败不会影响订阅注册
+            // If extraction fails, return whatever metadata has already been collected.
+            // This prevents metadata extraction failures from blocking subscription registration.
         }
 
         return metadata;
     }
 
     /// <summary>
-    /// 构建人类可读的方法签名
+    /// Builds a human-readable method signature.
     /// </summary>
-    /// <param name="method">方法信息</param>
-    /// <returns>方法签名字符串</returns>
+    /// <param name="method">Method information.</param>
+    /// <returns>The formatted method signature.</returns>
     private static string BuildMethodSignature(MethodInfo method)
     {
         var sb = new StringBuilder();
 
-        // 返回类型
+        // Return type.
         sb.Append(method.ReturnType.GetCleanName());
         sb.Append(' ');
 
-        // 方法名
+        // Method name.
         sb.Append(method.Name);
         sb.Append('(');
 
-        // 参数
+        // Parameters.
         var parameters = method.GetParameters();
         for (int i = 0; i < parameters.Length; i++)
         {
@@ -81,6 +81,4 @@ internal static class DelegateMetadataExtractor
 
         return sb.ToString();
     }
-
-   
 }

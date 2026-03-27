@@ -3,34 +3,34 @@ using Monica.Framework.Core.Interfaces;
 namespace Monica.Framework.Core.Attributes;
 
 /// <summary>
-/// 项目单元信息
+/// Project unit information
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class UnitInfoAttribute(string name) : Attribute, IUnitCachedAttribute
 {
     /// <summary>
-    /// 项目单元名称，将会显示在相关的UI界面上。
+    /// The project unit name will be displayed on the relevant UI interface.
     /// </summary>
     public string Name { get; set; } = name;
 
     /// <summary>
-    /// 项目单元作者，通常用于标识该单元的创建者或维护者或责任人。
+    /// Project unit author, usually used to identify the creator or maintainer or person responsible for the unit.
     /// </summary>
     public string? Author { get; set; }
 
     /// <summary>
-    /// 相关业务组、或需求ID、模块ID等，用于UI界面相关项目单元。
+    /// Related business groups, or requirement IDs, module IDs, etc., are used for UI interface related project units.
     /// </summary>
     public string[]? Group { get; set; }
 
     /// <summary>
-    /// 项目单元描述，通常用于简要说明该单元的功能或用途。如该属性为空，则读取XML注释中的summary内容。
+    /// Project unit description, usually used to briefly describe the function or purpose of the unit. If this attribute is empty, the summary content in the XML comment is read.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Markdown文档描述，链接或路径，通常用于提供更详细的文档说明。
+    /// Markdown document description, link or path, usually used to provide more detailed documentation.
     /// </summary>
-    /// <remarks>自定义语法：@用户管理.md#权限控制 可以生成相应配置的文档服务的超链接地址（暂未实现）</remarks>
+    /// <remarks>Custom syntax: @User Management.md#Permission Control can generate the hyperlink address of the corresponding configured document service (not implemented yet)</remarks>
     public string? MarkdownDocs { get; set; }
 }

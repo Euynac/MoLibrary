@@ -3,7 +3,7 @@ namespace Monica.Tool.Extensions;
 public static class ListExtensions
 {
     /// <summary>
-    /// 将List分为指定批大小的多批List
+    /// Divide List into multiple batches of List with specified batch size
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -30,12 +30,12 @@ public static class ListExtensions
     }
 
     /// <summary>
-    /// 根据指定条件将列表分为满足条件和不满足条件的两个列表，只遍历一次
+    /// Divide the list into two lists that meet the conditions and those that do not meet the conditions according to the specified conditions, and only traverse once
     /// </summary>
-    /// <typeparam name="T">列表元素类型</typeparam>
-    /// <param name="source">源列表</param>
-    /// <param name="predicate">筛选条件</param>
-    /// <returns>元组，第一个列表为满足条件的元素，第二个列表为不满足条件的元素</returns>
+    /// <typeparam name="T">list element type</typeparam>
+    /// <param name="source">source list</param>
+    /// <param name="predicate">Filter criteria</param>
+    /// <returns>Tuple, the first list contains elements that meet the condition, and the second list contains elements that do not meet the condition</returns>
     public static (List<T> matched, List<T> unmatched) WherePartition<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         var matched = new List<T>();

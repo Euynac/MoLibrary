@@ -25,7 +25,7 @@ public static class ModuleSignalRBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 SignalR 模块
+        /// Configuring the SignalR module
         /// </summary>
         public static ModuleSignalRGuide AddSignalR(Action<ModuleSignalROption>? action = null)
         {
@@ -49,7 +49,7 @@ public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR,
         {
             var tagName = option.GetApiGroupName();
 
-            // 获取SignalR所有Server端Hub信息
+            // Get all server-side Hub information of SignalR
             endpoints.MapGet("/signalr/hubs",
                 async ([FromServices] MoSignalRManageService service) =>
                 {
@@ -60,7 +60,7 @@ public class ModuleSignalR(ModuleSignalROption option) : MoModule<ModuleSignalR,
                 .WithSummary("获取SignalR所有Server端Hub信息")
                 .WithDescription("获取所有注册的SignalR Hub的详细信息，包括路由、方法和参数");
 
-            // 获取当前所有已连接的SignalR用户
+            // Get all currently connected SignalR users
             endpoints.MapGet("/signalr/connected-users",
                 async ([FromServices] MoSignalRManageService service) =>
                 {
@@ -83,15 +83,15 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     }
 
     /// <summary>
-    ///     注册SignalR，并允许额外配置HubOptions和JsonHubProtocolOptions。
+    /// Register SignalR and allow additional configuration of HubOptions and JsonHubProtocolOptions.
     /// </summary>
-    /// <typeparam name="TIHubOperator">Hub操作接口类型。</typeparam>
-    /// <typeparam name="THubOperator">Hub操作实现类型。</typeparam>
-    /// <typeparam name="TIContract">Hub契约接口类型。</typeparam>
-    /// <typeparam name="TIUser">用户接口类型。</typeparam>
-    /// <param name="configure">可选的HubOptions配置委托。</param>
-    /// <param name="jsonConfigure">可选的JsonHubProtocolOptions配置委托。</param>
-    /// <returns>返回当前<see cref="ModuleSignalRGuide"/>实例以便链式调用。</returns>
+    /// <typeparam name="TIHubOperator">Hub operation interface type.</typeparam>
+    /// <typeparam name="THubOperator">Hub operation implementation type.</typeparam>
+    /// <typeparam name="TIContract">Hub contract interface type.</typeparam>
+    /// <typeparam name="TIUser">User interface type.</typeparam>
+    /// <param name="configure">Optional HubOptions configuration delegate.</param>
+    /// <param name="jsonConfigure">Optional JsonHubProtocolOptions configuration delegate.</param>
+    /// <returns>Returns the current <see cref="ModuleSignalRGuide"/> instance for chaining calls.</returns>
     public ModuleSignalRGuide AddSignalR<TIHubOperator, THubOperator, TIContract, TIUser>(
         Action<HubOptions>? configure = null,
         Action<JsonHubProtocolOptions>? jsonConfigure = null)
@@ -121,7 +121,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     }
 
     /// <summary>
-    ///     配置SignalR Swagger显示
+    /// Configure SignalR Swagger display
     /// </summary>
     public ModuleSignalRGuide AddSignalRSwagger(Action<SignalRSwaggerGenOptions> signalROption)
     {
@@ -136,7 +136,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
     }
 
     /// <summary>
-    ///     增加SignalR Hub以及相关接口
+    /// Add SignalR Hub and related interfaces
     /// </summary>
     public ModuleSignalRGuide MapSignalRHub<THubServer>([StringSyntax("Route")] string pattern) where THubServer : Hub
     {
@@ -157,17 +157,17 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
 }
 
 /// <summary>
-/// SignalR模块配置选项
+/// SignalR module configuration options
 /// </summary>
 public class ModuleSignalROption : MoModuleOptionWithMinimalApi<ModuleSignalR>
 {
     /// <summary>
-    /// 注册的Hub类型
+    /// Registered Hub type
     /// </summary>
     internal List<MoHubInfo> Hubs { get; set; } = [];
 }
 
 /// <summary>
-/// Hub信息记录
+/// Hub information record
 /// </summary>
 public record MoHubInfo(Type HubType, string HubRoute);

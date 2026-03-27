@@ -6,11 +6,11 @@ namespace Monica.DomainDrivenDesign.AutoController.Settings;
 public class MoCrudControllerOption : IMoModuleExtraOption<ModuleAutoControllers>
 {
     /// <summary>
-    /// 自动CRUD路径前缀
+    /// Route prefix used for auto-generated CRUD endpoints.
     /// </summary>
     public string RoutePath { get; set; } = "api/v1/[controller]";
     /// <summary>
-    /// Controller自动注册后缀
+    /// Required class-name suffix for automatic controller registration.
     /// </summary>
     public string CrudControllerPostfix { get; set; } = "CrudService";
 }

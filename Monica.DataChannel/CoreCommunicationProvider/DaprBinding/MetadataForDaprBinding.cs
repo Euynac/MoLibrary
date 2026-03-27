@@ -8,12 +8,12 @@ public class MetadataForDaprBinding : CommunicationMetadata<DaprBindingCore>
     public EDaprBindingType DaprBindingType { get; }
 
     /// <summary>
-    /// 用于MQ类。Dapr Input Binding必填。必须与metadata.route的值一致。Dapr会根据微服务所有的接口判断是否需要推送数据
+    /// Required for MQ bindings. Input bindings must match metadata.route and allow Dapr to determine push targets by inspecting interfaces.
     /// </summary>
     public string? InputListenerRoute { get; set; }
 
     /// <summary>
-    /// 用于MQ类。Output Binding必填。为metadata.name的值
+    /// Required for MQ bindings using an output binding; should match metadata.name.
     /// </summary>
     public string? OutputBindingName { get; set; }
 

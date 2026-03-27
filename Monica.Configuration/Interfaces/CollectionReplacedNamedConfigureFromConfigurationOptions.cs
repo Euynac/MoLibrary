@@ -34,7 +34,9 @@ public class MoExtendedOptionsBuilderConfigurationExtensions
 }
 
 /// <summary>
-/// 解决默认值、及多来源添加问题  TODO 暂未实现多来源添加问题解决； 
+/// Ensures collection-like options prefer replacement behavior over accumulation
+/// when multiple configuration sources are present.
+/// TODO: Multi-source additive-edge cases still need a dedicated fix.
 /// </summary>
 /// <typeparam name="TOptions"></typeparam>
 public class CollectionReplacedNamedConfigureFromConfigurationOptions<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TOptions> :
@@ -71,7 +73,8 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
     }
 
     /// <summary>
-    /// 解决Configuration的对于ICollection、数组等的行为存在多来源时默认是Append的情况，将其改写为覆盖
+    /// Overrides default multi-source binding behavior for ICollection/array-like members.
+    /// By default, Configuration appends values from multiple sources; this path changes it to replacement.
     /// </summary>
     /// <param name="options"></param>
     /// <param name="configurations"></param>
@@ -103,7 +106,7 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
                     }
                     collectionProperty.SetValue(option, null);
                 }
-                else if (collectionProperty.PropertyType.IsClassObject()) //解决嵌套属性类型存在相同的Append问题的情况
+                else if (collectionProperty.PropertyType.IsClassObject()) // Apply the same replacement strategy to nested object properties.
                 {
                     if (!section.Exists())
                     {
@@ -116,7 +119,7 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
     }
 
     /// <summary>
-    /// 获取所有的集合属性
+    /// Gets all collection-like properties, including arrays and nested class objects.
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
@@ -144,7 +147,7 @@ public class CollectionReplacedNamedConfigureFromConfigurationOptions<[Dynamical
     }
 
     /// <summary>
-    /// 获取属性在Configuration中的名称
+    /// Gets the effective property name used by Configuration.
     /// </summary>
     /// <param name="property"></param>
     /// <returns></returns>

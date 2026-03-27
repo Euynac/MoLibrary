@@ -17,7 +17,7 @@ public static class ModuleJobSchedulerUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 JobSchedulerUI 模块
+        /// Configure the JobSchedulerUI module
         /// </summary>
         public static ModuleJobSchedulerUIGuide AddJobSchedulerUI(Action<ModuleJobSchedulerUIOption>? action = null)
         {
@@ -27,8 +27,8 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 }
 
 /// <summary>
-/// JobScheduler UI 模块实现
-/// 提供基于 Blazor 的作业调度管理界面
+/// JobScheduler UI module implementation
+/// Provides a job scheduling management interface based on Blazor
 /// </summary>
 [ModuleKey(EMoModuleKey.JobSchedulerUI)]
 public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
@@ -37,7 +37,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册 Singleton 服务（性能优化）
+        // Register Singleton service (performance optimization)
         services.AddSingleton<JobDefinitionQueryService>();
         services.AddSingleton<JobInstanceQueryService>();
         services.AddSingleton<JobStatisticsService>();
@@ -46,13 +46,13 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         services.AddSingleton<CronExpressionService>();
         services.AddSingleton<JobArgsSchemaService>();
 
-        // 注册仪表盘、监控、分析服务
+        // Register for dashboard, monitoring, and analysis services
         services.AddSingleton<DashboardDataLoader>();
         services.AddSingleton<JobDashboardService>();
         services.AddSingleton<JobMonitorService>();
         services.AddSingleton<JobAnalyticsService>();
 
-        // 注册 Scoped 门面服务（Blazor Circuit）
+        // Register Scoped facade service (Blazor Circuit)
         services.AddScoped<JobSchedulerUIService>();
         // StackTraceParserService is now registered by ModuleUIStackTrace module
     }
@@ -62,19 +62,19 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         DependsOnModule<ModuleLocalizationGuide>().Register()
             .AddResource<JobSchedulerResource>();
 
-        // 依赖后端 JobScheduler 模块
+        // Depends on the backend JobScheduler module
         DependsOnModule<ModuleJobSchedulerGuide>().Register();
 
-        // 依赖 UIStackTrace 模块（用于堆栈跟踪可视化）
+        // Depends on UIStackTrace module (for stack trace visualization)
         DependsOnModule<ModuleUIStackTraceGuide>().Register();
 
-        // 依赖 UI 核心模块并注册页面
+        // Depend on the UI core module and register the page
         if (!Option.DisableJobSchedulerPages)
         {
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    // 总览仪表盘
+                    // Overview dashboard
                     p.RegisterLocalizedComponent<DashboardPage>(
                         DashboardPage.PAGE_URL,
                         "Pages:JobSchedulerDashboard:Title",
@@ -84,7 +84,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                         navOrder: 99,
                         navLinkMatch: NavLinkMatch.All);
 
-                    // 实时监控
+                    // Real-time monitoring
                     p.RegisterLocalizedComponent<MonitorPage>(
                         MonitorPage.PAGE_URL,
                         "Pages:JobSchedulerMonitor:Title",
@@ -109,7 +109,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
                         addToNav: true,
                         navOrder: 102);
 
-                    // 统计分析
+                    // Statistical analysis
                     p.RegisterLocalizedComponent<StatisticsPage>(
                         StatisticsPage.PAGE_URL,
                         "Pages:JobStatistics:Title",
@@ -123,50 +123,50 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 }
 
 /// <summary>
-/// JobScheduler UI 模块配置指南
+/// JobScheduler UI module configuration guide
 /// </summary>
 public class ModuleJobSchedulerUIGuide
     : MoModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
 {
-    // 配置方法可在后续需要时添加
-    // 目前通过 Mo.AddJobSchedulerUI(options => { ... }) 直接配置即可
+    // Configuration methods can be added later if needed
+    // Currently, it can be configured directly through Mo.AddJobSchedulerUI(options => { ... })
 }
 
 /// <summary>
-/// JobScheduler UI 模块配置选项
+/// JobScheduler UI module configuration options
 /// </summary>
 public class ModuleJobSchedulerUIOption : MoModuleOption<ModuleJobSchedulerUI>
 {
     /// <summary>
-    /// 禁用 JobScheduler UI 页面
+    /// Disable the JobScheduler UI page
     /// </summary>
     public bool DisableJobSchedulerPages { get; set; } = false;
 
     /// <summary>
-    /// 健康指标时间窗口（默认 30 天）
-    /// 配置统计近 x 时间健康度
+    /// Health indicator time window (default 30 days)
+    /// Configure statistics for health in the past x time
     /// </summary>
     public TimeSpan HealthMetricsWindow { get; set; } = TimeSpan.FromDays(30);
 
     /// <summary>
-    /// 健康指标中显示的最近失败实例数量（默认 5）
-    /// 配置显示最近 x 个失败实例记录
+    /// Number of recent failed instances shown in health metrics (default 5)
+    /// Configuration displays the latest x failed instance records
     /// </summary>
     public int HealthMetricsFailedInstancesLimit { get; set; } = 5;
 
     /// <summary>
-    /// 表格默认分页大小（默认 20）
+    /// Table default page size (default 20)
     /// </summary>
     public int DefaultPageSize { get; set; } = 20;
 
     /// <summary>
-    /// 自动刷新间隔（默认 5 秒）
-    /// 设置为更高值（如 10 秒）以减少服务器负载
+    /// Auto refresh interval (default 5 seconds)
+    /// Set to a higher value (like 10 seconds) to reduce server load
     /// </summary>
     public TimeSpan AutoRefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// 默认启用自动刷新
+    /// Auto-refresh is enabled by default
     /// </summary>
     public bool EnableAutoRefreshByDefault { get; set; } = true;
 }

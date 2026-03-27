@@ -4,57 +4,57 @@ using Monica.ServiceDiscovery.Models;
 namespace Monica.ServiceDiscovery.Abstractions;
 
 /// <summary>
-/// Leader 选举服务接口
+/// Leader election service interface
 /// </summary>
 public interface ILeaderElectionService
 {
     /// <summary>
-    /// 当前 Leader 状态
+    /// Current Leader status
     /// </summary>
     LeaderStatus CurrentStatus { get; }
 
     /// <summary>
-    /// 是否是 Leader
+    /// Whether it is Leader
     /// </summary>
     bool IsLeader { get; }
 
     /// <summary>
-    /// 成为 Leader 的时间（如果不是 Leader 则为 null）
+    /// Time to become Leader (null if not Leader)
     /// </summary>
     DateTime? LeaderBecomeTime { get; }
 
     /// <summary>
-    /// 当前 ETag（用于续约验证）
+    /// Current ETag (for renewal verification)
     /// </summary>
     string? CurrentETag { get; }
 
     /// <summary>
-    /// Leader 获得事件
+    /// Leader gets events
     /// </summary>
     event EventHandler<LeaderGainedEvent>? OnLeaderGained;
 
     /// <summary>
-    /// Leader 丢失事件
+    /// Leader loss event
     /// </summary>
     event EventHandler<LeaderLostEvent>? OnLeaderLost;
 
     /// <summary>
-    /// 设置为 Leader
+    /// Set as Leader
     /// </summary>
     void SetAsLeader(DateTime becomeTime, string eTag);
 
     /// <summary>
-    /// 更新 ETag
+    /// Update ETag
     /// </summary>
     void UpdateETag(string newETag);
 
     /// <summary>
-    /// 触发 Leader 丢失
+    /// Trigger Leader loss
     /// </summary>
     void TriggerLeaderLost(LeaderLostReason reason);
 
     /// <summary>
-    /// 重置 Leader 状态
+    /// Reset Leader state
     /// </summary>
     void ResetLeaderState();
 }

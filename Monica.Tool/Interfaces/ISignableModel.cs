@@ -7,33 +7,33 @@ using Monica.Tool.Web;
 namespace Monica.Tool.Interfaces;
 
 /// <summary>
-/// 自动签名类中忽略签名的字段
+/// Ignore signed fields in automatic signature class
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class NotSign : Attribute, ISignableModel { }
 /// <summary>
-/// 自动签名类中仅指定签名的字段（当Setting中开启仅签名才会生效，开启后忽略签名标签失效）
+/// Only the signature fields are specified in the automatic signature class (only the signature will take effect when it is turned on in Settings, and the signature tag will be ignored after it is turned on).
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class OnlySign : Attribute, ISignableModel { }
 public interface ISignableModel { }//仅用于标签约束
 /// <summary>
-/// 可签名模型接口（自动根据属性名及值ToString()（属性必为public）进行签名）
+/// Signable model interface (automatically signed based on the attribute name and value ToString() (the attribute must be public))
 /// </summary>
 public interface ISignableModel<T> : ISignableModel where T : class, ISignableModel<T>
 {
     /// <summary>
-    /// 快速获得该接口对象。
+    /// Quickly obtain the interface object.
     /// </summary>
     /// <returns></returns>
     public ISignableModel<T> GetSignableModel() => this;
 
     /// <summary>
-    /// 当前自动签名设置
+    /// Current auto-signing settings
     /// </summary>
     public SignableModelSetting SignSetting => new();
     /// <summary>
-    /// 修改自动签名设置
+    /// Modify automatic signature settings
     /// </summary>
     /// <param name="settingAction"></param>
     /// <returns></returns>
@@ -43,7 +43,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
         return this;
     }
     /// <summary>
-    /// 忽视指定字段不进行签名
+    /// Ignore specified fields and do not sign
     /// </summary>
     /// <returns></returns>
     public ISignableModel<T> Ignore(string ignoreName)
@@ -52,7 +52,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
         return this;
     }
     /// <summary>
-    /// 取消忽视指定字段不进行签名
+    /// Cancel ignore the specified field and do not sign
     /// </summary>
     /// <returns></returns>
     public ISignableModel<T> UnIgnore(string ignoreName)
@@ -61,15 +61,15 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
         return this;
     }
     /// <summary>
-    /// 获取当前对象签名后的字符串
+    /// Get the string after the signature of the current object
     /// </summary>
     /// <returns></returns>
     public string Sign() => Sign(null);
 
     /// <summary>
-    /// 获取当前对象签名后的字符串
+    /// Get the string after the signature of the current object
     /// </summary>
-    /// <param name="supplement">需要补充到最后再进行签名的字符串</param>
+    /// <param name="supplement">String that needs to be added to the end before signing</param>
     /// <returns></returns>
     public string Sign(string? supplement)
     {
@@ -80,7 +80,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
 
 
     /// <summary>
-    /// 获取拼接后但未加密的字符串
+    /// Get the concatenated but unencrypted string
     /// </summary>
     /// <returns></returns>
     public string GetConcatStr()
@@ -101,7 +101,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
         }
     }
     /// <summary>
-    /// ASCII比较器
+    /// ASCII comparator
     /// </summary>
     class AsciiCompare : IComparer<string>
     {
@@ -109,7 +109,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
 
     }
     /// <summary>
-    /// 根据当前签名设置获取当前对象对应的字典，不会返回null
+    /// Get the dictionary corresponding to the current object based on the current signature settings, and will not return null.
     /// </summary>
     /// <returns></returns>
     public IDictionary<string, string?> GetDictionaryUseSetting() =>
@@ -117,7 +117,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
 
 
     /// <summary>
-    /// 根据指定设置获取指定对象对应的字典，不会返回null
+    /// Get the dictionary corresponding to the specified object according to the specified settings, and will not return null.
     /// </summary>
     /// <returns></returns>
     public static IDictionary<string, string?> GetDictionary(object instance, Type type, SignableModelSetting setting)
@@ -127,7 +127,7 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
             : new Dictionary<string, string?>();
         foreach (var propertyInfo in type.GetProperties())
         {
-            //处理加了标签的
+            //Handle tagged
             if (!setting.EnableOnlySign)
             {
                 if (propertyInfo.GetCustomAttribute<NotSign>() != null) continue;
@@ -137,14 +137,14 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
                 if (propertyInfo.GetCustomAttribute<OnlySign>() == null) continue;
             }
 
-            //获取属性值：
+            //Get attribute value:
             var propertyValue = propertyInfo.GetValue(instance);
             if (propertyValue == null && setting.NotSignNull) continue;
-            //获取属性名：
+            //Get attribute name:
             var propertyName = propertyInfo.Name;
             if (setting.IgnoreList.Contains(propertyName) ||
                 propertyName == nameof(SignSetting)) continue;
-            //获取属性类型，以支持嵌套
+            //Gets the attribute type to support nesting
             var propertyType = propertyInfo.PropertyType;
             if (propertyValue != null && propertyType.IsClass && propertyType != typeof(string))
             {
@@ -155,9 +155,9 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
         return propertyInfoDict;
     }
     /// <summary>
-    /// 直接获取当前对象对应的字典
+    /// Directly obtain the dictionary corresponding to the current object
     /// </summary>
-    /// <param name="ignoreNull">忽视null值，不添加到字典中</param>
+    /// <param name="ignoreNull">Ignore null values ​​and do not add them to the dictionary</param>
     /// <returns></returns>
     public Dictionary<string, string?> GetDictionary(bool ignoreNull = true)
     {
@@ -169,44 +169,44 @@ public interface ISignableModel<T> : ISignableModel where T : class, ISignableMo
 
 }
 /// <summary>
-/// 签名方式
+/// Signature method
 /// </summary>
 public enum SignWay
 {
     /// <summary>
-    /// 传统方式，即key1=value1&amp;key2=value2 value将被urlEncode
+    /// Traditional way, that is, key1=value1&amp;key2=value2 value will be urlEncoded
     /// </summary>
     Traditional,
 }
 public class SignableModelSetting
 {
     /// <summary>
-    /// 启用仅签名标签（即反转标签），打了Sign标签的才会签名，否则忽略
+    /// Enable signature-only tags (ie reverse tags). Only those with the Sign tag will sign, otherwise they will be ignored.
     /// </summary>
     public bool EnableOnlySign { get; set; }
     /// <summary>
-    /// 空字段不签名，跳过
+    /// Empty fields are not signed and skipped
     /// </summary>
     public bool NotSignNull { get; set; } = true;
     /// <summary>
-    /// 需要跳过的字段名（使用nameof，增加时增加一个使用add，多个使用addRange）
+    /// The name of the field that needs to be skipped (use nameof, add one to add, use addRange to add multiple)
     /// </summary>
     public HashSet<string> IgnoreList { get; set; } = new();
     /// <summary>
-    /// 需要字段按照Ascii码排序后进行签名
+    /// The fields need to be sorted according to the Ascii code before signing.
     /// </summary>
     public bool NeedAsciiSort { get; set; } = true;
     /// <summary>
-    /// 签名结果需要转小写
+    /// The signature result needs to be converted to lowercase
     /// </summary>
     public bool NeedToLower { get; set; } = true;
 
     /// <summary>
-    /// 拼接的字符串需要转小写
+    /// The concatenated strings need to be converted to lowercase
     /// </summary>
     public bool KeyToLower { get; set; } = true;
     /// <summary>
-    /// 签名方式
+    /// Signature method
     /// </summary>
     public SignWay Way { get; set; } = SignWay.Traditional;
 }

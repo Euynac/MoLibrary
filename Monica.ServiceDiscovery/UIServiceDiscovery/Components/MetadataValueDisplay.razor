@@ -13,7 +13,7 @@
         {
             @if (shouldCollapse)
             {
-                @* 显示部分URL和折叠按钮 *@
+                @* Show partial URLs and a collapse toggle *@
                 @for (int i = 0; i < visibleCount; i++)
                 {
                     var url = urlItems[i];
@@ -45,7 +45,7 @@
             }
             else
             {
-                @* 显示所有URL *@
+                @* Show all URLs *@
                 @foreach (var url in urlItems)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1" OnClick="@(async () => await OpenUrl(url))">
@@ -57,7 +57,7 @@
         }
         else
         {
-            @* 详细模式：显示所有URL *@
+            @* Detailed mode: show all URLs *@
             @foreach (var url in urlItems)
             {
                 <MudLink Href="@url" Target="_blank" Color="Color.Primary" Typo="Typo.body2" Class="ma-1">
@@ -85,16 +85,16 @@ else
         if (string.IsNullOrWhiteSpace(value))
             return new List<string>();
 
-        // 使用分号和逗号分割
+        // Split by semicolons and commas.
         var items = value.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(item => item.Trim())
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToList();
 
-        // 检查是否所有项都是URL
+        // Check whether all items are URLs.
         var urlItems = items.Where(IsUrl).ToList();
 
-        // 如果所有项都是URL，返回URL列表；否则返回空列表（作为普通文本处理）
+        // If all items are URLs, return the URL list; otherwise return an empty list (handled as plain text).
         return urlItems.Count == items.Count ? urlItems : new List<string>();
     }
 
@@ -103,7 +103,7 @@ else
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        // 检查是否为有效的URL格式
+        // Check whether the value is a valid URL format.
         return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
@@ -116,7 +116,7 @@ else
         try
         {
             var uri = new Uri(url);
-            // 如果URL太长，只显示主机和路径的简化版本
+            // If the URL is too long, show a simplified host-and-port form.
             if (url.Length > 50)
             {
                 return $"{uri.Host}:{uri.Port}";
@@ -131,7 +131,7 @@ else
 
     private async Task OpenUrl(string url)
     {
-        // 使用JavaScript打开新窗口
+        // Open a new window via JavaScript.
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 }

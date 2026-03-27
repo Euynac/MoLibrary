@@ -38,7 +38,7 @@ public interface IMoTracingDataEntity
         }
     }
     /// <summary>
-    /// 将当前状态提取为可追踪链信息
+    /// Extract the current state into traceable chain information
     /// </summary>
     /// <returns></returns>
     public string GetCurTracingData()

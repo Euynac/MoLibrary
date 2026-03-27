@@ -172,7 +172,7 @@
             _isRefreshing = true;
             StateHasChanged();
 
-            // 自动刷新时不显示加载指示器，静默更新
+            // Do not display the loading indicator during automatic refresh and update silently
             await LoadDataAsync(showLoading: false);
         }
         finally

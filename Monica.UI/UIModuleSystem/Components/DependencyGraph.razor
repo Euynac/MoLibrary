@@ -21,8 +21,7 @@
         }
 
         <MudGrid Spacing="4" Class="mb-4">
-            <!-- 依赖关系概览 -->
-            <MudItem xs="12" md="4">
+            <!-- Dependencies overview -->            <MudItem xs="12" md="4">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -82,8 +81,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 图表控制 -->
-            <MudItem xs="12" md="8">
+            <!-- Chart control -->            <MudItem xs="12" md="8">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -263,8 +261,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 依赖关系图 -->
-            <MudItem xs="12">
+            <!-- Dependency graph -->            <MudItem xs="12">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -291,15 +288,13 @@
                                       Class="dependency-graph-canvas"
                                       Style="height: 600px; width: 100%;"
                                       Elevation="2">
-                                <!-- 图表将在这里渲染 -->
-                            </MudPaper>
+                                <!-- The chart will be rendered here -->                            </MudPaper>
                         </div>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
-            <!-- 图例 -->
-            <MudItem xs="12" md="6">
+            <!-- legend -->            <MudItem xs="12" md="6">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -359,8 +354,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 节点详情 -->
-            <MudItem xs="12" md="6">
+            <!-- Node details -->            <MudItem xs="12" md="6">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -432,7 +426,7 @@
     private List<ContextMenuItem<ModuleDependencyNode>> contextMenuItems = [];
 
     /// <summary>
-    /// 依赖关系图数据
+    /// Dependency graph data
     /// </summary>
     [Parameter] public ModuleDependencyGraph? DependencyGraphData { get; set; }
 
@@ -442,12 +436,12 @@
     [Parameter] public EventCallback<ModuleKey> OnModuleDetailClicked { get; set; }
 
     /// <summary>
-    /// JavaScript运行时
+    /// JavaScript runtime
     /// </summary>
     [Inject] public IJSRuntime JSRuntime { get; set; } = default!;
 
     /// <summary>
-    /// 组件初始化后
+    /// After component initialization
     /// </summary>
     /// <returns></returns>
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -472,7 +466,7 @@
     }
 
     /// <summary>
-    /// 初始化图表
+    /// Initialize chart
     /// </summary>
     /// <returns></returns>
     private async Task InitializeGraph()
@@ -535,9 +529,9 @@
     }
 
     /// <summary>
-    /// 布局改变事件
+    /// layout change event
     /// </summary>
-    /// <param name="layout">布局类型</param>
+    /// <param name="layout">Layout type</param>
     /// <returns></returns>
     private async Task OnLayoutChanged(string layout)
     {
@@ -550,9 +544,9 @@
     }
 
     /// <summary>
-    /// 过滤器改变事件
+    /// filter change event
     /// </summary>
-    /// <param name="filter">过滤器类型</param>
+    /// <param name="filter">Filter type</param>
     /// <returns></returns>
     private async Task OnEdgeFilterChanged(string filter)
     {
@@ -596,7 +590,7 @@
     }
 
     /// <summary>
-    /// 放大图表
+    /// Enlarge chart
     /// </summary>
     /// <returns></returns>
     private async Task ZoomIn()
@@ -608,7 +602,7 @@
     }
 
     /// <summary>
-    /// 缩小图表
+    /// Zoom out chart
     /// </summary>
     /// <returns></returns>
     private async Task ZoomOut()
@@ -620,7 +614,7 @@
     }
 
     /// <summary>
-    /// 重置视图
+    /// reset view
     /// </summary>
     /// <returns></returns>
     private async Task ResetZoom()
@@ -632,7 +626,7 @@
     }
 
     /// <summary>
-    /// 导出图片
+    /// Export pictures
     /// </summary>
     /// <returns></returns>
     private async Task ExportGraph()
@@ -663,10 +657,10 @@
     }
 
     /// <summary>
-    /// 获取加载文本
+    /// Get loading text
     /// </summary>
-    /// <param name="index">索引</param>
-    /// <returns>加载文本</returns>
+    /// <param name="index">Index</param>
+    /// <returns>Load text</returns>
     private string GetLoadingText(int index) => index switch
     {
         0 => L["ModuleSystem:DependencyGraph:Loading:DependencyOverview"],
@@ -997,7 +991,7 @@
     }
 
     /// <summary>
-    /// 资源释放
+    /// Resource release
     /// </summary>
     /// <returns></returns>
     public async ValueTask DisposeAsync()

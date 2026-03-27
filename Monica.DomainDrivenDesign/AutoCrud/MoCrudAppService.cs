@@ -12,7 +12,7 @@ namespace Monica.DomainDrivenDesign.AutoCrud;
 
 
 /// <summary>
-/// CRUD禁用删除接口标志
+/// Marker interface used to disable delete endpoints for CRUD services.
 /// </summary>
 public interface IMoCrudDisableDelete
 {
@@ -23,7 +23,11 @@ public interface IMoCrudAppService
 }
 
 /// <summary>
-/// <inheritdoc/> <para>简化形式，1.该基类禁用修改与增加功能。2.需进一步禁用删除使用<see cref="IMoCrudDisableDelete"/> </para>
+/// <inheritdoc/>
+/// <para>
+/// Simplified variant: create and update operations are disabled.
+/// Implement <see cref="IMoCrudDisableDelete"/> as well to disable delete operations.
+/// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, MoCrudDisableDto, MoCrudDisableDto,
@@ -35,7 +39,11 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 }
 
 /// <summary>
-/// <inheritdoc/> <para>简化形式，1.无需生成批量删除接口。2.单个输出与列表输出相同。3. 使用默认分页请求</para>
+/// <inheritdoc/>
+/// <para>
+/// Simplified variant: bulk delete is not generated, the single-item DTO matches the list-item DTO,
+/// and the default paged request DTO is used.
+/// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, MoCrudPageRequestDto, TCreateInput, TUpdateInput,
@@ -47,7 +55,10 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, 
 }
 
 /// <summary>
-/// <inheritdoc/> <para>简化形式，1.无需生成批量删除接口。2.单个输出与列表输出相同。</para>
+/// <inheritdoc/>
+/// <para>
+/// Simplified variant: bulk delete is not generated, and the single-item DTO matches the list-item DTO.
+/// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(TRepository repository)
@@ -61,18 +72,21 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 
 
 /// <summary>
-/// 自动CRUD接口基类。子类必须以设定的 <see cref="MoCrudControllerOption.CrudControllerPostfix"/> 结尾，否则无法自动注册。其余开头名字会自动生成为路由名，以小写单词短横线隔开。如UserListAppService：user-list
+/// Base class for auto-generated CRUD application services.
+/// Subclasses must end with <see cref="MoCrudControllerOption.CrudControllerPostfix"/> to be registered automatically.
+/// The remaining class name prefix is converted into a kebab-case route segment, for example:
+/// <c>UserListAppService</c> becomes <c>user-list</c>.
 /// </summary>
-/// <typeparam name="TEntity">实体类型，必须实现 <see cref="IMoEntity{TKey}"/> 接口</typeparam>
-/// <typeparam name="TGetOutputDto">获取单个实体时的输出DTO类型，必须实现 <see cref="IMoEntityDto{TKey}"/> 接口</typeparam>
-/// <typeparam name="TGetListOutputDto">获取实体列表时的输出DTO类型，必须实现 <see cref="IMoEntityDto{TKey}"/> 接口</typeparam>
-/// <typeparam name="TKey">实体主键类型</typeparam>
-/// <typeparam name="TGetListInput">获取实体列表时的输入参数类型</typeparam>
-/// <typeparam name="TCreateInput">创建实体时的输入参数类型</typeparam>
-/// <typeparam name="TUpdateInput">更新实体时的输入参数类型</typeparam>
-/// <typeparam name="TBulkDeleteInput">批量删除实体时的输入参数类型</typeparam>
-/// <typeparam name="TRepository">实体仓储类型，必须实现 <see cref="IMoRepository{TEntity, TKey}"/> 接口</typeparam>
-/// <param name="repository">实体仓储实例</param>
+/// <typeparam name="TEntity">The entity type. Must implement <see cref="IMoEntity{TKey}"/>.</typeparam>
+/// <typeparam name="TGetOutputDto">The DTO type returned by single-entity queries. Must implement <see cref="IMoEntityDto{TKey}"/>.</typeparam>
+/// <typeparam name="TGetListOutputDto">The DTO type returned by list queries. Must implement <see cref="IMoEntityDto{TKey}"/>.</typeparam>
+/// <typeparam name="TKey">The entity primary key type.</typeparam>
+/// <typeparam name="TGetListInput">The input type used for list queries.</typeparam>
+/// <typeparam name="TCreateInput">The input type used for create operations.</typeparam>
+/// <typeparam name="TUpdateInput">The input type used for update operations.</typeparam>
+/// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
+/// <typeparam name="TRepository">The repository type. Must implement <see cref="IMoRepository{TEntity, TKey}"/>.</typeparam>
+/// <param name="repository">The repository instance.</param>
 public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(TRepository repository) : 
     MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(repository), IMoCrudAppService
@@ -82,11 +96,11 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     where TRepository : IMoRepository<TEntity, TKey>
 {
     /// <summary>
-    /// 创建实体
+    /// Creates an entity.
     /// </summary>
-    /// <param name="input">创建实体的输入参数</param>
-    /// <returns>返回创建成功的响应结果</returns>
-    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
+    /// <param name="input">The input used to create the entity.</param>
+    /// <returns>A standardized success response for the created entity.</returns>
+    /// <remarks>Overrides the base method to return the standardized response format.</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> CreateAsync(TCreateInput input)
     {
@@ -95,11 +109,11 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     }
 
     /// <summary>
-    /// 删除指定ID的实体
+    /// Deletes the entity with the specified ID.
     /// </summary>
-    /// <param name="id">要删除的实体ID</param>
-    /// <returns>返回删除成功的响应结果</returns>
-    /// <remarks>重写基类方法，使用标准响应格式返回结果</remarks>
+    /// <param name="id">The ID of the entity to delete.</param>
+    /// <returns>A standardized success response for the deleted entity.</returns>
+    /// <remarks>Overrides the base method to return the standardized response format.</remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> DeleteAsync(TKey id)
     {
@@ -108,16 +122,16 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     }
 
     /// <summary>
-    /// 批量删除实体
+    /// Deletes multiple entities.
     /// </summary>
-    /// <param name="input">包含要删除的实体ID集合的输入参数</param>
-    /// <returns>返回批量删除的响应结果</returns>
-    /// <remarks>如果输入参数实现了IHasRequestIds接口，则执行批量删除操作</remarks>
+    /// <param name="input">The input containing the IDs of the entities to delete.</param>
+    /// <returns>A standardized response for the bulk delete operation.</returns>
+    /// <remarks>Bulk deletion is executed only when the input implements <see cref="IHasRequestIds{TKey}"/>.</remarks>
     public virtual async Task<Res> BulkDeleteAsync(TBulkDeleteInput input)
     {
         if (input is IHasRequestIds<TKey> keys)
         {
-            //TODO 应支持软删除
+            // TODO: Soft delete should be supported here.
             await repository.DeleteDirectAsync(p => keys.Ids.Contains(p.Id));
             return ResEntityDeleteSuccess(string.Join(",", keys.Ids));
         }
@@ -126,28 +140,28 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     }
 
     /// <summary>
-    /// 更新指定ID的实体
+    /// Updates the entity with the specified ID.
     /// </summary>
-    /// <param name="id">要更新的实体ID</param>
-    /// <param name="input">更新实体的输入参数</param>
-    /// <returns>返回更新成功的响应结果</returns>
+    /// <param name="id">The ID of the entity to update.</param>
+    /// <param name="input">The input used to update the entity.</param>
+    /// <returns>A standardized success response for the updated entity.</returns>
     /// <remarks>
-    /// 重写基类方法，使用标准响应格式返回结果
-    /// 规范：TUpdateInput和TCreateInput不要继承Entity等基类
+    /// Overrides the base method to return the standardized response format.
+    /// Guideline: <typeparamref name="TUpdateInput"/> and <typeparamref name="TCreateInput"/> should not inherit from entity-style base classes.
     /// </remarks>
     [OverrideService(-999)]
     public new virtual async Task<Res> UpdateAsync(TKey id, TUpdateInput input)
     {
-        //规范：TUpdateInput和TCreateInput不要继承Entity等基类
+        // Guideline: TUpdateInput and TCreateInput should not inherit from entity-style base classes.
         var dto = await base.UpdateAsync(id, input);
         return ResEntityUpdateSuccess(dto);
     }
 
     /// <summary>
-    /// 生成的{id}路由规则是方法参数名为id
+    /// The generated <c>{id}</c> route token depends on the method parameter being named <c>id</c>.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <param name="id">The entity ID.</param>
+    /// <returns>The standardized response that wraps the requested entity.</returns>
     [OverrideService(-999)]
     public new virtual async Task<Res<TGetOutputDto>> GetAsync(TKey id)
     {
@@ -161,23 +175,23 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         }
     }
 
-    //TODO 移除此功能或迁移
-    //TODO 此方法重写不同签名的需要增加POST标签，不会继承该标签
+    // TODO: Remove this feature or move it elsewhere.
+    // TODO: When overriding a method with a different signature, add the POST attribute explicitly because it is not inherited.
     [HttpPost]
     public virtual async Task<ResPaged<dynamic>> ListAsync(TGetListInput input)
     {
         return await GetListAsync(input);
     }
-    #region 模板响应
+    #region Template Responses
     /// <summary>
-    /// 实体名，用于模板响应
+    /// Entity display name used when composing template responses.
     /// </summary>
     protected virtual string? EntityName => null;
     /// <summary>
-    /// 未找到给定ID实体
+    /// Creates the standard response for a missing entity.
     /// </summary>
-    /// <param name="entityId"></param>
-    /// <returns></returns>
+    /// <param name="entityId">The identifier that could not be found.</param>
+    /// <returns>A standardized not-found response.</returns>
     protected virtual Res ResEntityNotFound(string entityId)
     {
         if (EntityName is { } name)
@@ -187,10 +201,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return "未找到相应数据";
     }
     /// <summary>
-    /// 实体更新成功
+    /// Creates the standard success response after an entity update.
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
+    /// <param name="dto">The updated DTO.</param>
+    /// <returns>A standardized success response.</returns>
     protected virtual Res ResEntityUpdateSuccess(TGetOutputDto dto)
     {
         if (EntityName is { } name)
@@ -200,9 +214,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return Res.Ok($"更新成功:{dto.Id}");
     }
     /// <summary>
-    /// 实体更新成功
+    /// Creates the standard success response after an entity update.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="entityId">The identifier of the updated entity.</param>
+    /// <returns>A standardized success response.</returns>
     protected virtual Res ResEntityUpdateSuccess(string entityId)
     {
         if (EntityName is { } name)
@@ -212,10 +227,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return Res.Ok($"更新成功:{entityId}");
     }
     /// <summary>
-    /// 实体更新失败
+    /// Creates the standard failure response for an entity update.
     /// </summary>
-    /// <param name="entityId"></param>
-    /// <returns></returns>
+    /// <param name="entityId">The identifier of the entity that failed to update.</param>
+    /// <returns>A standardized failure response.</returns>
     protected virtual Res ResEntityUpdateFailed(string entityId)
     {
         if (EntityName is { } name)
@@ -225,10 +240,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return "更新失败";
     }
     /// <summary>
-    /// 实体新增成功
+    /// Creates the standard success response after an entity is created.
     /// </summary>
-    /// <param name="dto"></param>
-    /// <returns></returns>
+    /// <param name="dto">The created DTO.</param>
+    /// <returns>A standardized success response.</returns>
     protected virtual Res ResEntityCreateSuccess(TGetOutputDto dto)
     {
         if (EntityName is { } name)
@@ -238,9 +253,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return Res.Ok($"新增成功:{dto.Id}");
     }
     /// <summary>
-    /// 实体新增成功
+    /// Creates the standard success response after an entity is created.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="entityId">The identifier of the created entity.</param>
+    /// <returns>A standardized success response.</returns>
     protected virtual Res ResEntityCreateSuccess(string entityId)
     {
         if (EntityName is { } name)
@@ -250,9 +266,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return Res.Ok($"新增成功:{entityId}");
     }
     /// <summary>
-    /// 实体新增失败
+    /// Creates the standard failure response for entity creation.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A standardized failure response.</returns>
     protected virtual Res ResEntityCreateFailed()
     {
         if (EntityName is { } name)
@@ -262,10 +278,10 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return "新增失败";
     }
     /// <summary>
-    /// 实体删除成功
+    /// Creates the standard success response after an entity is deleted.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <param name="id">The identifier of the deleted entity.</param>
+    /// <returns>A standardized success response.</returns>
     protected virtual Res ResEntityDeleteSuccess(string id)
     {
         if (EntityName is { } name)
@@ -275,9 +291,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
         return Res.Ok($"删除成功:{id}");
     }
     /// <summary>
-    /// 实体删除失败
+    /// Creates the standard failure response for entity deletion.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A standardized failure response.</returns>
     protected virtual Res ResEntityDeleteFailed()
     {
         if (EntityName is { } name)

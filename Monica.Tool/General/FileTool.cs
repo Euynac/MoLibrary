@@ -52,7 +52,7 @@ public static class FileTool
         return Environment.GetFolderPath(folder);
     }
     /// <summary>
-    /// 用不会占用文件的方式读取程序集文件
+    /// Read the assembly file in a way that does not occupy the file
     /// </summary>
     /// <param name="fileUrl"></param>
     /// <returns></returns>
@@ -104,27 +104,27 @@ public static class FileTool
     }
 
     /// <summary>
-    /// 检查路径是否是合法路径（Windows）
+    /// Check if the path is a legal path (Windows)
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
-    /// 注意""被转义成了"
-    /// 有用到具名捕获组，该模式串能匹配出path、filename、name、ext，不能匹配文件夹及文件名为.开头的，以及\\这样的存在
+    /// Note that "" is escaped into "
+    /// Using a named capture group, this pattern string can match path, filename, name, ext, but cannot match folder and file names starting with ., and the existence of \\
     public static bool IsPath(string path)
     {
         return path.IsMatch(@"^(?<path>(?:[a-zA-Z]:)?\\?(?:(?!\.)[^\\\?\/\*\|<>:""]+\\?)*?)(?:(?<filename>(?<name>[^\\\?\/\*\|<>:""]+?)\.(?<ext>[^.\\\?\/\*\|<>:""]+)))?$");
     }
     /// <summary>
-    /// 根据文件路径获取当前目录名
+    /// Get the current directory name based on the file path
     /// </summary>
     /// <param name="path"></param>
-    /// <returns>获取不到返回null</returns>
+    /// <returns>Unable to obtain return null</returns>
     public static string? GetDirectoryName(string path)//当前目录名
     {
         return Directory.GetParent(path)?.Name;
     }
     /// <summary>
-    /// 根据文件路径获取当前目录路径
+    /// Get the current directory path based on the file path
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
@@ -143,11 +143,11 @@ public static class FileTool
     }
 
     /// <summary>
-    /// 覆盖写入文件
+    /// Overwrite file
     /// </summary>
     /// <param name="path"></param>
     /// <param name="content"></param>
-    /// <param name="ensureDirectory">如果不存在目录，则创建</param>
+    /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void WriteFile(string path, string content, bool ensureDirectory = true)
     {
         var stringBuilder = new StringBuilder(content);
@@ -155,11 +155,11 @@ public static class FileTool
     }
 
     /// <summary>
-    /// 向文件末尾追加写入
+    /// Append to the end of the file
     /// </summary>
     /// <param name="path"></param>
     /// <param name="content"></param>
-    /// <param name="ensureDirectory">如果不存在目录，则创建</param>
+    /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void AppendFile(string path, string content, bool ensureDirectory = true)
     {
         var stringBuilder = new StringBuilder(content);
@@ -167,11 +167,11 @@ public static class FileTool
     }
 
     /// <summary>
-    /// 向文件末尾追加写入
+    /// Append to the end of the file
     /// </summary>
     /// <param name="path"></param>
     /// <param name="content"></param>
-    /// <param name="ensureDirectory">如果不存在目录，则创建</param>
+    /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void AppendFile(string path, StringBuilder content, bool ensureDirectory = true)
     {
         if (ensureDirectory)
@@ -185,11 +185,11 @@ public static class FileTool
         writer.Close();
     }
     /// <summary>
-    /// 覆盖写入文件
+    /// Overwrite file
     /// </summary>
     /// <param name="path"></param>
     /// <param name="content"></param>
-    /// <param name="ensureDirectory">如果不存在目录，则创建</param>
+    /// <param name="ensureDirectory">If the directory does not exist, create it</param>
     public static void WriteFile(string path, StringBuilder content, bool ensureDirectory = true)
     {
         if (ensureDirectory)
@@ -224,7 +224,7 @@ public static class FileTool
     public static string GetCurrentDirectory() => Directory.GetCurrentDirectory();
         
     /// <summary>
-    /// 读取文件信息
+    /// Read file information
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>

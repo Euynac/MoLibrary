@@ -156,7 +156,7 @@ public static class IEnumerableExtensions
             : source;
     }
     /// <summary>
-    /// 转换为特定的列表类型
+    /// Convert to a specific list type
     /// </summary>
     /// <param name="source"></param>
     /// <param name="itemType"></param>
@@ -174,7 +174,7 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// 利用反射机制将类型T内每个字段转成键值对
+    /// Use the reflection mechanism to convert each field in type T into a key-value pair
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -211,18 +211,18 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// 合并列表为一个新的列表
+    /// Merge lists into a new list
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
     /// <param name="listToCombine"></param>
-    /// <remarks>可使用Concat替代</remarks>
+    /// <remarks>Concat can be used instead</remarks>
     /// <returns></returns>
     public static List<T> CombineList<T>(this List<T> list, params List<T>?[]? listToCombine) =>
         list.CombineForeach(listToCombine?.Where(p => p != null).SelectMany(p => p!)).ToList();
 
     /// <summary>
-    /// 批量迭代列表
+    /// Batch iterate over list
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>
@@ -275,7 +275,7 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// 对原始集合和目标状态集合取交集，获取变更，并得到三个列表：待删除，待更新，待添加
+    /// Take the intersection of the original set and the target state set, obtain the changes, and get three lists: to be deleted, to be updated, and to be added.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="originList"></param>
@@ -323,17 +323,17 @@ public static class IEnumerableExtensions
         values == null ? string.Empty : string.Join(separator.ToString(), values);
 
     /// <summary>
-    /// 判断一个集合是否是 null 或空集合。
+    /// Determine whether a collection is null or an empty collection.
     /// <br/>English: Determine whether a collection is null or an empty collection.
     /// </summary>
-    /// <param name="collection">指定的集合</param>
+    /// <param name="collection">specified collection</param>
     /// <returns></returns>
     [ContractAnnotation("null => true")]
     public static bool IsNullOrEmptySet<T>([NotNullWhen(false)][NoEnumeration] this IEnumerable<T>? collection) //指示不会对collection进行读写操作，但这里读了?
         => collection == null || !collection.Any();
 
     /// <summary>
-    /// 判断一个集合是否是 null 或空集合。
+    /// Determine whether a collection is null or an empty collection.
     /// <br/>English: Determine whether a collection is null or an empty collection.
     /// </summary>
     /// https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/attributes/nullable-analysis
@@ -387,16 +387,16 @@ public static class IEnumerableExtensions
         return list;
     }
     /// <summary>
-    /// 尝试获取与指定的键相关联的值。
+    /// Try to get the value associated with the specified key.
     /// <br/>English: Attempts to get the value associated with the specified key.
     /// </summary>
-    /// <param name="dict">可为空</param>
-    /// <param name="value">当本方法返回时，如果找到了指定的键，则返回与该键相关联的值；否则，返回值参数类型的默认值或设定的值。这个参数是在未初始化的情况下传递的。
+    /// <param name="dict">Can be null</param>
+    /// <param name="value">When this method returns, if the specified key is found, the value associated with the key is returned; otherwise, the default value or the set value of the value parameter type is returned. This parameter is passed uninitialized.
     ///<br/>English: When this method returns, the value associated with the specified key, if the key is found; otherwise, the default value for the type of the value parameter or the specified value. This parameter is passed uninitialized.</param>
-    /// <param name="key">要获取值的键，可为空，为空必返回false。
+    /// <param name="key">The key to obtain the value, which can be empty. If it is empty, false will be returned.
     ///  <br/>English: The key of the value to get. key can be null, if null, return false.
     /// </param>
-    /// <param name="defaultValue">失败时返回的默认值或设定的值。
+    /// <param name="defaultValue">The default value or set value returned on failure.
     /// <br/>English: The default value or the specified value to return if failed.
     /// </param>
     /// <typeparam name="TKey"></typeparam>
@@ -416,12 +416,12 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// 尝试通过Value获取Key的值（多个value相同仅获取一个key，所以一般用于value和key一对一）
+    /// Try to get the value of Key through Value (only one key is obtained when multiple values ​​are the same, so it is generally used for one-to-one value and key)
     /// </summary>
     /// <param name="dict"></param>
-    /// <param name="value">预测Dictionary中会有的值</param>
-    /// <param name="key">若是存在value将返回key</param>
-    /// <returns>成功返回true且返回key，不成功则返回false</returns>
+    /// <param name="value">Predict the values ​​that will be in Dictionary</param>
+    /// <param name="key">If value exists, key will be returned</param>
+    /// <returns>Returns true and key if successful, false if unsuccessful.</returns>
     public static bool TryGetKey<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>>? dict, TValue value, out TKey? key)
     {
         key = default;
@@ -437,14 +437,14 @@ public static class IEnumerableExtensions
         return false;
     }
     /// <summary>
-    /// 尝试获取所有指定Value对应的Key值
+    /// Try to get all Key values ​​corresponding to the specified Value
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TValue"></typeparam>
     /// <param name="dict"></param>
-    /// <param name="value">预测集合中会有的值</param>
-    /// <param name="key">value对应的所有Key</param>
-    /// <returns>成功返回true且返回key的List，不成功则返回false</returns>
+    /// <param name="value">Predict the values ​​that will be in the set</param>
+    /// <param name="key">All keys corresponding to value</param>
+    /// <returns>Returns true if successful and returns a List of keys, false if unsuccessful.</returns>
     public static bool TryGetAllKey<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>>? dict, TValue value, out List<TKey> key)
     {
         key = new List<TKey>();
@@ -459,7 +459,7 @@ public static class IEnumerableExtensions
         return key.Count != 0;
     }
     /// <summary>
-    /// 将可空类型的集合转换为不可空的<seealso cref="IEnumerable{T}"/>
+    /// Convert a collection of nullable types to non-nullable <seealso cref="IEnumerable{T}"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="list"></param>

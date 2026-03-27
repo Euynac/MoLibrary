@@ -16,7 +16,7 @@ public static class ModuleLockerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Locker 模块
+        /// Configure the Locker module
         /// </summary>
         public static ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
         {

@@ -1,7 +1,8 @@
 namespace Monica.EventBus.Abstractions;
 
 /// <summary>
-/// (Singleton) 分布式事件总线接口
+/// Defines the contract for the distributed event bus.
+/// Implementations are intended to be registered as singletons.
 /// </summary>
 public interface IMoDistributedEventBus : IMoEventBus
 {

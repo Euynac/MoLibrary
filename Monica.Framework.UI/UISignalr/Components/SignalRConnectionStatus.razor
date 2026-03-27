@@ -1,6 +1,6 @@
 @using Monica.Framework.UI.UISignalr.Models
 
-<!-- 连接状态 -->
+<!-- connection status -->
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudText Typo="Typo.h5" Class="mb-3">连接状态</MudText>
     <MudChip Color="@GetConnectionStatusColor()" 
@@ -28,19 +28,19 @@
 
 @code {
     /// <summary>
-    /// 连接状态
+    /// connection status
     /// </summary>
     [Parameter] public SignalRConnectionState ConnectionState { get; set; } = new();
 
     /// <summary>
-    /// 选中的Hub路由
+    /// Selected Hub route
     /// </summary>
     [Parameter] public string SelectedHubRoute { get; set; } = "";
 
     /// <summary>
-    /// 获取连接状态颜色
+    /// Get connection status color
     /// </summary>
-    /// <returns>颜色</returns>
+    /// <returns>Color</returns>
     private Color GetConnectionStatusColor()
     {
         return ConnectionState.Status switch

@@ -1,6 +1,6 @@
 @using Monica.Framework.UI.UISignalr.Models
 
-<!-- 方法调用 -->
+<!-- method call -->
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudText Typo="Typo.h5" Class="mb-3">方法调用</MudText>
     <MudGrid>
@@ -65,55 +65,55 @@
 
 @code {
     /// <summary>
-    /// Hub方法列表
+    /// Hub method list
     /// </summary>
     [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
 
     /// <summary>
-    /// 是否已连接
+    /// Is it connected?
     /// </summary>
     [Parameter] public bool IsConnected { get; set; }
 
     /// <summary>
-    /// 选择的方法名称
+    /// Selected method name
     /// </summary>
     [Parameter] public string SelectedMethodName { get; set; } = "";
 
     /// <summary>
-    /// 选择的方法名称变化回调
+    /// Selected method name change callback
     /// </summary>
     [Parameter] public EventCallback<string> SelectedMethodNameChanged { get; set; }
 
     /// <summary>
-    /// 方法参数
+    /// method parameters
     /// </summary>
     [Parameter] public Dictionary<string, string> MethodParameters { get; set; } = new();
 
     /// <summary>
-    /// 调用方法回调
+    /// Call method callback
     /// </summary>
     [Parameter] public EventCallback<(string methodName, List<MethodCallParameter> parameters)> OnInvokeMethod { get; set; }
 
     /// <summary>
-    /// 当前选择的方法
+    /// Currently selected method
     /// </summary>
     private HubMethodInfo? SelectedMethod => HubMethods.FirstOrDefault(m => m.Name == SelectedMethodName);
 
     /// <summary>
-    /// 安全获取参数值
+    /// Safely obtain parameter values
     /// </summary>
-    /// <param name="parameterName">参数名称</param>
-    /// <returns>参数值</returns>
+    /// <param name="parameterName">Parameter name</param>
+    /// <returns>Parameter values</returns>
     private string GetParameterValue(string parameterName)
     {
         return MethodParameters?.GetValueOrDefault(parameterName, "") ?? "";
     }
 
     /// <summary>
-    /// 安全设置参数值
+    /// Security setting parameter value
     /// </summary>
-    /// <param name="parameterName">参数名称</param>
-    /// <param name="value">参数值</param>
+    /// <param name="parameterName">Parameter name</param>
+    /// <param name="value">Parameter value</param>
     private void SetParameterValue(string parameterName, string value)
     {
         if (MethodParameters != null)
@@ -123,16 +123,16 @@
     }
 
     /// <summary>
-    /// 参数设置变化处理
+    /// Parameter setting change processing
     /// </summary>
     protected override async Task OnParametersSetAsync()
     {
-        // 确保MethodParameters字典不为null
+        // Make sure the MethodParameters dictionary is not null
         MethodParameters ??= new Dictionary<string, string>();
         
         if (SelectedMethod != null)
         {
-            // 确保参数字典包含所有需要的参数
+            // Make sure the parameter dictionary contains all required parameters
             foreach (var arg in SelectedMethod.Args)
             {
                 if (!MethodParameters.ContainsKey(arg.Name))
@@ -145,10 +145,10 @@
     }
 
     /// <summary>
-    /// 获取显示类型名称
+    /// Get display type name
     /// </summary>
-    /// <param name="type">参数类型</param>
-    /// <returns>显示类型名称</returns>
+    /// <param name="type">Parameter type</param>
+    /// <returns>Display type name</returns>
     private string GetDisplayType(string type)
     {
         var normalizedType = type.ToLower().Replace("system.", "");
@@ -168,10 +168,10 @@
     }
 
     /// <summary>
-    /// 获取参数帮助文本
+    /// Get parameter help text
     /// </summary>
-    /// <param name="type">参数类型</param>
-    /// <returns>帮助文本</returns>
+    /// <param name="type">Parameter type</param>
+    /// <returns>Help text</returns>
     private string GetParameterHelperText(string type)
     {
         var normalizedType = type.ToLower().Replace("system.", "");
@@ -193,11 +193,11 @@
     }
 
     /// <summary>
-    /// 获取参数错误文本
+    /// Get parameter error text
     /// </summary>
-    /// <param name="value">参数值</param>
-    /// <param name="type">参数类型</param>
-    /// <returns>错误文本</returns>
+    /// <param name="value">Parameter value</param>
+    /// <param name="type">Parameter type</param>
+    /// <returns>Error text</returns>
     private string GetParameterErrorText(string value, string type)
     {
         if (string.IsNullOrEmpty(value))
@@ -221,11 +221,11 @@
     }
 
     /// <summary>
-    /// 验证参数值
+    /// Validate parameter values
     /// </summary>
-    /// <param name="value">参数值</param>
-    /// <param name="type">参数类型</param>
-    /// <returns>是否有效</returns>
+    /// <param name="value">Parameter value</param>
+    /// <param name="type">Parameter type</param>
+    /// <returns>Is it valid?</returns>
     private bool ValidateParameterValue(string value, string type)
     {
         if (string.IsNullOrEmpty(value))
@@ -260,7 +260,7 @@
                 case "guid":
                     return Guid.TryParse(value, out _);
                 default:
-                    // 对于复杂类型，尝试解析为JSON
+                    // For complex types, try parsing to JSON
                     if (value.Trim().StartsWith("{") || value.Trim().StartsWith("["))
                     {
                         try
@@ -283,9 +283,9 @@
     }
 
     /// <summary>
-    /// 检查所有参数是否有效
+    /// Check if all parameters are valid
     /// </summary>
-    /// <returns>是否所有参数都有效</returns>
+    /// <returns>Are all parameters valid</returns>
     private bool AreParametersValid()
     {
         if (SelectedMethod == null) return true;
@@ -298,7 +298,7 @@
     }
 
     /// <summary>
-    /// 清空所有参数
+    /// Clear all parameters
     /// </summary>
     private async Task ClearParametersAsync()
     {
@@ -313,7 +313,7 @@
     }
 
     /// <summary>
-    /// 调用方法
+    /// call method
     /// </summary>
     private async Task InvokeMethodAsync()
     {
@@ -336,7 +336,7 @@
     }
 
     /// <summary>
-    /// 处理方法名称变化
+    /// Handling method name changes
     /// </summary>
     private async Task OnSelectedMethodNameChangedInternal(string value)
     {

@@ -19,7 +19,7 @@ public static class ModuleObservableInstanceUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ObservableInstanceUI 模块
+        /// Configure the ObservableInstanceUI module
         /// </summary>
         public static ModuleObservableInstanceUIGuide AddObservableInstanceUI(Action<ModuleObservableInstanceUIOption>? action = null)
         {

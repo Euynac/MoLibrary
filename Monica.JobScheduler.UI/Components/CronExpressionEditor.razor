@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<JobSchedulerResource> L
 
-<!-- 引入 cronstrue 库 -->
+<!-- Introduce cronstrue library -->
 @if (!_cronstrueLoaded)
 {
     <script src="_content/Monica.JobScheduler.UI/lib/cronstrue/cronstrue-i18n.min.js"></script>
@@ -14,7 +14,7 @@
 
 <MudPaper Elevation="2" Class="pa-4">
     <MudStack Spacing="3">
-        <!-- 标题和格式切换 -->
+        <!-- Title and format switching -->
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudText Typo="Typo.h6">Cron 表达式编辑器</MudText>
             <MudChipSet T="CronFormat" @bind-SelectedValue="_format" @bind-SelectedValue:after="OnFormatChangedAsync" CheckMark SelectionMode="SelectionMode.SingleSelection">
@@ -27,7 +27,7 @@
             </MudChipSet>
         </MudStack>
 
-        <!-- 表达式输入 -->
+        <!-- expression input -->
         <MudTextField @bind-Value="@Value"
                       T="string"
                       Label="Cron 表达式"
@@ -39,7 +39,7 @@
                       Error="@_hasError"
                       ErrorText="@_errorText" />
 
-        <!-- 文字解析 -->
+        <!-- Text analysis -->
         @if (_isLoadingDescription)
         {
             <MudAlert Severity="Severity.Info" Dense="true">
@@ -58,7 +58,7 @@
             </MudAlert>
         }
 
-        <!-- 近5次执行时间 -->
+        <!-- Last 5 execution times -->
         @if (_nextOccurrences.Count > 0)
         {
             <MudPaper Outlined="true" Class="pa-3">
@@ -76,7 +76,7 @@
             </MudPaper>
         }
 
-        <!-- 操作按钮 -->
+        <!-- Action button -->
         <MudStack Row="true" Spacing="2">
             <MudButton Variant="Variant.Text"
                        Color="Color.Primary"
@@ -92,7 +92,7 @@
             </MudButton>
         </MudStack>
 
-        <!-- 简易设置 -->
+        <!-- Easy setup -->
         @if (_showSimpleSettings)
         {
             <MudPaper Outlined="true" Class="pa-3">
@@ -205,7 +205,7 @@
             </MudPaper>
         }
 
-        <!-- 语法说明 -->
+        <!-- Grammar instructions -->
         @if (_showSyntaxGuide)
         {
             <MudPaper Outlined="true" Class="pa-3 syntax-guide">
@@ -397,7 +397,7 @@
         {
             try
             {
-                // 加载 JavaScript 模块
+                // Load JavaScript module
                 _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>(
                     "import",
                     "./_content/Monica.JobScheduler.UI/js/cron-helper.js");
@@ -412,7 +412,7 @@
             }
             catch (Exception ex)
             {
-                // JS 模块加载失败，记录错误但不阻止组件渲染
+                // JS module loading fails, logging errors but not preventing component rendering
                 _cronstrueLoaded = false;
                 Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {ex.Message}", Severity.Warning);
             }
@@ -426,16 +426,16 @@
 
     private async Task OnFormatChangedAsync()
     {
-        // _format 已由双向绑定自动更新
+        // _format has been automatically updated by two-way binding
 
-        // 尝试转换现有表达式（如果有的话）
+        // Attempts to convert existing expressions (if any)
         if (!string.IsNullOrWhiteSpace(Value))
         {
-            // 根据当前格式推断原格式
+            // Infer the original format from the current format
             var parts = Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var oldFormat = parts.Length == 6 ? CronFormat.Quartz : CronFormat.Standard;
 
-            // 只有格式真的不同时才转换
+            // Only convert if the format is really different
             if (oldFormat != _format)
             {
                 var result = CronService.ConvertFormat(Value, oldFormat, _format);
@@ -472,7 +472,7 @@
             return;
         }
 
-        // 验证表达式（同步验证）
+        // Validate expressions (synchronous validation)
         var validation = CronService.ValidateExpression(Value, _format);
         if (validation.IsFailed(out var error))
         {
@@ -486,7 +486,7 @@
         _hasError = false;
         _errorText = string.Empty;
 
-        // 异步获取文字描述（仅在 JS 模块已加载时）
+        // Get text description asynchronously (only when JS module is loaded)
         if (_jsModule != null)
         {
             _isLoadingDescription = true;
@@ -515,7 +515,7 @@
             _description = string.Empty;
         }
 
-        // 获取执行时间（同步）
+        // Get execution time (synchronous)
         var occurrences = CronService.GetNextOccurrences(Value, _format, 5);
         if (occurrences.IsFailed(out var occError, out var occurrenceList))
         {

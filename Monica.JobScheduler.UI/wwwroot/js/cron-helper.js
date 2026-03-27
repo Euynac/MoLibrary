@@ -1,10 +1,10 @@
-// Cron 表达式解析辅助函数
+// Cron expression parsing helper function
 
-// 用于跟踪 cronstrue 库加载状态
+// Used to track cronstrue library loading status
 let cronstrueLoadPromise = null;
 
 /**
- * 动态加载 cronstrue 库
+ * Dynamically load the cronstrue library
  * @returns {Promise<boolean>}
  */
 async function loadCronstrueLibrary() {
@@ -86,7 +86,7 @@ async function loadCronstrueLibrary() {
 }
 
 /**
- * 确保 cronstrue 库已加载
+ * Make sure the cronstrue library is loaded
  * @returns {Promise<boolean>}
  */
 async function ensureCronstrueLoaded() {
@@ -100,9 +100,9 @@ async function ensureCronstrueLoaded() {
 }
 
 /**
- * 使用 cronstrue 库将 Cron 表达式转换为中文描述
- * @param {string} expression - Cron 表达式
- * @param {string} format - 格式类型: "standard" (5段) 或 "quartz" (6段)
+ * Use the cronstrue library to convert Cron expressions into Chinese descriptions
+ * @param {string} expression - Cron expression
+ * @param {string} format - format type: "standard" (5 paragraphs) or "quartz" (6 paragraphs)
  * @returns {Promise<object>} { success: boolean, description?: string, error?: string }
  */
 export async function parseCronExpression(expression, format) {
@@ -122,7 +122,7 @@ export async function parseCronExpression(expression, format) {
             };
         }
 
-        // cronstrue 配置选项
+        // cronstrue configuration options
         const options = {
             locale: 'zh_CN',              // 默认中文
             use24HourTimeFormat: true,    // 24 小时制
@@ -131,7 +131,7 @@ export async function parseCronExpression(expression, format) {
             dayOfWeekStartIndexZero: true // 周日为 0
         };
 
-        // cronstrue 会自动检测 5 段或 6 段格式
+        // cronstrue will automatically detect 5-segment or 6-segment format
         const description = cronstrue.toString(expression, options);
 
         return {
@@ -147,7 +147,7 @@ export async function parseCronExpression(expression, format) {
 }
 
 /**
- * 检查 cronstrue 库是否已加载
+ * Check if cronstrue library is loaded
  * @returns {boolean}
  */
 export function isCronstrueLoaded() {
@@ -155,7 +155,7 @@ export function isCronstrueLoaded() {
 }
 
 /**
- * 预加载 cronstrue 库（可在页面初始化时调用）
+ * Preload the cronstrue library (can be called when the page is initialized)
  * @returns {Promise<boolean>}
  */
 export async function preloadCronstrue() {

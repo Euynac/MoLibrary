@@ -1,24 +1,24 @@
-// 依赖关系图可视化
+// Dependency graph visualization
 let graph = null;
 let container = null;
 let d3 = null;
 
-// 动态加载D3.js库
+// Dynamically load the D3.js library
 async function loadD3() {
     if (d3 === null) {
         try {
-            // 检查是否已经加载到全局对象
+            // Check if it has been loaded into the global object
             if (window.d3) {
                 d3 = window.d3;
                 return d3;
             }
             
-            // 动态创建script标签加载D3.js
+            // Dynamically create script tags to load D3.js
             const script = document.createElement('script');
             script.src = '/_content/Monica.UI/lib/d3.min.js';
             script.type = 'text/javascript';
             
-            // 返回Promise等待脚本加载完成
+            // Return Promise and wait for script loading to complete
             return new Promise((resolve, reject) => {
                 script.onload = () => {
                     if (window.d3) {
@@ -41,16 +41,16 @@ async function loadD3() {
     return d3;
 }
 
-// 获取当前主题
+// Get the current topic
 function isDarkMode() {
-    // 检查 MudBlazor 的暗黑模式
+    // Check out MudBlazor’s Dark Mode
     return document.documentElement.classList.contains('mud-theme-dark') ||
            document.body.classList.contains('mud-theme-dark') ||
            document.body.classList.contains('dark-theme') || 
            window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-// 获取主题相关的颜色
+// Get theme-related colors
 function getThemeColors() {
     const isDark = isDarkMode();
     return {
@@ -70,33 +70,33 @@ function getThemeColors() {
     };
 }
 
-// 初始化依赖关系图
+// Initialize dependency graph
 export async function initializeDependencyGraph(containerId, nodes, edges) {
     try {
-        // 确保D3.js已加载
+        // Make sure D3.js is loaded
         await loadD3();
         container = document.getElementById(containerId);
         if (!container) {
             throw new Error(`Container with ID '${containerId}' not found`);
         }
 
-        // 清空容器
+        // Empty container
         container.innerHTML = '';
 
-        // 获取主题颜色
+        // Get theme color
         const colors = getThemeColors();
 
-        // 创建SVG画布
+        // Create SVG canvas
         const svg = d3.select(container)
             .append('svg')
             .attr('width', '100%')
             .attr('height', '100%')
             .style('background-color', colors.background);
 
-        // 创建箭头标记
+        // Create arrow markers
         const defs = svg.append('defs');
         
-        // 直接依赖箭头
+        // direct dependency arrow
         defs.append('marker')
             .attr('id', 'arrow-direct')
             .attr('viewBox', '0 0 10 10')
@@ -109,7 +109,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .attr('d', 'M0,0 L0,6 L9,3 z')
             .attr('fill', colors.edgeColors.direct);
 
-        // 传递依赖箭头
+        // transitive dependency arrow
         defs.append('marker')
             .attr('id', 'arrow-transitive')
             .attr('viewBox', '0 0 10 10')
@@ -122,7 +122,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .attr('d', 'M0,0 L0,6 L9,3 z')
             .attr('fill', colors.edgeColors.transitive);
 
-        // 循环依赖箭头
+        // circular dependency arrow
         defs.append('marker')
             .attr('id', 'arrow-circular')
             .attr('viewBox', '0 0 10 10')
@@ -135,7 +135,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .attr('d', 'M0,0 L0,6 L9,3 z')
             .attr('fill', colors.edgeColors.circular);
 
-        // 创建缩放行为
+        // Create zoom behavior
         const zoom = d3.zoom()
             .scaleExtent([0.1, 10])
             .on('zoom', (event) => {
@@ -144,17 +144,17 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
 
         svg.call(zoom);
 
-        // 创建主要的g元素
+        // Create the main g element
         const g = svg.append('g');
 
-        // 创建力导向布局
+        // Create a force-directed layout
         const simulation = d3.forceSimulation(nodes)
             .force('link', d3.forceLink(edges).id(d => d.id).distance(120))
             .force('charge', d3.forceManyBody().strength(-400))
             .force('center', d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2))
             .force('collision', d3.forceCollide().radius(35));
 
-        // 创建边
+        // Create edge
         const link = g.append('g')
             .selectAll('line')
             .data(edges)
@@ -165,7 +165,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .attr('marker-end', d => `url(#arrow-${d.dependencyType.toLowerCase()})`)
             .style('opacity', 0.8);
 
-        // 创建节点
+        // Create node
         const node = g.append('g')
             .selectAll('circle')
             .data(nodes)
@@ -187,12 +187,12 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
                 })
                 .on('end', function(event, d) {
                     if (!event.active) simulation.alphaTarget(0);
-                    // 不设置为null，保持拖动后的位置
+                    // If not set to null, the position after dragging will be maintained.
                     // d.fx = null;
                     // d.fy = null;
                 }));
 
-        // 添加节点标签
+        // Add node label
         const label = g.append('g')
             .selectAll('text')
             .data(nodes)
@@ -206,30 +206,30 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             .style('pointer-events', 'none')
             .style('user-select', 'none');
 
-        // 添加交互
+        // Add interaction
         node.on('mouseenter', function(event, d) {
-            // 高亮相关的边
+            // Highlight relevant edges
             link.style('opacity', edge => 
                 edge.source.id === d.id || edge.target.id === d.id ? 1 : 0.3
             );
             
-            // 高亮相关的节点
+            // Highlight related nodes
             node.style('opacity', n => 
                 n.id === d.id || isConnected(d.id, n.id) ? 1 : 0.5
             );
 
-            // 显示节点信息
+            // Show node information
             showNodeInfo(d);
         }).on('mouseleave', function() {
-            // 重置样式
+            // reset style
             link.style('opacity', 0.8);
             node.style('opacity', 1);
             
-            // 清除节点信息
+            // Clear node information
             hideNodeInfo();
         });
 
-        // 更新位置
+        // Update location
         simulation.on('tick', () => {
             link
                 .attr('x1', d => d.source.x)
@@ -246,7 +246,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
                 .attr('y', d => d.y);
         });
 
-        // 保存图表实例
+        // Save chart instance
         graph = {
             svg,
             g,
@@ -260,10 +260,10 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             colors
         };
 
-        // 监听主题变化
+        // Monitor theme changes
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
         
-        // 监听MudBlazor主题变化
+        // Monitor MudBlazor theme changes
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && 
@@ -289,7 +289,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
         throw error;
     }
 
-    // 辅助函数
+    // Helper function
     function getNodeColor(d, colors) {
         if (d.isPartOfCycle) return colors.nodeColors.cycle;
         if (d.isDisabled) return colors.nodeColors.disabled;
@@ -336,7 +336,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
             isDisabled: d.isDisabled
         };
         
-        // 创建或更新节点信息显示
+        // Create or update node information display
         updateNodeInfoDisplay(info);
     }
 
@@ -345,7 +345,7 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
     }
 
     function updateNodeInfoDisplay(info) {
-        // 尝试找到显示节点详情的元素
+        // Try to find the element that shows the node details
         const nodeDetailElement = document.querySelector('.node-detail-content');
         if (nodeDetailElement) {
             if (info) {
@@ -387,17 +387,17 @@ export async function initializeDependencyGraph(containerId, nodes, edges) {
 
 }
 
-// 更新主题
+// Update theme
 function updateTheme() {
     if (!graph) return;
     
     const colors = getThemeColors();
     graph.colors = colors;
     
-    // 更新SVG背景
+    // Update SVG background
     graph.svg.style('background-color', colors.background);
     
-    // 更新节点颜色
+    // Update node color
     graph.node.attr('fill', d => {
         if (d.isPartOfCycle) return colors.nodeColors.cycle;
         if (d.isDisabled) return colors.nodeColors.disabled;
@@ -405,7 +405,7 @@ function updateTheme() {
     });
     graph.node.attr('stroke', colors.background);
     
-    // 更新边颜色
+    // Update edge color
     graph.link.attr('stroke', d => {
         switch (d.dependencyType) {
             case 'Direct': return colors.edgeColors.direct;
@@ -415,16 +415,16 @@ function updateTheme() {
         }
     });
     
-    // 更新标签颜色
+    // Update label color
     graph.label.style('fill', colors.nodeColors.text);
     
-    // 更新箭头颜色
+    // Update arrow color
     graph.svg.select('#arrow-direct path').attr('fill', colors.edgeColors.direct);
     graph.svg.select('#arrow-transitive path').attr('fill', colors.edgeColors.transitive);
     graph.svg.select('#arrow-circular path').attr('fill', colors.edgeColors.circular);
 }
 
-// 改变布局
+// Change layout
 export async function changeLayout(layout) {
     if (!graph) return;
     
@@ -475,7 +475,7 @@ export async function changeLayout(layout) {
     }
 }
 
-// 应用过滤器
+// Apply filter
 export async function applyFilter(filter) {
     if (!graph) return;
     
@@ -499,10 +499,10 @@ export async function applyFilter(filter) {
                 break;
         }
 
-        // 更新边的可见性
+        // Update edge visibility
         link.style('display', d => visibleEdges.includes(d) ? 'block' : 'none');
 
-        // 更新节点的可见性
+        // Update node visibility
         const visibleNodeIds = new Set();
         visibleEdges.forEach(edge => {
             visibleNodeIds.add(edge.source.id);
@@ -516,7 +516,7 @@ export async function applyFilter(filter) {
     }
 }
 
-// 缩放控制
+// Zoom control
 export async function zoomIn() {
     if (!graph) return;
     
@@ -550,7 +550,7 @@ export async function resetZoom() {
     }
 }
 
-// 导出图片
+// Export pictures
 export async function exportGraph(filename) {
     if (!graph) {
         console.error('Graph not initialized');
@@ -563,11 +563,11 @@ export async function exportGraph(filename) {
         const svgElement = graph.svg.node();
         const svgData = new XMLSerializer().serializeToString(svgElement);
         
-        // 创建完整的SVG内容，包含样式
+        // Create complete SVG content, including styles
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const svgUrl = URL.createObjectURL(svgBlob);
         
-        // 创建canvas来转换为PNG
+        // Create canvas to convert to PNG
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const img = new Image();
@@ -576,26 +576,26 @@ export async function exportGraph(filename) {
             canvas.width = img.naturalWidth || 800;
             canvas.height = img.naturalHeight || 600;
             
-            // 设置白色背景
+            // Set white background
             ctx.fillStyle = graph.colors.background;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 绘制图像
+            // draw image
             ctx.drawImage(img, 0, 0);
             
-            // 创建下载链接
+            // Create download link
             const link = document.createElement('a');
             link.download = filename || 'dependency-graph.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
             
-            // 清理资源
+            // Clean up resources
             URL.revokeObjectURL(svgUrl);
         };
         
         img.onerror = function() {
             console.error('Failed to load SVG image for export');
-            // 备选方案：直接下载SVG
+            // Alternative: Download the SVG directly
             const link = document.createElement('a');
             link.download = (filename || 'dependency-graph') + '.svg';
             link.href = svgUrl;
@@ -610,7 +610,7 @@ export async function exportGraph(filename) {
     }
 }
 
-// 辅助函数
+// Helper function
 function getNodeColor(d, colors) {
     if (d.isPartOfCycle) return colors.nodeColors.cycle;
     if (d.isDisabled) return colors.nodeColors.disabled;
@@ -626,10 +626,10 @@ function getEdgeColor(type, colors) {
     }
 }
 
-// 导出主题更新函数
+// Export theme update function
 export function refreshTheme() {
     updateTheme();
 }
 
-// D3.js库将在使用时动态加载
+// The D3.js library will be dynamically loaded when used
 console.log('Enhanced dependency graph module loaded. D3.js will be loaded dynamically when needed.'); 

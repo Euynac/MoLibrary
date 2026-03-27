@@ -5,7 +5,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 请求类
+/// Request class
 /// </summary>
 /// <param name="type"></param>
 public class UnitRequestDto(Type type) : ProjectUnit(type, EProjectUnitType.RequestDto), IHasProjectUnitFactory

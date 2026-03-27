@@ -15,8 +15,10 @@ public interface IMoUnitOfWork : IDisposable
     void Initialize(MoUnitOfWorkOptions options);
 
     /// <summary>
-    /// 如果开启了事务，必须调用这个方法才会提交事务。如果没有使用autoSave，调用此方法会自动SaveChanges。
-    /// Complete 后 UnitOfWork 无法再次获取新的 DbContext，详见DbContextProvider中 GetCurrentByChecking
+    /// If transactions are enabled, this method must be called to commit the transaction.
+    /// If autoSave is not used, calling this method will automatically invoke SaveChanges.
+    /// After Complete, the UnitOfWork can no longer obtain a new DbContext.
+    /// See DbContextProvider.GetCurrentByChecking for details.
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>

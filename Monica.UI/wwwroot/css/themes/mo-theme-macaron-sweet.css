@@ -1,10 +1,10 @@
-/* Monica Macaron Sweet Theme - 马卡龙甜心主题 */
-/* 柔和粉彩主题，使用马卡龙色系 */
+/* Monica Macaron Sweet Theme – Macaron Sweetheart Theme */
+/* Soft pastel theme, using macaron colors */
 
-/* 导入可爱字体 - 离线模式 */
+/* Import cute fonts - offline mode */
 /* @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&display=swap'); */
 
-/* 本地字体定义 */
+/* local font definition */
 @font-face {
     font-family: 'Comfortaa';
     src: url('../../fonts/Comfortaa-Regular.woff2') format('woff2');
@@ -19,12 +19,12 @@
     font-display: swap;
 }
 
-/* Macaron Sweet Theme CSS Variables - 明暗模式通用 */
+/* Macaron Sweet Theme CSS Variables - Common to light and dark modes */
 :root[data-theme="macaron-sweet-light"],
 :root[data-theme="macaron-sweet-dark"],
 .mo-theme-macaron-sweet-light,
 .mo-theme-macaron-sweet-dark {
-    /* 马卡龙色彩变量 */
+    /* Macaron color variables */
     --mo-macaron-pink: #ff9aa2;
     --mo-macaron-mint: #b5ead7;
     --mo-macaron-lavender: #c7ceea;
@@ -34,7 +34,7 @@
     --mo-bounce-intensity: 0.15;
     --mo-sweet-glow: 0.3;
     
-    /* 组件样式变量 - 可爱圆润风格 */
+    /* Component style variables - cute and round style */
     --mo-button-border-radius: 25px;
     --mo-button-padding-x: 24px;
     --mo-button-padding-y: 12px;
@@ -58,14 +58,14 @@
     
     --mo-table-border-radius: 24px;
     
-    /* 间距变量 - 可爱比例 */
+    /* Spacing Variable - Cute Ratio */
     --mo-spacing-xs: 6px;
     --mo-spacing-sm: 12px;
     --mo-spacing-md: 20px;
     --mo-spacing-lg: 28px;
     --mo-spacing-xl: 36px;
     
-    /* 动画变量 - 弹跳效果 */
+    /* Animation Variables - Bounce Effect */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 350ms;
     --mo-transition-slow: 500ms;
@@ -73,14 +73,14 @@
     --mo-animation-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --mo-animation-sweet: 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
     
-    /* 马卡龙渐变变量 */
+    /* Macaron gradient variable */
     --mo-gradient-pink-mint: linear-gradient(135deg, #ff9aa2 0%, #b5ead7 100%);
     --mo-gradient-lavender-peach: linear-gradient(135deg, #c7ceea 0%, #ffd3a5 100%);
     --mo-gradient-rose-lemon: linear-gradient(135deg, #ffb3ba 0%, #ffefba 100%);
     --mo-gradient-sweet-dream: linear-gradient(135deg, #ff9aa2 0%, #c7ceea 25%, #b5ead7 50%, #ffd3a5 75%, #ffefba 100%);
     --mo-gradient-pastel-rainbow: linear-gradient(45deg, #ff9aa2 0%, #ffb3ba 20%, #ffd3a5 40%, #ffefba 60%, #b5ead7 80%, #c7ceea 100%);
     
-    /* 可爱光晕变量 */
+    /* Cute halo variable */
     --mo-glow-pink: 0 0 20px rgba(255, 154, 162, var(--mo-sweet-glow));
     --mo-glow-mint: 0 0 20px rgba(181, 234, 215, var(--mo-sweet-glow));
     --mo-glow-lavender: 0 0 20px rgba(199, 206, 234, var(--mo-sweet-glow));
@@ -118,7 +118,7 @@
     --mo-sweet-glow-dark: 0 0 15px rgba(255, 138, 149, 0.4);
 }
 
-/* 甜美背景 - Light Mode */
+/* Sweet Background – Light Mode */
 .mo-theme-macaron-sweet-light {
     background: var(--mo-background-cream);
     position: relative;
@@ -151,7 +151,7 @@
     animation: mo-bubble-float 15s ease-in-out infinite;
 }
 
-/* 甜美背景 - Dark Mode */
+/* Sweet Background – Dark Mode */
 .mo-theme-macaron-sweet-dark {
     background: var(--mo-background-cream);
     position: relative;
@@ -184,7 +184,7 @@
     animation: mo-bubble-float 18s ease-in-out infinite;
 }
 
-/* 甜美流动动画 */
+/* Sweet flowing animation */
 @keyframes mo-sweet-flow {
     0%, 100% { 
         background-position: 0% 50%; 
@@ -204,7 +204,7 @@
     }
 }
 
-/* 气泡浮动动画 */
+/* Bubble floating animation */
 @keyframes mo-bubble-float {
     0%, 100% { 
         transform: translateY(0px) scale(1);
@@ -220,7 +220,7 @@
     }
 }
 
-/* 弹跳动画 */
+/* Bounce animation */
 @keyframes mo-bounce {
     0%, 100% { 
         transform: translateY(0) scale(1);
@@ -230,7 +230,7 @@
     }
 }
 
-/* 甜美脉冲动画 */
+/* Sweet pulse animation */
 @keyframes mo-sweet-pulse {
     0%, 100% { 
         box-shadow: var(--mo-glow-pink);
@@ -242,14 +242,14 @@
     }
 }
 
-/* 摇摆动画 */
+/* Swing animation */
 @keyframes mo-sweet-wiggle {
     0%, 100% { transform: rotate(0deg); }
     25% { transform: rotate(2deg); }
     75% { transform: rotate(-2deg); }
 }
 
-/* 闪烁动画 */
+/* flash animation */
 @keyframes mo-sweet-sparkle {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
@@ -261,7 +261,7 @@
     /* Global Typography */
     font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     
-    /* Cards - 马卡龙卡片 */
+    /* Cards – Macaron Cards */
     .mud-card {
         background: var(--mo-background-candy) !important;
         border: 2px solid var(--mo-border-sweet) !important;
@@ -313,7 +313,7 @@
         animation: mo-sweet-wiggle 0.5s ease-in-out infinite;
     }
     
-    /* Buttons - 马卡龙按钮 */
+    /* Buttons - Macaron buttons */
     .mud-button {
         border-radius: var(--mo-button-border-radius) !important;
         padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
@@ -409,7 +409,7 @@
         transform: scale(1.05);
     }
     
-    /* Inputs - 马卡龙输入框 */
+    /* Inputs - Macaron input box */
     .mud-input-outlined .mud-input-outlined-border {
         border-color: var(--mo-border-sweet) !important;
         border-radius: var(--mo-input-border-radius) !important;
@@ -436,7 +436,7 @@
         font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     }
     
-    /* AppBar - 马卡龙导航栏 */
+    /* AppBar – Macaron Navigation Bar */
     .mud-app-bar {
         background: var(--mo-gradient-pink-mint) !important;
         border-bottom: 3px solid var(--mo-border-candy) !important;
@@ -465,7 +465,7 @@
         animation: mo-sweet-sparkle 3s ease-in-out infinite;
     }
     
-    /* Drawer - 马卡龙侧边栏 */
+    /* Drawer - Macaron sidebar */
     .mud-drawer .mud-drawer-content {
         background: var(--mo-background-candy) !important;
         border-right: 3px solid var(--mo-border-candy) !important;
@@ -483,7 +483,7 @@
         animation: mo-sweet-flow 20s ease-in-out infinite;
     }
     
-    /* Dialog - 马卡龙对话框 */
+    /* Dialog - Macaron dialog box */
     .mud-dialog {
         background: var(--mo-background-candy) !important;
         border: 3px solid var(--mo-border-candy) !important;
@@ -520,7 +520,7 @@
         font-family: 'Comfortaa', 'Nunito', Arial, 'Microsoft YaHei', sans-serif !important;
     }
     
-    /* Tables - 马卡龙表格 */
+    /* Tables – Macaron Tables */
     .mud-table {
         background: var(--mo-background-candy) !important;
         border-radius: var(--mo-table-border-radius) !important;
@@ -566,7 +566,7 @@
         animation: mo-sweet-pulse 1s ease-in-out;
     }
     
-    /* Chips - 马卡龙标签 */
+    /* Chips - Macaron Labels */
     .mud-chip {
         background: var(--mo-gradient-rose-lemon) !important;
         border: 2px solid var(--mo-border-sweet) !important;
@@ -607,7 +607,7 @@
         animation: mo-sweet-sparkle 1s ease-in-out infinite;
     }
     
-    /* Typography - 马卡龙字体 */
+    /* Typography - Macaron font */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3,
@@ -631,7 +631,7 @@
         animation: mo-sweet-sparkle 4s ease-in-out infinite;
     }
     
-    /* Popovers and Menus - 马卡龙弹出框 */
+    /* Popovers and Menus - Macaron pop-up box */
     .mud-popover,
     .mud-menu {
         background: var(--mo-background-candy) !important;
@@ -642,7 +642,7 @@
         animation: mo-bounce 0.4s ease-out;
     }
     
-    /* Tooltips - 马卡龙提示框 */
+    /* Tooltips – Macaron tooltips */
     .mud-tooltip {
         background: var(--mo-gradient-pink-mint) !important;
         border: 2px solid var(--mo-border-sweet) !important;
@@ -653,7 +653,7 @@
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
     
-    /* Snackbars - 马卡龙通知栏 */
+    /* Snackbars - Macaron notification bar */
     .mud-snackbar {
         background: var(--mo-gradient-lavender-peach) !important;
         border: 2px solid var(--mo-border-candy) !important;
@@ -665,7 +665,7 @@
         animation: mo-bounce 0.6s ease-out;
     }
     
-    /* Tabs - 马卡龙标签页 */
+    /* Tabs - Macaron tab page */
     .mud-tabs-toolbar {
         background: var(--mo-background-candy) !important;
         border-bottom: 3px solid var(--mo-border-candy) !important;
@@ -708,7 +708,7 @@
         animation: mo-bounce 0.6s ease-in-out;
     }
     
-    /* List Items - 马卡龙列表项 */
+    /* List Items - Macaron list items */
     .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
@@ -743,7 +743,7 @@
         animation: mo-sweet-sparkle 1s ease-in-out infinite;
     }
     
-    /* 工具类 */
+    /* Tools */
     .mo-sweet-bg {
         background: var(--mo-gradient-sweet-dream) !important;
         animation: mo-sweet-flow 20s ease-in-out infinite;
@@ -772,7 +772,7 @@
 
 /* Light Theme Specific Styles */
 .mo-theme-macaron-sweet-light {
-    /* 明亮模式特殊效果 */
+    /* Bright mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -800,7 +800,7 @@
 
 /* Dark Theme Specific Styles */
 .mo-theme-macaron-sweet-dark {
-    /* 暗色模式特殊效果 */
+    /* Dark mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -825,7 +825,7 @@
         box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7) !important;
     }
     
-    /* 暗色模式下的特殊发光效果 */
+    /* Special glow effect in dark mode */
     .mud-button-filled-primary:hover,
     .mud-chip:hover,
     .mud-tab.mud-tab-active {
@@ -833,7 +833,7 @@
     }
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 960px) {
     .mo-theme-macaron-sweet-light,
     .mo-theme-macaron-sweet-dark {
@@ -859,7 +859,7 @@
     }
 }
 
-/* 无障碍支持 */
+/* Accessibility support */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-macaron-sweet-light *,
     .mo-theme-macaron-sweet-dark * {
@@ -875,7 +875,7 @@
     }
 }
 
-/* 性能优化 */
+/* Performance optimization */
 .mo-theme-macaron-sweet-light .mud-table *,
 .mo-theme-macaron-sweet-light .mud-data-grid *,
 .mo-theme-macaron-sweet-light .mud-treeview *,

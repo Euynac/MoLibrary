@@ -5,9 +5,9 @@ using Monica.Profiling.Models;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     性能指标收集器
-///     使用 System.Runtime EventCounters 实时收集运行时性能指标（内存、CPU、GC、线程池等），
-///     并维护历史数据用于趋势分析和实时监控
+/// Performance Metrics Collector
+/// Use System.Runtime EventCounters to collect runtime performance indicators (memory, CPU, GC, thread pool, etc.) in real time,
+/// And maintain historical data for trend analysis and real-time monitoring
 /// </summary>
 public class ProfilingMetricsCollector : EventListener, IDisposable
 {
@@ -19,10 +19,10 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     private volatile MemoryDataPoint? _latestDataPoint;
 
     /// <summary>
-    ///     初始化性能指标收集器
+    /// Initialize the performance indicator collector
     /// </summary>
-    /// <param name="maxHistoryPoints">最大历史数据点数 (默认 300 = 5 分钟)</param>
-    /// <param name="sampleIntervalMs">采样间隔毫秒数 (默认 1000ms)</param>
+    /// <param name="maxHistoryPoints">Maximum number of historical data points (default 300 = 5 minutes)</param>
+    /// <param name="sampleIntervalMs">Sampling interval in milliseconds (default 1000ms)</param>
     public ProfilingMetricsCollector(int maxHistoryPoints = 300, int sampleIntervalMs = 1000)
     {
         _maxHistoryPoints = maxHistoryPoints;
@@ -31,12 +31,12 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     采样间隔 (毫秒)
+    /// Sampling interval (milliseconds)
     /// </summary>
     public int SampleIntervalMs { get; }
 
     /// <summary>
-    ///     释放资源
+    /// Release resources
     /// </summary>
     public override void Dispose()
     {
@@ -51,12 +51,12 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     当指标更新时触发
+    /// Fires when the indicator is updated
     /// </summary>
     public event Action<MemoryDataPoint>? OnMetricsUpdated;
 
     /// <summary>
-    ///     当 EventSource 创建时被调用
+    /// Called when the EventSource is created
     /// </summary>
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
@@ -69,7 +69,7 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     当事件被写入时被调用
+    /// Called when an event is written
     /// </summary>
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
@@ -101,7 +101,7 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     定时捕获快照
+    /// Capture snapshots regularly
     /// </summary>
     private void CaptureSnapshot(object? state)
     {
@@ -131,14 +131,14 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
         _latestDataPoint = dataPoint;
         _history.Enqueue(dataPoint);
 
-        // 维护最大历史点数
+        // Maintain maximum historical points
         while (_history.Count > _maxHistoryPoints) _history.TryDequeue(out _);
 
         OnMetricsUpdated?.Invoke(dataPoint);
     }
 
     /// <summary>
-    ///     获取指定计数器的值
+    /// Get the value of the specified counter
     /// </summary>
     private double GetCounter(string name)
     {
@@ -146,12 +146,12 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     获取当前最新的数据点
+    /// Get the latest data point
     /// </summary>
     public MemoryDataPoint? GetCurrentDataPoint() => _latestDataPoint;
 
     /// <summary>
-    ///     获取历史数据
+    /// Get historical data
     /// </summary>
     public MemoryTrendData GetTrendData()
     {
@@ -164,7 +164,7 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     }
 
     /// <summary>
-    ///     获取所有计数器的原始值
+    /// Get the raw values ​​of all counters
     /// </summary>
     public IReadOnlyDictionary<string, double> GetAllCounters()
     {

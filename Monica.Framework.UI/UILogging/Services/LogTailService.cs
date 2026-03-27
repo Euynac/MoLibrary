@@ -8,14 +8,14 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UILogging.Services;
 
 /// <summary>
-/// 日志读取结果
+/// Log reading results
 /// </summary>
-/// <param name="Lines">日志行集合</param>
-/// <param name="StartLineNumber">起始行号（第一行的绝对行号）</param>
+/// <param name="Lines">Log line collection</param>
+/// <param name="StartLineNumber">Start line number (absolute line number of the first line)</param>
 public readonly record struct LogReadResult(IReadOnlyList<string> Lines, long StartLineNumber);
 
 /// <summary>
-/// 底层日志文件读取服务
+/// Underlying log file reading service
 /// </summary>
 public sealed class LogTailService(
     IOptions<ModuleLoggingOption> loggingOptions,
@@ -33,14 +33,14 @@ public sealed class LogTailService(
     public string LogFilePath => _logFilePath;
 
     /// <summary>
-    /// 当前日志文件是否存在
+    /// Does the current log file exist?
     /// </summary>
     public bool LogFileExists => File.Exists(_logFilePath);
 
     public string LogDirectory => Path.GetDirectoryName(_logFilePath) ?? AppContext.BaseDirectory;
 
     /// <summary>
-    /// 当前行号（最后读取到的行的绝对行号）
+    /// Current line number (absolute line number of the last line read)
     /// </summary>
     public long CurrentLineNumber
     {
@@ -54,7 +54,7 @@ public sealed class LogTailService(
     }
 
     /// <summary>
-    /// 文件总行数（初始化时统计）
+    /// Total number of lines in the file (statistics during initialization)
     /// </summary>
     public long TotalFileLineCount
     {
@@ -68,9 +68,9 @@ public sealed class LogTailService(
     }
 
     /// <summary>
-    /// 切换到新的日志文件
+    /// Switch to new log file
     /// </summary>
-    /// <param name="newFilePath">新的日志文件完整路径</param>
+    /// <param name="newFilePath">New log file full path</param>
     public void SwitchToFile(string newFilePath)
     {
         lock (_syncRoot)
@@ -85,12 +85,12 @@ public sealed class LogTailService(
     }
 
     /// <summary>
-    /// 读取指定行号之前的N行日志
+    /// Read N lines of logs before the specified line number
     /// </summary>
-    /// <param name="beforeLineNumber">在此行号之前读取</param>
-    /// <param name="lineCount">要读取的行数</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>读取的日志行及起始行号</returns>
+    /// <param name="beforeLineNumber">Read before this line number</param>
+    /// <param name="lineCount">Number of lines to read</param>
+    /// <param name="cancellationToken">Cancellation Token</param>
+    /// <returns>The log lines read and the starting line number</returns>
     public async Task<Res<LogReadResult>> ReadLinesBeforeAsync(long beforeLineNumber, int lineCount, CancellationToken cancellationToken = default)
     {
         try
@@ -145,7 +145,7 @@ public sealed class LogTailService(
     }
 
     /// <summary>
-    /// 读取最近的N行日志
+    /// Read the most recent N lines of logs
     /// </summary>
     public async Task<Res<LogReadResult>> ReadLatestLinesAsync(int lineCount, CancellationToken cancellationToken = default)
     {
@@ -212,7 +212,7 @@ public sealed class LogTailService(
     }
 
     /// <summary>
-    /// 监听日志文件新增内容
+    /// Monitor new content in log files
     /// </summary>
     public async IAsyncEnumerable<string> WatchAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -267,7 +267,7 @@ public sealed class LogTailService(
         bool isFileRotated = false;
         lock (_syncRoot)
         {
-            // 检测文件是否被轮转（文件大小小于上次位置）
+            // Detect if a file is rotated (file size is smaller than last position)
             if (stream.Length < _lastPosition)
             {
                 _lastPosition = 0;
@@ -302,7 +302,7 @@ public sealed class LogTailService(
         lock (_syncRoot)
         {
             _lastPosition = stream.Position;
-            // 增加行号计数
+            // Increase line number count
             _currentLineNumber += result.Count;
         }
 

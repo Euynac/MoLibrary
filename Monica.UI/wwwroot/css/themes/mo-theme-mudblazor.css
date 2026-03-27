@@ -1,20 +1,20 @@
-/* MudBlazor Default Theme - 完全保持原始MudBlazor风格 */
-/* 本文件为空，不添加任何自定义样式，完全使用MudBlazor的默认样式 */
+/* MudBlazor Default Theme - completely maintains the original MudBlazor style */
+/* This file is empty, no custom styles are added, and MudBlazor’s default styles are completely used. */
 
 /* Light Theme Placeholder */
 :root[data-theme="mudblazor-light"],
 .mo-theme-mudblazor-light {
-    /* 无自定义变量，完全使用MudBlazor默认值 */
+    /* No custom variables, completely using MudBlazor default values */
 }
 
 /* Dark Theme Placeholder */
 :root[data-theme="mudblazor-dark"],
 .mo-theme-mudblazor-dark {
-    /* 无自定义变量，完全使用MudBlazor默认值 */
+    /* No custom variables, completely using MudBlazor default values */
 }
 
-/* 无自定义样式，保持MudBlazor原始外观 */
+/* No custom styles, keep MudBlazor original look */
 .mo-theme-mudblazor-light,
 .mo-theme-mudblazor-dark {
-    /* 本主题不覆盖任何MudBlazor组件样式 */
+    /* This theme does not cover any MudBlazor component styles */
 }

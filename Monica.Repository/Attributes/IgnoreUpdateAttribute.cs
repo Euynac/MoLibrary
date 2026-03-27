@@ -1,7 +1,7 @@
 namespace Monica.Repository.Attributes;
 
 /// <summary>
-/// 指示当前字段在Update语句时直接忽略Update
+/// Instructs the current field to directly ignore Update when updating the statement.
 /// </summary>
 
 [AttributeUsage( AttributeTargets.Property)]

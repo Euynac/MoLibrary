@@ -1,7 +1,8 @@
 namespace Monica.DomainDrivenDesign.Swagger;
 //
 // /// <summary>
-// /// 将ApiExplorer.GroupName转换为Swagger Tags的操作过滤器（TODO .NET10新API待研究）
+// /// Operation filter that maps ApiExplorer.GroupName to Swagger tags.
+// /// TODO: Revisit this when evaluating the .NET 10 API changes.
 // /// </summary>
 // internal class GroupNameToTagsOperationFilter : IOperationFilter
 // {
@@ -12,12 +13,12 @@ namespace Monica.DomainDrivenDesign.Swagger;
 //         if (!string.IsNullOrEmpty(apiDescription.GroupName))
 //         {
 //             operation.Tags ??= new List<OpenApiTag>();
-//             operation.Tags.Clear(); //默认情况下如果不自己打Tag，会有一个默认的Tag，值和Controller名相同。
+//             operation.Tags.Clear(); // By default, Swagger adds a tag that matches the controller name unless a tag is assigned explicitly.
 //             var controllerName = context.MethodInfo.DeclaringType?.Name ?? "Unknown";
 //             operation.Tags.Add(new OpenApiTag
 //             {
 //                 Name = apiDescription.GroupName,
-//                 Description = $"{controllerName} 相关接口"
+//                 Description = $"{controllerName} related endpoints"
 //             });
 //         }
 //     }

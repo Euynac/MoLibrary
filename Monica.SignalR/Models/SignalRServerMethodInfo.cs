@@ -1,98 +1,98 @@
 namespace Monica.SignalR.Models;
 
 /// <summary>
-/// SignalR服务端组信息
+/// SignalR server group information
 /// </summary>
 public class SignalRServerGroupInfo
 {
 
     /// <summary>
-    /// 组来源Hub类名
+    /// Group source Hub class name
     /// </summary>
     public required string Source { get; set; } 
 
     /// <summary>
-    /// 组Hub路由
+    /// Group Hub routing
     /// </summary>
     public required string Route { get; set; }
 
     /// <summary>
-    /// 组方法列表
+    /// Group method list
     /// </summary>
     public List<SignalRServerMethodInfo> Methods { get; set; } = [];
 }
 
 
 /// <summary>
-/// SignalR服务端方法信息
+/// SignalR server method information
 /// </summary>
 public class SignalRServerMethodInfo
 {
     /// <summary>
-    /// 方法描述
+    /// Method description
     /// </summary>
     public string Desc { get; set; } = string.Empty;
 
     /// <summary>
-    /// 方法名称
+    /// method name
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 方法参数列表
+    /// Method parameter list
     /// </summary>
     public List<SignalRMethodParameter> Args { get; set; } = [];
 
 }
 
 /// <summary>
-/// SignalR方法参数信息
+/// SignalR method parameter information
 /// </summary>
 public class SignalRMethodParameter
 {
     /// <summary>
-    /// 参数类型名称
+    /// Parameter type name
     /// </summary>
     public string Type { get; set; } = string.Empty;
 
     /// <summary>
-    /// 参数名称
+    /// Parameter name
     /// </summary>
     public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// SignalR连接用户信息
+/// SignalR connection user information
 /// </summary>
 public class SignalRConnectedUserInfo
 {
     /// <summary>
-    /// 连接ID
+    /// Connection ID
     /// </summary>
     public required string ConnectionId { get; set; }
 
     /// <summary>
-    /// 连接时间
+    /// connection time
     /// </summary>
     public DateTime ConnectionTime { get; set; }
 
     /// <summary>
-    /// 用户Claims信息
+    /// User Claims Information
     /// </summary>
     public Dictionary<string, string> Claims { get; set; } = [];
 
     /// <summary>
-    /// 是否已认证
+    /// Has it been certified?
     /// </summary>
     public bool IsAuthenticated { get; set; }
 
     /// <summary>
-    /// 用户名称（从Claims中提取）
+    /// Username (extracted from Claims)
     /// </summary>
     public string? UserName { get; set; }
 
     /// <summary>
-    /// 用户ID（从Claims中提取）
+    /// User ID (extracted from Claims)
     /// </summary>
     public string? UserId { get; set; }
 } 

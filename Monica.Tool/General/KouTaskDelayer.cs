@@ -3,7 +3,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// Kou定时、延时器
+/// Mouth timer, delayer
 /// </summary>
 public static class KouTaskDelayer
 {
@@ -12,7 +12,7 @@ public static class KouTaskDelayer
     private static readonly object _listLock = new();
 
     /// <summary>
-    /// 单次线程等待时间（ms）
+    /// Single thread waiting time (ms)
     /// </summary>
     private const int SleepTime = 1000;
 
@@ -21,7 +21,7 @@ public static class KouTaskDelayer
         StartTick();
     }
     /// <summary>
-    /// 开启定时器
+    /// Start timer
     /// </summary>
     private static void StartTick()
     {
@@ -68,31 +68,31 @@ public static class KouTaskDelayer
     }
 
     /// <summary>
-    /// 向定时池增加需要执行的任务
+    /// Add tasks that need to be executed to the timing pool
     /// </summary>
     /// <param name="executeTime"></param>
-    /// <param name="task">要执行的任务</param>
+    /// <param name="task">tasks to be performed</param>
     public static void AddTask(DateTime executeTime, Task task)
     {
         lock (_listLock)
         {
             // _sleepTaskList.Add(new Tuple<DateTime, DateTime>(executeTime, DateTime.Now), task);
             _sleepTaskList.Add(executeTime, task);
-            //允许重复的执行时间，但注意Remove之类的方法失效
+            //Allow repeated execution times, but note that methods such as Remove are invalid
         }
     }
     /// <summary>
-    /// 向定时池增加需要执行的任务
+    /// Add tasks that need to be executed to the timing pool
     /// </summary>
     /// <param name="executeTime"></param>
-    /// <param name="action">要执行的任务</param>
+    /// <param name="action">tasks to be performed</param>
     public static void AddTask(DateTime executeTime, Action action)
     {
         lock (_listLock)
         {
             // _sleepTaskList.Add(new Tuple<DateTime, DateTime>(executeTime, DateTime.Now), new Task(action));
             _sleepTaskList.Add(executeTime, new Task(action));
-            //允许重复的执行时间，但注意Remove之类的方法失效
+            //Allow repeated execution times, but note that methods such as Remove are invalid
         }
     }
 

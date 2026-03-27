@@ -3,7 +3,7 @@ namespace Monica.JobScheduler.UI.Models;
 using Monica.JobScheduler.Models;
 
 /// <summary>
-/// 作业健康指标
+/// job health indicators
 /// </summary>
 public class JobHealthMetrics
 {
@@ -21,17 +21,17 @@ public class JobHealthMetrics
     public int ScheduledCount { get; set; }
 
     /// <summary>
-    /// 健康度 - 衡量作业调度的有效性
-    /// 公式: (总执行次数 - 跳过 - 失败 - 终止) / 总执行次数 * 100
+    /// Healthiness - measures the effectiveness of job scheduling
+    /// Formula: (total number of executions - skipped - failed - terminated) / total number of executions * 100
     /// </summary>
     public double HealthScore => TotalExecutions > 0
         ? ((TotalExecutions - SkippedCount - FailedCount - TerminatedCount) / (double)TotalExecutions) * 100
         : 100;
 
     /// <summary>
-    /// 执行失败率 - 衡量作业代码的可靠性
-    /// 公式: (失败 + 终止) / 实际完成数量 * 100
-    /// 实际完成数量 = 总执行次数 - 跳过 - 取消 - 运行中 - 已入队 - 已调度
+    /// Execution Failure Rate - Measures the reliability of a job's code
+    /// Formula: (failure + termination) / actual number of completions * 100
+    /// Actual number of completions = total number of executions - skipped - canceled - running - queued - scheduled
     /// </summary>
     public double ExecutionFailureRate
     {

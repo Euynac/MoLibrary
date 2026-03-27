@@ -4,7 +4,7 @@
 public class DateTimeInterval(DateTime left, DateTime right)
 {
     /// <summary>
-    /// 是否处于区间内
+    /// Is it within the interval?
     /// </summary>
     /// <param name="time"></param>
     /// <returns></returns>
@@ -14,7 +14,7 @@ public class DateTimeInterval(DateTime left, DateTime right)
     }
 
     /// <summary>
-    /// 不在区间时，输出最近边界差异值。区间内差异为0。
+    /// When not in the interval, output the nearest boundary difference value. The difference within the interval is 0.
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -39,7 +39,7 @@ public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, D
     }
 
     /// <summary>
-    /// 距离的基准时间的差异值
+    /// Difference value of distance from base time
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -57,7 +57,7 @@ public class BaseTimeInterval(TimeSpan thresholdLeft, TimeSpan thresholdRight, D
 #endregion
 public static class TimeExtensions
 {
-    //.NET 6后 TimeZoneInfo的ID 支持跨平台自动转换
+    //After .NET 6, TimeZoneInfo's ID supports cross-platform automatic conversion.
     public static TimeZoneInfo LocalTimeZoneInfo { get; set; } = TimeZoneInfo.FindSystemTimeZoneById("China Standard Time");
 
     /// <summary>
@@ -161,10 +161,12 @@ public static class TimeExtensions
     /// <returns></returns>
     public static DateTime ReplaceTime(this DateTime dateTime, TimeOnly timeOnly) =>
     new(dateTime.Year, dateTime.Month, dateTime.Day, timeOnly.Hour, timeOnly.Minute, timeOnly.Second);
-    #region 格式化
+    #region Formatting
 
     /// <summary>
-    /// Time interval conversion to Chinese format <paramref name="duration"/>.Days 天 <paramref name="duration"/>.Hours 小时 <paramref name="duration"/>.Minutes 分 <paramref name="duration"/>.Seconds 秒
+    /// Converts a time interval into a human-readable Chinese duration string:
+    /// <paramref name="duration"/>.Days days, <paramref name="duration"/>.Hours hours,
+    /// <paramref name="duration"/>.Minutes minutes, and <paramref name="duration"/>.Seconds seconds.
     /// </summary>
     /// <param name="duration"></param>
     /// <returns></returns>
@@ -184,20 +186,20 @@ public static class TimeExtensions
     #endregion
 
     /// <summary>
-    /// 时间戳（格林威治时间1970年01月01日00时00分00秒）类型
+    /// Timestamp (January 1, 1970 00:00:00 GMT) type
     /// </summary>
     public enum TimeStampType
     {
         /// <summary>
-        /// 总秒数（10位）
+        /// Total seconds (10 digits)
         /// </summary>
         Unix,
         /// <summary>
-        /// 总毫秒数（13位）
+        /// Total milliseconds (13 bits)
         /// </summary>
         Javascript
     }
-    #region 时间类拓展
+    #region Time Extensions
     /// <summary>
     /// Get the time span of given date time to that next minute.
     /// </summary>
@@ -251,11 +253,11 @@ public static class TimeExtensions
     }
 
     /// <summary>
-    /// 获取指定类型的时间戳的 <see cref="DateTime"/> 表示形式
+    /// Gets the <see cref="DateTime"/> representation of a timestamp of the specified type
     /// </summary>
-    /// <param name="timestamp">时间戳</param>
-    /// <param name="timeStampType">指定类型，默认Unix（秒为单位）</param>
-    /// <returns>注意是以本地时区为准的</returns>
+    /// <param name="timestamp">Timestamp</param>
+    /// <param name="timeStampType">Specify type, default Unix (in seconds)</param>
+    /// <returns>Note that this is based on the local time zone</returns>
     public static DateTime ToDateTime(this long timestamp, TimeStampType timeStampType = TimeStampType.Unix)
     {
         var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
@@ -272,11 +274,11 @@ public static class TimeExtensions
         return daTime;
     }
     /// <summary>
-    /// DateTime转时间戳
+    /// DateTime to timestamp
     /// </summary>
     /// <param name="dateTime"></param>
     /// <param name="timeStampType"></param>
-    /// <returns>注意是以本地时区为准的</returns>
+    /// <returns>Note that this is based on the local time zone</returns>
     public static long ToTimeStamp(this DateTime dateTime, TimeStampType timeStampType = TimeStampType.Unix)
     {
         var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Local);
@@ -293,10 +295,10 @@ public static class TimeExtensions
         return timestamp;
     }
     /// <summary>
-    /// 转换为中国式星期几的表述（星期天为第七天）
+    /// Convert to the representation of the day of the week in Chinese style (Sunday is the seventh day)
     /// </summary>
     /// <param name="week"></param>
-    /// <returns>1-7对应星期一到星期天</returns>
+    /// <returns>1-7 corresponds to Monday to Sunday</returns>
     public static ChineseWeeks ToChineseWeek(this DayOfWeek week) => week == DayOfWeek.Sunday ? ChineseWeeks.Sunday : (ChineseWeeks)week;
 
     #endregion

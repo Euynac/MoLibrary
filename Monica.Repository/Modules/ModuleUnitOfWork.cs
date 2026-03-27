@@ -18,7 +18,7 @@ public static class ModuleUnitOfWorkBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 UnitOfWork 模块
+        /// Configuring the UnitOfWork module
         /// </summary>
         public static ModuleUnitOfWorkGuide AddUnitOfWork(Action<ModuleUnitOfWorkOption>? action = null)
         {
@@ -62,7 +62,7 @@ public class ModuleUnitOfWorkGuide : MoModuleGuide<ModuleUnitOfWork, ModuleUnitO
         ConfigureServices(context =>
         {
             context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
-            //TODO 可使用Singleton？
+            //TODO Can I use Singleton?
         }, secondKey: typeof(TDbContext).FullName);
         return this;
     }
@@ -73,7 +73,7 @@ public class ModuleUnitOfWorkOption : MoModuleOption<ModuleUnitOfWork>
 {
 
     /// <summary>
-    /// 开启实体变更事件支持
+    /// Enable entity change event support
     /// </summary>
     public bool EnableEntityEvent { get; set; }
 }

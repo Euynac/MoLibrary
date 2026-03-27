@@ -3,42 +3,42 @@ using Microsoft.Extensions.AI;
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI 聊天消息模型
+/// AI chat message model
 /// </summary>
 public class AIChatMessage
 {
     /// <summary>
-    /// 消息唯一标识符
+    /// Message unique identifier
     /// </summary>
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// 消息角色
+    /// message role
     /// </summary>
     public required AIChatRole Role { get; init; }
 
     /// <summary>
-    /// 消息内容
+    /// Message content
     /// </summary>
     public required string Content { get; set; }
 
     /// <summary>
-    /// 消息创建时间
+    /// Message creation time
     /// </summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>
-    /// 使用的模型名称（仅助手消息有效）
+    /// Model name to use (valid only for helper messages)
     /// </summary>
     public string? ModelName { get; init; }
 
     /// <summary>
-    /// 使用的 Provider ID（仅助手消息有效）
+    /// Provider ID to use (valid only for helper messages)
     /// </summary>
     public string? ProviderId { get; init; }
 
     /// <summary>
-    /// Token 使用量
+    /// Token usage
     /// </summary>
     public TokenUsage? Usage { get; set; }
 
@@ -64,7 +64,7 @@ public class AIChatMessage
     public List<ToolCallInfo>? ToolCalls { get; set; }
 
     /// <summary>
-    /// 将消息转换为 Microsoft.Extensions.AI 的 ChatMessage
+    /// Convert message to Microsoft.Extensions.AI's ChatMessage
     /// </summary>
     public ChatMessage ToChatMessage()
     {
@@ -72,7 +72,7 @@ public class AIChatMessage
     }
 
     /// <summary>
-    /// 从 Microsoft.Extensions.AI 的 ChatMessage 创建
+    /// Created from ChatMessage of Microsoft.Extensions.AI
     /// </summary>
     public static AIChatMessage FromChatMessage(ChatMessage message, string? providerId = null, string? modelName = null)
     {
@@ -87,38 +87,38 @@ public class AIChatMessage
 }
 
 /// <summary>
-/// 聊天消息角色
+/// Chat message role
 /// </summary>
 public enum AIChatRole
 {
     /// <summary>
-    /// 系统消息
+    /// System messages
     /// </summary>
     System,
 
     /// <summary>
-    /// 用户消息
+    /// User messages
     /// </summary>
     User,
 
     /// <summary>
-    /// 助手消息
+    /// Assistant message
     /// </summary>
     Assistant,
 
     /// <summary>
-    /// 工具消息
+    /// tool news
     /// </summary>
     Tool
 }
 
 /// <summary>
-/// 聊天角色扩展方法
+/// Chat role extension method
 /// </summary>
 public static class AIChatRoleExtensions
 {
     /// <summary>
-    /// 转换为 Microsoft.Extensions.AI 的 ChatRole
+    /// ChatRole converted to Microsoft.Extensions.AI
     /// </summary>
     public static ChatRole ToChatRole(this AIChatRole role)
     {
@@ -133,7 +133,7 @@ public static class AIChatRoleExtensions
     }
 
     /// <summary>
-    /// 从 Microsoft.Extensions.AI 的 ChatRole 转换
+    /// Convert from ChatRole of Microsoft.Extensions.AI
     /// </summary>
     public static AIChatRole FromChatRole(ChatRole role)
     {
@@ -146,22 +146,22 @@ public static class AIChatRoleExtensions
 }
 
 /// <summary>
-/// Token 使用量
+/// Token usage
 /// </summary>
 public class TokenUsage
 {
     /// <summary>
-    /// 输入 Token 数量
+    /// Enter the number of Tokens
     /// </summary>
     public int InputTokens { get; init; }
 
     /// <summary>
-    /// 输出 Token 数量
+    /// Output the number of Tokens
     /// </summary>
     public int OutputTokens { get; init; }
 
     /// <summary>
-    /// Reasoning Token 数量
+    /// Reasoning Token quantity
     /// </summary>
     public int ReasoningTokens { get; init; }
 

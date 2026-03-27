@@ -3,41 +3,41 @@ using Monica.ServiceDiscovery.Models;
 namespace Monica.ServiceDiscovery.Abstractions;
 
 /// <summary>
-/// 注册中心客户端信息接口
+/// Registration center client information interface
 /// </summary>
 public interface IServiceDiscoveryClientInfo
 {
     /// <summary>
-    /// 用于展示客户端监听地址元数据
+    /// Used to display client listening address metadata
     /// </summary>
     const string LISTENING_ADDRESS_METADATA_KEY = "LISTENING_ADDRESS";
 
     /// <summary>
-    /// 获取当前微服务实例的完整状态信息
+    /// Get complete status information of the current microservice instance
     /// </summary>
-    /// <param name="isHeartbeatInfo">是否为心跳信息（心跳时不包含环境变量和监听地址元数据）</param>
-    /// <returns>实例状态信息</returns>
+    /// <param name="isHeartbeatInfo">Whether it is heartbeat information (heartbeat does not include environment variables and listening address metadata)</param>
+    /// <returns>Instance status information</returns>
     InstanceState GetServiceStatus(bool isHeartbeatInfo = true);
 
     /// <summary>
-    /// 获取当前实例的注册时间（首次注册时记录，null 表示尚未注册）
+    /// Get the registration time of the current instance (recorded when first registered, null means it has not been registered yet)
     /// </summary>
     DateTime? RegistrationTime { get; }
 
     /// <summary>
-    /// 获取当前实例的最后心跳时间（每次心跳更新，null 表示尚未发送心跳）
+    /// Get the last heartbeat time of the current instance (updated with each heartbeat, null means the heartbeat has not been sent yet)
     /// </summary>
     DateTime? LastHeartbeatTime { get; }
 
     /// <summary>
-    /// 设置注册时间（仅在首次注册成功时调用）
+    /// Set the registration time (only called when the first registration is successful)
     /// </summary>
-    /// <param name="time">注册时间</param>
+    /// <param name="time">Registration time</param>
     void SetRegistrationTime(DateTime time);
 
     /// <summary>
-    /// 更新最后心跳时间（每次心跳成功后调用）
+    /// Update the last heartbeat time (called after each heartbeat is successful)
     /// </summary>
-    /// <param name="time">心跳时间</param>
+    /// <param name="time">heartbeat time</param>
     void UpdateLastHeartbeatTime(DateTime time);
 }

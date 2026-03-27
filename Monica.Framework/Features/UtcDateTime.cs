@@ -45,7 +45,7 @@ public class AutoUtcDateTimeModelBinderProvider : IModelBinderProvider
 
 
 /// <summary>
-/// 自动将本地时间转为UTC时间的类型
+/// Automatically convert local time to UTC time type
 /// </summary>
 /// https://learn.microsoft.com/en-us/aspnet/core/mvc/models/model-binding?view=aspnetcore-8.0#bind-with-iparsablettryparse
 [Obsolete("暂未完成，仅供参考")]

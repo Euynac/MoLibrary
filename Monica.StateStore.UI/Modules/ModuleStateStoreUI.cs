@@ -17,7 +17,7 @@ public static class ModuleStateStoreUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 StateStoreUI 模块
+        /// Configure the StateStoreUI module
         /// </summary>
         public static ModuleStateStoreUIGuide AddStateStoreUI(Action<ModuleStateStoreUIOption>? action = null)
         {
@@ -27,7 +27,7 @@ public static class ModuleStateStoreUIBuilderExtensions
 }
 
 /// <summary>
-/// StateStore UI 模块 - 提供状态存储管理界面
+/// StateStore UI module - provides state storage management interface
 /// </summary>
 [ModuleKey(EMoModuleKey.StateStoreUI)]
 public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
@@ -41,10 +41,10 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
             DependsOnModule<ModuleLocalizationGuide>().Register()
                 .AddResource<StateStoreResource>();
 
-            // 依赖 StateStore 模块
+            // Depends on StateStore module
             DependsOnModule<ModuleStateStoreGuide>().Register();
 
-            // 依赖 UI 核心模块并注册 UI 组件
+            // Depend on the UI core module and register UI components
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
@@ -70,7 +70,7 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
 }
 
 /// <summary>
-/// StateStore UI 模块配置指南
+/// StateStore UI module configuration guide
 /// </summary>
 public class ModuleStateStoreUIGuide
     : MoModuleGuide<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>
@@ -78,37 +78,37 @@ public class ModuleStateStoreUIGuide
 }
 
 /// <summary>
-/// StateStore UI 模块选项
+/// StateStore UI module options
 /// </summary>
 public class ModuleStateStoreUIOption : MoModuleOption<ModuleStateStoreUI>
 {
     /// <summary>
-    /// 禁用 StateStore 管理页面
+    /// Disable StateStore admin page
     /// </summary>
     public bool DisableStateStorePage { get; set; } = false;
 
     /// <summary>
-    /// 默认 Key 扫描模式
+    /// Default Key scan mode
     /// </summary>
     public string DefaultScanPattern { get; set; } = "*";
 
     /// <summary>
-    /// 每页最大 Key 数量
+    /// Maximum number of keys per page
     /// </summary>
     public int MaxKeysPerPage { get; set; } = 50;
 
     /// <summary>
-    /// 允许编辑 Key (设为 false 则只读模式)
+    /// Allow editing of Key (set to false for read-only mode)
     /// </summary>
     public bool AllowKeyEditing { get; set; } = true;
 
     /// <summary>
-    /// 允许删除 Key
+    /// Allow deletion of Key
     /// </summary>
     public bool AllowKeyDeletion { get; set; } = true;
 
     /// <summary>
-    /// 允许创建 Key
+    /// Allow creation of Key
     /// </summary>
     public bool AllowKeyCreation { get; set; } = true;
 }

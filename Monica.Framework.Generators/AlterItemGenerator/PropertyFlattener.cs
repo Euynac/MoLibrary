@@ -5,12 +5,12 @@ using System.Linq;
 namespace Monica.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
-/// 属性扁平化器，将嵌套对象的属性展平为单层结构
+/// Property flattener, flatten the properties of nested objects into a single-layer structure
 /// </summary>
 internal class PropertyFlattener
 {
     /// <summary>
-    /// 扁平化属性列表
+    /// Flattened property list
     /// </summary>
     public FlattenedPropertyResult FlattenProperties(EntityAnalysisResult analysisResult)
     {
@@ -21,12 +21,12 @@ internal class PropertyFlattener
         {
             if (property.IsOptionalNavigation)
             {
-                // 可选导航属性需要分组处理
+                // Optional navigation attributes need to be grouped
                 ProcessOptionalNavigationProperty(property, navigationGroups, analysisResult.EntitySymbol);
             }
             else
             {
-                // 普通属性或从 Owned 类型扁平化的属性
+                // Ordinary properties or properties flattened from the Owned type
                 var flattenedProperty = CreateFlattenedProperty(property);
                 flattenedProperties.Add(flattenedProperty);
             }
@@ -39,11 +39,11 @@ internal class PropertyFlattener
     }
 
     /// <summary>
-    /// 处理可选导航属性
+    /// Handling optional navigation properties
     /// </summary>
     private void ProcessOptionalNavigationProperty(PropertyInfo property, Dictionary<string, NavigationPropertyGroup> navigationGroups, Microsoft.CodeAnalysis.INamedTypeSymbol entitySymbol)
     {
-        // 从属性路径中提取导航属性名称
+        // Extract navigation property name from property path
         var pathParts = property.PropertyPath.Split('.');
         var navigationPropertyName = pathParts[0];
 
@@ -62,7 +62,7 @@ internal class PropertyFlattener
     }
 
     /// <summary>
-    /// 创建扁平化属性
+    /// Create flat properties
     /// </summary>
     private FlattenedProperty CreateFlattenedProperty(PropertyInfo property)
     {
@@ -79,12 +79,12 @@ internal class PropertyFlattener
     }
 
     /// <summary>
-    /// 获取扁平化后的属性名称
+    /// Get the flattened attribute name
     /// </summary>
     private string GetFlattenedPropertyName(PropertyInfo property)
     {
-        // 对于嵌套属性，使用最后一段作为属性名
-        // 例如: Plan.Callsign -> Callsign
+        // For nested properties, use the last paragraph as the property name
+        // For example: Plan.Callsign -> Callsign
         //      DepInfo.COBT -> COBT
         var pathParts = property.PropertyPath.Split('.');
         return pathParts[pathParts.Length - 1];
@@ -92,7 +92,7 @@ internal class PropertyFlattener
 }
 
 /// <summary>
-/// 扁平化属性结果
+/// Flatten attribute results
 /// </summary>
 internal class FlattenedPropertyResult(
     ImmutableList<FlattenedProperty> properties,
@@ -103,7 +103,7 @@ internal class FlattenedPropertyResult(
 }
 
 /// <summary>
-/// 扁平化的属性
+/// Flat properties
 /// </summary>
 internal class FlattenedProperty(
     string name,
@@ -126,7 +126,7 @@ internal class FlattenedProperty(
 }
 
 /// <summary>
-/// 导航属性组
+/// Navigation property group
 /// </summary>
 internal class NavigationPropertyGroup
 {
@@ -135,7 +135,7 @@ internal class NavigationPropertyGroup
         NavigationPropertyName = navigationPropertyName;
         Properties = properties;
         
-        // 直接从根实体类型中查找导航属性
+        // Find navigation properties directly from the root entity type
         var navProperty = entitySymbol?.GetMembers().OfType<Microsoft.CodeAnalysis.IPropertySymbol>()
             .FirstOrDefault(p => p.Name == navigationPropertyName);
                 
@@ -153,7 +153,7 @@ internal class NavigationPropertyGroup
     
     private string GetNavigationPropertyTypeName(Microsoft.CodeAnalysis.ITypeSymbol type)
     {
-        // 如果是可空类型，获取底层类型
+        // If it is a nullable type, get the underlying type
         if (type is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
             namedType.IsGenericType && 
             namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")

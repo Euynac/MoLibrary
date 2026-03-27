@@ -324,7 +324,7 @@
 
         try
         {
-            // 解析形如 "^(option1|option2|option3)$" 的正则表达式
+            // Parse regular expressions of the form "^(option1|option2|option3)$"
             var match = System.Text.RegularExpressions.Regex.Match(RegexPattern, @"^\^\(([^)]+)\)\$$");
             if (match.Success)
             {
@@ -334,7 +334,7 @@
         }
         catch
         {
-            // 忽略解析错误，返回null使用文本框
+            // Ignore parsing errors, return null to use textbox
         }
 
         return null;
@@ -350,7 +350,7 @@
         if (value1 == null && value2 == null) return true;
         if (value1 == null || value2 == null) return false;
 
-        // 使用JSON序列化进行深度比较
+        // Deep comparison using JSON serialization
         try
         {
             var json1 = JsonSerializer.Serialize(value1, JsonFileProviderConventions.JsonSerializerOptions);

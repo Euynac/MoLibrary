@@ -24,7 +24,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
     /// <param name="type">The type to be registered.</param>
     public virtual void AddType(IServiceCollection services, Type type)
     {
-        //TODO 支持泛型自动注册，但需要进行配置实现
+        //TODO supports generic automatic registration, but requires configuration.
         if(type is not { IsClass: true, IsAbstract: false, IsGenericType: false }) return;
 
         var dependencyAttribute = GetDependencyAttributeOrNull(type);
@@ -160,7 +160,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         List<ServiceIdentifier> allExposingServiceTypes,
         ServiceLifetime lifeTime)
     {
-        //TODO 泛型自动注册
+        //TODO generic automatic registration
         //if (implementationType.IsGenericType)
         //{
         //    implementationType = implementationType.GetGenericTypeDefinition();
@@ -171,7 +171,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         //    exposingServiceType = exposingServiceType.GetGenericTypeDefinition();
         //}
 
-        //TODO 研究这段是否有必要
+        //TODO Study whether this paragraph is necessary
         if (lifeTime.EqualsAny(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
         {
             var redirectedType = GetRedirectedTypeOrNull(

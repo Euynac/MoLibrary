@@ -1,4 +1,4 @@
-/* 行级差异样式 */
+/* Row-level diff styles */
 .line {
     display: flex;
     align-items: flex-start;
@@ -50,7 +50,7 @@
     overflow-x: auto;
 }
 
-/* 行级差异样式 */
+/* Row-level diff styles */
 .line-added {
     background-color: rgba(22, 163, 74, 0.1);
 }
@@ -90,7 +90,7 @@
     background-color: rgba(245, 158, 11, 0.05);
 }
 
-/* 字符级差异样式 */
+/* Character-level diff styles */
 ::deep .char-added {
     background-color: var(--mud-palette-success);
     color: var(--mud-palette-success-text);
@@ -111,7 +111,7 @@
     box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
 }
 
-/* 分割视图容器 */
+/* split view container */
 .split-view-container {
     display: flex;
     height: 100%;
@@ -143,7 +143,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 分割视图行样式 */
+/* Split view row style */
 .split-view-panel .line {
     display: flex;
     align-items: flex-start;
@@ -175,7 +175,7 @@
     overflow-x: auto;
 }
 
-/* 分割视图行状态样式 */
+/* Split view row state style */
 .split-line-added {
     background-color: rgba(22, 163, 74, 0.1);
 }
@@ -212,7 +212,7 @@
     background-color: transparent;
 }
 
-/* 分割视图字符级差异样式 */
+/* Split view character level diff style */
 ::deep .char-modified-old {
     background-color: rgba(239, 68, 68, 0.2);
     color: var(--mud-palette-error-text);
@@ -233,7 +233,7 @@
     box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
 }
 
-/* 响应式设计 - 分割视图 */
+/* Responsive Design - Split View */
 @media (max-width: 768px) {
     .split-view-container {
         flex-direction: column;
@@ -277,7 +277,7 @@
         font-size: 11px;
     }
     
-    /* 移动端字符级差异样式调整 */
+    /* Character-level difference style adjustment on mobile terminal */
     ::deep .char-added,
     ::deep .char-deleted {
         padding: 0 1px;
@@ -285,7 +285,7 @@
     }
 }
 
-/* 深色主题适配 - 分割视图 */
+/* Dark theme adaptation - split view */
 @media (prefers-color-scheme: dark) {
     ::deep .char-added {
         background-color: rgba(22, 163, 74, 0.8);
@@ -310,7 +310,7 @@
     }
 }
 
-/* 高对比度模式支持 - 分割视图 */
+/* High contrast mode support - split view */
 @media (prefers-contrast: high) {
     ::deep .char-added,
     ::deep .char-deleted {

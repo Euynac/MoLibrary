@@ -7,9 +7,9 @@ using Monica.DataChannel.CoreCommunicationProvider.Default;
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// 数据管道构建器
-/// 提供流式API用于创建和配置数据管道
-/// 负责组装端点、中间件和其他组件形成完整的管道
+/// Builder for data pipelines.
+/// Provides a fluent API for creating and configuring data pipelines.
+/// Assembles endpoints, middleware, and other components into a complete pipeline.
 /// </summary>
 public class DataPipelineBuilder
 {
@@ -17,45 +17,44 @@ public class DataPipelineBuilder
     private CommunicationMetadata? _outerEndpointMetadata;
 
     /// <summary>
-    /// 内部通信核心类型
+    /// Gets the communication core type used for the inner endpoint.
     /// </summary>
     public Type? InnerCoreType { get; private set; }
-    
+
     /// <summary>
-    /// 外部通信核心类型
+    /// Gets the communication core type used for the outer endpoint.
     /// </summary>
     public Type? OuterCoreType { get; private set; }
 
     private readonly List<IPipeMiddleware> _middlewares = [];
     
     /// <summary>
-    /// 已添加的中间件实例集合
+    /// Gets the middleware instances that were added directly to the builder.
     /// </summary>
     public IReadOnlyList<IPipeMiddleware> Middlewares => _middlewares;
 
     /// <summary>
-    /// 依赖注入的中间件类型集合
-    /// 这些中间件将在构建时从服务容器中解析
+    /// Stores middleware types that should be resolved from dependency injection at build time.
     /// </summary>
     private readonly List<Type> _diMiddlewares = [];
-    
+
     /// <summary>
-    /// 管道注册ID
-    /// 用于唯一标识此管道
+    /// Gets or sets the pipeline registration identifier.
+    /// Used to uniquely identify the pipeline.
     /// </summary>
     public string Id { get; set; } = null!;
 
     /// <summary>
-    /// 管道组ID
-    /// 用于将相关管道组织在一起
+    /// Gets or sets the pipeline group identifier.
+    /// Used to organize related pipelines together.
     /// </summary>
     public string? GroupId { get; set; }
 
     /// <summary>
-    /// 设置外部通信端点为默认端点
+    /// Sets the outer communication endpoint to the default endpoint implementation.
     /// </summary>
-    /// <typeparam name="TCore">外部通信端点类型，必须继承自DefaultCore</typeparam>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <typeparam name="TCore">The outer communication endpoint type, which must inherit from <see cref="DefaultCore"/>.</typeparam>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder SetOuterEndpoint<TCore>() where TCore : DefaultCore
     {
         OuterCoreType = typeof(TCore);
@@ -63,10 +62,10 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 设置内部通信端点为默认端点
+    /// Sets the inner communication endpoint to the default endpoint implementation.
     /// </summary>
-    /// <typeparam name="TCore">内部通信端点类型，必须继承自DefaultCore</typeparam>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <typeparam name="TCore">The inner communication endpoint type, which must inherit from <see cref="DefaultCore"/>.</typeparam>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder SetInnerEndpoint<TCore>() where TCore : DefaultCore
     {
         InnerCoreType = typeof(TCore);
@@ -74,11 +73,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 设置内部通信端点
-    /// 不设置时将使用默认内部端点实现，忽略处理外部来的消息
+    /// Sets the inner communication endpoint.
+    /// When not configured, the builder falls back to the default inner endpoint implementation, which ignores incoming outer messages.
     /// </summary>
-    /// <param name="metadata">通信元数据，包含端点配置信息</param>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <param name="metadata">The communication metadata that describes the endpoint configuration.</param>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder SetInnerEndpoint(CommunicationMetadata metadata)
     {
         metadata.EnrichOrValidate();
@@ -88,11 +87,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 设置外部通信端点
-    /// 必须设置，否则无法构建管道
+    /// Sets the outer communication endpoint.
+    /// This endpoint is required before the pipeline can be built.
     /// </summary>
-    /// <param name="metadata">通信元数据，包含端点配置信息</param>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <param name="metadata">The communication metadata that describes the endpoint configuration.</param>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder SetOuterEndpoint(CommunicationMetadata metadata)
     {
         metadata.EnrichOrValidate();
@@ -102,11 +101,10 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 添加支持依赖注入的中间件
-    /// 中间件实例将在构建时从服务容器中解析
+    /// Adds middleware that should be resolved from dependency injection.
     /// </summary>
-    /// <typeparam name="TMiddleware">中间件类型，必须实现IPipeMiddleware接口</typeparam>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <typeparam name="TMiddleware">The middleware type, which must implement <see cref="IPipeMiddleware"/>.</typeparam>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder AddPipeMiddleware<TMiddleware>() where TMiddleware : class, IPipeMiddleware
     {
         _diMiddlewares.Add(typeof(TMiddleware));
@@ -114,11 +112,10 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 添加中间件实例
-    /// 直接添加已创建的中间件实例到管道
+    /// Adds middleware instances directly to the pipeline.
     /// </summary>
-    /// <param name="middlewares">要添加的中间件实例数组</param>
-    /// <returns>构建器实例，用于链式调用</returns>
+    /// <param name="middlewares">The middleware instances to add.</param>
+    /// <returns>The current builder instance.</returns>
     public DataPipelineBuilder AddPipeMiddleware(params IPipeMiddleware[] middlewares)
     {
         _middlewares.AddRange(middlewares);
@@ -126,12 +123,11 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 注册管道到中央管理器
-    /// 完成管道配置并将其添加到DataChannelCentral
+    /// Registers the configured pipeline builder with <see cref="DataChannelCentral"/>.
     /// </summary>
-    /// <param name="id">管道唯一标识符</param>
-    /// <param name="groupId">可选的管道组标识符</param>
-    /// <exception cref="Exception">外部端点未设置时抛出异常</exception>
+    /// <param name="id">The unique pipeline identifier.</param>
+    /// <param name="groupId">An optional pipeline group identifier.</param>
+    /// <exception cref="Exception">Thrown when the outer endpoint has not been configured.</exception>
     public void Register(string id, string? groupId = null)
     {
         if (OuterCoreType == null) throw new Exception("You must set outer endpoint for data pipeline");
@@ -145,31 +141,31 @@ public class DataPipelineBuilder
     }
 
     /// <summary>
-    /// 构建数据管道
-    /// 创建并连接所有端点和中间件，形成完整的数据管道
-    /// 对于标记为Transient的组件，将创建代理
+    /// Builds the data pipeline.
+    /// Creates and connects all endpoints and middleware to produce a complete data pipeline.
+    /// Components marked as transient are wrapped in proxies.
     /// </summary>
-    /// <param name="provider">服务提供者，用于解析依赖</param>
-    /// <returns>构建完成的数据管道实例</returns>
+    /// <param name="provider">The service provider used to resolve dependencies.</param>
+    /// <returns>The fully built data pipeline instance.</returns>
     internal DataPipeline Build(IServiceProvider provider)
     {
-        // 创建内部端点
+        // Create the inner endpoint.
         var innerEndpoint = TransientProxy.CreateEndpointProxy(provider, InnerCoreType!, EDataSource.Inner, _innerEndpointMetadata);
 
-        // 创建外部端点
+        // Create the outer endpoint.
         var outerEndpoint = TransientProxy.CreateEndpointProxy(provider, OuterCoreType!, EDataSource.Outer, _outerEndpointMetadata);
         outerEndpoint.EntranceType = EDataSource.Outer;
 
-        // 获取可观测实例管理器
+        // Resolve the observable instance registry.
         var observableManager = provider.GetRequiredService<IObservableInstanceRegistry>();
 
-        // 创建管道
+        // Create the pipeline.
         var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, observableManager, GroupId);
 
-        // 创建中间件
+        // Start with directly registered middleware.
         var middlewaresList = new List<IPipeMiddleware>(_middlewares);
 
-        // 添加依赖注入的中间件
+        // Add middleware resolved from dependency injection.
         foreach (var type in _diMiddlewares)
         {
             var middleware = TransientProxy.CreateMiddlewareProxy(provider, type);

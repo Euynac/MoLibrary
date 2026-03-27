@@ -6,7 +6,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 领域事件
+/// domain events
 /// </summary>
 /// <param name="type"></param>
 public class UnitDomainEvent(Type type) : ProjectUnit(type, EProjectUnitType.DomainEvent), IHasProjectUnitFactory
@@ -35,7 +35,7 @@ public class UnitDomainEvent(Type type) : ProjectUnit(type, EProjectUnitType.Dom
     }
    
     /// <summary>
-    /// 获取领域事件内容结构（new一个事件object默认值）
+    /// Get the domain event content structure (new event object default value)
     /// </summary>
     /// <returns></returns>
     public object? GetStructure()

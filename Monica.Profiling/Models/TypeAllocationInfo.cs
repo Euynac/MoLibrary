@@ -1,7 +1,7 @@
 namespace Monica.Profiling.Models;
 
 /// <summary>
-///     类型分配信息 - 特定类型的内存分配统计
+/// Type Allocation Information - memory allocation statistics for a specific type
 /// </summary>
 public class TypeAllocationInfo
 {
@@ -9,17 +9,17 @@ public class TypeAllocationInfo
     private long _totalBytes;
 
     /// <summary>
-    ///     完整类型名称 (如 "System.String", "MyNamespace.MyClass")
+    /// Full type name (e.g. "System.String", "MyNamespace.MyClass")
     /// </summary>
     public required string TypeName { get; init; }
 
     /// <summary>
-    ///     简短类型名称 (如 "String", "MyClass")
+    /// Short type name (e.g. "String", "MyClass")
     /// </summary>
     public string ShortTypeName => GetShortTypeName(TypeName);
 
     /// <summary>
-    ///     分配实例数量
+    /// Allocate number of instances
     /// </summary>
     public long AllocationCount
     {
@@ -28,7 +28,7 @@ public class TypeAllocationInfo
     }
 
     /// <summary>
-    ///     总分配字节数
+    /// Total allocated bytes
     /// </summary>
     public long TotalBytes
     {
@@ -37,37 +37,37 @@ public class TypeAllocationInfo
     }
 
     /// <summary>
-    ///     原子性地增加分配数量
+    /// Atomicly increase the number of allocations
     /// </summary>
     public void AddAllocationCount(long value) => Interlocked.Add(ref _allocationCount, value);
 
     /// <summary>
-    ///     原子性地增加字节数
+    /// Atomicly increase the number of bytes
     /// </summary>
     public void AddTotalBytes(long value) => Interlocked.Add(ref _totalBytes, value);
 
     /// <summary>
-    ///     平均分配大小 (字节)
+    /// Average allocation size (bytes)
     /// </summary>
     public double AverageSize => AllocationCount > 0 ? (double)TotalBytes / AllocationCount : 0;
 
     /// <summary>
-    ///     占总分配数的百分比
+    /// % of total allocations
     /// </summary>
     public double AllocationPercentage { get; set; }
 
     /// <summary>
-    ///     占总字节数的百分比
+    /// Percentage of total bytes
     /// </summary>
     public double BytesPercentage { get; set; }
 
     /// <summary>
-    ///     是否为大对象 (>85KB, 分配在 LOH 上)
+    /// Is it a large object (>85KB, allocated on LOH)
     /// </summary>
     public bool IsLargeObjectHeap => AverageSize >= 85000;
 
     /// <summary>
-    ///     最后一次看到分配的时间 (UTC)
+    /// The time the allocation was last seen (UTC)
     /// </summary>
     public DateTime LastSeenUtc { get; set; }
 

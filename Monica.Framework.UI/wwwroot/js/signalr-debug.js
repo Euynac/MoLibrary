@@ -247,11 +247,11 @@ const signalRDebug = {
         }
 
         try {
-            // 不进行自动类型转换，保持C#传递过来的类型
-            // C#端已经做了正确的类型转换，JavaScript端应该直接使用
+            // No automatic type conversion is performed, keeping the type passed by C#
+            // The C# side has done the correct type conversion, and the JavaScript side should be used directly.
             const convertedArgs = args.map(arg => {
-                // 直接返回参数，不进行任何自动转换
-                // 让C#端的SignalRDebugService.ConvertParameterValue方法负责类型转换
+                // Return parameters directly without any automatic conversion
+                // Let the SignalRDebugService.ConvertParameterValue method on the C# side be responsible for type conversion
                 return arg;
             });
 
@@ -298,5 +298,5 @@ const signalRDebug = {
     }
 };
 
-// 将signalRDebug对象分配给window，以便全局访问
+// Assign the signalRDebug object to window for global access
 window.signalRDebug = signalRDebug;

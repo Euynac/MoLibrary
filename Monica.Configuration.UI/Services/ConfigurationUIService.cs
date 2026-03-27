@@ -7,18 +7,18 @@ using Monica.Tool.Results;
 namespace Monica.Configuration.UI.Services;
 
 /// <summary>
-/// 统一配置UI服务，提供配置管理功能（支持配置中心和客户端模式）
+/// Unify configuration UI services and provide configuration management functions (supports configuration center and client mode)
 /// </summary>
 public class ConfigurationUIService(
     IMoConfigurationApi api,
     ILogger<ConfigurationUIService> logger)
 {
     /// <summary>
-    /// 获取所有配置状态信息
+    /// Get all configuration status information
     /// </summary>
-    /// <param name="mode">显示模式（可选）</param>
+    /// <param name="mode">Display mode (optional)</param>
     /// <param name="onlyCurDomain"></param>
-    /// <returns>配置状态列表</returns>
+    /// <returns>Configuration status list</returns>
     public async Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false)
     {
         try
@@ -33,11 +33,11 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 获取指定配置项状态信息
+    /// Get the status information of the specified configuration item
     /// </summary>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <param name="key">配置键</param>
-    /// <returns>配置项状态</returns>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <param name="key">Configuration key</param>
+    /// <returns>Configuration item status</returns>
     public async Task<Res<DtoOptionItem>> GetOptionItemAsync(string? appid, string key)
     {
         try
@@ -52,11 +52,11 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 获取指定配置类状态信息
+    /// Get status information of specified configuration class
     /// </summary>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <param name="key">配置键</param>
-    /// <returns>配置类状态</returns>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <param name="key">Configuration key</param>
+    /// <returns>Configuration class status</returns>
     public async Task<Res<DtoConfig>> GetConfigAsync(string? appid, string key)
     {
         try
@@ -71,13 +71,13 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 获取配置历史记录
+    /// Get configuration history
     /// </summary>
-    /// <param name="key">配置键（可选）</param>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <param name="start">开始时间（可选）</param>
-    /// <param name="end">结束时间（可选）</param>
-    /// <returns>配置历史列表</returns>
+    /// <param name="key">Configuration key (optional)</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <param name="start">Start time (optional)</param>
+    /// <param name="end">End time (optional)</param>
+    /// <returns>Configuration history list</returns>
     public async Task<Res<List<DtoOptionHistory>>> GetConfigHistoryAsync(
         string? key,
         string? appid,
@@ -96,10 +96,10 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 更新配置
+    /// Update configuration
     /// </summary>
-    /// <param name="request">更新请求</param>
-    /// <returns>更新结果</returns>
+    /// <param name="request">Update request</param>
+    /// <returns>Update results</returns>
     public async Task<Res> UpdateConfigAsync(DtoUpdateConfig request)
     {
         try
@@ -114,12 +114,12 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 回滚配置到指定版本
+    /// Roll back configuration to specified version
     /// </summary>
-    /// <param name="key">配置键</param>
-    /// <param name="appId">应用ID</param>
-    /// <param name="version">版本号</param>
-    /// <returns>回滚结果</returns>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appId">Application ID</param>
+    /// <param name="version">Version number</param>
+    /// <returns>Rollback results</returns>
     public async Task<Res> RollbackConfigAsync(string key, string appId, string version)
     {
         try
@@ -134,9 +134,9 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 获取配置调试视图
+    /// Get configuration debug view
     /// </summary>
-    /// <returns>配置调试信息</returns>
+    /// <returns>Configure debugging information</returns>
     public async Task<Res<string[]>> GetDebugViewAsync()
     {
         try
@@ -152,9 +152,9 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 获取配置提供者信息
+    /// Get configuration provider information
     /// </summary>
-    /// <returns>配置提供者列表</returns>
+    /// <returns>Configuration provider list</returns>
     public async Task<Res<List<DtoConfigurationProviderGroup>>> GetProvidersAsync()
     {
         try
@@ -174,10 +174,10 @@ public class ConfigurationUIService(
     }
 
     /// <summary>
-    /// 分析配置类中配置项的来源一致性
+    /// Analyze the source consistency of configuration items in configuration classes
     /// </summary>
-    /// <param name="config">配置类</param>
-    /// <returns>来源分析结果</returns>
+    /// <param name="config">Configuration class</param>
+    /// <returns>Source analysis results</returns>
     public ConfigSourceAnalysis AnalyzeConfigSourceConsistency(DtoConfig config)
     {
         var analysis = new ConfigSourceAnalysis

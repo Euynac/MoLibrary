@@ -1,7 +1,7 @@
 namespace Monica.AutoModel.Model;
 
 /// <summary>
-/// AutoModel 表设置
+/// AutoModel table configuration.
 /// </summary>
 public class AutoTable
 {

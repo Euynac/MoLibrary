@@ -3,48 +3,48 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 
 /// <summary>
-/// 请求含分页需求
+/// Indicates that the request supports paging.
 /// </summary>
 public interface IHasRequestPage : IHasRequestSkipCount
 {
     /// <summary>
-    /// 当前页数
+    /// Current page number.
     /// </summary>
     public int? Page { get; set; }
 
     /// <summary>
-    /// 取消分页，获取所有数据
+    /// Disables paging and returns all data.
     /// </summary>
     public bool? DisablePage { get; set; }
 }
 
 
 /// <summary>
-/// 请求含限制最大返回条数
+/// Indicates that the request limits the maximum number of returned items.
 /// </summary>
 public interface IHasRequestLimitedResult
 {
     /// <summary>
-    /// 每次响应的最大条数。在分页中就是每页条数。
+    /// Maximum number of items returned per response. In paged queries, this is the page size.
     /// </summary>
     [Range(1, 2147483647)]
     public int MaxResultCount { get; set; }
 }
 
 /// <summary>
-/// 请求含跳过条数数
+/// Indicates that the request supports skipping a number of items.
 /// </summary>
 public interface IHasRequestSkipCount : IHasRequestLimitedResult
 {
     /// <summary>
-    /// 从第一页第一条开始跳过的数目
+    /// Number of items to skip starting from the first item on the first page.
     /// </summary>
     [Range(0, 2147483647)]
     public int? SkipCount { get; set; }
 }
 
 /// <summary>
-/// 键值分页
+/// Indicates that the request supports keyset pagination.
 /// </summary>
 public interface IHasRequestKeysetPage : IHasRequestLimitedResult
 {

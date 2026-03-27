@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 马卡龙甜心主题 - 柔和粉彩主题
+/// Macaron Sweetheart Theme – Soft Pastel Theme
 /// </summary>
 public class ThemeMacaronSweet : ThemeBase
 {

@@ -1,7 +1,7 @@
-/* Monica Ink Landscape Theme - 墨韵山水主题 */
-/* 中国水墨画风格主题 - 遵循 Monica 主题规范 */
+/* Monica Ink Landscape Theme - Moyun Landscape Theme */
+/* Chinese Ink Painting Style Theme - Follows Monica Theme Specifications */
 
-/* 导入中文字体 - 离线模式 */
+/* Import Chinese fonts - offline mode */
 @font-face {
     font-family: 'Noto Serif SC';
     src: url('../../fonts/NotoSerifSC-Regular.woff2') format('woff2');
@@ -27,15 +27,15 @@
    CSS 变量定义 - 按规范分类
    ============================================== */
 
-/* 主题通用变量 - 适用于明暗两种模式 */
+/* Theme universal variables - suitable for both light and dark modes */
 :root[data-theme="ink-landscape-light"],
 :root[data-theme="ink-landscape-dark"],
 .mo-theme-ink-landscape-light,
 .mo-theme-ink-landscape-dark {
     
-    /* ========== 组件样式变量 ========== */
+    /* ========== Component style variables ========== */
     
-    /* 按钮样式 */
+    /* button style */
     --mo-button-border-radius: 2px;
     --mo-button-padding-x: 16px;
     --mo-button-padding-y: 8px;
@@ -43,46 +43,46 @@
     --mo-button-text-transform: none;
     --mo-button-transition: all 0.3s ease;
     
-    /* 卡片样式 */
+    /* card style */
     --mo-card-border-radius: 4px;
     --mo-card-padding: 24px;
     
-    /* 输入框样式 */
+    /* Input box style */
     --mo-input-border-radius: 2px;
     --mo-input-padding: 12px 16px;
     --mo-input-border-width: 1px;
     
-    /* 对话框样式 */
+    /* Dialog style */
     --mo-dialog-border-radius: 8px;
     --mo-dialog-padding: 32px;
     
-    /* 标签样式 */
+    /* label style */
     --mo-chip-border-radius: 12px;
     --mo-chip-padding: 4px 12px;
     --mo-chip-height: 28px;
     
-    /* 表格样式 */
+    /* table style */
     --mo-table-border-radius: 4px;
     
-    /* ========== 间距变量 ========== */
+    /* ========== Spacing variable ========== */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* ========== 动画和过渡变量 ========== */
+    /* ========== Animation and Transition Variables ========== */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 400ms;
     --mo-transition-slow: 600ms;
     --mo-animation-smooth: 400ms ease;
     --mo-animation-ink: 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
     
-    /* ========== 水墨特效变量 ========== */
+    /* ========== Ink special effects variables ========== */
     --mo-ink-wash-opacity: 0.05;
     --mo-ink-border-opacity: 0.15;
     
-    /* 水墨纹理 */
+    /* Ink texture */
     --mo-ink-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     --mo-paper-texture: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.01' fill-rule='evenodd'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E");
 }
@@ -92,7 +92,7 @@
    ============================================== */
 :root[data-theme="ink-landscape-light"],
 .mo-theme-ink-landscape-light {
-    /* 使用 MudBlazor 变量系统，不定义自定义颜色 */
+    /* Use the MudBlazor variable system and don't define custom colors */
 }
 
 /* ==============================================
@@ -100,14 +100,14 @@
    ============================================== */
 :root[data-theme="ink-landscape-dark"],
 .mo-theme-ink-landscape-dark {
-    /* 使用 MudBlazor 变量系统，不定义自定义颜色 */
+    /* Use the MudBlazor variable system and don't define custom colors */
 }
 
 /* ==============================================
    动画定义
    ============================================== */
 
-/* 水墨渲染动画 */
+/* Ink rendering animation */
 @keyframes mo-ink-wash {
     0% { 
         opacity: 0;
@@ -123,7 +123,7 @@
     }
 }
 
-/* 毛笔笔触动画 */
+/* Brush stroke animation */
 @keyframes mo-brush-stroke {
     0% { 
         transform: scaleX(0);
@@ -139,7 +139,7 @@
     }
 }
 
-/* 墨迹扩散动画 */
+/* Ink spread animation */
 @keyframes mo-ink-spread {
     0% { 
         box-shadow: 0 0 0 0 var(--mud-palette-primary);
@@ -155,7 +155,7 @@
     }
 }
 
-/* 淡入动画 */
+/* fade in animation */
 @keyframes mo-fade-in {
     0% { 
         opacity: 0;
@@ -174,15 +174,15 @@
 .mo-theme-ink-landscape-light,
 .mo-theme-ink-landscape-dark {
     
-    /* ========== 全局字体设置 ========== */
+    /* ========== Global font settings ========== */
     font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     line-height: 1.7 !important;
     
-    /* ========== 背景纹理 ========== */
+    /* ========== Background texture ========== */
     background: var(--mud-palette-background) var(--mo-paper-texture);
     background-attachment: fixed;
     
-    /* ========== 按钮组件 ========== */
+    /* ========== Button component ========== */
     .mud-button {
         border-radius: var(--mo-button-border-radius) !important;
         padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
@@ -240,7 +240,7 @@
         border-radius: var(--mo-button-border-radius) !important;
     }
     
-    /* ========== 卡片组件 ========== */
+    /* ========== Card Component ========== */
     .mud-card {
         border-radius: var(--mo-card-border-radius) !important;
         transition: var(--mo-animation-smooth) !important;
@@ -282,7 +282,7 @@
         animation: mo-ink-wash 1s ease-out;
     }
     
-    /* ========== 输入框组件 ========== */
+    /* ========== Input box component ========== */
     .mud-input-outlined .mud-input-outlined-border {
         border-radius: var(--mo-input-border-radius) !important;
         border-width: var(--mo-input-border-width) !important;
@@ -299,7 +299,7 @@
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* ========== 导航栏组件 ========== */
+    /* ========== Navigation bar component ========== */
     .mud-app-bar {
         position: relative;
     }
@@ -315,7 +315,7 @@
         opacity: 0.8;
     }
     
-    /* ========== 侧边栏组件 ========== */
+    /* ========== Sidebar Component ========== */
     .mud-drawer .mud-drawer-content {
         position: relative;
     }
@@ -331,7 +331,7 @@
         opacity: 0.6;
     }
     
-    /* ========== 对话框组件 ========== */
+    /* ========== Dialog component ========== */
     .mud-dialog {
         border-radius: var(--mo-dialog-border-radius) !important;
         position: relative;
@@ -354,7 +354,7 @@
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* ========== 表格组件 ========== */
+    /* ========== Table component ========== */
     .mud-table {
         border-radius: var(--mo-table-border-radius) !important;
         overflow: hidden;
@@ -380,13 +380,13 @@
         font-weight: 600 !important;
     }
     
-    /* 表格行 - 基础样式 */
+    /* Table Rows - Basic Style */
     .mud-table-row {
         position: relative;
         transition: all var(--mo-transition-normal) ease;
     }
     
-    /* 表格行左侧指示条 */
+    /* Indicator bar on the left side of table row */
     .mud-table-row::before {
         content: '';
         position: absolute;
@@ -399,12 +399,12 @@
         z-index: 1;
     }
     
-    /* 表格行hover效果 */
+    /* Table row hover effect */
     .mud-table-row:hover::before {
         width: 2px;
     }
     
-    /* ========== 标签组件 ========== */
+    /* ========== Label component ========== */
     .mud-chip {
         border-radius: var(--mo-chip-border-radius) !important;
         padding: var(--mo-chip-padding) !important;
@@ -418,7 +418,7 @@
         transform: translateY(-1px);
     }
     
-    /* ========== 排版组件 ========== */
+    /* ========== Typesetting component ========== */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3,
@@ -445,26 +445,26 @@
         opacity: 0.6;
     }
     
-    /* ========== 弹出框和菜单 ========== */
+    /* ========== Pop-up boxes and menus ========== */
     .mud-popover,
     .mud-menu {
         border-radius: var(--mo-card-border-radius) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* ========== 提示框 ========== */
+    /* ========== Prompt box ========== */
     .mud-tooltip {
         border-radius: var(--mo-button-border-radius) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* ========== 通知栏 ========== */
+    /* ========== Notification Bar ========== */
     .mud-snackbar {
         border-radius: var(--mo-button-border-radius) !important;
         font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif !important;
     }
     
-    /* ========== 标签页 ========== */
+    /* ========== Tab ========== */
     .mud-tabs-toolbar {
         position: relative;
     }
@@ -503,7 +503,7 @@
         background: var(--mud-palette-primary);
     }
     
-    /* ========== 列表项 ========== */
+    /* ========== List items ========== */
     .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
@@ -538,7 +538,7 @@
    ============================================== */
 .mo-theme-ink-landscape-light {
     
-    /* 背景纹理覆盖 */
+    /* Background texture overlay */
     &::before {
         content: '';
         position: fixed;
@@ -552,7 +552,7 @@
         pointer-events: none;
     }
     
-    /* 高度组件样式 - 仅添加边框效果 */
+    /* Height component style - only adds border effect */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -566,7 +566,7 @@
    ============================================== */
 .mo-theme-ink-landscape-dark {
     
-    /* 背景纹理覆盖 */
+    /* Background texture overlay */
     &::before {
         content: '';
         position: fixed;
@@ -580,7 +580,7 @@
         pointer-events: none;
     }
     
-    /* 高度组件样式 - 仅添加边框效果 */
+    /* Height component style - only adds border effect */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,

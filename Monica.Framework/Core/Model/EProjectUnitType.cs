@@ -4,39 +4,39 @@ public enum EProjectUnitType
 {
     None,
     /// <summary>
-    /// 应用服务
+    /// application services
     /// </summary>
     ApplicationService,
     /// <summary>
-    /// 领域服务
+    /// Domain services
     /// </summary>
     DomainService,
     /// <summary>
-    /// 仓储
+    /// warehousing
     /// </summary>
     Repository,
     /// <summary>
-    /// 领域事件
+    /// domain events
     /// </summary>
     DomainEvent,
     /// <summary>
-    /// 领域事件处理程序
+    /// Domain event handler
     /// </summary>
     DomainEventHandler,
     /// <summary>
-    /// 本地事件处理程序
+    /// local event handler
     /// </summary>
     LocalEventHandler,
     /// <summary>
-    /// 种子数据
+    /// Seed data
     /// </summary>
     Seeder,
     /// <summary>
-    /// 后台定时作业
+    /// Background scheduled jobs
     /// </summary>
     RecurringJob,
     /// <summary>
-    /// 后台作业
+    /// background job
     /// </summary>
     TriggeredJob,
     /// <summary>
@@ -48,27 +48,27 @@ public enum EProjectUnitType
     /// </summary>
     GrpcApi,
     /// <summary>
-    /// 状态存储
+    /// state storage
     /// </summary>
     StateStore,
     /// <summary>
-    /// 事件总线
+    /// event bus
     /// </summary>
     EventBus,
     /// <summary>
-    /// Actor 模型
+    /// Actor model
     /// </summary>
     Actor,
     /// <summary>
-    /// 实体、聚合
+    /// entities, aggregates
     /// </summary>
     Entity,
     /// <summary>
-    /// 请求类
+    /// Request class
     /// </summary>
     RequestDto,
     /// <summary>
-    /// 配置类
+    /// Configuration class
     /// </summary>
     Configuration,
 }

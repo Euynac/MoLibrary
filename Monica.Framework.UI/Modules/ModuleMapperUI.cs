@@ -13,7 +13,7 @@ public static class ModuleMapperUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 MapperUI 模块
+        /// Configure the MapperUI module
         /// </summary>
         public static ModuleMapperUIGuide AddMapperUI(Action<ModuleMapperUIOption>? action = null)
         {
@@ -23,7 +23,7 @@ public static class ModuleMapperUIBuilderExtensions
 }
 
 /// <summary>
-/// Mapper UI模块
+/// Mapper UI module
 /// </summary>
 [ModuleKey(EMoModuleKey.MapperUI)]
 public class ModuleMapperUI(ModuleMapperUIOption option)
@@ -49,19 +49,19 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
 }
 
 /// <summary>
-/// MapperUI模块向导
+/// MapperUI module wizard
 /// </summary>
 public class ModuleMapperUIGuide : MoModuleGuide<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>
 {
 }
 
 /// <summary>
-/// MapperUI模块选项
+/// MapperUI module options
 /// </summary>
 public class ModuleMapperUIOption : MoModuleOption<ModuleMapperUI>
 { 
     /// <summary>
-    /// 是否禁用Mapper页面
+    /// Whether to disable Mapper pages
     /// </summary>
     public bool DisableUIMapperPage { get; set; }
 }

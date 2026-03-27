@@ -194,12 +194,12 @@ public static partial class ObjectExtensions
         flag ? trueReturn : falseReturn;
 
     /// <summary>
-    /// 判断是否存在一个元素给定的元素与之相等。
+    /// Determines whether there is an element equal to the given element.
     /// <br/>English: Determine whether there is an element given element is equal to it.
     /// </summary>
-    /// <typeparam name="T">可以为空</typeparam>
+    /// <typeparam name="T">Can be empty</typeparam>
     /// <param name="this"></param>
-    /// <param name="objects">给定的元素</param>
+    /// <param name="objects">given element</param>
     /// <returns></returns>
     public static bool EqualsAny<T>(this T? @this, params T?[] objects) where T : class
     {
@@ -208,12 +208,12 @@ public static partial class ObjectExtensions
     }
 
     /// <summary>
-    /// 判断是否存在一个元素给定的元素与之相等。
+    /// Determines whether there is an element equal to the given element.
     /// <br/>English: Determine whether there is an element given element is equal to it.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="this"></param>
-    /// <param name="objects">给定的元素</param>
+    /// <param name="objects">given element</param>
     /// <returns></returns>
     public static bool EqualsAny<T>(this T? @this, params T?[] objects) where T : struct
     {
@@ -222,19 +222,19 @@ public static partial class ObjectExtensions
     }
 
     /// <summary>
-    /// 判断是否存在一个元素给定的元素与之相等。
+    /// Determines whether there is an element equal to the given element.
     /// <br/>English: Determine whether there is an element given element is equal to it.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="this"></param>
-    /// <param name="objects">给定的元素</param>
+    /// <param name="objects">given element</param>
     /// <returns></returns>
     public static bool EqualsAny<T>(this T @this, params T?[] objects) where T : struct
     {
         return objects.Any(obj => obj.Equals(@this));
     }
     /// <summary>
-    /// 判断元素是否满足任意一个方法。
+    /// Determine whether the element satisfies any of the methods.
     /// <br/>English: Determine whether the element satisfies any method.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -245,7 +245,7 @@ public static partial class ObjectExtensions
     }
 
     /// <summary>
-    /// 判断元素是否满足所有方法。
+    /// Determine whether the element satisfies all methods.
     /// <br/>English: Determine whether the element satisfies all methods.
     /// </summary>
     /// <typeparam name="T"></typeparam>

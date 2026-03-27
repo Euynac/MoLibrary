@@ -19,11 +19,11 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     private FieldToken _token = null!;
     private object? _curValue = null!;
     /// <summary>
-    /// 指代表达式中值属性
+    /// Represents the expression's value property.
     /// </summary>
     private string _curValueParam = null!;
     /// <summary>
-    /// 指代当前字段属性
+    /// Represents the current field property.
     /// </summary>
     private string _curFieldParam = null!;
     private int _curTotalParamCount = 0;
@@ -33,14 +33,14 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     private bool _isMulti => (_features & EFieldConditionFeatures.Multi) != 0;
 
     /// <summary>
-    /// 目前不支持动态扩展LinqToSql的方法
+    /// Dynamic extension methods for LinqToSql are not supported at runtime.
     /// </summary>
     protected virtual string LinqFunctions => (_features & EFieldConditionFeatures.UseClientSideEvaluations) != 0
         ? nameof(LinqToObjectFunctions)
         : "EF.Functions";
 
     /// <summary>
-    /// 判断ConvertedValue特殊属性，是否需要提前结束生成
+    /// Determines whether the special ConvertedValue property requires ending generation early.
     /// </summary>
     /// <param name="expression"></param>
     /// <returns></returns>
@@ -152,7 +152,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
         return $"{_curFieldParam} {condition} {_curValueParam}";
     }
 
-    #region DateTime相关
+    #region DateTime-related
 
     private dynamic GenForTimeSpan()
     {
@@ -186,7 +186,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
 
     #endregion
 
-    #region Numeric相关
+    #region Numeric-related
 
     private dynamic GenForDouble()
     {
@@ -239,7 +239,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     }
 
     /// <summary>
-    /// 补充附加的参数，并输出其所在序号
+    /// Adds supplemental parameters and returns the index where it was inserted.
     /// </summary>
     /// <param name="supplement"></param>
     /// <returns></returns>
@@ -275,7 +275,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     #region Is
 
     /// <summary>
-    /// 解析Is表达式
+    /// Parses an Is expression.
     /// </summary>
     /// <returns></returns>
     private string ResolveIs()
@@ -309,7 +309,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
 
     #region ExpLike
     /// <summary>
-    /// 解析 ExpLike 表达式
+    /// Parses an ExpLike expression.
     /// </summary>
     /// <returns></returns>
     private string ResolveExpLike()
@@ -390,7 +390,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     }
 
     /// <summary>
-    /// ExpLike正则
+    /// ExpLike regular expression.
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex("""

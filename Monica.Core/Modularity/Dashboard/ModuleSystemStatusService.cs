@@ -664,8 +664,8 @@ public class ModuleSystemStatusService : IModuleSystemStatusService
         var details = $"Total initialization time: {totalInitTime}ms";
 
         // Performance thresholds.
-        const long slowInitThreshold = 5000; // 5秒
-        const long verySlowModuleThreshold = 1000; // 1秒
+        const long slowInitThreshold = 5000; // 5 seconds
+        const long verySlowModuleThreshold = 1000; // 1 second
 
         if (totalInitTime > slowInitThreshold)
         {

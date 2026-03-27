@@ -3,7 +3,7 @@ namespace Monica.JobScheduler.UI.Models;
 using Monica.JobScheduler.Models;
 
 /// <summary>
-/// 作业定义筛选请求
+/// Job definition filter request
 /// </summary>
 public class JobDefinitionFilterRequest
 {
@@ -15,12 +15,12 @@ public class JobDefinitionFilterRequest
     public int PageSize { get; set; } = 20;
 
     /// <summary>
-    /// 排序字段名称
+    /// Sort field name
     /// </summary>
     public string? SortBy { get; set; }
 
     /// <summary>
-    /// 是否降序排序
+    /// Whether to sort in descending order
     /// </summary>
     public bool SortDescending { get; set; } = false;
 }

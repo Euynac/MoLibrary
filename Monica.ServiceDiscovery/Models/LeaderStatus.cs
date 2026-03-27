@@ -1,53 +1,53 @@
 namespace Monica.ServiceDiscovery.Models;
 
 /// <summary>
-/// 领导者状态枚举
+/// leader status enum
 /// </summary>
 public enum LeaderStatus
 {
     /// <summary>
-    /// 当前实例是领导者
+    /// The current instance is the leader
     /// </summary>
     Leader,
 
     /// <summary>
-    /// 当前实例是跟随者（其他实例是领导者）
+    /// The current instance is a follower (other instances are leaders)
     /// </summary>
     Follower,
 
     /// <summary>
-    /// 正在寻找领导者（当前没有领导者）
+    /// Looking for leader (currently no leader)
     /// </summary>
     Looking
 }
 
 /// <summary>
-/// 领导者状态查询响应
+/// Leader status query response
 /// </summary>
 public class LeaderStatusResponse
 {
     /// <summary>
-    /// 当前实例的领导者状态
+    /// The leader status of the current instance
     /// </summary>
     public LeaderStatus Status { get; set; }
 
     /// <summary>
-    /// 当前领导者的实例ID（如果存在）
+    /// The instance ID of the current leader (if one exists)
     /// </summary>
     public string? LeaderInstanceId { get; set; }
 
     /// <summary>
-    /// 领导者注册时间（如果存在）
+    /// Leader registration time (if exists)
     /// </summary>
     public DateTime? LeaderRegistrationTime { get; set; }
 
     /// <summary>
-    /// 当前运行中的实例总数
+    /// Total number of instances currently running
     /// </summary>
     public int RunningInstanceCount { get; set; }
 
     /// <summary>
-    /// 附加消息
+    /// additional message
     /// </summary>
     public string? Message { get; set; }
 

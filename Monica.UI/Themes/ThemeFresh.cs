@@ -3,8 +3,8 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 小清新主题：清爽、简洁、柔和的色彩搭配
-/// 灵感来源于春天的自然色彩和现代简约设计
+/// Small fresh theme: refreshing, simple and soft color matching
+/// Inspired by spring’s natural colors and modern minimalist design
 /// </summary>
 public class ThemeFresh : ThemeBase
 {
@@ -21,99 +21,79 @@ public class ThemeFresh : ThemeBase
         {
             PaletteLight = new PaletteLight()
             {
-                // 主色调：薄荷绿
-                Primary = "#00c896",
+                // Main color: mint green                Primary = "#00c896",
                 PrimaryLighten = "#33d4aa",
                 PrimaryDarken = "#00a87d",
                 PrimaryContrastText = "#ffffff",
 
-                // 辅助色：柔和的珊瑚粉
-                Secondary = "#ff8a95",
+                // Secondary color: soft coral pink                Secondary = "#ff8a95",
                 SecondaryLighten = "#ffb3ba",
                 SecondaryDarken = "#ff6b78",
                 SecondaryContrastText = "#ffffff",
 
-                // 第三色：天空蓝
-                Tertiary = "#85d7ff",
+                // Third color: sky blue                Tertiary = "#85d7ff",
                 TertiaryContrastText = "#1e5266",
 
-                // 信息色：清新蓝
-                Info = "#64b5f6",
+                // Information color: fresh blue                Info = "#64b5f6",
                 InfoLighten = "#90caf9",
                 InfoDarken = "#42a5f5",
                 InfoContrastText = "#ffffff",
 
-                // 成功色：清新绿
-                Success = "#66bb6a",
+                // Success color: fresh green                Success = "#66bb6a",
                 SuccessLighten = "#81c784",
                 SuccessDarken = "#4caf50",
                 SuccessContrastText = "#ffffff",
 
-                // 警告色：柔和橙
-                Warning = "#ffb74d",
+                // Warning Color: Soft Orange                Warning = "#ffb74d",
                 WarningLighten = "#ffcc80",
                 WarningDarken = "#ffa726",
                 WarningContrastText = "#1e1e1e",
 
-                // 错误色：柔和红
-                Error = "#ff7043",
+                // Wrong color: soft red                Error = "#ff7043",
                 ErrorLighten = "#ff8a65",
                 ErrorDarken = "#f4511e",
                 ErrorContrastText = "#ffffff",
 
-                // 暗色调
-                Dark = "#424242",
+                // dark tones                Dark = "#424242",
                 DarkLighten = "#616161",
                 DarkDarken = "#212121",
                 DarkContrastText = "#ffffff",
 
-                // 背景色：非常浅的薄荷色调
-                Background = "#f8fffe",
+                // Background color: very light mint tone                Background = "#f8fffe",
                 BackgroundGray = "#f5f7f7",
 
-                // 表面色：纯白带一点点薄荷
-                Surface = "#ffffff",
+                // Surface color: pure white with a little mint                Surface = "#ffffff",
                 
-                // 抽屉背景
-                DrawerBackground = "#fcfffe",
+                // drawer background                DrawerBackground = "#fcfffe",
                 DrawerText = "#424242",
                 DrawerIcon = "#616161",
 
-                // 应用栏背景：清新白
-                AppbarBackground = "#ffffff",
+                // App bar background: fresh white                AppbarBackground = "#ffffff",
                 AppbarText = "#424242",
 
-                // 文本色
-                TextPrimary = "#2e3440",
+                // text color                TextPrimary = "#2e3440",
                 TextSecondary = "#5e6772",
                 TextDisabled = "#adb3ba",
 
-                // 操作色
-                ActionDefault = "#64b5f6",
+                // Operation color                ActionDefault = "#64b5f6",
                 ActionDisabled = "#e0e4e8",
                 ActionDisabledBackground = "#f5f7f9",
 
-                // 边框和分割线：非常柔和的灰色
-                Divider = "#e8ecef",
+                // Borders and dividers: very soft gray                Divider = "#e8ecef",
                 DividerLight = "#f0f3f5",
 
-                // 表格条纹
-                TableStriped = "#fafbfb",
+                // form stripes                TableStriped = "#fafbfb",
                 TableHover = "#f0f8f5",
 
-                // 线条
-                LinesDefault = "#e0e4e8",
+                // line                LinesDefault = "#e0e4e8",
                 LinesInputs = "#d0d5da",
 
-                // 覆盖层
-                OverlayDark = "rgba(33,33,33,0.3)",
+                // Covering layer                OverlayDark = "rgba(33,33,33,0.3)",
                 OverlayLight = "rgba(255,255,255,0.7)",
 
-                // 悬停状态
-                HoverOpacity = 0.08,
+                // hover state                HoverOpacity = 0.08,
 
-                // 其他
-                GrayDefault = "#9e9e9e",
+                // other                GrayDefault = "#9e9e9e",
                 GrayLight = "#bdbdbd",
                 GrayLighter = "#e0e0e0",
                 GrayDark = "#757575",
@@ -121,99 +101,79 @@ public class ThemeFresh : ThemeBase
             },
             PaletteDark = new PaletteDark()
             {
-                // 主色调：深薄荷绿
-                Primary = "#00e5a0",
+                // Main color: dark mint green                Primary = "#00e5a0",
                 PrimaryLighten = "#33eab3",
                 PrimaryDarken = "#00c586",
                 PrimaryContrastText = "#000000",
 
-                // 辅助色：深珊瑚粉
-                Secondary = "#ff9fa8",
+                // Secondary color: deep coral pink                Secondary = "#ff9fa8",
                 SecondaryLighten = "#ffb8bf",
                 SecondaryDarken = "#ff8691",
                 SecondaryContrastText = "#000000",
 
-                // 第三色：深天空蓝
-                Tertiary = "#9ae3ff",
+                // Third color: deep sky blue                Tertiary = "#9ae3ff",
                 TertiaryContrastText = "#003548",
 
-                // 信息色
-                Info = "#81d4fa",
+                // information color                Info = "#81d4fa",
                 InfoLighten = "#a1defc",
                 InfoDarken = "#4fc3f7",
                 InfoContrastText = "#000000",
 
-                // 成功色
-                Success = "#81c784",
+                // success color                Success = "#81c784",
                 SuccessLighten = "#a5d6a7",
                 SuccessDarken = "#66bb6a",
                 SuccessContrastText = "#000000",
 
-                // 警告色
-                Warning = "#ffcc80",
+                // warning color                Warning = "#ffcc80",
                 WarningLighten = "#ffd699",
                 WarningDarken = "#ffb74d",
                 WarningContrastText = "#000000",
 
-                // 错误色
-                Error = "#ff8a65",
+                // wrong color                Error = "#ff8a65",
                 ErrorLighten = "#ffab91",
                 ErrorDarken = "#ff7043",
                 ErrorContrastText = "#000000",
 
-                // 暗色调
-                Dark = "#d0d0d0",
+                // dark tones                Dark = "#d0d0d0",
                 DarkLighten = "#e0e0e0",
                 DarkDarken = "#b0b0b0",
                 DarkContrastText = "#000000",
 
-                // 背景色：深色带一点绿色调
-                Background = "#0f1614",
+                // Background color: dark with a little green tint                Background = "#0f1614",
                 BackgroundGray = "#141a18",
 
-                // 表面色：深色表面
-                Surface = "#1a211f",
+                // Surface color: dark surface                Surface = "#1a211f",
                 
-                // 抽屉背景
-                DrawerBackground = "#161d1b",
+                // drawer background                DrawerBackground = "#161d1b",
                 DrawerText = "#e0e0e0",
                 DrawerIcon = "#bdbdbd",
 
-                // 应用栏背景
-                AppbarBackground = "#1a211f",
+                // app bar background                AppbarBackground = "#1a211f",
                 AppbarText = "#e0e0e0",
 
-                // 文本色
-                TextPrimary = "#eceff1",
+                // text color                TextPrimary = "#eceff1",
                 TextSecondary = "#b0bec5",
                 TextDisabled = "#607d8b",
 
-                // 操作色
-                ActionDefault = "#81d4fa",
+                // Operation color                ActionDefault = "#81d4fa",
                 ActionDisabled = "#455a64",
                 ActionDisabledBackground = "#263238",
 
-                // 边框和分割线
-                Divider = "#2a3330",
+                // Borders and dividing lines                Divider = "#2a3330",
                 DividerLight = "#323b38",
 
-                // 表格条纹
-                TableStriped = "#1e2624",
+                // form stripes                TableStriped = "#1e2624",
                 TableHover = "#232b29",
 
-                // 线条
-                LinesDefault = "#3a4340",
+                // line                LinesDefault = "#3a4340",
                 LinesInputs = "#455a64",
 
-                // 覆盖层
-                OverlayDark = "rgba(0,0,0,0.5)",
+                // Covering layer                OverlayDark = "rgba(0,0,0,0.5)",
                 OverlayLight = "rgba(255,255,255,0.1)",
 
-                // 悬停状态
-                HoverOpacity = 0.12,
+                // hover state                HoverOpacity = 0.12,
 
-                // 其他
-                GrayDefault = "#9e9e9e",
+                // other                GrayDefault = "#9e9e9e",
                 GrayLight = "#bdbdbd",
                 GrayLighter = "#e0e0e0",
                 GrayDark = "#757575",
@@ -222,17 +182,14 @@ public class ThemeFresh : ThemeBase
            
             LayoutProperties = new LayoutProperties()
             {
-                // 使用更大的圆角，营造柔和感
-                DefaultBorderRadius = "12px",
+                // Use larger rounded corners to create a softer feel                DefaultBorderRadius = "12px",
                 
-                // 抽屉宽度
-                DrawerWidthLeft = "260px",
+                // Drawer width                DrawerWidthLeft = "260px",
                 DrawerWidthRight = "260px",
                 DrawerMiniWidthLeft = "72px",
                 DrawerMiniWidthRight = "72px",
                 
-                // 应用栏高度
-                AppbarHeight = "64px",
+                // App bar height                AppbarHeight = "64px",
             },
             Shadows = new Shadow()
             {

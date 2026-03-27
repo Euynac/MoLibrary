@@ -8,7 +8,7 @@
 <PageTitle>Timekeeper调试</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- 标题栏 -->
+    <!-- title bar -->
     <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #FF6F00 30%, #FF9800 90%); color: white;">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -38,7 +38,7 @@
     else
     {
         <MudGrid Spacing="3">
-            <!-- 正在运行的 Timekeeper -->
+            <!-- Running Timekeeper -->
             <MudItem xs="12" lg="6">
                 <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
                     <MudCardHeader Class="pb-2">
@@ -82,7 +82,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 统计信息 -->
+            <!-- Statistics -->
             <MudItem xs="12" lg="6">
                 <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
                     <MudCardHeader Class="pb-2">
@@ -126,7 +126,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 详细统计信息 -->
+            <!-- Detailed statistics -->
             @if (_statistics.Any())
             {
                 <MudItem xs="12">
@@ -176,7 +176,7 @@
 
 @code {
     /// <summary>
-    /// Timekeeper调试页面URL
+    /// Timekeeper debug page URL
     /// </summary>
     public const string PAGE_URL = "/timekeeper-debug";
 
@@ -199,13 +199,13 @@
 
         try
         {
-            // 同时加载统计信息和正在运行的信息
+            // Load statistics and running information simultaneously
             var statisticsTask = TimekeeperService.GetTimekeeperStatusAsync();
             var runningTask = TimekeeperService.GetRunningTimekeepersAsync();
 
             await Task.WhenAll(statisticsTask, runningTask);
 
-            // 处理统计信息结果
+            // Processing statistics results
             if (statisticsTask.Result.IsFailed(out var statisticsError, out var statisticsData))
             {
                 Snackbar.Add($"加载统计信息失败: {statisticsError}", Severity.Error);
@@ -216,7 +216,7 @@
                 _statistics = statisticsData;
             }
 
-            // 处理正在运行的信息结果
+            // Process running information results
             if (runningTask.Result.IsFailed(out var runningError, out var runningData))
             {
                 Snackbar.Add($"加载正在运行的信息失败: {runningError}", Severity.Error);

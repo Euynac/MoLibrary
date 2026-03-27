@@ -3,7 +3,7 @@ using Monica.Tool.Extensions;
 namespace Monica.StateStore.ProgressBar;
 
 /// <summary>
-/// 自定义进度条类
+/// Custom progress bar class
 /// </summary>
 /// <typeparam name="TCustomStatus"></typeparam>
 public abstract class ProgressBar<TCustomStatus>(
@@ -16,7 +16,7 @@ public abstract class ProgressBar<TCustomStatus>(
     private TCustomStatus? _customStatus;
 
     /// <summary>
-    /// 请使用<see cref="CustomStatus"/>
+    /// Please use <see cref="CustomStatus"/>
     /// </summary>
     public override ProgressBarStatus Status
     {
@@ -52,21 +52,21 @@ public abstract class ProgressBar<TCustomStatus>(
 
 
 /// <summary>
-/// 进度条类，用于跟踪和管理任务的执行进度
+/// Progress bar class, used to track and manage the execution progress of tasks
 /// </summary>
 /// <remarks>
-/// 进度条类，用于跟踪和管理任务的执行进度
+/// Progress bar class, used to track and manage the execution progress of tasks
 /// </remarks>
 /// <param name="setting"></param>
-/// <param name="service">进度条服务接口</param>
-/// <param name="taskId">任务唯一标识符</param>
+/// <param name="service">Progress bar service interface</param>
+/// <param name="taskId">task unique identifier</param>
 public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
 {
     private bool _isCancelled;
     private CancellationToken? _cancellationToken;
 
     /// <summary>
-    /// 任务唯一标识符
+    /// task unique identifier
     /// </summary>
     public string TaskId => Status.Id;
 
@@ -74,7 +74,7 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
 
     private ProgressBarStatus? _status;
     /// <summary>
-    /// 当前进度状态
+    /// Current progress status
     /// </summary>
     public virtual ProgressBarStatus Status
     {
@@ -83,42 +83,42 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     }
 
     /// <summary>
-    /// 任务是否已完成
+    /// Has the task been completed?
     /// </summary>
     public bool IsCompleted { get; private set; }
 
     /// <summary>
-    /// 任务是否已取消
+    /// Whether the task has been canceled
     /// </summary>
     public bool IsCancelled => _isCancelled || (_cancellationToken?.IsCancellationRequested ?? false);
 
     /// <summary>
-    /// 获取与此进度条关联的取消令牌
+    /// Get the cancellation token associated with this progress bar
     /// </summary>
     public CancellationToken CancellationToken => _cancellationToken ?? CancellationToken.None;
 
     /// <summary>
-    /// 进度条服务接口，用于保存进度状态
+    /// Progress bar service interface, used to save progress status
     /// </summary>
     protected IMoProgressBarService Service { get; } = service;
 
     /// <summary>
-    /// 进度条状态更新事件
+    /// Progress bar status update event
     /// </summary>
     public event EventHandler<ProgressBarEventArgs>? StatusUpdated;
 
     /// <summary>
-    /// 进度条取消事件
+    /// Progress bar cancellation event
     /// </summary>
     public event EventHandler<ProgressBarCancelledEventArgs>? Cancelled;
 
     /// <summary>
-    /// 进度条完成事件
+    /// progress bar completion event
     /// </summary>
     public event EventHandler<ProgressBarEventArgs>? Completed;
 
     /// <summary>
-    /// 初始化进度条状态
+    /// Initialize progress bar state
     /// </summary>
     /// <param name="distributedStatus"></param>
     /// <exception cref="InvalidOperationException"></exception>
@@ -135,27 +135,27 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     #region 分布式操作
 
     /// <summary>
-    /// 分布式印记，指示当前分布式进度条所处服务
+    /// Distributed imprint, indicating the service where the current distributed progress bar is located
     /// </summary>
     public string? DistributedStamp { get; set; }
 
 
     /// <summary>
-    /// 是否是当前可控制分布式进度条（指示当前服务正在更改进度条状态）
+    /// Whether the distributed progress bar is currently controllable (indicating that the current service is changing the status of the progress bar)
     /// </summary>
     public bool IsCurrentTurn => Setting.DistributedStamp == DistributedStamp;
 
     #endregion
 
     /// <summary>
-    /// 设置取消令牌
+    /// Set cancellation token
     /// </summary>
-    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="cancellationToken">cancel token</param>
     internal void SetCancellationToken(CancellationToken cancellationToken)
     {
         _cancellationToken = cancellationToken;
         
-        // 注册取消事件监听
+        // Register cancellation event listener
         if (cancellationToken.CanBeCanceled)
         {
             cancellationToken.Register(() =>
@@ -169,37 +169,37 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     }
 
     /// <summary>
-    /// 触发状态更新事件
+    /// Trigger status update event
     /// </summary>
-    /// <param name="e">事件参数</param>
+    /// <param name="e">event parameters</param>
     protected virtual void OnStatusUpdated(ProgressBarEventArgs e)
     {
         StatusUpdated?.Invoke(this, e);
     }
 
     /// <summary>
-    /// 触发取消事件
+    /// trigger cancel event
     /// </summary>
-    /// <param name="e">取消事件参数</param>
+    /// <param name="e">Cancel event parameters</param>
     protected virtual void OnCancelled(ProgressBarCancelledEventArgs e)
     {
         Cancelled?.Invoke(this, e);
     }
 
     /// <summary>
-    /// 触发完成事件
+    /// trigger completion event
     /// </summary>
-    /// <param name="e">事件参数</param>
+    /// <param name="e">event parameters</param>
     protected virtual void OnCompleted(ProgressBarEventArgs e)
     {
         Completed?.Invoke(this, e);
     }
 
     /// <summary>
-    /// 保存当前进度状态到存储服务
+    /// Save the current progress status to the storage service
     /// </summary>
-    /// <param name="saveInstantly">是否立即保存，默认false。如果进度条有自动更新设置且此参数为false，则不会立即保存</param>
-    /// <returns>异步任务</returns>
+    /// <param name="saveInstantly">Whether to save immediately, default false. If the progress bar has auto-update settings and this parameter is false, it will not be saved immediately.</param>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async ValueTask SaveStatus(bool saveInstantly = false)
     {
         if (IsCompleted || IsCancelled) return;
@@ -207,17 +207,17 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
         Status.LastUpdated = DateTime.Now;
         await Service.SaveProgressBarStateAsync(this, saveInstantly);
         
-        // 触发状态更新事件
+        // Trigger status update event
         OnStatusUpdated(new ProgressBarEventArgs(this));
     }
 
     /// <summary>
-    /// 更新任务进度状态
+    /// Update task progress status
     /// </summary>
-    /// <param name="currentStep">当前步数，会确保不小于0</param>
-    /// <param name="statusMessage">状态消息</param>
-    /// <param name="phase">当前阶段（可选）</param>
-    /// <returns>异步任务</returns>
+    /// <param name="currentStep">The current step number will ensure that it is not less than 0</param>
+    /// <param name="statusMessage">status message</param>
+    /// <param name="phase">Current stage (optional)</param>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async Task UpdateStatusAsync(int currentStep, string? statusMessage = null, string? phase = null)
     {
         ThrowIfCancellationRequested();
@@ -236,23 +236,23 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     }
 
     /// <summary>
-    /// 递增进度
+    /// Incremental progress
     /// </summary>
-    /// <param name="increment">递增步数，默认为1</param>
-    /// <param name="statusMessage">状态消息</param>
-    /// <param name="phase">当前阶段（可选）</param>
-    /// <returns>异步任务</returns>
+    /// <param name="increment">Increment the number of steps, default is 1</param>
+    /// <param name="statusMessage">status message</param>
+    /// <param name="phase">Current stage (optional)</param>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async Task IncrementAsync(int increment = 1, string? statusMessage = null, string? phase = null)
     {
         await UpdateStatusAsync(Status.CurrentStep + increment, statusMessage, phase);
     }
 
     /// <summary>
-    /// 更新当前阶段
+    /// Update current stage
     /// </summary>
-    /// <param name="phase">阶段名称</param>
-    /// <param name="statusMessage">状态消息（可选）</param>
-    /// <returns>异步任务</returns>
+    /// <param name="phase">Stage name</param>
+    /// <param name="statusMessage">Status message (optional)</param>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async Task UpdatePhaseAsync(string phase, string? statusMessage = null)
     {
         ThrowIfCancellationRequested();
@@ -267,9 +267,9 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
     }
 
     /// <summary>
-    /// 完成任务，保存最终状态
+    /// Complete the task and save the final status
     /// </summary>
-    /// <returns>异步任务</returns>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async Task CompleteTaskAsync(string? statusMessage = null, string? phase = null)
     {
         if (IsCompleted || IsCancelled) return;
@@ -285,22 +285,22 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
         Status.CurrentStep = Status.TotalSteps;
         await Service.FinishProgressBarAsync(this);
         
-        // 触发完成事件
+        // trigger completion event
         OnCompleted(new ProgressBarEventArgs(this));
     }
 
     /// <summary>
-    /// 取消任务
+    /// Cancel task
     /// </summary>
-    /// <param name="reason">取消原因</param>
-    /// <returns>异步任务</returns>
+    /// <param name="reason">Reason for cancellation</param>
+    /// <returns>Asynchronous tasks</returns>
     public virtual async Task CancelTaskAsync(string? reason = null)
     {
         if (IsCompleted || _isCancelled) return;
         
         _isCancelled = true;
         
-        // 设置状态中的取消标记和取消原因
+        // Set the cancellation mark and cancellation reason in the status
         Status.IsCancelled = true;
         if (!string.IsNullOrEmpty(reason))
         {
@@ -309,12 +309,12 @@ public class ProgressBar(ProgressBarSetting setting, IMoProgressBarService servi
         
         await Service.CancelProgressBarAsync(this, reason);
         
-        // 触发取消事件
+        // trigger cancel event
         OnCancelled(new ProgressBarCancelledEventArgs(this, reason));
     }
 
     /// <summary>
-    /// 检查是否已取消，如果已取消则抛出OperationCancelledException
+    /// Check if it has been canceled and throw OperationCancelledException if it has been canceled
     /// </summary>
     public virtual void ThrowIfCancellationRequested()
     {

@@ -5,22 +5,22 @@ using System.Reflection;
 namespace Monica.Tool.Extensions;
 
 /// <summary>
-/// CustomAttribute扩展方法
+/// CustomAttribute extension method
 /// </summary>
 public static class CustomAttributeExtensions
 {
     #region CachedCustomAttribute 缓存版的CustomAttribute
 
     /// <summary>
-    /// Cache Data [TypeName + AttributeName组成的Key, Attribute对象]
+    /// Cache Data [Key composed of TypeName + AttributeName, Attribute object]
     /// </summary>
     private static readonly ConcurrentDictionary<string, object?> _cache = new();
 
     /// <summary>
-    /// 获取指定类型的CustomAttribute
+    /// Get the CustomAttribute of the specified type
     /// </summary>
-    /// <typeparam name="TAttribute">要获取的Attribute</typeparam>
-    /// <returns>返回Attribute的值，没有则返回null</returns>
+    /// <typeparam name="TAttribute">Attribute to obtain</typeparam>
+    /// <returns>Returns the value of Attribute, if not, returns null</returns>
     public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type classType)
         where TAttribute : Attribute
     {
@@ -28,12 +28,12 @@ public static class CustomAttributeExtensions
     }
 
     /// <summary>
-    /// 获取指定类或指定属性或方法的CustomAttribute
+    /// Get the CustomAttribute of the specified class or specified attribute or method
     /// </summary>
-    /// <typeparam name="TAttribute">要获取的Attribute</typeparam>
+    /// <typeparam name="TAttribute">Attribute to obtain</typeparam>
     /// <typeparam name="TClass"></typeparam>
     /// <typeparam name="TProperty"></typeparam>
-    /// <returns>返回Attribute的值，没有则返回null</returns>
+    /// <returns>Returns the value of Attribute, if not, returns null</returns>
     public static TAttribute? GetCustomAttributeCached<TAttribute, TClass, TProperty>(this Type classType,
         Expression<Func<TClass, TProperty>> property)
         where TAttribute : Attribute
@@ -43,12 +43,12 @@ public static class CustomAttributeExtensions
     }
 
     /// <summary>
-    /// 获取指定类或指定属性或方法的CustomAttribute
+    /// Get the CustomAttribute of the specified class or specified attribute or method
     /// </summary>
     /// <typeparam name="TClass"></typeparam>
     /// <typeparam name="TProperty"></typeparam>
     /// <typeparam name="TAttribute"></typeparam>
-    /// <returns>返回Attribute的值，没有则返回null</returns>
+    /// <returns>Returns the value of Attribute, if not, returns null</returns>
     public static TAttribute? GetCustomAttributeCached<TAttribute, TClass, TProperty>(this TClass classType,
         TAttribute attributeType, Expression<Func<TClass, TProperty>> property) where TAttribute : Attribute where TClass : class, new()
     {
@@ -58,12 +58,12 @@ public static class CustomAttributeExtensions
     }
 
     /// <summary>
-    /// 获取指定类的指定属性或方法的CustomAttribute
+    /// Get the CustomAttribute of the specified attribute or method of the specified class
     /// </summary>
     /// <typeparam name="TAttribute"></typeparam>
-    /// <param name="sourceType">指定的类</param>
-    /// <param name="name">指定属性或方法名</param>
-    /// <returns>返回Attribute的值，没有则返回null</returns>
+    /// <param name="sourceType">specified class</param>
+    /// <param name="name">Specify attribute or method name</param>
+    /// <returns>Returns the value of Attribute, if not, returns null</returns>
     public static TAttribute? GetCustomAttributeCached<TAttribute>(this Type sourceType, string? name)
         where TAttribute : Attribute
     {
@@ -73,12 +73,12 @@ public static class CustomAttributeExtensions
         return null;
     }
     /// <summary>
-    /// 获取指定类或其属性或方法的CustomAttribute
+    /// Gets the CustomAttribute of the specified class or its attributes or methods
     /// </summary>
     /// <typeparam name="TAttribute"></typeparam>
     /// <param name="type"></param>
     /// <param name="name">nameof</param>
-    /// <returns>返回Attribute的值，没有则返回null</returns>
+    /// <returns>Returns the value of Attribute, if not, returns null</returns>
     private static TAttribute? GetValue<TAttribute>(Type type, string? name)
         where TAttribute : Attribute
     {

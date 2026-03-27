@@ -4,7 +4,7 @@ using Monica.Tool.Results;
 namespace Monica.ServiceDiscovery.ServiceInvocation.Providers;
 
 /// <summary>
-/// 独立模式服务调用提供者（不支持服务间调用）
+/// Standalone mode service call provider (inter-service calls are not supported)
 /// </summary>
 public class StandaloneServiceInvocationProvider : IServiceInvocationConnector
 {

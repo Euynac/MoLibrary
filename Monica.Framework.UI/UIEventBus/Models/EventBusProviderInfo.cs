@@ -3,77 +3,77 @@ using Monica.EventBus.Providers;
 namespace Monica.Framework.UI.UIEventBus.Models;
 
 /// <summary>
-/// 表示已注册的 EventBus Provider 信息
+/// Represents registered EventBus Provider information
 /// </summary>
 public class EventBusProviderInfo
 {
     /// <summary>
-    /// 服务键 (null 表示非 Keyed 的默认 Provider)
+    /// Service key (null indicates a non-Keyed default Provider)
     /// </summary>
     public string? ServiceKey { get; init; }
 
     /// <summary>
-    /// 显示名称
+    /// display name
     /// </summary>
     public string DisplayName => ServiceKey ?? "默认";
 
     /// <summary>
-    /// Provider 类型
+    /// Provider type
     /// </summary>
     public EEventBusProviderType ProviderType { get; init; }
 
     /// <summary>
-    /// Provider 能力
+    /// Provider capabilities
     /// </summary>
     public EEventBusCapabilities Capabilities { get; init; }
 
     /// <summary>
-    /// 是否为分布式 EventBus
+    /// Whether it is distributed EventBus
     /// </summary>
     public bool IsDistributed { get; init; }
 
     /// <summary>
-    /// Provider Option 的类型
+    /// Type of Provider Option
     /// </summary>
     public Type? OptionType { get; init; }
 
     /// <summary>
-    /// Provider Option 的实例
+    /// Example of Provider Option
     /// </summary>
     public object? OptionInstance { get; init; }
 
     /// <summary>
-    /// 实现类型名称
+    /// Implementation type name
     /// </summary>
     public string ImplementationType { get; init; } = "";
 
     /// <summary>
-    /// 订阅总数
+    /// Total number of subscriptions
     /// </summary>
     public int SubscriptionCount { get; set; }
 
     /// <summary>
-    /// 活跃订阅数
+    /// Number of active subscriptions
     /// </summary>
     public int ActiveSubscriptionCount { get; set; }
 
     /// <summary>
-    /// 检查 Provider 是否支持批量发布
+    /// Check if the Provider supports batch publishing
     /// </summary>
     public bool SupportsBulkPublish => Capabilities.HasFlag(EEventBusCapabilities.BulkPublish);
 
     /// <summary>
-    /// 检查 Provider 是否支持流式订阅
+    /// Check if the Provider supports streaming subscriptions
     /// </summary>
     public bool SupportsStreaming => Capabilities.HasFlag(EEventBusCapabilities.Streaming);
 
     /// <summary>
-    /// 检查 Provider 是否支持死信队列
+    /// Check if the Provider supports dead letter queues
     /// </summary>
     public bool SupportsDeadLetterQueue => Capabilities.HasFlag(EEventBusCapabilities.DeadLetterQueue);
 
     /// <summary>
-    /// 获取 Provider 类型的显示名称
+    /// Get the display name of the Provider type
     /// </summary>
     public string ProviderTypeName => ProviderType switch
     {
@@ -83,7 +83,7 @@ public class EventBusProviderInfo
     };
 
     /// <summary>
-    /// 获取唯一标识 (用于比较和选择)
+    /// Get unique identifier (for comparison and selection)
     /// </summary>
     public string UniqueId => $"{ProviderType}:{ServiceKey ?? "default"}:{(IsDistributed ? "dist" : "local")}";
 }

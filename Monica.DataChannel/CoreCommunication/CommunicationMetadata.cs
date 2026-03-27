@@ -7,12 +7,13 @@ public abstract class CommunicationMetadata
     /// </summary>
     public ECommunicationType Type { get; set; } 
     /// <summary>
-    /// 设置通信方向
+    /// Gets or sets the communication direction.
     /// </summary>
     public EConnectionDirection Direction { get; set; }
     public abstract Type GetCommunicationCoreType();
     /// <summary>
-    /// 验证Metadata有效性或根据创建后信息丰富Metadata。若有异常，直接抛出即可。
+    /// Validates the metadata or enriches it with derived values after creation.
+    /// Throw an exception directly when validation fails.
     /// </summary>
     public virtual void EnrichOrValidate()
     {
@@ -26,27 +27,27 @@ public abstract class CommunicationMetadata<TCore> : CommunicationMetadata where
 }
 
 /// <summary>
-/// 支持的通信方向
+/// Supported connection directions.
 /// </summary>
 public enum EConnectionDirection
 {
     None,
     /// <summary>
-    /// 可接收数据
+    /// Can receive data.
     /// </summary>
     Input,
     /// <summary>
-    /// 可发布数据
+    /// Can send data.
     /// </summary>
     Output,
     /// <summary>
-    /// 双向通信，数据可出可入
+    /// Supports bidirectional communication.
     /// </summary>
     InputAndOutput
 }
 
 /// <summary>
-/// 连接类型
+/// Communication types.
 /// </summary>
 public enum ECommunicationType
 {

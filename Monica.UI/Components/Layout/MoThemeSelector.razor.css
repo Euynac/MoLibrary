@@ -8,7 +8,7 @@
     box-shadow: 0 4px 12px rgba(var(--mud-palette-primary-rgb), 0.3);
 }
 
-/* 主题卡片样式 */
+/* Topic card style */
 .theme-card {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
@@ -30,7 +30,7 @@
     background: rgba(var(--mud-palette-primary-rgb), 0.1);
 }
 
-/* 对话框样式优化 */
+/* Dialog style optimization */
 .mud-dialog .mud-dialog-content {
     padding: 0;
 }

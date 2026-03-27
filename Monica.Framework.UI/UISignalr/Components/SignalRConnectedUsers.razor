@@ -1,6 +1,6 @@
 @using Monica.SignalR.Models
 
-<!-- 已连接用户 -->
+<!-- Connected user -->
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <div class="d-flex justify-space-between align-center mb-3">
         <MudText Typo="Typo.h5">已连接用户 (@ConnectedUsers.Count)</MudText>
@@ -73,7 +73,7 @@
     }
 </MudPaper>
 
-<!-- 用户详情对话框 -->
+<!-- User details dialog -->
 <MudDialog @bind-Visible="@_dialogVisible" Options="@_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">用户详细信息</MudText>
@@ -153,12 +153,12 @@
 
 @code {
     /// <summary>
-    /// 已连接用户列表
+    /// List of connected users
     /// </summary>
     [Parameter] public IReadOnlyList<SignalRConnectedUserInfo> ConnectedUsers { get; set; } = new List<SignalRConnectedUserInfo>();
 
     /// <summary>
-    /// 刷新按钮点击事件
+    /// Refresh button click event
     /// </summary>
     [Parameter] public EventCallback OnRefreshClicked { get; set; }
 
@@ -167,9 +167,9 @@
     private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
 
     /// <summary>
-    /// 显示用户详情
+    /// Show user details
     /// </summary>
-    /// <param name="user">用户信息</param>
+    /// <param name="user">User information</param>
     private void ShowUserDetails(SignalRConnectedUserInfo user)
     {
         _selectedUser = user;

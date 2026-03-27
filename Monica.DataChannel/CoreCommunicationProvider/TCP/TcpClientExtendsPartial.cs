@@ -132,7 +132,7 @@ public partial class TcpClientExtends
         {
             if (clientExtends.Client != null && clientExtends.Client.Client != null && clientExtends.Connected)
             {
-                //使用poll方法检查socket的状态 poll 检查是否有可读数据
+                // Use Poll to check whether the socket has readable data.
                 if (clientExtends.Client.Client.Poll(0, SelectMode.SelectRead))
                 {
                     var buff = new byte[1];

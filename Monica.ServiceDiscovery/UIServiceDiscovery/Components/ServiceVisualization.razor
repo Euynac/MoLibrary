@@ -95,7 +95,7 @@
     </MudCardContent>
 </MudCard>
 
-@* 右键菜单 *@
+@* Context menu *@
 <MoContextMenu TItem="RegisteredServiceStatus" 
                Items="@_contextMenuItems" 
                Visible="@_contextMenuOpen"
@@ -114,7 +114,7 @@
     private bool _loading = false;
     private bool _showOfflineServices = true;
     
-    // 筛选相关字段
+    // Filter-related fields
     private bool _showFilterPanel = false;
     private bool _showLayoutPanel = false;
     private string _filterText = string.Empty;
@@ -122,12 +122,12 @@
     private IReadOnlyCollection<string> _selectedDomains = new HashSet<string>();
     private bool _showOnlyWithInstances = false;
     
-    // 布局相关字段
+    // Layout-related fields
     private ServiceLayoutType _currentLayout = ServiceLayoutType.Force;
     private int _forceDistance = 150;
     private int _forceStrength = -500;
     
-    // 右键菜单相关字段
+    // Context-menu-related fields
     private bool _contextMenuOpen = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
@@ -165,18 +165,18 @@
 
         try
         {
-            // 获取合并的服务状态
+            // Get merged service statuses
             if (!(await ServiceDiscoveryFacade.GetMergedServicesStatusAsync()).IsFailed(out var error, out var services))
             {
                 _allServices = services ?? new List<RegisteredServiceStatus>();
                 
-                // 初始化筛选状态
+                // Initialize filter state
                 InitializeFilters();
                 
-                // 获取域信息并分配颜色
+                // Load domain info and assign colors
                 await AssignDomainColors();
                 
-                // 应用过滤
+                // Apply filters
                 await ApplyFilters();
             }
             else
@@ -217,7 +217,7 @@
 
     private void InitializeFilters()
     {
-        // 初始化选择的状态
+        // Initialize selected statuses
         if (!_selectedStatuses.Any())
         {
             _selectedStatuses = new HashSet<ServiceStatus>(
@@ -225,7 +225,7 @@
             );
         }
         
-        // 初始化选择的域
+        // Initialize selected domains
         if (!_selectedDomains.Any())
         {
             var allDomains = _allServices.Select(GetServiceDomainName).Distinct().ToList();
@@ -249,16 +249,16 @@
     {
         _filteredServices = _allServices.Where(service =>
         {
-            // 状态筛选
+            // Status filter
             if (!_selectedStatuses.Contains(service.OverallStatus))
                 return false;
                 
-            // 域筛选
+            // Domain filter
             var serviceDomain = GetServiceDomainName(service);
             if (!_selectedDomains.Contains(serviceDomain))
                 return false;
                 
-            // 文本筛选
+            // Text filter
             if (!string.IsNullOrWhiteSpace(_filterText))
             {
                 var matchesText = service.AppName.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
@@ -270,11 +270,11 @@
                     return false;
             }
             
-            // 实例筛选
+            // Instance filter
             if (_showOnlyWithInstances && service.TotalInstanceCount == 0)
                 return false;
             
-            // 兼容原有的离线服务筛选
+            // Keep compatibility with the legacy offline-service filter
             if (!_showOfflineServices && service.OverallStatus == ServiceStatus.Offline)
                 return false;
             
@@ -291,7 +291,7 @@
             var graphData = PrepareGraphData();
             await _jsModule.InvokeVoidAsync("updateGraph", graphData);
             
-            // 应用当前布局设置
+            // Apply current layout settings
             await SetLayout(_currentLayout);
             if (_currentLayout == ServiceLayoutType.Force)
             {
@@ -356,7 +356,7 @@
             instanceInfo = service.GetValidInstanceInfo()
         }).ToList();
 
-        // 暂时不构建服务间的依赖关系，因为当前模型中没有这个信息
+        // Do not build inter-service dependencies yet, because the current model does not contain this information.
         var links = new List<object>();
 
         return new { nodes, links };

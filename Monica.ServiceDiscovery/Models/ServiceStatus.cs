@@ -2,18 +2,18 @@ namespace Monica.ServiceDiscovery.Models;
 
 public enum ServiceStatus
 {
-    /// <summary>运行中</summary>
+    /// <summary>Running</summary>
     Running,
 
-    /// <summary>更新中</summary>
+    /// <summary>Updating</summary>
     Updating,
 
-    /// <summary>离线</summary>
+    /// <summary>Offline</summary>
     Offline,
 
-    /// <summary>异常</summary>
+    /// <summary>abnormal</summary>
     Error,
 
-    /// <summary>不健康（心跳超时但未达到离线阈值）</summary>
+    /// <summary>Unhealthy (heartbeat timed out but did not reach offline threshold)</summary>
     Unhealthy
 }

@@ -4,9 +4,9 @@ using Monica.Tool.Extensions;
 namespace Monica.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
-/// 默认采用UTF8进行转换
+/// Converts between byte arrays and strings by using UTF-8 by default.
 /// </summary>
-/// <param name="encoding"></param>
+/// <param name="encoding">The encoding to use. When omitted, UTF-8 is used.</param>
 public class BytesAndStringCore(Encoding? encoding = null) : BiDataTransformerMiddlewareBase<BytesAndStringCore, byte[], string>
 {
     public override string Convert(byte[] data)

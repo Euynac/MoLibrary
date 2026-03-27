@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 深海静谧主题 - 深海主题
+/// Deep sea quiet theme - deep sea theme
 /// </summary>
 public class ThemeDeepOcean : ThemeBase
 {

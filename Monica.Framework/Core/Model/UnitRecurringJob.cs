@@ -5,7 +5,7 @@ using Monica.JobScheduler.Jobs;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 后台定时作业
+/// Background scheduled jobs
 /// </summary>
 /// <param name="type"></param>
 public class UnitRecurringJob(Type type) : ProjectUnit(type, EProjectUnitType.RecurringJob), IHasProjectUnitFactory

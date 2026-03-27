@@ -1,22 +1,22 @@
 namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
-/// Leader 获得事件
+/// Leader gets events
 /// </summary>
 public class LeaderGainedEvent
 {
     /// <summary>
-    /// 服务名称
+    /// Service name
     /// </summary>
     public required string ServiceName { get; init; }
 
     /// <summary>
-    /// 实例 ID
+    /// Instance ID
     /// </summary>
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// 成为 Leader 的时间
+    /// Time to become a Leader
     /// </summary>
     public required DateTime BecomeLeaderTime { get; init; }
 }

@@ -21,7 +21,8 @@ public static class UtilsOption
        
     }
     /// <summary>
-    /// 对指定配置类实例当前取值进行日志记录。使用 <see cref="OptionSettingAttribute"/> 中的LoggingFormat或Description进行格式化。
+    /// Logs the current values of the specified configuration instance.
+    /// Uses <see cref="OptionSettingAttribute"/>.LoggingFormat or Description for formatting.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="config"></param>
@@ -35,7 +36,7 @@ public static class UtilsOption
 
         var configInfo = MoConfiguration.Create(config);
      
-        //对T的每个属性获取OptionsAttribute
+        // Get OptionSettingAttribute metadata for each property of T.
         var items = configInfo.OptionItems.Select(p => p);
         foreach (var option in items)
         {

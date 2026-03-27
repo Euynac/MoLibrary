@@ -5,7 +5,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Tool.Results;
 
 /// <summary>
-/// 统一分页响应模型
+/// Unified pagination response model
 /// </summary>
 /// <typeparam name="TDto"></typeparam>
 public class ResPaged<TDto> : IResultEnvelope
@@ -26,43 +26,43 @@ public class ResPaged<TDto> : IResultEnvelope
     public class PageData(int? sum, IReadOnlyList<TDto>? items)
     {
         /// <summary>
-        /// 数据总数
+        /// Total data
         /// </summary>
         [JsonPropertyName("sum")]
         public int? Sum { get; set; } = sum;
 
         /// <summary>
-        /// 当前数据列表
+        /// Current data list
         /// </summary>
         [JsonPropertyName("items")]
         public IReadOnlyList<TDto>? Items { get; set; } = items;
 
         /// <summary>
-        /// 每页数据数量
+        /// Amount of data per page
         /// </summary>
         [JsonPropertyName("pageSize")]
         public int? PageSize { get; set; }
 
         /// <summary>
-        /// 当前页数
+        /// Current page number
         /// </summary>
         [JsonPropertyName("currentPage")]
         public int? CurrentPage { get; set; }
 
         /// <summary>
-        /// 总页数
+        /// Total pages
         /// </summary>
         [JsonPropertyName("totalPages")]
         public int? TotalPages => ((double?)Sum / PageSize)?.Ceiling();
 
         /// <summary>
-        /// 是否可以向前翻页
+        /// Is it possible to page forward
         /// </summary>
         [JsonPropertyName("hasPrevious")]
         public bool? HasPrevious => CurrentPage == null ? null : CurrentPage > 1;
 
         /// <summary>
-        /// 是否可以向后翻页
+        /// Is it possible to turn pages backward?
         /// </summary>
         [JsonPropertyName("hasNext")]
         public bool? HasNext => CurrentPage == null ? null : CurrentPage < TotalPages;
@@ -101,13 +101,13 @@ public class ResPaged<TDto> : IResultEnvelope
     }
 
     /// <summary>
-    /// 获取可继承的错误信息
+    /// Get inheritable error information
     /// </summary>
     /// <returns></returns>
     public Res Inherit() => this;
 
     /// <summary>
-    /// 提取为新响应数据
+    /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
     public static implicit operator Res(ResPaged<TDto> res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)

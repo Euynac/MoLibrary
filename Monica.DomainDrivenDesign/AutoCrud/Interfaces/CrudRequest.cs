@@ -3,7 +3,7 @@ using Monica.AutoModel.Interfaces;
 namespace Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 
 /// <summary>
-/// Crud自动接口功能禁用占位Dto，指示包含该参数的功能无需生成接口
+/// Placeholder DTO used to disable generation of a specific auto-CRUD endpoint when this parameter type is present.
 /// </summary>
 public class MoCrudDisableDto
 {
@@ -11,7 +11,7 @@ public class MoCrudDisableDto
 }
 
 /// <summary>
-/// 批量删除请求Dto
+/// Request DTO for bulk deletion.
 /// </summary>
 public class MoCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 {
@@ -20,7 +20,7 @@ public class MoCrudBulkDeleteRequestDto<TKey> : IHasRequestIds<TKey>
 
 
 /// <summary>
-/// 分页请求Dto
+/// Default paged CRUD request DTO.
 /// </summary>
 public class MoCrudPageRequestDto : LimitedResultRequestDto, IHasRequestFilter, IHasRequestSelect, IHasRequestPage, IHasRequestFeature, IHasRequestSorting, IHasRequestKeysetPage
 {

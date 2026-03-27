@@ -3,138 +3,138 @@ using System.Diagnostics;
 namespace Monica.Framework.UI.UISystemInfo.Models;
 
 /// <summary>
-/// 系统信息响应模型
+/// System information response model
 /// </summary>
 public class SystemInfoResponse
 {
     /// <summary>
-    /// 构建时间
+    /// Build time
     /// </summary>
     public DateTime BuildTime { get; set; }
 
     /// <summary>
-    /// 本地时间
+    /// local time
     /// </summary>
     public DateTime LocalTime { get; set; }
 
     /// <summary>
-    /// UTC时间
+    /// UTC time
     /// </summary>
     public DateTime UtcTime { get; set; }
 
     /// <summary>
-    /// 产品版本（简化模式）
+    /// Product version (simplified mode)
     /// </summary>
     public string? ProductVersion { get; set; }
 
     /// <summary>
-    /// 进程启动时间
+    /// process start time
     /// </summary>
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
-    /// 文件信息（详细模式）
+    /// File information (verbose mode)
     /// </summary>
     public FileVersionInfo? FileInfo { get; set; }
 
     /// <summary>
-    /// 环境信息（详细模式）
+    /// Environmental information (verbose mode)
     /// </summary>
     public EnvironmentInfo? EnvironmentInfo { get; set; }
 }
 
 /// <summary>
-/// 环境信息
+/// environmental information
 /// </summary>
 public class EnvironmentInfo
 {
     /// <summary>
-    /// .NET版本
+    /// .NET version
     /// </summary>
     public Version? Version { get; set; }
 
     /// <summary>
-    /// 用户名
+    /// username
     /// </summary>
     public string? UserName { get; set; }
 
     /// <summary>
-    /// 机器名
+    /// Machine name
     /// </summary>
     public string? MachineName { get; set; }
 
     /// <summary>
-    /// 操作系统版本
+    /// Operating system version
     /// </summary>
     public OperatingSystem? OSVersion { get; set; }
 
     /// <summary>
-    /// 进程ID
+    /// Process ID
     /// </summary>
     public int ProcessId { get; set; }
 
     /// <summary>
-    /// 进程启动时间
+    /// process start time
     /// </summary>
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
-    /// 当前目录
+    /// current directory
     /// </summary>
     public string? CurrentDirectory { get; set; }
 
     /// <summary>
-    /// 是否已开始关闭
+    /// Has the shutdown started?
     /// </summary>
     public bool HasShutdownStarted { get; set; }
 
     /// <summary>
-    /// 是否64位操作系统
+    /// Is it a 64-bit operating system?
     /// </summary>
     public bool Is64BitOperatingSystem { get; set; }
 
     /// <summary>
-    /// 是否64位进程
+    /// Is it a 64-bit process?
     /// </summary>
     public bool Is64BitProcess { get; set; }
 
     /// <summary>
-    /// 是否特权进程
+    /// Is the process a privileged process?
     /// </summary>
     public bool IsPrivilegedProcess { get; set; }
 
     /// <summary>
-    /// 系统滴答计数
+    /// System tick count
     /// </summary>
     public int TickCount { get; set; }
 
     /// <summary>
-    /// 用户域名
+    /// User domain name
     /// </summary>
     public string? UserDomainName { get; set; }
 
     /// <summary>
-    /// 工作集大小
+    /// working set size
     /// </summary>
     public long WorkingSet { get; set; }
 
     /// <summary>
-    /// 系统页面大小
+    /// System page size
     /// </summary>
     public int SystemPageSize { get; set; }
 
     /// <summary>
-    /// 环境变量
+    /// environment variables
     /// </summary>
     public IDictionary<string, object?>? Environments { get; set; }
 
     /// <summary>
-    /// 是否用户交互式
+    /// Is the user interactive?
     /// </summary>
     public bool UserInteractive { get; set; }
 
     /// <summary>
-    /// 进程路径
+    /// process path
     /// </summary>
     public string? ProcessPath { get; set; }
 } 

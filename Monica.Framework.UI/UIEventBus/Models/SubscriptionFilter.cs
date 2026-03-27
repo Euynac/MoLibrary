@@ -3,42 +3,42 @@ using Monica.EventBus.Models;
 namespace Monica.Framework.UI.UIEventBus.Models;
 
 /// <summary>
-/// 订阅过滤条件
+/// Subscription filters
 /// </summary>
 public class SubscriptionFilter
 {
     /// <summary>
-    /// 按状态过滤
+    /// Filter by status
     /// </summary>
     public SubscriptionState? State { get; set; }
 
     /// <summary>
-    /// 按范围过滤
+    /// Filter by range
     /// </summary>
     public SubscriptionScope? Scope { get; set; }
 
     /// <summary>
-    /// 按服务键过滤
+    /// Filter by service key
     /// </summary>
     public string? ServiceKey { get; set; }
 
     /// <summary>
-    /// 按是否自动发现过滤
+    /// Filter by whether to automatically discover
     /// </summary>
     public bool? IsAutoDiscovered { get; set; }
 
     /// <summary>
-    /// 搜索文本（在事件类型或主题名称中搜索）
+    /// Search text (search within event type or topic name)
     /// </summary>
     public string? SearchText { get; set; }
 
     /// <summary>
-    /// 选中的 Provider（用于按 Provider 过滤）
+    /// Selected Provider (for filtering by Provider)
     /// </summary>
     public EventBusProviderInfo? SelectedProvider { get; set; }
 
     /// <summary>
-    /// 是否有任何过滤条件
+    /// Are there any filters?
     /// </summary>
     public bool HasAnyFilter =>
         State.HasValue ||
@@ -49,7 +49,7 @@ public class SubscriptionFilter
         SelectedProvider != null;
 
     /// <summary>
-    /// 清空所有过滤条件
+    /// Clear all filters
     /// </summary>
     public void Clear()
     {
@@ -62,7 +62,7 @@ public class SubscriptionFilter
     }
 
     /// <summary>
-    /// 创建副本
+    /// Create a copy
     /// </summary>
     public SubscriptionFilter Clone()
     {

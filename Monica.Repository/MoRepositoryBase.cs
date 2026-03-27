@@ -83,7 +83,7 @@ public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, I
 
 
     /// <summary>
-    /// 使用Default Detail Func进行Include
+    /// Applies includes by using the default detail function.
     /// </summary>
     /// <returns></returns>
     public virtual Task<IQueryable<TEntity>> WithDetailsAsync()
@@ -105,7 +105,7 @@ public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, I
         return query;
     }
     /// <summary>
-    /// 通过重写方法进行配置WithDetail的默认行为
+    /// Configures the default behavior of WithDetails by overriding this method.
     /// </summary>
     /// <param name="entities"></param>
     /// <returns></returns>
@@ -145,7 +145,7 @@ public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, I
     public abstract Task DeleteDirectAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     protected virtual CancellationToken GetCancellationToken(CancellationToken preferredValue = default)
     {
-        //TODO 参考ABP实现
+        // TODO: Align this implementation with the ABP approach.
         return preferredValue;
     }
 

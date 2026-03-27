@@ -67,7 +67,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
                         () => TcpUtils.ServerReceive(tcpClientExtends, logger, connectionName, ReceivedMsgEvent, cancellation),
                         cancellation);
 
-                    //心跳机制
+                    // Heartbeat mechanism
                     _ = Task.Run(
                         () => TcpUtils.ServerSendSHBT(tcpClientExtends, logger, metadata.SendTime, connectionName),
                         cancellation);

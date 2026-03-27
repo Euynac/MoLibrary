@@ -5,13 +5,13 @@ namespace Monica.Configuration.Interfaces;
 public interface IMoConfigurationServiceInfo
 {
     /// <summary>
-    /// 通过项目名获取服务信息
+    /// Gets service info by project name.
     /// </summary>
     /// <param name="projectName"></param>
     /// <returns></returns>
     ServiceInfo GetServiceInfo(string projectName);
     /// <summary>
-    /// 该项目名是否属于当前领域
+    /// Determines whether the project belongs to the current domain.
     /// </summary>
     /// <param name="projectName"></param>
     /// <returns></returns>

@@ -4,12 +4,12 @@ namespace Monica.DataChannel.CoreCommunicationProvider.Default;
 
 
 /// <summary>
-/// 默认Endpoint，需要主动从Channel中发送或监听信息
+/// Default endpoint that actively sends or listens through the channel.
 /// </summary>
 public class DefaultCore : CommunicationCore<MetadataForDefault>
 {
     /// <summary>
-    /// 默认Endpoint，需要主动从Channel中发送或监听信息
+    /// Default endpoint that actively sends or listens through the channel.
     /// </summary>
     public DefaultCore(MetadataForDefault metadata) : base(metadata)
     {
@@ -27,11 +27,11 @@ public class DefaultCore : CommunicationCore<MetadataForDefault>
 }
 
 /// <summary>
-/// 默认Endpoint，需要主动从Channel中发送或监听信息
+/// Generic default endpoint that requires explicit channel metadata to operate.
 /// </summary>
-/// <typeparam name="TCore"></typeparam>
-/// <typeparam name="TMetadata">设置Channel的元数据配置</typeparam>
-/// <param name="metadata">子类直接注入获取即可</param>
+/// <typeparam name="TCore">Concrete endpoint type.</typeparam>
+/// <typeparam name="TMetadata">Metadata type used to configure the channel.</typeparam>
+/// <param name="metadata">Metadata instance supplied by derived classes.</param>
 public class DefaultCore<TCore, TMetadata>(TMetadata metadata) : CommunicationCore<TMetadata>(metadata) where TMetadata : CommunicationMetadata<TCore> where TCore : DefaultCore<TCore, TMetadata>
 {
     public override EConnectionDirection SupportedConnectionDirection()

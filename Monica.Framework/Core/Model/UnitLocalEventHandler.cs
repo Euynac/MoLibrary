@@ -6,7 +6,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 本地事件处理
+/// local event handling
 /// </summary>
 /// <param name="type"></param>
 public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitType.LocalEventHandler), IHasProjectUnitFactory
@@ -17,7 +17,7 @@ public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitTy
     }
 
     /// <summary>
-    /// 本地事件类型
+    /// local event type
     /// </summary>
     public Type EventType { get; set; } = null!;
 

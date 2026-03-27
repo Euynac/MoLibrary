@@ -1,79 +1,79 @@
 namespace Monica.JobScheduler.UI.Models;
 
 /// <summary>
-/// 时间粒度
+/// time granularity
 /// </summary>
 public enum TimeGranularity
 {
     /// <summary>
-    /// 按小时聚合
+    /// Aggregate by hour
     /// </summary>
     Hourly,
 
     /// <summary>
-    /// 按天聚合
+    /// Aggregate by day
     /// </summary>
     Daily,
 
     /// <summary>
-    /// 按周聚合
+    /// Aggregate by week
     /// </summary>
     Weekly
 }
 
 /// <summary>
-/// 执行趋势数据点
+/// Execution trend data points
 /// </summary>
 public class ExecutionTrendPoint
 {
     /// <summary>
-    /// 时间点（聚合周期的起始时间）
+    /// Time point (start time of aggregation period)
     /// </summary>
     public DateTime Timestamp { get; set; }
 
     /// <summary>
-    /// 成功执行数量
+    /// Number of successful executions
     /// </summary>
     public int SucceededCount { get; set; }
 
     /// <summary>
-    /// 失败执行数量（Failed + Terminated）
+    /// Number of failed executions (Failed + Terminated)
     /// </summary>
     public int FailedCount { get; set; }
 
     /// <summary>
-    /// 跳过数量
+    /// skip quantity
     /// </summary>
     public int SkippedCount { get; set; }
 
     /// <summary>
-    /// 取消数量
+    /// Cancellation quantity
     /// </summary>
     public int CancelledCount { get; set; }
 
     /// <summary>
-    /// 总执行数量
+    /// Total number of executions
     /// </summary>
     public int TotalCount { get; set; }
 
     /// <summary>
-    /// 该时间段的成功率 (0-100)
+    /// Success rate for this time period (0-100)
     /// </summary>
     public double SuccessRate => TotalCount > 0 ? ((double)SucceededCount / TotalCount) * 100 : 100;
 }
 
 /// <summary>
-/// 执行耗时百分位数
+/// Execution time percentile
 /// </summary>
 public class DurationPercentiles
 {
     /// <summary>
-    /// 任务Key（如果针对特定任务）
+    /// Task Key (if targeting a specific task)
     /// </summary>
     public string? JobKey { get; set; }
 
     /// <summary>
-    /// P50 (中位数)
+    /// P50 (median)
     /// </summary>
     public TimeSpan P50 { get; set; }
 
@@ -93,260 +93,260 @@ public class DurationPercentiles
     public TimeSpan P99 { get; set; }
 
     /// <summary>
-    /// 平均耗时
+    /// Average time taken
     /// </summary>
     public TimeSpan Average { get; set; }
 
     /// <summary>
-    /// 最短耗时
+    /// The shortest time
     /// </summary>
     public TimeSpan Min { get; set; }
 
     /// <summary>
-    /// 最长耗时
+    /// longest time
     /// </summary>
     public TimeSpan Max { get; set; }
 
     /// <summary>
-    /// 样本数量
+    /// sample size
     /// </summary>
     public int SampleCount { get; set; }
 }
 
 /// <summary>
-/// 排行榜类型
+/// Ranking type
 /// </summary>
 public enum RankingType
 {
     /// <summary>
-    /// 按执行次数排行
+    /// Ranked by execution count
     /// </summary>
     ExecutionCount,
 
     /// <summary>
-    /// 按失败次数排行
+    /// Ranked by number of failures
     /// </summary>
     FailureCount,
 
     /// <summary>
-    /// 按平均耗时排行（从长到短）
+    /// Ranked by average time taken (from longest to shortest)
     /// </summary>
     AverageDuration,
 
     /// <summary>
-    /// 按跳过次数排行
+    /// Ranked by skip count
     /// </summary>
     SkipCount
 }
 
 /// <summary>
-/// 任务排行榜项
+/// Task ranking items
 /// </summary>
 public class JobRanking
 {
     /// <summary>
-    /// 排名
+    /// Ranking
     /// </summary>
     public int Rank { get; set; }
 
     /// <summary>
-    /// 任务Key
+    /// TaskKey
     /// </summary>
     public required string JobKey { get; set; }
 
     /// <summary>
-    /// 任务名称
+    /// Task name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 数值（根据排行类型含义不同）
+    /// Numeric value (different meanings depending on ranking type)
     /// </summary>
     public double Value { get; set; }
 
     /// <summary>
-    /// 格式化后的数值显示
+    /// Formatted numerical display
     /// </summary>
     public string? FormattedValue { get; set; }
 
     /// <summary>
-    /// 占总数的百分比
+    /// % of total
     /// </summary>
     public double Percentage { get; set; }
 }
 
 /// <summary>
-/// 失败分析结果
+/// Failure analysis results
 /// </summary>
 public class FailureAnalysis
 {
     /// <summary>
-    /// 按任务分组的失败统计
+    /// Failure statistics grouped by tasks
     /// </summary>
     public List<JobFailureCount> ByJob { get; set; } = [];
 
     /// <summary>
-    /// 重试成功率 (0-100)
-    /// 计算公式: 重试后成功的数量 / 总重试次数 * 100
+    /// Retry success rate (0-100)
+    /// Calculation formula: Number of successes after retries / Total number of retries * 100
     /// </summary>
     public double RetrySuccessRate { get; set; }
 
     /// <summary>
-    /// 总失败数
+    /// Total failures
     /// </summary>
     public int TotalFailures { get; set; }
 
     /// <summary>
-    /// 总终止数
+    /// Total number of terminations
     /// </summary>
     public int TotalTerminated { get; set; }
 
     /// <summary>
-    /// 统计时间范围起始
+    /// Start of statistical time range
     /// </summary>
     public DateTime StartTime { get; set; }
 
     /// <summary>
-    /// 统计时间范围结束
+    /// End of statistical time range
     /// </summary>
     public DateTime EndTime { get; set; }
 }
 
 /// <summary>
-/// 任务失败统计
+/// Task failure statistics
 /// </summary>
 public class JobFailureCount
 {
     /// <summary>
-    /// 任务Key
+    /// TaskKey
     /// </summary>
     public required string JobKey { get; set; }
 
     /// <summary>
-    /// 任务名称
+    /// Task name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 失败次数（Failed状态）
+    /// Number of failures (Failed status)
     /// </summary>
     public int FailedCount { get; set; }
 
     /// <summary>
-    /// 终止次数（Terminated状态）
+    /// Number of terminations (Terminated status)
     /// </summary>
     public int TerminatedCount { get; set; }
 
     /// <summary>
-    /// 总失败数（Failed + Terminated）
+    /// Total number of failures (Failed + Terminated)
     /// </summary>
     public int TotalFailureCount => FailedCount + TerminatedCount;
 
     /// <summary>
-    /// 该任务的执行总数
+    /// The total number of executions of this task
     /// </summary>
     public int TotalExecutions { get; set; }
 
     /// <summary>
-    /// 失败率 (0-100)
+    /// Failure rate (0-100)
     /// </summary>
     public double FailureRate => TotalExecutions > 0 ? ((double)TotalFailureCount / TotalExecutions) * 100 : 0;
 }
 
 /// <summary>
-/// 时间范围预设
+/// Time range default
 /// </summary>
 public enum TimeRangePreset
 {
     /// <summary>
-    /// 今天
+    /// today
     /// </summary>
     Today,
 
     /// <summary>
-    /// 最近24小时
+    /// last 24 hours
     /// </summary>
     Last24Hours,
 
     /// <summary>
-    /// 最近7天
+    /// Last 7 days
     /// </summary>
     Last7Days,
 
     /// <summary>
-    /// 最近30天
+    /// Last 30 days
     /// </summary>
     Last30Days,
 
     /// <summary>
-    /// 自定义范围
+    /// Custom scope
     /// </summary>
     Custom
 }
 
 /// <summary>
-/// 最慢实例信息（用于 Top N 展示）
+/// Slowest instance information (for Top N display)
 /// </summary>
 public class SlowestInstance
 {
     /// <summary>
-    /// 实例ID
+    /// Instance ID
     /// </summary>
     public required string InstanceId { get; set; }
 
     /// <summary>
-    /// 作业键
+    /// job key
     /// </summary>
     public required string JobKey { get; set; }
 
     /// <summary>
-    /// 作业名称
+    /// Job name
     /// </summary>
     public required string JobName { get; set; }
 
     /// <summary>
-    /// 执行耗时
+    /// Execution time
     /// </summary>
     public TimeSpan Duration { get; set; }
 
     /// <summary>
-    /// 完成时间
+    /// completion time
     /// </summary>
     public DateTime CompletedAt { get; set; }
 }
 
 /// <summary>
-/// 统计页面请求参数
+/// Statistics page request parameters
 /// </summary>
 public class StatisticsRequest
 {
     /// <summary>
-    /// 时间范围预设
+    /// Time range default
     /// </summary>
     public TimeRangePreset Preset { get; set; } = TimeRangePreset.Today;
 
     /// <summary>
-    /// 自定义起始时间（仅当Preset为Custom时使用）
+    /// Custom start time (only used when Preset is Custom)
     /// </summary>
     public DateTime? CustomStartTime { get; set; }
 
     /// <summary>
-    /// 自定义结束时间（仅当Preset为Custom时使用）
+    /// Custom end time (only used when Preset is Custom)
     /// </summary>
     public DateTime? CustomEndTime { get; set; }
 
     /// <summary>
-    /// 时间粒度
+    /// time granularity
     /// </summary>
     public TimeGranularity Granularity { get; set; } = TimeGranularity.Hourly;
 
     /// <summary>
-    /// 排行榜显示数量
+    /// Ranking display quantity
     /// </summary>
     public int TopN { get; set; } = 10;
 
     /// <summary>
-    /// 获取实际的起始时间
+    /// Get the actual start time
     /// </summary>
     public DateTime GetStartTime()
     {
@@ -365,7 +365,7 @@ public class StatisticsRequest
     }
 
     /// <summary>
-    /// 获取实际的结束时间
+    /// Get the actual end time
     /// </summary>
     public DateTime GetEndTime()
     {

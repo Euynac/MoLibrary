@@ -3,28 +3,28 @@ using Monica.DataChannel.Pipeline;
 namespace Monica.DataChannel;
 
 /// <summary>
-/// 数据通道类
-/// 封装了数据管道，提供统一的访问和控制接口
-/// 作为DataChannelCentral的管理单元
+/// Represents a data channel.
+/// Wraps a data pipeline and provides a unified access and control surface.
+/// Acts as the managed unit tracked by <see cref="DataChannelCentral"/>.
 /// </summary>
-/// <param name="pipeline">数据管道实例</param>
+/// <param name="pipeline">The data pipeline instance.</param>
 public class DataChannel(DataPipeline pipeline)
 {
     /// <summary>
-    /// 获取数据管道
-    /// 包含数据传输和处理的核心逻辑
+    /// Gets the underlying data pipeline.
+    /// Contains the core data transfer and processing logic.
     /// </summary>
     public DataPipeline Pipe { get; } = pipeline;
-    
+
     /// <summary>
-    /// 获取数据通道的唯一标识符
-    /// 与管道ID保持一致
+    /// Gets the unique identifier of the data channel.
+    /// This value matches the pipeline identifier.
     /// </summary>
     public string Id => Pipe.Id;
-    
+
     /// <summary>
-    /// 重新初始化数据通道
-    /// 当通道需要重置或重新连接时调用
+    /// Reinitializes the data channel.
+    /// Call this when the channel needs to be reset or reconnected.
     /// </summary>
     public async Task ReInitialize(CancellationToken cancellationToken = default)
     {
@@ -32,18 +32,20 @@ public class DataChannel(DataPipeline pipeline)
     }
 
     /// <summary>
-    /// 从内部端点发送数据，经过转换中间件（若有）处理后由内部端点接收
+    /// Sends data from the inner endpoint.
+    /// The payload passes through transform middleware, if any, and is then received by the outer endpoint.
     /// </summary>
-    /// <param name="data">要发送的数据</param>
+    /// <param name="data">The data to send.</param>
     public async Task SendDataFromInnerAsync(object data)
     {
         await Pipe.SendDataAsync(new DataContext(EDataSource.Inner, data));
     }
 
     /// <summary>
-    /// 从外部端点发送数据，经过转换中间件（若有）处理后由外部端点接收
+    /// Sends data from the outer endpoint.
+    /// The payload passes through transform middleware, if any, and is then received by the inner endpoint.
     /// </summary>
-    /// <param name="data">要发送的数据</param>
+    /// <param name="data">The data to send.</param>
     public async Task SendDataFromOuterAsync(object data)
     {
         await Pipe.SendDataAsync(new DataContext(EDataSource.Outer, data));

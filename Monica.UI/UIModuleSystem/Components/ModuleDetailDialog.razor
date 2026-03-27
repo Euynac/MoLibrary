@@ -279,22 +279,22 @@
 
 @code {
     /// <summary>
-    /// 是否显示对话框
+    /// Whether to display the dialog box
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
 
     /// <summary>
-    /// 是否显示对话框改变事件
+    /// Whether to display dialog change events
     /// </summary>
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// 选中的模块详情
+    /// Selected module details
     /// </summary>
     [Parameter] public ModuleDetailInfo? SelectedModuleDetail { get; set; }
 
     /// <summary>
-    /// 对话框选项
+    /// Dialog options
     /// </summary>
     private DialogOptions DialogOptions = new()
     {
@@ -305,7 +305,7 @@
     };
 
     /// <summary>
-    /// 关闭对话框
+    /// Close dialog
     /// </summary>
     /// <returns></returns>
     private Task OnClose() => SetVisibilityAsync(false);
@@ -324,7 +324,7 @@
     }
 
     /// <summary>
-    /// 获取传递依赖列表
+    /// Get transitive dependency list
     /// </summary>
     /// <returns></returns>
     private IEnumerable<ModuleKey> GetTransitiveDependencies()
@@ -337,9 +337,9 @@
     }
 
     /// <summary>
-    /// 获取阶段图标
+    /// Get stage icon
     /// </summary>
-    /// <param name="phase">阶段</param>
+    /// <param name="phase">Phase</param>
     /// <returns></returns>
     private string GetPhaseIcon(EMoModuleConfigMethods phase) => phase switch
     {
@@ -353,9 +353,9 @@
     };
 
     /// <summary>
-    /// 获取阶段颜色
+    /// Get stage color
     /// </summary>
-    /// <param name="phase">阶段</param>
+    /// <param name="phase">Phase</param>
     /// <returns></returns>
     private Color GetPhaseColor(EMoModuleConfigMethods phase) => phase switch
     {
@@ -368,9 +368,9 @@
     };
 
     /// <summary>
-    /// 获取阶段百分比
+    /// Get stage percentage
     /// </summary>
-    /// <param name="duration">持续时间</param>
+    /// <param name="duration">Duration</param>
     /// <returns></returns>
     private double GetPhasePercentage(long duration)
     {

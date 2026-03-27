@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UISignalr.Services
 {
     /// <summary>
-    /// SignalR调试服务
+    /// SignalR Debugging Service
     /// </summary>
     public class SignalRDebugService : IAsyncDisposable
     {
@@ -23,35 +23,35 @@ namespace Monica.Framework.UI.UISignalr.Services
         private readonly SignalRConnectionState _connectionState = new();
 
         /// <summary>
-        /// 是否启用详细调试日志
+        /// Whether to enable detailed debugging logs
         /// </summary>
         public bool IsVerboseLoggingEnabled { get; set; } = false;
 
         /// <summary>
-        /// 消息接收事件
+        /// Message receiving event
         /// </summary>
         public event Action<SignalRMessage>? MessageReceived;
 
         /// <summary>
-        /// 连接状态变化事件
+        /// Connection status change event
         /// </summary>
         public event Action<SignalRConnectionState>? ConnectionStateChanged;
 
         /// <summary>
-        /// 方法监听状态变化事件
+        /// Method to listen for state change events
         /// </summary>
         public event Action<HubMethodInfo>? MethodListenerChanged;
 
         /// <summary>
-        /// 已连接用户列表变化事件
+        /// Connected user list change event
         /// </summary>
         public event Action<IReadOnlyList<SignalRConnectedUserInfo>>? ConnectedUsersChanged;
 
         /// <summary>
-        /// 构造函数
+        /// Constructor
         /// </summary>
-        /// <param name="jsRuntime">JavaScript运行时</param>
-        /// <param name="signalRService">SignalR业务服务</param>
+        /// <param name="jsRuntime">JavaScript runtime</param>
+        /// <param name="signalRService">SignalR business service</param>
         public SignalRDebugService(IJSRuntime jsRuntime, MoSignalRManageService signalRService)
         {
             _jsRuntime = jsRuntime;
@@ -59,19 +59,19 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 初始化服务
+        /// Initialize service
         /// </summary>
         public async Task InitializeAsync()
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             
-            // 等待JavaScript加载完成后再设置回调
+            // Wait for JavaScript to finish loading before setting the callback
             await WaitForJavaScriptAsync();
             await SetupJavaScriptCallbacks();
         }
 
         /// <summary>
-        /// 等待JavaScript加载完成
+        /// Wait for JavaScript to finish loading
         /// </summary>
         private async Task WaitForJavaScriptAsync()
         {
@@ -82,13 +82,13 @@ namespace Monica.Framework.UI.UISignalr.Services
             {
                 try
                 {
-                    // 尝试调用signalRDebug对象的方法来检查是否已加载
+                    // Try calling the signalRDebug object's method to check if it has been loaded
                     await _jsRuntime.InvokeAsync<object>("signalRDebug.getHubsData");
                     return; // 成功，退出循环
                 }
                 catch
                 {
-                    // JavaScript尚未加载完成，等待一会儿再试
+                    // JavaScript has not been loaded yet, please wait a while and try again
                     await Task.Delay(retryDelay);
                     retryDelay = Math.Min(retryDelay * 2, 1000); // 指数退避，最大1秒
                 }
@@ -98,7 +98,7 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 设置JavaScript回调
+        /// Set JavaScript callback
         /// </summary>
         private async Task SetupJavaScriptCallbacks()
         {
@@ -115,9 +115,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 加载Hub信息
+        /// Load Hub information
         /// </summary>
-        /// <returns>是否成功</returns>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> LoadHubsAsync()
         {
             try
@@ -133,7 +133,7 @@ namespace Monica.Framework.UI.UISignalr.Services
                 _hubMethods.Clear();
                 _hubGroups.Clear();
                 
-                // 保存原始的Hub组信息
+                // Save original Hub group information
                 _hubGroups.AddRange(hubGroups);
                 
                 foreach (var hubGroup in hubGroups)
@@ -162,9 +162,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 加载已连接用户信息
+        /// Load connected user information
         /// </summary>
-        /// <returns>是否成功</returns>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> LoadConnectedUsersAsync()
         {
             try
@@ -192,17 +192,17 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 获取已连接用户列表
+        /// Get the list of connected users
         /// </summary>
-        /// <returns>已连接用户列表</returns>
+        /// <returns>List of connected users</returns>
         public IReadOnlyList<SignalRConnectedUserInfo> GetConnectedUsers() => _connectedUsers.AsReadOnly();
 
         /// <summary>
-        /// 连接到SignalR Hub
+        /// Connect to SignalR Hub
         /// </summary>
         /// <param name="hubUrl">Hub URL</param>
-        /// <param name="accessToken">访问令牌</param>
-        /// <returns>是否成功</returns>
+        /// <param name="accessToken">Access Token</param>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> ConnectAsync(string hubUrl, string accessToken)
         {
             try
@@ -237,9 +237,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 断开连接
+        /// Disconnect
         /// </summary>
-        /// <returns>是否成功</returns>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> DisconnectAsync()
         {
             try
@@ -266,11 +266,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 发送消息
+        /// Send message
         /// </summary>
-        /// <param name="userName">用户名</param>
-        /// <param name="message">消息内容</param>
-        /// <returns>是否成功</returns>
+        /// <param name="userName">Username</param>
+        /// <param name="message">Message content</param>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> SendMessageAsync(string userName, string message)
         {
             try
@@ -296,11 +296,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 调用方法
+        /// call method
         /// </summary>
-        /// <param name="methodName">方法名称</param>
-        /// <param name="parameters">参数列表</param>
-        /// <returns>是否成功</returns>
+        /// <param name="methodName">Method name</param>
+        /// <param name="parameters">Parameter list</param>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> InvokeMethodAsync(string methodName, List<MethodCallParameter> parameters)
         {
             try
@@ -314,7 +314,7 @@ namespace Monica.Framework.UI.UISignalr.Services
                     return false;
                 }
 
-                // 详细记录参数转换过程（仅在启用详细日志时）
+                // Detailed logging of the parameter conversion process (only when verbose logging is enabled)
                 if (IsVerboseLoggingEnabled)
                 {
                     AddMessage("系统", $"开始调用方法: {methodName}", MessageType.Info);
@@ -331,7 +331,7 @@ namespace Monica.Framework.UI.UISignalr.Services
                         AddMessage("系统", $"参数 {arg.Name} ({arg.Type}): '{value}'", MessageType.Info);
                     }
 
-                    // 根据参数类型转换值
+                    // Convert values ​​based on parameter type
                     var convertedValue = ConvertParameterValue(value, arg.Type);
                     args.Add(convertedValue ?? string.Empty);
                     
@@ -351,7 +351,7 @@ namespace Monica.Framework.UI.UISignalr.Services
                 var error = result.GetProperty("error").GetString();
                 AddMessage("错误", $"调用方法失败: {error}", MessageType.Error);
                     
-                // 添加参数信息帮助调试
+                // Add parameter information to help debugging
                 AddMessage("调试", $"调用参数: {string.Join(", ", args.Select((arg, idx) => $"{method.Args[idx].Name}={arg}"))}", MessageType.Info);
                     
                 return false;
@@ -365,11 +365,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 转换参数值
+        /// Conversion parameter value
         /// </summary>
-        /// <param name="value">字符串值</param>
-        /// <param name="type">目标类型</param>
-        /// <returns>转换后的值</returns>
+        /// <param name="value">String value</param>
+        /// <param name="type">Target type</param>
+        /// <returns>Converted value</returns>
         private object? ConvertParameterValue(string value, string type)
         {
             if (string.IsNullOrEmpty(value))
@@ -381,7 +381,7 @@ namespace Monica.Framework.UI.UISignalr.Services
             {
                 var normalizedType = type.ToLower().Replace("system.", "");
                 
-                // 记录转换过程（仅在启用详细日志时）
+                // Log conversion process (only when verbose logging is enabled)
                 if (IsVerboseLoggingEnabled)
                 {
                     AddMessage("调试", $"参数转换: '{value}' -> {type} (标准化: {normalizedType})", MessageType.Info);
@@ -389,32 +389,32 @@ namespace Monica.Framework.UI.UISignalr.Services
                 
                 var result = normalizedType switch
                 {
-                    // 字符串类型：直接返回原值，不进行任何转换
+                    // String type: Return the original value directly without any conversion
                     "string" => value,
                     
-                    // 数值类型：严格按照类型转换
+                    // Numeric type: Strictly follow type conversion
                     "int" or "int32" => int.Parse(value.Trim()),
                     "long" or "int64" => long.Parse(value.Trim()),
                     "double" => double.Parse(value.Trim()),
                     "float" or "single" => float.Parse(value.Trim()),
                     
-                    // 布尔类型：支持多种格式
+                    // Boolean type: supports multiple formats
                     "bool" or "boolean" => ParseBooleanValue(value),
                     
-                    // 日期时间类型
+                    // datetime type
                     "datetime" => DateTime.Parse(value.Trim()),
                     
-                    // GUID类型
+                    // GUID type
                     "guid" => Guid.Parse(value.Trim()),
                     
-                    // 处理完整的系统类型名称
+                    // Handle full system type name
                     _ when normalizedType.StartsWith("system.") => ConvertSystemType(value, type),
                     
-                    // 数组和列表类型：尝试JSON解析
+                    // Array and list types: Try JSON parsing
                     _ when normalizedType.Contains("[]") || normalizedType.Contains("list") || normalizedType.Contains("array") =>
                         TryParseAsJson(value, type),
                     
-                    // 其他复杂类型：尝试JSON解析，失败则返回原字符串
+                    // Other complex types: try JSON parsing, and return the original string if it fails.
                     _ => TryParseComplexType(value, type)
                 };
                 
@@ -428,7 +428,7 @@ namespace Monica.Framework.UI.UISignalr.Services
             {
                 AddMessage("错误", $"参数转换失败: '{value}' -> {type}, 错误: {ex.Message}", MessageType.Error);
                 
-                // 转换失败时，对于string类型返回原值，其他类型返回默认值
+                // When the conversion fails, the original value is returned for the string type, and the default value is returned for other types.
                 var normalizedType = type.ToLower().Replace("system.", "");
                 if (normalizedType == "string")
                 {
@@ -441,10 +441,10 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 解析布尔值
+        /// parse boolean
         /// </summary>
-        /// <param name="value">字符串值</param>
-        /// <returns>布尔值</returns>
+        /// <param name="value">String value</param>
+        /// <returns>Boolean value</returns>
         private bool ParseBooleanValue(string value)
         {
             var normalizedValue = value.ToLower().Trim();
@@ -457,11 +457,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 转换系统类型
+        /// Convert system type
         /// </summary>
-        /// <param name="value">字符串值</param>
-        /// <param name="type">类型名称</param>
-        /// <returns>转换后的值</returns>
+        /// <param name="value">String value</param>
+        /// <param name="type">Type name</param>
+        /// <returns>Converted value</returns>
         private object ConvertSystemType(string value, string type)
         {
             var typeName = type.Replace("System.", "").ToLower();
@@ -480,11 +480,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 尝试解析为JSON
+        /// Try parsing to JSON
         /// </summary>
-        /// <param name="value">字符串值</param>
-        /// <param name="type">类型名称</param>
-        /// <returns>解析结果</returns>
+        /// <param name="value">String value</param>
+        /// <param name="type">Type name</param>
+        /// <returns>Analysis results</returns>
         private object TryParseAsJson(string value, string type)
         {
             try
@@ -500,28 +500,28 @@ namespace Monica.Framework.UI.UISignalr.Services
                 }
                 else
                 {
-                    // 不是JSON格式，返回原字符串
+                    // Not in JSON format, return the original string
                     return value;
                 }
             }
             catch
             {
-                // JSON解析失败，返回原字符串
+                // JSON parsing failed and original string returned
                 return value;
             }
         }
 
         /// <summary>
-        /// 尝试解析复杂类型
+        /// Try to parse complex types
         /// </summary>
-        /// <param name="value">字符串值</param>
-        /// <param name="type">类型名称</param>
-        /// <returns>解析结果</returns>
+        /// <param name="value">String value</param>
+        /// <param name="type">Type name</param>
+        /// <returns>Analysis results</returns>
         private object TryParseComplexType(string value, string type)
         {
             var trimmedValue = value.Trim();
             
-            // 如果看起来像JSON，尝试解析
+            // If it looks like JSON, try parsing
             if ((trimmedValue.StartsWith("{") && trimmedValue.EndsWith("}")) ||
                 (trimmedValue.StartsWith("[") && trimmedValue.EndsWith("]")))
             {
@@ -531,20 +531,20 @@ namespace Monica.Framework.UI.UISignalr.Services
                 }
                 catch
                 {
-                    // JSON解析失败，返回原字符串
+                    // JSON parsing failed and original string returned
                     return value;
                 }
             }
             
-            // 不像JSON，直接返回原字符串
+            // Unlike JSON, the original string is returned directly
             return value;
         }
 
         /// <summary>
-        /// 获取默认值
+        /// Get default value
         /// </summary>
-        /// <param name="type">类型名称</param>
-        /// <returns>默认值</returns>
+        /// <param name="type">Type name</param>
+        /// <returns>Default value</returns>
         private object GetDefaultValue(string type)
         {
             return type.ToLower() switch
@@ -562,11 +562,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 切换方法监听
+        /// Switch method listening
         /// </summary>
-        /// <param name="methodName">方法名称</param>
-        /// <param name="isListening">是否监听</param>
-        /// <returns>是否成功</returns>
+        /// <param name="methodName">Method name</param>
+        /// <param name="isListening">Whether to listen</param>
+        /// <returns>Whether it was successful</returns>
         public async Task<bool> ToggleMethodListenerAsync(string methodName, bool isListening)
         {
             try
@@ -605,9 +605,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 启用所有监听器
+        /// Enable all listeners
         /// </summary>
-        /// <returns>成功启用的数量</returns>
+        /// <returns>The number of successful activations</returns>
         public async Task<int> EnableAllListenersAsync()
         {
             int successCount = 0;
@@ -625,9 +625,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 禁用所有监听器
+        /// Disable all listeners
         /// </summary>
-        /// <returns>成功禁用的数量</returns>
+        /// <returns>The number of successful bans</returns>
         public async Task<int> DisableAllListenersAsync()
         {
             int successCount = 0;
@@ -645,7 +645,7 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 清空消息
+        /// Clear messages
         /// </summary>
         public void ClearMessages()
         {
@@ -655,35 +655,35 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 获取消息列表
+        /// Get message list
         /// </summary>
-        /// <returns>消息列表</returns>
+        /// <returns>Message list</returns>
         public IReadOnlyList<SignalRMessage> GetMessages() => _messages.AsReadOnly();
 
         /// <summary>
-        /// 获取Hub方法列表
+        /// Get Hub method list
         /// </summary>
-        /// <returns>Hub方法列表</returns>
+        /// <returns>Hub method list</returns>
         public IReadOnlyList<HubMethodInfo> GetHubMethods() => _hubMethods.AsReadOnly();
         
         /// <summary>
-        /// 获取Hub组信息列表
+        /// Get the Hub group information list
         /// </summary>
-        /// <returns>Hub组信息列表</returns>
+        /// <returns>Hub group information list</returns>
         public IReadOnlyList<SignalRServerGroupInfo> GetHubGroups() => _hubGroups.AsReadOnly();
 
         /// <summary>
-        /// 获取连接状态
+        /// Get connection status
         /// </summary>
-        /// <returns>连接状态</returns>
+        /// <returns>Connection status</returns>
         public SignalRConnectionState GetConnectionState() => _connectionState;
 
         /// <summary>
-        /// JavaScript回调：接收消息
+        /// JavaScript callback: receive message
         /// </summary>
-        /// <param name="source">消息来源</param>
-        /// <param name="content">消息内容</param>
-        /// <param name="type">消息类型</param>
+        /// <param name="source">Source</param>
+        /// <param name="content">Message content</param>
+        /// <param name="type">Message type</param>
         [JSInvokable("Invoke")]
         public void Invoke(string source, string content, string type)
         {
@@ -704,7 +704,7 @@ namespace Monica.Framework.UI.UISignalr.Services
             {
                 _connectionState.TotalReceivedMessages++;
                 
-                // 更新方法接收次数
+                // Update method reception times
                 var methodName = content.Split(':')[0];
                 var method = _hubMethods.FirstOrDefault(m => m.DisplayName.Contains(methodName));
                 if (method != null)
@@ -718,9 +718,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// JavaScript回调：连接状态变化
+        /// JavaScript callback: connection status change
         /// </summary>
-        /// <param name="status">连接状态</param>
+        /// <param name="status">Connection status</param>
         [JSInvokable("OnConnectionStatusChanged")]
         public void OnConnectionStatusChanged(string status)
         {
@@ -732,9 +732,9 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// JavaScript回调：连接ID变化
+        /// JavaScript callback: connection ID changes
         /// </summary>
-        /// <param name="id">连接ID</param>
+        /// <param name="id">Connection ID</param>
         [JSInvokable("SetConnectionId")]
         public void SetConnectionId(string id)
         {
@@ -745,11 +745,11 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 添加消息
+        /// Add message
         /// </summary>
-        /// <param name="source">消息来源</param>
-        /// <param name="content">消息内容</param>
-        /// <param name="type">消息类型</param>
+        /// <param name="source">Source</param>
+        /// <param name="content">Message content</param>
+        /// <param name="type">Message type</param>
         private void AddMessage(string source, string content, MessageType type)
         {
             var message = new SignalRMessage
@@ -763,7 +763,7 @@ namespace Monica.Framework.UI.UISignalr.Services
 
             _messages.Insert(0, message);
             
-            // 限制消息数量
+            // Limit the number of messages
             if (_messages.Count > 1000)
             {
                 _messages.RemoveAt(_messages.Count - 1);
@@ -773,7 +773,7 @@ namespace Monica.Framework.UI.UISignalr.Services
         }
 
         /// <summary>
-        /// 释放资源
+        /// Release resources
         /// </summary>
         public async ValueTask DisposeAsync()
         {
@@ -790,7 +790,7 @@ namespace Monica.Framework.UI.UISignalr.Services
             }
             catch
             {
-                // 忽略清理错误
+                // Ignore cleanup errors
             }
             
             _dotNetRef?.Dispose();

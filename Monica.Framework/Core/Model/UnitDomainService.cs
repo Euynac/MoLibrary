@@ -5,7 +5,7 @@ using Monica.Modules;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 领域服务
+/// Domain services
 /// </summary>
 /// <param name="type"></param>
 public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.DomainService), IHasProjectUnitFactory
@@ -32,7 +32,7 @@ public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.D
         var unit = new UnitDomainService(context.Type);
         if (!unit.VerifyType()) return null;
         
-        // 初始化方法元数据
+        // Initialization method metadata
         unit.InitializeMethods<MoDomainService>();
         return unit;
     }

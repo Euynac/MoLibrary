@@ -266,7 +266,7 @@ public static class RepositoryAsyncExtensions
         return await queryable.MaxAsync(selector, cancellationToken);
     }
 
-    //Todo 待.NET 支持MaxBy后优化
+    //Todo will be optimized after .NET supports MaxBy.
     public static async Task<T?> MaxByAsync<T, TKey>(
         this IMoBasicRepository<T> repository,
         Expression<Func<T, TKey>> selector,

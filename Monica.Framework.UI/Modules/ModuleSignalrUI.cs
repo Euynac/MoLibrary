@@ -15,7 +15,7 @@ public static class ModuleSignalrUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 SignalrUI 模块
+        /// Configuring the SignalrUI module
         /// </summary>
         public static ModuleSignalrUIGuide AddSignalRUI(Action<ModuleSignalrUIOption>? action = null)
         {
@@ -52,12 +52,12 @@ public class ModuleSignalrUIGuide : MoModuleGuide<ModuleSignalrUI, ModuleSignalr
 public class ModuleSignalrUIOption : MoModuleOption<ModuleSignalrUI>
 { 
     /// <summary>
-    /// 是否禁用SignalR调试页面
+    /// Whether to disable the SignalR debugging page
     /// </summary>
     public bool DisableUISingalrPage { get; set; }
 
     /// <summary>
-    /// 默认AccessToken用于SignalR调试页面
+    /// The default AccessToken is used for SignalR debugging pages
     /// </summary>
     public string? DefaultAccessToken { get; set; }
 }

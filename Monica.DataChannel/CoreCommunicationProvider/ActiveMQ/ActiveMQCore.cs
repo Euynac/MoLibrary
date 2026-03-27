@@ -19,7 +19,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
         }
 
         ITextMessage msg = await session.CreateTextMessageAsync(data.Data?.ToString());
-        msg.Properties.SetString("Type", data.DataType?.Name); //设置消息种类
+        msg.Properties.SetString("Type", data.DataType?.Name); // Sets the message type.
         await producer.SendAsync(msg);
     }
 
@@ -30,7 +30,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
         var connection = await factory.CreateConnectionAsync(Metadata.AccessKey, Metadata.SecretKey);
         connection.ClientId = Metadata.ClientId;
         await connection.StartAsync();
-        session = await connection.CreateSessionAsync(AcknowledgementMode.AutoAcknowledge);//自动签收
+        session = await connection.CreateSessionAsync(AcknowledgementMode.AutoAcknowledge);// Auto-acknowledge mode.
 
         if (Metadata.Direction == EConnectionDirection.Input || Metadata.Direction == EConnectionDirection.InputAndOutput)
         {
@@ -48,7 +48,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
                         }
 
                         logger.LogInformation("ActivateMQ接收到消息：{message}", message);
-                        //如果是ClientAcknowledge或者IndividualAcknowledge，需要调用Acknowledge方法进行签收确认
+                        // If using ClientAcknowledge or IndividualAcknowledge, call Acknowledge() here.
                         //message?.Acknowledge();
                     }
                     catch (Exception e)
@@ -74,7 +74,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
                         }
 
                         logger.LogInformation("ActivateMQ接收到消息：{message}", message);
-                        //如果是ClientAcknowledge或者IndividualAcknowledge，需要调用Acknowledge方法进行签收确认
+                        // If using ClientAcknowledge or IndividualAcknowledge, call Acknowledge() here.
                         //message?.Acknowledge();
                     }
                     catch (Exception e)
@@ -92,7 +92,7 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
             {
                 var dest = await session.GetQueueAsync(Metadata.QueueName);
                 producer = session.CreateProducer(dest);
-                producer.DeliveryMode = MsgDeliveryMode.NonPersistent; //消息发送模式：持久化或非持久化
+                producer.DeliveryMode = MsgDeliveryMode.NonPersistent; // Delivery mode (persistent vs non-persistent).
             }
         }
     }
@@ -101,4 +101,4 @@ public class ActiveMQCore(MetadataForActiveMQ metadata, ILogger<ActiveMQCore> lo
     {
         return EConnectionDirection.InputAndOutput;
     }
-} 
+}

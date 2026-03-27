@@ -3,39 +3,39 @@ using Monica.AI.Models;
 namespace Monica.AI.Abstractions;
 
 /// <summary>
-/// AI Provider 工厂接口，用于创建和管理 Provider 实例
+/// AI Provider factory interface, used to create and manage Provider instances
 /// </summary>
 public interface IAIProviderFactory
 {
     /// <summary>
-    /// 获取指定 ID 的 Provider
+    /// Get the Provider with the specified ID
     /// </summary>
     /// <param name="providerId">Provider ID</param>
-    /// <returns>Provider 实例，如果不存在则返回 null</returns>
+    /// <returns>Provider instance, or null if it does not exist</returns>
     IAIProvider? GetProvider(string providerId);
 
     /// <summary>
-    /// 获取所有已注册的 Provider
+    /// Get all registered Providers
     /// </summary>
-    /// <returns>Provider 列表</returns>
+    /// <returns>Provider list</returns>
     IReadOnlyList<IAIProvider> GetAllProviders();
 
     /// <summary>
-    /// 获取所有 Provider 的元数据信息
+    /// Get metadata information of all Providers
     /// </summary>
-    /// <returns>Provider 信息列表</returns>
+    /// <returns>Provider information list</returns>
     IReadOnlyList<AIProviderInfo> GetAllProviderInfos();
 
     /// <summary>
-    /// 获取默认 Provider
+    /// Get the default Provider
     /// </summary>
-    /// <returns>默认 Provider 实例</returns>
+    /// <returns>Default Provider instance</returns>
     IAIProvider? GetDefaultProvider();
 
     /// <summary>
-    /// 检查指定 Provider 是否已注册
+    /// Check whether the specified Provider has been registered
     /// </summary>
     /// <param name="providerId">Provider ID</param>
-    /// <returns>是否已注册</returns>
+    /// <returns>Have you registered?</returns>
     bool HasProvider(string providerId);
 }

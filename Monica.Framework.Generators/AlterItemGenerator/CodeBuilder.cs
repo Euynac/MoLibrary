@@ -7,12 +7,12 @@ using Microsoft.CodeAnalysis;
 namespace Monica.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
-/// 代码构建器，用于生成 AlterItemData 类和 Apply 方法的代码
+/// Code builder for generating code for the AlterItemData class and Apply method
 /// </summary>
 internal class CodeBuilder
 {
     /// <summary>
-    /// 生成 AlterItemData 类的完整代码
+    /// Generate complete code for the AlterItemData class
     /// </summary>
     public string BuildAlterItemDataClass(
         EntityAnalysisResult analysisResult, 
@@ -29,34 +29,34 @@ internal class CodeBuilder
 
         var sb = new StringBuilder();
 
-        // 文件头部和 using 语句
+        // File headers and using statements
         BuildFileHeader(sb, entitySymbol, includeDebugInfo);
         BuildUsingStatements(sb, entitySymbol, flattenedResult);
 
-        // 命名空间开始
+        // namespace start
         sb.AppendLine($"namespace {namespaceName};");
         sb.AppendLine();
 
-        // 类定义开始
+        // Class definition begins
         BuildClassHeader(sb, className, entityName, includeDebugInfo);
 
-        // 属性定义
+        // Property definition
         BuildProperties(sb, flattenedResult);
 
-        // Apply 方法
+        // Apply method
         BuildApplyMethod(sb, entityName, flattenedResult);
         
-        // GetChanges 方法
+        // GetChanges method
         BuildGetChangesMethod(sb, entityName, flattenedResult);
 
-        // 类定义结束
+        // End of class definition
         sb.AppendLine("}");
 
         return sb.ToString();
     }
 
     /// <summary>
-    /// 构建文件头部
+    /// Build file header
     /// </summary>
     private void BuildFileHeader(StringBuilder sb, INamedTypeSymbol entitySymbol, bool includeDebugInfo)
     {
@@ -75,7 +75,7 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建 using 语句
+    /// Building a using statement
     /// </summary>
     private void BuildUsingStatements(StringBuilder sb, INamedTypeSymbol entitySymbol, FlattenedPropertyResult flattenedResult)
     {
@@ -88,14 +88,14 @@ internal class CodeBuilder
             "Monica.Framework.Features.AlterChain"
         };
 
-        // 添加实体命名空间
+        // Add entity namespace
         var entityNamespace = entitySymbol.ContainingNamespace.ToDisplayString();
         if (!string.IsNullOrEmpty(entityNamespace))
         {
             usings.Add(entityNamespace);
         }
 
-        // 添加属性类型相关的命名空间
+        // Add namespace related to attribute type
         foreach (var property in flattenedResult.Properties)
         {
             AddNamespacesFromProperty(usings, property);
@@ -119,21 +119,21 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 从FlattenedProperty中添加相关命名空间
+    /// Add related namespace from FlattenedProperty
     /// </summary>
     private void AddNamespacesFromProperty(HashSet<string> usings, FlattenedProperty property)
     {
-        // 从原始属性符号的类型中提取命名空间
+        // Extract the namespace from the type of the original attribute symbol
         var typeSymbol = property.OriginalPropertySymbol.Type;
         AddNamespacesFromTypeSymbol(usings, typeSymbol);
     }
     
     /// <summary>
-    /// 从类型符号中添加命名空间
+    /// Add namespace from type symbol
     /// </summary>
     private static void AddNamespacesFromTypeSymbol(HashSet<string> usings, ITypeSymbol typeSymbol)
     {
-        // 处理可空类型
+        // Handling nullable types
         if (typeSymbol is INamedTypeSymbol namedType && 
             namedType.IsGenericType && 
             namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
@@ -142,14 +142,14 @@ internal class CodeBuilder
             return;
         }
         
-        // 添加类型所在的命名空间
+        // Add the namespace where the type is located
         var namespaceName = typeSymbol.ContainingNamespace?.ToDisplayString();
         if (!string.IsNullOrEmpty(namespaceName) && namespaceName != "<global namespace>")
         {
             usings.Add(namespaceName!);
         }
         
-        // 处理泛型类型参数
+        // Handling generic type parameters
         if (typeSymbol is INamedTypeSymbol genericType && genericType.IsGenericType)
         {
             foreach (var typeArg in genericType.TypeArguments)
@@ -160,11 +160,11 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 获取简洁的类型显示字符串，不使用global::前缀
+    /// Get a compact type display string without using the global:: prefix
     /// </summary>
     private string GetConciseTypeString(ITypeSymbol typeSymbol)
     {
-        // 创建简洁的显示格式，不使用全限定名称
+        // Create a concise display format without using fully qualified names
         var format = new SymbolDisplayFormat(
             typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameOnly,
             genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
@@ -173,24 +173,24 @@ internal class CodeBuilder
         
         var typeName = typeSymbol.ToDisplayString(format);
         
-        // 确保所有引用类型和值类型都是可空的
+        // Make sure all reference and value types are nullable
         if (!typeName.EndsWith("?"))
         {
-            // 对于值类型，如果不是已经是 Nullable<T>，则添加 ?
+            // For value types, if not already Nullable<T>, add ?
             if (!typeSymbol.IsReferenceType)
             {
                 if (typeSymbol is INamedTypeSymbol namedType && 
                     namedType.IsGenericType && 
                     namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
                 {
-                    // 已经是 Nullable<T>，保持原样
+                    // Already Nullable<T>, leave it as is
                     return typeName;
                 }
 
                 return typeName + "?";
             }
 
-            // 对于引用类型（包括string），添加 ?
+            // For reference types (including string), add ?
             return typeName + "?";
         }
         
@@ -198,7 +198,7 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建类头部
+    /// Build class header
     /// </summary>
     private void BuildClassHeader(StringBuilder sb, string className, string entityName, bool includeDebugInfo)
     {
@@ -218,21 +218,21 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建属性定义
+    /// Build property definition
     /// </summary>
     private void BuildProperties(StringBuilder sb, FlattenedPropertyResult flattenedResult)
     {
-        // 分组属性：直接属性和导航属性分别处理
+        // Grouping attributes: direct attributes and navigation attributes are processed separately
         var directProperties = flattenedResult.Properties.Where(p => !p.IsOptionalNavigation).ToList();
         var propertyGroups = GroupPropertiesByOwner(directProperties);
         
-        // 生成直接属性（无分组）
+        // Generate direct attributes (no grouping)
         foreach (var property in propertyGroups.Where(g => g.Key == "Direct").SelectMany(g => g.Value))
         {
             BuildPropertyDeclaration(sb, property);
         }
         
-        // 生成分组属性
+        // Generate grouping properties
         foreach (var group in propertyGroups.Where(g => g.Key != "Direct"))
         {
             sb.AppendLine($"    #region {group.Key}");
@@ -247,7 +247,7 @@ internal class CodeBuilder
             sb.AppendLine();
         }
         
-        // 生成导航属性组
+        // Generate navigation attribute group
         foreach (var navGroup in flattenedResult.NavigationGroups)
         {
             sb.AppendLine($"    #region {navGroup.NavigationPropertyName}");
@@ -264,11 +264,11 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建 Apply 方法和 GenedApply 方法
+    /// Building the Apply method and the GenedApply method
     /// </summary>
     private void BuildApplyMethod(StringBuilder sb, string entityName, FlattenedPropertyResult flattenedResult)
     {
-        // 生成 virtual Apply 方法
+        // Generate virtual Apply method
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 应用变更到目标实体 (可被重写以扩展功能)");
         sb.AppendLine("    /// </summary>");
@@ -279,7 +279,7 @@ internal class CodeBuilder
         sb.AppendLine("    }");
         sb.AppendLine();
 
-        // 生成 GenedApply 方法
+        // Generate the GenedApply method
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 生成的应用变更逻辑 (由Source Generator自动生成)");
         sb.AppendLine("    /// </summary>");
@@ -287,17 +287,17 @@ internal class CodeBuilder
         sb.AppendLine($"    protected void GenedApply({entityName} entity)");
         sb.AppendLine("    {");
 
-        // 处理直接属性（从 Owned 类型扁平化的属性）
+        // Handle direct properties (properties flattened from Owned type)
         var directProperties = flattenedResult.Properties.Where(p => !p.IsOptionalNavigation).ToList();
         var propertyGroups = GroupPropertiesByOwner(directProperties);
         
-        // 生成直接属性赋值（无分组）
+        // Generate direct property assignment (no grouping)
         foreach (var property in propertyGroups.Where(g => g.Key == "Direct").SelectMany(g => g.Value))
         {
             BuildPropertyAssignment(sb, property);
         }
         
-        // 生成分组属性赋值
+        // Generate grouping attribute assignments
         foreach (var group in propertyGroups.Where(g => g.Key != "Direct"))
         {
             sb.AppendLine($"        #region {group.Key}");
@@ -312,7 +312,7 @@ internal class CodeBuilder
             sb.AppendLine();
         }
         
-        // 处理导航属性组
+        // Handling navigation property groups
         foreach (var group in flattenedResult.NavigationGroups)
         {
             BuildNavigationPropertyGroup(sb, group);
@@ -322,21 +322,21 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建属性赋值代码
+    /// Build attribute assignment code
     /// </summary>
     private void BuildPropertyAssignment(StringBuilder sb, FlattenedProperty property)
     {
         sb.AppendLine($"        if ({property.Name} != null)");
         sb.AppendLine("        {");
 
-        // 处理特殊情况：DateTime 默认值检查
+        // Handling special cases: DateTime default value checking
         if (IsDateTimeType(property.Type))
         {
-            // 检查原始属性是否可空
+            // Check if original property is nullable
             if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
             {
 
-                // 目标属性是可空的，需要检查默认值并转换
+                // Target property is nullable, default value needs to be checked and converted
                 sb.AppendLine($"            if ({property.Name} != default(DateTime))");
                 sb.AppendLine("            {");
                 var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
@@ -350,7 +350,7 @@ internal class CodeBuilder
             }
             else
             {
-                // 目标属性是非空的，直接赋值
+                // The target attribute is non-null and can be assigned directly.
                 var safePropertyPath = property.PropertyPath.Contains('.') ? MakeNonNullPropertyPath(property.PropertyPath) : property.PropertyPath;
                 sb.AppendLine($"            entity.{safePropertyPath} = {property.Name}.Value;");
             }
@@ -371,14 +371,14 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建导航属性组代码
+    /// Build navigation property group code
     /// </summary>
     private void BuildNavigationPropertyGroup(StringBuilder sb, NavigationPropertyGroup group)
     {
         sb.AppendLine($"        #region {group.NavigationPropertyName}");
         sb.AppendLine();
         
-        // 生成检查数组和条件
+        // Generate check array and condition
         var propertyNames = group.Properties.Select(p => p.Name).ToList();
         sb.AppendLine($"        object?[] {group.NavigationPropertyName.ToLower()}List = [{string.Join(", ", propertyNames)}];");
         sb.AppendLine($"        if ({group.NavigationPropertyName.ToLower()}List.Any(x => x != null))");
@@ -387,7 +387,7 @@ internal class CodeBuilder
         sb.AppendLine("        }");
         sb.AppendLine();
 
-        // 生成单个属性赋值
+        // Generate a single property assignment
         foreach (var property in group.Properties)
         {
             BuildPropertyAssignment(sb, property);
@@ -396,16 +396,16 @@ internal class CodeBuilder
             //
             // if (IsDateTimeType(property.Type))
             // {
-            //     // 检查原始属性是否可空
+            // // Check if the original property is nullable
             //     if (property.OriginalType.Contains("?") || property.OriginalType.StartsWith("DateTime?"))
             //     {
-            //         // 目标属性是可空的，直接赋值
+            // // The target attribute is nullable and can be assigned directly.
             //         var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
             //         sb.AppendLine($"            entity.{safePropertyPath} = {property.Name};");
             //     }
             //     else
             //     {
-            //         // 目标属性是非空的，需要检查默认值并转换
+            // // The target attribute is non-null and needs to check the default value and convert it
             //         sb.AppendLine($"            if ({property.Name} != default(DateTime))");
             //         sb.AppendLine("            {");
             //         var safePropertyPath = MakeNonNullPropertyPath(property.PropertyPath);
@@ -433,16 +433,16 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 获取导航属性类型
+    /// Get navigation attribute type
     /// </summary>
     private string GetNavigationPropertyType(NavigationPropertyGroup group)
     {
-        // 使用从符号信息中获取的实际类型名称
+        // Use the actual type name obtained from the symbol information
         return group.NavigationPropertyTypeName;
     }
 
     /// <summary>
-    /// 检查是否是 DateTime 类型
+    /// Check if it is of DateTime type
     /// </summary>
     private bool IsDateTimeType(string type)
     {
@@ -450,7 +450,7 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 检查是否是可空值类型
+    /// Check if it is a nullable value type
     /// </summary>
     private bool IsNullableValueType(string type)
     {
@@ -461,7 +461,7 @@ internal class CodeBuilder
     }
     
     /// <summary>
-    /// 根据属性路径对属性进行分组
+    /// Group properties based on property path
     /// </summary>
     private Dictionary<string, List<FlattenedProperty>> GroupPropertiesByOwner(List<FlattenedProperty> properties)
     {
@@ -483,7 +483,7 @@ internal class CodeBuilder
     }
     
     /// <summary>
-    /// 获取属性所属的分组名称
+    /// Get the group name to which the attribute belongs
     /// </summary>
     private string GetOwnerGroupName(string propertyPath)
     {
@@ -495,15 +495,15 @@ internal class CodeBuilder
     }
     
     /// <summary>
-    /// 构建属性声明
+    /// Build property declaration
     /// </summary>
     private void BuildPropertyDeclaration(StringBuilder sb, FlattenedProperty property)
     {
-        // XML 文档注释
+        // XML documentation comments
         if (!string.IsNullOrWhiteSpace(property.XmlDocumentation))
         {
             sb.AppendLine("    /// <summary>");
-            // 处理多行注释，确保每行都有 ///
+            // Handle multi-line comments, ensuring each line has ///
             var lines = property.XmlDocumentation!.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var line in lines)
             {
@@ -512,22 +512,22 @@ internal class CodeBuilder
             sb.AppendLine("    /// </summary>");
         }
 
-        // 使用简洁的类型名称
+        // Use concise type names
         var conciseType = GetConciseTypeString(property.OriginalPropertySymbol.Type);
         
-        // 确保类型是可空的
+        // Make sure the type is nullable
         if (!conciseType.EndsWith("?") && !IsReferenceType(property.OriginalPropertySymbol.Type))
         {
             conciseType += "?";
         }
         
-        // 属性定义
+        // Property definition
         sb.AppendLine($"    public {conciseType} {property.Name} {{ get; set; }}");
         sb.AppendLine();
     }
     
     /// <summary>
-    /// 检查是否是引用类型
+    /// Check if it is a reference type
     /// </summary>
     private bool IsReferenceType(ITypeSymbol type)
     {
@@ -537,11 +537,11 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建 GetChanges 方法和 GenedGetChanges 方法
+    /// Build the GetChanges method and the GenedGetChanges method
     /// </summary>
     private void BuildGetChangesMethod(StringBuilder sb, string entityName, FlattenedPropertyResult flattenedResult)
     {
-        // 生成 virtual GetChanges 方法
+        // Generate virtual GetChanges method
         sb.AppendLine();
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 获取当前变更信息 (可被重写以扩展功能)");
@@ -554,7 +554,7 @@ internal class CodeBuilder
         sb.AppendLine("    }");
         sb.AppendLine();
 
-        // 生成 GenedGetChanges 方法
+        // Generate the GenedGetChanges method
         sb.AppendLine("    /// <summary>");
         sb.AppendLine("    /// 生成的获取变更信息逻辑 (由Source Generator自动生成)");
         sb.AppendLine("    /// </summary>");
@@ -563,14 +563,14 @@ internal class CodeBuilder
         sb.AppendLine($"    protected IEnumerable<PropertyAlterData> GenedGetChanges({entityName}? entity = null)");
         sb.AppendLine("    {");
 
-        // 处理直接属性（从 Owned 类型扁平化的属性）
+        // Handle direct properties (properties flattened from Owned type)
         var directProperties = flattenedResult.Properties.Where(p => !p.IsOptionalNavigation).ToList();
         foreach (var property in directProperties)
         {
             BuildGetChangesPropertyYield(sb, property);
         }
 
-        // 处理导航属性组
+        // Handling navigation property groups
         foreach (var navGroup in flattenedResult.NavigationGroups)
         {
             foreach (var property in navGroup.Properties)
@@ -583,7 +583,7 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 构建 GetChanges 方法中的属性 yield return 代码
+    /// Construct property yield return code in GetChanges method
     /// </summary>
     private void BuildGetChangesPropertyYield(StringBuilder sb, FlattenedProperty property)
     {
@@ -592,13 +592,13 @@ internal class CodeBuilder
         sb.AppendLine("            yield return new PropertyAlterData");
         sb.AppendLine("            {");
         
-        // 优先使用 AlterItemPropertyAttribute 的Title，否则使用 PropertyName
+        // Prioritize using AlterItemPropertyAttribute's Title, otherwise use PropertyName
         var displayName = GetPropertyDisplayName(property);
         sb.AppendLine($"                DisplayName = \"{displayName}\",");
         sb.AppendLine($"                PropertyName = nameof({property.Name}),");
         sb.AppendLine($"                NewValue = {property.Name},");
         
-        // 处理可空导航属性的安全访问
+        // Handling safe access to nullable navigation properties
         var safePropertyPath = MakeSafePropertyPath(property.PropertyPath);
         sb.AppendLine($"                OldValue = entity?.{safePropertyPath}");
         sb.AppendLine("            };");
@@ -607,11 +607,11 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 将属性路径转换为安全的可空访问路径
+    /// Convert property paths to safe nullable access paths
     /// </summary>
     private string MakeSafePropertyPath(string propertyPath)
     {
-        // 将 "DepInfo.COBT" 转换为 "DepInfo?.COBT"
+        // Convert "DepInfo.COBT" to "DepInfo?.COBT"
         var parts = propertyPath.Split('.');
         if (parts.Length > 1)
         {
@@ -621,32 +621,32 @@ internal class CodeBuilder
     }
 
     /// <summary>
-    /// 将属性路径转换为非空访问路径（用于赋值语句）
+    /// Convert property paths to non-null access paths (for assignment statements)
     /// </summary>
     private string MakeNonNullPropertyPath(string propertyPath)
     {
-        // 将 "DepInfo.COBT" 转换为 "DepInfo!.COBT"
+        // Convert "DepInfo.COBT" to "DepInfo!.COBT"
         var parts = propertyPath.Split('.');
         if (parts.Length > 1)
         {
-            // 第一个部分是导航属性，需要加上 !
+            // The first part is the navigation attribute, which needs to be added!
             return parts[0] + "!." + string.Join(".", parts.Skip(1));
         }
         return propertyPath;
     }
 
     /// <summary>
-    /// 获取属性显示名称，优先使用 AlterItemPropertyAttribute 的Title，否则使用 PropertyName
+    /// Get the attribute display name. The Title of AlterItemPropertyAttribute is used first, otherwise PropertyName is used.
     /// </summary>
     private string GetPropertyDisplayName(FlattenedProperty property)
     {
-        // 检查 AlterItemPropertyAttribute 的 Title 设置
+        // Check the AlterItemPropertyAttribute's Title setting
         var alterItemAttr = property.OriginalPropertySymbol.GetAttributes()
             .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute");
         
         if (alterItemAttr != null)
         {
-            // 查找 Title 属性
+            // Find the Title property
             var titleNamedArg = alterItemAttr.NamedArguments
                 .FirstOrDefault(arg => arg.Key == "Title");
             
@@ -658,7 +658,7 @@ internal class CodeBuilder
             }
         }
         
-        // 默认返回属性名
+        // Return attribute name by default
         return property.Name;
     }
 }

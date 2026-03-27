@@ -1,7 +1,7 @@
 @using Monica.Configuration.Model
 
 <div class="configuration-value-editor">
-    @* 首先检查SpecialType，它优先于BasicType *@
+    @* Check SpecialType first, it takes precedence over BasicType *@
     @if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Array)
     {
         <ConfigurationArrayEditor Value="@Value" 
@@ -17,7 +17,7 @@
                                  ValueChanged="@OnValueChanged" 
                                  OptionItem="@OptionItem" />
     }
-    @* 如果不是复合类型，则根据BasicType选择组件 *@
+    @* If not a composite type, the component is selected based on BasicType *@
     else if (OptionItem?.Type == EOptionItemValueBasicType.Object && OptionItem.SubStructure != null)
     {
         <ConfigurationObjectEditor Value="@Value" 
@@ -60,11 +60,11 @@
     }
 
     /// <summary>
-    /// 检查是否有验证错误
+    /// Check for validation errors
     /// </summary>
     public bool HasValidationErrors()
     {
-        // 只检查字典编辑器的验证错误，其他类型暂时不需要
+        // Only check validation errors for dictionary editors, other types are not needed for the time being.
         if (OptionItem?.SpecialType == EOptionItemValueSpecialType.Dict)
         {
             return dictEditor?.HasValidationErrors() ?? false;

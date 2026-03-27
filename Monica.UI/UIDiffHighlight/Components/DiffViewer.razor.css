@@ -30,14 +30,14 @@
 }
 
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
     .diff-viewer {
         font-size: 12px;
     }
 }
 
-/* 滚动条样式 */
+/* Scroll bar style */
 .diff-content::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -56,13 +56,13 @@
     background: var(--mud-palette-text-secondary);
 }
 
-/* 空状态样式 */
+/* Empty state style */
 .diff-viewer .mud-alert {
     margin: 16px;
 }
 
 
-/* 视图模式切换按钮样式 */
+/* View mode switch button style */
 .view-mode-toggle {
     display: flex;
     gap: 4px;
@@ -83,7 +83,7 @@
 }
 
 
-/* 响应式设计 - 控制按钮 */
+/* Responsive design - control buttons */
 @media (max-width: 768px) {
     .display-mode-chips {
         flex-wrap: wrap;

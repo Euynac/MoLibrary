@@ -20,7 +20,7 @@
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mt-3" ActivePanelIndexChanged="OnTabChanged">
         <MudTabPanel Text="修改概览">
             <div class="pa-4">
-                <!-- 修改概览表格 -->
+                <!-- Modify overview table -->
                 <MudTable T="ConfigurationViewModel" Items="@modifiedConfigs" Dense="true" Hover="true">
                     <HeaderContent>
                         <MudTh>配置类</MudTh>
@@ -51,7 +51,7 @@
                     </RowTemplate>
                 </MudTable>
 
-                <!-- 详细变更内容 -->
+                <!-- Detailed changes -->
                 @if (!string.IsNullOrEmpty(selectedConfigKey))
                 {
                     <MudDivider Class="my-4" />
@@ -98,7 +98,7 @@
                         </RowTemplate>
                     </MudTable>
 
-                    <!-- JSON差异对比区域 -->
+                    <!-- JSON difference comparison area -->
                     @if (selectedDiffItem != null)
                     {
                         <MudDivider Class="my-4" />
@@ -181,7 +181,7 @@
     private string selectedConfigKey = "";
     private int TotalModifiedItems => modifiedConfigs.Sum(c => c.ModificationCount);
 
-    // JSON差异对比相关
+    // JSON difference comparison related
     private ConfigurationItemViewModel? selectedDiffItem;
 
     protected override void OnParametersSet()
@@ -266,12 +266,12 @@
     {
         if (selectedDiffItem == item)
         {
-            // 如果点击的是已选中的项，则隐藏差异对比
+            // If you click on a selected item, hide the difference comparison
             selectedDiffItem = null;
         }
         else
         {
-            // 否则显示该项的差异对比
+            // Otherwise, display the difference comparison of this item
             selectedDiffItem = item;
         }
         StateHasChanged();
@@ -279,7 +279,7 @@
 
     private void OnTabChanged(int tabIndex)
     {
-        // 切换tab时隐藏JSON差异对比
+        // Hide JSON difference comparison when switching tabs
         if (selectedDiffItem != null)
         {
             selectedDiffItem = null;
@@ -292,10 +292,10 @@
 
     private void Submit()
     {
-        // 使用StateManager构建配置类级别的更新请求列表
+        // Use StateManager to build a list of configuration class-level update requests
         var updateRequests = StateManager.BuildUpdateRequests();
 
-        // 返回配置类级别的更新请求数据
+        // Returns configuration class level update request data
         MudDialog.Close(DialogResult.Ok(updateRequests));
     }
 }

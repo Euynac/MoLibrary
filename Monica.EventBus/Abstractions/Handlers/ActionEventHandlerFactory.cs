@@ -1,25 +1,26 @@
 ﻿namespace Monica.EventBus.Abstractions.Handlers;
 /// <summary>
-/// This event handler is an adapter to be able to use an action as <see cref="IMoLocalEventHandler{TEvent}"/> implementation.
+/// Adapter that allows a delegate to be used as an <see cref="IMoLocalEventHandler{TEvent}"/>
+/// implementation.
 /// </summary>
 /// <typeparam name="TEvent">Event type</typeparam>
 public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>
 {
     /// <summary>
-    /// Function to handle the event.
+    /// Delegate used to handle the event.
     /// </summary>
     public Func<TEvent, Task> Action { get; }
 
     /// <summary>
     /// Creates a new instance of <see cref="ActionEventHandler{TEvent}"/>.
     /// </summary>
-    /// <param name="handler">Action to handle the event</param>
+    /// <param name="handler">Delegate that handles the event.</param>
     public ActionEventHandler(Func<TEvent, Task> handler) => Action = handler;
 
     /// <summary>
-    /// Handles the event.
+    /// Handles the event by invoking the configured delegate.
     /// </summary>
-    /// <param name="eventData"></param>
+    /// <param name="eventData">Event payload.</param>
     public async Task HandleEventAsync(TEvent eventData)
     {
         await Action(eventData);
@@ -27,7 +28,7 @@ public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>
 }
 
 /// <summary>
-/// Action-based event handler factory.
+/// Factory for delegate-based event handlers.
 /// </summary>
 internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, Task> action) : IEventHandlerFactory
     where TEvent : class

@@ -11,11 +11,11 @@ public static class EfCoreExclude
 {
     internal const string EXCLUDE_PROPERTY_ANNOTATION = "Excluded property:";
     /// <summary>
-    /// 排除字段不查询 (目前仅支持PgSQL，以及string类型忽略，请不要到处使用)
+    /// Exclude fields from querying (currently only supports PgSQL, and string types are ignored, please do not use it everywhere)
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <typeparam name="TProperty"></typeparam>
-    /// <param name="query">目前仅支持单个属性，不支持匿名</param>
+    /// <param name="query">Currently only a single attribute is supported and anonymous is not supported</param>
     /// <param name="propertyPath"></param>
     /// <returns></returns>
     public static IQueryable<TEntity> Exclude<TEntity, TProperty>(this IQueryable<TEntity> query,
@@ -61,7 +61,7 @@ public class RepositoryTaggedQueryCommandInterceptor : DbCommandInterceptor
             var endIndex = sql.IndexOfAny(['\n', '\r']);
             var excluded = sql[excludePropertyKey.Length..endIndex];
             
-            //发现这种执行sql效率还不如直接取，是因为会使得sql变成O(n)?
+            //I found that the efficiency of executing sql is not as good as fetching it directly, because it will make sql become O(n)?
             finalSql = sql.Replace($"""
                                     f."{excluded}"
                                     """, $"""

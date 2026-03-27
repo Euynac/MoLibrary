@@ -7,7 +7,7 @@
 @inject ConfigurationUIService ConfigUIService
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
-    <!-- 搜索区域和操作按钮 -->
+    <!-- Search area and action buttons -->
     <MudGrid Class="mb-4">
         <MudItem xs="12" md="6">
             <MudTextField @bind-Value="searchKeyword" 
@@ -43,9 +43,9 @@
         </MudItem>
     </MudGrid>
     
-    <!-- 三列布局 -->
+    <!-- three column layout -->
     <MudGrid Class="config-explorer-grid">
-        <!-- 第一列：领域和服务导航 -->
+        <!-- Column 1: Domain and Service Navigation -->
         <MudItem xs="3">
             <MudPaper Class="pa-2 config-navigation-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
@@ -71,7 +71,7 @@
             </MudPaper>
         </MudItem>
         
-        <!-- 第二列：配置类表格 -->
+        <!-- Second column: configuration table -->
         <MudItem xs="4">
             <MudPaper Class="pa-2 config-class-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
@@ -156,7 +156,7 @@
             </MudPaper>
         </MudItem>
         
-        <!-- 第三列：配置项表格 -->
+        <!-- The third column: configuration item table -->
         <MudItem xs="5">
             <MudPaper Class="pa-2 config-item-panel">
                 <MudText Typo="Typo.h6" Class="mb-3">配置项</MudText>
@@ -272,15 +272,15 @@
     
     private string searchKeyword = "";
     
-    // 选择状态
+    // Select status
     private DtoDomainGroup? selectedDomain;
     private DtoServiceGroup? selectedService;
     private DtoConfig? selectedConfig;
     
-    // 状态管理
+    // Status management
     private ConfigurationStateManager stateManager = new();
     
-    // 保存确认对话框
+    // Save confirmation dialog
     private bool isSaveConfirmationDialogOpen = false;
     private bool isSaving = false;
     
@@ -294,13 +294,13 @@
     
     protected override void OnParametersSet()
     {
-        // 只有在配置数据真正发生变化时才重新初始化状态管理器
+        // Only reinitialize the state manager when the configuration data actually changes
         if (_lastConfigs != Configs) 
         {
             _lastConfigs = Configs;
             stateManager.Initialize(Configs);
             
-            // 从状态管理器恢复选择状态
+            // Restore selection state from state manager
             RestoreSelectionFromStateManager();
         }
     }
@@ -312,7 +312,7 @@
         selectedService = service;
         selectedConfig = null; // 重置配置类选择
         
-        // 更新状态管理器
+        // Update status manager
         stateManager.UpdateSelection(domainName: domain.Name, serviceName: service.Name, configName: null);
         
         StateHasChanged();
@@ -322,7 +322,7 @@
     {
         selectedConfig = config;
         
-        // 更新状态管理器，传递完整的选择状态
+        // Update the state manager to pass the complete selection state
         if (config != null && selectedDomain != null && selectedService != null)
         {
             stateManager.UpdateSelection(domainName: selectedDomain.Name, serviceName: selectedService.Name, configName: config.Name);
@@ -459,7 +459,7 @@
             editingItem = item;
             editingAppId = appId;
             
-            // 使用 IDialogService 打开编辑对话框
+            // Open the edit dialog using IDialogService
             var parameters = new DialogParameters<ConfigurationEditor>
             {
                 { x => x.OnConfigurationUpdated, EventCallback.Factory.Create(this, OnConfigurationUpdated) },
@@ -481,7 +481,7 @@
             
             if (result != null && !result.Canceled)
             {
-                // 由于 StateManager 已经处理了更新，只需要刷新界面
+                // Since the StateManager has already handled the update, just refresh the interface
                 StateHasChanged();
             }
         }
@@ -494,7 +494,7 @@
 
     private void OnConfigurationUpdated()
     {
-        // 当 ConfigurationEditor 更新配置后的回调，只需要刷新界面
+        // When ConfigurationEditor updates the configuration callback, you only need to refresh the interface
         StateHasChanged();
     }
     
@@ -516,7 +516,7 @@
     
     private async void OpenSaveConfirmationDialog()
     {
-        // 确保有修改项时才打开对话框
+        // Make sure there are modifications before opening the dialog box
         var modifiedConfigs = stateManager.GetModifiedConfigurations();
         if (modifiedConfigs.Any())
         {
@@ -563,13 +563,13 @@
         
         try
         {
-            // 逐个执行配置类级别的更新请求
+            // Execute configuration class level update requests one by one
             foreach (var updateRequest in updateRequests)
             {
                 await OnConfigUpdate.InvokeAsync(updateRequest);
             }
             
-            // 清空修改记录
+            // Clear modification history
             stateManager.ClearAllModifications();
             CloseSaveConfirmationDialog();
         }
@@ -609,7 +609,7 @@
     }
 
     /// <summary>
-    /// 打开配置来源不一致对话框
+    /// Opens the Configuration Source Inconsistency dialog box
     /// </summary>
     private async Task OpenSourceInconsistencyDialog(DtoConfig config, ConfigSourceAnalysis analysis)
     {
@@ -633,7 +633,7 @@
     }
     
     /// <summary>
-    /// 从状态管理器恢复选择状态
+    /// Restore selection state from state manager
     /// </summary>
     private void RestoreSelectionFromStateManager()
     {

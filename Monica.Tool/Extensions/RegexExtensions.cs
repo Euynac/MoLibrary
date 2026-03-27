@@ -173,13 +173,13 @@ public static class RegexExtensions
         return count > 0 ? regex.Replace(input, replacement, count) : regex.Replace(input, replacement);
     }
     /// <summary>
-    /// 找到字符串中符合正则表达式的给定命名捕获组名的所有匹配项。未找到返回Count=0的List。
+    /// Finds all occurrences of the given named capturing group name in a string that match the regular expression. A List returning Count=0 was not found.
     /// <br/>English: Finds all the matches in a string that match the regular expression pattern and the given named capture group name. Not found returns a List with Count=0.
     /// </summary>
-    /// <param name="s">要测试的字符串</param>
-    /// <param name="pattern">要匹配的正则表达式模式</param>
-    /// <param name="groupName">正则表达式中的命名捕获组中的名字</param>
-    /// <param name="regexOptions">使用指定的选项进行匹配，可按位组合</param>
+    /// <param name="s">the string to test</param>
+    /// <param name="pattern">Regular expression pattern to match</param>
+    /// <param name="groupName">Names in named capture groups in regular expressions</param>
+    /// <param name="regexOptions">Match using specified options, which can be combined bitwise</param>
     /// <returns></returns>
     public static List<string> MatchedGroupValues(this string? s,
         [RegexPattern] string pattern, string groupName,
@@ -198,11 +198,11 @@ public static class RegexExtensions
     }
 
     /// <summary>
-    /// 判断是否是有效的正则表达式模式。
+    /// Determine whether it is a valid regular expression pattern.
     /// <br/>English: Determine whether it is a valid regular expression pattern.
     /// </summary>
     /// <param name="s"></param>
-    /// <param name="error">如果是无效正则表达式，输出错误原因</param>
+    /// <param name="error">If it is an invalid regular expression, the error reason is output.</param>
     /// <returns></returns>
     public static bool IsValidRegexPattern(this string? s, out string error)
     {

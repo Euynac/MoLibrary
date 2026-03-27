@@ -19,7 +19,7 @@ public interface IMoAlterItem
 public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoAlterItem where TAlterItemData : class, IMoTracingDataAlterItemData<TTargetEntity>, new() where TTargetEntity : class, IMoTracingDataEntity where TEnumAlterSource:Enum
 {
     /// <summary>
-    /// 变更项ID
+    /// Change item ID
     /// </summary>
     public string Id { get; set; }
 
@@ -43,7 +43,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     }
 
     /// <summary>
-    /// 刷新DataJson，在Data发生变更时必须调用，否则不会生效
+    /// Refresh DataJson, must be called when Data changes, otherwise it will not take effect
     /// </summary>
     public void RefreshDataJson()
     {
@@ -54,17 +54,17 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
 
     #region 回滚操作
     /// <summary>
-    /// 目标回滚ID
+    /// Target rollback ID
     /// </summary>
     public List<string>? TargetRollbackIds { get; set; }
 
     /// <summary>
-    /// 是否已经回滚(无效化标志位)
+    /// Whether it has been rolled back (invalidation flag)
     /// </summary>
     public bool IsInvalid => RollbackBy is not null;
 
     /// <summary>
-    /// (有值则认为已被回滚) 使得该修改项回滚的回滚修改项ID
+    /// (If it has a value, it is considered to have been rolled back) The rollback modification item ID that causes the modification item to be rolled back
     /// </summary>
     public string? RollbackBy { get; set; }
 
@@ -82,47 +82,47 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
 
     #region Setting
     /// <summary>
-    /// 该次变更操作时间
+    /// The change operation time
     /// </summary>
     public DateTime AlterTime { get; set; }
 
     /// <summary>
-    /// 实际变更操作影响时间，默认是AlterTime
+    /// The actual change operation impact time, the default is AlterTime
     /// </summary>
     public DateTime? ActualEffectTime { get; set; }
 
     /// <summary>
-    /// 排序时使用时间，也是真正应用到修改的时间
+    /// The time used when sorting is also the time that is actually applied to the modification.
     /// </summary>
     [NotMapped]
     [JsonIgnore]
     public DateTime OrderTime => (ActualEffectTime ?? AlterTime).AddMicroseconds(OffsetAdjust);
 
     /// <summary>
-    /// 微调修改时间，用于解决变更操作时间重复等极端情况
+    /// Fine-tune modification time to solve extreme situations such as duplication of change operation time
     /// </summary>
     public int OffsetAdjust { get; set; }
 
     /// <summary>
-    /// 变更备注
+    /// Change notes
     /// </summary>
     public string? Remarks { get; set; }
     /// <summary>
-    /// 变更来源
+    /// Change source
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public TEnumAlterSource Source { get; set; } = default!;
     /// <summary>
-    /// 变更来源名
+    /// Change source name
     /// </summary>
     public string? SourceInfo { get; set; }
     /// <summary>
-    /// 变更来源GUID，如用户GUID等
+    /// Change source GUID, such as user GUID, etc.
     /// </summary>
     public string? SourceId { get; set; }
 
     /// <summary>
-    /// 变更相关操作来源组ID，可用于按影响组回退
+    /// Change related operation source group ID, which can be used to roll back by affected group
     /// </summary>
     public List<string>? RelatedSourceId { get; set; }
     #endregion
@@ -150,7 +150,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     }
 
     /// <summary>
-    /// 应用修改
+    /// Apply changes
     /// </summary>
     public TTargetEntity ApplyAlter(TTargetEntity entity)
     {
@@ -160,7 +160,7 @@ public class MoAlterItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IMoA
     }
     
     /// <summary>
-    /// 获取原状态到应用此变更的变更描述
+    /// Get the change description from the original state to apply this change
     /// </summary>
     /// <param name="previousStatus"></param>
     /// <returns></returns>

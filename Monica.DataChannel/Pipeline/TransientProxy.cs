@@ -6,22 +6,22 @@ using Monica.DataChannel.Interfaces;
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// Transient组件代理工厂
-/// 用于创建各种组件的Transient代理
+/// Factory for transient component proxies.
+/// Creates proxy wrappers for pipeline components that use a transient lifetime.
 /// </summary>
 public static class TransientProxy
 {
     /// <summary>
-    /// 创建支持Transient生命周期的端点代理
+    /// Creates an endpoint proxy for components that support a transient lifetime.
     /// </summary>
-    /// <param name="serviceProvider">服务提供者</param>
-    /// <param name="componentType">组件类型</param>
-    /// <param name="entranceType">端点方向</param>
-    /// <param name="metadata">组件元数据</param>
-    /// <returns>端点代理实例</returns>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="componentType">The component type.</param>
+    /// <param name="entranceType">The endpoint direction.</param>
+    /// <param name="metadata">Optional component metadata.</param>
+    /// <returns>The endpoint proxy instance.</returns>
     public static IPipeEndpoint CreateEndpointProxy(IServiceProvider serviceProvider, Type componentType, EDataSource entranceType, object? metadata = null)
     {
-        // 检查组件是否需要Transient生命周期
+        // Check whether the component requires a transient lifetime.
         if (IsTransientComponent(componentType))
         {
             var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
@@ -38,11 +38,11 @@ public static class TransientProxy
     }
 
     /// <summary>
-    /// 创建支持Transient生命周期的转换中间件代理
+    /// Creates a transform middleware proxy for components that support a transient lifetime.
     /// </summary>
-    /// <param name="serviceProvider">服务提供者</param>
-    /// <param name="componentType">组件类型</param>
-    /// <returns>转换中间件代理实例</returns>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="componentType">The component type.</param>
+    /// <returns>The transform middleware proxy instance.</returns>
     private static IPipeTransformMiddleware CreateTransformMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
     {
         if (!IsTransientComponent(componentType))
@@ -55,11 +55,11 @@ public static class TransientProxy
     }
 
     /// <summary>
-    /// 创建支持Transient生命周期的端点中间件代理
+    /// Creates an endpoint middleware proxy for components that support a transient lifetime.
     /// </summary>
-    /// <param name="serviceProvider">服务提供者</param>
-    /// <param name="componentType">组件类型</param>
-    /// <returns>端点中间件代理实例</returns>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="componentType">The component type.</param>
+    /// <returns>The endpoint middleware proxy instance.</returns>
     private static IPipeEndpointMiddleware CreateEndpointMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
     {
         if (!IsTransientComponent(componentType))
@@ -72,13 +72,13 @@ public static class TransientProxy
     }
 
     /// <summary>
-    /// 创建或返回中间件实例
-    /// 如果中间件实现了IComponentTransient接口，则创建代理
-    /// 否则直接返回已创建的实例
+    /// Creates a middleware instance or returns its proxy.
+    /// Middleware that implements <see cref="IComponentTransient"/> is wrapped in a proxy.
+    /// All other middleware types are created directly.
     /// </summary>
-    /// <param name="serviceProvider">服务提供者</param>
-    /// <param name="componentType">组件类型</param>
-    /// <returns>中间件实例或其代理</returns>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="componentType">The component type.</param>
+    /// <returns>The middleware instance or its proxy.</returns>
     public static IPipeMiddleware CreateMiddlewareProxy(
         IServiceProvider serviceProvider,
         Type componentType)
@@ -97,10 +97,10 @@ public static class TransientProxy
     }
 
     /// <summary>
-    /// 检查组件类型是否需要Transient生命周期
+    /// Determines whether the component type requires a transient lifetime.
     /// </summary>
-    /// <param name="componentType">组件类型</param>
-    /// <returns>是否为Transient组件</returns>
+    /// <param name="componentType">The component type.</param>
+    /// <returns><see langword="true"/> if the component is transient; otherwise, <see langword="false"/>.</returns>
     public static bool IsTransientComponent(Type componentType)
     {
         return typeof(IComponentTransient).IsAssignableFrom(componentType);
@@ -108,8 +108,8 @@ public static class TransientProxy
 }
 
 /// <summary>
-/// 组件代理基类
-/// 提供创建Transient实例的基本功能
+/// Base class for transient component proxies.
+/// Provides the shared logic required to create transient component instances.
 /// </summary>
 internal abstract class TransientComponentProxyBase(
     IServiceScopeFactory serviceScopeFactory,
@@ -121,11 +121,11 @@ internal abstract class TransientComponentProxyBase(
     protected readonly object? Metadata = metadata;
 
     /// <summary>
-    /// 创建特定类型的组件实例
+    /// Creates a component instance of the requested type.
     /// </summary>
-    /// <typeparam name="T">目标类型</typeparam>
-    /// <param name="scopedServiceProvider">从外部scope提供的ServiceProvider</param>
-    /// <returns>创建的实例</returns>
+    /// <typeparam name="T">The target type.</typeparam>
+    /// <param name="scopedServiceProvider">The scoped service provider.</param>
+    /// <returns>The created instance.</returns>
     protected T CreateInstance<T>(IServiceProvider scopedServiceProvider) where T : class
     {
         var obj = Metadata != null
@@ -142,8 +142,8 @@ internal abstract class TransientComponentProxyBase(
 }
 
 /// <summary>
-/// 端点代理类
-/// 实现对Transient端点的代理
+/// Proxy for transient endpoints.
+/// Delegates endpoint calls to transient endpoint instances resolved per operation.
 /// </summary>
 internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFactory, Type componentType, EDataSource entranceType, object? metadata)
     : TransientComponentProxyBase(serviceScopeFactory, componentType, metadata), ICommunicationCore
@@ -235,9 +235,9 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     }
 
     /// <summary>
-    /// 获取通信核心支持的连接方向
+    /// Gets the connection direction supported by the communication core.
     /// </summary>
-    /// <returns>连接方向</returns>
+    /// <returns>The supported connection direction.</returns>
     public EConnectionDirection SupportedConnectionDirection()
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -246,10 +246,10 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     }
 
     /// <summary>
-    /// 发送数据
+    /// Sends data through the proxied communication core.
     /// </summary>
-    /// <param name="data">数据上下文</param>
-    /// <returns>异步任务</returns>
+    /// <param name="data">The data context.</param>
+    /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(DataContext data)
     {
         if (!_isInit)
@@ -266,8 +266,8 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
 }
 
 /// <summary>
-/// 转换中间件代理类
-/// 实现对Transient转换中间件的代理
+/// Proxy for transient transform middleware.
+/// Resolves a fresh middleware instance for each transform operation.
 /// </summary>
 internal class TransientPipeTransformMiddlewareProxy(
     IServiceScopeFactory serviceScopeFactory,
@@ -278,7 +278,7 @@ internal class TransientPipeTransformMiddlewareProxy(
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var instance = CreateInstance<IPipeTransformMiddleware>(scope.ServiceProvider);
-        // 如果中间件需要访问管道，则设置管道引用
+        // Assign the pipeline reference when the middleware requires pipeline access.
         if (instance is IWantAccessPipeline wantAccess && Pipeline != null)
         {
             wantAccess.Pipe = Pipeline;
@@ -298,8 +298,8 @@ internal class TransientPipeTransformMiddlewareProxy(
 }
 
 /// <summary>
-/// 端点中间件代理类
-/// 实现对Transient端点中间件的代理
+/// Proxy for transient endpoint middleware.
+/// Resolves a fresh middleware instance for each operation.
 /// </summary>
 internal class TransientPipeEndpointMiddlewareProxy(
     IServiceScopeFactory serviceScopeFactory,

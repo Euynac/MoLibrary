@@ -4,52 +4,52 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 项目单元方法元数据模型
+/// Project unit method metadata model
 /// </summary>
 public class ProjectUnitMethod
 {
     /// <summary>
-    /// 方法定义信息
+    /// method definition information
     /// </summary>
     public required MethodInfo MethodInfo { get; set; }
     
     /// <summary>
-    /// 方法名
+    /// method name
     /// </summary>
     public string MethodName => MethodInfo.Name;
     
     /// <summary>
-    /// 方法描述（从XML注释中获取，如果没有则为空）
+    /// Method description (obtained from XML annotation, or empty if none)
     /// </summary>
     public string? Description { get; set; }
     
     /// <summary>
-    /// 已产生的异常数量（后续完善，默认为空）
+    /// The number of exceptions that have been generated (subject to improvement, default is empty)
     /// </summary>
     public int? ExceptionCount { get; set; }
     
     /// <summary>
-    /// 方法平均耗时统计（毫秒）（后续完善，默认为空）
+    /// Average method time consumption statistics (milliseconds) (subject to improvement, default is empty)
     /// </summary>
     public double? AverageExecutionTimeMs { get; set; }
     
     /// <summary>
-    /// 方法签名
+    /// method signature
     /// </summary>
     public string MethodSignature => GetMethodSignature();
     
     /// <summary>
-    /// 方法参数信息
+    /// Method parameter information
     /// </summary>
     public ParameterInfo[] Parameters => MethodInfo.GetParameters();
     
     /// <summary>
-    /// 返回类型
+    /// Return type
     /// </summary>
     public Type ReturnType => MethodInfo.ReturnType;
     
     /// <summary>
-    /// 获取方法签名字符串
+    /// Get method signature string
     /// </summary>
     /// <returns></returns>
     private string GetMethodSignature()

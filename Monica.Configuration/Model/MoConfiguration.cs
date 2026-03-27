@@ -4,45 +4,45 @@ using Monica.Tool.Extensions;
 namespace Monica.Configuration.Model;
 
 /// <summary>
-/// 配置类信息
+/// Configuration type metadata.
 /// </summary>
 public class MoConfiguration
 {
     /// <summary>
-    /// 配置类类型
+    /// Configuration CLR type.
     /// </summary>
     public Type ConfigType { get; }
 
     /// <summary>
-    /// 配置类名
+    /// Configuration type name.
     /// </summary>
     public string Name { get; set; }
 
     /// <summary>
-    /// 配置类Key，用于修改
+    /// Configuration key used for update operations.
     /// </summary>
     public string Key => Info.Section ?? Name;
     /// <summary>
-    /// 配置项信息
+    /// Option item metadata.
     /// </summary>
     public List<OptionItem> OptionItems { get; protected set; }
 
     /// <summary>
-    /// 配置类信息
+    /// Configuration attribute metadata.
     /// </summary>
     public ConfigurationAttribute Info { get; set; }
 
     /// <summary>
-    /// 配置版本
+    /// Configuration version.
     /// </summary>
     public string Version { get; set; } = "";
     /// <summary>
-    /// 配置类所在的项目名
+    /// Project name that owns this configuration type.
     /// </summary>
     public string FromProjectName { get; set; }
 
     /// <summary>
-    /// 默认配置文件名
+    /// Default configuration file name.
     /// </summary>
     public string DefaultSourceFileName => $"{FromProjectName}.{Name}.json";
     public static MoConfiguration Create<T>(T config)

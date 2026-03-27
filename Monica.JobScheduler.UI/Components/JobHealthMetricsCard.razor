@@ -19,7 +19,7 @@
         @if (_metrics != null)
         {
             <MudStack Spacing="3">
-                <!-- 健康度和执行失败率 -->
+                <!-- Health and execution failure rate -->
                 <MudGrid>
                     <MudItem xs="6">
                         <MudStack Spacing="1">
@@ -57,13 +57,13 @@
                     </MudItem>
                 </MudGrid>
 
-                <!-- 健康度进度条 -->
+                <!-- health progress bar -->
                 <MudProgressLinear Color="@GetHealthScoreColor(_metrics.HealthScore)"
                                    Value="@_metrics.HealthScore"
                                    Size="Size.Large"
                                    Rounded="true" />
 
-                <!-- 执行状态统计 -->
+                <!-- Execution status statistics -->
                 <div class="state-grid-wrapper">
                     <MudGrid>
                         <MudItem xs="6" sm="3">
@@ -133,14 +133,14 @@
                     </MudGrid>
                 </div>
 
-                <!-- 总执行次数 -->
+                <!-- Total execution times -->
                 <MudStack Row="true" Justify="Justify.Center">
                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                         @L["JobDetail:HealthMetrics:TotalExecutions"]: <strong>@_metrics.TotalExecutions</strong>
                     </MudText>
                 </MudStack>
 
-                <!-- 最近失败实例 -->
+                <!-- Recent failed instances -->
                 @if (_metrics.RecentFailures.Any())
                 {
                     <MudExpansionPanels Elevation="0">

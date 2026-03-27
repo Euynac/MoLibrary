@@ -14,7 +14,7 @@ public static class ModuleCancellationManagerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 CancellationManager 模块
+        /// Configure the CancellationManager module
         /// </summary>
         public static ModuleCancellationManagerGuide AddCancellationManager(Action<ModuleCancellationManagerOption>? action = null)
         {
@@ -24,29 +24,29 @@ public static class ModuleCancellationManagerBuilderExtensions
 }
 
 /// <summary>
-/// 分布式取消令牌管理器模块
-/// 提供跨微服务实例的取消令牌管理功能
+/// Distributed cancellation token manager module
+/// Provide cancellation token management capabilities across microservice instances
 /// </summary>
 [ModuleKey(EMoModuleKey.CancellationManager)]
 public class ModuleCancellationManager(ModuleCancellationManagerOption option)
     : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
 {
     /// <summary>
-    /// 配置服务依赖注入
+    /// Configure service dependency injection
     /// </summary>
-    /// <param name="services">服务集合</param>
-    /// <returns>返回配置结果</returns>
+    /// <param name="services">Service collection</param>
+    /// <returns>Return configuration results</returns>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 根据配置选择合适的实现
+        // Choose the appropriate implementation based on your configuration
         if (!Option.UseDistributed)
         {
-            // 注册内存版取消令牌管理器服务
+            // Register the memory version to cancel the token manager service
             services.AddSingleton<IMoCancellationManager, InMemoryCancellationManager>();
         }
         else
         {
-            // 注册分布式取消令牌管理器服务
+            // Register the distributed cancellation token manager service
             services.AddSingleton<IMoCancellationManager>((serviceProvider) =>
             {
                 var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(nameof(ModuleCancellationManager));
@@ -65,22 +65,22 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
 }
 
 /// <summary>
-/// 分布式取消令牌管理器模块指南
+/// Distributed Cancellation Token Manager Module Guide
 /// </summary>
 public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationManager, ModuleCancellationManagerOption,
     ModuleCancellationManagerGuide>
 {
     /// <summary>
-    /// 添加指定键的取消令牌管理器
+    /// Adds a cancellation token manager for the specified key
     /// </summary>
-    /// <param name="key">服务键</param>
-    /// <param name="useDistributed">是否使用内存实现，默认为false</param>
-    /// <returns>返回当前模块指南实例以支持链式调用</returns>
+    /// <param name="key">service key</param>
+    /// <param name="useDistributed">Whether to use memory implementation, the default is false</param>
+    /// <returns>Returns the current module guide instance to support chained calls</returns>
     public ModuleCancellationManagerGuide AddKeyedCancellationManager(string key, bool useDistributed = false)
     {
         if (useDistributed)
         {
-            // 使用分布式实现，需要依赖StateStore
+            // Using distributed implementation, you need to rely on StateStore
             DependsOnModule<ModuleStateStoreGuide>().Register().AddKeyedCommonStateStore(key, true);
         }
 
@@ -90,12 +90,12 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
             {
                 if (!useDistributed)
                 {
-                    // 使用内存实现
+                    // Use memory implementation
                     return ActivatorUtilities.CreateInstance<InMemoryCancellationManager>(serviceProvider);
                 }
                 else
                 {
-                    // 使用分布式实现
+                    // Use distributed implementation
                     var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
                     return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
                 }
@@ -108,30 +108,30 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
 }
 
 /// <summary>
-/// 分布式取消令牌管理器模块配置选项
+/// Distributed cancellation token manager module configuration options
 /// </summary>
 public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellationManager>
 {
     /// <summary>
-    /// 是否使用内存实现，默认为false（使用分布式实现）
+    /// Whether to use memory implementation, the default is false (use distributed implementation)
     /// </summary>
     public bool UseDistributed { get; set; } = false;
 
     /// <summary>
-    /// 轮询间隔（毫秒），默认为1000ms
-    /// 仅在使用分布式实现时有效
+    /// Polling interval (milliseconds), default is 1000ms
+    /// Only valid when using distributed implementation
     /// </summary>
     public int PollingIntervalMs { get; set; } = 1000;
 
     /// <summary>
-    /// 是否启用详细日志记录，默认为false
+    /// Whether to enable detailed logging, the default is false
     /// </summary>
     public bool EnableVerboseLogging { get; set; } = false;
 
     /// <summary>
-    /// 取消令牌状态的TTL（生存时间），默认为24小时
-    /// 设置为null表示永不过期
-    /// 仅在使用分布式实现时有效
+    /// TTL (time to live) for canceling token status, default is 24 hours
+    /// Set to null to never expire
+    /// Only valid when using distributed implementation
     /// </summary>
     public TimeSpan? StateTtl { get; set; } = TimeSpan.FromHours(24);
 

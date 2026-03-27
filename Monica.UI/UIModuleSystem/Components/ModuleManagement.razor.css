@@ -23,7 +23,7 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
-/* 数据网格优化 */
+/* Data Grid Optimization */
 ::deep .mud-data-grid {
     border-radius: 0 0 12px 12px;
 }
@@ -37,7 +37,7 @@
         background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
     }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 960px) {
     .modern-card {
         margin-bottom: 16px;

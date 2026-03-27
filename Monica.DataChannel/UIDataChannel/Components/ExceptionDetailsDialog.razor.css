@@ -1,54 +1,54 @@
-/* 异常详情对话框样式 */
+/* Styles for the exception details dialog */
 
-/* 信息项标签 */
+/* Labels for information fields */
 .info-label {
     color: var(--mud-palette-text-secondary);
 }
 
-/* 信息项值 - 普通 */
+/* Values for normal info fields */
 .info-value {
     font-weight: 500;
 }
 
-/* 信息项值 - 错误状态 */
+/* Values for error state info fields */
 .info-value-error {
     font-weight: 500;
     color: var(--mud-palette-error);
 }
 
-/* 信息项值 - 警告状态 */
+/* Values for warning state info fields */
 .info-value-warning {
     font-weight: 500;
     color: var(--mud-palette-warning);
 }
 
-/* 异常表格容器 */
+/* Container wrapping the exception table */
 .exception-table-container {
     max-height: 500px;
     overflow-y: auto;
 }
 
-/* 异常卡片 */
+/* Visual treatment for exception cards */
 .exception-card {
     border-left: 4px solid var(--mud-palette-error);
 }
 
-/* 异常标题 */
+/* Styling for exception titles */
 .exception-title {
     color: var(--mud-palette-error);
 }
 
-/* 异常信息标签 */
+/* Labels for exception info entries */
 .exception-info-label {
     color: var(--mud-palette-text-secondary);
 }
 
-/* 异常章节标题 */
+/* Section headings inside the exception dialog */
 .exception-section-title {
     font-weight: 500;
 }
 
-/* 异常堆栈容器 */
+/* Container for stack trace content */
 .exception-stack-container {
     max-height: 300px;
     overflow-y: auto;
@@ -57,7 +57,7 @@
     border: 1px solid var(--mud-palette-divider);
 }
 
-/* 异常堆栈文本 */
+/* Formatting for stack trace text */
 .exception-stack-text {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 12px;
@@ -67,7 +67,7 @@
     margin: 0;
 }
 
-/* 响应式设计 */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .exception-table-container {
         max-height: 350px;
@@ -93,7 +93,7 @@
     }
 }
 
-/* MudBlazor组件自定义样式 */
+/* Custom MudBlazor overrides */
 ::deep .exception-table-container .mud-table-container {
     max-height: inherit;
 }
@@ -102,24 +102,24 @@
     max-height: inherit;
 }
 
-/* 异常卡片内容间距 */
+/* Padding inside exception cards */
 ::deep .exception-card .mud-card-content {
     padding: 12px;
 }
 
-/* 信息网格布局 */
+/* Layout tweaks for exception info grid */
 ::deep .exception-info-grid .mud-grid-item {
     margin-bottom: 8px;
 }
 
-/* 对话框标题样式 */
+/* Styling for the dialog title */
 ::deep .mud-dialog .mud-dialog-title {
     border-bottom: 1px solid var(--mud-palette-divider);
     padding-bottom: 16px;
     margin-bottom: 16px;
 }
 
-/* 滚动条样式 */
+/* Scrollbar styling */
 .exception-table-container::-webkit-scrollbar,
 .exception-stack-container::-webkit-scrollbar {
     width: 6px;
@@ -141,22 +141,22 @@
     background: var(--mud-palette-text-secondary);
 }
 
-/* 异常展开效果 */
+/* Exception card expansion animation */
 ::deep .exception-card .mud-collapse {
     transition: all 0.3s ease;
 }
 
-/* 堆栈文本选择样式 */
+/* Selection styling for stack trace text */
 .exception-stack-text::selection {
     background: var(--mud-palette-primary-lighten);
 }
 
-/* 数据表格行悬停效果 */
+/* Hover effect for table rows */
 ::deep .exception-table-container .mud-table-row:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 异常卡片悬停效果 */
+/* Hover effect for exception cards */
 .exception-card:hover {
     box-shadow: 0 4px 8px rgba(244, 67, 54, 0.1);
     transition: box-shadow 0.3s ease;

@@ -118,7 +118,7 @@
         var dict = items.Where(x => !string.IsNullOrEmpty(x.Key)).DistinctBy(p => p.Key)
                        .ToDictionary(x => x.Key, x => x.Value);
 
-        // 将Dictionary转换为JsonElement
+        // Convert Dictionary to JsonElement
         var result = JsonFileProviderConventions.ToJsonElement(dict);
         await ValueChanged.InvokeAsync(result);
         StateHasChanged();
@@ -136,7 +136,7 @@
             _ => ""
         };
 
-        // 将默认值转换为JsonElement
+        // Convert default value to JsonElement
         return JsonFileProviderConventions.ToJsonElement(defaultValue);
     }
 
@@ -155,7 +155,7 @@
     }
 
     /// <summary>
-    /// 检查是否有验证错误
+    /// Check for validation errors
     /// </summary>
     public bool HasValidationErrors()
     {
@@ -164,7 +164,7 @@
     }
 
     /// <summary>
-    /// 获取指定Key的重复数量
+    /// Get the number of duplicates of the specified Key
     /// </summary>
     private int GetKeyDuplicateCount(string key)
     {
@@ -173,7 +173,7 @@
     }
 
     /// <summary>
-    /// 获取Key的错误文本
+    /// Get the error text of Key
     /// </summary>
     private string GetKeyErrorText(string key)
     {

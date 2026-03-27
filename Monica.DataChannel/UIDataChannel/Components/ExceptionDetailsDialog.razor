@@ -12,7 +12,7 @@
         @if (ExceptionInfo != null)
         {
             <MudStack Spacing="3">
-                <!-- 基本信息 -->
+                <!-- Basic information -->
                 <MudCard Elevation="1" Class="pa-3">
                     <MudStack Row="true" Spacing="4" Class="exception-info-grid">
                         <MudStack>
@@ -34,10 +34,10 @@
                     </MudStack>
                 </MudCard>
                 
-                <!-- 异常列表 -->
+                <!-- Exception list -->
                 @if (ExceptionInfo.Exceptions.Any())
                 {
-                    <MudDataGrid Items="ExceptionInfo.Exceptions" Filterable="true" SortMode="SortMode.Multiple" 
+                    <MudDataGrid Items="ExceptionInfo.Exceptions" Filterable="true" SortMode="SortMode.Multiple"
                                Hover="true" Dense="true" Class="exception-table-container"
                                ReadOnly="true" EditMode="DataGridEditMode.Cell">
                         <Columns>
@@ -58,13 +58,13 @@
                         </Columns>
                     </MudDataGrid>
 
-                    <!-- 异常详细信息展开区域 -->
+                    <!-- Expanded exception details -->
                     @if (_selectedExceptionDetail != null)
                     {
                         <MudCollapse Expanded="true">
                             <MudCard Elevation="2" Class="exception-card pa-3">
                                 <MudStack Spacing="3">
-                                    <!-- 详细信息标题和收起按钮 -->
+                                    <!-- Title and collapse controls -->
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudText Typo="Typo.h6" Class="exception-title">
                                             <MudIcon Icon="@Icons.Material.Filled.BugReport" Class="mr-2" />
@@ -77,7 +77,7 @@
                                         </MudButton>
                                     </MudStack>
 
-                                    <!-- 基本信息 -->
+                                    <!-- Core exception info -->
                                     <MudCard Elevation="1" Class="pa-3">
                                         <MudStack Spacing="2">
                                             <MudStack Row="true" Spacing="4">
@@ -113,7 +113,7 @@
                                         </MudStack>
                                     </MudCard>
 
-                                    <!-- 异常消息 -->
+                                    <!-- Exception message -->
                                     <MudCard Elevation="1" Class="pa-3">
                                         <MudStack Spacing="2">
                                             <MudText Typo="Typo.subtitle2" Class="exception-section-title">异常消息</MudText>
@@ -123,7 +123,7 @@
                                         </MudStack>
                                     </MudCard>
 
-                                    <!-- 异常堆栈 -->
+                                    <!-- Stack trace -->
                                     @if (!string.IsNullOrEmpty(_selectedExceptionDetail.StackTrace))
                                     {
                                         <MudCard Elevation="1" Class="pa-3">
@@ -156,16 +156,16 @@
     [Parameter] public string ChannelId { get; set; } = string.Empty;
 
     /// <summary>
-    /// 异常信息
+    /// Gets or sets the exception information.
     /// </summary>
     [Parameter] public ChannelExceptionInfo ExceptionInfo { get; set; } = null!;
 
     private ExceptionDetailInfo? _selectedExceptionDetail;
 
     /// <summary>
-    /// 显示异常详情
+    /// Shows the selected exception details.
     /// </summary>
-    /// <param name="exception">异常详情信息</param>
+    /// <param name="exception">The selected exception detail.</param>
     private void ShowExceptionDetails(ExceptionDetailInfo exception)
     {
         _selectedExceptionDetail = exception;
@@ -173,11 +173,11 @@
     }
 
     /// <summary>
-    /// 隐藏异常详情
+    /// Hides the exception details panel.
     /// </summary>
     private void HideExceptionDetails()
     {
         _selectedExceptionDetail = null;
         StateHasChanged();
     }
-} 
+}

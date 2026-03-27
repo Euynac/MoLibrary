@@ -3,7 +3,8 @@ namespace Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 public interface IHasRequestFeature
 {
     /// <summary>
-    /// 额外特性功能表达式。目前支持：Distinct（对Select后结果进行去重）
+    /// Additional request features.
+    /// Currently supports <c>Distinct</c>, which removes duplicates after <c>Select</c> is applied.
     /// </summary>
     public string? Features { get; set; }
 
@@ -25,13 +26,13 @@ public interface IHasRequestFeature
 public class FeatureSetting
 {
     /// <summary>
-    /// 特性枚举
+    /// Parsed feature flags.
     /// </summary>
     public ERequestFeature? FeatureFlags { get; set; }
     /// <summary>
-    /// 特性是否使得Count失效，需要另外Count最终结果
+    /// Determines whether the selected features invalidate the initial count query and require counting the final result instead.
     /// </summary>
-    /// <returns></returns>
+    /// <returns><see langword="true"/> when the final result set must be counted; otherwise, <see langword="false"/>.</returns>
     public bool ShouldJumpCount()
     {
         return FeatureFlags?.HasFlag(ERequestFeature.Distinct) is true;
@@ -41,7 +42,7 @@ public class FeatureSetting
 public enum ERequestFeature
 {
     /// <summary>
-    /// 结果去重，仅支持Select后进行去重
+    /// Deduplicates the result set. Only supported after <c>Select</c> is applied.
     /// </summary>
     Distinct = 1 << 0,
 }

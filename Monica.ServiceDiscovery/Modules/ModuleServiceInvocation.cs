@@ -10,7 +10,7 @@ using Monica.ServiceDiscovery.ServiceInvocation.Providers;
 namespace Monica.Modules;
 
 /// <summary>
-/// 服务调用模块
+/// Service call module
 /// </summary>
 [ModuleKey(EMoModuleKey.ServiceInvocation)]
 public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
@@ -19,23 +19,23 @@ public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
 
     public override void ClaimDependencies()
     {
-        // 服务调用模块无依赖
+        // Service calling module has no dependencies
     }
 }
 
 /// <summary>
-/// 服务调用模块配置选项
+/// Service call module configuration options
 /// </summary>
 public class ModuleServiceInvocationOption : MoModuleOption<ModuleServiceInvocation>
 {
     /// <summary>
-    /// 是否使用分布式调用提供者
+    /// Whether to use a distributed call provider
     /// </summary>
     public bool UseDistributedProvider { get; internal set; }
 }
 
 /// <summary>
-/// 服务调用模块配置指南
+/// Service Call Module Configuration Guide
 /// </summary>
 public class ModuleServiceInvocationGuide : MoModuleGuide<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>
 {
@@ -47,7 +47,7 @@ public class ModuleServiceInvocationGuide : MoModuleGuide<ModuleServiceInvocatio
     }
 
     /// <summary>
-    /// 使用独立模式（不支持服务调用，调用时抛出异常）
+    /// Use independent mode (service calling is not supported and an exception will be thrown when calling)
     /// </summary>
     public ModuleServiceInvocationGuide UseStandaloneProvider()
     {
@@ -61,9 +61,9 @@ public class ModuleServiceInvocationGuide : MoModuleGuide<ModuleServiceInvocatio
     }
 
     /// <summary>
-    /// 使用分布式调用提供者
+    /// Using a distributed call provider
     /// </summary>
-    /// <typeparam name="TProvider">提供者类型</typeparam>
+    /// <typeparam name="TProvider">provider type</typeparam>
     public ModuleServiceInvocationGuide UseDistributedProvider<TProvider>()
         where TProvider : class, IServiceInvocationConnector
     {
@@ -82,7 +82,7 @@ public static class ModuleServiceInvocationBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ServiceInvocation 模块
+        /// Configure the ServiceInvocation module
         /// </summary>
         public static ModuleServiceInvocationGuide AddServiceInvocation(Action<ModuleServiceInvocationOption>? action = null)
         {

@@ -4,34 +4,34 @@ using MudBlazor;
 namespace Monica.Framework.UI.UIEventBus.Models;
 
 /// <summary>
-/// UI友好的订阅视图模型
+/// UI friendly subscription view model
 /// </summary>
 public class SubscriptionViewModel
 {
     #region Identity
 
     /// <summary>
-    /// 订阅ID
+    /// Subscription ID
     /// </summary>
     public string SubscriptionId { get; set; } = string.Empty;
 
     /// <summary>
-    /// 事件类型完整名称
+    /// Event type full name
     /// </summary>
     public string EventType { get; set; } = string.Empty;
 
     /// <summary>
-    /// 事件类型简短名称（用于显示）
+    /// Event type short name (for display)
     /// </summary>
     public string EventTypeShortName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 主题名称
+    /// Topic name
     /// </summary>
     public string TopicName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 服务键（用于Keyed EventBus）
+    /// Service key (for Keyed EventBus)
     /// </summary>
     public string? ServiceKey { get; set; }
 
@@ -40,22 +40,22 @@ public class SubscriptionViewModel
     #region Handler Information
 
     /// <summary>
-    /// 处理器类型完整名称
+    /// Processor type full name
     /// </summary>
     public string? HandlerType { get; set; }
 
     /// <summary>
-    /// 处理器类型简短名称（用于显示）
+    /// Processor type short name (for display)
     /// </summary>
     public string? HandlerTypeShortName { get; set; }
 
     /// <summary>
-    /// 处理器工厂类型名称
+    /// Processor factory type name
     /// </summary>
     public string HandlerFactoryType { get; set; } = string.Empty;
 
     /// <summary>
-    /// 是否为Action处理器
+    /// Whether it is an Action processor
     /// </summary>
     public bool IsActionHandler => HandlerType == null;
 
@@ -64,27 +64,27 @@ public class SubscriptionViewModel
     #region Action Handler Metadata
 
     /// <summary>
-    /// Action处理器的方法名称
+    /// Action processor method name
     /// </summary>
     public string? ActionMethodName { get; set; }
 
     /// <summary>
-    /// Action处理器的声明类型
+    /// Declared type of action handler
     /// </summary>
     public string? ActionDeclaringType { get; set; }
 
     /// <summary>
-    /// Action处理器的方法签名
+    /// Action handler method signature
     /// </summary>
     public string? ActionMethodSignature { get; set; }
 
     /// <summary>
-    /// Action处理器的方法是否为静态方法
+    /// Whether the method of the Action processor is a static method
     /// </summary>
     public bool? ActionIsStatic { get; set; }
 
     /// <summary>
-    /// 获取Action处理器的完整描述（用于工具提示）
+    /// Get the full description of the Action handler (used in tooltips)
     /// </summary>
     public string ActionHandlerTooltip
     {
@@ -123,22 +123,22 @@ public class SubscriptionViewModel
     #region Scope & State
 
     /// <summary>
-    /// 订阅范围
+    /// Subscription scope
     /// </summary>
     public SubscriptionScope Scope { get; set; }
 
     /// <summary>
-    /// 订阅范围显示文本
+    /// Subscription range display text
     /// </summary>
     public string ScopeDisplay => Scope == SubscriptionScope.Local ? "本地" : "分布式";
 
     /// <summary>
-    /// 订阅状态
+    /// Subscription status
     /// </summary>
     public SubscriptionState State { get; set; }
 
     /// <summary>
-    /// 订阅状态显示文本
+    /// Subscription status display text
     /// </summary>
     public string StateDisplay => State switch
     {
@@ -150,7 +150,7 @@ public class SubscriptionViewModel
     };
 
     /// <summary>
-    /// 订阅状态对应的颜色
+    /// The color corresponding to the subscription status
     /// </summary>
     public Color StateColor => State switch
     {
@@ -162,7 +162,7 @@ public class SubscriptionViewModel
     };
 
     /// <summary>
-    /// 订阅范围对应的颜色
+    /// The color corresponding to the subscription range
     /// </summary>
     public Color ScopeColor => Scope == SubscriptionScope.Local ? Color.Info : Color.Secondary;
 
@@ -171,22 +171,22 @@ public class SubscriptionViewModel
     #region Lifecycle
 
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// 激活时间
+    /// activation time
     /// </summary>
     public DateTime? ActivatedAt { get; set; }
 
     /// <summary>
-    /// 停用时间
+    /// deactivation time
     /// </summary>
     public DateTime? DeactivatedAt { get; set; }
 
     /// <summary>
-    /// 是否自动发现
+    /// Whether to automatically discover
     /// </summary>
     public bool IsAutoDiscovered { get; set; }
 
@@ -195,7 +195,7 @@ public class SubscriptionViewModel
     #region Metadata
 
     /// <summary>
-    /// 元数据
+    /// metadata
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
 
@@ -204,22 +204,22 @@ public class SubscriptionViewModel
     #region Display Properties
 
     /// <summary>
-    /// 创建时间显示文本
+    /// Creation time display text
     /// </summary>
     public string CreatedAtDisplay => CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     /// <summary>
-    /// 激活时间显示文本
+    /// Activation time display text
     /// </summary>
     public string? ActivatedAtDisplay => ActivatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     /// <summary>
-    /// 停用时间显示文本
+    /// Disable time display text
     /// </summary>
     public string? DeactivatedAtDisplay => DeactivatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
 
     /// <summary>
-    /// 持续时间显示文本
+    /// duration display text
     /// </summary>
     public string DurationDisplay
     {
@@ -246,7 +246,7 @@ public class SubscriptionViewModel
     }
 
     /// <summary>
-    /// 处理器显示文本
+    /// Processor displays text
     /// </summary>
     public string HandlerDisplay
     {
@@ -254,7 +254,7 @@ public class SubscriptionViewModel
         {
             if (IsActionHandler)
             {
-                // 如果有方法名，显示方法名
+                // If there is a method name, display the method name
                 if (!string.IsNullOrEmpty(ActionMethodName))
                 {
                     return $"Action: {ActionMethodName}";

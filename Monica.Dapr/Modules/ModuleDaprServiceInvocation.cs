@@ -16,7 +16,7 @@ namespace Monica.Modules;
 public static class ModuleDaprServiceInvocationBuilderExtensions
 {
     /// <summary>
-    /// 使用 Dapr 作为服务调用提供者
+    /// Using Dapr as service call provider
     /// </summary>
     public static ModuleDaprServiceInvocationGuide UseDaprInvocationProvider(
         this ModuleServiceInvocationGuide guide, Action<ModuleDaprServiceInvocationOption>? action = null)
@@ -27,7 +27,7 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
 }
 
 /// <summary>
-/// Dapr 服务调用模块
+/// Dapr service call module
 /// </summary>
 [ModuleKey(EMoModuleKey.DaprProviderClientConnector)]
 public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
@@ -58,7 +58,7 @@ public class ModuleDaprServiceInvocationOption : MoModuleOption<ModuleDaprServic
 }
 
 /// <summary>
-/// 基于 Dapr 的服务调用连接器实现
+/// Dapr-based service call connector implementation
 /// </summary>
 public class DaprServiceInvocationConnector(
     DaprClient client,

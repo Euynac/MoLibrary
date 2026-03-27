@@ -41,7 +41,7 @@
     }
 
 
-/* 芯片样式调整 */
+/* Chip style adjustment */
 ::deep .mud-chip {
     margin: 2px;
     transition: all 0.2s ease;
@@ -52,12 +52,12 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
-/* 警告框样式 */
+/* Alert box style */
 ::deep .mud-alert {
     border-radius: 8px;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 600px) {
     .module-detail-header {
         text-align: center;
@@ -76,7 +76,7 @@
     }
 }
 
-/* 深色主题适配 */
+/* Dark theme adaptation */
 @media (prefers-color-scheme: dark) {
     .detail-card {
         background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);
@@ -94,7 +94,7 @@
     }
 }
 
-/* MudBlazor 深色主题适配 */
+/* MudBlazor dark theme adaptation */
 [data-theme="dark"] .detail-card,
 .mud-theme-dark .detail-card {
     background: linear-gradient(135deg, rgba(var(--mud-palette-primary-rgb), 0.08) 0%, rgba(var(--mud-palette-surface-rgb), 0.08) 100%);

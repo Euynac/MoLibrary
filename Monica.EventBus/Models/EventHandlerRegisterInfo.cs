@@ -4,7 +4,7 @@ using Monica.EventBus.Attributes;
 namespace Monica.EventBus.Models;
 
 /// <summary>
-/// Represents a registered event handler with pre-computed metadata
+/// Represents a registered event handler with precomputed metadata.
 /// </summary>
 public sealed record EventHandlerRegisterInfo
 {
@@ -14,7 +14,7 @@ public sealed record EventHandlerRegisterInfo
     public bool IsDistributed { get; }
     public bool IsLocal { get; }
     /// <summary>
-    /// 是否是自动注册的
+    /// Gets a value indicating whether the registration was created automatically.
     /// </summary>
     public bool IsAutoRegistered { get; }
 
@@ -45,7 +45,8 @@ public sealed record EventHandlerRegisterInfo
     }
 
     /// <summary>
-    /// Factory method to create registrations from handler type with automatic interface detection
+    /// Creates registration entries for the specified handler type by detecting its implemented
+    /// handler interfaces automatically.
     /// </summary>
     public static IEnumerable<EventHandlerRegisterInfo> CreateFromHandlerType(Type handlerType)
     {
@@ -56,7 +57,7 @@ public sealed record EventHandlerRegisterInfo
         foreach (var @interface in handlerType.GetInterfaces().Where(p => p.IsGenericType))
         {
             var eventType = @interface.GetGenericArguments()[0];
-            if (eventType.IsGenericParameter) continue; // 跳过泛型参数
+            if (eventType.IsGenericParameter) continue; // Skip open generic event type parameters.
             if (@interface.GetGenericTypeDefinition() == typeof(IMoDistributedEventHandler<>))
             {
                 distributedEvents.Add(eventType);

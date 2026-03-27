@@ -8,7 +8,7 @@ using Monica.Tool.General;
 namespace Monica.Tool.Results;
 
 /// <summary>
-/// 统一响应模型，仅含有响应码和响应信息
+/// Unified response model, only containing response code and response information
 /// </summary>
 [DebuggerDisplay("{GetDebugValue()}")]
 public class Res : IResultEnvelope
@@ -24,17 +24,17 @@ public class Res : IResultEnvelope
     public ExpandoObject? Metadata { get; set; }
 
     /// <summary>
-    /// 创建异常返回
+    /// Create exception return
     /// </summary>
     /// <param name="e"></param>
     public Res(Exception e)
     {
-        Message = $"服务出现异常：{e}";
+        Message = $"Service exception occurred: {e}";
         Status = ResStatus.InternalError;
     }
 
     /// <summary>
-    /// 创建空返回（并不代表成功）
+    /// Create an empty return (does not mean success)
     /// </summary>
     public Res()
     {
@@ -42,7 +42,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 创建消息返回
+    /// Create message return
     /// </summary>
     /// <param name="message"></param>
     /// <param name="status"></param>
@@ -57,7 +57,7 @@ public class Res : IResultEnvelope
     public static implicit operator string(Res res) => res.Message ?? "";
 
     /// <summary>
-    /// 创建一个成功的响应
+    /// Create a successful response
     /// </summary>
     /// <param name="hint"></param>
     /// <returns></returns>
@@ -67,7 +67,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 创建一个成功的响应
+    /// Create a successful response
     /// </summary>
     /// <param name="format"></param>
     /// <param name="args"></param>
@@ -78,7 +78,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 创建一个失败的响应
+    /// Create a failed response
     /// </summary>
     /// <param name="format"></param>
     /// <param name="status"></param>
@@ -90,7 +90,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 创建一个失败的响应
+    /// Create a failed response
     /// </summary>
     /// <param name="failDesc"></param>
     /// <param name="status"></param>
@@ -106,11 +106,11 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 根据数据是否为空返回成功或失败响应
+    /// Returns a success or failure response depending on whether the data is empty
     /// </summary>
-    /// <param name="data">要检查的数据</param>
-    /// <param name="errorWhenNull">数据为空时的错误信息</param>
-    /// <returns>数据不为空时返回成功响应，否则返回错误响应</returns>
+    /// <param name="data">Data to check</param>
+    /// <param name="errorWhenNull">Error message when data is empty</param>
+    /// <returns>Returns a successful response when the data is not empty, otherwise returns an error response</returns>
     public static Res<T> OkOrFailWhenNull<T>(T? data, string errorWhenNull) => data == null ? errorWhenNull : data;
 
     public static Res<T> Create<T>(T data, ResStatus status)
@@ -122,7 +122,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 基于当前信息增加Data数据
+    /// Add Data based on current information
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="data"></param>
@@ -144,7 +144,7 @@ public class Res : IResultEnvelope
     }
 
     /// <summary>
-    /// 获取Debug值
+    /// Get Debug value
     /// </summary>
     /// <returns></returns>
     internal string GetDebugValue()
@@ -159,7 +159,7 @@ public class Res : IResultEnvelope
 }
 
 /// <summary>
-/// 统一响应模型
+/// unified response model
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [DebuggerDisplay("{GetDebugValue()}")]
@@ -176,13 +176,13 @@ public record Res<T> : IResultEnvelope
     public ExpandoObject? Metadata { get; set; }
 
     /// <summary>
-    /// Response的响应数据项
+    /// Response data items of Response
     /// </summary>
     [JsonPropertyName(ResJsonFieldNames.Data)]
     public T? Data { get; set; }
 
     /// <summary>
-    /// 创建空返回（并不代表成功）
+    /// Create an empty return (does not mean success)
     /// </summary>
     public Res()
     {
@@ -190,7 +190,7 @@ public record Res<T> : IResultEnvelope
     }
 
     /// <summary>
-    /// 创建成功返回
+    /// Created successfully and returned
     /// </summary>
     /// <param name="data"></param>
     public Res(T data)
@@ -207,7 +207,7 @@ public record Res<T> : IResultEnvelope
 
     public Res(Exception e)
     {
-        Message = $"服务出现异常：{e}";
+        Message = $"Service exception occurred: {e}";
         Status = ResStatus.InternalError;
     }
 
@@ -216,7 +216,7 @@ public record Res<T> : IResultEnvelope
     public static implicit operator Res<T>(T data) => new(data);
 
     /// <summary>
-    /// 提取为新响应数据
+    /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
     public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
@@ -225,7 +225,7 @@ public record Res<T> : IResultEnvelope
     };
 
     /// <summary>
-    /// 提取为新响应数据
+    /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
     public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
@@ -234,13 +234,13 @@ public record Res<T> : IResultEnvelope
     };
 
     /// <summary>
-    /// 获取可继承的错误信息
+    /// Get inheritable error information
     /// </summary>
     /// <returns></returns>
     public Res Inherit() => this;
 
     /// <summary>
-    /// 获取Debug值
+    /// Get Debug value
     /// </summary>
     /// <returns></returns>
     internal string GetDebugValue()

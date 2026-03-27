@@ -13,29 +13,29 @@ namespace Monica.Configuration;
 public static class MoConfigurationConventions
 {
 
-    #region 面板
+    #region Dashboard
     /// <summary>
-    /// 更新指定配置
+    /// Updates a specific configuration.
     /// </summary>
     public static string DashboardConfigUpdate { get; set; } = "/configuration/update";
     /// <summary>
-    /// 获取微服务配置状态
+    /// Gets configuration status for all microservices.
     /// </summary>
     public static string DashboardAllConfigStatus { get; set; } = "/configuration/status";
     /// <summary>
-    /// 获取指定配置类状态
+    /// Gets status for a specific configuration class.
     /// </summary>
     public static string DashboardConfigStatus { get; set; } = "/configuration/config/status";
     /// <summary>
-    /// 获取指定配置状态
+    /// Gets status for a specific configuration item.
     /// </summary>
     public static string DashboardOptionItemStatus { get; set; } = "/configuration/option/status";
     /// <summary>
-    /// 获取配置类历史
+    /// Gets configuration class history.
     /// </summary>
     public static string DashboardConfigHistory { get; set; } = "/configuration/history";
     /// <summary>
-    /// 回滚配置类
+    /// Rolls back a configuration class.
     /// </summary>
     public static string DashboardConfigRollback { get; set; } = "/configuration/rollback";
     #endregion

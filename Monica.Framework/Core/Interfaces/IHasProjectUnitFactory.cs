@@ -5,7 +5,7 @@ namespace Monica.Framework.Core.Interfaces;
 public interface IHasProjectUnitFactory
 {
     /// <summary>
-    /// 当前项目单元信息建造工厂
+    /// Current project unit information construction factory
     /// </summary>
     /// <param name="context"></param>
     /// <returns></returns>

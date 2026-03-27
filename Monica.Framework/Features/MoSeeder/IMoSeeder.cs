@@ -3,7 +3,7 @@ namespace Monica.Framework.Features.MoSeeder;
 public interface IMoSeeder
 {
     /// <summary>
-    /// 执行种子方法
+    /// Execute seed method
     /// </summary>
     /// <returns></returns>
     public Task SeedAsync();

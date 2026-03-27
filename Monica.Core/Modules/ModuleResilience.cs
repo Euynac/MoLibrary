@@ -14,7 +14,7 @@ public static class ModuleResilienceBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Resilience 模块
+        /// Registers and configures the Resilience module.
         /// </summary>
         public static ModuleResilienceGuide AddResilience(Action<ModuleResilienceOption>? action = null)
         {

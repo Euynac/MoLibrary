@@ -3,47 +3,47 @@ using Monica.Tool.Results;
 namespace Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 
 /// <summary>
-/// 服务调用连接器接口，用于服务间 HTTP 调用
+/// Service invocation connector interface for inter-service HTTP calls.
 /// </summary>
 public interface IServiceInvocationConnector
 {
     /// <summary>
-    /// GET 方法执行调用
+    /// Executes a GET request.
     /// </summary>
-    /// <typeparam name="TResponse">响应类型</typeparam>
-    /// <param name="appId">目标服务的 AppId</param>
-    /// <param name="callbackUrl">回调 URL 路径</param>
-    /// <returns>调用结果</returns>
+    /// <typeparam name="TResponse">Response type.</typeparam>
+    /// <param name="appId">AppId of the target service.</param>
+    /// <param name="callbackUrl">Callback URL path.</param>
+    /// <returns>Invocation result.</returns>
     Task<Res<TResponse>> GetAsync<TResponse>(string appId, string callbackUrl);
 
     /// <summary>
-    /// GET 方法批量执行调用
+    /// Executes GET requests in batch.
     /// </summary>
-    /// <typeparam name="TResponse">响应类型</typeparam>
-    /// <param name="appIds">目标服务的 AppId 列表</param>
-    /// <param name="callbackUrl">回调 URL 路径</param>
-    /// <returns>调用结果字典，Key 为 AppId</returns>
+    /// <typeparam name="TResponse">Response type.</typeparam>
+    /// <param name="appIds">List of target service AppIds.</param>
+    /// <param name="callbackUrl">Callback URL path.</param>
+    /// <returns>A dictionary of invocation results keyed by AppId.</returns>
     Task<Dictionary<string, Res<TResponse>>> GetAsync<TResponse>(List<string> appIds, string callbackUrl);
 
     /// <summary>
-    /// POST 方法执行调用
+    /// Executes a POST request.
     /// </summary>
-    /// <typeparam name="TRequest">请求类型</typeparam>
-    /// <typeparam name="TResponse">响应类型</typeparam>
-    /// <param name="appId">目标服务的 AppId</param>
-    /// <param name="callbackUrl">回调 URL 路径</param>
-    /// <param name="request">请求数据</param>
-    /// <returns>调用结果</returns>
+    /// <typeparam name="TRequest">Request type.</typeparam>
+    /// <typeparam name="TResponse">Response type.</typeparam>
+    /// <param name="appId">AppId of the target service.</param>
+    /// <param name="callbackUrl">Callback URL path.</param>
+    /// <param name="request">Request payload.</param>
+    /// <returns>Invocation result.</returns>
     Task<Res<TResponse>> PostAsync<TRequest, TResponse>(string appId, string callbackUrl, TRequest request);
 
     /// <summary>
-    /// POST 方法批量执行调用
+    /// Executes POST requests in batch.
     /// </summary>
-    /// <typeparam name="TRequest">请求类型</typeparam>
-    /// <typeparam name="TResponse">响应类型</typeparam>
-    /// <param name="appIds">目标服务的 AppId 列表</param>
-    /// <param name="callbackUrl">回调 URL 路径</param>
-    /// <param name="request">请求数据</param>
-    /// <returns>调用结果字典，Key 为 AppId</returns>
+    /// <typeparam name="TRequest">Request type.</typeparam>
+    /// <typeparam name="TResponse">Response type.</typeparam>
+    /// <param name="appIds">List of target service AppIds.</param>
+    /// <param name="callbackUrl">Callback URL path.</param>
+    /// <param name="request">Request payload.</param>
+    /// <returns>A dictionary of invocation results keyed by AppId.</returns>
     Task<Dictionary<string, Res<TResponse>>> PostAsync<TRequest, TResponse>(List<string> appIds, string callbackUrl, TRequest request);
 }

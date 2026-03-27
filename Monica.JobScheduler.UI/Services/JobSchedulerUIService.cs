@@ -6,8 +6,8 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// JobScheduler UI 门面服务
-/// 提供统一的接口给 UI 组件调用
+/// JobScheduler UI facade service
+/// Provide a unified interface for UI component calls
 /// </summary>
 public class JobSchedulerUIService(
     JobSchedulerApiService apiService,

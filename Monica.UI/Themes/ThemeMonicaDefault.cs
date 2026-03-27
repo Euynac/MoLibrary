@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// Monica默认主题 - 经典的Material Design风格
+/// Monica default theme - classic Material Design style
 /// </summary>
 public class ThemeMonicaDefault : ThemeBase
 {
@@ -11,8 +11,7 @@ public class ThemeMonicaDefault : ThemeBase
     public override string DisplayName => "默认主题";
     public override string Description => "经典的Material Design风格";
     
-    // 使用基类的默认CodeBlockTheme (Github/GithubDark)
-
+    // Use the default CodeBlockTheme of the base class (Github/GithubDark)
     public override MudTheme CreateTheme()
     {
         return new MudTheme()

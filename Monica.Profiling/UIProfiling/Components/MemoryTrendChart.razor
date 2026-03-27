@@ -1,5 +1,5 @@
 <MudGrid Spacing="3">
-    @* 趋势统计摘要 *@
+    @* Trend statistical summary *@
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">趋势统计</MudText>
@@ -39,7 +39,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 堆大小趋势图 *@
+    @* Heap size trend chart *@
     <MudItem xs="12" lg="6">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">堆大小趋势 (MB)</MudText>
@@ -61,7 +61,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 分配速率趋势图 *@
+    @* Allocation rate trend graph *@
     <MudItem xs="12" lg="6">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">分配速率趋势 (MB/s)</MudText>
@@ -83,7 +83,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 各代大小趋势 *@
+    @* Trends across generations *@
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">各代堆大小分布 (最新)</MudText>
@@ -113,7 +113,7 @@
         </MudPaper>
     </MudItem>
 
-    @* 最近数据表格 *@
+    @* Recent data table *@
     <MudItem xs="12">
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">最近数据点</MudText>
@@ -180,7 +180,7 @@
             return;
         }
 
-        // 采样以减少图表数据点 (最多显示 50 个点)
+        // Sampling to reduce chart data points (display up to 50 points)
         var step = Math.Max(1, TrendData.DataPoints.Count / 50);
         var sampledData = TrendData.DataPoints
             .Where((_, i) => i % step == 0 || i == TrendData.DataPoints.Count - 1)

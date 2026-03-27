@@ -5,12 +5,12 @@ namespace Monica.Framework.Core.Model;
 public class FactoryContext
 {
     /// <summary>
-    /// 当前类型
+    /// current type
     /// </summary>
     public required Type Type { get; set; }
 
     /// <summary>
-    /// 服务注册容器
+    /// Service registration container
     /// </summary>
     public required IServiceCollection ServiceCollection { get; set; }
 }

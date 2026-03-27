@@ -13,7 +13,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UIEventBus.Services;
 
 /// <summary>
-/// EventBus Provider 发现服务 - 提供 Provider 发现和信息查询
+/// EventBus Provider Discovery Service - Provides Provider discovery and information query
 /// </summary>
 public class EventBusProviderDiscoveryService(
     IServiceProvider serviceProvider,
@@ -34,7 +34,7 @@ public class EventBusProviderDiscoveryService(
     #region Provider Discovery
 
     /// <summary>
-    /// 获取所有已注册的 EventBus Provider
+    /// Get all registered EventBus Providers
     /// </summary>
     public Res<List<EventBusProviderInfo>> GetRegisteredProviders()
     {
@@ -42,36 +42,36 @@ public class EventBusProviderDiscoveryService(
         {
             var providers = new List<EventBusProviderInfo>();
 
-            // 1. 获取默认 Local EventBus
+            // 1. Get the default Local EventBus
             var defaultLocalEventBus = serviceProvider.GetService<IMoLocalEventBus>();
             if (defaultLocalEventBus != null)
             {
                 providers.Add(CreateLocalProviderInfo(null, defaultLocalEventBus));
             }
 
-            // 2. 获取默认 Distributed EventBus（排除 NullDistributedEventBus）
+            // 2. Get the default Distributed EventBus (exclude NullDistributedEventBus)
             var defaultDistributedEventBus = serviceProvider.GetService<IMoDistributedEventBus>();
             if (defaultDistributedEventBus != null && defaultDistributedEventBus is not NullDistributedEventBus)
             {
                 providers.Add(CreateDistributedProviderInfo(null, defaultDistributedEventBus));
             }
 
-            // 3. 从模块注册中获取 Keyed 服务键
+            // 3. Get the Keyed service key from the module registration
             var keyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(typeof(ModuleEventBus));
 
-            // 4. 获取 Keyed Provider
+            // 4. Get Keyed Provider
             foreach (var key in keyedServiceKeys)
             {
                 try
                 {
-                    // 尝试获取 Keyed Local EventBus
+                    // Try to get Keyed Local EventBus
                     var keyedLocalEventBus = serviceProvider.GetKeyedService<IMoLocalEventBus>(key);
                     if (keyedLocalEventBus != null)
                     {
                         providers.Add(CreateLocalProviderInfo(key, keyedLocalEventBus));
                     }
 
-                    // 尝试获取 Keyed Distributed EventBus
+                    // Try to get Keyed Distributed EventBus
                     var keyedDistributedEventBus = serviceProvider.GetKeyedService<IMoDistributedEventBus>(key);
                     if (keyedDistributedEventBus != null && keyedDistributedEventBus is not NullDistributedEventBus)
                     {
@@ -84,7 +84,7 @@ public class EventBusProviderDiscoveryService(
                 }
             }
 
-            // 5. 获取 DaprEventBus 的 Keyed 服务键
+            // 5. Get the Keyed service key of DaprEventBus
             var daprModuleType = ProviderSnapshots
                 .FirstOrDefault(s => s.ModuleInstance is IEventBusModuleProvider { ProviderType: EEventBusProviderType.Dapr })
                 ?.ModuleType;
@@ -99,7 +99,7 @@ public class EventBusProviderDiscoveryService(
                         var keyedDaprEventBus = serviceProvider.GetKeyedService<IMoDistributedEventBus>(key);
                         if (keyedDaprEventBus != null && keyedDaprEventBus is not NullDistributedEventBus)
                         {
-                            // 检查是否已存在该 Provider
+                            // Check if the Provider already exists
                             if (providers.Any(p => p.ServiceKey == key && p.IsDistributed))
                                 continue;
 
@@ -113,7 +113,7 @@ public class EventBusProviderDiscoveryService(
                 }
             }
 
-            // 6. 填充订阅统计信息
+            // 6. Populate subscription statistics
             PopulateSubscriptionCounts(providers);
 
             return Res.Ok(providers);
@@ -126,7 +126,7 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// 根据服务键获取 Local Provider
+    /// Get Local Provider based on service key
     /// </summary>
     public Res<IMoLocalEventBus> GetLocalProvider(string? serviceKey)
     {
@@ -151,7 +151,7 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// 根据服务键获取 Distributed Provider
+    /// Get Distributed Provider based on service key
     /// </summary>
     public Res<IMoDistributedEventBus> GetDistributedProvider(string? serviceKey)
     {
@@ -238,7 +238,7 @@ public class EventBusProviderDiscoveryService(
     {
         try
         {
-            // 查找 ModuleEventBus 的快照
+            // Find a snapshot of ModuleEventBus
             var eventBusSnapshot = MoModuleRegisterCentre.ModuleSnapshots
                 .FirstOrDefault(s => s.ModuleType == typeof(ModuleEventBus));
 
@@ -287,7 +287,7 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// 为 Provider 列表填充订阅统计信息
+    /// Populate subscription statistics for the Provider list
     /// </summary>
     private void PopulateSubscriptionCounts(List<EventBusProviderInfo> providers)
     {
@@ -297,10 +297,10 @@ public class EventBusProviderDiscoveryService(
         {
             var matchingSubscriptions = allSubscriptions.Where(s =>
             {
-                // 匹配 ServiceKey
+                // Match ServiceKey
                 var keyMatches = s.ServiceKey == provider.ServiceKey;
 
-                // 匹配 Scope
+                // Match Scope
                 var scopeMatches = provider.IsDistributed
                     ? s.Scope == SubscriptionScope.Distributed
                     : s.Scope == SubscriptionScope.Local;

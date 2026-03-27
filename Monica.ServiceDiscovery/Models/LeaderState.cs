@@ -1,22 +1,22 @@
 namespace Monica.ServiceDiscovery.Models;
 
 /// <summary>
-/// Leader 状态
+/// Leader status
 /// </summary>
 public class LeaderState
 {
     /// <summary>
-    /// Leader 实例 ID
+    /// Leader instance ID
     /// </summary>
     public required string InstanceId { get; set; }
 
     /// <summary>
-    /// 成为 Leader 的时间
+    /// Time to become a Leader
     /// </summary>
     public DateTime BecomeLeaderTime { get; set; }
 
     /// <summary>
-    /// 服务名称
+    /// Service name
     /// </summary>
     public string? ServiceName { get; set; }
 }

@@ -3,32 +3,32 @@ namespace Monica.ServiceDiscovery.Models;
 public static class ServiceDiscoveryConventions
 {
     /// <summary>
-    /// 微服务注册注册中心
+    /// Microservice registration registration center
     /// </summary>
     public static string RegistryRegister = "/registry/register";
 
     /// <summary>
-    /// 微服务心跳
+    /// Microservice heartbeat
     /// </summary>
     public static string RegistryHeartbeat = "/registry/heartbeat";
 
     /// <summary>
-    /// 查询领导者状态
+    /// Query leader status
     /// </summary>
     public static string RegistryLeaderStatus = "/registry/leader-status";
 
     /// <summary>
-    /// 获取所有微服务状态
+    /// Get the status of all microservices
     /// </summary>
     public static string RegistryServiceStatus = "/registry/services";
 
     /// <summary>
-    /// 取消所有微服务注册
+    /// Cancel all microservice registrations
     /// </summary>
     public static string RegistryUnregisterAll = "/registry/unregister-all";
 
     /// <summary>
-    /// 测试重连注册表服务
+    /// Test reconnection registry service
     /// </summary>
     public static string ClientReconnectRegistry = "/registry-client/reconnect";
 }

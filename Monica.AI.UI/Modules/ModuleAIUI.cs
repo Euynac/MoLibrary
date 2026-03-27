@@ -12,14 +12,14 @@ using MudBlazor;
 namespace Monica.Modules;
 
 /// <summary>
-/// AI UI 模块注册扩展方法
+/// AI UI module registration extension method
 /// </summary>
 public static class ModuleAIUIBuilderExtensions
 {
     extension(Mo)
     {
         /// <summary>
-        /// 配置 AI UI 模块
+        /// Configure AI UI module
         /// </summary>
         public static ModuleAIUIGuide AddAIUI(Action<ModuleAIUIOption>? action = null)
         {
@@ -29,8 +29,8 @@ public static class ModuleAIUIBuilderExtensions
 }
 
 /// <summary>
-/// AI UI 模块实现
-/// 提供基于 Blazor 的 AI 聊天界面
+/// AI UI module implementation
+/// Provides an AI chat interface based on Blazor
 /// </summary>
 [ModuleKey(EMoModuleKey.AIUI)]
 public class ModuleAIUI(ModuleAIUIOption option)
@@ -48,7 +48,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
 
     public override void ClaimDependencies()
     {
-        // 依赖后端 AI 模块
+        // Depends on backend AI modules
         DependsOnModule<ModuleAIGuide>().Register();
 
         if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage)
@@ -57,7 +57,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
                 .AddResource<AIResource>();
         }
 
-        // 依赖 UI 核心模块并注册页面
+        // Depend on the UI core module and register the page
         if (!Option.DisableAIChatPage)
         {
             DependsOnModule<ModuleUICoreGuide>().Register(o => o.EnableMarkdown = true)
@@ -91,7 +91,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
 }
 
 /// <summary>
-/// AI UI 模块配置指南
+/// AI UI module configuration guide
 /// </summary>
 public class ModuleAIUIGuide
     : MoModuleGuide<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>

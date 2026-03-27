@@ -1,19 +1,19 @@
-/* Monica Glassmorphic Theme - 现代化毛玻璃效果 */
-/* 只包含组件样式，颜色由 MudBlazor 主题系统管理 */
+/* Monica Glassmorphic Theme - modern frosted glass effect */
+/* Contains only component styles, colors are managed by the MudBlazor theme system */
 
-/* Glassmorphic Theme CSS Variables - 明暗模式通用 */
+/* Glassmorphic Theme CSS Variables - Universal for light and dark modes */
 :root[data-theme="glassmorphic-light"],
 :root[data-theme="glassmorphic-dark"],
 .mo-theme-glassmorphic-light,
 .mo-theme-glassmorphic-dark {
-    /* 毛玻璃效果变量 */
+    /* Frosted glass effect variable */
     --mo-glass-blur: 16px;
     --mo-glass-blur-heavy: 24px;
     --mo-glass-blur-light: 8px;
     --mo-glass-opacity: 0.85;
     --mo-glass-border-width: 1px;
     
-    /* 组件样式变量 - 圆润现代风格 */
+    /* Component Style Variables - Sleek Modern Style */
     --mo-button-border-radius: 16px;
     --mo-button-padding-x: 24px;
     --mo-button-padding-y: 12px;
@@ -37,21 +37,21 @@
     
     --mo-table-border-radius: 20px;
     
-    /* 间距变量 */
+    /* spacing variable */
     --mo-spacing-xs: 6px;
     --mo-spacing-sm: 12px;
     --mo-spacing-md: 20px;
     --mo-spacing-lg: 32px;
     --mo-spacing-xl: 48px;
     
-    /* 动画变量 */
+    /* Animation variables */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 400ms;
     --mo-transition-slow: 600ms;
     --mo-animation-smooth: 400ms cubic-bezier(0.4, 0, 0.2, 1);
     --mo-animation-bounce: 600ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
-    /* 阴影变量 */
+    /* shadow variable */
     --mo-shadow-glass-light: 0 8px 32px rgba(31, 38, 135, 0.37);
     --mo-shadow-glass-hover: 0 12px 40px rgba(31, 38, 135, 0.5);
     --mo-shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
@@ -88,7 +88,7 @@
     --mo-neon-box-shadow: 0 0 20px var(--mud-palette-primary);
 }
 
-/* 渐变背景 - Light Mode */
+/* Gradient Background - Light Mode */
 .mo-theme-glassmorphic-light::before {
     content: '';
     position: fixed;
@@ -102,7 +102,7 @@
     z-index: -10;
 }
 
-/* 渐变背景 - Dark Mode */
+/* Gradient Background – Dark Mode */
 .mo-theme-glassmorphic-dark::before {
     content: '';
     position: fixed;
@@ -116,13 +116,13 @@
     z-index: -10;
 }
 
-/* 渐变动画 */
+/* Gradient animation */
 @keyframes mo-gradient-shift {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
 }
 
-/* 霓虹脉冲动画 */
+/* Neon pulse animation */
 @keyframes mo-neon-pulse {
     0%, 100% { 
         box-shadow: var(--mo-neon-box-shadow);
@@ -134,7 +134,7 @@
     }
 }
 
-/* 浮动动画 */
+/* floating animation */
 @keyframes mo-float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-8px); }
@@ -143,13 +143,13 @@
 /* Light and Dark Theme Styles */
 .mo-theme-glassmorphic-light,
 .mo-theme-glassmorphic-dark {
-    /* 全局毛玻璃效果 */
+    /* Global frosted glass effect */
     .mud-main-content {
         backdrop-filter: blur(var(--mo-glass-blur-light));
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-light));
     }
     
-    /* Cards - 毛玻璃卡片 */
+    /* Cards - Frosted Glass Cards */
     .mud-card {
         background: var(--mo-background-glass-card) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -180,7 +180,7 @@
         border-color: var(--mud-palette-primary);
     }
     
-    /* Buttons - 渐变毛玻璃按钮 */
+    /* Buttons - Gradient frosted glass buttons */
     .mud-button {
         border-radius: var(--mo-button-border-radius) !important;
         padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
@@ -245,7 +245,7 @@
         border-radius: var(--mo-button-border-radius) !important;
     }
     
-    /* Inputs - 毛玻璃输入框 */
+    /* Inputs - Frosted glass input box */
     .mud-input-outlined {
         backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
@@ -271,7 +271,7 @@
         background: var(--mo-background-glass-hover) !important;
     }
     
-    /* AppBar - 毛玻璃导航栏 */
+    /* AppBar - frosted glass navigation bar */
     .mud-app-bar {
         background: var(--mo-background-glass) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -280,7 +280,7 @@
         box-shadow: var(--mo-glass-shadow) !important;
     }
     
-    /* Drawer - 毛玻璃侧边栏 */
+    /* Drawer - Frosted glass sidebar */
     .mud-drawer .mud-drawer-content {
         background: var(--mo-background-glass) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -288,7 +288,7 @@
         border-right: 1px solid var(--mo-glass-border) !important;
     }
     
-    /* Dialog - 毛玻璃对话框 */
+    /* Dialog - Frosted glass dialog box */
     .mud-dialog {
         background: var(--mo-background-glass-card) !important;
         backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
@@ -302,7 +302,7 @@
         padding: var(--mo-dialog-padding) !important;
     }
     
-    /* Tables - 毛玻璃表格 */
+    /* Tables - Frosted Glass Tables */
     .mud-table {
         background: var(--mo-background-glass-card) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -320,7 +320,7 @@
         background-color: var(--mo-background-glass-hover) !important;
     }
     
-    /* Chips - 毛玻璃标签 */
+    /* Chips - Frosted Glass Labels */
     .mud-chip {
         background: var(--mo-background-glass) !important;
         backdrop-filter: blur(var(--mo-glass-blur-light)) !important;
@@ -339,7 +339,7 @@
         box-shadow: var(--mo-glass-shadow) !important;
     }
     
-    /* Popovers and Menus - 毛玻璃弹出框 */
+    /* Popovers and Menus - Frosted glass pop-up box */
     .mud-popover,
     .mud-menu {
         background: var(--mo-background-glass-card) !important;
@@ -350,7 +350,7 @@
         box-shadow: var(--mo-shadow-glass-hover) !important;
     }
     
-    /* Tooltips - 毛玻璃提示框 */
+    /* Tooltips - Frosted glass prompt box */
     .mud-tooltip {
         background: var(--mo-background-glass-card) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -360,7 +360,7 @@
         box-shadow: var(--mo-glass-shadow) !important;
     }
     
-    /* Snackbars - 毛玻璃通知栏 */
+    /* Snackbars – Frosted Glass Notification Bar */
     .mud-snackbar {
         background: var(--mo-background-glass-card) !important;
         backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
@@ -370,7 +370,7 @@
         box-shadow: var(--mo-shadow-glass-hover) !important;
     }
     
-    /* Tabs - 毛玻璃标签页 */
+    /* Tabs - Frosted glass tab page */
     .mud-tabs-toolbar {
         background: var(--mo-background-glass) !important;
         backdrop-filter: blur(var(--mo-glass-blur)) !important;
@@ -397,7 +397,7 @@
         transform: translateY(-1px);
     }
     
-    /* List Items - 毛玻璃列表项 */
+    /* List Items - Frosted glass list items */
     .mud-list-item {
         border-radius: var(--mo-button-border-radius) !important;
         margin: var(--mo-spacing-xs) var(--mo-spacing-sm) !important;
@@ -412,7 +412,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
-    /* 统一过渡效果 */
+    /* Unify transition effects */
     .mud-button,
     .mud-card,
     .mud-chip,
@@ -422,7 +422,7 @@
         transition: all var(--mo-animation-smooth) !important;
     }
     
-    /* 工具类 */
+    /* Tools */
     .mo-glass-heavy {
         backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
         -webkit-backdrop-filter: blur(var(--mo-glass-blur-heavy)) !important;
@@ -448,7 +448,7 @@
 
 /* Light Theme Specific Styles */
 .mo-theme-glassmorphic-light {
-    /* 明亮模式特殊效果 */
+    /* Bright mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -476,9 +476,9 @@
     }
 }
 
-/* Dark Theme Specific Styles - 霓虹发光效果 */
+/* Dark Theme Specific Styles - Neon Glow Effect */
 .mo-theme-glassmorphic-dark {
-    /* 暗色模式特殊效果 */
+    /* Dark mode special effects */
     .mud-elevation-1,
     .mud-elevation-2,
     .mud-elevation-4,
@@ -505,20 +505,20 @@
         box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(148, 163, 184, 0.1) !important;
     }
     
-    /* 霓虹按钮效果 */
+    /* neon button effect */
     .mud-button-filled-primary:hover {
         animation: mo-neon-pulse 2s ease-in-out infinite;
         text-shadow: var(--mo-neon-text-shadow);
     }
     
-    /* 霓虹文本效果 */
+    /* neon text effect */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3 {
         text-shadow: var(--mo-text-shadow);
     }
     
-    /* 导航链接霓虹悬停效果 */
+    /* Navigation links neon hover effect */
     .mud-nav-link:hover {
         background: var(--mo-background-glass-hover) !important;
         border-radius: var(--mo-button-border-radius) !important;
@@ -526,14 +526,14 @@
         text-shadow: 0 0 10px currentColor;
     }
     
-    /* 表格行霓虹悬停 */
+    /* table row neon hover */
     .mud-table-row:hover {
         background: var(--mo-background-glass-hover) !important;
         box-shadow: inset 0 0 20px rgba(0, 212, 255, 0.1) !important;
     }
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 960px) {
     .mo-theme-glassmorphic-light,
     .mo-theme-glassmorphic-dark {
@@ -560,7 +560,7 @@
     }
 }
 
-/* 无障碍支持 */
+/* Accessibility support */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-glassmorphic-light *,
     .mo-theme-glassmorphic-dark * {
@@ -574,7 +574,7 @@
     }
 }
 
-/* 性能优化 - 避免过渡动画影响性能的元素 */
+/* Performance Optimization - Avoid transition animations affecting performance of elements */
 .mo-theme-glassmorphic-light .mud-table *,
 .mo-theme-glassmorphic-light .mud-data-grid *,
 .mo-theme-glassmorphic-light .mud-treeview *,

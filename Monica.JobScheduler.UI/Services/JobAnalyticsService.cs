@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 统计分析服务
+/// Statistical analysis services
 /// </summary>
 public class JobAnalyticsService(
     IMoJobMetadataRepository metadataRepository,
@@ -72,7 +72,7 @@ public class JobAnalyticsService(
     #region Optimized Methods with Projection
 
     /// <summary>
-    /// 获取统计分析所需的实例数据（使用投影，不加载 StateHistory 和 JobArgs 等大文本字段）
+    /// Obtain instance data required for statistical analysis (use projection, do not load large text fields such as StateHistory and JobArgs)
     /// </summary>
     public async Task<Res<List<JobInstanceStatistics>>> GetInstanceStatisticsAsync(
         DateTime startTime,
@@ -118,7 +118,7 @@ public class JobAnalyticsService(
     }
 
     /// <summary>
-    /// 计算执行趋势（基于预加载的投影数据）
+    /// Calculate execution trends (based on preloaded projection data)
     /// </summary>
     public Res<List<ExecutionTrendPoint>> CalculateExecutionTrend(
         List<JobInstanceStatistics> instances,
@@ -158,7 +158,7 @@ public class JobAnalyticsService(
     }
 
     /// <summary>
-    /// 计算执行耗时百分位数（基于预加载的投影数据）
+    /// Calculate execution time percentile (based on preloaded projection data)
     /// </summary>
     public Res<DurationPercentiles> CalculateDurationPercentiles(
         List<JobInstanceStatistics> instances,
@@ -207,7 +207,7 @@ public class JobAnalyticsService(
     }
 
     /// <summary>
-    /// 计算任务排行榜（基于预加载的投影数据）
+    /// Compute task rankings (based on preloaded projection data)
     /// </summary>
     public Res<List<JobRanking>> CalculateTopJobs(
         List<JobInstanceStatistics> instances,
@@ -284,7 +284,7 @@ public class JobAnalyticsService(
     }
 
     /// <summary>
-    /// 计算失败分析（基于预加载的投影数据）
+    /// Calculation failure analysis (based on preloaded projection data)
     /// </summary>
     public Res<FailureAnalysis> CalculateFailureAnalysis(
         List<JobInstanceStatistics> instances,
@@ -338,7 +338,7 @@ public class JobAnalyticsService(
     }
 
     /// <summary>
-    /// 计算最慢的 N 个实例（每个 JobKey 只取最慢的一个）
+    /// Calculate the slowest N instances (only take the slowest one for each JobKey)
     /// </summary>
     public Res<List<SlowestInstance>> CalculateSlowestInstances(
         List<JobInstanceStatistics> instances,

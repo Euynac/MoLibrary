@@ -4,13 +4,13 @@ using Monica.Core.Features.MoDecorator;
 namespace Examples.Monica;
 
 /// <summary>
-/// MoDecorator 使用示例
-/// 展示如何使用 InterfaceProxyDecorationStrategy 来装饰实现特定接口的所有服务
+/// MoDecorator usage example
+/// Shows how to use InterfaceProxyDecorationStrategy to decorate all services that implement a specific interface
 /// </summary>
 public static class MoDecoratorExample
 {
     /// <summary>
-    /// 基础仓储接口
+    /// Basic warehousing interface
     /// </summary>
     public interface IRepository
     {
@@ -18,7 +18,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 用户仓储接口
+    /// User warehousing interface
     /// </summary>
     public interface IUserRepository : IRepository
     {
@@ -26,7 +26,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 产品仓储接口
+    /// Product warehousing interface
     /// </summary>
     public interface IProductRepository : IRepository
     {
@@ -34,16 +34,16 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 泛型处理器接口
+    /// Generic processor interface
     /// </summary>
-    /// <typeparam name="T">处理的数据类型</typeparam>
+    /// <typeparam name="T">Data types processed</typeparam>
     public interface IHandler<T>
     {
         Task<T> HandleAsync(T data);
     }
 
     /// <summary>
-    /// 用户仓储实现
+    /// User warehousing implementation
     /// </summary>
     public class UserRepository : IUserRepository
     {
@@ -52,7 +52,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 产品仓储实现
+    /// Product warehousing implementation
     /// </summary>
     public class ProductRepository : IProductRepository
     {
@@ -61,7 +61,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 字符串处理器实现
+    /// String processor implementation
     /// </summary>
     public class StringHandler : IHandler<string>
     {
@@ -69,7 +69,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 整数处理器实现
+    /// Integer processor implementation
     /// </summary>
     public class IntHandler : IHandler<int>
     {
@@ -77,7 +77,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 仓储缓存装饰器
+    /// Repository cache decorator
     /// </summary>
     public class CachingRepositoryDecorator : IRepository
     {
@@ -90,7 +90,7 @@ public static class MoDecoratorExample
 
         public async Task<string> GetDataAsync(int id)
         {
-            // 简单的缓存逻辑模拟
+            // Simple caching logic simulation
             Console.WriteLine($"[Cache] Checking cache for repository data: {id}");
             var result = await _inner.GetDataAsync(id);
             Console.WriteLine($"[Cache] Cached repository data: {id} -> {result}");
@@ -99,9 +99,9 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 泛型日志装饰器
+    /// Generic log decorator
     /// </summary>
-    /// <typeparam name="T">处理的数据类型</typeparam>
+    /// <typeparam name="T">Data types processed</typeparam>
     public class LoggingHandler<T> : IHandler<T>
     {
         private readonly IHandler<T> _inner;
@@ -121,25 +121,25 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 演示 InterfaceProxyDecorationStrategy 的使用
+    /// Demonstrate the use of InterfaceProxyDecorationStrategy
     /// </summary>
     public static async Task RunExample()
     {
         var services = new ServiceCollection();
 
-        // 注册服务
+        // Registration service
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IHandler<string>, StringHandler>();
         services.AddScoped<IHandler<int>, IntHandler>();
 
-        // 使用 InterfaceProxyDecorationStrategy 装饰所有实现 IRepository 的服务
+        // Use InterfaceProxyDecorationStrategy to decorate all services that implement IRepository
         services.DecorateInterfaceProxy<IRepository, CachingRepositoryDecorator>();
 
-        // 使用委托装饰所有实现 IHandler<T> 的服务
+        // Decorate all services that implement IHandler<T> with delegates
         services.DecorateInterfaceProxy(typeof(IHandler<>), typeof(LoggingHandler<>));
 
-        // 也可以使用函数式装饰
+        // You can also use functional decoration
         services.DecorateInterfaceProxy<IRepository>(repo => 
         {
             return new FunctionalRepositoryDecorator(repo);
@@ -149,7 +149,7 @@ public static class MoDecoratorExample
 
         Console.WriteLine("=== MoDecorator InterfaceProxy Example ===\n");
 
-        // 测试仓储装饰
+        // Test warehouse decoration
         Console.WriteLine("1. 测试仓储装饰:");
         var userRepo = serviceProvider.GetRequiredService<IUserRepository>();
         var userData = await userRepo.GetDataAsync(123);
@@ -159,7 +159,7 @@ public static class MoDecoratorExample
         var productData = await productRepo.GetDataAsync(456);
         Console.WriteLine($"Result: {productData}\n");
 
-        // 测试泛型处理器装饰
+        // Testing generic handler decorations
         Console.WriteLine("2. 测试泛型处理器装饰:");
         var stringHandler = serviceProvider.GetRequiredService<IHandler<string>>();
         var stringResult = await stringHandler.HandleAsync("Hello World");
@@ -173,7 +173,7 @@ public static class MoDecoratorExample
     }
 
     /// <summary>
-    /// 函数式仓储装饰器示例
+    /// Functional repository decorator example
     /// </summary>
     private class FunctionalRepositoryDecorator : IRepository
     {

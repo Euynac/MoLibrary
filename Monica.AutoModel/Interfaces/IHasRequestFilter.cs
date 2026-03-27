@@ -3,15 +3,15 @@
 public interface IHasRequestFilter
 {
     /// <summary>
-    /// 动态过滤条件
+    /// Dynamic filter expression.
     /// </summary>
     string? Filter { get; set; }
     /// <summary>
-    /// 模糊查询多个字段的值
+    /// Value used for fuzzy searching across multiple fields.
     /// </summary>
     string? Fuzzy { get; set; }
     /// <summary>
-    /// 设置模糊查询指定字段
+    /// Restricts fuzzy searching to specific fields.
     /// </summary>
     string? FuzzyColumns { get; set; }
 }

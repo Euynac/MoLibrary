@@ -11,41 +11,41 @@ using Monica.Tool.Extensions;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     类型分配收集器 - 使用 TraceEvent/ETW 的 GCAllocationTick 事件收集类型级别的分配信息
+/// Type Allocation Collector - Collect type-level allocation information using the GCAllocationTick event of TraceEvent/ETW
 /// </summary>
 /// <remarks>
-///     使用 GCAllocationTick 事件而非 GCSampledObjectAllocation，因为:
-///     1. GCAllocationTick 直接提供 TypeName 属性，无需 TypeBulkType 查找
-///     2. GCSampledObjectAllocation 依赖 TypeBulkType 事件提供 TypeID → TypeName 映射，
-///        但在自监控场景下 TypeBulkType.TypeName 可能为空（时序问题）
-///     3. GCAllocationTick 在每约 100KB 分配时触发，提供可靠的采样
+/// Use the GCAllocationTick event instead of GCSampledObjectAllocation because:
+/// 1. GCAllocationTick directly provides the TypeName property without the need for TypeBulkType lookup
+/// 2. GCSampledObjectAllocation relies on the TypeBulkType event to provide TypeID → TypeName mapping.
+/// But in the self-monitoring scenario, TypeBulkType.TypeName may be empty (timing issue)
+/// 3. GCAllocationTick triggers every ~100KB allocation, providing reliable sampling
 /// </remarks>
 public class TypeAllocationCollector : IDisposable
 {
     private readonly ILogger<TypeAllocationCollector> _logger;
 
     /// <summary>
-    ///     TypeName -> AllocationInfo 分配统计
+    /// TypeName -> AllocationInfo allocation statistics
     /// </summary>
     private readonly ConcurrentDictionary<string, TypeAllocationInfo> _typeAllocations = new();
 
     /// <summary>
-    ///     快照历史记录
+    /// Snapshot history
     /// </summary>
     private readonly ConcurrentQueue<TypeAllocationSnapshot> _history = new();
 
     /// <summary>
-    ///     排除模式 (编译后的正则)
+    /// Exclusion patterns (compiled regular expressions)
     /// </summary>
     private readonly List<Regex> _excludePatterns;
 
-    // ETW 会话相关
+    // ETW session related
     private TraceEventSession? _session;
     private ETWTraceEventSource? _source;
     private Task? _processingTask;
     private CancellationTokenSource? _cts;
 
-    // 状态
+    // state
     private volatile bool _isCollecting;
     private AllocationSamplingMode _currentMode = AllocationSamplingMode.Disabled;
     private DateTime _collectionStartTime;
@@ -53,10 +53,10 @@ public class TypeAllocationCollector : IDisposable
     private long _totalBytes;
     private long _droppedEventCount;
 
-    // 快照定时器
+    // snapshot timer
     private Timer? _snapshotTimer;
 
-    // 配置
+    // Configuration
     private readonly int _maxTrackedTypes;
     private readonly TimeSpan _snapshotInterval;
     private readonly int _maxHistorySnapshots;
@@ -64,17 +64,17 @@ public class TypeAllocationCollector : IDisposable
     private readonly TimeSpan? _autoStopAfter;
 
     /// <summary>
-    ///     当新快照可用时触发
+    /// Triggered when a new snapshot is available
     /// </summary>
     public event Action<TypeAllocationSnapshot>? OnSnapshotUpdated;
 
     /// <summary>
-    ///     是否正在收集
+    /// Is collecting
     /// </summary>
     public bool IsCollecting => _isCollecting;
 
     /// <summary>
-    ///     当前采样模式
+    /// Current sampling mode
     /// </summary>
     public AllocationSamplingMode CurrentMode => _currentMode;
 
@@ -94,7 +94,7 @@ public class TypeAllocationCollector : IDisposable
         _etwBufferSizeMB = etwBufferSizeMB;
         _autoStopAfter = autoStopAfter ?? TimeSpan.FromMinutes(10);
 
-        // 编译排除模式
+        // compile exclude mode
         var patterns = excludeTypePatterns ?? ["^System\\.Runtime\\."];
         _excludePatterns = patterns
             .Select(p => new Regex(p, RegexOptions.Compiled | RegexOptions.IgnoreCase))
@@ -102,9 +102,9 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     开始收集分配事件
+    /// Start collecting distribution events
     /// </summary>
-    /// <param name="mode">采样模式</param>
+    /// <param name="mode">Sampling mode</param>
     public void StartCollection(AllocationSamplingMode mode)
     {
         if (_isCollecting)
@@ -113,7 +113,7 @@ public class TypeAllocationCollector : IDisposable
             return;
         }
 
-        // 检查平台支持
+        // Check platform support
         if (!OperatingSystem.IsWindows())
         {
             _logger.LogWarning("ETW 分配跟踪仅在 Windows 上完全支持，当前平台可能功能受限");
@@ -125,28 +125,28 @@ public class TypeAllocationCollector : IDisposable
             _collectionStartTime = DateTime.UtcNow;
             _cts = new CancellationTokenSource();
 
-            // 创建 ETW 会话
+            // Create an ETW session
             var sessionName = $"Monica_TypeAllocation_{Guid.NewGuid():N}"[..50];
             _session = new TraceEventSession(sessionName, TraceEventSessionOptions.Create)
             {
                 BufferSizeMB = _etwBufferSizeMB
             };
 
-            // 使用 GC 关键字启用 GCAllocationTick 事件
-            // GCAllocationTick 直接提供 TypeName，无需 TypeBulkType 查找
+            // Enable the GCAllocationTick event using the GC keyword
+            // GCAllocationTick provides TypeName directly, no TypeBulkType lookup required
             var keywords = ClrTraceEventParser.Keywords.GC;
 
-            // 启用 CLR Provider
+            // Enable CLR Provider
             _session.EnableProvider(
                 ClrTraceEventParser.ProviderGuid,
                 TraceEventLevel.Verbose,
                 (ulong)keywords);
 
-            // 获取事件源并订阅 GCAllocationTick 事件
+            // Get the event source and subscribe to the GCAllocationTick event
             _source = _session.Source;
             _source.Clr.GCAllocationTick += OnAllocationTick;
 
-            // 在后台线程处理事件
+            // Handling events on a background thread
             _processingTask = Task.Run(() =>
             {
                 try
@@ -159,14 +159,14 @@ public class TypeAllocationCollector : IDisposable
                 }
             }, _cts.Token);
 
-            // 启动快照定时器
+            // Start snapshot timer
             _snapshotTimer = new Timer(
                 CaptureSnapshot,
                 null,
                 _snapshotInterval,
                 _snapshotInterval);
 
-            // 自动停止定时器
+            // Auto stop timer
             if (_autoStopAfter.HasValue)
             {
                 _ = Task.Delay(_autoStopAfter.Value, _cts.Token)
@@ -189,7 +189,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     停止收集
+    /// Stop collection
     /// </summary>
     public void StopCollection()
     {
@@ -226,38 +226,38 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     处理 GCAllocationTick 事件 - 直接获取 TypeName
+    /// Handle GCAllocationTick event - get TypeName directly
     /// </summary>
     /// <remarks>
-    ///     GCAllocationTick 在每约 100KB 分配时触发，提供:
-    ///     - TypeName: 直接可用的类型名称
-    ///     - AllocationAmount: 本次分配大小
+    /// GCAllocationTick fires every ~100KB allocation, providing:
+    /// - TypeName: Directly available type name
+    /// - AllocationAmount: the size of this allocation
     ///     - AllocationKind: SOH(0)/LOH(1)/POH(2)
     /// </remarks>
     private void OnAllocationTick(GCAllocationTickTraceData data)
     {
         var typeName = data.TypeName;
 
-        // 跳过空类型名
+        // Skip empty type names
         if (string.IsNullOrEmpty(typeName))
         {
             Interlocked.Increment(ref _droppedEventCount);
             return;
         }
 
-        // 检查排除模式
+        // Check exclusion patterns
         if (ShouldExcludeType(typeName))
             return;
 
-        // 更新聚合数据
+        // Update aggregated data
         var info = _typeAllocations.GetOrAdd(typeName, name => new TypeAllocationInfo
         {
             TypeName = name,
             LastSeenUtc = DateTime.UtcNow
         });
 
-        // 线程安全更新
-        // AllocationTick: 每次事件代表一次分配，AllocationAmount 是分配大小
+        // Thread safety updates
+        // AllocationTick: Each event represents an allocation, AllocationAmount is the allocation size
         info.AddAllocationCount(1);
         info.AddTotalBytes(data.AllocationAmount);
         info.LastSeenUtc = DateTime.UtcNow;
@@ -265,7 +265,7 @@ public class TypeAllocationCollector : IDisposable
         Interlocked.Add(ref _totalAllocationCount, 1);
         Interlocked.Add(ref _totalBytes, data.AllocationAmount);
 
-        // 强制执行最大跟踪类型数
+        // Enforce a maximum number of trace types
         if (_typeAllocations.Count > _maxTrackedTypes)
         {
             PruneSmallestTypes();
@@ -273,7 +273,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     检查是否应该排除该类型
+    /// Check if the type should be excluded
     /// </summary>
     private bool ShouldExcludeType(string typeName)
     {
@@ -286,7 +286,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     修剪最小的类型以保持在限制内
+    /// Prune smallest types to stay within limits
     /// </summary>
     private void PruneSmallestTypes()
     {
@@ -303,7 +303,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     捕获快照
+    /// capture snapshot
     /// </summary>
     private void CaptureSnapshot(object? state)
     {
@@ -321,7 +321,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     构建当前快照
+    /// Build current snapshot
     /// </summary>
     private TypeAllocationSnapshot BuildSnapshot()
     {
@@ -357,7 +357,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     获取当前快照
+    /// Get current snapshot
     /// </summary>
     public TypeAllocationSnapshot GetCurrentSnapshot()
     {
@@ -365,7 +365,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     获取历史快照
+    /// Get historical snapshot
     /// </summary>
     public IReadOnlyList<TypeAllocationSnapshot> GetHistory()
     {
@@ -373,7 +373,7 @@ public class TypeAllocationCollector : IDisposable
     }
 
     /// <summary>
-    ///     重置数据
+    /// Reset data
     /// </summary>
     public void ResetData()
     {

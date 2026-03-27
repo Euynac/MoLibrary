@@ -1,6 +1,6 @@
 /**
- * D3.js 节点交互模块
- * 提供节点悬停、点击、高亮等交互功能
+ * D3.js node interaction module
+ * Provides interactive functions such as node hovering, clicking, and highlighting.
  * 
  * @module d3-node-interaction
  */
@@ -8,7 +8,7 @@
 import { getModernLinkStyle } from './d3-graph-base.js';
 
 /**
- * 节点高亮管理器
+ * Node Highlight Manager
  */
 export class NodeHighlightManager {
     constructor(options = {}) {
@@ -20,27 +20,27 @@ export class NodeHighlightManager {
         this.normalStrokeWidth = options.normalStrokeWidth || 2;
         this.isDarkMode = options.isDarkMode || false;
         
-        // 保存marker IDs
+        // Save marker IDs
         this.markerIds = options.markerIds || null;
         
-        // 获取现代化样式配置，传入marker IDs
+        // Get modern style configuration and pass in marker IDs
         this.normalLinkStyle = getModernLinkStyle(this.isDarkMode, false, this.markerIds);
         this.highlightLinkStyle = getModernLinkStyle(this.isDarkMode, true, this.markerIds);
     }
     
     /**
-     * 高亮节点及其相关连接
-     * @param {string} nodeId - 节点ID
-     * @param {Array} nodes - 所有节点
-     * @param {Array} links - 所有连接
-     * @param {Object} nodeSelection - D3 节点选择
-     * @param {Object} linkSelection - D3 连接选择
+     * Highlight nodes and their associated connections
+     * @param {string} nodeId - node ID
+     * @param {Array} nodes - all nodes
+     * @param {Array} links - all links
+     * @param {Object} nodeSelection - D3 node selection
+     * @param {Object} linkSelection - D3 connection selection
      */
     highlightNode(nodeId, nodes, links, nodeSelection, linkSelection) {
-        // 清除之前的高亮
+        // Clear previous highlights
         this.clearHighlight(nodeSelection, linkSelection);
         
-        // 找到相关的节点和连接，并记录方向
+        // Find relevant nodes and connections and record directions
         const relatedNodes = new Set([nodeId]);  // 包含当前节点
         const outgoingLinks = new Set(); // 出边（当前节点 -> 其他节点）
         const incomingLinks = new Set(); // 入边（其他节点 -> 当前节点）
@@ -58,17 +58,17 @@ export class NodeHighlightManager {
             }
         });
         
-        // 应用高亮效果，传递方向信息
+        // Apply highlight effects to convey directional information
         this.applyHighlight(relatedNodes, outgoingLinks, incomingLinks, nodeSelection, linkSelection);
     }
     
     /**
-     * 应用高亮效果
+     * Apply highlight effect
      */
     applyHighlight(relatedNodes, outgoingLinks, incomingLinks, nodeSelection, linkSelection) {
         const self = this;
         
-        // 高亮节点 - 所有相关节点使用相同的不透明度
+        // Highlight nodes - use the same opacity for all related nodes
         nodeSelection.each(function(d) {
             const node = d3.select(this);
             const isRelated = relatedNodes.has(d.id);
@@ -79,13 +79,13 @@ export class NodeHighlightManager {
                 .duration(200)
                 .attr('opacity', isRelated ? 1 : self.fadeOpacity);
 
-            // 控制节点主体元素边框
+            // Control node body element border
             primaryShape
                 .transition()
                 .duration(200)
                 .attr('stroke-width', isRelated ? self.highlightStrokeWidth : self.normalStrokeWidth);
             
-            // 对于复杂节点，增强阴影效果
+            // For complex nodes, enhance the shadow effect
             if (isRelated && d.isComplex) {
                 const shadowFilter = node.select('filter feDropShadow');
                 if (!shadowFilter.empty()) {
@@ -97,10 +97,10 @@ export class NodeHighlightManager {
                 }
             }
             
-            // 控制所有文本元素透明度（包括标题、依赖数量、chip文字等）
+            // Control the transparency of all text elements (including titles, dependent numbers, chip text, etc.)
         });
         
-        // 高亮连接 - 根据方向使用不同颜色
+        // Highlight connections - use different colors depending on direction
         linkSelection.each(function(d) {
             const link = d3.select(this);
             const isOutgoing = outgoingLinks.has(d);
@@ -109,8 +109,8 @@ export class NodeHighlightManager {
             
             if (isRelated) {
                 const style = self.highlightLinkStyle;
-                // 使用 MudBlazor 颜色系统变量
-                // 出边使用 Info 色系，入边使用 Success 色系
+                // Using MudBlazor color system variables
+                // The outgoing edge uses the Info color system and the incoming edge uses the Success color system.
                 const strokeColor = isOutgoing ? 
                     (self.isDarkMode ? 'var(--mud-palette-info-lighten, #29B6F6)' : 'var(--mud-palette-info, #1976D2)') : // 出边：Info色
                     (self.isDarkMode ? 'var(--mud-palette-success-lighten, #66BB6A)' : 'var(--mud-palette-success, #43A047)');  // 入边：Success色
@@ -135,19 +135,19 @@ export class NodeHighlightManager {
             }
         });
         
-        // 合并出边和入边
+        // Merge outgoing and incoming edges
         const allRelatedLinks = new Set([...outgoingLinks, ...incomingLinks]);
         this.highlightedNodes = relatedNodes;
         this.highlightedLinks = allRelatedLinks;
     }
     
     /**
-     * 清除高亮
+     * clear highlight
      */
     clearHighlight(nodeSelection, linkSelection) {
         const self = this;
         
-        // 恢复节点 - 确保所有节点恢复为完全不透明
+        // Restoring Nodes - Ensures all nodes are restored to full opacity
         nodeSelection.each(function(d) {
             const node = d3.select(this);
             const primaryShape = self.getPrimaryShapeSelection(node);
@@ -162,7 +162,7 @@ export class NodeHighlightManager {
                 .duration(200)
                 .attr('stroke-width', self.normalStrokeWidth);
             
-            // 对于复杂节点，恢复正常阴影
+            // For complex nodes, restore normal shading
             if (d && d.isComplex) {
                 const shadowFilter = node.select('filter feDropShadow');
                 if (!shadowFilter.empty()) {
@@ -176,7 +176,7 @@ export class NodeHighlightManager {
             
         });
         
-        // 恢复连接 - 使用现代化样式恢复
+        // Restore your connection - restore with a modern style
         linkSelection
             .transition()
             .duration(200)
@@ -203,7 +203,7 @@ export class NodeHighlightManager {
 }
 
 /**
- * 节点交互处理器
+ * node interaction handler
  */
 export class NodeInteractionHandler {
     constructor(options = {}) {
@@ -212,7 +212,7 @@ export class NodeInteractionHandler {
         this.onHover = options.onHover;
         this.onHoverOut = options.onHoverOut;
         this.onDoubleClick = options.onDoubleClick;
-        // 传递 isDarkMode 和 markerIds 给 highlightManager
+        // Pass isDarkMode and markerIds to highlightManager
         const highlightOptions = options.highlightOptions || {};
         highlightOptions.isDarkMode = options.isDarkMode;
         highlightOptions.markerIds = options.markerIds; // 传递marker IDs
@@ -220,9 +220,9 @@ export class NodeInteractionHandler {
     }
     
     /**
-     * 绑定节点交互事件
-     * @param {Object} nodeSelection - D3 节点选择
-     * @param {Object} context - 上下文对象，包含 nodes, links, linkSelection
+     * Bind node interaction events
+     * @param {Object} nodeSelection - D3 node selection
+     * @param {Object} context - context object, including nodes, links, linkSelection
      */
     bindNodeEvents(nodeSelection, context) {
         const self = this;
@@ -231,7 +231,7 @@ export class NodeInteractionHandler {
             .on('click', function(event, d) {
                 event.stopPropagation();
                 
-                // 双击处理
+                // Double click processing
                 if (event.detail === 2) {
                     if (self.onDoubleClick) {
                         self.onDoubleClick.call(this, event, d);
@@ -245,7 +245,7 @@ export class NodeInteractionHandler {
                 event.stopPropagation();
                 
                 if (self.onRightClick) {
-                    // 获取节点在页面中的实际位置
+                    // Get the actual position of the node in the page
                     const transform = d3.select(this).attr('transform');
                     const matrix = this.getCTM();
                     const pt = this.ownerSVGElement.createSVGPoint();
@@ -253,7 +253,7 @@ export class NodeInteractionHandler {
                     pt.y = d.y || 0;
                     const screenPt = pt.matrixTransform(matrix);
                     
-                    // 使用原生事件对象或D3事件对象
+                    // Use native event objects or D3 event objects
                     const nativeEvent = event.sourceEvent || event;
                     
                     self.onRightClick.call(this, event, d, {
@@ -267,7 +267,7 @@ export class NodeInteractionHandler {
                 }
             })
             .on('mouseenter', function(event, d) {
-                // 高亮相关节点和连接
+                // Highlight relevant nodes and connections
                 if (context && context.nodes && context.links && context.linkSelection) {
                     self.highlightManager.highlightNode(
                         d.id,
@@ -283,7 +283,7 @@ export class NodeInteractionHandler {
                 }
             })
             .on('mouseleave', function(event, d) {
-                // 清除高亮
+                // clear highlight
                 if (context && context.linkSelection) {
                     self.highlightManager.clearHighlight(
                         nodeSelection,
@@ -298,7 +298,7 @@ export class NodeInteractionHandler {
     }
     
     /**
-     * 清除所有高亮
+     * Clear all highlights
      */
     clearAllHighlights(nodeSelection, linkSelection) {
         this.highlightManager.clearHighlight(nodeSelection, linkSelection);
@@ -306,7 +306,7 @@ export class NodeInteractionHandler {
 }
 
 /**
- * 创建通用拖拽行为（适用于非力导向布局）
+ * Create universal drag behavior (for non-force-directed layouts)
  */
 export function createStaticDragBehavior(options = {}) {
     let startX, startY;
@@ -326,11 +326,11 @@ export function createStaticDragBehavior(options = {}) {
             d.x = event.x;
             d.y = event.y;
             
-            // 更新节点位置
+            // Update node location
             d3.select(this)
                 .attr('transform', `translate(${d.x},${d.y})`);
             
-            // 更新相关连接线
+            // Update related connections
             if (options.updateLinks) {
                 options.updateLinks(d);
             }
@@ -340,7 +340,7 @@ export function createStaticDragBehavior(options = {}) {
             }
         })
         .on('end', function(event, d) {
-            // 可选：添加吸附到网格的功能
+            // Optional: Add the ability to snap to grid
             if (options.snapToGrid) {
                 const gridSize = options.gridSize || 10;
                 d.x = Math.round(d.x / gridSize) * gridSize;

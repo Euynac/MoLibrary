@@ -1,7 +1,7 @@
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// DataChannel异常信息
+/// Exception information for a single DataChannel.
 /// </summary>
 public class ChannelExceptionInfo
 {
@@ -16,68 +16,68 @@ public class ChannelExceptionInfo
     public string PipelineId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 当前异常数量
+    /// Number of exceptions currently held in the channel.
     /// </summary>
     public long CurrentExceptions { get; set; }
 
     /// <summary>
-    /// 总异常数量
+    /// Total exceptions recorded for the channel.
     /// </summary>
     public long TotalExceptions { get; set; }
     
     /// <summary>
-    /// 异常池最大大小
+    /// Maximum history depth for the exception pool.
     /// </summary>
     public int MaxPoolSize { get; set; }
     
     /// <summary>
-    /// 是否有异常
+    /// Indicates whether the channel currently holds exceptions.
     /// </summary>
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// 异常详情列表
+    /// Details of each recorded exception.
     /// </summary>
     public List<ExceptionDetailInfo> Exceptions { get; set; } = new();
 }
 
 /// <summary>
-/// 异常详情信息
+/// Details about a single exception.
 /// </summary>
 public class ExceptionDetailInfo
 {
     /// <summary>
-    /// 异常时间戳
+    /// Timestamp when the exception occurred.
     /// </summary>
     public DateTime Timestamp { get; set; }
     
     /// <summary>
-    /// 异常源类型
+    /// CLR type of the component that raised the exception.
     /// </summary>
     public string SourceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 异常源描述
+    /// Description of the source component for the exception.
     /// </summary>
     public string SourceDescription { get; set; } = string.Empty;
     
     /// <summary>
-    /// 异常类型
+    /// CLR exception type name.
     /// </summary>
     public string ExceptionType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 异常消息
+    /// Exception message text.
     /// </summary>
     public string Message { get; set; } = string.Empty;
     
     /// <summary>
-    /// 异常堆栈
+    /// Stack trace captured for the exception.
     /// </summary>
     public string StackTrace { get; set; } = string.Empty;
     
     /// <summary>
-    /// 业务描述
+    /// Business-level description of the exception context.
     /// </summary>
     public string Description { get; set; } = string.Empty;
-} 
+}

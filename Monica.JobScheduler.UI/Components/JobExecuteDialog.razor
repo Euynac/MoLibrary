@@ -125,7 +125,7 @@
 
     protected override void OnInitialized()
     {
-        // 通过 JobRegistry 获取实际的 CLR Type
+        // Get the actual CLR Type through JobRegistry
         if (!string.IsNullOrEmpty(JobDefinition.JobArgsKey))
         {
             _argsClrType = JobRegistry.GetJobArgsClrType(JobDefinition.JobArgsKey);

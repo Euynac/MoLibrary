@@ -1,5 +1,5 @@
 
-/* 使用 ::deep 穿透 MudBlazor 组件样式 */
+/* Use ::deep to penetrate MudBlazor component styles */
 .publish-section-wrapper ::deep .mud-paper {
     border-left: 4px solid var(--mud-palette-primary);
 }
@@ -18,7 +18,7 @@
     border-color: var(--mud-palette-lines-default);
 }
 
-/* 消息列表样式 */
+/* Message list style */
 .message-list-wrapper ::deep .mud-list {
     max-height: 400px;
     overflow-y: auto;

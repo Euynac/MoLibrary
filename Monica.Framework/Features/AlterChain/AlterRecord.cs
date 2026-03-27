@@ -3,26 +3,26 @@
 public record AlterRecord
 {
     /// <summary>
-    /// 变更记录名
+    /// Change record name
     /// </summary>
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// 旧值（来自于Entity）
+    /// Old value (from Entity)
     /// </summary>
     public object? OldValue { get; set; }
 
     /// <summary>
-    /// 新值（来自于AlterItem）
+    /// New value (from AlterItem)
     /// </summary>
     public object? NewValue { get; set; }
     /// <summary>
-    /// 是否回滚
+    /// Whether to roll back
     /// </summary>
     public bool? IsRollback { get; set; }
 
     /// <summary>
-    /// 目标回滚ID
+    /// Target rollback ID
     /// </summary>
     public List<string>? TargetRollbackIds { get; set; }
 }

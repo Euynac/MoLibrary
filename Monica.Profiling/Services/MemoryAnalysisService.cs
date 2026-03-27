@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     内存分析服务实现
+/// Memory analysis service implementation
 /// </summary>
 public class MemoryAnalysisService(
     ProfilingMetricsCollector metricsCollector,
@@ -40,7 +40,7 @@ public class MemoryAnalysisService(
         var gcInfo = GC.GetGCMemoryInfo(kind);
         var genInfoSpan = gcInfo.GenerationInfo;
 
-        // 构建各代详细信息
+        // Build generation details
         var genDetails = new List<GenerationDetailInfo>();
         for (var i = 0; i < genInfoSpan.Length; i++)
             genDetails.Add(new GenerationDetailInfo
@@ -52,7 +52,7 @@ public class MemoryAnalysisService(
                 FragmentationAfterBytes = genInfoSpan[i].FragmentationAfterBytes
             });
 
-        // 计算暂停时间 (取两个暂停时间中的较大值)
+        // Calculate the pause time (take the larger of the two pause times)
         var pauseDurations = gcInfo.PauseDurations;
         var totalPause = pauseDurations.Length > 0 ? pauseDurations[0] : TimeSpan.Zero;
         if (pauseDurations.Length > 1 && pauseDurations[1] > totalPause) totalPause = pauseDurations[1];
@@ -87,7 +87,7 @@ public class MemoryAnalysisService(
 
             if (generation < 0)
             {
-                // 完整 GC
+                // Full GC
                 if (compacting) GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 
                 GC.Collect(GC.MaxGeneration, blocking ? GCCollectionMode.Forced : GCCollectionMode.Optimized, blocking,
@@ -95,7 +95,7 @@ public class MemoryAnalysisService(
             }
             else
             {
-                // 指定代数的 GC
+                // GC for specified generations
                 var targetGen = Math.Min(generation, GC.MaxGeneration);
                 GC.Collect(targetGen, blocking ? GCCollectionMode.Forced : GCCollectionMode.Optimized, blocking);
             }
@@ -142,7 +142,7 @@ public class MemoryAnalysisService(
             var fileName = $"gcdump_{process.ProcessName}_{DateTime.Now:yyyyMMdd_HHmmss}.gcdump";
             var dumpPath = outputPath ?? Path.Combine(Path.GetTempPath(), fileName);
 
-            // 检查 dotnet-gcdump 是否可用
+            // Check if dotnet-gcdump is available
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet-gcdump",

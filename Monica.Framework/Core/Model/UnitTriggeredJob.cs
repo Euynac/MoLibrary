@@ -6,7 +6,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 后台触发式任务
+/// Background triggered tasks
 /// </summary>
 /// <param name="type"></param>
 public class UnitTriggeredJob(Type type) : ProjectUnit(type, EProjectUnitType.TriggeredJob), IHasProjectUnitFactory

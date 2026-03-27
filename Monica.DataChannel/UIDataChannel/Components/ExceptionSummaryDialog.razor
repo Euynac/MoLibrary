@@ -11,7 +11,7 @@
         @if (ExceptionSummary != null)
         {
             <MudStack Spacing="4">
-                <!-- 总体统计卡片 -->
+                <!-- Overall statistic cards -->
                 <MudGrid Spacing="3" Class="stats-grid">
                     <MudItem xs="12" md="6" lg="3">
                         <MudCard Elevation="2" Class="pa-3">
@@ -59,7 +59,7 @@
                     </MudItem>
                 </MudGrid>
 
-                <!-- Channel详细统计表格 -->
+                <!-- Detailed per-channel table -->
                 @if (ExceptionSummary.ChannelSummaries.Any())
                 {
                     <MudCard Elevation="2" Class="pa-3">
@@ -69,11 +69,11 @@
                                 Channel异常详细统计
                             </MudText>
                             
-                            <MudDataGrid Items="ExceptionSummary.ChannelSummaries" 
-                                       Filterable="true" 
-                                       SortMode="SortMode.Multiple" 
-                                       Hover="true" 
-                                       Dense="true" 
+                            <MudDataGrid Items="ExceptionSummary.ChannelSummaries"
+                                       Filterable="true"
+                                       SortMode="SortMode.Multiple"
+                                       Hover="true"
+                                       Dense="true"
                                        Class="exception-table-container"
                                        ReadOnly="true">
                                 <Columns>
@@ -176,22 +176,22 @@
     [CascadingParameter] IDialogReference? MudDialog { get; set; }
 
     /// <summary>
-    /// 异常统计信息
+    /// Gets or sets the exception summary information.
     /// </summary>
     [Parameter] public ExceptionSummaryInfo ExceptionSummary { get; set; } = null!;
 
     /// <summary>
-    /// 查看Channel异常事件
+    /// Gets or sets the callback used to view channel exceptions.
     /// </summary>
     [Parameter] public Action<string>? OnViewChannelExceptions { get; set; }
 
     /// <summary>
-    /// 清空Channel异常事件
+    /// Gets or sets the callback used to clear channel exceptions.
     /// </summary>
     [Parameter] public Func<string, Task>? OnClearChannelExceptions { get; set; }
 
     /// <summary>
-    /// 获取刷新后的异常统计数据
+    /// Gets or sets the callback used to refresh exception summary data.
     /// </summary>
     [Parameter] public Func<Task<ExceptionSummaryInfo?>>? OnGetRefreshData { get; set; }
 
@@ -201,7 +201,7 @@
         {
             await OnClearChannelExceptions(channelId);
             
-            // 刷新对话框数据
+            // Refresh the dialog data.
             if (OnGetRefreshData != null)
             {
                 var refreshedData = await OnGetRefreshData();
@@ -213,4 +213,4 @@
             }
         }
     }
-} 
+}

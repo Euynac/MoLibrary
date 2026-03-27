@@ -3,7 +3,7 @@ using System.Reflection;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// 反射工具类
+/// Reflection tool class
 /// </summary>
 public static class ReflectionTool
 {
@@ -20,21 +20,21 @@ public static class ReflectionTool
     }
 
     /// <summary>
-    /// 克隆某个对象中所有可写的属性值到对象（引用类型依然是同个引用，值类型则是复制）（EFCore会追踪修改，因为做的是Action操作）
+    /// Clone all writable attribute values ​​in an object to the object (the reference type is still the same reference, and the value type is copied) (EFCore will track modifications because it is an Action operation)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="obj"></param>
-    /// <param name="copyFromObj">需要复制值的对象用以克隆</param>
-    /// <param name="ignoreParameterNames">设定忽略克隆的属性名</param>
+    /// <param name="copyFromObj">Objects whose values ​​need to be copied are used for cloning</param>
+    /// <param name="ignoreParameterNames">Set attribute names to ignore clones</param>
     /// <returns>Return given cloned object for convenient.</returns>
     public static T CloneParameters<T>(this T obj, T copyFromObj, params string[] ignoreParameterNames)
     {
         var ignoreList = ignoreParameterNames.ToHashSet();
         foreach (var propertyInfo in typeof(T).GetProperties().Where(p => p.CanWrite))
         {
-            //获取属性值：
+            //Get attribute value:
             var propertyValue = propertyInfo.GetValue(copyFromObj);
-            //获取属性名：
+            //Get attribute name:
             var propertyName = propertyInfo.Name;
             if (ignoreList.Contains(propertyName)) continue;
             propertyInfo.SetValue(obj, propertyValue);
@@ -53,18 +53,18 @@ public static class ReflectionTool
         var type = typeof(T);
         foreach (var propertyInfo in type.GetProperties())
         {
-            //获取属性值：
+            //Get attribute value:
             yield return propertyInfo.GetValue(instance);
         }
     }
 
 
     /// <summary>
-    /// 获取指定类对象中所有public的属性信息，返回Dict[key属性名，Value[属性类型，属性值]]
+    /// Get all public attribute information in the specified class object and return Dict[key attribute name, Value[attribute type, attribute value]]
     /// </summary>
-    /// <typeparam name="T">指定类型</typeparam>
-    /// <param name="instance">类的实例</param>
-    /// <param name="toLowerCase">返回的属性名是否转小写</param>
+    /// <typeparam name="T">Specify type</typeparam>
+    /// <param name="instance">class instance</param>
+    /// <param name="toLowerCase">Whether the returned attribute name is converted to lowercase</param>
     /// <returns></returns>
     public static Dictionary<string, KeyValuePair<Type, object?>> GetAllPropertyInfo<T>(T instance, bool toLowerCase = false) where T : class
     {
@@ -72,11 +72,11 @@ public static class ReflectionTool
         var type = typeof(T);
         foreach (var propertyInfo in type.GetProperties())
         {
-            //获取属性类型
+            //Get attribute type
             var propertyType = propertyInfo.PropertyType;
-            //获取属性名：
+            //Get attribute name:
             var propertyName = toLowerCase ? propertyInfo.Name.ToLower() : propertyInfo.Name;
-            //获取属性值：
+            //Get attribute value:
             var propertyValue = propertyInfo.GetValue(instance);
             var propertyPair = new KeyValuePair<Type, object?>(propertyType, propertyValue);
             propertyInfoDict.Add(propertyName, propertyPair);

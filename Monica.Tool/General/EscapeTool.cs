@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// 转义工具类 用于转义一些在某些场合可能引发问题的字符串
+/// Escape tool class is used to escape some strings that may cause problems in some situations.
 /// </summary>
 public static class EscapeTool
 {

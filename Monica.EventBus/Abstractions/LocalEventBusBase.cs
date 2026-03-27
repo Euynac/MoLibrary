@@ -9,7 +9,7 @@ namespace Monica.EventBus.Abstractions;
 /// Base class for local (in-process) event bus implementations.
 /// Publishes events by directly triggering handlers in the same process.
 /// </summary>
-/// TODO Use build-in Channel to implement.
+// TODO: Consider reworking this implementation to use the built-in Channel APIs.
 public abstract class LocalEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,

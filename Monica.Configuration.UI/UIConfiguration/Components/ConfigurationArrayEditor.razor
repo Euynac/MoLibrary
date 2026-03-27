@@ -99,7 +99,7 @@
 
     private async Task NotifyValueChanged()
     {
-        // 将List转换为JsonElement
+        // Convert List to JsonElement
         var result = JsonFileProviderConventions.ToJsonElement(items);
         await ValueChanged.InvokeAsync(result);
     }
@@ -116,7 +116,7 @@
             _ => ""
         };
         
-        // 将默认值转换为JsonElement
+        // Convert default value to JsonElement
         return JsonFileProviderConventions.ToJsonElement(defaultValue);
     }
     

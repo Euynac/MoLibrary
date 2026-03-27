@@ -8,7 +8,7 @@ namespace Monica.Configuration.Providers;
 public class JsonFileProviderConventions
 {
     /// <summary>
-    /// 配置文件Json格式化设置
+    /// JSON formatting options used by configuration files.
     /// </summary>
     public static JsonSerializerOptions JsonSerializerOptions { get; } =
         new()
@@ -19,24 +19,24 @@ public class JsonFileProviderConventions
         };
 
     /// <summary>
-    /// 将对象转换为JsonElement
+    /// Converts an object to <see cref="JsonElement"/>.
     /// </summary>
-    /// <param name="value">要转换的对象</param>
-    /// <returns>转换后的JsonElement，如果转换失败则返回原值</returns>
+    /// <param name="value">The object to convert.</param>
+    /// <returns>The converted <see cref="JsonElement"/>. Returns the original value when conversion fails.</returns>
     public static object ToJsonElement(object? value)
     {
         if (value == null) return value!;
         
         try
         {
-            // 将所有value都序列化为JSON字符串，然后解析为JsonElement
+            // Serialize the value to JSON and parse it as JsonElement.
             var jsonString = JsonSerializer.Serialize(value, JsonSerializerOptions);
             var jsonDocument = JsonDocument.Parse(jsonString);
             return jsonDocument.RootElement;
         }
         catch
         {
-            // 如果转换失败，返回原值
+            // If conversion fails, keep the original value.
             return value;
         }
     }

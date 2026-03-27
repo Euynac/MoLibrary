@@ -9,10 +9,10 @@ public class MetadataForActiveMQ : CommunicationMetadata<ActiveMQCore>
     public string QueueName { get; set; } = string.Empty;
     public string AccessKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
-    
+
     public string SubscriptionName { get; set; } = nameof(MetadataForActiveMQ);
     /// <summary>
-    /// ClientId的持久化订阅者，ActiveMQ会给这个指定ClientId的持久化订阅者保存它断线期间接收到的消息，当下次这个ClientId的订阅者重新连接时，ActiveMQ会将断线期间接收到的消息发给订阅者。默认使用Guid生成
+    /// ClientId for the durable subscriber; ActiveMQ retains messages for this ID while offline and redelivers them when it reconnects. Defaults to a new GUID.
     /// </summary>
     public string ClientId { get; set; } = Guid.NewGuid().ToString();
     public MetadataForActiveMQ(EConnectionDirection direction = EConnectionDirection.Input)

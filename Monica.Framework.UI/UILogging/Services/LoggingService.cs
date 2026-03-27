@@ -10,7 +10,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UILogging.Services;
 
 /// <summary>
-/// 日志页面核心服务，负责维护临时日志池与实时订阅
+/// Log page core service, responsible for maintaining temporary log pool and real-time subscription
 /// </summary>
 public sealed class LoggingService(
     ScreenLogBuffer buffer,
@@ -37,12 +37,12 @@ public sealed class LoggingService(
     public long TotalFileLineCount => logTailService.TotalFileLineCount;
 
     /// <summary>
-    /// 当前日志文件是否存在
+    /// Does the current log file exist?
     /// </summary>
     public bool LogFileExists => logTailService.LogFileExists;
 
     /// <summary>
-    /// 初始化日志缓冲池
+    /// Initialize log buffer pool
     /// </summary>
     public async Task<Res<ScreenLogSnapshot>> InitializeAsync(int requestedLines, CancellationToken cancellationToken = default)
     {
@@ -60,7 +60,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 启动日志实时监听
+    /// Start real-time log monitoring
     /// </summary>
     public Task<Res> StartAsync(CancellationToken cancellationToken = default)
     {
@@ -69,7 +69,7 @@ public sealed class LoggingService(
             return Task.FromResult(Res.Ok("日志监听已在运行"));
         }
 
-        // 确保释放旧的 CancellationTokenSource
+        // Make sure to release the old CancellationTokenSource
         _tailCts.SafeCancelAndDispose();
 
         var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -81,7 +81,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 暂停日志监听
+    /// Pause log monitoring
     /// </summary>
     public async Task<Res> PauseAsync()
     {
@@ -122,7 +122,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 更新筛选器
+    /// Update filter
     /// </summary>
     public async Task<Res<ScreenLogSnapshot>> UpdateFilterAsync(string? keyword, bool onlyCapture)
     {
@@ -133,7 +133,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 获取当前快照
+    /// Get current snapshot
     /// </summary>
     public ScreenLogSnapshot GetSnapshot()
     {
@@ -141,11 +141,11 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 加载更多历史日志（在当前缓冲区之前）
+    /// Load more history logs (before current buffer)
     /// </summary>
-    /// <param name="lineCount">要加载的行数，默认50行</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>加载的行数</returns>
+    /// <param name="lineCount">Number of lines to load, default 50</param>
+    /// <param name="cancellationToken">Cancellation Token</param>
+    /// <returns>Number of rows loaded</returns>
     public async Task<Res<int>> LoadMoreLinesAsync(int lineCount = 50, CancellationToken cancellationToken = default)
     {
         try
@@ -156,11 +156,11 @@ public sealed class LoggingService(
                 return 0;
             }
 
-            // 获取当前缓冲区最早的行号
+            // Get the earliest line number of the current buffer
             var firstLine = snapshot.Lines.FirstOrDefault();
             if (firstLine?.AbsoluteLineNumber == null || firstLine.AbsoluteLineNumber <= 1)
             {
-                // 已经到达文件开头
+                // The beginning of the file has been reached
                 return 0;
             }
 
@@ -177,7 +177,7 @@ public sealed class LoggingService(
                 return 0;
             }
 
-            // 前置到缓冲区
+            // prepend to buffer
             var newSnapshot = buffer.Prepend(readResult.Lines, readResult.StartLineNumber);
             await PublishSnapshotAsync(newSnapshot, cancellationToken).ConfigureAwait(false);
 
@@ -191,7 +191,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 导出当前临时日志池
+    /// Export the current temporary log pool
     /// </summary>
     public Task<Res<LogExportResult>> ExportBufferAsync()
     {
@@ -203,7 +203,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 列出日志目录文件
+    /// List log directory files
     /// </summary>
     public Task<Res<IReadOnlyList<LogFileDescriptor>>> ListFilesAsync(CancellationToken cancellationToken = default)
     {
@@ -211,7 +211,7 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 打开指定日志文件
+    /// Open the specified log file
     /// </summary>
     public Task<Res<FileStream>> OpenFileAsync(string relativePath, CancellationToken cancellationToken = default)
     {
@@ -219,31 +219,31 @@ public sealed class LoggingService(
     }
 
     /// <summary>
-    /// 切换到指定的日志文件
+    /// Switch to the specified log file
     /// </summary>
-    /// <param name="relativePath">相对于日志目录的文件路径</param>
-    /// <param name="initialLines">初始加载的行数</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>新文件的日志快照</returns>
+    /// <param name="relativePath">File path relative to the log directory</param>
+    /// <param name="initialLines">Number of initially loaded lines</param>
+    /// <param name="cancellationToken">Cancellation Token</param>
+    /// <returns>Log snapshot of new file</returns>
     public async Task<Res<ScreenLogSnapshot>> SwitchToFileAsync(string relativePath, int initialLines, CancellationToken cancellationToken = default)
     {
-        // 暂停当前监听
+        // Pause current listening
         await PauseAsync();
 
-        // 解析完整路径并切换
+        // Parse full path and switch
         var fullPath = logFileQueryService.ResolveFilePath(relativePath);
         logTailService.SwitchToFile(fullPath);
 
-        // 重新初始化
+        // Reinitialize
         return await InitializeAsync(initialLines, cancellationToken);
     }
 
     /// <summary>
-    /// 创建日志订阅
+    /// Create a log subscription
     /// </summary>
     public LoggingSubscription Subscribe()
     {
-        // 使用有界 Channel，防止内存无限增长
+        // Use bounded Channel to prevent unlimited memory growth
         var channel = Channel.CreateBounded<ScreenLogSnapshot>(new BoundedChannelOptions(100)
         {
             SingleReader = true,
@@ -269,7 +269,7 @@ public sealed class LoggingService(
         {
             _subscribers.Remove(channel);
         }
-        // 总是尝试完成 channel，确保资源释放
+        // Always try to complete the channel, ensuring resources are released
         channel.Writer.TryComplete();
     }
 
@@ -328,7 +328,7 @@ public sealed class LoggingService(
 }
 
 /// <summary>
-/// 日志订阅包装
+/// Log subscription packaging
 /// </summary>
 public sealed class LoggingSubscription : IAsyncDisposable
 {

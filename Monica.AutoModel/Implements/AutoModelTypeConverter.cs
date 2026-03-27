@@ -13,7 +13,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
 {
     protected AutoModelExpressionOptions Options = options.Value;
 
-    //System.Dynamic.Linq不支持List<object>类型的Contains之类的泛型方法，必须强类型List
+    // System.Dynamic.Linq does not support generic methods like Contains on List<object>; use strongly typed lists.
     private static IList ToStrongTypeList<T>(IEnumerable<T> enumerable)
     {
         var list = enumerable.ToList();
@@ -91,7 +91,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
             technicalDetail: $"无法转换 '{value}' 为 Boolean");
     }
 
-    #region DateTime相关
+    #region DateTime-related
     public dynamic ConvertTimeSpan(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
     {
         if ((features & EFieldConditionFeatures.Fuzzy) != 0)
@@ -131,7 +131,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         if ((features & EFieldConditionFeatures.Fuzzy) != 0)
         {
             return value;
-            //截至2024-04-29 PgSQL provider 暂不支持TimeOnly.ToString()
+            // As of 2024-04-29, the PgSQL provider still does not support TimeOnly.ToString().
         }
         if (MoStringTool.TryToTimeOnly(value, out var time))
         {
@@ -148,7 +148,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
         if ((features & EFieldConditionFeatures.Fuzzy) != 0)
         {
             return value;
-            //截至2024-04-29 PgSQL provider 暂不支持DateOnly.ToString()
+            // As of 2024-04-29, the PgSQL provider still does not support DateOnly.ToString().
         }
 
         if (MoStringTool.TryToDateOnly(value, out var time))
@@ -164,7 +164,7 @@ public class AutoModelTypeConverter(IOptions<AutoModelExpressionOptions> options
 
 
 
-    #region Numeric相关
+    #region Numeric-related
 
     public dynamic ConvertDouble(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
     {

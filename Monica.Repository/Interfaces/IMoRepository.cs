@@ -38,7 +38,7 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
     /// </remarks>
     Task<DbSet<TEntity>> GetDbSetAsync();
     /// <summary>
-    /// 条件批量更新
+    /// Conditional batch update
     /// </summary>
     /// <param name="predicate"></param>
     /// <param name="setPropertyCalls"></param>
@@ -49,7 +49,7 @@ public interface IMoRepository<TEntity> : IMoBasicRepository<TEntity>, IMoReposi
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 条件批量删除
+    /// Conditional batch deletion
     /// </summary>
     /// <param name="predicate"></param>
     /// <param name="cancellationToken"></param>
@@ -67,7 +67,7 @@ public interface IMoRepository<TEntity, TKey> : IMoRepository<TEntity>, IMoBasic
 
 
 /// <summary>
-/// 仓储层方法标记
+/// Repository layer method tag
 /// </summary>
 public interface IMoRepository : IMoRepositoryFeatures
 {
@@ -100,13 +100,13 @@ public interface IMoRepository : IMoRepositoryFeatures
 
 
 /// <summary>
-/// 仓储层特殊功能
+/// Warehousing layer special functions
 /// </summary>
 public interface IMoRepositoryFeatures
 {
 
     /// <summary>
-    /// 该仓库是进行了分表操作
+    /// This warehouse has performed table splitting operations
     /// </summary>
     /// <returns></returns>
     bool IsShardingTable() => false;

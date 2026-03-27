@@ -3,43 +3,43 @@ using Monica.JobScheduler.Models;
 namespace Monica.JobScheduler.UI.Models;
 
 /// <summary>
-/// 轻量级 Job 实例投影，仅包含统计分析所需字段
-/// 不包含 StateHistory 和 JobArgs 等大文本字段，用于减少数据传输
+/// Lightweight Job instance projection, containing only the fields required for statistical analysis
+/// Does not contain large text fields such as StateHistory and JobArgs to reduce data transfer
 /// </summary>
 public record JobInstanceStatistics
 {
     /// <summary>
-    /// 实例唯一标识符
+    /// Instance unique identifier
     /// </summary>
     public string InstanceId { get; init; } = string.Empty;
 
     /// <summary>
-    /// 作业键
+    /// job key
     /// </summary>
     public string JobKey { get; init; } = string.Empty;
 
     /// <summary>
-    /// 执行状态
+    /// Execution status
     /// </summary>
     public JobState State { get; init; }
 
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public DateTime CreatedAt { get; init; }
 
     /// <summary>
-    /// 开始执行时间
+    /// Start execution time
     /// </summary>
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// 完成时间
+    /// completion time
     /// </summary>
     public DateTime? CompletedAt { get; init; }
 
     /// <summary>
-    /// 重试次数
+    /// Number of retries
     /// </summary>
     public int RetryAttempt { get; init; }
 }

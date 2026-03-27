@@ -3,7 +3,7 @@ namespace Monica.JobScheduler.UI.Models;
 using Monica.JobScheduler.Models;
 
 /// <summary>
-/// 作业实例筛选请求
+/// Job instance filter request
 /// </summary>
 public class JobInstanceFilterRequest
 {

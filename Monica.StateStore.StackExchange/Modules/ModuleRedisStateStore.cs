@@ -92,7 +92,7 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
 
     public override void ClaimDependencies()
     {
-        // 依赖 StateStore 基础模块
+        // Depends on StateStore basic module
         DependsOnModule<ModuleStateStoreGuide>().Register();
     }
 

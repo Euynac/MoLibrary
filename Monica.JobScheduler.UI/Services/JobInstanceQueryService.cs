@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 作业实例查询服务
+/// Job instance query service
 /// </summary>
 public class JobInstanceQueryService(
     IMoJobMetadataRepository metadataRepository,

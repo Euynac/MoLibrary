@@ -2,7 +2,7 @@
 namespace Monica.Framework.Features.AlterChain;
 
 /// <summary>
-/// 变更记录属性历史
+/// Change record attribute history
 /// </summary>
 /// <typeparam name="TAlterItem"></typeparam>
 /// <param name="BeforeValue"></param>
@@ -12,7 +12,7 @@ public record PropertyHistory<TAlterItem>(object? BeforeValue, object? CurrentVa
     where TAlterItem : IMoAlterItem
 {
     /// <summary>
-    /// 是初始值
+    /// is the initial value
     /// </summary>
     public bool IsInitialValue => RelatedAlterItem == null;
 

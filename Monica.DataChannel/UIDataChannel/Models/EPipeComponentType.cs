@@ -1,37 +1,37 @@
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// 管道组件类型枚举
+/// Enum describing pipeline component roles for the UI.
 /// </summary>
 public enum EPipeComponentType
 {
     /// <summary>
-    /// 管道端点类型
+    /// Represents a pipeline endpoint component.
     /// </summary>
     Endpoint,
     
     /// <summary>
-    /// 管道转换中间件类型
+    /// Represents a transformation middleware.
     /// </summary>
     TransformMiddleware,
     
     /// <summary>
-    /// 管道端点中间件类型
+    /// Represents middleware that wraps an endpoint.
     /// </summary>
     EndpointMiddleware,
     
     /// <summary>
-    /// 管道监控中间件类型
+    /// Represents monitoring middleware.
     /// </summary>
     MonitorMiddleware,
     
     /// <summary>
-    /// 基础管道中间件类型
+    /// Represents the base middleware implementation.
     /// </summary>
     BaseMiddleware,
     
     /// <summary>
-    /// 信息展示中间件类型
+    /// Represents middleware that provides info dashboards.
     /// </summary>
     InfoDisplayMiddleware
 }

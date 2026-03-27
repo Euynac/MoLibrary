@@ -7,7 +7,7 @@ namespace Monica.DataChannel.BuildInMiddlewares;
 public class FilterSpecialCharacterConfig
 {
     /// <summary>
-    /// 自定义的特殊字符
+    /// Gets or sets the custom special-character patterns to remove.
     /// </summary>
     public string SpecialCharacters { get; set; } = "";
 }
@@ -18,13 +18,13 @@ public class FilterSpecialCharacterMiddleware(IOptions<FilterSpecialCharacterCon
     {
         if (context.Data is string dataStr)
         {
-            //过滤HTML标签
+            // Remove HTML tags.
             dataStr = Regex.Replace(dataStr, "<.*?>", string.Empty);
 
-            //过滤JavaScript代码
+            // Remove obvious JavaScript snippets.
             dataStr = Regex.Replace(dataStr, @"alert\s*\(.*?\)|eval\s*\(.*?\)", string.Empty, RegexOptions.IgnoreCase);
 
-            //过滤自定义的特殊字符
+            // Remove caller-defined special characters or patterns.
             if (!string.IsNullOrEmpty(config.Value.SpecialCharacters))
             {
                 foreach (var specialCharacter in config.Value.SpecialCharacters.Replace('，',',').Split(new[] {','},

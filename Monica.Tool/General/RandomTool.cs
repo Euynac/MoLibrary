@@ -20,10 +20,10 @@ public static class RandomTool
     /// </summary>
     private static readonly Random _random = Random.Shared;
 
-    #region 随机生成
+    #region Random Generation
 
     /// <summary>
-    /// 获取强随机byte数组
+    /// Gets a cryptographically secure random byte array.
     /// </summary>
     /// <param name="byteCount"></param>
     /// <returns></returns>
@@ -104,15 +104,15 @@ public static class RandomTool
 
 
     ///<summary>
-    ///生成随机字符串 
+    /// Generates a random string.
     ///</summary>
-    ///<param name="length">目标字符串的长度</param>
-    ///<param name="useNum">是否包含数字，默认包含</param>
-    ///<param name="useLow">是否包含小写字母</param>
-    ///<param name="useUpp">是否包含大写字母</param>
-    ///<param name="useSpecial">是否包含特殊字符</param>
-    ///<param name="custom">要包含的自定义字符，直接输入要包含的字符列表</param>
-    ///<returns>指定长度的随机字符串</returns>
+    ///<param name="length">Target string length.</param>
+    ///<param name="useNum">Whether to include digits. Included by default.</param>
+    ///<param name="useLow">Whether to include lowercase letters.</param>
+    ///<param name="useUpp">Whether to include uppercase letters.</param>
+    ///<param name="useSpecial">Whether to include special characters.</param>
+    ///<param name="custom">Custom characters to include directly.</param>
+    ///<returns>A random string of the specified length.</returns>
     public static string GetString(int length, bool useNum = true, bool useLow = false, bool useUpp = false,
         bool useSpecial = false, string? custom = null)
     {
@@ -146,7 +146,7 @@ public static class RandomTool
 
     #endregion
 
-    #region ICollection的类拓展
+    #region ICollection Extensions
 
     /// <summary>
     /// Get a random item from the array.
@@ -278,7 +278,7 @@ public static class RandomTool
 
     #endregion
 
-    #region 时间类
+    #region Time Extensions
 
     public static DateTime GetDateTimeBetween(DateTime left, DateTime right,
         TimeExtensions.DateTimePart truncateTo = TimeExtensions.DateTimePart.Second)
@@ -296,10 +296,10 @@ public static class RandomTool
 
     #endregion
 
-    #region Enum类拓展
+    #region Enum Extensions
 
     /// <summary>
-    /// 从Enum中随机选取一个（需要Enum类是0-n连续的）
+    /// Picks one random value from an enum (requires enum values to be continuous from 0 to n).
     /// </summary>
     /// <returns></returns>
     public static T EnumRandomGetOne<T>() where T : Enum
@@ -311,7 +311,7 @@ public static class RandomTool
 
     #endregion
 
-    #region 数字类拓展
+    #region Numeric Extensions
 
     /// <summary>
     /// Generate a random double between minValue and maxValue (include min but not max value).
@@ -385,55 +385,56 @@ public static class RandomTool
 
     #endregion
 
-    #region object类拓展
+    #region Object Extensions
 
     /// <summary>
-    /// 有x%可能性返回null（用于 ?? 来随机选择，并较其他效率较高）
+    /// Returns null with x% probability (useful with ?? for probabilistic selection with good performance).
     /// </summary>
     /// <param name="obj"></param>
-    /// <param name="probability">概率基础值，不返回null的可能性[0-1]</param>
-    /// <param name="influenceValue">影响值，与原始基础概率相加，可为负</param>
-    /// <param name="maxProbability">最大可能性，影响值+基础值的最大值</param>
-    /// <param name="minProbability">最小可能性，影响值+基础值的最小值</param>
+    /// <param name="probability">Base probability in [0-1], representing the chance of not returning null.</param>
+    /// <param name="influenceValue">Influence value added to the base probability; can be negative.</param>
+    /// <param name="maxProbability">Upper bound for (base + influence).</param>
+    /// <param name="minProbability">Lower bound for (base + influence).</param>
     /// <returns></returns>
     public static T? ProbablyNull<T>(this T obj, double probability, double influenceValue = 0,
         double maxProbability = 1, double minProbability = 0) where T : class
         => ProbablyTrue(probability, influenceValue, maxProbability, minProbability) ? null : obj;
 
     /// <summary>
-    /// 有x%可能性不返回null，就是有x%可能性会做（链式上?截断用于概率执行）
+    /// Returns the original object with x% probability; otherwise returns null.
+    /// Useful for probabilistic execution in nullable chaining.
     /// </summary>
     /// <param name="obj"></param>
-    /// <param name="probability">概率基础值，不返回null的可能性[0-1]</param>
-    /// <param name="influenceValue">影响值，与原始基础概率相加，可为负</param>
-    /// <param name="maxProbability">最大可能性，影响值+基础值的最大值</param>
-    /// <param name="minProbability">最小可能性，影响值+基础值的最小值</param>
+    /// <param name="probability">Base probability in [0-1], representing the chance of not returning null.</param>
+    /// <param name="influenceValue">Influence value added to the base probability; can be negative.</param>
+    /// <param name="maxProbability">Upper bound for (base + influence).</param>
+    /// <param name="minProbability">Lower bound for (base + influence).</param>
     /// <returns></returns>
     public static T? ProbablyDo<T>(this T obj, double probability, double influenceValue = 0, double maxProbability = 1,
         double minProbability = 0) where T : class
         => ProbablyTrue(probability, influenceValue, maxProbability, minProbability) ? obj : null;
 
     /// <summary>
-    /// 有x%可能性会成为给定的对象
+    /// Returns the provided replacement object with x% probability.
     /// </summary>
     /// <param name="obj"></param>
-    /// <param name="become">x%可能会返回的对象</param>
-    /// <param name="probability">概率基础值，不返回null的可能性[0-1]</param>
-    /// <param name="influenceValue">影响值，与原始基础概率相加，可为负</param>
-    /// <param name="maxProbability">最大可能性，影响值+基础值的最大值</param>
-    /// <param name="minProbability">最小可能性，影响值+基础值的最小值</param>
-    /// <returns>没有成为就返回原先的对象</returns>
+    /// <param name="become">Replacement object returned with the configured probability.</param>
+    /// <param name="probability">Base probability in [0-1].</param>
+    /// <param name="influenceValue">Influence value added to the base probability; can be negative.</param>
+    /// <param name="maxProbability">Upper bound for (base + influence).</param>
+    /// <param name="minProbability">Lower bound for (base + influence).</param>
+    /// <returns>The replacement object if triggered; otherwise the original object.</returns>
     public static T ProbablyBe<T>(this T obj, T become, double probability, double influenceValue = 0,
         double maxProbability = 1, double minProbability = 0)
         => ProbablyTrue(probability, influenceValue, maxProbability, minProbability) ? become : obj;
 
     /// <summary>
-    /// 有x%可能性返回true
+    /// Returns true with x% probability.
     /// </summary>
-    /// <param name="probability">概率基础值，返回true的可能性[0-1]</param>
-    /// <param name="influenceValue">影响值，与原始基础概率相加，可为负</param>
-    /// <param name="maxProbability">0-1之间 最大可能性，影响值+基础值的最大值</param>
-    /// <param name="minProbability">0-1之间 最小可能性，影响值+基础值的最小值</param>
+    /// <param name="probability">Base probability of returning true in [0-1].</param>
+    /// <param name="influenceValue">Influence value added to the base probability; can be negative.</param>
+    /// <param name="maxProbability">Upper bound in [0-1] for (base + influence).</param>
+    /// <param name="minProbability">Lower bound in [0-1] for (base + influence).</param>
     /// <returns></returns>
     public static bool ProbablyTrue(this double probability, double influenceValue = 0, double maxProbability = 1,
         double minProbability = 0)
@@ -443,13 +444,13 @@ public static class RandomTool
     }
 
     /// <summary>
-    /// 结果基于给定的哈希，有x%可能性返回true
+    /// Returns true with x% probability, deterministically based on the provided hash source.
     /// </summary>
-    /// <param name="probability">概率基础值，返回true的可能性[0-1]</param>
+    /// <param name="probability">Base probability of returning true in [0-1].</param>
     /// <param name="objectToHash"></param>
-    /// <param name="influenceValue">影响值，与原始基础概率相加，可为负</param>
-    /// <param name="maxProbability">0-1之间 最大可能性，影响值+基础值的最大值</param>
-    /// <param name="minProbability">0-1之间 最小可能性，影响值+基础值的最小值</param>
+    /// <param name="influenceValue">Influence value added to the base probability; can be negative.</param>
+    /// <param name="maxProbability">Upper bound in [0-1] for (base + influence).</param>
+    /// <param name="minProbability">Lower bound in [0-1] for (base + influence).</param>
     /// <returns></returns>
     public static bool ProbablyTrue(this double probability, object objectToHash, double influenceValue = 0,
         double maxProbability = 1,
@@ -461,7 +462,7 @@ public static class RandomTool
 
     #endregion
 
-    #region 数学分布
+    #region Mathematical Distribution
 
     public static double DistributeUsePowerFunction(int value, double distributeMaxValue, double power,
         int maxRange = 100)

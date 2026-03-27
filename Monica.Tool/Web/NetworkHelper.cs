@@ -5,7 +5,7 @@ namespace Monica.Tool.Web;
 public class NetworkHelper
 {
     /// <summary>
-    /// 返回null表示成功，否则返回错误信息
+    /// Returns null to indicate success, otherwise returns an error message
     /// </summary>
     /// <param name="ip"></param>
     /// <param name="port"></param>

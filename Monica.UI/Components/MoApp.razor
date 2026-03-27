@@ -19,11 +19,9 @@
         <link href=@Assets["_content/MudBlazor.Markdown/MudBlazor.Markdown.min.css"] rel="stylesheet" />
     }
     
-    <!-- Monica 主题 CSS -->
-    <link href=@Assets["_content/Monica.UI/css/mo-theme-main.css"] rel="stylesheet" />
+    <!-- Monica theme CSS -->    <link href=@Assets["_content/Monica.UI/css/mo-theme-main.css"] rel="stylesheet" />
     
-	<!-- 巨坑：支持消费应用的 CSS isolation 最终是打包成了bundle(可以通过编译目录下的YourProject.staticwebassets.runtime.json)，所以要根据入口程序集名称获取 -->
-    <link href="@(Assembly.GetEntryAssembly()?.GetName().Name).styles.css" rel="stylesheet" />
+	<!-- Big Pitfall: CSS isolation that supports consumer applications is eventually packaged into a bundle (can be obtained through YourProject.staticwebassets.runtime.json in the compilation directory), so it must be obtained according to the entry assembly name -->    <link href="@(Assembly.GetEntryAssembly()?.GetName().Name).styles.css" rel="stylesheet" />
   
     <link rel="icon" type="image/ico" href="@Assets["_content/Monica.UI/favicon.ico"]" />
     <HeadOutlet @rendermode="InteractiveServer" />

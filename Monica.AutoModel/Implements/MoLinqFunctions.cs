@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Monica.AutoModel.Implements;
 
 /// <summary>
-/// 用于DynamicLinq生成Lambada表达式
+/// Used by DynamicLinq to generate lambda expressions.
 /// </summary>
 [DynamicLinqType]
 public static class LinqToObjectFunctions
@@ -31,7 +31,7 @@ public static class LinqToObjectFunctions
         string? pattern)
         => LikeCore(matchExpression, pattern, escapeCharacter: null);
 
-    #region Like 客户端实现 EFCore 3.1
+    #region Like client-side implementation for EFCore 3.1
 
     ///// <summary>
     /////     <para>
@@ -161,7 +161,7 @@ public static class LinqToObjectFunctions
 
 
 /// <summary>
-/// 用于DynamicLinq生成Lambada表达式
+/// Used by DynamicLinq to generate lambda expressions.
 /// </summary>
 [DynamicLinqType]
 public static class LinqToSqlFunctions

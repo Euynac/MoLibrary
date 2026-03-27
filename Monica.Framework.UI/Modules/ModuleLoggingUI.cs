@@ -21,7 +21,7 @@ public static class ModuleLoggingUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 LoggingUI 模块
+        /// Configure LoggingUI module
         /// </summary>
         public static ModuleLoggingUIGuide AddLoggingUI(Action<ModuleLoggingUIOption>? action = null)
         {
@@ -31,7 +31,7 @@ public static class ModuleLoggingUIBuilderExtensions
 }
 
 /// <summary>
-/// Logging UI 模块实现
+/// Logging UI module implementation
 /// </summary>
 [ModuleKey(EMoModuleKey.LoggingUI)]
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
@@ -120,49 +120,49 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 }
 
 /// <summary>
-/// Logging UI 模块向导
+/// Logging UI module wizard
 /// </summary>
 public class ModuleLoggingUIGuide : MoModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
 {
 }
 
 /// <summary>
-/// Logging UI 模块选项
+/// Logging UI module options
 /// </summary>
 public class ModuleLoggingUIOption : MoModuleOptionWithMinimalApi<ModuleLoggingUI>
 {
     /// <summary>
-    /// 是否禁用日志监控页面
+    /// Whether to disable the log monitoring page
     /// </summary>
     public bool DisableUILoggingPage { get; set; }
 
     /// <summary>
-    /// 初始化时获取的日志行数
+    /// Number of log lines obtained during initialization
     /// </summary>
     public int DefaultFetchLines { get; set; } = 500;
 
     /// <summary>
-    /// 临时日志池允许的最大显示行数
+    /// The maximum number of display lines allowed in the temporary log pool
     /// </summary>
     public int MaxDisplayLines { get; set; } = 5000;
 
     /// <summary>
-    /// 日志轮询间隔
+    /// Log polling interval
     /// </summary>
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// 默认启用仅捕获匹配项
+    /// Capture only matches is enabled by default
     /// </summary>
     public bool DefaultOnlyCapture { get; set; } = true;
 
     /// <summary>
-    /// 预设可选的屏幕日志行数
+    /// Default number of optional screen log lines
     /// </summary>
     public IReadOnlyList<int> PresetLineCounts { get; set; } = new[] { 200, 500, 1000, 2500, 5000 };
 
     /// <summary>
-    /// 日志目录优先设定
+    /// Log directory priority setting
     /// </summary>
     public string? LogDirectory { get; set; }
 }

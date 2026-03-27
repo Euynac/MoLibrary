@@ -19,7 +19,7 @@ public static class ModuleTimekeeperUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 TimekeeperUI 模块
+        /// Configure the TimekeeperUI module
         /// </summary>
         public static ModuleTimekeeperUIGuide AddTimekeeperUI(Action<ModuleTimekeeperUIOption>? action = null)
         {
@@ -29,7 +29,7 @@ public static class ModuleTimekeeperUIBuilderExtensions
 }
 
 /// <summary>
-/// Timekeeper UI模块
+/// Timekeeper UI module
 /// </summary>
 [ModuleKey(EMoModuleKey.TimekeeperUI)]
 public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
@@ -45,7 +45,7 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
     {
         if (!Option.DisableUITimekeeperPage)
         {
-            // 注册原有的Timekeeper模块依赖
+            // Register the original Timekeeper module dependency
             DependsOnModule<ModuleTimekeeperGuide>().Register();
 
             DependsOnModule<ModuleUICoreGuide>().Register()
@@ -91,19 +91,19 @@ public class ModuleTimekeeperUI(ModuleTimekeeperUIOption option)
 }
 
 /// <summary>
-/// TimekeeperUI模块向导
+/// TimekeeperUI module wizard
 /// </summary>
 public class ModuleTimekeeperUIGuide : MoModuleGuide<ModuleTimekeeperUI, ModuleTimekeeperUIOption, ModuleTimekeeperUIGuide>
 {
 }
 
 /// <summary>
-/// TimekeeperUI模块选项
+/// TimekeeperUI module options
 /// </summary>
 public class ModuleTimekeeperUIOption : MoModuleOptionWithMinimalApi<ModuleTimekeeperUI>
 { 
     /// <summary>
-    /// 是否禁用Timekeeper调试页面
+    /// Whether to disable the Timekeeper debugging page
     /// </summary>
     public bool DisableUITimekeeperPage { get; set; }
 } 

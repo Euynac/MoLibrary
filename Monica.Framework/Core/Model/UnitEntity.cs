@@ -6,7 +6,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 实体及聚合
+/// entities and aggregates
 /// </summary>
 /// <param name="type"></param>
 public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity), IHasProjectUnitFactory
@@ -19,7 +19,7 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
     public bool IsAggregate { get; set; }
 
     /// <summary>
-    ///  需要在Program.cs 添加 config.AddDbContext
+    ///  Need to add config.AddDbContext in Program.cs
     /// </summary>
     public UnitRepository? RepoUnit { get; set; }
 

@@ -77,7 +77,7 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : MoMod
 
         if (option is { IncludeListeningAddresses: true})
         {
-            // 注册 IServerAddressesFeature 以获取监听地址
+            // Register IServerAddressesFeature to retrieve listening addresses.
             services.TryAddSingleton(provider =>
             {
                 var server = provider.GetService<IServer>();
@@ -92,18 +92,18 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : MoMod
         services.AddScoped<ServiceDiscoveryQueryService>();
         services.AddScoped<ServiceDiscoveryFacade>();
 
-        // 注册新的 StateStore 基础服务
+        // Register the new StateStore foundational services.
         services.TryAddSingleton<IRegistrationStateManager, RegistrationStateManager>();
         services.TryAddSingleton<ILeaderElectionService, LeaderElectionService>();
 
-        // 注册 ServiceDiscoveryClientHostedService 为单例并同时作为 HostedService 和 Coordinator
+        // Register ServiceDiscoveryClientHostedService as a singleton and expose it as both HostedService and Coordinator.
         services.AddSingleton<ServiceDiscoveryClientHostedService>();
         services.AddSingleton<IServiceRegistrationCoordinator>(provider =>
             provider.GetRequiredService<ServiceDiscoveryClientHostedService>());
         services.AddHostedService(provider =>
             provider.GetRequiredService<ServiceDiscoveryClientHostedService>());
 
-        // 注册默认信息提供者实现
+        // Register the default information provider implementation.
         services.TryAddSingleton<IServiceDiscoveryCatalogProvider, DefaultServiceDiscoveryCatalogProvider>();
     }
 
@@ -158,10 +158,10 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
 
     /// <summary>
-    /// 使用内存状态存储（单实例模式）
+    /// Uses in-memory state storage (single-instance mode).
     /// </summary>
     /// <remarks>
-    /// 适用于单实例部署或开发环境
+    /// Suitable for single-instance deployments or development environments.
     /// </remarks>
     public ModuleServiceDiscoveryGuide UseInMemoryStateStore()
     {
@@ -175,10 +175,10 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
 
     /// <summary>
-    /// 使用分布式状态存储（多实例模式）
+    /// Uses distributed state storage (multi-instance mode).
     /// </summary>
     /// <remarks>
-    /// 适用于多实例部署，需要配置 Common 分布式 StateStore（如 Redis）
+    /// Suitable for multi-instance deployments and requires a common distributed StateStore (for example, Redis).
     /// </remarks>
     public ModuleServiceDiscoveryGuide UseDistributedStateStore()
     {
@@ -191,7 +191,7 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
 
     /// <summary>
-    /// 将当前服务设置为注册中心服务器
+    /// Marks the current service as the registry server.
     /// </summary>
     public ModuleServiceDiscoveryGuide SetAsRegistryServer()
     {
@@ -200,9 +200,9 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
 
     /// <summary>
-    /// 设置注册中心服务端目录提供者服务
+    /// Configures the catalog provider service used by the registry server.
     /// </summary>
-    /// <typeparam name="TInfoProvider">目录提供者服务实现类型</typeparam>
+    /// <typeparam name="TInfoProvider">Implementation type of the catalog provider service.</typeparam>
     public ModuleServiceDiscoveryGuide ConfigureRegistryCatalog<TInfoProvider>()
         where TInfoProvider : class, IServiceDiscoveryCatalogProvider
     {
@@ -214,10 +214,10 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
 
     /// <summary>
-    /// 从Flags枚举设置依赖的子域列表
+    /// Sets the dependent subdomain list from a Flags enum value.
     /// </summary>
-    /// <typeparam name="TEnum">标记了Flags特性的枚举类型</typeparam>
-    /// <param name="domainFlags">包含多个域标志的枚举值</param>
+    /// <typeparam name="TEnum">Enum type decorated with the Flags attribute.</typeparam>
+    /// <param name="domainFlags">Enum value that may include multiple domain flags.</param>
     public ModuleServiceDiscoveryGuide SetDependentSubDomains<TEnum>(TEnum domainFlags)
         where TEnum : struct, Enum
     {
@@ -231,10 +231,10 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
 
         foreach (var flagValue in flagValues)
         {
-            // 跳过None值（通常为0）
+            // Skip the None value (typically 0).
             if (Convert.ToInt32(flagValue) == 0) continue;
 
-            // 检查是否包含该标志
+            // Check whether this flag is included.
             if (domainFlags.HasFlag(flagValue))
             {
                 domains.Add(flagValue.ToString());
@@ -246,13 +246,14 @@ public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery,
     }
     
     /// <summary>
-    /// 使用已注册的 Keyed StateStore（通过指定 serviceKey）
+    /// Uses a pre-registered keyed StateStore via the specified serviceKey.
     /// </summary>
-    /// <param name="serviceKey">StateStore 的服务键，用于从 DI 容器中获取对应的 StateStore 实例</param>
-    /// <returns>模块指南实例以支持链式调用</returns>
+    /// <param name="serviceKey">Service key of the StateStore used to resolve the corresponding instance from the DI container.</param>
+    /// <returns>The module guide instance for fluent chaining.</returns>
     /// <remarks>
-    /// 使用此方法前，需要先在 ModuleStateStoreGuide 中通过 AddKeyedRedisStateStore 或 AddKeyedDaprStateStore 等方法注册对应 serviceKey 的 StateStore。
-    /// 默认情况下，可以使用 nameof(ModuleServiceDiscovery) 作为 serviceKey。
+    /// Before calling this method, register the StateStore for the target serviceKey in ModuleStateStoreGuide,
+    /// for example via AddKeyedRedisStateStore or AddKeyedDaprStateStore.
+    /// By default, nameof(ModuleServiceDiscovery) can be used as the serviceKey.
     /// </remarks>
     public ModuleServiceDiscoveryGuide UseCustomKeyedStateStore(string serviceKey = nameof(ModuleServiceDiscovery))
     {
@@ -272,7 +273,7 @@ public static class ModuleServiceDiscoveryBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ServiceDiscovery 模块
+        /// Configures the ServiceDiscovery module.
         /// </summary>
         public static ModuleServiceDiscoveryGuide AddServiceDiscovery(Action<ModuleServiceDiscoveryOption>? action = null)
         {
@@ -284,23 +285,23 @@ public static class ModuleServiceDiscoveryBuilderExtensions
 public class ModuleServiceDiscoveryOption : MoModuleOptionWithMinimalApi<ModuleServiceDiscovery>
 {
     /// <summary>
-    /// 当前微服务是注册中心
+    /// Indicates whether the current microservice acts as the registry server.
     /// </summary>
     public bool IsRegistryServer { get; internal set; }
 
     /// <summary>
-    /// 是否是单实例内存模式(standalone mode)
-    /// 适用于单实例部署或开发环境，不支持跨服务配置调用
+    /// Indicates whether standalone in-memory mode is enabled.
+    /// Suitable for single-instance deployments or development environments and does not support cross-service configuration calls.
     /// </summary>
     public bool IsStandaloneMode { get; internal set; }
    
     /// <summary>
-    /// 需要读取作为元数据的环境变量Key列表
+    /// Environment variable keys to read as metadata.
     /// </summary>
     public List<string> MetadataEnvironmentVariables { get; set; } = new();
 
     /// <summary>
-    /// 是否获取监听地址作为元数据
+    /// Indicates whether listening addresses should be included as metadata.
     /// </summary>
     public bool IncludeListeningAddresses { get; set; } = true;
     
@@ -308,22 +309,22 @@ public class ModuleServiceDiscoveryOption : MoModuleOptionWithMinimalApi<ModuleS
     // === Service Identity Configuration ===
 
     /// <summary>
-    /// 子域名（可选）
+    /// Subdomain name (optional).
     /// </summary>
     public string? DomainName { get; set; }
 
     /// <summary>
-    /// 微服务唯一标识符（默认从入口程序集名称获取）
+    /// Unique microservice identifier (defaults to the entry assembly name).
     /// </summary>
     public string? AppId { get; set; }
 
     /// <summary>
-    /// 微服务显示名称（默认从入口程序集名称获取）
+    /// Display name of the microservice (defaults to the entry assembly name).
     /// </summary>
     public string? AppName { get; set; }
 
     /// <summary>
-    /// 项目名称（默认从入口程序集名称获取）
+    /// Project name (defaults to the entry assembly name).
     /// </summary>
     public string? ProjectName { get; set; }
 
@@ -337,49 +338,49 @@ public class ModuleServiceDiscoveryOption : MoModuleOptionWithMinimalApi<ModuleS
     public DateTime? BuildTime { get; set; }
 
     /// <summary>
-    /// 程序集版本号（默认从FileVersionInfo获取）
+    /// Assembly version (defaults to FileVersionInfo).
     /// </summary>
     public string? AssemblyVersion { get; set; }
 
     /// <summary>
-    /// 发布版本号（自定义版本标识）
+    /// Release version (custom version identifier).
     /// </summary>
     public string? ReleaseVersion { get; set; }
 
     // === Instance Information ===
 
     /// <summary>
-    /// 实例标识符，格式："hostname:processId"
-    /// 如未设置，自动生成为："{COMPUTERNAME/HOSTNAME/MachineName}:{ProcessId}"
+    /// Instance identifier in the format "hostname:processId".
+    /// If not set, it is generated automatically as "{COMPUTERNAME/HOSTNAME/MachineName}:{ProcessId}".
     /// </summary>
     public string? FromInstance { get; set; }
 
     /// <summary>
-    /// 依赖的子域列表
+    /// List of dependent subdomains.
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
 
-    // === 新架构配置 ===
+    // === New Architecture Configuration ===
 
     /// <summary>
-    /// Leader 选举配置
+    /// Leader election configuration.
     /// </summary>
     public ElectionConfig Election { get; set; } = new();
 
     /// <summary>
-    /// 孤立处理模式
+    /// Isolation handling mode.
     /// </summary>
     public EIsolationHandlingMode IsolationHandlingMode { get; set; } = EIsolationHandlingMode.ContinueRunning;
 
     /// <summary>
-    /// 是否使用自定义的 Keyed StateStore 提供者
-    /// 当为 true 时，ClaimDependencies 不会自动注册 Keyed StateStore
+    /// Indicates whether a custom keyed StateStore provider is used.
+    /// When true, ClaimDependencies does not auto-register a keyed StateStore.
     /// </summary>
     public bool UseCustomKeyedStateStore => CustomStateStoreServiceKey != null;
 
     /// <summary>
-    /// 自定义 StateStore 的服务键
-    /// 用于从 DI 容器中获取指定 serviceKey 的 StateStore 实例
+    /// Service key of the custom StateStore.
+    /// Used to resolve the keyed StateStore instance from the DI container.
     /// </summary>
     public string? CustomStateStoreServiceKey { get; internal set; }
 
@@ -399,17 +400,17 @@ public class ModuleServiceDiscoveryOption : MoModuleOptionWithMinimalApi<ModuleS
 }
 
 /// <summary>
-/// 孤立处理模式
+/// Isolation handling mode.
 /// </summary>
 public enum EIsolationHandlingMode
 {
     /// <summary>
-    /// 继续运行（降级模式，不参与 Leader 选举）
+    /// Continue running in degraded mode without participating in leader election.
     /// </summary>
     ContinueRunning,
 
     /// <summary>
-    /// 快速下线
+    /// Shut down quickly.
     /// </summary>
     FastShutdown
 }

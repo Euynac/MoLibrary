@@ -51,7 +51,7 @@
     <MudCardContent Class="channel-content">
         @if (_isReInitializing)
         {
-            <!-- Loading遮罩 -->
+            <!-- Loading overlay -->
             <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="loading-container">
                 <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
                 <MudText Typo="Typo.h6" Color="Color.Primary" Class="loading-title">
@@ -64,9 +64,9 @@
         }
         else
         {
-            <!-- 正常内容 -->
+            <!-- Normal content -->
             <MudStack Spacing="3">
-                <!-- 状态信息 -->
+                <!-- Status information -->
                 <MudStack Row="true" Spacing="2">
                     <MudChip T="string" Color="@(Channel.IsInitialized ? Color.Success : Color.Secondary)" Size="Size.Small">
                         @(Channel.IsInitialized ? "已初始化" : "未初始化")
@@ -85,11 +85,11 @@
                     }
                 </MudStack>
 
-                <!-- 端点信息 -->
+                <!-- Endpoint details -->
                 <MudStack Spacing="2">
                     <MudText Typo="Typo.subtitle2" Class="endpoint-section-title">端点信息</MudText>
                     
-                    <!-- 内部端点 -->
+                    <!-- Inner endpoint -->
                     <MudExpansionPanels Elevation="0" Dense="true">
                         <MudExpansionPanel>
                             <TitleContent>
@@ -104,7 +104,7 @@
                         </MudExpansionPanel>
                     </MudExpansionPanels>
 
-                    <!-- 外部端点 -->
+                    <!-- Outer endpoint -->
                     <MudExpansionPanels Elevation="0" Dense="true">
                         <MudExpansionPanel>
                             <TitleContent>
@@ -120,7 +120,7 @@
                     </MudExpansionPanels>
                 </MudStack>
 
-                <!-- 中间件信息 -->
+                <!-- Middleware info -->
                 @if (Channel.Middlewares.Any())
                 {
                     <MudStack Spacing="2">
@@ -155,15 +155,15 @@
                                     <ChildContent>
                                         @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
                                         {
-                                            <!-- 信息展示中间件特殊显示 -->
+                                            <!-- Special display for info middleware -->
                                             <MudStack Spacing="3">
-                                                <!-- 元数据信息 -->
+                                                <!-- Metadata info -->
                                                 <MudStack Spacing="2">
                                                     <MudText Typo="Typo.subtitle2" Class="info-display-section-title">基础信息</MudText>
                                                     <MetadataDisplay Metadata="middleware.Metadata" />
                                                 </MudStack>
 
-                                                <!-- 展示字典信息 -->
+                                                <!-- Display dictionary entries -->
                                                 <MudStack Spacing="2">
                                                     <MudText Typo="Typo.subtitle2" Class="stats-section-title">
                                                         <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Small" Class="mr-1" />
@@ -190,7 +190,7 @@
                                         }
                                         else
                                         {
-                                            <!-- 普通中间件显示 -->
+                                            <!-- Display for standard middlewares -->
                                             <MetadataDisplay Metadata="middleware.Metadata" />
                                         }
                                     </ChildContent>
@@ -200,7 +200,7 @@
                     </MudStack>
                 }
 
-                <!-- 异常信息 -->
+                <!-- Exception details -->
                 @if (Channel.HasExceptions)
                 {
                     <MudStack Spacing="2">
@@ -222,34 +222,34 @@
 
 @code {
     /// <summary>
-    /// Channel状态信息
+    /// Gets or sets the channel status information.
     /// </summary>
     [Parameter] public ChannelStatusInfo Channel { get; set; } = null!;
 
     /// <summary>
-    /// 重新初始化事件
+    /// Gets or sets the callback used to reinitialize the channel.
     /// </summary>
     [Parameter] public EventCallback<string> OnReInitialize { get; set; }
 
     /// <summary>
-    /// 查看异常事件
+    /// Gets or sets the callback used to view exceptions.
     /// </summary>
     [Parameter] public EventCallback<string> OnViewExceptions { get; set; }
 
     /// <summary>
-    /// 清空异常事件
+    /// Gets or sets the callback used to clear exceptions.
     /// </summary>
     [Parameter] public EventCallback<string> OnClearExceptions { get; set; }
 
     /// <summary>
-    /// 重新初始化进行中状态
+    /// Tracks whether reinitialization is currently in progress.
     /// </summary>
     private bool _isReInitializing = false;
 
     /// <summary>
-    /// 处理重新初始化
+    /// Handles channel reinitialization.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     private async Task HandleReInitialize()
     {
         if (_isReInitializing) return;
@@ -259,20 +259,20 @@
 
         try
         {
-            // 使用ConfigureAwait(false)避免死锁，并确保异步操作不阻塞UI线程
-            await Task.Run(async () => 
+            // Use ConfigureAwait(false) to avoid deadlocks and keep the asynchronous operation from blocking the UI thread.
+            await Task.Run(async () =>
             {
                 await OnReInitialize.InvokeAsync(Channel.Id);
             }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            // 可以在这里添加错误处理逻辑
+            // Additional error handling can be added here if needed.
             System.Diagnostics.Debug.WriteLine($"重新初始化失败: {ex.Message}");
         }
         finally
         {
-            // 确保在UI线程上更新状态
+            // Ensure state updates run on the UI thread.
             await InvokeAsync(() =>
             {
                 _isReInitializing = false;
@@ -282,9 +282,9 @@
     }
 
     /// <summary>
-    /// 获取卡片CSS类
+    /// Gets the CSS class list for the card.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The computed CSS class string.</returns>
     private string GetCardClass()
     {
         var classes = new List<string> { "channel-card" };
@@ -300,9 +300,9 @@
     }
 
     /// <summary>
-    /// 获取Channel图标
+    /// Gets the icon for the current channel state.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The icon name.</returns>
     private string GetChannelIcon()
     {
         if (Channel.IsNotAvailable) return Icons.Material.Filled.Cancel;
@@ -312,9 +312,9 @@
     }
 
     /// <summary>
-    /// 获取Channel颜色
+    /// Gets the color for the current channel state.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The channel color.</returns>
     private Color GetChannelColor()
     {
         if (Channel.IsNotAvailable) return Color.Error;
@@ -324,10 +324,10 @@
     }
 
     /// <summary>
-    /// 获取组件图标
+    /// Gets the icon for a pipeline component type.
     /// </summary>
-    /// <param name="type">组件类型</param>
-    /// <returns></returns>
+    /// <param name="type">The component type.</param>
+    /// <returns>The icon name.</returns>
     private string GetComponentIcon(EPipeComponentType type)
     {
         return type switch
@@ -342,10 +342,10 @@
     }
 
     /// <summary>
-    /// 获取组件颜色
+    /// Gets the color for a pipeline component type.
     /// </summary>
-    /// <param name="type">组件类型</param>
-    /// <returns></returns>
+    /// <param name="type">The component type.</param>
+    /// <returns>The component color.</returns>
     private Color GetComponentColor(EPipeComponentType type)
     {
         return type switch
@@ -360,10 +360,10 @@
     }
 
     /// <summary>
-    /// 获取组件类型显示名称
+    /// Gets the display name for a pipeline component type.
     /// </summary>
-    /// <param name="type">组件类型</param>
-    /// <returns></returns>
+    /// <param name="type">The component type.</param>
+    /// <returns>The display name.</returns>
     private string GetComponentTypeDisplayName(EPipeComponentType type)
     {
         return type switch
@@ -379,10 +379,10 @@
     }
 
     /// <summary>
-    /// 获取信息项图标
+    /// Gets the icon for an information item value.
     /// </summary>
-    /// <param name="value">信息值</param>
-    /// <returns></returns>
+    /// <param name="value">The information value.</param>
+    /// <returns>The icon name.</returns>
     private string GetInfoIcon(object value)
     {
         return value switch
@@ -397,10 +397,10 @@
     }
 
     /// <summary>
-    /// 获取信息项颜色
+    /// Gets the color for an information item value.
     /// </summary>
-    /// <param name="value">信息值</param>
-    /// <returns></returns>
+    /// <param name="value">The information value.</param>
+    /// <returns>The color associated with the value.</returns>
     private Color GetInfoColor(object value)
     {
         return value switch
@@ -415,10 +415,10 @@
     }
 
     /// <summary>
-    /// 格式化信息值显示
+    /// Formats an information value for display.
     /// </summary>
-    /// <param name="value">信息值</param>
-    /// <returns></returns>
+    /// <param name="value">The information value.</param>
+    /// <returns>The formatted display string.</returns>
     private string FormatInfoValue(object value)
     {
         return value switch
@@ -436,11 +436,11 @@
     }
 
     /// <summary>
-    /// 打开消息调试器对话框
+    /// Opens the message debugger dialog.
     /// </summary>
     private async Task OpenMessageDebugger(string channelId, ComponentInfo middleware)
     {
-        // 获取实际的中间件实例
+        // Resolve the actual middleware instance.
         var debuggerMiddleware = await GetMessageDebuggerMiddleware(channelId, middleware.Name);
         if (debuggerMiddleware == null)
         {
@@ -464,7 +464,7 @@
     }
 
     /// <summary>
-    /// 获取MessageDebuggerMiddleware实例
+    /// Gets the <see cref="MessageDebuggerMiddleware"/> instance.
     /// </summary>
     private async Task<MessageDebuggerMiddleware?> GetMessageDebuggerMiddleware(string channelId, string middlewareName)
     {
@@ -486,4 +486,4 @@
         }
     }
 
-} 
+}

@@ -22,7 +22,7 @@ public static class ModuleConfigurationBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Configuration 模块
+        /// Configures the Configuration module.
         /// </summary>
         public static ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
         {
@@ -45,13 +45,13 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
 
         services.AddOptions();
         services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
-        services.TryAddSingleton<IMoProjectCatalog, ServiceDiscoveryProjectCatalog>();//TODO 抽离 ServiceDiscovery 依赖，设置项目结构最佳实践（单体、微服务）
+        services.TryAddSingleton<IMoProjectCatalog, ServiceDiscoveryProjectCatalog>(); // TODO: Decouple ServiceDiscovery dependency and define best-practice project layouts (monolith vs microservices).
         services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         // {
         //     Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
-        //     //TODO 1.考虑使用JsonSerializer进行配置序列化存储 2.使用单例DaprClient
+        //     // TODO: 1) Consider JsonSerializer for configuration serialization storage. 2) Use a singleton DaprClient.
         //     var client = new DaprClientBuilder().Build();
         //     manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
         //         TimeSpan.FromSeconds(10));
@@ -77,7 +77,8 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
   
     public override void PostConfigureServices(IServiceCollection services)
     {
-        //巨坑：当Option的属性是List或Array等类型，有多个Configuration来源，那么这里面的元素会Append而不是替换。设计如此。dotnet/runtime #36384
+        // Important behavior: when option properties are List/Array and multiple configuration sources exist,
+        // .NET appends elements instead of replacing them. This is by design. See dotnet/runtime #36384.
         MoConfigurationManager.Setting.SetOtherSourceAction?.Invoke((ConfigurationManager) MoConfigurationManager.AppConfiguration);
         MoConfigurationCard.RefreshProviders();
     }
@@ -143,61 +144,66 @@ public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConf
     /// of the missing properties.
     /// </summary>
     /// <remarks>
-    /// 这用于检查是否给定Dictionary中的所有键都有指定配置类匹配的属性。所以不会用于HostConfiguration的配置，而是针对指定配置源映射指定配置类。
+    /// This checks whether every key in a given dictionary maps to a property on the target configuration type.
+    /// It is intended for explicit source-to-type mapping rather than host-level configuration binding.
     /// </remarks>
     public bool ErrorOnUnknownConfiguration { get; set; }
 
     /// <summary>
-    /// 如果配置类没有被<see cref="ConfigurationAttribute"/>标记，则抛出异常。默认不抛出异常，仅记录日志。
+    /// Throws when a configuration type is not annotated with <see cref="ConfigurationAttribute"/>.
+    /// By default, this is disabled and only logs an error.
     /// </summary>
     public bool ErrorOnNoTagConfigAttribute { get; set; }
     /// <summary>
-    /// 启用当使用<see cref="ConfigurationAttribute"/>时，其配置参数必须同时使用<see cref="OptionSettingAttribute"/>，否则抛出异常
+    /// Requires configuration properties to also use <see cref="OptionSettingAttribute"/>
+    /// when <see cref="ConfigurationAttribute"/> is applied; otherwise throws an exception.
     /// </summary>
     public bool ErrorOnNoTagOptionAttribute { get; set; }
 
     /// <summary>
-    /// 开启配置读取日志
-    /// TODO 暂未实现，拟通过动态注入set方法实现
+    /// Enables configuration-read logging.
+    /// TODO: Not implemented yet; planned via dynamic setter interception.
     /// </summary>
     public bool EnableReadConfigLogging { get; set; }
 
     /// <summary>
-    /// 开启配置注册日志
+    /// Enables configuration-registration logging.
     /// </summary>
     public bool EnableConfigRegisterLogging { get; set; }
 
     /// <summary>
-    /// 应用程序相关配置字典实例
+    /// Application configuration root.
     /// </summary>
     public IConfiguration AppConfiguration { get; set; } = null!;
 
     /// <summary>
-    /// 是否允许在没有配置项特性的情况下对选项进行日志记录
+    /// Allows logging option values even when <see cref="OptionSettingAttribute"/> is missing.
     /// </summary>
     public bool EnableLoggingWithoutOptionSetting { get; set; }
 
-    #region 配置文件管理
+    #region Configuration File Management
 
     /// <summary>
-    /// 按照配置类生成配置文件进行管理（生成在程序运行路径下）
+    /// Generates and manages configuration files per configuration type
+    /// (created under the runtime path).
     /// </summary>
     public bool GenerateFileForEachOption { get; set; }
 
     /// <summary>
-    /// 配置类生成配置文件的父级文件夹
+    /// Parent folder for generated configuration files.
     /// </summary>
     public string? GenerateOptionFileParentDirectory { get; set; } = "configs";
     
     /// <summary>
-    /// 指定如何处理配置类中删除的属性
+    /// Specifies how removed properties in configuration types are handled.
     /// </summary>
     public LocalJsonFileProvider.RemovedPropertyHandling RemovedPropertyHandling { get; set; } = LocalJsonFileProvider.RemovedPropertyHandling.Comment;
     #endregion
 
     /// <summary>
-    /// 设置其他配置来源，优先级高。（优先级就是读取的顺序，后面的读取重复的会覆盖前面的配置）
-    /// 默认读取规则：
+    /// Adds additional configuration sources with higher precedence.
+    /// Precedence follows read order: later sources override earlier duplicate keys.
+    /// Default read rules:
     /// <para></para>JsonDocumentOptions options = new JsonDocumentOptions()
     /// <para></para>{
     /// <para></para>  CommentHandling = JsonCommentHandling.Skip,

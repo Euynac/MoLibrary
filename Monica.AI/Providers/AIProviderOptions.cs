@@ -1,74 +1,74 @@
 namespace Monica.AI.Providers;
 
 /// <summary>
-/// AI Provider 配置基类
+/// AI Provider configuration base class
 /// </summary>
 public abstract class AIProviderOptions
 {
     /// <summary>
-    /// Provider 唯一标识符，如果不设置则是 Provider 名称
+    /// Provider unique identifier, or Provider name if not set
     /// </summary>
     public string? ProviderId { get; set; }
 
     /// <summary>
-    /// Provider 显示名称
+    /// Provider display name
     /// </summary>
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// API 密钥
+    /// API key
     /// </summary>
     public required string ApiKey { get; set; }
 
     /// <summary>
-    /// Provider 默认系统提示词
+    /// Provider default system prompt word
     /// </summary>
     public string? SystemPrompt { get; set; }
 
     /// <summary>
-    /// 支持的模型列表（为空则该 Provider 无效）
+    /// List of supported models (if empty, the Provider is invalid)
     /// </summary>
     public IList<string>? SupportedModels { get; set; }
 
     /// <summary>
-    /// API 基础 URL（可选，用于自定义端点）
+    /// API base URL (optional, for custom endpoints)
     /// </summary>
     public string? BaseUrl { get; set; }
 
     /// <summary>
-    /// 是否设为默认 Provider
+    /// Whether to set it as the default Provider
     /// </summary>
     public bool IsDefault { get; set; }
 
     /// <summary>
-    /// 请求超时时间（秒）
+    /// Request timeout (seconds)
     /// </summary>
     public int TimeoutSeconds { get; set; } = 120;
 }
 
 /// <summary>
-/// OpenAI Provider 配置
+/// OpenAI Provider configuration
 /// </summary>
 public class OpenAIProviderOptions : AIProviderOptions
 {
     /// <summary>
-    /// 组织 ID（可选）
+    /// Organization ID (optional)
     /// </summary>
     public string? Organization { get; set; }
 
     /// <summary>
-    /// 项目 ID（可选）
+    /// Project ID (optional)
     /// </summary>
     public string? Project { get; set; }
 }
 
 /// <summary>
-/// Anthropic Provider 配置
+/// Anthropic Provider Configuration
 /// </summary>
 public class AnthropicProviderOptions : AIProviderOptions
 {
     /// <summary>
-    /// 默认最大 Token 数量
+    /// Default maximum number of Tokens
     /// </summary>
     public int MaxTokens { get; set; } = 4096;
 }

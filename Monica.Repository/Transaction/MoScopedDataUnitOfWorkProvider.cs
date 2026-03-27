@@ -3,20 +3,20 @@ using Monica.Core.Features.MoScopedData;
 namespace Monica.Repository.Transaction;
 
 /// <summary>
-/// 环境数据默认实现类，用于在Scoped生命周期内临时存储和管理状态数据。
+/// Default implementation for scoped ambient data, used to temporarily store and manage state within a scoped lifetime.
 /// </summary>
 public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoScopedData
 {
     /// <summary>
-    /// 数据字典，用于存储键值对数据
+    /// Data dictionary used to store key-value pairs.
     /// </summary>
     public IDictionary<string, object?> DataDict => manager.Current?.Items ?? new Dictionary<string, object?>();
 
     /// <summary>
-    /// 设置数据
+    /// Sets a data value.
     /// </summary>
-    /// <param name="key">数据键</param>
-    /// <param name="value">数据值</param>
+    /// <param name="key">Data key.</param>
+    /// <param name="value">Data value.</param>
     public void SetData(string key, object? value = null)
     {
         var current = manager.Current;
@@ -27,11 +27,11 @@ public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoS
     }
 
     /// <summary>
-    /// 获取数据
+    /// Gets a data value.
     /// </summary>
-    /// <typeparam name="T">数据类型</typeparam>
-    /// <param name="key">数据键</param>
-    /// <returns>数据值，如果不存在则返回默认值</returns>
+    /// <typeparam name="T">Data type.</typeparam>
+    /// <param name="key">Data key.</param>
+    /// <returns>The data value, or the default value if it does not exist.</returns>
     public T? GetData<T>(string key)
     {
         var current = manager.Current;
@@ -43,12 +43,12 @@ public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoS
     }
 
     /// <summary>
-    /// 获取数据，如果不存在则返回指定的默认值
+    /// Gets a data value, or returns the specified default value when the key does not exist.
     /// </summary>
-    /// <typeparam name="T">数据类型</typeparam>
-    /// <param name="key">数据键</param>
-    /// <param name="defaultValue">默认值</param>
-    /// <returns>数据值或默认值</returns>
+    /// <typeparam name="T">Data type.</typeparam>
+    /// <param name="key">Data key.</param>
+    /// <param name="defaultValue">Default value.</param>
+    /// <returns>The data value or the provided default value.</returns>
     public T GetData<T>(string key, T defaultValue)
     {
         var current = manager.Current;
@@ -60,10 +60,10 @@ public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoS
     }
 
     /// <summary>
-    /// 检查是否存在指定的数据
+    /// Checks whether a given key exists.
     /// </summary>
-    /// <param name="key">数据键</param>
-    /// <returns>如果存在返回true，否则返回false</returns>
+    /// <param name="key">Data key.</param>
+    /// <returns><c>true</c> if the key exists; otherwise, <c>false</c>.</returns>
     public bool HasData(string key)
     {
         var current = manager.Current;
@@ -71,10 +71,10 @@ public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoS
     }
 
     /// <summary>
-    /// 移除指定的数据
+    /// Removes the specified data entry.
     /// </summary>
-    /// <param name="key">数据键</param>
-    /// <returns>如果成功移除返回true，否则返回false</returns>
+    /// <param name="key">Data key.</param>
+    /// <returns><c>true</c> if removal succeeds; otherwise, <c>false</c>.</returns>
     public bool RemoveData(string key)
     {
         var current = manager.Current;
@@ -86,7 +86,7 @@ public class MoScopedDataUnitOfWorkProvider(IMoUnitOfWorkManager manager) : IMoS
     }
 
     /// <summary>
-    /// 清空所有数据
+    /// Clears all data.
     /// </summary>
     public void Clear()
     {

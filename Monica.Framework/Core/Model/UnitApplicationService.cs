@@ -8,7 +8,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 应用服务
+/// application services
 /// </summary>
 /// <param name="type"></param>
 public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitType.ApplicationService), IHasProjectUnitFactory
@@ -19,18 +19,18 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
     }
 
     /// <summary>
-    /// 是否禁用（一般用于测试，关闭该接口使用）
+    /// Whether to disable (generally used for testing, close the interface for use)
     /// </summary>
     [Obsolete("暂未实现，需先实现自动生成HTTP接口")]
     public bool IsDisabled { get; set; }
 
     /// <summary>
-    /// 是否是写操作
+    /// Is it a write operation?
     /// </summary>
     public bool IsCommand { get; set; }
 
     /// <summary>
-    /// 是否是读操作
+    /// Is it a read operation?
     /// </summary>
     public bool IsQuery => IsCommand == false;
 
@@ -74,13 +74,13 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
 
     public override void DoingConnect()
     {
-        // 处理现有的请求类型依赖
+        // Handle existing request type dependencies
         if (RequestType is not null)
         {
             if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var requestUnit))
             {
                 var alertMessage = $"{this}无法关联其请求{RequestType.GetCleanFullName()},可能未继承{nameof(IMoRequest)}相关接口";
-                // 添加警告级别告警
+                // Add warning level alert
                 Alerts.Add(new ProjectUnitAlert
                 {
                     Level = EAlertLevel.Warning,
@@ -96,7 +96,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
             }
         }
 
-        // 检测构造函数中的工作单元依赖
+        // Detecting unit-of-work dependencies in constructors
         DetectConstructorUnitDependencies();
     }
 }

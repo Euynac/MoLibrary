@@ -11,7 +11,7 @@ using Monica.Tool.General;
 namespace Monica.Configuration.Providers;
 
 /// <summary>
-/// 本地Json配置文件提供者
+/// Local JSON configuration file provider.
 /// </summary>
 /// <param name="card"></param>
 public class LocalJsonFileProvider(MoConfigurationCard card)
@@ -19,30 +19,31 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     private readonly HashSet<string> _skipCheckJsonPath = [];
 
     /// <summary>
-    /// 配置如何处理删除的属性
+    /// Defines how removed properties are handled.
     /// </summary>
     public enum RemovedPropertyHandling
     {
         /// <summary>
-        /// 从配置文件中移除
+        /// Remove them from the configuration file.
         /// </summary>
         Remove,
         
         /// <summary>
-        /// 保留但注释掉
+        /// Keep them as commented history records.
         /// </summary>
         Comment
     }
     
     /// <summary>
-    /// 拟将配置卡片存储到文件后的内容，取配置类实际默认值
+    /// Builds default file content for the current configuration card
+    /// using the configuration type's default instance.
     /// </summary>
     /// <returns></returns>
     public string GetDefaultFileContents()
     {
-        // 确定配置节点名称
+        // Determine the configuration section name.
         var sectionName = card.Key;
-        // 获取当前配置类的默认实例
+        // Create the default instance of the configuration type.
         var defaultObj = Activator.CreateInstance(card.Configuration.ConfigType);
         if (defaultObj == null)
         {
@@ -50,7 +51,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             throw new InvalidOperationException($"配置类{card.Configuration.ConfigType.FullName}无法生成默认配置值，请检查是否有无参构造函数");
         }
 
-        // 创建默认配置的JSON节点
+        // Create the JSON node for default configuration content.
         var defaultJson = JsonSerializer.Serialize(
             new Dictionary<string, object> { { sectionName, defaultObj } },
             JsonFileProviderConventions.JsonSerializerOptions);
@@ -87,7 +88,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 _skipCheckJsonPath.Add(item.Key.Replace(":", "."));
             }
 
-            // 检查配置类是否有变化，并更新文件
+            // Check whether the configuration structure changed and update the file.
             UpdateConfigFile(path, MoConfigurationManager.Setting.RemovedPropertyHandling);
         }
 
@@ -95,37 +96,37 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     }
     
     /// <summary>
-    /// 记录删除属性的信息
+    /// Metadata for a removed property record.
     /// </summary>
     private class RemovedPropertyInfo
     {
         /// <summary>
-        /// 完整属性路径
+        /// Full property path.
         /// </summary>
         public string Path { get; init; } = string.Empty;
         
         /// <summary>
-        /// 属性值（JSON格式）
+        /// Property value (JSON format).
         /// </summary>
         public JsonNode? Value { get; init; }
         
         /// <summary>
-        /// 删除时间
+        /// Removal time.
         /// </summary>
         public DateTime RemovedTime { get; init; } = DateTime.Now;
     }
     
     /// <summary>
-    /// 检查并更新配置文件以匹配当前配置类结构
+    /// Checks and updates the configuration file to match the current configuration structure.
     /// </summary>
-    /// <param name="filePath">配置文件路径</param>
-    /// <param name="removedPropertyHandling">如何处理被移除的属性</param>
+    /// <param name="filePath">Configuration file path.</param>
+    /// <param name="removedPropertyHandling">How removed properties are handled.</param>
     private void UpdateConfigFile(string filePath, RemovedPropertyHandling removedPropertyHandling = RemovedPropertyHandling.Comment)
     {
         try
         {
             var documentOptions = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip };
-            // 读取现有的JSON文件
+            // Read the existing JSON file.
             var existingJson = File.ReadAllText(filePath);
             var existingJsonDocument = JsonDocument.Parse(existingJson, documentOptions);
             var jsonObject = JsonNode.Parse(existingJson, documentOptions: documentOptions)?.AsObject();
@@ -136,7 +137,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 File.WriteAllText(filePath, GetDefaultFileContents(), Encoding.UTF8);
                 return;
             }
-            // 确定配置节点名称
+            // Determine the configuration section name.
             var sectionName = card.Key;
             var defaultJson = GetDefaultFileContents();
             var defaultJsonNode = JsonNode.Parse(defaultJson)?.AsObject();
@@ -147,44 +148,44 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 return;
             }
             
-            // 检查节点是否存在
+            // Check whether the target section exists.
             if (!jsonObject.TryGetPropertyValue(sectionName, out var sectionNode))
             {
-                // 不存在则添加
+                // Add the section when missing.
                 jsonObject[sectionName] = defaultJsonNode[sectionName]?.DeepClone();
                 File.WriteAllText(filePath, jsonObject.ToJsonString(JsonFileProviderConventions.JsonSerializerOptions), Encoding.UTF8);
                 MoConfigurationManager.Logger.LogInformation("配置文件添加了新节点: {SectionName}", sectionName);
                 return;
             }
             
-            // 获取默认配置的属性列表
+            // Get default properties.
             var defaultSection = defaultJsonNode[sectionName]?.AsObject();
             if (defaultSection == null) return;
             
-            // 获取现有配置的属性列表
+            // Get existing properties.
             var existingSection = sectionNode?.AsObject();
             if (existingSection == null) return;
             
-            // 用来收集需要添加到文件末尾的所有删除属性的历史记录
+            // Collect removed-property history records that will be appended as comments.
             var removedProperties = new List<RemovedPropertyInfo>();
             
-            // 提取现有文件中的历史记录注释（如果有）
+            // Extract existing history comments from the current file (if any).
             var existingRemovedProperties = ExtractRemovedPropertiesHistory(existingJson);
             if (existingRemovedProperties.Count > 0)
             {
                 removedProperties.AddRange(existingRemovedProperties);
             }
 
-            // 递归比较默认对象和现有对象的结构差异
+            // Recursively compare structure differences between default and existing objects.
             var fileChanged = RecursivelyUpdateProperties(defaultSection, existingSection, sectionName, removedProperties);
             
-            // 保存更新后的文件
+            // Save the updated file.
             if (fileChanged || removedProperties.Count > existingRemovedProperties.Count)
             {
-                // 序列化更新后的JSON对象
+                // Serialize the updated JSON object.
                 var updatedJson = jsonObject.ToJsonString(JsonFileProviderConventions.JsonSerializerOptions);
                 
-                // 处理被移除的属性注释（如果有）
+                // Append removed-property history comments when needed.
                 if (removedPropertyHandling == RemovedPropertyHandling.Comment && removedProperties.Count > 0)
                 {
                     updatedJson = AddRemovedPropertiesAsComments(updatedJson, removedProperties);
@@ -200,31 +201,31 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     }
     
     /// <summary>
-    /// 递归比较和更新JSON对象的属性结构
+    /// Recursively compares and updates JSON object property structure.
     /// </summary>
-    /// <param name="defaultObj">默认配置对象</param>
-    /// <param name="existingObj">现有配置对象</param>
-    /// <param name="currentPath">当前属性路径</param>
-    /// <param name="removedProperties">收集被移除的属性信息</param>
-    /// <returns>如果文件有变化则返回true</returns>
+    /// <param name="defaultObj">Default configuration object.</param>
+    /// <param name="existingObj">Existing configuration object.</param>
+    /// <param name="currentPath">Current property path.</param>
+    /// <param name="removedProperties">Collector for removed-property records.</param>
+    /// <returns>Returns true when the file content changes.</returns>
     private bool RecursivelyUpdateProperties(JsonObject defaultObj, JsonObject existingObj, string currentPath, List<RemovedPropertyInfo> removedProperties)
     {
 
-        if (_skipCheckJsonPath.Contains(currentPath)) // 如果是字典加入跳过比较列表
+        if (_skipCheckJsonPath.Contains(currentPath)) // Dictionary nodes are skipped during structure comparison.
         {
             MoConfigurationManager.Logger.LogDebug($"跳过Dictionary类型节点的内部结构比较: {currentPath}");
             return false;
         }
         var hasChanges = false;
 
-        // 检查是否有新属性需要添加
+        // Check whether new properties need to be added.
         foreach (var property in defaultObj)
         {
             var propertyPath = $"{currentPath}.{property.Key}";
 
             if (!existingObj.ContainsKey(property.Key))
             {
-                // 添加新属性
+                // Add new property.
                 existingObj[property.Key] = property.Value?.DeepClone();
                 hasChanges = true;
                 MoConfigurationManager.Logger.LogInformation("配置文件添加了新属性: {PropertyPath}", propertyPath);
@@ -232,7 +233,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             else if (property.Value is JsonObject defaultChildObj &&
                      existingObj[property.Key] is JsonObject existingChildObj)
             {
-                // 递归处理嵌套对象
+                // Recursively process nested objects.
                 var childChanged = RecursivelyUpdateProperties(
                     defaultChildObj, 
                     existingChildObj, 
@@ -243,7 +244,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             }
         }
         
-        // 检查是否有需要移除的属性
+        // Check whether there are properties to remove.
         var propertiesToRemove = new List<string>();
         
         foreach (var property in existingObj)
@@ -252,7 +253,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
 
             if (!defaultObj.ContainsKey(property.Key))
             {
-                // 记录被移除的属性信息
+                // Record removed-property metadata.
                 removedProperties.Add(new RemovedPropertyInfo
                 {
                     Path = propertyPath,
@@ -260,7 +261,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                     RemovedTime = DateTime.Now
                 });
                 
-                // 如果设置为移除属性，则添加到待移除列表
+                // Add to removal list when removal is enabled.
                 if (MoConfigurationManager.Setting.RemovedPropertyHandling.EqualsAny(RemovedPropertyHandling.Comment, RemovedPropertyHandling.Remove))
                 {
                     propertiesToRemove.Add(property.Key);
@@ -269,7 +270,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 hasChanges = true;
                 MoConfigurationManager.Logger.LogInformation("发现已移除属性: {PropertyPath}", propertyPath);
             }
-            // 递归检查嵌套对象，但不处理已标记为移除的属性
+            // Recursively process nested objects, excluding properties already marked for removal.
             else if (property.Value is JsonObject existingChildObj && 
                      defaultObj[property.Key] is JsonObject defaultChildObj &&
                      !propertiesToRemove.Contains(property.Key))
@@ -284,7 +285,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             }
         }
         
-        // 移除标记为删除的属性
+        // Remove properties marked for deletion.
         foreach (var key in propertiesToRemove)
         {
             existingObj.Remove(key);
@@ -294,21 +295,21 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     }
     
     /// <summary>
-    /// 从现有JSON文件中提取已删除属性的历史记录
+    /// Extracts removed-property history records from an existing JSON file.
     /// </summary>
-    /// <param name="jsonContent">JSON文件内容</param>
-    /// <returns>已删除属性的历史记录</returns>
+    /// <param name="jsonContent">JSON file content.</param>
+    /// <returns>Removed-property history records.</returns>
     private List<RemovedPropertyInfo> ExtractRemovedPropertiesHistory(string jsonContent)
     {
         var result = new List<RemovedPropertyInfo>();
         
-        // 查找删除历史记录部分
+        // Locate the removed-history section.
         var historyStart = jsonContent.IndexOf("// __REMOVED_PROPERTIES_HISTORY__", StringComparison.Ordinal);
         if (historyStart == -1) return result;
         
         try
         {
-            // 逐行读取历史记录
+            // Read history lines one by one.
             var historySection = jsonContent[historyStart..];
             var lines = historySection.Split('\n');
             
@@ -317,10 +318,10 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                 var line = lines[i].Trim();
                 if (!line.StartsWith("//")) continue;
                 
-                // 提取属性路径、删除时间和属性值
-                line = line[2..].Trim(); // 移除注释标记
+                // Extract property path, removal time, and value.
+                line = line[2..].Trim(); // Remove comment prefix.
                 
-                // 解析特定格式: [2023-01-01 12:00:00] path.to.property: {"value": 123}
+                // Parse format: [2023-01-01 12:00:00] path.to.property: {"value": 123}
                 var timestampEnd = line.IndexOf(']');
                 if (timestampEnd == -1) continue;
                 
@@ -348,44 +349,44 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
                     }
                     catch
                     {
-                        // 忽略无法解析的值
+                        // Ignore values that cannot be parsed.
                     }
                 }
             }
         }
         catch
         {
-            // 如果解析失败，返回空列表
+            // Return an empty list when parsing fails.
         }
         
         return result;
     }
     
     /// <summary>
-    /// 将被移除的属性作为注释添加到JSON文件末尾
+    /// Appends removed properties as comments at the end of the JSON file.
     /// </summary>
-    /// <param name="jsonContent">序列化后的JSON内容</param>
-    /// <param name="removedProperties">被移除的属性列表</param>
-    /// <returns>添加了注释的JSON内容</returns>
+    /// <param name="jsonContent">Serialized JSON content.</param>
+    /// <param name="removedProperties">Removed-property list.</param>
+    /// <returns>JSON content with appended comments.</returns>
     private string AddRemovedPropertiesAsComments(string jsonContent, List<RemovedPropertyInfo> removedProperties)
     {
         if (removedProperties.Count == 0) return jsonContent;
         
         var sb = new StringBuilder(jsonContent);
         
-        // 移除现有的历史记录部分（如果有）
+        // Remove existing history section (if present).
         var historyStart = jsonContent.IndexOf("// __REMOVED_PROPERTIES_HISTORY__", StringComparison.Ordinal);
         if (historyStart != -1)
         {
             sb.Length = historyStart;
         }
         
-        // 添加空行作为分隔
+        // Add a blank line as separator.
         sb.AppendLine();
         sb.AppendLine("// __REMOVED_PROPERTIES_HISTORY__");
-        sb.AppendLine("// 以下是被移除的配置项记录（仅供参考）:");
+        sb.AppendLine("// Removed configuration item history (for reference only):");
         
-        // 按照删除时间逆序排序，保证最新删除的显示在前面
+        // Sort by removal time descending so the latest records appear first.
         foreach (var property in removedProperties.OrderByDescending(p => p.RemovedTime))
         {
             var valueJson = property.Value?.ToJsonString() ?? "null";
@@ -396,14 +397,14 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
     }
 
     /// <summary>
-    /// 此方法用于修复Dictionary属性在配置文件结构比较时的bug。
-    /// 当配置类包含字典类型属性时，
-    /// JSON序列化后每个Key会成为JSON对象的属性，导致RecursivelyUpdateProperties
-    /// 方法将用户添加的新Key误认为是需要移除的属性。
-    /// 
-    /// 通过识别Dictionary类型的属性并跳过其内部键值对的结构比较，
-    /// 用户可以自由地在配置文件中添加、修改、删除Dictionary的键值对，
-    /// 而不会被系统误判为配置结构变更。
+    /// Fixes dictionary-structure comparison behavior.
+    /// When a configuration type contains dictionary properties, each dictionary key
+    /// becomes a JSON property after serialization. Without this guard, newly added
+    /// user keys may be misidentified as removed properties by <c>RecursivelyUpdateProperties</c>.
+    ///
+    /// By recognizing dictionary-typed properties and skipping internal key/value
+    /// structure comparison, users can add, modify, or remove dictionary entries
+    /// freely without being treated as configuration schema changes.
     /// </summary>
     private static bool IsShouldJumpCheckType(Type type)
     {

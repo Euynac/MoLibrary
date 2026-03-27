@@ -217,7 +217,7 @@
         _isOffline = config.IsOffline;
         _sourceList = config.SourceList;
 
-        // 从StateManager获取当前值，如果没有修改则使用原始值
+        // Get the current value from the StateManager, or use the original value if it has not been modified
         var configViewModel = StateManager?.GetConfiguration(ConfigName);
         var itemViewModel = configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == config.Key);
         _editValue = itemViewModel?.CurrentValue ?? config.Value;
@@ -246,14 +246,14 @@
         {
             if (_currentConfig != null && StateManager != null && !string.IsNullOrEmpty(ConfigName))
             {
-                // 直接使用 StateManager 更新配置项
+                // Directly use StateManager to update configuration items
                 StateManager.UpdateItem(ConfigName, _currentConfig.Key, _editValue);
                 
-                // 通知父组件配置已更新
+                // Notify the parent component that the configuration has been updated
                 await OnConfigurationUpdated.InvokeAsync();
             }
 
-            // 关闭对话框
+            // Close dialog
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
@@ -264,7 +264,7 @@
     }
 
     /// <summary>
-    /// 检查是否有验证错误
+    /// Check for validation errors
     /// </summary>
     private bool HasValidationErrors()
     {

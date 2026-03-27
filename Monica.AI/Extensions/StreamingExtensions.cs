@@ -81,27 +81,27 @@ public static class StreamingExtensions
 }
 
 /// <summary>
-/// 流式聊天数据
+/// Streaming chat data
 /// </summary>
 public class StreamingChatData
 {
     /// <summary>
-    /// 文本内容
+    /// text content
     /// </summary>
     public string? Text { get; set; }
 
     /// <summary>
-    /// 完成原因
+    /// Completion reason
     /// </summary>
     public string? FinishReason { get; set; }
 
     /// <summary>
-    /// 模型 ID
+    /// Model ID
     /// </summary>
     public string? ModelId { get; set; }
 
     /// <summary>
-    /// 是否完成
+    /// Is it done?
     /// </summary>
     public bool Done { get; set; }
 }

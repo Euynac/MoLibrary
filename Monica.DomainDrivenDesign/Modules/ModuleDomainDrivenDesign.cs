@@ -19,7 +19,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        //TODO 优化无需AOP
+        // TODO: Optimize so the module no longer relies on AOP.
         services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
             c =>
             {
@@ -59,7 +59,7 @@ public static class ModuleDomainDrivenDesignBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DomainDrivenDesign 模块 （该模块还依赖配置 AutoController.Generator 项目）
+        /// Configure the DomainDrivenDesign module (this module also depends on AutoController.Generator).
         /// </summary>
         public static ModuleDomainDrivenDesignGuide AddDomainDrivenDesign(Action<ModuleDomainDrivenDesignOption>? action = null)
         {

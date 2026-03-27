@@ -187,7 +187,7 @@ internal class JsonSettingsDocument
 
         var targetNode = obj[targetProperty];
         
-        // 配置类（JsonObject）不能设置为null
+        // Configuration class (JsonObject) cannot be set to null
         if (targetNode is JsonObject && value == null)
         {
             throw new InvalidOperationException($"{_filePath}中{key}是配置类，不能设置为null");
@@ -218,7 +218,7 @@ internal class JsonSettingsDocument
             return true;
         }
 
-        // 如果都是JsonObject，进行递归类型检查
+        // If they are all JsonObject, perform recursive type checking
         if (targetNode is JsonObject targetObj && newNode is JsonObject newObj)
         {
             return IsJsonObjectPropertiesCompatible(targetObj, newObj, out errorMessage);
@@ -236,7 +236,7 @@ internal class JsonSettingsDocument
     private bool IsJsonObjectPropertiesCompatible(JsonObject targetObj, JsonObject newObj, out string? errorMessage)
     {
         errorMessage = null;
-        // 检查新对象中的每个属性是否与目标对象中对应属性的类型兼容
+        // Checks whether each property in the new object is compatible with the type of the corresponding property in the target object
         foreach (var newProperty in newObj)
         {
             if (targetObj.TryGetPropertyValue(newProperty.Key, out var targetValue))
@@ -247,7 +247,7 @@ internal class JsonSettingsDocument
                     return false;
                 }
             }
-            // 如果目标对象中不存在该属性，则认为兼容（允许添加新属性）
+            // If the attribute does not exist in the target object, it is considered compatible (new attributes are allowed to be added)
         }
         return true;
     }
@@ -287,7 +287,7 @@ internal class JsonSettingsDocument
             Indented = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
-        // Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping 可以防止将Unicode的中文等字符变为\u的形式。虽然不用也不影响解析。 官方使用Default的Encoder主要是为了安全？
+        // Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping can prevent Unicode Chinese and other characters from being changed into the form of \u. Although it is not used, it does not affect the analysis. Does the official use Default's Encoder mainly for safety?
         _doc ??= new JsonObject();
         _doc.WriteTo(jsonWriter);
     }

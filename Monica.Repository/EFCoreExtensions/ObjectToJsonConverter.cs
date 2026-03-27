@@ -9,7 +9,7 @@ namespace Monica.Repository.EFCoreExtensions;
 public static class PropertyBuilderExtensions
 {
     /// <summary>
-    /// EFCore扩展方法，使用JsonConverter将对象转换为Json字符串存储到数据库中
+    /// EFCore extension method, use JsonConverter to convert objects into Json strings and store them in the database
     /// </summary>
     /// <typeparam name="TTargetObj"></typeparam>
     /// <param name="propertyBuilder"></param>

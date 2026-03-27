@@ -13,7 +13,7 @@ public static class ModuleProgressBarBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ProgressBar 模块
+        /// Configure the ProgressBar module
         /// </summary>
         public static ModuleProgressBarGuide AddProgressBar(Action<ModuleProgressBarOption>? action = null)
         {
@@ -49,7 +49,7 @@ public class ModuleProgressBarGuide : MoModuleGuide<ModuleProgressBar, ModulePro
 public class ModuleProgressBarOption : MoModuleOption<ModuleProgressBar>
 {
     /// <summary>
-    /// 使用分布式存储
+    /// Use distributed storage
     /// </summary>
     public bool UseDistributedStateStore { get; set; }
 }

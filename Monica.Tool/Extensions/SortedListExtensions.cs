@@ -5,26 +5,26 @@ public class SortedListExtensions
     
 }
 /// <summary>
-/// 用于比较两个键的比较器，将相等的键处理为较小值（先进先出）
-/// 注意：这会破坏 Remove(key) 或 IndexOfKey(key) 方法，因为比较器永远不会返回 0 来表示键相等
-/// 适用于不允许重复键的 SortedList 或 SortedDictionary
+/// Comparator for comparing two keys, treating equal keys as smaller values ​​(first in, first out)
+/// NOTE: This will break the Remove(key) or IndexOfKey(key) methods as the comparator will never return 0 for key equality
+/// Applies to SortedList or SortedDictionary that do not allow duplicate keys
 /// </summary>
-/// <typeparam name="TKey">键的类型，必须实现 IComparable 接口</typeparam>
+/// <typeparam name="TKey">The type of key must implement the IComparable interface</typeparam>
 public class DuplicateKeyComparer<TKey> : IComparer<TKey> where TKey : IComparable<TKey>
 {
     /// <summary>
-    /// 比较两个键的大小关系
+    /// Compare the size relationship between two keys
     /// </summary>
-    /// <param name="x">第一个要比较的键</param>
-    /// <param name="y">第二个要比较的键</param>
+    /// <param name="x">The first key to compare</param>
+    /// <param name="y">The second key to compare</param>
     /// <returns>
-    /// 如果 x 小于 y，返回负数；
-    /// 如果 x 等于 y，返回 -1（表示 x 小于 y，确保先进先出）；
-    /// 如果 x 大于 y，返回正数
+    /// If x is less than y, return a negative number;
+    /// If x is equal to y, return -1 (indicating that x is less than y, ensuring first-in, first-out);
+    /// If x is greater than y, return a positive number
     /// </returns>
     public int Compare(TKey? x, TKey? y)
     {
-        // 处理 null 值情况
+        // Handling null value cases
         if (x is null && y is null) return -1; // 两个都为 null，返回 -1（表示 x 小于 y）保持 FIFO
         if (x is null) return -1; // x 为 null，返回 -1（表示 x 小于 y）
         if (y is null) return 1;  // y 为 null，返回 1（表示 x 大于 y）

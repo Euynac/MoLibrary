@@ -7,7 +7,7 @@ using Monica.Modules;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     自动启动类型分配收集的托管服务
+/// Automatically start type assignment collection of managed services
 /// </summary>
 public class TypeAllocationAutoStartService(
     TypeAllocationCollector collector,
@@ -19,7 +19,7 @@ public class TypeAllocationAutoStartService(
         var opt = options.Value;
         if (!opt.AutoStartCollection)
         {
-            // 服务不应该被注册到这里，但为安全起见检查
+            // Services should not be registered here, but for security reasons check
             return Task.CompletedTask;
         }
 

@@ -1,73 +1,73 @@
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// 异常统计信息
+/// Aggregated exception statistics for the data channel layer.
 /// </summary>
 public class ExceptionSummaryInfo
 {
     /// <summary>
-    /// 总Channel数量
+    /// Total number of registered channels.
     /// </summary>
     public int TotalChannels { get; set; }
     
     /// <summary>
-    /// 有异常的Channel数量
+    /// Channels currently reporting exceptions.
     /// </summary>
     public int ChannelsWithExceptions { get; set; }
     
     /// <summary>
-    /// 当前总异常数量
+    /// Sum of active exception counts across all channels.
     /// </summary>
     public int TotalCurrentExceptions { get; set; }
 
     /// <summary>
-    /// 历史总异常数量
+    /// Accumulated number of exception events recorded historically.
     /// </summary>
     public int TotalHistoricalExceptions { get; set; }
     
     /// <summary>
-    /// Channel统计信息列表
+    /// Detailed statistics per channel.
     /// </summary>
     public List<ChannelSummaryInfo> ChannelSummaries { get; set; } = new();
 }
 
 /// <summary>
-/// Channel统计信息
+/// Per-channel exception statistics.
 /// </summary>
 public class ChannelSummaryInfo
 {
     /// <summary>
-    /// Channel ID
+    /// Identifier of the DataChannel.
     /// </summary>
     public string ChannelId { get; set; } = string.Empty;
     
     /// <summary>
-    /// Pipeline ID
+    /// Identifier of the associated pipeline.
     /// </summary>
     public string PipelineId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 当前异常数量
+    /// Active exception count for the channel.
     /// </summary>
     public long CurrentExceptionCount { get; set; }
 
     /// <summary>
-    /// 总异常数量
+    /// Total exception count recorded.
     /// </summary>
     public long TotalExceptionCount { get; set; }
     
     /// <summary>
-    /// 异常池最大大小
+    /// Maximum size of the exception history pool.
     /// </summary>
     public int MaxPoolSize { get; set; }
     
     /// <summary>
-    /// 是否有异常
+    /// Indicates whether the channel currently has exceptions.
     /// </summary>
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// 最新异常时间
+    /// Timestamp of the latest recorded exception, if any.
     /// </summary>
     public DateTime? LatestException { get; set; }
-} 
+}

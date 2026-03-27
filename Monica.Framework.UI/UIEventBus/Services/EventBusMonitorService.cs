@@ -11,7 +11,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UIEventBus.Services;
 
 /// <summary>
-/// EventBus监控服务 - 封装订阅管理和实时更新功能
+/// EventBus monitoring service - encapsulates subscription management and real-time update functions
 /// </summary>
 public sealed class EventBusMonitorService(
     ISubscriptionManager subscriptionManager,
@@ -21,21 +21,21 @@ public sealed class EventBusMonitorService(
 {
     private readonly ISubscriptionManager _subscriptionManager = subscriptionManager;
 
-    // 实时变更通道
+    // Change channels in real time
     private readonly Channel<SubscriptionChangeViewModel> _changesChannel =
         Channel.CreateUnbounded<SubscriptionChangeViewModel>();
 
-    // Observable订阅列表
+    // Observable subscription list
     private readonly List<IDisposable> _observableSubscriptions = new();
 
-    // 初始化标志
+    // initialization flag
     private readonly object _initLock = new();
     private bool _initialized;
 
     #region Initialization
 
     /// <summary>
-    /// 初始化订阅监听（延迟初始化）
+    /// Initialize subscription listening (lazy initialization)
     /// </summary>
     private void EnsureInitialized()
     {
@@ -47,7 +47,7 @@ public sealed class EventBusMonitorService(
 
             try
             {
-                // 订阅本地EventBus的变更
+                // Subscribe to local EventBus changes
                 var localSub = localEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
                         var vm = MapToChangeViewModel(change);
@@ -57,7 +57,7 @@ public sealed class EventBusMonitorService(
                     }));
                 _observableSubscriptions.Add(localSub);
 
-                // 订阅分布式EventBus的变更
+                // Subscribe to changes in distributed EventBus
                 var distSub = distributedEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
                         var vm = MapToChangeViewModel(change);
@@ -79,7 +79,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// Observable观察者实现
+    /// Observable observer implementation
     /// </summary>
     private class SubscriptionChangeObserver(Action<SubscriptionChange> onNext) : IObserver<SubscriptionChange>
     {
@@ -93,7 +93,7 @@ public sealed class EventBusMonitorService(
     #region Query Methods
 
     /// <summary>
-    /// 获取所有订阅
+    /// Get all subscriptions
     /// </summary>
     public async Task<Res<List<SubscriptionViewModel>>> GetAllSubscriptionsAsync()
     {
@@ -122,7 +122,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 根据ID获取订阅
+    /// Get subscription based on ID
     /// </summary>
     public async Task<Res<SubscriptionViewModel?>> GetSubscriptionByIdAsync(SubscriptionId subscriptionId)
     {
@@ -146,7 +146,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 过滤订阅
+    /// Filter subscriptions
     /// </summary>
     public async Task<Res<List<SubscriptionViewModel>>> FilterSubscriptionsAsync(SubscriptionFilter filter)
     {
@@ -154,7 +154,7 @@ public sealed class EventBusMonitorService(
         {
             var allSubs = _subscriptionManager.GetAll().AsQueryable();
 
-            // 应用过滤条件
+            // Apply filters
             if (filter.State.HasValue)
             {
                 allSubs = allSubs.Where(s => s.State == filter.State.Value);
@@ -200,7 +200,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 获取统计信息
+    /// Get statistics
     /// </summary>
     public async Task<Res<SubscriptionStatistics>> GetStatisticsAsync()
     {
@@ -261,7 +261,7 @@ public sealed class EventBusMonitorService(
     #region Lifecycle Methods
 
     /// <summary>
-    /// 激活订阅
+    /// Activate subscription
     /// </summary>
     public async Task<Res> ActivateSubscriptionAsync(SubscriptionId subscriptionId)
     {
@@ -284,7 +284,7 @@ public sealed class EventBusMonitorService(
                 return Res.Fail("无法激活已释放的订阅");
             }
 
-            // 根据范围选择对应的管理器
+            // Select the corresponding manager based on the scope
             var manager = subscription.Scope == SubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
@@ -309,7 +309,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 停用订阅
+    /// Deactivate subscription
     /// </summary>
     public async Task<Res> DeactivateSubscriptionAsync(SubscriptionId subscriptionId)
     {
@@ -327,7 +327,7 @@ public sealed class EventBusMonitorService(
                 return Res.Fail($"只能停用活跃订阅，当前状态: {subscription.State}");
             }
 
-            // 根据范围选择对应的管理器
+            // Select the corresponding manager based on the scope
             var manager = subscription.Scope == SubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
@@ -345,7 +345,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 移除订阅
+    /// Remove subscription
     /// </summary>
     public async Task<Res> UnsubscribeAsync(SubscriptionId subscriptionId)
     {
@@ -363,7 +363,7 @@ public sealed class EventBusMonitorService(
                 return Res.Fail("订阅已经被移除");
             }
 
-            // 根据范围选择对应的管理器
+            // Select the corresponding manager based on the scope
             var manager = subscription.Scope == SubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
@@ -385,7 +385,7 @@ public sealed class EventBusMonitorService(
     #region Real-time Subscription
 
     /// <summary>
-    /// 订阅实时变更通知
+    /// Subscribe to real-time change notifications
     /// </summary>
     public ChannelReader<SubscriptionChangeViewModel> SubscribeToChanges()
     {
@@ -398,7 +398,7 @@ public sealed class EventBusMonitorService(
     #region Mapping Methods
 
     /// <summary>
-    /// 将ISubscription映射为ViewModel
+    /// Map ISubscription to ViewModel
     /// </summary>
     private SubscriptionViewModel MapToViewModel(ISubscription subscription)
     {
@@ -422,7 +422,7 @@ public sealed class EventBusMonitorService(
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value?.ToString() ?? "null")
         };
 
-        // 提取 Action 处理器元数据
+        // Extract Action handler metadata
         if (subscription.HandlerType == null) // Action 处理器
         {
             vm.ActionMethodName = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionMethodName);
@@ -435,7 +435,7 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// 将SubscriptionChange映射为ViewModel
+    /// Map SubscriptionChange to ViewModel
     /// </summary>
     private SubscriptionChangeViewModel MapToChangeViewModel(SubscriptionChange change)
     {
@@ -455,7 +455,7 @@ public sealed class EventBusMonitorService(
     {
         logger.LogInformation("Disposing EventBusMonitorService...");
 
-        // 取消所有Observable订阅
+        // Cancel all Observable subscriptions
         foreach (var subscription in _observableSubscriptions)
         {
             try
@@ -469,7 +469,7 @@ public sealed class EventBusMonitorService(
         }
         _observableSubscriptions.Clear();
 
-        // 关闭Channel
+        // CloseChannel
         _changesChannel.Writer.Complete();
 
         await Task.CompletedTask;

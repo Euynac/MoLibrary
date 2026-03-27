@@ -7,7 +7,7 @@
 @code {
 	protected override void OnInitialized()
 	{
-		// 订阅主题变更事件
+		// Subscribe to theme change events.
 		ThemeService.OnThemeChanged += OnThemeChanged;
 	}
 
@@ -15,7 +15,7 @@
 	{
 		if (firstRender)
 		{
-            // 初始设置主题
+            // Initialize the markdown theme on first render.
             UpdateMarkdownTheme();
 		}
 	}

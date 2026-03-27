@@ -1,28 +1,28 @@
 namespace Monica.StateStore.ProgressBar;
 
 /// <summary>
-/// 自定义进度条状态示例
+/// Custom progress bar status example
 /// </summary>
 public class CustomProgressBarStatus(int totalSteps, string id) : ProgressBarStatus(totalSteps, id)
 {
     /// <summary>
-    /// 自定义属性：处理的文件数量
+    /// Custom property: Number of files processed
     /// </summary>
     public int ProcessedFiles { get; set; }
 
     /// <summary>
-    /// 自定义属性：处理的总字节数
+    /// Custom property: Total bytes processed
     /// </summary>
     public long ProcessedBytes { get; set; }
 
     /// <summary>
-    /// 自定义属性：当前处理的文件名
+    /// Custom attribute: the file name currently being processed
     /// </summary>
     public string? CurrentFileName { get; set; }
 }
 
 /// <summary>
-/// 自定义进度条示例
+/// Custom progress bar example
 /// </summary>
 public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService service, string taskId)
     : ProgressBar<CustomProgressBarStatus>(setting, service, taskId)
@@ -30,10 +30,10 @@ public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService
     
 
     /// <summary>
-    /// 更新文件处理进度
+    /// Update file processing progress
     /// </summary>
-    /// <param name="fileName">当前处理的文件名</param>
-    /// <param name="fileSize">文件大小</param>
+    /// <param name="fileName">The name of the file currently being processed</param>
+    /// <param name="fileSize">file size</param>
     /// <returns></returns>
     public async Task UpdateFileProgressAsync(string fileName, long fileSize)
     {
@@ -52,7 +52,7 @@ public class CustomProgressBar(ProgressBarSetting setting, IMoProgressBarService
 }
 
 /// <summary>
-/// 使用示例
+/// Usage example
 /// </summary>
 public class ProgressBarExample
 {
@@ -64,7 +64,7 @@ public class ProgressBarExample
     }
 
     /// <summary>
-    /// 基本使用示例：阶段和状态跟踪
+    /// Basic usage example: stage and status tracking
     /// </summary>
     public async Task BasicUsageExample()
     {
@@ -76,10 +76,10 @@ public class ProgressBarExample
 
         try
         {
-            // 初始化阶段
+            // initialization phase
             await progressBar.UpdatePhaseAsync("初始化", "准备开始处理...");
 
-            // 数据加载阶段
+            // Data loading phase
             await progressBar.UpdatePhaseAsync("数据加载", "正在加载数据...");
             for (int i = 1; i <= 30; i++)
             {
@@ -87,7 +87,7 @@ public class ProgressBarExample
                 await Task.Delay(100); // 模拟处理时间
             }
 
-            // 数据处理阶段
+            // Data processing stage
             await progressBar.UpdatePhaseAsync("数据处理", "正在处理数据...");
             for (int i = 31; i <= 80; i++)
             {
@@ -95,7 +95,7 @@ public class ProgressBarExample
                 await Task.Delay(50); // 模拟处理时间
             }
 
-            // 完成阶段
+            // completion stage
             await progressBar.UpdatePhaseAsync("完成", "正在保存结果...");
             for (int i = 81; i <= 100; i++)
             {
@@ -113,7 +113,7 @@ public class ProgressBarExample
     }
 
     /// <summary>
-    /// 自定义状态使用示例
+    /// Custom status usage example
     /// </summary>
     public async Task CustomStatusExample()
     {
@@ -126,7 +126,7 @@ public class ProgressBarExample
         {
             await progressBar.UpdatePhaseAsync("文件处理", "开始处理文件...");
 
-            // 模拟处理多个文件
+            // Simulate processing of multiple files
             var files = new[] { "file1.txt", "file2.txt", "file3.txt" };
             foreach (var file in files)
             {
@@ -144,11 +144,11 @@ public class ProgressBarExample
     }
 
     /// <summary>
-    /// 获取状态示例
+    /// Get status example
     /// </summary>
     public async Task GetStatusExample()
     {
-        // 获取基本状态
+        // Get basic status
         var basicStatus = await RequireStatusAsync("basic-example");
         Console.WriteLine($"基本进度: {basicStatus.Percentage}%, 阶段: {basicStatus.Phase}, 状态: {basicStatus.CurrentStatus}");
         
@@ -165,7 +165,7 @@ public class ProgressBarExample
             Console.WriteLine("任务正在进行中");
         }
 
-        // 获取自定义状态
+        // Get custom status
         var customStatus = await _progressBarService.GetProgressBarStatusAsync<CustomProgressBarStatus>("custom-example");
         if (customStatus != null)
         {
@@ -179,13 +179,13 @@ public class ProgressBarExample
     }
 
     /// <summary>
-    /// 取消操作示例
+    /// Cancel operation example
     /// </summary>
     public async Task CancelExample()
     {
         var progressBar = await _progressBarService.CreateProgressBarAsync("cancel-example");
 
-        // 监听取消事件
+        // Listen for cancellation events
         progressBar.Cancelled += (sender, e) =>
         {
             Console.WriteLine($"任务被取消: {e.Reason}");
@@ -198,16 +198,16 @@ public class ProgressBarExample
             await progressBar.UpdatePhaseAsync("处理中", "正在执行任务...");
             await Task.Delay(2000);
 
-            // 模拟取消操作
+            // Simulate cancellation operation
             await progressBar.CancelTaskAsync("用户主动取消");
         }
         catch (InvalidOperationException)
         {
-            // 任务已被取消
+            // Task has been canceled
             Console.WriteLine("任务已被取消");
         }
 
-        // 稍后获取状态查看取消信息
+        // Get status later to view cancellation information
         var status = await _progressBarService.GetProgressBarStatusAsync("cancel-example");
         if (status == null)
         {
@@ -218,21 +218,21 @@ public class ProgressBarExample
     }
 
     /// <summary>
-    /// 跨微服务状态检查示例
+    /// Cross-microservice status check example
     /// </summary>
     public async Task CrossServiceStatusCheckExample()
     {
-        // 模拟微服务A创建任务
+        // Simulate microservice A creation task
         var progressBarA = await _progressBarService.CreateProgressBarAsync("cross-service-task", setting =>
         {
             setting.TotalSteps = 50;
         });
 
-        // 开始处理
+        // Start processing
         await progressBarA.UpdatePhaseAsync("数据处理", "开始处理...");
         await progressBarA.UpdateStatusAsync(10, "处理了10项");
 
-        // 模拟微服务B检查任务状态
+        // Simulate microservice B to check task status
         var taskStatus = await RequireStatusAsync("cross-service-task");
         Console.WriteLine($"微服务B检查: 进度 {taskStatus.Percentage}%, 阶段: {taskStatus.Phase}");
         
@@ -242,15 +242,15 @@ public class ProgressBarExample
             return;
         }
 
-        // 模拟一段时间后，微服务A取消了任务
+        // After simulating for a period of time, microservice A cancels the task
         await progressBarA.CancelTaskAsync("检测到异常，主动取消");
 
-        // 微服务B再次检查状态
+        // Microservice B checks the status again
         var updatedStatus = await RequireStatusAsync("cross-service-task");
         if (updatedStatus.IsCancelled)
         {
             Console.WriteLine($"微服务B检测到任务已被取消: {updatedStatus.CancelReason}");
-            // 在这里可以执行清理逻辑
+            // Cleanup logic can be executed here
         }
     }
 

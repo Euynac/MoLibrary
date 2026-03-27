@@ -5,15 +5,15 @@ using System.Text.RegularExpressions;
 namespace Monica.DataChannel.BuildInMiddlewares;
 
 /// <summary>
-/// 业务消息分析中间件示例
-/// 继承自信息展示中间件基类，用于分析和统计业务消息类型
-/// 开发者可以根据自己的业务需求修改此示例
+/// Business message analysis middleware example
+/// Inherited from the information display middleware base class, used to analyze and count business message types
+/// Developers can modify this example to suit their business needs
 /// </summary>
 public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
 {
     /// <summary>
-    /// 消息类型正则表达式
-    /// 可根据实际业务消息格式修改
+    /// Message type regular expression
+    /// Can be modified according to actual business message format
     /// </summary>
     private readonly Dictionary<string, Regex> _messageTypePatterns = new()
     {
@@ -25,12 +25,12 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     };
 
     /// <summary>
-    /// 大小限制（字节）
+    /// Size limit (bytes)
     /// </summary>
     private const int LARGE_MESSAGE_THRESHOLD = 1024 * 10; // 10KB
 
     /// <summary>
-    /// 构造函数
+    /// Constructor
     /// </summary>
     public BusinessMessageAnalyzerMiddleware()
     {
@@ -38,25 +38,25 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 同步处理数据上下文
+    /// Synchronize data context
     /// </summary>
-    /// <param name="context">数据上下文</param>
-    /// <returns>处理后的数据上下文</returns>
+    /// <param name="context">data context</param>
+    /// <returns>Processed data context</returns>
     public override DataContext Pass(DataContext context)
     {
         try
         {
-            // 基础统计
+            // basic statistics
             IncrementCounter("总消息数");
             SetInfo("最后处理时间", DateTime.Now);
 
-            // 分析消息内容
+            // Analyze message content
             AnalyzeMessageContent(context);
 
-            // 分析消息大小
+            // Analyze message size
             AnalyzeMessageSize(context);
 
-            // 分析处理时间
+            // Analysis processing time
             AnalyzeProcessingTime();
 
             return context;
@@ -71,19 +71,19 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 异步处理数据上下文
+    /// Process data context asynchronously
     /// </summary>
-    /// <param name="context">数据上下文</param>
-    /// <returns>处理后的数据上下文</returns>
+    /// <param name="context">data context</param>
+    /// <returns>Processed data context</returns>
     public override async Task<DataContext> PassAsync(DataContext context)
     {
         return await Task.FromResult(Pass(context));
     }
 
     /// <summary>
-    /// 分析消息内容
+    /// Analyze message content
     /// </summary>
-    /// <param name="context">数据上下文</param>
+    /// <param name="context">data context</param>
     private void AnalyzeMessageContent(DataContext context)
     {
         if (context.Data == null) 
@@ -94,11 +94,11 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
 
         var messageContent = context.Data.ToString() ?? string.Empty;
         
-        // 统计消息长度
+        // Statistics message length
         var messageLength = messageContent.Length;
         SetInfo("平均消息长度", CalculateAverage("总字符数", messageLength, "总消息数"));
 
-        // 识别消息类型
+        // Identify message type
         var messageType = IdentifyMessageType(messageContent);
         if (!string.IsNullOrEmpty(messageType))
         {
@@ -110,7 +110,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
             IncrementCounter("未知类型消息");
         }
 
-        // 统计JSON消息
+        // Statistics JSON messages
         if (IsJsonMessage(messageContent))
         {
             IncrementCounter("JSON消息数");
@@ -123,27 +123,27 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 分析消息大小
+    /// Analyze message size
     /// </summary>
-    /// <param name="context">数据上下文</param>
+    /// <param name="context">data context</param>
     private void AnalyzeMessageSize(DataContext context)
     {
         if (context.Data == null) return;
 
         var messageSize = System.Text.Encoding.UTF8.GetByteCount(context.Data.ToString() ?? string.Empty);
         
-        // 更新统计信息
+        // Update statistics
         IncrementCounter("总字节数", messageSize);
         SetInfo("平均消息大小(字节)", CalculateAverage("总字节数", messageSize, "总消息数"));
 
-        // 大消息统计
+        // big news statistics
         if (messageSize > LARGE_MESSAGE_THRESHOLD)
         {
             IncrementCounter("大消息数");
             SetInfo("最大消息大小", Math.Max(GetInfo<long>("最大消息大小"), messageSize));
         }
 
-        // 小消息统计
+        // Small news statistics
         if (messageSize < 100)
         {
             IncrementCounter("小消息数");
@@ -151,7 +151,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 分析处理时间
+    /// Analysis processing time
     /// </summary>
     private void AnalyzeProcessingTime()
     {
@@ -169,10 +169,10 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 识别消息类型
+    /// Identify message type
     /// </summary>
-    /// <param name="messageContent">消息内容</param>
-    /// <returns>消息类型名称</returns>
+    /// <param name="messageContent">Message content</param>
+    /// <returns>Message type name</returns>
     private string? IdentifyMessageType(string messageContent)
     {
         foreach (var pattern in _messageTypePatterns)
@@ -186,10 +186,10 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 检查是否为JSON消息
+    /// Check if it is a JSON message
     /// </summary>
-    /// <param name="messageContent">消息内容</param>
-    /// <returns>是否为JSON</returns>
+    /// <param name="messageContent">Message content</param>
+    /// <returns>Is it JSON?</returns>
     private bool IsJsonMessage(string messageContent)
     {
         try
@@ -204,9 +204,9 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 分析JSON消息
+    /// Analyze JSON messages
     /// </summary>
-    /// <param name="messageContent">JSON消息内容</param>
+    /// <param name="messageContent">JSON message content</param>
     private void AnalyzeJsonMessage(string messageContent)
     {
         try
@@ -214,11 +214,11 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
             using var doc = JsonDocument.Parse(messageContent);
             var root = doc.RootElement;
 
-            // 统计JSON层级深度
+            // Statistical JSON hierarchy depth
             var depth = GetJsonDepth(root);
             SetInfo("最大JSON深度", Math.Max(GetInfo<int>("最大JSON深度"), depth));
 
-            // 统计JSON字段数量
+            // Count the number of JSON fields
             if (root.ValueKind == JsonValueKind.Object)
             {
                 var fieldCount = CountJsonFields(root);
@@ -232,10 +232,10 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 获取JSON深度
+    /// Get JSON depth
     /// </summary>
-    /// <param name="element">JSON元素</param>
-    /// <returns>深度</returns>
+    /// <param name="element">JSON element</param>
+    /// <returns>depth</returns>
     private int GetJsonDepth(JsonElement element)
     {
         return element.ValueKind switch
@@ -247,10 +247,10 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 计算JSON字段数量
+    /// Count the number of JSON fields
     /// </summary>
-    /// <param name="element">JSON元素</param>
-    /// <returns>字段数量</returns>
+    /// <param name="element">JSON element</param>
+    /// <returns>Number of fields</returns>
     private int CountJsonFields(JsonElement element)
     {
         return element.ValueKind switch
@@ -262,12 +262,12 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 计算平均值
+    /// Calculate average
     /// </summary>
-    /// <param name="totalKey">总数键</param>
-    /// <param name="newValue">新值</param>
-    /// <param name="countKey">计数键</param>
-    /// <returns>平均值</returns>
+    /// <param name="totalKey">total key</param>
+    /// <param name="newValue">new value</param>
+    /// <param name="countKey">Count key</param>
+    /// <returns>average value</returns>
     private double CalculateAverage(string totalKey, double newValue, string countKey)
     {
         var total = GetInfo<double>(totalKey) + newValue;
@@ -277,7 +277,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 初始化中间件
+    /// Initialize middleware
     /// </summary>
     private void Initialize()
     {
@@ -289,7 +289,7 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 重置所有统计信息
+    /// Reset all statistics
     /// </summary>
     public void ResetStatistics()
     {
@@ -298,9 +298,9 @@ public class BusinessMessageAnalyzerMiddleware : PipeInfoDisplayMiddlewareBase
     }
 
     /// <summary>
-    /// 获取处理速率统计
+    /// Get processing rate statistics
     /// </summary>
-    /// <returns>处理速率信息</returns>
+    /// <returns>Processing rate information</returns>
     public Dictionary<string, object> GetProcessingStats()
     {
         var stats = new Dictionary<string, object>();

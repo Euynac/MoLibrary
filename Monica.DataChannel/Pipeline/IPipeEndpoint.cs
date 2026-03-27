@@ -3,23 +3,23 @@ using Monica.DataChannel.Interfaces;
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// 管道端点接口
-/// 定义数据管道的入口和出口点，负责数据的接收和处理
-/// 实现此接口的组件可作为数据流的源或目标
+/// Contract for pipeline endpoints.
+/// Defines the ingress and egress points of a data pipeline and is responsible for receiving and handling data.
+/// Implementations can act as a data source, a destination, or both.
 /// </summary>
 public interface IPipeEndpoint : IWantAccessPipeline, IPipeComponent
 {
     /// <summary>
-    /// 接收管道数据
-    /// 当数据到达端点时由管道调用此方法处理数据
+    /// Receives data from the pipeline.
+    /// The pipeline calls this method when data reaches the endpoint.
     /// </summary>
-    /// <param name="data">要处理的数据上下文</param>
-    /// <returns>表示异步操作的任务</returns>
+    /// <param name="data">The data context to process.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public Task ReceiveDataAsync(DataContext data);
 
     /// <summary>
-    /// 入口类型
-    /// 定义此端点的数据方向（内部或外部）
+    /// Gets or sets the endpoint direction.
+    /// Indicates whether this endpoint is the inner side or the outer side of the pipeline.
     /// </summary>
     public EDataSource EntranceType { get; internal set; }
 }

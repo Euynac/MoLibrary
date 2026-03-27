@@ -5,7 +5,7 @@ namespace Monica.DataChannel.CoreCommunication;
 
 
 /// <summary>
-/// 通信能力核心基类
+/// Base class for communication cores.
 /// </summary>
 public abstract class CommunicationCore : ICommunicationCore
 {
@@ -21,20 +21,20 @@ public abstract class CommunicationCore : ICommunicationCore
     public abstract EConnectionDirection SupportedConnectionDirection();
 
     /// <summary>
-    /// 构建来自于该端的数据
+    /// Creates a data context originating from this endpoint.
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <param name="data">The payload.</param>
+    /// <returns>The created data context.</returns>
     public virtual DataContext CreateData(object? data)
     {
         return new DataContext(EntranceType, data);
     }
     
     /// <summary>
-    /// 异步发送数据
+    /// Sends the specified data context asynchronously.
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <param name="data">The data context to send.</param>
+    /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(DataContext data)
     {
         DecorateDataContextBeforeSend(data);
@@ -42,10 +42,10 @@ public abstract class CommunicationCore : ICommunicationCore
     }
 
     /// <summary>
-    /// 异步发送数据
+    /// Sends a raw payload asynchronously.
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <param name="data">The payload to send.</param>
+    /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(object data)
     {
         var dataContext = CreateData(data);
@@ -53,9 +53,9 @@ public abstract class CommunicationCore : ICommunicationCore
     }
 
     /// <summary>
-    /// 装饰数据
+    /// Decorates the data context before it is sent.
     /// </summary>
-    /// <param name="dataContext"></param>
+    /// <param name="dataContext">The data context being sent.</param>
     protected virtual void DecorateDataContextBeforeSend(DataContext dataContext)
     {
 
@@ -70,15 +70,16 @@ public abstract class CommunicationCore : ICommunicationCore
     }
 
     /// <summary>
-    /// 管道实例。初始化后非空
+    /// Gets or sets the owning pipeline instance.
+    /// This property is guaranteed to be non-null after initialization.
     /// </summary>
     public DataPipeline Pipe { get; set; } = null!;
 
     /// <summary>
-    /// 异步方法接收消息
+    /// Receives data asynchronously.
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <param name="data">The incoming data context.</param>
+    /// <returns>A task that represents the asynchronous receive operation.</returns>
     public virtual async Task ReceiveDataAsync(DataContext data)
     {
         ReceiveData(data);
@@ -86,9 +87,9 @@ public abstract class CommunicationCore : ICommunicationCore
     }
 
     /// <summary>
-    /// 同步方法接收消息
+    /// Receives data synchronously.
     /// </summary>
-    /// <param name="data"></param>
+    /// <param name="data">The incoming data context.</param>
     public virtual void ReceiveData(DataContext data)
     {
     }
@@ -100,8 +101,8 @@ public abstract class CommunicationCore : ICommunicationCore
 /// <summary>
 /// <inheritdoc cref="CommunicationCore"/>
 /// </summary>
-/// <typeparam name="TMetadata"></typeparam>
-/// <param name="metadata"></param>
+/// <typeparam name="TMetadata">The metadata type used by the communication core.</typeparam>
+/// <param name="metadata">The metadata instance.</param>
 public abstract class CommunicationCore<TMetadata>(TMetadata metadata) : CommunicationCore where TMetadata : CommunicationMetadata
 {
     public TMetadata Metadata { get; private set; } = metadata;

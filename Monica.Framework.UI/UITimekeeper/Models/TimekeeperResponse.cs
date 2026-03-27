@@ -1,83 +1,83 @@
 namespace Monica.Framework.UI.UITimekeeper.Models;
 
 /// <summary>
-/// Timekeeper统计信息响应模型
+/// Timekeeper statistics response model
 /// </summary>
 public class TimekeeperStatisticsResponse
 {
     /// <summary>
-    /// 计时器名称
+    /// timer name
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 执行次数
+    /// Number of executions
     /// </summary>
     public int Times { get; set; }
 
     /// <summary>
-    /// 平均执行时间
+    /// average execution time
     /// </summary>
     public string Average { get; set; } = string.Empty;
 
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public string CreateAt { get; set; } = string.Empty;
 
     /// <summary>
-    /// 每分钟执行次数
+    /// Executions per minute
     /// </summary>
     public string TimesEveryMinutes { get; set; } = string.Empty;
 
     /// <summary>
-    /// 平均内存使用量
+    /// average memory usage
     /// </summary>
     public string? AverageMemory { get; set; }
 
     /// <summary>
-    /// 最后一次内存使用量
+    /// Last memory usage
     /// </summary>
     public string? LastMemory { get; set; }
 
     /// <summary>
-    /// 最后一次执行时长
+    /// Last execution time
     /// </summary>
     public string LastDuration { get; set; } = string.Empty;
 
     /// <summary>
-    /// 最后执行时间
+    /// last execution time
     /// </summary>
     public string? LastExecutedTime { get; set; }
 }
 
 /// <summary>
-/// 正在运行的Timekeeper信息响应模型
+/// Running Timekeeper information response model
 /// </summary>
 public class RunningTimekeeperResponse
 {
     /// <summary>
-    /// 计时器名称
+    /// timer name
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// 内容描述
+    /// Content description
     /// </summary>
     public string? Content { get; set; }
 
     /// <summary>
-    /// 开始时间
+    /// start time
     /// </summary>
     public string StartTime { get; set; } = string.Empty;
 
     /// <summary>
-    /// 当前经过时间
+    /// current elapsed time
     /// </summary>
     public string CurrentElapsed { get; set; } = string.Empty;
 
     /// <summary>
-    /// 运行时长
+    /// Running time
     /// </summary>
     public string RunningDuration { get; set; } = string.Empty;
 } 

@@ -1,6 +1,6 @@
-/* 堆栈跟踪查看器样式 */
+/* Stack trace viewer style */
 
-/* 整体容器 */
+/* overall container */
 .stack-trace-container {
     position: relative;
     background-color: var(--mud-palette-background-gray);
@@ -16,7 +16,7 @@
     overflow-y: auto;
 }
 
-/* 复制按钮包装器 */
+/* Copy button wrapper */
 .copy-button-wrapper {
     position: absolute;
     top: 16px;
@@ -24,7 +24,7 @@
     z-index: 10;
 }
 
-/* 使用 ::deep 选择器穿透 CSS 隔离来样式化 MudIconButton */
+/* Styling MudIconButton through CSS isolation using ::deep selector */
 .copy-button-wrapper ::deep .mud-icon-button {
     opacity: 0.3;
     transition: opacity 0.2s ease;
@@ -35,7 +35,7 @@
     opacity: 1;
 }
 
-/* 异常头部 */
+/* abnormal head */
 .exception-header {
     margin-bottom: 8px;
     padding: 8px;
@@ -54,7 +54,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 单条堆栈帧 */
+/* Single stack frame */
 .stack-frame {
     margin: 6px 0;
     padding: 6px;
@@ -69,92 +69,92 @@
     background-color: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
 }
 
-/* "at" 关键字: 加粗 + Color.Info */
+/* "at" keyword: bold + Color.Info */
 .at-keyword {
     font-weight: 700;
     color: var(--mud-palette-info);
     margin-right: 2px;
 }
 
-/* 命名空间部分: 加粗，保持默认颜色 */
+/* Namespace part: Bold, keep default color */
 .namespace-part {
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
 
-/* 类名部分: 加粗，保持默认颜色 */
+/* Class name part: Bold, keep default color */
 .classname-part {
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
 
-/* 方法名: 加粗 + Color.Warning */
+/* Method name: Bold + Color.Warning */
 .method-name {
     font-weight: 700;
     color: var(--mud-palette-warning);
 }
 
-/* 参数括号: 加粗 */
+/* Parameter brackets: bold */
 .param-bracket {
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
-/* 参数类型: 加粗 */
+/* Parameter type: Bold */
 .param-type {
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
-/* 参数名: 不加粗，保持默认颜色 */
+/* Parameter name: Do not bold, keep the default color */
 .param-name {
     font-weight: 400;
     color: var(--mud-palette-text-secondary);
 }
 
-/* 参数分隔符: 加粗 */
+/* Parameter separator: bold */
 .param-separator {
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
-/* 参数空格 */
+/* Parameter space */
 .param-space {
     white-space: normal;
 }
 
-/* "in" 关键字: 加粗，保持默认颜色 */
+/* "in" keyword: bold, keep default color */
 .in-keyword {
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
-/* 文件路径（目录部分）: 加粗 */
+/* File path (directory part): bold */
 .file-path-dir {
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
     font-size: 0.9em;
 }
 
-/* 文件名: 加粗 + Color.Warning */
+/* Filename: Bold + Color.Warning */
 .file-name {
     font-weight: 700;
     color: var(--mud-palette-warning);
 }
 
-/* "line:" 部分: 加粗 + Color.Error */
+/* "line:" part: bold + Color.Error */
 .line-info {
     font-weight: 700;
     color: var(--mud-palette-error);
 }
 
-/* 行号: 加粗 + Color.Error */
+/* Line number: Bold + Color.Error */
 .line-number {
     font-weight: 700;
     color: var(--mud-palette-error);
 }
 
-/* 内部异常标题 */
+/* Internal exception title */
 .inner-exception-header {
     margin: 12px 0 8px 0;
     padding: 8px;
@@ -163,20 +163,20 @@
     border-radius: 3px;
 }
 
-/* 内部异常标签 */
+/* Internal exception label */
 .inner-exception-label {
     color: var(--mud-palette-text-primary);
     font-weight: 500;
 }
 
-/* 内部异常结束标记 */
+/* Internal abend marker */
 .inner-exception-end {
     color: var(--mud-palette-warning);
     font-weight: 500;
     font-style: italic;
 }
 
-/* 普通文本行 */
+/* plain text line */
 .plain-text-line {
     margin: 4px 0;
     padding: 4px;
@@ -185,7 +185,7 @@
     padding-left: 8px;
 }
 
-/* 解析错误提示 */
+/* Parse error message */
 .parse-error {
     display: flex;
     align-items: flex-start;
@@ -210,7 +210,7 @@
     line-height: 1.4;
 }
 
-/* 降级显示的原始文本 */
+/* Degrade original text displayed */
 .fallback-text {
     margin-top: 8px;
     padding: 12px;
@@ -229,7 +229,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 空消息提示 */
+/* Empty message prompt */
 .empty-message {
     padding: 12px;
     text-align: center;
@@ -237,7 +237,7 @@
     font-style: italic;
 }
 
-/* 滚动条样式 */
+/* Scroll bar style */
 .stack-trace-container::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -256,13 +256,13 @@
     background: var(--mud-palette-text-secondary);
 }
 
-/* 文本选择样式 */
+/* Text selection style */
 .stack-trace-container ::selection {
     background-color: var(--mud-palette-primary-lighten);
     color: var(--mud-palette-text-primary);
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
     .stack-trace-container {
         font-size: 0.75rem;

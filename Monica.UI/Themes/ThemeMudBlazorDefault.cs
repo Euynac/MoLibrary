@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// MudBlazor默认主题 - 完全保持原始MudBlazor风格
+/// MudBlazor default theme - completely maintains the original MudBlazor style
 /// </summary>
 public class ThemeMudBlazorDefault : ThemeBase
 {

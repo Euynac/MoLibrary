@@ -10,12 +10,12 @@ namespace Monica.Configuration;
 public static class UtilsConfiguration
 {
     /// <summary>
-    /// 获取配置类标签
+    /// Gets the configuration attribute for the specified type.
     /// </summary>
     /// <exception cref="InvalidOperationException"></exception>
     public static ConfigurationAttribute? GetConfigAttribute(Type type)
     {
-        //获取T的ConfigurationAttribute
+        // Read ConfigurationAttribute from the target type.
         var configAttr = type.GetCustomAttribute<ConfigurationAttribute>();
         if (configAttr is {Section: null, DisableSection: false} attr)
         {
@@ -36,7 +36,7 @@ public static class UtilsConfiguration
     }
    
     /// <summary>
-    /// 获取配置类标签
+    /// Gets the configuration attribute for type <typeparamref name="T"/>.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
@@ -44,14 +44,15 @@ public static class UtilsConfiguration
     public static ConfigurationAttribute? GetConfigAttribute<T>() where T : class => GetConfigAttribute(typeof(T));
 
     /// <summary>
-    /// 检查该类是否标记了配置类标签
+    /// Checks whether the type is annotated with <see cref="ConfigurationAttribute"/>.
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
     public static bool HasConfigAttribute(Type type) => type.GetCustomAttribute<ConfigurationAttribute>() != null;
 
     /// <summary>
-    /// 获取指定配置类实例。不建议直接使用该方法获取，无验证等功能。
+    /// Gets an instance of the specified configuration type.
+    /// Prefer using the options pipeline because this method does not include validation.
     /// </summary>
     /// <exception cref="InvalidOperationException"></exception>
     public static object? GetConfig(Type optionType)
@@ -60,14 +61,14 @@ public static class UtilsConfiguration
         if (configAttr == null) return null;
         return configAttr.Section != null
             ?
-            //获取指定节点的配置
+            // Read configuration from the specified section.
             MoConfigurationManager.AppConfiguration.GetSection(configAttr.Section).Get(optionType)
             : MoConfigurationManager.AppConfiguration.Get(optionType);
     }
 
 
     /// <summary>
-    /// 获取指定配置类实例
+    /// Gets an instance of the specified configuration type from the service provider.
     /// </summary>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
@@ -93,7 +94,7 @@ public static class UtilsConfiguration
         return null;
     }
     /// <summary>
-    /// 在依赖注入容器构建阶段获取指定配置类实例。
+    /// Gets an instance of the specified configuration type during service collection build-up.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="service"></param>
@@ -101,7 +102,7 @@ public static class UtilsConfiguration
     /// <exception cref="InvalidOperationException"></exception>
     public static T GetConfig<T>(IServiceCollection service) where T : class, new()
     {
-        //TODO 参考ABP读取方式增加效率
+        // TODO: Improve efficiency by adopting an ABP-style access approach.
         //service.GetConfiguration();
         var configAttr = GetConfigAttribute<T>();
         var provider = service.BuildServiceProvider();

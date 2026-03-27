@@ -43,7 +43,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     protected virtual IMoRepository<TEntity, TKey> Repository { get; } = repository;
 
-    #region 查
+    #region Query
 
     /// <summary>
     /// Retrieves an entity by its ID and maps it to a DTO.
@@ -75,7 +75,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             featureSetting = setting;
         }
 
-        if (input is not IHasRequestPage { DisablePage: true }) //不分页则不需要Count
+        if (input is not IHasRequestPage { DisablePage: true }) // No count is needed when paging is disabled.
         {
             if (featureSetting?.ShouldJumpCount() is not true)
             {
@@ -88,7 +88,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
         var dynamicQuery = (IQueryable) query;
 
-        //转化为 IQueryable 使得可应用动态选择
+        // Cast to IQueryable so dynamic projection can be applied.
         if (input is IHasRequestSelect select && select.HasUsingSelected())
         {
             if (!select.SelectColumns.IsNullOrWhiteSpace())
@@ -110,7 +110,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         var (pagedQueryable, curPage, pageSize) = ApplyPaging(dynamicQuery, input);
         dynamicQuery = pagedQueryable;
 
-        //如果已经应用了动态选择
+        // If dynamic projection has already been applied.
         if (dynamicQuery is not IQueryable<TEntity> finalEntityQuery)
         {
             var selectedList = await dynamicQuery.ToDynamicListAsync();
@@ -191,7 +191,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         TGetListInput input, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        //巨坑： IAsyncEnumerable 类型会丢失 AsyncLocal 值，进入到这个方法就已经丢失了
+        // Important: IAsyncEnumerable loses AsyncLocal values; by the time execution reaches this method, the ambient state is already gone.
         var unitOfWork = ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
         using var uow = unitOfWork.Begin();
         var query = await CreateFilteredQueryAsync(input);
@@ -264,7 +264,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #endregion
 
-    #region 增
+    #region Create
 
     /// <summary>
     /// Creates a new entity from the input, saves it to the database, and returns the result as a DTO.
@@ -283,7 +283,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #endregion
 
-    #region 删
+    #region Delete
 
     /// <summary>
     /// Deletes an entity by its ID.
@@ -307,7 +307,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #endregion
 
-    #region 改
+    #region Update
     
     /// <summary>
     /// Updates an existing entity with the provided input and returns the updated entity as a DTO.
@@ -321,7 +321,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
         MapToEntity(input, entity);
 
-        //TODO 其实可以不需要Update，因为已经开了跟踪，直接SaveChange即可
+        // TODO: This update call may be unnecessary because change tracking is already enabled; SaveChanges alone might be enough.
         await Repository.UpdateAsync(entity, autoSave: true);
 
         return await MapToGetOutputDtoAsync(entity);
@@ -329,7 +329,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     #endregion
 
 
-    #region 排序
+    #region Sorting
 
     /// <summary>
     /// Applies sorting to the query based on the input.
@@ -340,23 +340,24 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <returns>The sorted query</returns>
     protected virtual IQueryable<TEntity> ApplySorting(IQueryable<TEntity> query, TGetListInput input)
     {
-        //巨坑：如果使用了Include，目前EFCore8会自动使用AsSpiltQuery功能。
-        //而若同时联合使用Skip或Take功能，则需要要求多个查询结果一致，否则会导致查不到或查询出错的情况（因为生成的多个SQL，排序结果不同）
-        //因为Include后会自动OrderBy 主键Id，而由于Skip或Take导致的子查询不会自动应用OrderBy BUG？
-        //要确保Order使得结果一致 参考:https://learn.microsoft.com/en-us/ef/core/querying/single-split-queries#split-queries
+        // Important: when Include is used, EF Core 8 may automatically switch to split queries.
+        // If split queries are combined with Skip or Take, every generated SQL query must produce the same ordering;
+        // otherwise rows can be missed or the query can fail because each query may return a different order.
+        // Include already introduces ordering by the primary key, while subqueries created by Skip or Take may not.
+        // Keep the ordering deterministic. See: https://learn.microsoft.com/en-us/ef/core/querying/single-split-queries#split-queries
         if (WithDetail() && input is IHasRequestPage { DisablePage: not true })
         {
             query = query.HasBeenOrdered(out var ordered) ? ordered.ThenByDescending(p => p.Id) : query.OrderByDescending(p => p.Id);
         }
 
-        //巨坑：Linq中的OrderBy，当连续进行OrderBy时，具体效果由Provider翻译决定。如PgSQL就会应用最后一次的OrderBy，前面的OrderBy将会忽略。
+        // Important: repeated OrderBy calls are provider-dependent. For example, PostgreSQL applies only the last OrderBy and ignores earlier ones.
         if (input is IHasRequestSorting sortedResultRequest && !sortedResultRequest.Sorting.IsNullOrWhiteSpace())
         {
             return query.HasBeenOrdered(out var ordered) ? ordered.ThenBy(sortedResultRequest.Sorting) : query.OrderBy(sortedResultRequest.Sorting);
         }
 
-        //巨坑：如果分表后进行分页，不进行排序会导致数据顺序、数量错误
-        //巨坑：分表后不支持Select后不存在字段的OrderBy，因为分表后是加载到内存进行OrderBy的。
+        // Important: paginating sharded tables without ordering can produce incorrect ordering and row counts.
+        // Important: after sharding, OrderBy cannot target fields removed by Select because ordering is performed in memory.
         if (input is IHasRequestSelect select && select.HasUsingSelected() && Repository.IsShardingTable())
         {
             return query;
@@ -393,7 +394,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     #endregion
 
 
-    #region 分页
+    #region Paging
 
     /// <summary>
     /// Applies paging to the query based on the input.
@@ -460,36 +461,36 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
 
     #endregion
 
-    #region 自定义设置
+    #region Customization
 
     /// <summary>
-    /// 对响应的实体Dto内容进行验证或进一步处理
+    /// Validates or further processes the response DTO list before it is returned.
     /// </summary>
-    /// <param name="input"></param>
-    /// <param name="dtos">要处理的实体DTO列表</param>
-    /// <returns>处理后的实体DTO列表，包装在Res结果中</returns>
+    /// <param name="input">The input used for the list query.</param>
+    /// <param name="dtos">The entity DTOs to process.</param>
+    /// <returns>The processed DTO list wrapped in a <see cref="Res{T}"/> result.</returns>
     protected virtual async Task<Res<List<TGetListOutputDto>>> ApplyCustomActionToResponseListAsync(TGetListInput input,
         List<TGetListOutputDto> dtos)
     {
         return dtos;
     }
     /// <summary>
-    /// 设置自定义过滤条件
+    /// Applies custom filter conditions.
     /// </summary>
-    /// <param name="input">获取列表的输入参数</param>
-    /// <param name="query">要应用过滤的查询</param>
-    /// <returns>应用过滤后的查询</returns>
+    /// <param name="input">The input used for the list query.</param>
+    /// <param name="query">The query to filter.</param>
+    /// <returns>The filtered query.</returns>
     protected virtual async Task<IQueryable<TEntity>> ApplyCustomFilterQueryAsync(TGetListInput input, IQueryable<TEntity> query)
     {
         return query;
     }
 
     /// <summary>
-    /// 应用过滤器。已扩展统一查询模型及自定义过滤、客户端侧过滤功能。
+    /// Creates the filtered query, including the unified query model, custom filters, and client-side filters.
     /// </summary>
-    /// <param name="input">获取列表的输入参数</param>
-    /// <param name="repository">给定仓储层，如历史仓储</param>
-    /// <returns>应用过滤后的查询</returns>
+    /// <param name="input">The input used for the list query.</param>
+    /// <param name="repository">The repository to query, such as a history repository.</param>
+    /// <returns>The filtered query.</returns>
     protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IMoRepository<TEntity, TKey>? repository = null)
     {
         repository ??= Repository;
@@ -507,7 +508,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
                 var result = AutoModel.GetNormalizedResult(filterRequest.Filter);
                 if (result.Context.Tokens.Any(p => p.FieldInfo?.ReflectionName == nameof(IHasSoftDelete.IsDeleted)))
                 {
-                    queryable = repository.DisableSoftDeleteFilter(queryable); //巨坑：发现ShardingTable会使其失效
+                    queryable = repository.DisableSoftDeleteFilter(queryable); // Important: this was observed to stop working with sharded tables.
                 }
                 queryable = AutoModel.ApplyFilter(queryable, result);
             }
@@ -525,39 +526,40 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         return queryable;
     }
     /// <summary>
-    /// 设置仅能客户端侧评估的自定义过滤条件。注意：Client Side评估会导致分页等功能无法在数据库执行，大幅降低效率
+    /// Defines custom filter conditions that can only be evaluated on the client side.
+    /// Client-side evaluation prevents paging and related operations from running in the database and can significantly reduce performance.
     /// </summary>
-    /// <param name="input">获取列表的输入参数</param>
-    /// <returns>客户端侧过滤函数，如果为null则不应用客户端过滤</returns>
+    /// <param name="input">The input used for the list query.</param>
+    /// <returns>The client-side filter function, or <see langword="null"/> to skip client-side filtering.</returns>
     protected virtual Func<TEntity, bool>? ApplyCustomFilterQueryClientSideAsync(TGetListInput input)
     {
         return null;
     }
     #endregion
     /// <summary>
-    /// 是否需要使用仓储层WithDetail方法
+    /// Determines whether the repository's <c>WithDetail</c> method should be used.
     /// </summary>
-    /// <returns>如果需要使用WithDetail方法则返回true，否则返回false</returns>
+    /// <returns><see langword="true"/> if <c>WithDetail</c> should be used; otherwise, <see langword="false"/>.</returns>
     protected virtual bool WithDetail()
     {
         return false;
     }
 
     /// <summary>
-    /// 在GetList方法时应用Include
+    /// Applies Include clauses when executing <c>GetList</c>.
     /// </summary>
-    /// <param name="queryable">要应用Include的查询</param>
-    /// <param name="input"></param>
-    /// <returns>应用Include后的查询</returns>
+    /// <param name="queryable">The query to extend with Include clauses.</param>
+    /// <param name="input">The input used for the list query.</param>
+    /// <returns>The query after Include clauses have been applied.</returns>
     protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> queryable, TGetListInput input)
     {
         return queryable;
     }
     /// <summary>
-    /// 在Get查询详情时应用Include
+    /// Applies Include clauses when loading entity details for <c>Get</c>.
     /// </summary>
-    /// <param name="queryable">要应用Include的查询</param>
-    /// <returns>应用Include后的查询</returns>
+    /// <param name="queryable">The query to extend with Include clauses.</param>
+    /// <returns>The query after Include clauses have been applied.</returns>
     protected virtual IQueryable<TEntity> ApplyInclude(IQueryable<TEntity> queryable)
     {
         return queryable;
@@ -631,8 +633,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     protected virtual async Task<List<TCustomDto>> MapToGetListOutputDtosAsync<TCustomDto>(IQueryable<TEntity> query)
     {
-        //巨坑：ProjectToType中Dto若含有子表字段定义，会连带查出，无需主动Include。
-        //20240422 Mapster暂不支持复杂类型ProjectToType
+        // Important: if the DTO defines child-table fields, ProjectToType will query them automatically, so explicit Include is unnecessary.
+        // As of 2024-04-22, Mapster does not support ProjectToType for complex types.
         //return await ObjectMapper.ProjectToType<TCustomDto>(query).ToListAsync();
         return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
     }

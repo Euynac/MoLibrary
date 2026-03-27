@@ -1,14 +1,14 @@
 namespace Monica.UI.Components.ContextMenu;
 
 /// <summary>
-/// 右键菜单构建器 - 简化版本
+/// Right-click menu builder - simplified version
 /// </summary>
 public class ContextMenuBuilder<TItem>
 {
     private readonly List<ContextMenuItem<TItem>> _items = new();
 
     /// <summary>
-    /// 添加菜单项
+    /// Add menu item
     /// </summary>
     public ContextMenuBuilder<TItem> AddItem(string text, string? icon = null, Func<TItem?, Task>? onClick = null, string? shortcut = null)
     {
@@ -24,7 +24,7 @@ public class ContextMenuBuilder<TItem>
     }
 
     /// <summary>
-    /// 添加子菜单项
+    /// Add submenu item
     /// </summary>
     public ContextMenuBuilder<TItem> AddSubMenu(string text, string? icon, Action<ContextMenuBuilder<TItem>> configureSubMenu)
     {
@@ -42,7 +42,7 @@ public class ContextMenuBuilder<TItem>
     }
 
     /// <summary>
-    /// 添加分隔线
+    /// add divider
     /// </summary>
     public ContextMenuBuilder<TItem> AddDivider()
     {
@@ -51,7 +51,7 @@ public class ContextMenuBuilder<TItem>
     }
 
     /// <summary>
-    /// 条件添加菜单项
+    /// Conditionally add menu items
     /// </summary>
     public ContextMenuBuilder<TItem> AddItemIf(bool condition, string text, string? icon = null, Func<TItem?, Task>? onClick = null, string? shortcut = null)
     {
@@ -63,12 +63,12 @@ public class ContextMenuBuilder<TItem>
     }
 
     /// <summary>
-    /// 构建菜单项列表
+    /// Build a list of menu items
     /// </summary>
     public List<ContextMenuItem<TItem>> Build() => _items;
 
     /// <summary>
-    /// 创建一个新的构建器
+    /// Create a new builder
     /// </summary>
     public static ContextMenuBuilder<TItem> Create() => new();
 }

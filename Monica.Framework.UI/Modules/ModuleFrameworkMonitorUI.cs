@@ -15,7 +15,7 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 FrameworkMonitorUI 模块
+        /// Configure the FrameworkMonitorUI module
         /// </summary>
         public static ModuleFrameworkMonitorUIGuide AddFrameworkMonitorUI(Action<ModuleFrameworkMonitorUIOption>? action = null)
         {
@@ -25,7 +25,7 @@ public static class ModuleFrameworkMonitorUIBuilderExtensions
 }
 
 /// <summary>
-/// 框架监控UI模块
+/// Framework monitoring UI module
 /// </summary>
 [ModuleKey(EMoModuleKey.FrameworkMonitorUI)]
 public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
@@ -34,7 +34,7 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // UI模块直接使用IFrameworkMonitorService，无需额外注册服务
+        // The UI module uses IFrameworkMonitorService directly without additional registration of services.
     }
 
     public override void ClaimDependencies()
@@ -58,19 +58,19 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
 }
 
 /// <summary>
-/// FrameworkMonitorUI模块向导
+/// FrameworkMonitorUI Module Wizard
 /// </summary>
 public class ModuleFrameworkMonitorUIGuide : MoModuleGuide<ModuleFrameworkMonitorUI, ModuleFrameworkMonitorUIOption, ModuleFrameworkMonitorUIGuide>
 {
 }
 
 /// <summary>
-/// FrameworkMonitorUI模块选项
+/// FrameworkMonitorUI module options
 /// </summary>
 public class ModuleFrameworkMonitorUIOption : MoModuleOption<ModuleFrameworkMonitorUI>
 { 
     /// <summary>
-    /// 是否禁用框架监控页面
+    /// Whether to disable the frame monitoring page
     /// </summary>
     public bool DisableUIFrameworkMonitorPage { get; set; }
 }

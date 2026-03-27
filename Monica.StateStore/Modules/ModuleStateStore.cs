@@ -15,7 +15,7 @@ public static class ModuleStateStoreBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 StateStore 模块
+        /// Configure the StateStore module
         /// </summary>
         public static ModuleStateStoreGuide AddStateStore(Action<ModuleStateStoreOption>? action = null)
         {
@@ -119,7 +119,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
 public class ModuleStateStoreOption : MoModuleOption<ModuleStateStore>
 {
     /// <summary>
-    /// 使用分布式状态存储作为默认的（非Keyed服务） <see cref="IMoStateStore"/> 实现
+    /// Use distributed state storage as the default (non-Keyed service) <see cref="IMoStateStore"/> implementation
     /// </summary>
     public bool UseDistributedProviderAsDefault { get; set; }
 }

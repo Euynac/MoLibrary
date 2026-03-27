@@ -4,15 +4,15 @@ using System.Text;
 namespace Monica.Tool.Web;
 
 /// <summary>
-/// 网络/安全方向工具
+/// Network and security utility helpers.
 /// </summary>
 public class WebTool
 {
     /// <summary>
-    /// Base64加密，出错将返回原文，默认按UTF8加密
+    /// Encodes text to Base64. Returns the original text if encoding fails. UTF-8 is used by default.
     /// </summary>
-    /// <param name="source">原文</param>
-    /// <param name="codeType">编码类型</param>
+    /// <param name="source">Source text.</param>
+    /// <param name="codeType">Text encoding.</param>
     /// <returns></returns>
     public static string EncodeBase64(string source, Encoding? codeType = null)
     {
@@ -32,10 +32,10 @@ public class WebTool
     }
 
     /// <summary>
-    /// Base64解密，出错将返回原文，默认按UTF8解密
+    /// Decodes Base64 text. Returns the original text if decoding fails. UTF-8 is used by default.
     /// </summary>
-    /// <param name="source">原文</param>
-    /// <param name="codeType">编码类型，为空默认是UTF8</param>
+    /// <param name="source">Source text.</param>
+    /// <param name="codeType">Text encoding. UTF-8 is used when null.</param>
     /// <returns></returns>
     public static string DecodeBase64(string source, Encoding? codeType = null)
     {

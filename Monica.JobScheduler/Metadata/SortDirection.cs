@@ -1,17 +1,17 @@
 namespace Monica.JobScheduler.Metadata;
 
 /// <summary>
-/// 排序方向
+/// Sorting direction
 /// </summary>
 public enum SortDirection
 {
     /// <summary>
-    /// 升序
+    /// Ascending order
     /// </summary>
     Ascending,
 
     /// <summary>
-    /// 降序
+    /// descending order
     /// </summary>
     Descending
 }

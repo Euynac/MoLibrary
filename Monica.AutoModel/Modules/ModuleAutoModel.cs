@@ -18,7 +18,7 @@ public static class ModuleAutoModelBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 AutoModel 模块
+        /// Registers and configures the AutoModel module.
         /// </summary>
         public static ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
         {
@@ -90,26 +90,26 @@ public class ModuleAutoModelGuide : MoModuleGuide<ModuleAutoModel, ModuleAutoMod
 public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoModel>
 {
     /// <summary>
-    /// 全局主动模式（仅使用了AutoField标签的字段才会启用自动模型功能）
+    /// Global active mode. Only fields marked with <c>AutoField</c> participate in AutoModel.
     /// </summary>
     public bool EnableActiveMode { get; set; }
 
     /// <summary>
-    /// 默认激活名开启前缀忽略
+    /// Enables prefix omission for default activation names.
     /// </summary>
     public bool EnableIgnorePrefix { get; set; }
 
     /// <summary>
-    /// 默认激活名开启前缀忽略后，自动调整失败的激活名不报错
+    /// When prefix omission is enabled for default activation names, automatic adjustment failures do not throw errors.
     /// </summary>
     public bool EnableIgnorePrefixAutoAdjust { get; set; }
 
     /// <summary>
-    /// 开启调试模式（如显示Filter实际生成Expression）
+    /// Enables debugging mode, for example to show the Expression generated from a filter.
     /// </summary>
     public bool EnableDebugging { get; set; }
     /// <summary>
-    /// 开启将字段显示名作为激活名
+    /// Enables using the field display name as an activation name.
     /// </summary>
     [Obsolete("暂未实现")]
     public bool EnableTitleAsActivateName { get; set; }
@@ -118,7 +118,7 @@ public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoMode
     public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
 
     /// <summary>
-    /// 开启对于不支持的字段类型进行异常报错
+    /// Throws exceptions for unsupported field types.
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 

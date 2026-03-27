@@ -3,10 +3,10 @@
    清爽、简洁、柔和的视觉体验
    ============================================ */
 
-/* 主题特定 CSS 变量 */
+/* Theme-specific CSS variables */
 :root[data-theme="fresh-light"],
 .mo-theme-fresh-light {
-    /* 圆角设计 - 柔和圆润 */
+    /* Rounded corner design - soft and rounded */
     --mo-button-border-radius: 16px;
     --mo-button-padding-x: 20px;
     --mo-button-padding-y: 10px;
@@ -28,21 +28,21 @@
     --mo-chip-border-radius: 20px;
     --mo-chip-padding: 6px 16px;
     
-    /* 过渡动画 - 轻柔流畅 */
+    /* Transition animation - soft and smooth */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 350ms;
     --mo-transition-slow: 500ms;
     --mo-animation-smooth: 450ms;
     --mo-animation-bounce: 650ms;
     
-    /* 间距系统 */
+    /* spacing system */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* 清新特效 */
+    /* Fresh special effects */
     --mo-fresh-hover-scale: 1.02;
     --mo-fresh-hover-shadow: 0 6px 20px rgba(0, 200, 150, 0.15);
     --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 200, 150, 0.2);
@@ -52,7 +52,7 @@
 
 :root[data-theme="fresh-dark"],
 .mo-theme-fresh-dark {
-    /* 暗色模式调整 */
+    /* Dark mode adjustments */
     --mo-button-border-radius: 16px;
     --mo-button-padding-x: 20px;
     --mo-button-padding-y: 10px;
@@ -74,21 +74,21 @@
     --mo-chip-border-radius: 20px;
     --mo-chip-padding: 6px 16px;
     
-    /* 过渡动画 */
+    /* transition animation */
     --mo-transition-fast: 200ms;
     --mo-transition-normal: 350ms;
     --mo-transition-slow: 500ms;
     --mo-animation-smooth: 450ms;
     --mo-animation-bounce: 650ms;
     
-    /* 间距系统 */
+    /* spacing system */
     --mo-spacing-xs: 4px;
     --mo-spacing-sm: 8px;
     --mo-spacing-md: 16px;
     --mo-spacing-lg: 24px;
     --mo-spacing-xl: 32px;
     
-    /* 暗色清新特效 */
+    /* Dark fresh special effects */
     --mo-fresh-hover-scale: 1.02;
     --mo-fresh-hover-shadow: 0 6px 20px rgba(0, 229, 160, 0.25);
     --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 229, 160, 0.3);
@@ -96,15 +96,15 @@
     --mo-fresh-gradient-secondary: linear-gradient(135deg, var(--mud-palette-secondary) 0%, #ffc4ca 100%);
 }
 
-/* 通用样式（明暗模式共享） */
+/* Common styles (shared between light and dark modes) */
 .mo-theme-fresh-light,
 .mo-theme-fresh-dark {
-    /* 全局过渡效果 */
+    /* Global transition effects */
     transition: background-color var(--mo-transition-normal) ease,
                 color var(--mo-transition-normal) ease;
 }
 
-/* 背景装饰 */
+/* background decoration */
 .mo-theme-fresh-light::before {
     content: '';
     position: fixed;
@@ -133,7 +133,7 @@
     z-index: -1;
 }
 
-/* 按钮样式 */
+/* button style */
 .mo-theme-fresh-light .mud-button,
 .mo-theme-fresh-dark .mud-button {
     border-radius: var(--mo-button-border-radius) !important;
@@ -154,7 +154,7 @@
     transform: translateY(0) scale(0.98);
 }
 
-/* 主要按钮渐变效果 */
+/* Main button gradient effect */
 .mo-theme-fresh-light .mud-button-filled-primary,
 .mo-theme-fresh-dark .mud-button-filled-primary {
     background: var(--mo-fresh-gradient) !important;
@@ -166,7 +166,7 @@
     background: var(--mo-fresh-gradient-secondary) !important;
 }
 
-/* 轮廓按钮 */
+/* outline button */
 .mo-theme-fresh-light .mud-button-outlined,
 .mo-theme-fresh-dark .mud-button-outlined {
     border-width: 2px !important;
@@ -178,7 +178,7 @@
     background-color: var(--mud-palette-action-default-hover) !important;
 }
 
-/* 文本按钮 */
+/* text button */
 .mo-theme-fresh-light .mud-button-text:hover,
 .mo-theme-fresh-dark .mud-button-text:hover {
     background-color: transparent !important;
@@ -187,7 +187,7 @@
     text-underline-offset: 4px;
 }
 
-/* 卡片样式 */
+/* card style */
 .mo-theme-fresh-light .mud-card,
 .mo-theme-fresh-dark .mud-card {
     border-radius: var(--mo-card-border-radius) !important;
@@ -215,7 +215,7 @@
     padding: var(--mo-card-padding) !important;
 }
 
-/* 输入框样式 */
+/* Input box style */
 .mo-theme-fresh-light .mud-input-outlined .mud-input-outlined-border,
 .mo-theme-fresh-dark .mud-input-outlined .mud-input-outlined-border {
     border-radius: var(--mo-input-border-radius) !important;
@@ -234,7 +234,7 @@
     box-shadow: var(--mo-fresh-focus-shadow) !important;
 }
 
-/* 选择框样式 */
+/* Select box style */
 .mo-theme-fresh-light .mud-select,
 .mo-theme-fresh-dark .mud-select {
     border-radius: var(--mo-input-border-radius) !important;
@@ -245,7 +245,7 @@
     border-radius: var(--mo-input-border-radius) !important;
 }
 
-/* 芯片样式 */
+/* chip style */
 .mo-theme-fresh-light .mud-chip,
 .mo-theme-fresh-dark .mud-chip {
     border-radius: var(--mo-chip-border-radius) !important;
@@ -258,7 +258,7 @@
     transform: scale(1.05);
 }
 
-/* 对话框样式 */
+/* Dialog style */
 .mo-theme-fresh-light .mud-dialog,
 .mo-theme-fresh-dark .mud-dialog {
     border-radius: var(--mo-dialog-border-radius) !important;
@@ -270,7 +270,7 @@
     padding: var(--mo-dialog-padding) !important;
 }
 
-/* 表格样式 */
+/* table style */
 .mo-theme-fresh-light .mud-table,
 .mo-theme-fresh-dark .mud-table {
     border-radius: var(--mo-card-border-radius) !important;
@@ -287,7 +287,7 @@
     background-color: var(--mud-palette-table-hover) !important;
 }
 
-/* 进度条样式 */
+/* Progress bar style */
 .mo-theme-fresh-light .mud-progress-linear,
 .mo-theme-fresh-dark .mud-progress-linear {
     height: 6px !important;
@@ -300,13 +300,13 @@
     background: var(--mo-fresh-gradient) !important;
 }
 
-/* 圆形进度条 */
+/* circular progress bar */
 .mo-theme-fresh-light .mud-progress-circular circle,
 .mo-theme-fresh-dark .mud-progress-circular circle {
     stroke-linecap: round !important;
 }
 
-/* 开关样式 */
+/* Switch style */
 .mo-theme-fresh-light .mud-switch-track,
 .mo-theme-fresh-dark .mud-switch-track {
     border-radius: 20px !important;
@@ -322,7 +322,7 @@
     background: var(--mo-fresh-gradient) !important;
 }
 
-/* 标签页样式 */
+/* Tab style */
 .mo-theme-fresh-light .mud-tabs,
 .mo-theme-fresh-dark .mud-tabs {
     border-radius: var(--mo-input-border-radius) !important;
@@ -345,7 +345,7 @@
     color: var(--mud-palette-primary-text) !important;
 }
 
-/* 工具提示样式 */
+/* Tooltip style */
 .mo-theme-fresh-light .mud-tooltip,
 .mo-theme-fresh-dark .mud-tooltip {
     border-radius: var(--mo-input-border-radius) !important;
@@ -353,13 +353,13 @@
     font-size: 0.875rem !important;
 }
 
-/* 快餐栏样式 */
+/* Fast food bar style */
 .mo-theme-fresh-light .mud-snackbar,
 .mo-theme-fresh-dark .mud-snackbar {
     border-radius: var(--mo-button-border-radius) !important;
 }
 
-/* 导航抽屉样式 */
+/* Navigation drawer style */
 .mo-theme-fresh-light .mud-drawer .mud-drawer-content,
 .mo-theme-fresh-dark .mud-drawer .mud-drawer-content {
     padding: var(--mo-spacing-lg) !important;
@@ -378,7 +378,7 @@
     transform: translateX(4px);
 }
 
-/* 应用栏样式 */
+/* App bar style */
 .mo-theme-fresh-light .mud-appbar,
 .mo-theme-fresh-dark .mud-appbar {
     backdrop-filter: blur(10px);
@@ -386,7 +386,7 @@
     background-color: color-mix(in srgb, var(--mud-palette-appbar-background) 90%, transparent) !important;
 }
 
-/* 浮动动作按钮 */
+/* floating action button */
 .mo-theme-fresh-light .mud-fab,
 .mo-theme-fresh-dark .mud-fab {
     border-radius: 50% !important;
@@ -400,20 +400,20 @@
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* 图标样式 */
+/* icon style */
 .mo-theme-fresh-light .mud-icon-button:hover,
 .mo-theme-fresh-dark .mud-icon-button:hover {
     background-color: var(--mud-palette-action-default-hover) !important;
     transform: scale(1.1);
 }
 
-/* 分割线样式 */
+/* Divider style */
 .mo-theme-fresh-light .mud-divider,
 .mo-theme-fresh-dark .mud-divider {
     background: linear-gradient(to right, transparent, var(--mud-palette-divider), transparent) !important;
 }
 
-/* 面包屑样式 */
+/* Breadcrumb style */
 .mo-theme-fresh-light .mud-breadcrumbs li:not(:last-child)::after,
 .mo-theme-fresh-dark .mud-breadcrumbs li:not(:last-child)::after {
     content: "›";
@@ -421,7 +421,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* 滚动条样式 */
+/* Scroll bar style */
 .mo-theme-fresh-light ::-webkit-scrollbar,
 .mo-theme-fresh-dark ::-webkit-scrollbar {
     width: 10px;
@@ -458,7 +458,7 @@
     background: rgba(0, 229, 160, 0.6);
 }
 
-/* 动画效果 */
+/* Animation effects */
 @keyframes mo-fresh-pulse {
     0% {
         box-shadow: 0 0 0 0 rgba(0, 200, 150, 0.4);
@@ -480,7 +480,7 @@
     }
 }
 
-/* 响应式调整 */
+/* Responsive adjustments */
 @media (max-width: 960px) {
     .mo-theme-fresh-light,
     .mo-theme-fresh-dark {
@@ -491,7 +491,7 @@
     }
 }
 
-/* 无障碍支持 */
+/* Accessibility support */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-fresh-light *,
     .mo-theme-fresh-dark * {
@@ -500,7 +500,7 @@
     }
 }
 
-/* 性能优化 */
+/* Performance optimization */
 .mo-theme-fresh-light .mud-table *,
 .mo-theme-fresh-light .mud-data-grid *,
 .mo-theme-fresh-light .mud-treeview *,
@@ -510,7 +510,7 @@
     transition: none !important;
 }
 
-/* 实用工具类 */
+/* Utility tools */
 .mo-fresh-gradient-text {
     background: var(--mo-fresh-gradient);
     -webkit-background-clip: text;

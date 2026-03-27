@@ -3,7 +3,7 @@ using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.Interfaces;
 /// <summary>
-/// 请求类基类，请不要使用此类型
+/// Base interface for request contracts; this type should not be used directly.
 /// </summary>
 public interface IMoRequestBase
 {
@@ -11,16 +11,16 @@ public interface IMoRequestBase
 }
 
 /// <summary>
-/// 请求类接口
+/// Request interface that returns a typed result.
 /// </summary>
-/// <typeparam name="TRequest">相应请求的响应类</typeparam>
+/// <typeparam name="TRequest">The response type for the request.</typeparam>
 public interface IMoRequest<TRequest> : IRequest<Res<TRequest>>, IMoRequestBase
 {
     
 }
 
 /// <summary>
-/// 简单请求类接口
+/// Simple request interface.
 /// </summary>
 public interface IMoRequest : IRequest<Res>, IMoRequestBase
 {
@@ -28,9 +28,9 @@ public interface IMoRequest : IRequest<Res>, IMoRequestBase
 }
 
 /// <summary>
-/// 自定义请求类接口
+/// Custom request interface.
 /// </summary>
-/// <typeparam name="TRequest"></typeparam>
+/// <typeparam name="TRequest">The result type returned by the custom request.</typeparam>
 public interface IMoCustomRequest<out TRequest> : IRequest<TRequest>
 {
 

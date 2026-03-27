@@ -5,14 +5,14 @@ using System.Text.RegularExpressions;
 namespace Monica.Framework.UI.UILogging.Models;
 
 /// <summary>
-/// 日志匹配片段，用于前端高亮
+/// Log matching fragments for front-end highlighting
 /// </summary>
-/// <param name="Start">起始位置</param>
-/// <param name="Length">匹配长度</param>
+/// <param name="Start">Start position</param>
+/// <param name="Length">Match length</param>
 public readonly record struct LogMatchSegment(int Start, int Length);
 
 /// <summary>
-/// 日志等级
+/// Log level
 /// </summary>
 public enum LogSeverity
 {
@@ -26,7 +26,7 @@ public enum LogSeverity
 }
 
 /// <summary>
-/// 日志筛选状态
+/// Log filter status
 /// </summary>
 public sealed class LogFilterState
 {
@@ -70,7 +70,7 @@ public sealed class LogFilterState
 }
 
 /// <summary>
-/// 屏幕日志快照
+/// Screen log snapshot
 /// </summary>
 public sealed class ScreenLogSnapshot
 {
@@ -86,7 +86,7 @@ public sealed class ScreenLogSnapshot
 }
 
 /// <summary>
-/// 界面展示用的日志行
+/// Log lines for interface display
 /// </summary>
 public sealed class LogLineViewModel
 {
@@ -127,22 +127,22 @@ public sealed class LogLineViewModel
     public bool IsMatch { get; private set; }
 
     /// <summary>
-    /// 绝对行号（在原始日志文件中的行号）
+    /// Absolute line number (line number in the original log file)
     /// </summary>
     public long? AbsoluteLineNumber { get; private set; }
 
     /// <summary>
-    /// 缓冲区索引（在未过滤的缓冲区中的位置，从1开始）
+    /// Buffer index (position in unfiltered buffer, starting from 1)
     /// </summary>
     public int? BufferIndex { get; private set; }
 
     /// <summary>
-    /// 过滤后索引（在过滤视图中的位置，从1开始，仅在过滤时有值）
+    /// Index after filtering (position in filtered view, starting from 1, only has value when filtering)
     /// </summary>
     public int? FilteredIndex { get; private set; }
 
     /// <summary>
-    /// 是否为上下文跳转的目标行
+    /// Whether it is the target line of the context jump
     /// </summary>
     public bool IsContextTarget { get; private set; }
 
@@ -206,7 +206,7 @@ public sealed class LogLineViewModel
     }
 
     /// <summary>
-    /// 设置位置信息
+    /// Set location
     /// </summary>
     public LogLineViewModel WithPosition(long? absoluteLineNumber, int? bufferIndex, int? filteredIndex = null)
     {
@@ -217,7 +217,7 @@ public sealed class LogLineViewModel
     }
 
     /// <summary>
-    /// 标记为上下文目标行
+    /// Mark as contextual target row
     /// </summary>
     public LogLineViewModel WithContextTarget(bool isTarget)
     {
@@ -226,7 +226,7 @@ public sealed class LogLineViewModel
     }
 
     /// <summary>
-    /// 获取格式化的复制文本
+    /// Get formatted copied text
     /// </summary>
     public string GetCopyText(LogCopyFormat format)
     {
@@ -245,7 +245,7 @@ public sealed class LogLineViewModel
     }
 
     /// <summary>
-    /// 获取格式化的时间戳
+    /// Get formatted timestamp
     /// </summary>
     public string GetFormattedTimestamp()
     {
@@ -254,55 +254,55 @@ public sealed class LogLineViewModel
 }
 
 /// <summary>
-/// 日志复制格式
+/// Log replication format
 /// </summary>
 public enum LogCopyFormat
 {
     /// <summary>
-    /// 原始完整日志行
+    /// Original full log line
     /// </summary>
     Raw,
 
     /// <summary>
-    /// 仅消息内容
+    /// Message content only
     /// </summary>
     MessageOnly,
 
     /// <summary>
-    /// 带时间戳的消息
+    /// timestamped messages
     /// </summary>
     WithTimestamp,
 
     /// <summary>
-    /// 带行号的完整日志
+    /// Full log with line numbers
     /// </summary>
     WithLineNumber
 }
 
 /// <summary>
-/// 日志文件信息
+/// Log file information
 /// </summary>
-/// <param name="FileName">文件名</param>
-/// <param name="Size">文件大小</param>
-/// <param name="LastModified">最后修改时间</param>
-/// <param name="RelativePath">相对路径</param>
+/// <param name="FileName">File name</param>
+/// <param name="Size">File size</param>
+/// <param name="LastModified">Last modified time</param>
+/// <param name="RelativePath">Relative path</param>
 public sealed record class LogFileDescriptor(string FileName, long Size, DateTime LastModified, string RelativePath);
 
 /// <summary>
-/// 导出结果
+/// Export results
 /// </summary>
-/// <param name="FileName">文件名</param>
-/// <param name="ContentType">内容类型</param>
-/// <param name="Content">文件内容</param>
+/// <param name="FileName">File name</param>
+/// <param name="ContentType">Content Type</param>
+/// <param name="Content">File content</param>
 public readonly record struct LogExportResult(string FileName, string ContentType, byte[] Content);
 
 /// <summary>
-/// 上下文日志读取结果
+/// Context log reading results
 /// </summary>
-/// <param name="Lines">日志行列表</param>
-/// <param name="TargetLineNumber">目标行号</param>
-/// <param name="StartLineNumber">起始行号</param>
-/// <param name="EndLineNumber">结束行号</param>
+/// <param name="Lines">Log line list</param>
+/// <param name="TargetLineNumber">Target line number</param>
+/// <param name="StartLineNumber">Start line number</param>
+/// <param name="EndLineNumber">End line number</param>
 public readonly record struct ContextLogResult(
     IReadOnlyList<LogLineViewModel> Lines,
     long TargetLineNumber,

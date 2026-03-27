@@ -9,7 +9,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP
 
         public bool IsServer {  get; set; }
         /// <summary>
-        /// 发送心跳间隔时间（无数据交互时） 秒
+        /// Interval for sending heartbeats when no data is flowing, in seconds.
         /// </summary>
         public TimeSpan? SendTime { get; set; }
 

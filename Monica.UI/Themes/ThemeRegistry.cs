@@ -1,7 +1,7 @@
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 主题注册表 - 管理所有可用主题
+/// Theme Registry - Manage all available themes
 /// </summary>
 public static class ThemeRegistry
 {
@@ -13,7 +13,7 @@ public static class ThemeRegistry
     }
 
     /// <summary>
-    /// 注册默认主题
+    /// Register default theme
     /// </summary>
     private static void RegisterDefaultThemes()
     {
@@ -23,7 +23,7 @@ public static class ThemeRegistry
         RegisterTheme(new ThemeNeonPulse());
         RegisterTheme(new ThemeFresh());
         
-        // 新增的主题
+        // Register new themes.
         RegisterTheme(new ThemeAuroraFlow());
         RegisterTheme(new ThemeInkLandscape());
         RegisterTheme(new ThemeMacaronSweet());
@@ -32,30 +32,30 @@ public static class ThemeRegistry
     }
 
     /// <summary>
-    /// 注册主题
+    /// Register theme
     /// </summary>
-    /// <param name="themeProvider">主题提供者</param>
+    /// <param name="themeProvider">Theme Provider</param>
     public static void RegisterTheme(IThemeProvider themeProvider)
     {
         _themes[themeProvider.Name] = themeProvider;
     }
 
     /// <summary>
-    /// 获取主题提供者
+    /// Get theme provider
     /// </summary>
-    /// <param name="themeName">主题名称</param>
-    /// <returns>主题提供者，如果不存在则返回默认主题</returns>
+    /// <param name="themeName">Theme name</param>
+    /// <returns>Theme provider; returns the default theme when the requested one does not exist.</returns>
     public static IThemeProvider GetTheme(string themeName)
     {
         return _themes.TryGetValue(themeName, out var theme) 
             ? theme 
-            : _themes["default"]; // 如果主题不存在，返回默认主题
+            : _themes["default"]; // Return the default theme when the requested theme does not exist.
     }
 
     /// <summary>
-    /// 获取所有可用主题
+    /// Get all available themes
     /// </summary>
-    /// <returns>主题信息数组</returns>
+    /// <returns>Theme information array</returns>
     public static (string Name, string DisplayName, string Description)[] GetAvailableThemes()
     {
         return _themes.Values
@@ -64,10 +64,10 @@ public static class ThemeRegistry
     }
 
     /// <summary>
-    /// 检查主题是否存在
+    /// Check whether the theme exists
     /// </summary>
-    /// <param name="themeName">主题名称</param>
-    /// <returns>是否存在</returns>
+    /// <param name="themeName">Theme name</param>
+    /// <returns>Exists</returns>
     public static bool ThemeExists(string themeName)
     {
         return _themes.ContainsKey(themeName);

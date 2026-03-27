@@ -21,7 +21,7 @@ public record InvocationInfo(MethodInfo MethodInfo)
     public string OperationName => MethodInfo.Name;
 
     /// <summary>
-    /// 是否是远程调用，需要合并调用链
+    /// Whether it is a remote call, the call chain needs to be merged
     /// </summary>
     public bool IsRemoteCall => MethodInfo.DeclaringType?.IsImplementInterface<IMoRpcApi>() is true;
 
@@ -37,8 +37,8 @@ public record InvocationInfo(MethodInfo MethodInfo)
 /// Method-invocation chain-tracing interceptor built on the current ChainTracking pipeline.
 /// Records chain data automatically for methods that return <see cref="IResultEnvelope" />.
 /// </summary>
-/// <param name="chainTracing">调用链追踪服务</param>
-/// <param name="timekeeperFactory">计时器工厂</param>
+/// <param name="chainTracing">Call chain tracking service</param>
+/// <param name="timekeeperFactory">timer factory</param>
 /// https://kozmic.net/dynamic-proxy-tutorial/
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
@@ -47,16 +47,16 @@ public class ChainTrackingProviderInvocationInterceptor(
     IMoTimekeeperFactory timekeeperFactory) : MoInterceptor
 {
     /// <summary>
-    /// 判断是否应该记录调用链
+    /// Determine whether the call chain should be recorded
     /// </summary>
-    /// <param name="invocation">方法调用信息</param>
+    /// <param name="invocation">Method call information</param>
     /// <param name="info"></param>
-    /// <returns>是否应该记录调用链</returns>
+    /// <returns>Whether the call chain should be logged</returns>
     private static bool ShouldRecordChain(IMoMethodInvocation invocation, [NotNullWhen(true)] out InvocationInfo? info)
     {
         var returnType = invocation.Method.ReturnType;
         info = null;
-        // 如果是 Task<T>，获取 T 的类型
+        // If it is Task<T>, get the type of T
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
         {
             returnType = returnType.GetGenericArguments()[0];
@@ -77,14 +77,14 @@ public class ChainTrackingProviderInvocationInterceptor(
 
 
     /// <summary>
-    /// 拦截方法调用
+    /// Intercepting method calls
     /// </summary>
-    /// <param name="invocation">方法调用信息</param>
+    /// <param name="invocation">Method call information</param>
     public override async Task InterceptAsync(IMoMethodInvocation invocation)
     {
         if (!ShouldRecordChain(invocation, out var info))
         {
-            // 不需要记录调用链的方法，直接执行
+            // There is no need to record the method of the call chain, execute it directly
             try
             {
                 await invocation.ProceedAsync();
@@ -104,11 +104,11 @@ public class ChainTrackingProviderInvocationInterceptor(
 
         var isRemoteCall = info.IsRemoteCall;
 
-        // 开始调用链追踪
+        // Start call chain tracing
         using var scope =
             chainTracing.BeginScope(info.OperationName, info.HandlerName, type: info.GetInvocationType());
 
-        // 创建计时器
+        // Create timer
         using var timer = timekeeperFactory.CreateNormalTimer(info.HandlerName);
         timer.Start();
         
@@ -117,7 +117,7 @@ public class ChainTrackingProviderInvocationInterceptor(
             await invocation.ProceedAsync();
             timer.Finish();
 
-            // 处理成功响应
+            // Handle successful response
             var responseTypeName = ChainTracingHelper.GetResponseTypeName(invocation.Method.ReturnType);
             
             if (invocation.ReturnValue is IResultEnvelope response)
@@ -145,7 +145,7 @@ public class ChainTrackingProviderInvocationInterceptor(
         {
             timer.Finish();
 
-            // 记录异常到调用链
+            // Log exceptions to the call chain
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 
             throw;

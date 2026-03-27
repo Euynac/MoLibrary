@@ -1,24 +1,24 @@
-/* Channel状态卡片样式 */
+/* Styles for the channel status card */
 
-/* 卡片容器 */
+/* Card container */
 .channel-card {
     height: 100%;
     display: flex;
     flex-direction: column;
 }
 
-/* 卡片标题样式 */
+/* Title styling */
 .channel-title {
     font-weight: 500;
 }
 
-/* 卡片内容样式 */
+/* Card content layout */
 .channel-content {
     flex: 1;
     padding-top: 8px;
 }
 
-/* 加载状态样式 */
+/* Loading state layout */
 .loading-container {
     padding: 2rem;
 }
@@ -31,7 +31,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* 端点信息样式 */
+/* Endpoint information styling */
 .endpoint-section-title {
     font-weight: 500;
 }
@@ -40,7 +40,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 中间件信息样式 */
+/* Middleware section styling */
 .middleware-section-title {
     font-weight: 500;
 }
@@ -49,7 +49,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 信息展示中间件样式 */
+/* Info-display middleware heading */
 .info-display-section-title {
     font-weight: 500;
     color: var(--mud-palette-primary);
@@ -79,7 +79,7 @@
     color: var(--mud-palette-text-primary);
 }
 
-/* 异常信息样式 */
+/* Exception info section */
 .exception-section-title {
     font-weight: 500;
     color: #f44336;
@@ -89,7 +89,7 @@
     color: #666;
 }
 
-/* 响应式设计 */
+/* Responsive adjustments */
 @media (max-width: 576px) {
     .stats-container .mud-grid-item {
         min-width: 100%;
@@ -106,7 +106,7 @@
     }
 }
 
-/* MudBlazor组件自定义样式 */
+/* Custom MudBlazor overrides */
 ::deep .channel-card .mud-card-header {
     padding-bottom: 8px;
 }
@@ -116,7 +116,7 @@
     padding-top: 8px;
 }
 
-/* 展开面板样式优化 */
+/* Expansion panel tweaks */
 ::deep .channel-card .mud-expansion-panels {
     box-shadow: none;
 }
@@ -131,17 +131,17 @@
     margin-bottom: 0;
 }
 
-/* 芯片样式优化 */
+/* Chip styling tweaks */
 ::deep .channel-card .mud-chip {
     font-size: 0.75rem;
 }
 
-/* 菜单样式优化 */
+/* Menu styling tweaks */
 ::deep .channel-card .mud-menu .mud-list-item {
     padding: 8px 16px;
 }
 
-/* 统计信息网格优化 */
+/* Layout tweaks for stats grid */
 ::deep .stats-container .mud-grid-item {
     display: flex;
     align-items: center;
@@ -152,29 +152,29 @@
     width: 100%;
 }
 
-/* 图标对齐优化 */
+/* Icon alignment tweaks */
 ::deep .channel-card .mud-icon {
     display: flex;
     align-items: center;
 }
 
-/* 进度条样式 */
+/* Progress indicator positioning */
 ::deep .channel-card .mud-progress-circular {
     margin: 0 auto;
 }
 
-/* 按钮悬停效果 */
+/* Button hover effect */
 ::deep .channel-card .mud-button-root:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 卡片阴影效果 */
+/* Card hover shadow */
 .channel-card:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
     transition: box-shadow 0.3s ease;
 }
 
-/* 异常状态特殊样式 */
+/* Border indicators for exception states */
 .channel-card.has-exceptions {
     border-left: 4px solid var(--mud-palette-error);
 }

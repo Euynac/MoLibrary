@@ -14,7 +14,7 @@
 <PageTitle>事件总线监控</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- 渐变 Header -->
+    <!-- Gradient Header -->
     <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #1976D2 30%, #2196F3 90%); color: white;">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -124,14 +124,14 @@
     private bool _loading = true;
     private CancellationTokenSource _cts = new();
 
-    // 数据
+    // data
     private List<SubscriptionViewModel> _subscriptions = new();
     private List<SubscriptionViewModel> _displayedSubscriptions = new();
     private SubscriptionStatistics? _statistics;
     private List<SubscriptionChangeViewModel> _recentChanges = new();
     private List<EventBusProviderInfo> _providers = new();
 
-    // 过滤器
+    // filter
     private SubscriptionFilter _filter = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -140,7 +140,7 @@
         {
             await LoadDataAsync();
 
-            // 启动实时监听
+            // Start real-time monitoring
             _ = ListenToChangesAsync(_cts.Token);
 
             StateHasChanged();
@@ -154,7 +154,7 @@
 
         try
         {
-            // 加载订阅列表
+            // Load subscription list
             if ((await MonitorService.GetAllSubscriptionsAsync()).IsFailed(out var error, out var subscriptions))
             {
                 Snackbar.Add("加载订阅列表失败: " + error, Severity.Error);
@@ -165,7 +165,7 @@
                 await ApplyFilterAsync();
             }
 
-            // 加载统计信息
+            // Load statistics
             if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
             {
                 Snackbar.Add("加载统计信息失败: " + statsError, Severity.Error);
@@ -175,7 +175,7 @@
                 _statistics = stats;
             }
 
-            // 加载 Provider 列表
+            // Load provider list
             if (ProviderDiscoveryService.GetRegisteredProviders().IsFailed(out var providerError, out var providers))
             {
                 Snackbar.Add("加载 Provider 列表失败: " + providerError, Severity.Error);
@@ -269,14 +269,14 @@
             var reader = MonitorService.SubscribeToChanges();
             await foreach (var change in reader.ReadAllAsync(ct))
             {
-                // 添加到最近变更列表
+                // Add to recent changes list
                 _recentChanges.Insert(0, change);
                 if (_recentChanges.Count > 100)
                 {
                     _recentChanges.RemoveAt(100);
                 }
 
-                // 刷新订阅列表和统计
+                // Refresh subscription list and statistics
                 await RefreshSubscriptionsAsync();
 
                 await InvokeAsync(StateHasChanged);
@@ -407,8 +407,8 @@
 
     private async Task UnsubscribeWithConfirmAsync(SubscriptionViewModel subscription)
     {
-        // 简化处理：直接执行移除，不显示确认对话框
-        // 在生产环境中，可以使用 MudBlazor 的 IDialogService 显示确认对话框
+        // Simplified processing: perform removal directly without displaying a confirmation dialog box
+        // In a production environment, you can use MudBlazor's IDialogService to display a confirmation dialog
         var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.UnsubscribeAsync(subscriptionId)).IsFailed(out var error))
         {

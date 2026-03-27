@@ -4,36 +4,36 @@ using Monica.DataChannel.Pipeline;
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// 管道组件信息
+/// Captures metadata about a pipeline component for UI display.
 /// </summary>
 public class ComponentInfo(IPipeComponent component)
 {
     /// <summary>
-    /// 组件类型
+    /// Component category.
     /// </summary>
     public EPipeComponentType Type { get; } = GetPipeComponentType(component.GetType());
     
     /// <summary>
-    /// 组件名称
+    /// Display name of the component's CLR type.
     /// </summary>
     public string Name => component.GetType().Name;
     
     /// <summary>
-    /// 组件元数据
+    /// Metadata produced by the component.
     /// </summary>
     public object Metadata => component.GetMetadata();
 
     /// <summary>
-    /// 信息展示字典（仅对信息展示中间件有效）
+    /// Dictionary of informational entries (only available for info-display middlewares).
     /// </summary>
     public IReadOnlyDictionary<string, object>? InfoDictionary => 
         component is PipeInfoDisplayMiddlewareBase infoMiddleware ? infoMiddleware.GetInfoDictionary() : null;
 
     /// <summary>
-    /// 获取管道组件类型
+    /// Determines the pipeline component category represented by the supplied type.
     /// </summary>
-    /// <param name="type">组件类型</param>
-    /// <returns>管道组件类型</returns>
+    /// <param name="type">Type of the component.</param>
+    /// <returns>The matching <see cref="EPipeComponentType"/> value.</returns>
     public static EPipeComponentType GetPipeComponentType(Type type)
     {
         if (type.IsAssignableTo(typeof(IPipeEndpoint)))
@@ -41,7 +41,7 @@ public class ComponentInfo(IPipeComponent component)
             return EPipeComponentType.Endpoint;
         }
         
-        // 优先检查信息展示中间件，因为它继承自监控中间件
+        // Prefer info-display middleware because it inherits from the monitor middleware.
         if (type.IsAssignableTo(typeof(PipeInfoDisplayMiddlewareBase)))
         {
             return EPipeComponentType.InfoDisplayMiddleware;
@@ -62,7 +62,7 @@ public class ComponentInfo(IPipeComponent component)
             return EPipeComponentType.EndpointMiddleware;
         }
         
-        // 默认返回基础中间件类型
+        // Fallback to the base middleware category when no specialized type matches.
         return EPipeComponentType.BaseMiddleware;
     }
 }

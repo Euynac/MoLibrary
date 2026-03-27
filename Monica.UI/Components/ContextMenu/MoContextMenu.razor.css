@@ -1,4 +1,4 @@
-/* 右键菜单容器样式 */
+/* Right-click menu container style */
 .mo-context-menu {
     border-radius: 6px;
     background-color: var(--mud-palette-surface);
@@ -6,7 +6,7 @@
     overflow: hidden;
 }
 
-/* 菜单项样式 */
+/* Menu item style */
 ::deep .mo-context-menu-item {
     padding: 10px 16px !important;
     min-height: 40px;
@@ -16,19 +16,19 @@
     position: relative;
 }
 
-/* 菜单项悬停效果 */
+/* menu item hover effect */
 ::deep .mo-context-menu-item:hover:not(.disabled) {
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 禁用的菜单项 */
+/* Disabled menu items */
 ::deep .mo-context-menu-item.disabled {
     opacity: 0.5;
     cursor: not-allowed !important;
     pointer-events: none;
 }
 
-/* 图标样式 */
+/* icon style */
 ::deep .mo-menu-icon {
     width: 18px;
     height: 18px;
@@ -37,7 +37,7 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* 图标占位符（当没有图标时保持对齐） */
+/* Icon placeholder (remains aligned when there is no icon) */
 ::deep .mo-menu-icon-placeholder {
     width: 18px;
     height: 18px;
@@ -45,7 +45,7 @@
     flex-shrink: 0;
 }
 
-/* 菜单文字样式 */
+/* Menu text style */
 ::deep .mo-menu-text {
     flex-grow: 1;
     white-space: nowrap;
@@ -56,18 +56,18 @@
     line-height: 20px;
 }
 
-/* 分隔线样式 */
+/* Divider style */
 ::deep .mud-divider {
     margin: 4px 0 !important;
     opacity: 0.5;
 }
 
-/* 列表容器移除默认padding */
+/* Remove default padding from list container */
 ::deep .mud-list {
     padding: 4px 0 !important;
 }
 
-/* 确保菜单项内容不换行 */
+/* Make sure menu item content does not wrap */
 ::deep .mud-list-item-text {
     display: flex !important;
     align-items: center;
@@ -75,14 +75,14 @@
     padding: 0 !important;
 }
 
-/* 确保MudListItem内部所有元素都使用全宽 */
+/* Make sure all elements inside MudListItem use full width */
 ::deep .mo-context-menu-item .mud-list-item-text > .mud-typography {
     width: 100% !important;
     display: flex !important;
     align-items: center;
 }
 
-/* 暗色主题调整 */
+/* Dark theme adjustment */
 @media (prefers-color-scheme: dark) {
     .mo-context-menu {
         box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.5);
@@ -93,7 +93,7 @@
     }
 }
 
-/* 快捷键提示（如果需要） */
+/* Keytips (if needed) */
 ::deep .mo-menu-shortcut {
     margin-left: auto;
     color: var(--mud-palette-text-disabled);
@@ -104,7 +104,7 @@
     min-width: 50px;
 }
 
-/* 子菜单箭头样式 */
+/* Submenu arrow style */
 ::deep .mo-menu-arrow {
     position: absolute;
     right: 0px;
@@ -117,19 +117,19 @@
     z-index: 10;
 }
 
-/* 确保箭头图标正确显示 */
+/* Make sure the arrow icon displays correctly */
 ::deep .mo-menu-arrow .mud-icon-root {
     width: 16px !important;
     height: 16px !important;
     font-size: 16px !important;
 }
 
-/* 悬停项高亮 */
+/* Hover item highlighting */
 ::deep .mo-context-menu-item.hovered {
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 子菜单特殊样式 */
+/* Submenu special style */
 .mo-context-menu[style*="z-index: 1301"] {
     border: 1px solid var(--mud-palette-divider);
 }

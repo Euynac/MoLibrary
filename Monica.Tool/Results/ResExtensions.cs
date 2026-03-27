@@ -9,7 +9,7 @@ namespace Monica.Tool.Results;
 public static class ResExtensions
 {
     /// <summary>
-    /// 获取响应码对应的HttpStatusCode
+    /// Get the HttpStatusCode corresponding to the response code
     /// </summary>
     /// <returns></returns>
     public static HttpStatusCode? ToHttpStatusCode(this IResultEnvelope? response)
@@ -45,26 +45,26 @@ public static class ResExtensions
             case ResStatus.Unknown:
                 return null;
             default:
-                throw new ArgumentOutOfRangeException(response.ToString(), $"未填写当前状态码{response.Status}对应HTTP状态码的值！");
+                throw new ArgumentOutOfRangeException(response.ToString(), $"No HTTP status code mapping is defined for status {response.Status}.");
         }
     }
 
     /// <summary>
-    /// [500] 微服务调用后需要检查，如果为False，应为服务调用出错，需要记录到微服务调用日志中去。接口调用异常由Mediator自动进行AOP，try catch进行日志记录
+    /// [500] It needs to be checked after the microservice is called. If it is False, it should be an error in the service call and needs to be recorded in the microservice call log. Interface call exceptions are automatically AOPed by Mediator and logged by try catch.
     /// </summary>
     public static bool IsRemoteResultHealthy(this IResultEnvelope res) =>
         res.Status != ResStatus.InternalError && !IsMalformed(res);
 
     /// <summary>
-    ///  [200] 代表请求正常处理
+    ///  [200] means the request is processed normally
     /// </summary>
     public static bool IsOk(this IResultEnvelope res) => res.Status == ResStatus.Ok;
 
     /// <summary>
-    /// 从远程调用请求结果 自动验证并附加信息
+    /// Request results from remote call Automatically validate and append information
     /// </summary>
     /// <param name="res"></param>
-    /// <param name="originInfo">HTTP等原始Response</param>
+    /// <param name="originInfo">HTTP and other original responses</param>
     /// <returns></returns>
     public static void AttachOriginIfMalformed(this IResultEnvelope res, string originInfo)
     {
@@ -75,15 +75,15 @@ public static class ResExtensions
     }
 
     /// <summary>
-    ///  不是一个有效的请求，代表可能返回值并不符合此规范，应注意此情况进行特殊处理。
+    ///  It is not a valid request, which means that the return value may not comply with this specification. You should pay attention to this situation and handle it specially.
     /// </summary>
     public static bool IsMalformed(this IResultEnvelope res)
     {
-        //TODO 需要判断 Res<T> 当OK的情况 Data = null时有规范问题
+        //TODO needs to judge Res<T> when OK Data = null There is a specification issue
         return res.Status == null;
     }
     /// <summary>
-    /// 接口设置额外信息(重复会覆盖)
+    /// Additional information for interface settings (duplication will overwrite)
     /// </summary>
     /// <param name="res"></param>
     /// <param name="name"></param>
@@ -95,7 +95,7 @@ public static class ResExtensions
         return res;
     }
     /// <summary>
-    /// 接口增加额外信息(重复Name则增加后缀)
+    /// Add additional information to the interface (add a suffix if the Name is repeated)
     /// </summary>
     /// <param name="res"></param>
     /// <param name="name"></param>
@@ -108,7 +108,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [MaybeNullWhen(true)]out T data)
     {
@@ -118,7 +118,7 @@ public static class ResExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error)
     {
@@ -128,7 +128,7 @@ public static class ResExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this Res<T?> res, [NotNullWhen(true)] out Res? error, out T? data) where T : struct
     {
@@ -138,7 +138,7 @@ public static class ResExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this Res<T?> res, [NotNullWhen(true)] out Res? error) where T : struct
     {
@@ -148,7 +148,7 @@ public static class ResExtensions
         return true;
     }
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed(this Res res, [NotNullWhen(true)] out Res? error)
     {
@@ -159,7 +159,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error, out ResPaged<T>.PageData data)
     {
@@ -170,7 +170,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// [not 200] 代表请求存在问题
+    /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this ResPaged<T> res, [NotNullWhen(true)] out Res? error)
     {
@@ -181,7 +181,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// [200] 代表请求正常处理
+    /// [200] means the request is processed normally
     /// </summary>
     public static bool IsOk<T>(this ResPaged<T> res, out ResPaged<T>.PageData data)
     {
@@ -189,7 +189,7 @@ public static class ResExtensions
         return res.IsOk();
     }
     /// <summary>
-    /// [200] 代表请求正常处理
+    /// [200] means the request is processed normally
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="res"></param>
@@ -202,7 +202,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// [200] 代表请求正常处理
+    /// [200] means the request is processed normally
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="res"></param>
@@ -215,7 +215,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// 请求正常处理，并提供成功描述。
+    /// The request is processed normally and a success description is provided.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="self"></param>
@@ -229,7 +229,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// 批量调用结果转为单次调用结果。
+    /// Batch call results are converted to single call results.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="responses"></param>
@@ -269,7 +269,7 @@ public static class ResExtensions
 
    
     /// <summary>
-    /// 合并返回值信息，保全两个Res的信息，一般用于两个Res类型不一致的情况
+    /// Merge the return value information to preserve the information of the two Res. It is generally used when the two Res types are inconsistent.
     /// </summary>
     /// <param name="self"></param>
     /// <param name="response"></param>
@@ -284,7 +284,7 @@ public static class ResExtensions
         return self;
     }
     /// <summary>
-    /// 追加信息
+    /// Additional information
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
@@ -294,7 +294,7 @@ public static class ResExtensions
         return Append(self, message, null);
     }
     /// <summary>
-    /// 追加信息
+    /// Additional information
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
@@ -315,7 +315,7 @@ public static class ResExtensions
         return self;
     }
     /// <summary>
-    /// 追加错误
+    /// append error
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
@@ -327,7 +327,7 @@ public static class ResExtensions
     }
 
     /// <summary>
-    /// 根据上层响应创建成功响应或失败响应
+    /// Create a success response or failure response based on the upper layer response
     /// </summary>
     /// <typeparam name="TResponse"></typeparam>
     /// <typeparam name="TLastResponse"></typeparam>

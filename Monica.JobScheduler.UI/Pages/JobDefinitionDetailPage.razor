@@ -22,7 +22,7 @@
     }
     else if (_jobDefinition != null)
     {
-        <!-- 标题和操作按钮 -->
+        <!-- Title and action buttons -->
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
             <MudText Typo="Typo.h4">@_jobDefinition.JobName</MudText>
             <MudStack Row="true" Spacing="2">
@@ -71,7 +71,7 @@
             </MudStack>
         </MudStack>
 
-        <!-- 基本信息 -->
+        <!-- Basic information -->
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">@L["JobDetail:BasicInfo:Title"]</MudText>
             <MudGrid>
@@ -110,7 +110,7 @@
             </MudGrid>
         </MudPaper>
 
-        <!-- 健康指标和统计信息 -->
+        <!-- Health Metrics and Statistics -->
         <MudGrid Class="mb-4">
             <MudItem xs="12" md="6">
                 <JobHealthMetricsCard JobKey="@JobKey" />
@@ -120,7 +120,7 @@
             </MudItem>
         </MudGrid>
 
-        <!-- 运行中的实例 -->
+        <!-- Running instance -->
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.h6">@L["JobDetail:RunningInstances:Title"]</MudText>
@@ -204,7 +204,7 @@
             }
         </MudPaper>
 
-        <!-- 作业信息摘要 -->
+        <!-- Summary of job information -->
         <MudPaper Class="pa-4 mb-4" Elevation="2">
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                 <MudText Typo="Typo.h6">@L["JobDetail:Configuration:Title"]</MudText>
@@ -421,7 +421,7 @@
     {
         if (_jobDefinition == null) return;
 
-        // 显示执行确认对话框
+        // Show execution confirmation dialog
         var parameters = new DialogParameters<JobExecuteDialog>
         {
             { x => x.JobDefinition, _jobDefinition }
@@ -438,7 +438,7 @@
         var dialog = await DialogService.ShowAsync<JobExecuteDialog>(L["Dialogs:JobExecute:Title"], parameters, options);
         var dialogResult = await dialog.Result;
 
-        // 执行结果已在对话框中处理，刷新实例列表
+        // The execution results have been processed in the dialog box and the instance list is refreshed.
         if (dialogResult is { Canceled: false })
         {
             await RefreshRunningInstancesAsync();
@@ -523,7 +523,7 @@
 
         if (result is { Canceled: false })
         {
-            // 刷新页面数据
+            // Refresh page data
             await LoadJobDefinitionAsync();
         }
     }
@@ -550,7 +550,7 @@
 
         if (result is { Canceled: false })
         {
-            // 刷新页面数据
+            // Refresh page data
             await LoadJobDefinitionAsync();
         }
     }

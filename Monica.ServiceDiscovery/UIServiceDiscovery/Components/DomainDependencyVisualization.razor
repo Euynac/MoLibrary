@@ -89,7 +89,7 @@
     </MudCardContent>
 </MudCard>
 
-@* 右键菜单 *@
+@* Context menu *@
 <MoContextMenu TItem="string" 
                Items="@_contextMenuItems" 
                Visible="@_contextMenuOpen"
@@ -110,7 +110,7 @@
     private Dictionary<string, List<RegisteredServiceStatus>> _domainServicesMap = new();
     private bool _loading = false;
     
-    // 筛选相关字段
+    // Filter-related fields
     private bool _showFilterPanel = false;
     private bool _showLayoutPanel = false;
     private string _filterText = string.Empty;
@@ -118,12 +118,12 @@
     private bool _showOnlyWithServices = false;
     private bool _showOnlyWithDependencies = false;
     
-    // 布局相关字段
+    // Layout-related fields
     private DomainLayoutType _currentLayout = DomainLayoutType.Force;
     private int _forceDistance = 200;
     private int _forceStrength = -800;
     
-    // 右键菜单相关字段
+    // Context-menu-related fields
     private bool _contextMenuOpen = false;
     private double _contextMenuX = 0;
     private double _contextMenuY = 0;
@@ -167,7 +167,7 @@
                 _domains = domains ?? [];
                 DomainColorResolver.AssignColors(_domains);
 
-                // 获取合并的服务状态来构建依赖关系
+                // Get merged service statuses to build dependencies
                 if (!(await ServiceDiscoveryFacade.GetMergedServicesStatusAsync()).IsFailed(out var servicesError, out var services))
                 {
                     BuildDomainDependencies(services ?? []);
@@ -178,10 +178,10 @@
                     Snackbar.Add(L["DomainGraph:Messages:GetServicesFailed", servicesError.Message ?? L["Shared:Values:Unknown"].Value].Value, Severity.Warning);
                 }
 
-                // 初始化筛选
+                // Initialize filters
                 InitializeFilters();
                 
-                // 应用筛选
+                // Apply filters
                 await ApplyFilters();
             }
             else
@@ -387,7 +387,7 @@
 
     private void InitializeFilters()
     {
-        // 初始化选择的域
+        // Initialize selected domains
         if (!_selectedDomainsFilter.Any())
         {
             var allDomainNames = _domains.Select(d => d.Name).ToList();
@@ -414,11 +414,11 @@
     {
         _filteredDomains = _domains.Where(domain =>
         {
-            // 域名筛选
+            // Domain-name filter
             if (!_selectedDomainsFilter.Contains(domain.Name))
                 return false;
                 
-            // 文本筛选
+            // Text filter
             if (!string.IsNullOrWhiteSpace(_filterText))
             {
                 var matchesText = domain.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
@@ -429,7 +429,7 @@
                     return false;
             }
             
-            // 仅显示有服务的域
+            // Show only domains that have services
             if (_showOnlyWithServices)
             {
                 var hasServices = _domainServicesMap.ContainsKey(domain.Name) && _domainServicesMap[domain.Name].Any();
@@ -440,13 +440,13 @@
             return true;
         }).ToList();
         
-        // 筛选依赖关系 - 只保留两端都在筛选后域列表中的依赖
+        // Filter dependencies: keep only dependencies whose source and target both exist in the filtered domain list.
         _filteredDependencies = _dependencies.Where(dep =>
         {
             var hasSource = _filteredDomains.Any(d => d.Name == dep.SourceDomain);
             var hasTarget = _filteredDomains.Any(d => d.Name == dep.TargetDomain);
             
-            // 如果仅显示有依赖的域，则需要确保依赖关系两端都存在
+            // If showing only domains with dependencies, both ends of the dependency must exist.
             if (_showOnlyWithDependencies)
             {
                 return hasSource && hasTarget;
@@ -455,7 +455,7 @@
             return hasSource && hasTarget;
         }).ToList();
         
-        // 如果仅显示有依赖的域，进一步过滤域列表
+        // If showing only domains with dependencies, further filter the domain list.
         if (_showOnlyWithDependencies)
         {
             var domainsWithDependencies = new HashSet<string>();
@@ -478,7 +478,7 @@
             var graphData = PrepareGraphData();
             await _jsModule.InvokeVoidAsync("updateGraph", graphData);
             
-            // 应用当前布局设置
+            // Apply current layout settings
             await SetLayout(_currentLayout);
             if (_currentLayout == DomainLayoutType.Force)
             {

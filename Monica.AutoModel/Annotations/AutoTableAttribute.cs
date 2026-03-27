@@ -5,15 +5,16 @@ namespace Monica.AutoModel.Annotations;
 public class AutoTableAttribute : Attribute
 {
     /// <summary>
-    /// 主动模式（仅打了AutoField标签的字段才会启用自动模型功能）为false时则默认为被动模式。为null为使用全局模式设置
+    /// Active mode setting. When <c>false</c>, passive mode is used by default.
+    /// When <c>null</c>, the global module setting is used.
     /// </summary>
     public bool? ActiveMode { get; set; }
     /// <summary>
-    /// 表名
+    /// Table name.
     /// </summary>
     public string? Name { get; set; }
     /// <summary>
-    /// <inheritdoc cref="ModuleAutoModelOption.EnableIgnorePrefix"/>，若为null运用上层设置
+    /// Whether to ignore prefixes. If <c>null</c>, the parent setting is used.
     /// </summary>
     public bool? EnableIgnorePrefix { get; set; }
 }

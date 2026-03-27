@@ -7,7 +7,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Configuration.Model;
 
 /// <summary>
-/// 配置项信息类
+/// Configuration item metadata.
 /// </summary>
 public class OptionItem
 {
@@ -29,57 +29,58 @@ public class OptionItem
     }
 
     /// <summary>
-    /// 配置信息特性
+    /// Option metadata attribute.
     /// </summary>
     public OptionSettingAttribute? Info { get; }
     /// <summary>
-    /// 配置项原始参数名
+    /// Raw option property name.
     /// </summary>
     public string Name => PropertyInfo.Name;
     /// <summary>
-    /// 配置项显示名
+    /// Display title of the option.
     /// </summary>
     public string Title => Info?.Title ?? PropertyInfo.Name;
     /// <summary>
-    /// 配置描述
+    /// Option description.
     /// </summary>
     public string? Description => Info?.Title;
     /// <summary>
-    /// 配置项属性反射信息
+    /// Reflected property info for this option.
     /// </summary>
     public PropertyInfo PropertyInfo { get; }
     /// <summary>
-    /// 配置基本类型
+    /// Basic option value type.
     /// </summary>
     public EOptionItemValueBasicType BasicType { get; set; }
 
     /// <summary>
-    /// 配置基本的系统类型，去除nullable、List等泛型类型后的纯净类型
+    /// Underlying system type after removing wrappers such as nullable and generic collection types.
     /// </summary>
     public Type UnderlyingType { get; private set; } = null!;
     /// <summary>
-    /// 配置特殊类型
+    /// Special option type classification.
     /// </summary>
     public EOptionItemValueSpecialType? SpecialType { get; set; }
     /// <summary>
-    /// 使用:拼接作为Key，与原生Configuration Key保持一致
+    /// Option key joined by ":" to stay consistent with native Configuration keys.
     /// </summary>
     public string Key { get; }
 
     /// <summary>
-    /// 配置项值
+    /// Option value.
     /// </summary>
     public object? Value { get; private set; }
 
     /// <summary>
-    /// 当配置项值为Dictionary或List或类的配置类类型，将会有子配置的配置类信息
+    /// When the option value is a Dictionary, List, or nested configuration class,
+    /// this contains the corresponding sub-configuration metadata.
     /// </summary>
     public MoConfiguration? SubConfigInfo { get; set; }
 
     #region Validate
 
     /// <summary>
-    /// 验证正则表达式
+    /// Validation regex pattern.
     /// </summary>
     public string? ValidateRegexPattern { get; set; }
 
@@ -89,17 +90,17 @@ public class OptionItem
     #region 来源信息
 
     /// <summary>
-    /// 最终配置类绑定到的配置来源
+    /// Effective configuration provider name.
     /// </summary>
     public string? Provider => SourceList.LastOrDefault().Value;
 
     /// <summary>
-    /// 最终配置来源详细
+    /// Effective configuration source details.
     /// </summary>
     public string? Source => SourceList.LastOrDefault().Key;
 
     /// <summary>
-    /// 所有配置来源，越后优先级越高
+    /// All configuration sources. Later entries have higher precedence.
     /// </summary>
     public Dictionary<string, string> SourceList { get; } = new();
     public void SetSource(IConfigurationProvider provider, string sourceInfo)
@@ -115,27 +116,28 @@ public class OptionItem
         {
             if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>) && type.GenericTypeArguments[1] is {IsClass:true} dictValueType && UtilsConfiguration.HasConfigAttribute(dictValueType))
             {
-                SubConfigInfo = new MoConfiguration(dictValueType);//字典嵌套配置类
+                SubConfigInfo = new MoConfiguration(dictValueType); // Nested configuration class inside dictionary value type.
             }
             else if (type.GetGenericTypeDefinition() == typeof(List<>) &&
                      type.GenericTypeArguments[0] is {IsClass: true} listValueType &&
                      UtilsConfiguration.HasConfigAttribute(listValueType))
             {
-                SubConfigInfo = new MoConfiguration(listValueType);//列表嵌套配置类
+                SubConfigInfo = new MoConfiguration(listValueType); // Nested configuration class inside list item type.
             }
         }
         else if(PropertyInfo.PropertyType is {IsClass:true, IsArray:false} propertyType && propertyType != typeof(string))
         {
-            SubConfigInfo = new MoConfiguration(propertyType);//单配置类
+            SubConfigInfo = new MoConfiguration(propertyType); // Single nested configuration class.
         }
     }
 
     /// <summary>
-    /// 根据配置类获取配置项信息列表（必须是含有set方法的属性）
+    /// Creates option item metadata from a configuration type
+    /// (only properties with setters are included).
     /// </summary>
     /// <param name="configType"></param>
     /// <param name="configInstance"></param>
-    /// <param name="parentKey">即配置节点SectionName</param>
+    /// <param name="parentKey">Configuration section name.</param>
     /// <returns></returns>
     public static List<OptionItem> CreateItems(Type configType, object? configInstance, string? parentKey)
     {
@@ -159,7 +161,7 @@ public class OptionItem
     }
 
     /// <summary>
-    /// 根据类型及设置生成验证的正则表达式
+    /// Generates validation regex based on property type and annotations.
     /// </summary>
     /// <param name="property"></param>
     /// <returns></returns>
@@ -177,7 +179,7 @@ public class OptionItem
         return null;
     }
 
-    #region 类型正规化
+    #region Type Normalization
 
     private static readonly HashSet<Type> NumericSet = [typeof(int), typeof(long), typeof(double)];
     private static readonly HashSet<Type> DateTimeSet = [typeof(DateTime)];

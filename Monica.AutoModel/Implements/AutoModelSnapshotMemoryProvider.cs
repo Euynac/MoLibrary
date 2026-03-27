@@ -17,7 +17,7 @@ using Monica.Tool.Extensions;
 namespace Monica.AutoModel.Implements;
 
 /// <summary>
-/// AutoModel内存快照服务
+/// AutoModel in-memory snapshot service.
 /// </summary>
 /// <typeparam name="TModel"></typeparam>
 public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
@@ -33,7 +33,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
 
     private static IEnumerable<PropertyInfo> GetAutoFieldTypes(Type type)
     {
-        //巨坑：string也是Class，引用类型。string?本质上是加了一个NullableContextAttribute. 所以string?和string可用typeof(string)统一判断。
+        // Caveat: string is also a reference type class. string? merely adds NullableContextAttribute, so treat string? the same as string using typeof(string).
         return type.GetProperties().OrderByDescending(p => p.PropertyType == typeof(string)).ThenBy(p => p.PropertyType.IsClass);
     }
 
@@ -58,7 +58,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
             isActiveMode = tableAttribute.ActiveMode ?? isActiveMode;
         }
 
-        var navigatedTypeNames = new HashSet<Type>();//防止嵌套造成的栈溢出。仅支持同种类型深入一层调用。
+        var navigatedTypeNames = new HashSet<Type>();// Prevent nested navigation from causing stack overflows; only support one level deep for the same type.
         List<string> allOriginActivateNames = [];
 
         ExtractFieldInfo(GetAutoFieldTypes(typeof(TModel)));
@@ -80,10 +80,10 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
             foreach (var p in propertyInfos)
             {
                 var fieldAttribute = p.GetCustomAttribute<AutoFieldAttribute>();
-                //如果是主动模式，但是没有设置AutoFieldAttribute，则跳过
+                // Skip when active mode is enabled but AutoFieldAttribute is missing.
                 if (isActiveMode && fieldAttribute == null) continue;
                 if (fieldAttribute?.Ignore is true) continue;
-                //如果未使用AutoField标签，且使用NotMapped, JsonIgnore的也自动忽略
+                // Automatically ignore fields without AutoField attribute or annotated with NotMapped/JsonIgnore.
                 if (fieldAttribute is null)
                 {
                     if (!options.DisableAutoIgnorePropertyWithNotMappedAttribute && p.GetCustomAttribute<NotMappedAttribute>() != null) continue;
@@ -91,10 +91,10 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                 }
 
 
-                //字典类型不支持
+                // Dictionary types are not supported.
                 if (typeof(IDictionary).IsAssignableFrom(p.PropertyType)) continue;
 
-                //判断是否是导航属性
+                // Determine whether the property is a navigation property.
                 if (p.PropertyType.GetGenericUnderlyingType() is { IsClass: true } underlyingType && underlyingType != typeof(string))
                 {
                     if (!navigatedTypeNames.Add(underlyingType)) continue;
@@ -116,7 +116,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     };
                     if (fromNavigateProperty != null)
                     {
-                        //对于ID字段特殊处理，即使开启了忽略前缀，也需要保留ID前缀
+                        // Treat ID properties specially; even when ignoring prefixes, keep the "ID" prefix.
                         if (p.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
                         {
                             field.EnableIgnorePrefix = false;
@@ -146,7 +146,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     if (activateNames.Count == 0)
                     {
                         var propertyName = field.DefaultActiveName;
-                        activateNames.Add(propertyName.ToLowerInvariant());//正规化后的激活名，用以忽略大小写匹配
+                        activateNames.Add(propertyName.ToLowerInvariant());// Normalized active name used for case-insensitive matching.
                         allOriginActivateNames.Add(propertyName);
                     }
 
@@ -173,7 +173,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                             technicalDetail: $"类型: {propertyTypeName}, 所在类: {declaringTypeName}");
                     }
 
-                    Console.WriteLine(msg); //TODO 后续换为统一模块日志
+                    Console.WriteLine(msg); // TODO: replace with the unified module logger later.
                 }
             }
 
@@ -182,7 +182,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
     }
 
     /// <summary>
-    /// 检查字段模糊设置
+    /// Validates fuzzy field configuration.
     /// </summary>
     /// <param name="propertyInfo"></param>
     /// <param name="fieldSetting"></param>

@@ -12,12 +12,12 @@ public interface IMoProjectCatalog
     string GetDomainName(string projectName);
 
     /// <summary>
-    /// Get domain title (Chinese display name) by domain name (e.g., "Flight" → "航班子域")
+    /// Get domain display title by domain name (e.g., "Flight" -> "Flight Domain")
     /// </summary>
     string GetDomainTitle(string domainName);
 
     /// <summary>
-    /// Get project display name for UI (e.g., "FlightService.API" → "航班服务")
+    /// Get project display name for UI (e.g., "FlightService.API" -> "Flight Service")
     /// </summary>
     string GetProjectDisplayName(string projectName);
 

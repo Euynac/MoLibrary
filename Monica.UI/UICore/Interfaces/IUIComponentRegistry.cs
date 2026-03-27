@@ -6,55 +6,55 @@ using Monica.UI.UICore.Models;
 namespace Monica.UI.UICore.Interfaces;
 
 /// <summary>
-/// UI组件注册接口，用于模块化注册Blazor组件
+/// UI component registration interface for modular registration of Blazor components
 /// </summary>
 public interface IUIComponentRegistry
 {
     /// <summary>
-    /// 注册页面组件
+    /// Register page components
     /// </summary>
-    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
-    /// <param name="route">路由路径</param>
-    /// <param name="displayName">显示名称</param>
-    /// <param name="icon">图标</param>
-    /// <param name="category">分类</param>
-    /// <param name="addToNav">是否添加到导航菜单</param>
-    /// <param name="navOrder">导航菜单排序顺序</param>
-    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
+    /// <param name="route">Route path</param>
+    /// <param name="displayName">Display name</param>
+    /// <param name="icon">icon</param>
+    /// <param name="category">Category</param>
+    /// <param name="addToNav">Whether to add to the navigation menu</param>
+    /// <param name="navOrder">Navigation menu sort order</param>
+    /// <param name="navLinkMatch">Navigation link matching pattern</param>
     void RegisterComponent<T>(string route, string displayName, string? icon = null, string? category = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase;
 
     /// <summary>
-    /// 注册页面组件（支持本地化）
+    /// Register page components (support localization)
     /// </summary>
-    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
-    /// <param name="route">路由路径</param>
-    /// <param name="displayNameKey">显示名称的本地化键（使用UIRegistryResource）</param>
-    /// <param name="icon">图标</param>
-    /// <param name="categoryKey">分类的本地化键（使用UIRegistryResource）</param>
-    /// <param name="addToNav">是否添加到导航菜单</param>
-    /// <param name="navOrder">导航菜单排序顺序</param>
-    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
+    /// <param name="route">Route path</param>
+    /// <param name="displayNameKey">Localized key for display name (using UIRegistryResource)</param>
+    /// <param name="icon">icon</param>
+    /// <param name="categoryKey">Category localization key (using UIRegistryResource)</param>
+    /// <param name="addToNav">Whether to add to the navigation menu</param>
+    /// <param name="navOrder">Navigation menu sort order</param>
+    /// <param name="navLinkMatch">Navigation link matching pattern</param>
     void RegisterLocalizedComponent<T>(string route, string displayNameKey, string? icon = null, string? categoryKey = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase;
 
     /// <summary>
-    /// 获取当前注册组件相关的附加的程序集
+    /// Get additional assemblies related to the currently registered component
     /// </summary>
-    /// <returns>附加的程序集</returns>
+    /// <returns>Additional assemblies</returns>
     Assembly[] GetAdditionalAssemblies();
 
     /// <summary>
-    /// 获取所有注册的页面
+    /// Get all registered pages
     /// </summary>
     IReadOnlyList<UIPageInfo> GetRegisteredPages();
 
     /// <summary>
-    /// 获取所有注册的导航项
+    /// Get all registered navigation items
     /// </summary>
     IReadOnlyList<UINavItem> GetNavItems();
 
     /// <summary>
-    /// 获取注册的组件类型
+    /// Get the registered component type
     /// </summary>
-    /// <param name="name">组件名称</param>
+    /// <param name="name">Component name</param>
     Type? GetComponentType(string name);
 } 

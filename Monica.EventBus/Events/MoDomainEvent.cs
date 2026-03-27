@@ -1,7 +1,7 @@
 namespace Monica.EventBus.Events;
 
 /// <summary>
-/// 领域事件基类
+/// Base class for domain events.
 /// </summary>
 public class MoDomainEvent : IMoDomainEvent
 {
@@ -9,7 +9,7 @@ public class MoDomainEvent : IMoDomainEvent
 }
 
 /// <summary>
-/// 指示是领域事件
+/// Marker interface for domain events.
 /// </summary>
 public interface IMoDomainEvent
 {

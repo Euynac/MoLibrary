@@ -3,38 +3,38 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 主题提供者接口
+/// Theme provider interface
 /// </summary>
 public interface IThemeProvider
 {
     /// <summary>
-    /// 主题名称
+    /// Topic name
     /// </summary>
     string Name { get; }
     
     /// <summary>
-    /// 主题显示名称
+    /// Topic display name
     /// </summary>
     string DisplayName { get; }
     
     /// <summary>
-    /// 主题描述
+    /// Topic description
     /// </summary>
     string Description { get; }
     
     /// <summary>
-    /// 创建MudTheme实例
+    /// Create MudTheme instance
     /// </summary>
-    /// <returns>配置好的MudTheme实例</returns>
+    /// <returns>Configured MudTheme instance</returns>
     MudTheme CreateTheme();
     
     /// <summary>
-    /// 获取明亮模式下的代码块主题
+    /// Get the Code Blocks theme in light mode
     /// </summary>
     CodeBlockTheme LightCodeBlockTheme { get; }
     
     /// <summary>
-    /// 获取暗黑模式下的代码块主题
+    /// Get the Code Blocks theme in dark mode
     /// </summary>
     CodeBlockTheme DarkCodeBlockTheme { get; }
 }

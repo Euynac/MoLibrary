@@ -4,28 +4,28 @@ using Monica.Modules;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 项目单元方法元数据辅助类
+/// Project unit methods metadata helper class
 /// </summary>
 public static class ProjectUnitXmlDocHelper
 {
     /// <summary>
-    /// 获取指定类型的公共方法元数据
+    /// Get the public method metadata of the specified type
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <param name="baseType">要排除的基类类型</param>
-    /// <returns>方法元数据列表</returns>
+    /// <param name="type">type</param>
+    /// <param name="baseType">Base class types to exclude</param>
+    /// <returns>Method metadata list</returns>
     public static List<ProjectUnitMethod> GetPublicMethods(Type type, Type? baseType = null)
     {
         return GetMethods(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static, baseType);
     }
 
     /// <summary>
-    /// 获取指定类型的方法元数据
+    /// Get method metadata of a specified type
     /// </summary>
-    /// <param name="type">类型</param>
-    /// <param name="bindingFlags">绑定标志</param>
-    /// <param name="baseType">要排除的基类类型</param>
-    /// <returns>方法元数据列表</returns>
+    /// <param name="type">type</param>
+    /// <param name="bindingFlags">binding flag</param>
+    /// <param name="baseType">Base class types to exclude</param>
+    /// <returns>Method metadata list</returns>
     public static List<ProjectUnitMethod> GetMethods(Type type, BindingFlags bindingFlags, Type? baseType = null)
     {
         var methods = type.GetMethods(bindingFlags)
@@ -33,7 +33,7 @@ public static class ProjectUnitXmlDocHelper
                         m.DeclaringType != typeof(object)); // 排除从Object继承的方法
             
 
-        // 如果指定了基类类型，也排除基类的方法
+        // If a base class type is specified, base class methods are also excluded
         if (baseType != null)
         {
             methods = methods.Where(m => m.DeclaringType != baseType);
@@ -54,20 +54,20 @@ public static class ProjectUnitXmlDocHelper
         return unitMethods;
     }
     /// <summary>
-    /// 获取类型的XML文档信息
+    /// Get type XML document information
     /// </summary>
-    /// <param name="type">指定类型</param>
-    /// <returns>类型描述，如果没有则返回null</returns>
+    /// <param name="type">Specify type</param>
+    /// <returns>Type description, returns null if none</returns>
     public static string? ExtractTypeDescription(Type type)
     {
         var xmlService = ModuleXmlDocumentation.Singleton;
         return xmlService?.GetTypeDocumentation(type);
     }
     /// <summary>
-    /// 提取方法描述（从XML注释中获取）
+    /// Extract method description (obtained from XML annotation)
     /// </summary>
-    /// <param name="method">方法信息</param>
-    /// <returns>方法描述，如果没有则返回null</returns>
+    /// <param name="method">method information</param>
+    /// <returns>Method description, returns null if none</returns>
     public static string? ExtractMethodDescription(MethodInfo method)
     {
         var xmlService = ModuleXmlDocumentation.Singleton;

@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 墨韵山水主题 - 中国水墨画风格主题
+/// Moyun Landscape Theme - Chinese Ink Painting Style Theme
 /// </summary>
 public class ThemeInkLandscape : ThemeBase
 {

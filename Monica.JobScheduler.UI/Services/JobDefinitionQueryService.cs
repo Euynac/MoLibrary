@@ -11,7 +11,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 作业定义查询服务
+/// Job definition query service
 /// </summary>
 public class JobDefinitionQueryService(
     JobSchedulerApiService apiService,
@@ -57,7 +57,7 @@ public class JobDefinitionQueryService(
                 pageSize: 1,
                 cancellationToken: cancellationToken);
 
-            // ResPaged 失败时，Code 不是 Ok
+            // ResPaged fails when Code is not Ok
             if (result.IsFailed(out var error))
             {
                 return Res.Fail($"Failed to get job definition: {error.Message}");
@@ -73,7 +73,7 @@ public class JobDefinitionQueryService(
     }
 
     /// <summary>
-    /// 获取带有上次执行信息的作业定义列表
+    /// Get a list of job definitions with last execution information
     /// </summary>
     public async Task<ResPaged<JobDefinitionWithLastExecution>> GetJobDefinitionsWithLastExecutionAsync(
         JobDefinitionFilterRequest filter,
@@ -99,7 +99,7 @@ public class JobDefinitionQueryService(
 
             var definitions = pageData.Items ?? [];
 
-            // 批量获取所有作业的最后执行实例（一次查询，避免N+1问题）
+            // Obtain the last execution instances of all jobs in batches (one query to avoid the N+1 problem)
             var jobKeys = definitions.Select(d => d.JobKey).ToList();
             var lastExecutionMap = await metadataRepository.GetLatestInstancesAsync(jobKeys, cancellationToken);
 
@@ -112,10 +112,10 @@ public class JobDefinitionQueryService(
                     Definition = definition
                 };
 
-                // 从批量查询结果中获取上次执行实例
+                // Get the last execution instance from batch query results
                 enhanced.LastExecution = lastExecutionMap.GetValueOrDefault(definition.JobKey);
 
-                // 计算下次执行时间（仅针对 RecurringJob）
+                // Calculate the next execution time (only for RecurringJob)
                 if (definition.JobType == JobType.Recurring && !string.IsNullOrEmpty(definition.CronExpression))
                 {
                     enhanced.NextExecutionTime = CalculateNextExecutionTime(definition.CronExpression, definition.StartTime, definition.EndTime);
@@ -138,7 +138,7 @@ public class JobDefinitionQueryService(
     }
 
     /// <summary>
-    /// 计算 RecurringJob 的下次执行时间
+    /// Calculate the next execution time of RecurringJob
     /// </summary>
     private DateTime? CalculateNextExecutionTime(string cronExpression, DateTime? startTime, DateTime? endTime)
     {
@@ -147,12 +147,12 @@ public class JobDefinitionQueryService(
             var cron = CronExpression.Parse(cronExpression, Cronos.CronFormat.IncludeSeconds);
             var now = DateTime.UtcNow;
 
-            // 如果有开始时间限制，使用开始时间和当前时间中较晚的时间
+            // If there is a start time limit, use the later of the start time and the current time
             var fromTime = startTime.HasValue && startTime.Value > now ? startTime.Value : now;
 
             var nextOccurrence = cron.GetNextOccurrence(fromTime, _cronTimeZone);
 
-            // 检查是否超过结束时间
+            // Check if the end time is exceeded
             if (nextOccurrence.HasValue && endTime.HasValue && nextOccurrence.Value > endTime.Value)
             {
                 return null;

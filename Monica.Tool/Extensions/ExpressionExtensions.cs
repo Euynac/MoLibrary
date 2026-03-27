@@ -6,7 +6,7 @@ namespace Monica.Tool.Extensions;
 public static class ExpressionExtensions
 {
     /// <summary>
-    /// 获取表达式选择的成员名
+    /// Get the member name selected by the expression
     /// </summary>
     /// <param name="lambda"></param>
     /// <returns></returns>
@@ -27,7 +27,7 @@ public static class ExpressionExtensions
     }
 
     /// <summary>
-    /// 从给定对象中获取给定属性选择表达式中选择的属性的值
+    /// Gets the value of the attribute selected in the given attribute selection expression from the given object
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TReturn"></typeparam>
@@ -42,7 +42,7 @@ public static class ExpressionExtensions
         throw new ArgumentException($"Invalid expression. You should select property in {typeof(T).GetCleanFullName()}. (eg. obj => obj.Name)");
     }
     /// <summary>
-    /// 获取给定属性选择表达式中选择的属性的信息
+    /// Gets information about the attribute selected in the given attribute selection expression
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="TReturn"></typeparam>

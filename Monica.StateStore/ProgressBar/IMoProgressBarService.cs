@@ -1,29 +1,29 @@
 namespace Monica.StateStore.ProgressBar;
 
 /// <summary>
-/// (Singleton) 进度条服务接口
+/// (Singleton) Progress bar service interface
 /// </summary>
 public interface IMoProgressBarService
 {
     /// <summary>
-    /// 创建一个新的进度条任务
+    /// Create a new progress bar task
     /// </summary>
-    /// <param name="id">为空则生成GUID作为Key</param>
+    /// <param name="id">If it is empty, a GUID is generated as the Key.</param>
     /// <param name="settingAction"></param>
     /// <returns></returns>
     Task<ProgressBar> CreateProgressBarAsync(string? id = null, Action<ProgressBarSetting>? settingAction = null);
 
     /// <summary>
-    /// 获取分布式进度条
+    /// Get distributed progress bar
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
     Task<ProgressBar?> FetchDistributedProgressBar(string id);
     /// <summary>
-    /// 创建一个新的自定义进度条任务
+    /// Create a new custom progress bar task
     /// </summary>
     /// <typeparam name="TCustomProgressBar"></typeparam>
-    /// <param name="id">为空则生成GUID作为Key</param>
+    /// <param name="id">If it is empty, a GUID is generated as the Key.</param>
     /// <param name="settingAction"></param>
     /// <returns></returns>
     Task<TCustomProgressBar> CreateProgressBarAsync<TCustomProgressBar>(string? id = null, Action<ProgressBarSetting>? settingAction = null)
@@ -31,54 +31,54 @@ public interface IMoProgressBarService
 
 
     /// <summary>
-    /// 获取自定义分布式进度条
+    /// Get a custom distributed progress bar
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
     Task<TCustomProgressBar?> FetchDistributedProgressBar<TCustomProgressBar, TCustomStatus>(string id) where TCustomProgressBar : ProgressBar where TCustomStatus : ProgressBarStatus;
     /// <summary>
-    /// 获取指定进度条的取消令牌
+    /// Get the cancellation token of the specified progress bar
     /// </summary>
-    /// <param name="id">取消令牌的唯一标识键</param>
-    /// <returns>返回与指定键关联的取消令牌</returns>
+    /// <param name="id">Unique identification key for cancellation token</param>
+    /// <returns>Returns the cancellation token associated with the specified key</returns>
     Task<CancellationToken> GetProgressBarCancellationTokenAsync(string id);
     /// <summary>
-    /// 获取指定进度条状态
+    /// Get the specified progress bar status
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
     Task<ProgressBarStatus?> GetProgressBarStatusAsync(string id);
 
     /// <summary>
-    /// 获取指定进度条的自定义状态
+    /// Get the custom status of the specified progress bar
     /// </summary>
-    /// <typeparam name="TCustomStatus">自定义状态类型</typeparam>
-    /// <param name="id">进度条ID</param>
+    /// <typeparam name="TCustomStatus">Custom status type</typeparam>
+    /// <param name="id">Progress bar ID</param>
     /// <returns></returns>
     Task<TCustomStatus?> GetProgressBarStatusAsync<TCustomStatus>(string id) where TCustomStatus : ProgressBarStatus;
 
     /// <summary>
-    /// 更新进度条状态
+    /// Update progress bar status
     /// </summary>
-    /// <param name="progressBar">进度条实例</param>
-    /// <param name="saveInstantly">是否立即保存，默认false。如果进度条有自动更新设置且此参数为false，则不会立即保存</param>
-    /// <param name="isComplete">是否是完成状态</param>
+    /// <param name="progressBar">Progress bar example</param>
+    /// <param name="saveInstantly">Whether to save immediately, default false. If the progress bar has auto-update settings and this parameter is false, it will not be saved immediately.</param>
+    /// <param name="isComplete">Is it a completed state?</param>
     /// <returns></returns>
     ValueTask SaveProgressBarStateAsync(ProgressBar progressBar, bool saveInstantly = false,
         bool isComplete = false);
 
     /// <summary>
-    /// 完成进度条任务
+    /// Complete progress bar task
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
     Task FinishProgressBarAsync(ProgressBar status);
 
     /// <summary>
-    /// 取消进度条任务
+    /// Cancel progress bar task
     /// </summary>
     /// <param name="status"></param>
-    /// <param name="reason">取消原因</param>
+    /// <param name="reason">Reason for cancellation</param>
     /// <returns></returns>
     Task CancelProgressBarAsync(ProgressBar status, string? reason = null);
 }
@@ -86,32 +86,32 @@ public interface IMoProgressBarService
 public class ProgressBarSetting
 {
     /// <summary>
-    /// 默认为空，当进度条每次进度更新时候即时更新状态到状态存储。对于一些进度变更频繁的进度条，建议设置此自动更新的时间间隔，后台每隔设定的时间间隔会判断是否需要自动更新状态到状态存储。
+    /// The default is empty. When the progress bar is updated every time, the status is updated to the status storage immediately. For some progress bars with frequent progress changes, it is recommended to set this automatic update time interval. The background will determine whether it needs to automatically update the status to the status storage every set time interval.
     /// </summary>
     public TimeSpan? AutoUpdateDuration { get; set; }
 
     /// <summary>
-    /// 创建分布式进度条
+    /// Create a distributed progress bar
     /// </summary>
     public bool UseDistributedProgressBar { get; set; }
 
     /// <summary>
-    /// 进度条任务的总步数，默认为100
+    /// The total number of steps in the progress bar task, the default is 100
     /// </summary>
     public int TotalSteps { get; set; } = 100;
 
     /// <summary>
-    /// 进度条状态的生存时间，超过此时间后状态未更新将被自动清理，默认为5分钟
+    /// The survival time of the progress bar status. If the status is not updated after this time, it will be automatically cleared. The default is 5 minutes.
     /// </summary>
     public TimeSpan TimeToLive { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// 进度条状态完成后的生存时间，超过此时间后状态将被自动清理，默认为3分钟
+    /// The survival time after the progress bar status is completed. After this time, the status will be automatically cleared. The default is 3 minutes.
     /// </summary>
     public TimeSpan CompletedTimeToLive { get; set; } = TimeSpan.FromMinutes(3);
     
     /// <summary>
-    /// 分布式印记
+    /// distributed imprint
     /// </summary>
     internal string? DistributedStamp { get; set; }
 }

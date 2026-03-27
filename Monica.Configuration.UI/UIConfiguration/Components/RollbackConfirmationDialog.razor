@@ -24,7 +24,7 @@
                 <MudCardContent>
                     @if (!string.IsNullOrEmpty(CurrentValue) || !string.IsNullOrEmpty(History.OldValue?.ToString()))
                     {
-                        <!-- 显示从当前值回滚到历史目标值的变化 -->
+                        <!-- Shows the change from the current value rolled back to the historical target value -->
                         <DiffViewer OriginText="@(CurrentValue ?? string.Empty)" 
                                    NewText="@(History.OldValue?.ToString() ?? string.Empty)" />
                     }

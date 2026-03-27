@@ -6,24 +6,24 @@ namespace Monica.AutoModel.Interfaces;
 public interface IAutoModelOperator<TModel>
 {
     /// <summary>
-    /// 将选择字段转换为自动模型字段对象
+    /// Converts selected field names to AutoModel field objects.
     /// </summary>
-    /// <param name="selectProperties"></param>
-    /// <returns></returns>
+    /// <param name="selectProperties">The selected field names.</param>
+    /// <returns>The matching AutoModel field objects.</returns>
     List<AutoField> GetFields(params string[] selectProperties);
     /// <summary>
-    /// 将选择字段转换为自动模型字段对象
+    /// Converts selected field names to AutoModel field objects, excluding the specified fields.
     /// </summary>
-    /// <param name="selectProperties"></param>
-    /// <returns></returns>
+    /// <param name="selectProperties">The field names to exclude.</param>
+    /// <returns>The remaining AutoModel field objects.</returns>
     List<AutoField> GetFieldsExpect(params string[] selectProperties);
 
     /// <summary>
-    /// 将选择字段表达式转换为自动模型字段对象，需要使用 <see cref="AutoModelExpressionOptions.SelectSeparator"/> 分割
+    /// Converts a selected-field expression into AutoModel field objects.
     /// </summary>
-    /// <param name="selectExpression"></param>
-    /// <param name="isReverseSelect">是否是反向选择，即选择除了给定字段的字段</param>
-    /// <returns></returns>
+    /// <param name="selectExpression">The selected-field expression separated by <see cref="AutoModelExpressionOptions.SelectSeparator"/>.</param>
+    /// <param name="isReverseSelect">Whether this is a reverse selection that excludes the specified fields.</param>
+    /// <returns>The normalized AutoModel field objects.</returns>
     List<AutoField> NormalizeLiteralSelect(string selectExpression, bool isReverseSelect = false);
     /// <summary>
     /// <inheritdoc cref="NormalizeLiteralSelect"/>
@@ -35,9 +35,9 @@ public interface IAutoModelOperator<TModel>
         bool isReverseSelect = false);
 
     /// <summary>
-    /// 获取过滤表达式的归一化结果
+    /// Gets the normalized result of a filter expression.
     /// </summary>
-    /// <param name="filter"></param>
-    /// <returns></returns>
+    /// <param name="filter">The filter expression.</param>
+    /// <returns>The normalized filter result.</returns>
     NormalizedResult GetNormalizedResult(string filter);
 }

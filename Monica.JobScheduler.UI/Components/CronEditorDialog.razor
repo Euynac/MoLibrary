@@ -45,7 +45,7 @@
     {
         _cronExpression = JobDefinition?.CronExpression ?? string.Empty;
 
-        // 根据表达式段数判断格式
+        // Determine the format based on the number of expression segments
         var parts = _cronExpression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         _format = parts.Length == 6 ? CronFormat.Quartz : CronFormat.Standard;
     }
@@ -67,7 +67,7 @@
 
         try
         {
-            // 更新作业定义
+            // Update job definition
             JobDefinition.CronExpression = _cronExpression;
             var result = await UIService.UpdateJobConfigAsync(JobDefinition);
 

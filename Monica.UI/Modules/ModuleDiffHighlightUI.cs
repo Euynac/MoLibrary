@@ -14,7 +14,7 @@ public static class ModuleDiffHighlightUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 DiffHighlightUI 模块
+        /// Configure the DiffHighlightUI module
         /// </summary>
         public static ModuleDiffHighlightUIGuide AddDiffHighlightUI(Action<ModuleDiffHighlightUIOption>? action = null)
         {
@@ -24,7 +24,7 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 }
 
 /// <summary>
-/// 文本差异对比高亮UI模块
+/// Text difference contrast highlighting UI module
 /// </summary>
 [ModuleKey(EMoModuleKey.DiffHighlightUI)]
 public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
@@ -33,7 +33,8 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 无需添加额外的服务，直接使用源模块的DiffHighlightService
+        // No extra services are required here.
+        // This module directly reuses DiffHighlightService from the source module.
     }
 
     public override void ClaimDependencies()
@@ -54,19 +55,19 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
 }
 
 /// <summary>
-/// DiffHighlightUI模块向导
+/// DiffHighlightUI Module Wizard
 /// </summary>
 public class ModuleDiffHighlightUIGuide : MoModuleGuide<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>
 {
 }
 
 /// <summary>
-/// DiffHighlightUI模块选项
+/// DiffHighlightUI module options
 /// </summary>
 public class ModuleDiffHighlightUIOption : MoModuleOption<ModuleDiffHighlightUI>
 { 
     /// <summary>
-    /// 是否禁用差异对比页面
+    /// Whether to disable the difference comparison page
     /// </summary>
     public bool DisableDiffHighlightPage { get; set; }
 }

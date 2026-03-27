@@ -24,7 +24,7 @@ public static class ModuleLoggingBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Logging 模块
+        /// Configure Logging module
         /// </summary>
         public static ModuleLoggingGuide AddLogging(Action<ModuleLoggingOption>? action = null)
         {

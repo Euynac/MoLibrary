@@ -9,8 +9,8 @@ using Monica.ServiceDiscovery.Models;
 namespace Monica.ServiceDiscovery.Providers;
 
 /// <summary>
-/// 默认的注册中心客户端信息实现
-/// 从ModuleServiceDiscoveryOption读取配置，并提供智能的自动检测回退值
+/// Default registration center client information implementation
+/// Read configuration from ModuleServiceDiscoveryOption and provide intelligent automatic detection of fallback values
 /// </summary>
 public class DefaultServiceDiscoveryClientInfo(
     IOptions<ModuleServiceDiscoveryOption> options,
@@ -18,11 +18,11 @@ public class DefaultServiceDiscoveryClientInfo(
 {
     private readonly ModuleServiceDiscoveryOption _options = options.Value;
 
-    // 延迟初始化基础服务信息（避免重复执行昂贵操作）
+    // Lazy initialization of basic service information (to avoid repeated expensive operations)
     private readonly Lazy<InstanceState> _baseServiceInfo = new(
         () => BuildBaseServiceInfo(options.Value));
 
-    // 线程安全的本地状态管理（类似 LeaderElectionService 模式）
+    // Thread-safe local state management (similar to LeaderElectionService pattern)
     private readonly object _stateLock = new();
     private DateTime? _registrationTime;
     private DateTime? _lastHeartbeatTime;
@@ -53,7 +53,7 @@ public class DefaultServiceDiscoveryClientInfo(
     {
         lock (_stateLock)
         {
-            // 仅在首次注册时设置（后续不再更改）
+            // Only set when registering for the first time (do not change later)
             _registrationTime ??= time;
         }
     }
@@ -68,7 +68,7 @@ public class DefaultServiceDiscoveryClientInfo(
 
     public InstanceState GetServiceStatus(bool isHeartbeatInfo = false)
     {
-        // 克隆基础信息以避免修改缓存的实例
+        // Clone base information to avoid modifying cached instances
         var instanceState = CloneInstanceState(_baseServiceInfo.Value);
 
         if (isHeartbeatInfo)
@@ -76,7 +76,7 @@ public class DefaultServiceDiscoveryClientInfo(
             return instanceState;
         }
 
-        // 为完整注册添加元数据（心跳时不添加）
+        // Add metadata for full registration (not added for heartbeat)
         AddEnvironmentVariablesMetadata(instanceState);
         AddListeningAddressesMetadata(instanceState);
 
@@ -108,7 +108,7 @@ public class DefaultServiceDiscoveryClientInfo(
     }
 
     /// <summary>
-    /// 自动生成FromInstance标识符，格式: hostname:processId
+    /// Automatically generate FromInstance identifier, format: hostname:processId
     /// </summary>
     private static string GenerateFromInstance()
     {
@@ -163,7 +163,7 @@ public class DefaultServiceDiscoveryClientInfo(
     }
 
     /// <summary>
-    /// 从FileVersionInfo提取程序集版本号
+    /// Extract assembly version number from FileVersionInfo
     /// </summary>
     private static string? GetAssemblyVersion(Assembly? assembly)
     {
@@ -184,7 +184,7 @@ public class DefaultServiceDiscoveryClientInfo(
     }
 
     /// <summary>
-    /// 克隆 InstanceState 以避免修改缓存的实例
+    /// Clone the InstanceState to avoid modifying the cached instance
     /// </summary>
     private InstanceState CloneInstanceState(InstanceState original)
     {
@@ -206,7 +206,7 @@ public class DefaultServiceDiscoveryClientInfo(
     }
 
     /// <summary>
-    /// 根据配置将环境变量添加为元数据
+    /// Add environment variables as metadata based on configuration
     /// </summary>
     private void AddEnvironmentVariablesMetadata(InstanceState instanceState)
     {
@@ -221,7 +221,7 @@ public class DefaultServiceDiscoveryClientInfo(
     }
 
     /// <summary>
-    /// 如果配置启用，将监听地址添加为元数据
+    /// If enabled by configuration, add listening address as metadata
     /// </summary>
     private void AddListeningAddressesMetadata(InstanceState instanceState)
     {

@@ -22,79 +22,79 @@ public interface IMoHubOperator<TIContract, TIUser> where TIContract : IMoHubCon
     IGroupManager Groups { get; }
 
     /// <summary>
-    ///     获取连接管理器
+    /// Get connection manager
     /// </summary>
     IMoSignalRConnectionManager ConnectionManager { get; }
 
     /// <summary>
-    ///     获取所有正在连接的用户
+    /// Get all currently connected users
     /// </summary>
     /// <returns></returns>
     IReadOnlyList<TIUser> GetUsers();
 
     /// <summary>
-    ///     获取所有满足指定条件的正在连接的用户
+    /// Get all connected users who meet the specified conditions
     /// </summary>
     /// <param name="judge"></param>
     /// <returns></returns>
     IReadOnlyList<TIUser> GetUsers(Func<SignalRConnectionInfo, TIUser, bool> judge);
 
     /// <summary>
-    ///     获取所有满足指定条件的正在连接的用户
+    /// Get all connected users who meet the specified conditions
     /// </summary>
     /// <param name="judge"></param>
     /// <returns></returns>
     IReadOnlyList<TIUser> GetUsers(Predicate<TIUser> judge);
 
     /// <summary>
-    ///     获取指定用户名的正在连接的用户
+    /// Get the connecting user with the specified username
     /// </summary>
     /// <returns></returns>
     TIUser? GetUser(string username);
 
     /// <summary>
-    ///     给指定用户列表推送消息
+    /// Push messages to specified user list
     /// </summary>
     /// <param name="users"></param>
     /// <returns></returns>
     TIContract Users(IReadOnlyList<TIUser> users);
 
     /// <summary>
-    ///     根据连接信息给指定用户推送消息
+    /// Push messages to specified users based on connection information
     /// </summary>
     /// <param name="info"></param>
     /// <returns></returns>
     TIContract User(SignalRConnectionInfo info);
 
     /// <summary>
-    ///     给指定用户推送消息
+    /// Push messages to specified users
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
     TIContract User(TIUser user);
 
     /// <summary>
-    ///     给满足指定条件的用户推送消息
+    /// Push messages to users who meet specified conditions
     /// </summary>
     /// <param name="judge"></param>
     /// <returns></returns>
     TIContract Users(Func<SignalRConnectionInfo, TIUser, bool> judge);
 
     /// <summary>
-    ///     给满足指定条件的用户推送消息
+    /// Push messages to users who meet specified conditions
     /// </summary>
     /// <param name="judge"></param>
     /// <returns></returns>
     TIContract Users(Predicate<TIUser> judge);
 
     /// <summary>
-    ///     获取所有正在连接的用户，key为SignalR连接ID
+    /// Get all connecting users, the key is SignalR connection ID
     /// </summary>
     /// <returns></returns>
     IReadOnlyList<SignalRConnectionInfo> GetConnectionInfos();
     
     /// <summary>
-    /// 判断当前用户是否还在线
+    /// Determine whether the current user is still online
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>

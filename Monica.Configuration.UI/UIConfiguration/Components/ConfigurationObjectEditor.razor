@@ -42,37 +42,37 @@
 
     protected override void OnParametersSet()
     {
-        // 从传入的Value参数中解析实际的对象值
+        // Parse the actual object value from the passed Value parameter
         if (Value is JsonElement element && element.ValueKind == JsonValueKind.Object)
         {
             currentValue = element.EnumerateObject().ToDictionary(x => x.Name, x => (object)x.Value);
         }
         else if (Value is JsonElement { ValueKind: JsonValueKind.Null } || Value is null)
         {
-            // 如果Value为null，创建空字典，后续会根据SubStructure的结构填充默认值
+            // If Value is null, an empty dictionary is created, and the default value will be filled in later based on the structure of SubStructure.
             currentValue = [];
         }
         else
         {
-            // 其他情况也创建空字典
+            // In other cases, an empty dictionary is also created
             currentValue = [];
         }
     }
 
     private object? GetValue(string propertyName)
     {
-        // 从解析出的实际值中获取指定属性的值（使用JSON对象的属性名）
+        // Get the value of the specified attribute from the actual value parsed (using the attribute name of the JSON object)
         return currentValue.GetValueOrDefault(propertyName);
 
-        // 如果当前值中没有该属性，返回null（BasicTypeEditor会处理默认值）
+        // If the attribute does not exist in the current value, return null (BasicTypeEditor will handle the default value)
     }
 
     private async Task SetValue(string propertyName, object? value)
     {
-        // 更新对象的指定属性值（使用JSON对象的属性名）
+        // Update the specified property value of the object (using the property name of the JSON object)
         if (value == null)
         {
-            // 如果值为null，检查对应的SubStructure项是否允许null
+            // If the value is null, check whether the corresponding SubStructure item allows null
             var structureItem = SubStructure?.Items?.FirstOrDefault(x => x.Name == propertyName);
             if (structureItem?.IsNullable == true)
             {
@@ -80,7 +80,7 @@
             }
             else
             {
-                // 如果不允许null，移除该属性
+                // If null is not allowed, remove this attribute
                 if (currentValue.ContainsKey(propertyName))
                 {
                     currentValue.Remove(propertyName);
@@ -92,7 +92,7 @@
             currentValue[propertyName] = value;
         }
         
-        // 将更新后的Dictionary转换为JsonElement并通知父组件
+        // Convert updated Dictionary to JsonElement and notify parent component
         var result = JsonFileProviderConventions.ToJsonElement(currentValue);
         await ValueChanged.InvokeAsync(result);
     }

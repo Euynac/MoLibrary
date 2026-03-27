@@ -6,25 +6,25 @@ namespace Monica.Configuration.UI.Interfaces;
 public interface IMoConfigurationStores
 {
     /// <summary>
-    /// 保存此次变更记录
+    /// Save this change record
     /// </summary>
     /// <param name="config"></param>
     Task<Res> SaveUpdate(DtoUpdateConfigRes config);
 
     /// <summary>
-    /// 获取指定Key的变更历史记录
+    /// Get the change history of the specified Key
     /// </summary>
     /// <returns></returns>
     Task<Res<List<DtoOptionHistory>>> GetHistory(string key, string appid);
 
     /// <summary>
-    /// 获取指定范围内变更历史记录
+    /// Get the change history within a specified range
     /// </summary>
     /// <returns></returns>
     Task<Res<List<DtoOptionHistory>>> GetHistory(DateTime start, DateTime end);
 
     /// <summary>
-    /// 获取指定Key和version的变更历史记录
+    /// Get the change history of the specified Key and version
     /// </summary>
     /// <returns></returns>
     Task<Res<DtoOptionHistory>> GetHistory(string key, string appid, string version);

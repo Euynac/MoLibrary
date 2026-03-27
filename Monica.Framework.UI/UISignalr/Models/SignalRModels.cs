@@ -3,156 +3,156 @@ using Monica.SignalR.Models;
 namespace Monica.Framework.UI.UISignalr.Models
 {
     /// <summary>
-    /// Hub方法信息
+    /// Hub method information
     /// </summary>
     public class HubMethodInfo
     {
         /// <summary>
-        /// 方法名称
+        /// method name
         /// </summary>
         public string Name { get; set; } = "";
         
         /// <summary>
-        /// 显示名称
+        /// display name
         /// </summary>
         public string DisplayName { get; set; } = "";
         
         /// <summary>
-        /// 方法参数列表
+        /// Method parameter list
         /// </summary>
         public List<SignalRMethodParameter> Args { get; set; } = [];
         
         /// <summary>
-        /// 是否正在监听
+        /// Is it listening?
         /// </summary>
         public bool IsListening { get; set; }
         
         /// <summary>
-        /// 接收消息次数
+        /// Number of messages received
         /// </summary>
         public int ReceivedCount { get; set; } = 0;
     }
 
     /// <summary>
-    /// SignalR消息模型
+    /// SignalR message model
     /// </summary>
     public class SignalRMessage
     {
         /// <summary>
-        /// 消息来源
+        /// Source
         /// </summary>
         public string Source { get; set; } = "";
         
         /// <summary>
-        /// 消息内容
+        /// Message content
         /// </summary>
         public string Content { get; set; } = "";
         
         /// <summary>
-        /// 消息详情
+        /// Message details
         /// </summary>
         public string Details { get; set; } = "";
         
         /// <summary>
-        /// 消息类型
+        /// Message type
         /// </summary>
         public MessageType Type { get; set; }
         
         /// <summary>
-        /// 时间戳
+        /// Timestamp
         /// </summary>
         public DateTime Timestamp { get; set; }
         
         /// <summary>
-        /// 是否为错误消息
+        /// Is it an error message?
         /// </summary>
         public bool IsError { get; set; }
     }
 
     /// <summary>
-    /// 消息类型枚举
+    /// Message type enum
     /// </summary>
     public enum MessageType
     {
         /// <summary>
-        /// 已发送
+        /// Sent
         /// </summary>
         Sent,
         
         /// <summary>
-        /// 已接收
+        /// Received
         /// </summary>
         Received,
         
         /// <summary>
-        /// 系统消息
+        /// System messages
         /// </summary>
         System,
         
         /// <summary>
-        /// 成功消息
+        /// success message
         /// </summary>
         Success,
         
         /// <summary>
-        /// 错误消息
+        /// error message
         /// </summary>
         Error,
         
         /// <summary>
-        /// 信息消息
+        /// information message
         /// </summary>
         Info
     }
 
     /// <summary>
-    /// SignalR连接状态
+    /// SignalR connection status
     /// </summary>
     public class SignalRConnectionState
     {
         /// <summary>
-        /// 连接状态
+        /// connection status
         /// </summary>
         public string Status { get; set; } = "未连接";
         
         /// <summary>
-        /// 连接ID
+        /// Connection ID
         /// </summary>
         public string ConnectionId { get; set; } = "";
         
         /// <summary>
-        /// 是否正在连接
+        /// Is connecting
         /// </summary>
         public bool IsConnecting { get; set; }
         
         /// <summary>
-        /// 已接收消息总数
+        /// Total number of messages received
         /// </summary>
         public int TotalReceivedMessages { get; set; }
         
         /// <summary>
-        /// 是否已连接
+        /// Is it connected?
         /// </summary>
         public bool IsConnected => Status == "Connected";
     }
 
     /// <summary>
-    /// 方法调用参数
+    /// Method call parameters
     /// </summary>
     public class MethodCallParameter
     {
         /// <summary>
-        /// 参数名称
+        /// Parameter name
         /// </summary>
         public string Name { get; set; } = "";
         
         /// <summary>
-        /// 参数值
+        /// Parameter value
         /// </summary>
         public string Value { get; set; } = "";
         
         /// <summary>
-        /// 参数类型
+        /// Parameter type
         /// </summary>
         public string Type { get; set; } = "";
     }

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Monica.Validation.Attributes;
 
 /// <summary>
-/// 嵌套验证结果
+/// Represents a nested validation result.
 /// </summary>
 public class NestedValidationResult() : ValidationResult("")
 {
@@ -12,7 +12,7 @@ public class NestedValidationResult() : ValidationResult("")
 }
 
 /// <summary>
-/// 继续检查嵌套类类型，支持列表及普通类
+/// Continues validation into nested object types, including both collections and regular objects.
 /// </summary>
 public class ValidateChildrenAttribute : ValidationAttribute
 {

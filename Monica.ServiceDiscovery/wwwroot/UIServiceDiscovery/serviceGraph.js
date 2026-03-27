@@ -1,6 +1,6 @@
 /**
- * 微服务架构图可视化
- * 基于 d3.js 实现的微服务架构图表，支持状态告警闪烁效果
+ * Microservice architecture diagram visualization
+ * Microservice architecture chart implemented based on d3.js, supporting status alarm flashing effect
  * 
  * @module serviceGraph
  */
@@ -13,10 +13,10 @@ import { createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-intera
 let graphInstance = null;
 
 /**
- * 初始化微服务架构图
- * @param {string} containerId - 容器ID
- * @param {boolean} isDarkMode - 是否为暗色模式
- * @param {Object} dotNetRef - .NET对象引用
+ * Initialization microservice architecture diagram
+ * @param {string} containerId - container ID
+ * @param {boolean} isDarkMode - whether it is dark mode
+ * @param {Object} dotNetRef - .NET object reference
  */
 export function initializeGraph(containerId, isDarkMode = false, dotNetRef = null, texts = {}) {
     dispose();
@@ -24,8 +24,8 @@ export function initializeGraph(containerId, isDarkMode = false, dotNetRef = nul
 }
 
 /**
- * 更新图表数据
- * @param {Object} data - 图表数据 {nodes, links}
+ * Update chart data
+ * @param {Object} data - chart data {nodes, links}
  */
 export function updateGraph(data) {
     if (graphInstance) {
@@ -34,7 +34,7 @@ export function updateGraph(data) {
 }
 
 /**
- * 重置视图
+ * reset view
  */
 export function resetView() {
     if (graphInstance) {
@@ -43,8 +43,8 @@ export function resetView() {
 }
 
 /**
- * 聚焦到指定节点
- * @param {string} nodeId - 节点ID
+ * Focus on specified node
+ * @param {string} nodeId - node ID
  */
 export function focusOnNode(nodeId) {
     if (graphInstance) {
@@ -53,8 +53,8 @@ export function focusOnNode(nodeId) {
 }
 
 /**
- * 设置布局类型
- * @param {string} layoutType - 布局类型
+ * Set layout type
+ * @param {string} layoutType - layout type
  */
 export function setLayout(layoutType) {
     if (graphInstance) {
@@ -63,8 +63,8 @@ export function setLayout(layoutType) {
 }
 
 /**
- * 设置力导向距离
- * @param {number} distance - 距离值
+ * Set force guide distance
+ * @param {number} distance - distance value
  */
 export function setForceDistance(distance) {
     if (graphInstance) {
@@ -73,8 +73,8 @@ export function setForceDistance(distance) {
 }
 
 /**
- * 设置力导向强度
- * @param {number} strength - 强度值
+ * Set force guide strength
+ * @param {number} strength - strength value
  */
 export function setForceStrength(strength) {
     if (graphInstance) {
@@ -83,7 +83,7 @@ export function setForceStrength(strength) {
 }
 
 /**
- * 销毁图表实例
+ * Destroy chart instance
  */
 export function dispose() {
     if (graphInstance) {
@@ -93,7 +93,7 @@ export function dispose() {
 }
 
 /**
- * 微服务架构图类
+ * Microservice architecture diagram class
  */
 class ServiceGraph extends GraphBase {
     constructor(containerId, options = {}) {
@@ -142,44 +142,44 @@ class ServiceGraph extends GraphBase {
             };
         }
         
-        // 创建力导向布局管理器
+        // Create a force-directed layout manager
         this.forceLayout = new ForceLayoutManager(this.width, this.height, {
             linkDistance: 150,
             chargeStrength: -500,
             collisionRadius: 50
         });
 
-        // 初始化布局算法管理器
+        // Initialize layout algorithm manager
         this.layoutAlgorithms = createLayoutAlgorithms(this.width, this.height);
         
-        // 静态布局拖拽行为
+        // Static layout dragging behavior
         this.staticDragBehavior = null;
 
-        // 创建图层
+        // Create layer
         this.createLayers();
         
-        // 绑定事件
+        // Binding events
         this.bindEvents();
     }
 
     createLayers() {
-        // 创建连接线层
+        // Create connection line layer
         this.linkLayer = this.mainGroup.append('g')
             .attr('class', 'links-layer');
             
-        // 创建节点层
+        // Create node layer
         this.nodeLayer = this.mainGroup.append('g')
             .attr('class', 'nodes-layer');
     }
 
     bindEvents() {
-        // 监听窗口大小变化
+        // Listen for window size changes
         this.handleResize = this.handleResize.bind(this);
         window.addEventListener('resize', this.handleResize);
         
-        // 添加背景点击事件处理
+        // Add background click event handling
         this.svg.on('click', (event) => {
-            // 只有当点击的是背景（svg本身）时才处理
+            // Only processed when the click is on the background (svg itself)
             if (event.target === this.svg.node()) {
                 this.handleBackgroundClick();
             }
@@ -187,27 +187,27 @@ class ServiceGraph extends GraphBase {
     }
     
     /**
-     * 处理背景点击事件
+     * Handling background click events
      */
     handleBackgroundClick() {
-        // 如果有.NET回调对象，通知背景被点击
+        // If there is a .NET callback object, notify that the background was clicked
         if (this.dotNetRef && typeof this.dotNetRef.invokeMethodAsync === 'function') {
             this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
         }
     }
     
     /**
-     * 处理节点右键事件
-     * @param {Object} node - 被右键点击的节点数据
-     * @param {Event} event - 原始事件对象
+     * Handle node right-click events
+     * @param {Object} node - the node data that was right-clicked
+     * @param {Event} event - the original event object
      */
     handleNodeRightClick(node, event) {
-        // 隐藏工具提示
+        // Hide tooltip
         this.hideTooltip();
         
-        // 如果有.NET回调对象，调用右键菜单显示方法
+        // If there is a .NET callback object, call the right-click menu display method
         if (this.dotNetRef && typeof this.dotNetRef.invokeMethodAsync === 'function') {
-            // 获取相对于视口的坐标
+            // Get coordinates relative to the viewport
             const x = event.clientX;
             const y = event.clientY;
             
@@ -219,13 +219,13 @@ class ServiceGraph extends GraphBase {
         this.nodes = data.nodes || [];
         this.links = data.links || [];
         
-        // 更新力导向布局数据
+        // Update force-directed layout data
         this.forceLayout.setData(this.nodes, this.links);
         
-        // 渲染图表
+        // Render chart
         this.render();
         
-        // 启动布局动画
+        // Start layout animation
         this.forceLayout.start(() => {
             this.updatePositions();
         });
@@ -237,24 +237,24 @@ class ServiceGraph extends GraphBase {
     }
 
     renderLinks() {
-        // 绑定数据
+        // Bind data
         this.linkElements = this.linkLayer
             .selectAll('.service-link')
             .data(this.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
 
-        // 移除旧元素
+        // Remove old elements
         this.linkElements.exit().remove();
 
-        // 创建新元素
+        // Create new element
         const linkEnter = this.linkElements.enter()
             .append('line')
             .attr('class', 'service-link')
             .style('opacity', 0);
 
-        // 合并选择
+        // Merge selection
         this.linkElements = linkEnter.merge(this.linkElements);
 
-        // 设置样式
+        // Set style
         const linkStyle = getModernLinkStyle(this.isDarkMode);
         this.linkElements
             .transition()
@@ -267,23 +267,23 @@ class ServiceGraph extends GraphBase {
     }
 
     renderNodes() {
-        // 绑定数据
+        // Bind data
         this.nodeElements = this.nodeLayer
             .selectAll('.service-node')
             .data(this.nodes, d => d.id);
 
-        // 移除旧元素
+        // Remove old elements
         const exitSelection = this.nodeElements.exit();
         exitSelection.each(d => this.stopAnimation(d.id));
         exitSelection.remove();
 
-        // 创建新元素组
+        // Create a new element group
         const nodeEnter = this.nodeElements.enter()
             .append('g')
             .attr('class', 'service-node')
             .style('opacity', 0);
 
-        // 添加外圆环（用于闪烁效果）
+        // Add outer ring (for sparkle effect)
         nodeEnter.append('circle')
             .attr('class', 'node-ring')
             .attr('r', 0)
@@ -291,19 +291,19 @@ class ServiceGraph extends GraphBase {
             .attr('stroke-width', 3)
             .style('opacity', 0);
 
-        // 添加主节点圆形
+        // Add main node circle
         nodeEnter.append('circle')
             .attr('class', 'node-circle')
             .attr('r', 0);
 
-        // 添加状态指示器
+        // Add status indicator
         nodeEnter.append('circle')
             .attr('class', 'status-indicator')
             .attr('r', 6)
             .attr('cx', 20)
             .attr('cy', -20);
 
-        // 添加实例数量文本
+        // Add instance number text
         nodeEnter.append('text')
             .attr('class', 'instance-count')
             .attr('dy', '0.35em')
@@ -311,23 +311,23 @@ class ServiceGraph extends GraphBase {
             .style('font-size', '10px')
             .style('font-weight', 'bold');
 
-        // 添加服务名称文本
+        // Add service name text
         nodeEnter.append('text')
             .attr('class', 'node-text')
             .attr('dy', '45px')
             .attr('text-anchor', 'middle')
             .style('font-size', '0px');
 
-        // 合并选择
+        // Merge selection
         this.nodeElements = nodeEnter.merge(this.nodeElements);
 
-        // 动画显示
+        // animation display
         this.nodeElements
             .transition()
             .duration(500)
             .style('opacity', 1);
 
-        // 更新主圆形节点
+        // Update main circle node
         this.nodeElements.select('.node-circle')
             .transition()
             .duration(500)
@@ -337,23 +337,23 @@ class ServiceGraph extends GraphBase {
             .attr('stroke-width', 2)
             .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
 
-        // 更新外圆环
+        // Update outer ring
         this.nodeElements.select('.node-ring')
             .attr('r', 30)
             .attr('stroke', d => this.getStatusColor(d.status));
 
-        // 更新状态指示器
+        // Update status indicator
         this.nodeElements.select('.status-indicator')
             .attr('fill', d => this.getStatusColor(d.status))
             .attr('stroke', getModernNodeStyle(this.isDarkMode).strokeColor)
             .attr('stroke-width', 1);
 
-        // 更新实例数量
+        // Update the number of instances
         this.nodeElements.select('.instance-count')
             .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
             .text(d => `${d.runningInstances}/${d.totalInstances}`);
 
-        // 更新服务名称
+        // Update service name
         this.nodeElements.select('.node-text')
             .transition()
             .duration(500)
@@ -361,10 +361,10 @@ class ServiceGraph extends GraphBase {
             .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
             .text(d => this.truncateText(d.name, 15));
 
-        // 添加拖拽行为
+        // Add dragging behavior
         this.nodeElements.call(this.forceLayout.getDragBehavior());
 
-        // 添加交互事件
+        // Add interaction events
         this.nodeElements
             .style('cursor', 'pointer')
             .on('mouseenter', (event, d) => {
@@ -387,7 +387,7 @@ class ServiceGraph extends GraphBase {
                 this.handleNodeRightClick(d, event);
             });
 
-        // 启动状态动画
+        // Start state animation
         this.nodeElements.each(d => this.startStatusAnimation(d));
     }
 
@@ -426,28 +426,28 @@ class ServiceGraph extends GraphBase {
         const ring = nodeElement.select('.node-ring');
         const statusIndicator = nodeElement.select('.status-indicator');
 
-        // 停止之前的动画
+        // Stop previous animation
         this.stopAnimation(nodeData.id);
 
         switch (nodeData.status) {
             case 'Running':
-                // 绿色常亮，无闪烁
+                // Steady green, no flickering
                 statusIndicator.style('opacity', 1);
                 ring.style('opacity', 0);
                 break;
 
             case 'Error':
-                // 红色闪烁
+                // Flashing red
                 this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#F44336', 500);
                 break;
 
             case 'Offline':
-                // 黑色闪烁
+                // black flash
                 this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#424242', 800);
                 break;
 
             case 'Updating':
-                // 黄色闪烁
+                // yellow flashing
                 this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#FF9800', 600);
                 break;
 
@@ -470,7 +470,7 @@ class ServiceGraph extends GraphBase {
             
             phase += Math.PI / 10; // 控制闪烁速度
             
-            // 保存定时器ID
+            // Save timer ID
             const timerId = setTimeout(animate, interval / 20);
             this.animations.set(nodeId, timerId);
         };
@@ -532,7 +532,7 @@ class ServiceGraph extends GraphBase {
     }
 
     showTooltip(event, content) {
-        // 创建或更新tooltip
+        // Create or update tooltip
         let tooltip = d3.select('body').select('.service-tooltip');
         if (tooltip.empty()) {
             tooltip = d3.select('body')
@@ -593,7 +593,7 @@ class ServiceGraph extends GraphBase {
                 .attr('height', this.height)
                 .attr('viewBox', [0, 0, this.width, this.height]);
             
-            // 更新力导向布局中心
+            // Update Force Directed Layout Center
             if (this.forceLayout) {
                 this.forceLayout.simulation
                     .force('center', d3.forceCenter(this.width / 2, this.height / 2));
@@ -603,12 +603,12 @@ class ServiceGraph extends GraphBase {
     }
 
     /**
-     * 设置布局
+     * Set layout
      */
     setLayout(layoutType) {
         this.currentLayout = layoutType;
         
-        // 移除之前的拖拽行为
+        // Remove previous dragging behavior
         if (this.nodeElements) {
             this.nodeElements.on('.drag', null);
         }
@@ -632,89 +632,89 @@ class ServiceGraph extends GraphBase {
     }
     
     /**
-     * 应用力导向布局
+     * Apply force-directed layout
      */
     applyForceLayout() {
-        // 释放所有固定节点
+        // Release all pinned nodes
         this.forceLayout.releaseAllFixed(this.nodes);
         
-        // 设置数据
+        // Set data
         this.forceLayout.setData(this.nodes, this.links);
         
-        // 应用拖拽行为
+        // Apply drag behavior
         if (this.nodeElements) {
             this.nodeElements.call(this.forceLayout.getDragBehavior());
         }
         
-        // 启动模拟
+        // Start simulation
         this.forceLayout.start(() => {
             this.updatePositions();
         });
     }
     
     /**
-     * 应用层次布局
+     * Apply hierarchical layout
      */
     applyHierarchyLayout() {
         this.forceLayout.stop();
         
-        // 计算层次布局 - 微服务通常没有明确的层次关系，按域分层
+        // Compute hierarchical layout - Microservices usually do not have clear hierarchical relationships and are layered by domain
         this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用环形布局
+     * Apply ring layout
      */
     applyCircularLayout() {
         this.forceLayout.stop();
         
-        // 计算环形布局
+        // Calculate ring layout
         this.layoutAlgorithms.circularLayout(this.nodes, {
             avgNodeSize: 60,
             complexNodeCount: 0
         });
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用网格布局
+     * Apply grid layout
      */
     applyGridLayout() {
         this.forceLayout.stop();
         
-        // 计算网格布局
+        // Compute Grid Layout
         this.layoutAlgorithms.gridLayout(this.nodes, {
             padding: 50,
             nodeSpacing: 120
         });
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用静态拖拽
+     * Apply static drag
      */
     applyStaticDrag() {
         const self = this;
         
         this.staticDragBehavior = createStaticDragBehavior({
             updateLinks: (draggedNode) => {
-                // 微服务图目前没有连接线，但为了兼容性保留此方法
+                // Microservice graphs currently have no connection lines, but this method is retained for compatibility
                 if (self.linkElements) {
                     self.linkElements
                         .attr('x1', d => {
@@ -747,7 +747,7 @@ class ServiceGraph extends GraphBase {
     }
     
     /**
-     * 更新静态位置
+     * Update static location
      */
     updateStaticPositions() {
         if (this.nodeElements) {
@@ -757,7 +757,7 @@ class ServiceGraph extends GraphBase {
                 .attr('transform', d => `translate(${d.x},${d.y})`);
         }
         
-        // 微服务图目前没有连接线，但为了兼容性保留此方法
+        // Microservice graphs currently have no connection lines, but this method is retained for compatibility
         if (this.linkElements) {
             this.linkElements
                 .transition()
@@ -782,38 +782,38 @@ class ServiceGraph extends GraphBase {
     }
     
     /**
-     * 设置力导向距离
+     * Set force guide distance
      */
     setForceDistance(distance) {
         this.forceLayout.updateLinkDistance(distance);
     }
     
     /**
-     * 设置力导向强度
+     * Set force guide strength
      */
     setForceStrength(strength) {
         this.forceLayout.updateChargeStrength(strength);
     }
 
     dispose() {
-        // 停止所有动画
+        // Stop all animations
         this.animations.forEach((timerId, nodeId) => {
             clearTimeout(timerId);
         });
         this.animations.clear();
         
-        // 清理tooltip
+        // Clean tooltip
         d3.select('.service-tooltip').remove();
         
-        // 停止力导向布局
+        // Stop force oriented layout
         if (this.forceLayout) {
             this.forceLayout.dispose();
         }
         
-        // 移除窗口事件监听器
+        // Remove window event listener
         window.removeEventListener('resize', this.handleResize);
         
-        // 调用基类的dispose
+        // Call dispose of the base class
         super.dispose();
     }
 }

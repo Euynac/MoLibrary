@@ -7,19 +7,20 @@ using Monica.Tool.Extensions;
 namespace Monica.AutoModel.Model;
 
 /// <summary>
-/// AutoModel 字段设置
+/// AutoModel field configuration.
 /// </summary>
 public class AutoField
 {
     /// <summary>
-    /// 字段激活名
+    /// Activation names that can be used to reference this field.
     /// </summary>
     public HashSet<string> ActivateNames { get; set; } = [];
 
     #region Navigation
 
     /// <summary>
-    /// 导航属性前缀（即从主类导航到该属性的反射名前缀）与指示导航属性是否是ICollection的元组列表
+    /// Navigation-property segments from the root model to this field,
+    /// together with a flag indicating whether each segment is an <c>ICollection</c>.
     /// </summary>
     [JsonIgnore]
     public List<(string RefelectName, bool IsCollection)>? NavigationProperties { get; set; }
@@ -29,7 +30,7 @@ public class AutoField
         NavigationProperties?.Select(p => p.IsCollection ? $"List<{p.RefelectName}>" : p.RefelectName).StringJoin('.');
 
 
-    #region DynamicLinq模式一
+    #region DynamicLinq Mode 1
 
     public string GetConditionExpressionParam()
     {
@@ -55,7 +56,7 @@ public class AutoField
             var navigationInfo = NavigationProperties.ElementAtOrDefault(navigationIndex++);
             var navigationName = navigationInfo.RefelectName;
             var isCollection = navigationInfo.IsCollection;
-            if (navigationInfo == default) //到最后本身字段，没有导航属性了
+            if (navigationInfo == default) // Reached the actual field; no navigation property remains.
             {
                 var fieldName = ReflectionName;
                 if ((TypeSetting.TypeFeatures & ETypeFeatures.IsCollection) != 0)
@@ -80,7 +81,7 @@ public class AutoField
 
     #endregion
 
-    #region DynamicLinq模式二（lambda模式）https://dynamic-linq.net/basic-simple-query#more-where-examples
+    #region DynamicLinq Mode 2 (lambda mode) https://dynamic-linq.net/basic-simple-query#more-where-examples
 
     //public string GetConditionExpressionParam(string finalItemVar = "i")
     //{
@@ -111,7 +112,7 @@ public class AutoField
     //        var navigationInfo = NavigationProperties.ElementAtOrDefault(navigationIndex++);
     //        var navigationName = navigationInfo.Item1;
     //        var isCollection = navigationInfo.Item2;
-    //        if (navigationInfo == default) //到最后本身字段，没有导航属性了
+    //        if (navigationInfo == default) // Reached the actual field; no navigation property remains.
     //        {
     //            var fieldName = ReflectionName;
     //            if ((TypeSetting.TypeFeatures & ETypeFeatures.IsCollection) != 0)
@@ -143,21 +144,21 @@ public class AutoField
 
     #endregion
     /// <summary>
-    /// 字段显示名，没有默认是反射名
+    /// Display name of the field. If not specified, the reflected property name is used.
     /// </summary>
     public required string Title { get; set; }
     /// <summary>
-    /// 字段反射名
+    /// Reflected property name.
     /// </summary>
     public required string ReflectionName { get; set; }
 
     /// <summary>
-    /// 模糊查询设置
+    /// Fuzzy-search configuration.
     /// </summary>
     public required AutoModelFuzzSetting FuzzSetting { get; set; }
 
     /// <summary>
-    /// 字段类型设置
+    /// Field type configuration.
     /// </summary>
     public required AutoFieldTypeSetting TypeSetting { get; set; }
     /// <summary>
@@ -166,12 +167,12 @@ public class AutoField
     public bool EnableIgnorePrefix { get; set; }
 
     /// <summary>
-    /// 获取默认激活名
+    /// Gets the default activation name.
     /// </summary>
     public string DefaultActiveName =>
         EnableIgnorePrefix ? ReflectionName : $"{NavigationProperties?.Select(s => s.RefelectName).StringJoin(".").BeIfNotEmpty("{0}.", true)}{ReflectionName}";
     /// <summary>
-    /// 该字段需适用客户端侧评估（无法翻译为SQL）
+    /// Indicates that this field requires client-side evaluation because it cannot be translated to SQL.
     /// </summary>
     [Obsolete("暂未实现")]
     public bool ShouldUseClientEvaluation { get; set; }

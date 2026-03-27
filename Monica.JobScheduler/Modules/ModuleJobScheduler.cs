@@ -28,7 +28,7 @@ public static class ModuleJobSchedulerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 JobScheduler 模块
+        /// Configure the JobScheduler module
         /// </summary>
         public static ModuleJobSchedulerGuide AddJobScheduler(Action<ModuleJobSchedulerOption>? action = null)
         {

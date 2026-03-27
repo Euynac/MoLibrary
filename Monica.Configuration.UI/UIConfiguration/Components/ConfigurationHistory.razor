@@ -21,7 +21,7 @@
     </MudCardHeader>
     
     <MudCardContent>
-        <!-- 筛选选项 -->
+        <!-- Filter options -->
         <MudGrid Class="mb-4">
             <MudItem xs="12" md="3">
                 <MudTextField T="string" @bind-Value="_filterKey" 
@@ -53,7 +53,7 @@
             </MudItem>
         </MudGrid>
 
-        <!-- 历史记录时间线 -->
+        <!-- History timeline -->
         <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
             @foreach (var history in _historyRecords.Take(50)) // 限制显示条数
             {
@@ -143,7 +143,7 @@
     private List<DtoOptionHistory> _historyRecords = new();
     private bool _loading = false;
     
-    // 筛选参数
+    // Filter parameters
     private string _filterKey = string.Empty;
     private string _filterAppId = string.Empty;
     private DateRange? _dateRange;
@@ -168,15 +168,15 @@
 
         try
         {
-            // 根据API逻辑决定查询参数
+            // Determine query parameters based on API logic
             string? key = string.IsNullOrWhiteSpace(_filterKey) ? null : _filterKey;
             string? appId = string.IsNullOrWhiteSpace(_filterAppId) ? null : _filterAppId;
             DateTime? startDate = _dateRange?.Start;
             DateTime? endDate = _dateRange?.End;
 
-            // 如果同时提供了key和appId，则查询特定配置
-            // 如果只提供了时间范围，则按时间范围查询
-            // 否则查询近180天的默认记录
+            // If both key and appId are provided, query for a specific configuration
+            // If only a time range is provided, query by time range
+            // Otherwise, query the default records of the past 180 days
             var result = await ConfigurationUIService.GetConfigHistoryAsync(
                 key,
                 appId,
@@ -211,8 +211,8 @@
 
     private async Task ShowDateRangePicker()
     {
-        // 触发日期范围选择器的显示（MudDateRangePicker会自动处理）
-        // 这里可以添加额外的逻辑，比如设置默认范围
+        // Trigger the display of the date range picker (MudDateRangePicker handles this automatically)
+        // Additional logic can be added here, such as setting the default range
         if (_dateRange == null)
         {
             _dateRange = new DateRange(DateTime.Now.AddDays(-30), DateTime.Now);
@@ -259,7 +259,7 @@
 
     private async Task ShowRollbackDialog(DtoOptionHistory history)
     {
-        // 获取当前配置值
+        // Get current configuration values
         string? currentValue = null;
         var currentConfigResult = await ConfigurationUIService.GetConfigAsync(history.AppId, history.Key);
         if (currentConfigResult.IsFailed(out var error, out var data))

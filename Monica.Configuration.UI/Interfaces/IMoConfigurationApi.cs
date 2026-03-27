@@ -5,42 +5,42 @@ using Monica.Tool.Results;
 namespace Monica.Configuration.UI.Interfaces;
 
 /// <summary>
-/// 统一配置管理API接口，支持配置中心和客户端模式
+/// Unified configuration management API interface, supporting configuration center and client mode
 /// </summary>
 public interface IMoConfigurationApi
 {
     /// <summary>
-    /// 获取所有配置状态信息
+    /// Get all configuration status information
     /// </summary>
-    /// <param name="mode">显示模式（可选）</param>
+    /// <param name="mode">Display mode (optional)</param>
     /// <param name="onlyCurDomain"></param>
-    /// <returns>配置状态列表</returns>
+    /// <returns>Configuration status list</returns>
     Task<Res<List<DtoDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false);
 
     /// <summary>
-    /// 获取指定配置项状态信息
+    /// Get the status information of the specified configuration item
     /// </summary>
-    /// <param name="key">配置键</param>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <returns>配置项状态</returns>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <returns>Configuration item status</returns>
     Task<Res<DtoOptionItem>> GetOptionItemAsync(string key, string? appid = null);
 
     /// <summary>
-    /// 获取指定配置类状态信息
+    /// Get status information of specified configuration class
     /// </summary>
-    /// <param name="key">配置键</param>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <returns>配置类状态</returns>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <returns>Configuration class status</returns>
     Task<Res<DtoConfig>> GetConfigAsync(string key, string? appid = null);
 
     /// <summary>
-    /// 获取配置历史记录
+    /// Get configuration history
     /// </summary>
-    /// <param name="key">配置键（可选）</param>
-    /// <param name="appid">应用ID（可选）</param>
-    /// <param name="start">开始时间（可选）</param>
-    /// <param name="end">结束时间（可选）</param>
-    /// <returns>配置历史列表</returns>
+    /// <param name="key">Configuration key (optional)</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <param name="start">Start time (optional)</param>
+    /// <param name="end">End time (optional)</param>
+    /// <returns>Configuration history list</returns>
     Task<Res<List<DtoOptionHistory>>> GetConfigHistoryAsync(
         string? key = null,
         string? appid = null,
@@ -48,18 +48,18 @@ public interface IMoConfigurationApi
         DateTime? end = null);
 
     /// <summary>
-    /// 更新配置
+    /// Update configuration
     /// </summary>
-    /// <param name="request">更新请求</param>
-    /// <returns>更新结果</returns>
+    /// <param name="request">Update request</param>
+    /// <returns>Update results</returns>
     Task<Res<DtoUpdateConfigRes>> UpdateConfigAsync(DtoUpdateConfig request);
 
     /// <summary>
-    /// 回滚配置到指定版本
+    /// Roll back configuration to specified version
     /// </summary>
-    /// <param name="key">配置键</param>
-    /// <param name="appid">应用ID</param>
-    /// <param name="version">版本号</param>
-    /// <returns>回滚结果</returns>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID</param>
+    /// <param name="version">Version number</param>
+    /// <returns>Rollback results</returns>
     Task<Res<DtoUpdateConfigRes>> RollbackConfigAsync(string key, string appid, string version);
 }

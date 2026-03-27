@@ -3,25 +3,25 @@ namespace Monica.Configuration.Model;
 public class ServiceInfo
 {
     /// <summary>
-    /// 子域名
+    /// Domain name.
     /// </summary>
     public string DomainName { get; set; } = "UnknownDomain";
     /// <summary>
-    /// 子域标题（显示名）
+    /// Domain display title.
     /// </summary>
     public string DomainTitle { get; set; } = "UnknownDomain";
 
     /// <summary>
-    /// 微服务项目名
+    /// Microservice project name.
     /// </summary>
     public string ProjectName { get; set; } = "UnknownService";
 
     /// <summary>
-    /// 微服务显示名
+    /// Microservice display name.
     /// </summary>
     public string AppName { get; set; } = "UnknownService";
     /// <summary>
-    /// 微服务APPID
+    /// Microservice AppId.
     /// </summary>
     public string AppId { get; set; } = "UnknownService";
 

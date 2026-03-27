@@ -23,7 +23,7 @@
     </MudCardHeader>
     
     <MudCardContent>
-        <!-- 统计卡片 -->
+        <!-- Statistics cards -->
         <MudGrid Class="mb-4">
             <MudItem xs="12" md="3">
                 <MudCard Outlined="true">
@@ -90,7 +90,7 @@
             </MudItem>
         </MudGrid>
 
-        <!-- 应用配置状态 -->
+        <!-- Application configuration status -->
         <MudText Typo="Typo.h6" Class="mb-3">应用配置状态</MudText>
         <MudGrid>
             @foreach (var appGroup in _configsByApp)
@@ -118,7 +118,7 @@
                                                   Size="Size.Small" />
                             </div>
                             
-                            <!-- 最近更新的配置 -->
+                            <!-- Recently updated configuration -->
                             @{
                                 var recentConfigs = appGroup.Value
                                     .Take(3);
@@ -142,7 +142,7 @@
             }
         </MudGrid>
 
-        <!-- 配置类型分布 -->
+        <!-- Configuration type distribution -->
         <MudText Typo="Typo.h6" Class="mb-3 mt-4">配置类型分布</MudText>
         <MudGrid>
             @foreach (var typeGroup in _configsByType)
@@ -161,7 +161,7 @@
             }
         </MudGrid>
 
-        <!-- 刷新状态 -->
+        <!-- refresh status -->
         @if (_loading)
         {
             <div class="d-flex justify-center pa-4">
@@ -191,7 +191,7 @@
     {
         await LoadStatusData();
         
-        // 设置自动刷新计时器
+        // Set auto-refresh timer
         _refreshTimer = new Timer(async _ =>
         {
             if (_autoRefresh)
@@ -218,7 +218,7 @@
                 return;
             }
 
-            // 从领域配置中提取所有配置项
+            // Extract all configuration items from realm configuration
             var allItems = new List<DtoOptionItem>();
             foreach (var domain in domainConfigs)
             {
@@ -234,7 +234,7 @@
             _configurations = allItems;
             _lastUpdateTime = DateTime.Now;
 
-            // 计算统计数据
+            // Calculate statistics
             _totalConfigs = _configurations.Count;
             _activeConfigs = _configurations.Count(c => !c.IsOffline);
             _appCount = _configurations.Where(c => !string.IsNullOrEmpty(c.Source))
@@ -243,13 +243,13 @@
                                      .Count();
             _recentUpdates = _configurations.Count(); // 暂时设为所有配置
 
-            // 按来源分组
+            // Group by source
             _configsByApp = _configurations
                 .Where(c => !string.IsNullOrEmpty(c.Source))
                 .GroupBy(c => c.Source!)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // 按类型分组
+            // Group by type
             _configsByType = _configurations
                 .GroupBy(c => c.Type.ToString())
                 .ToDictionary(g => g.Key, g => g.ToList());

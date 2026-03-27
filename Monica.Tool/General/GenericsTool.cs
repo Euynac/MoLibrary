@@ -1,20 +1,20 @@
 ﻿namespace Monica.Tool.General;
 
 /// <summary>
-/// 泛型工具类
+/// Generic tool class
 /// </summary>
 public static class GenericsTool
 {
     /// <summary>
-    /// 判断当前类型是否实现了给定的泛型类型（比如IList&lt;&gt;之类）
+    /// Determine whether the current type implements the given generic type (such as IList&lt;&gt;, etc.)
     /// </summary>
     /// <param name="type"></param>
-    /// <param name="genericType">需要使用typeof(IList&lt;&gt;)</param>
+    /// <param name="genericType">Need to use typeof(IList&lt;&gt;)</param>
     /// <returns></returns>
     public static bool ImplementsGenericType(this Type type, Type genericType) => type.GetInterfaces()
         .Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == genericType);
     /// <summary>
-    /// 将Predicate转化为对应的Func
+    /// Convert Predicate into corresponding Func
     /// </summary>
     /// <param name="predicate"></param>
     /// <typeparam name="T"></typeparam>
@@ -23,7 +23,7 @@ public static class GenericsTool
 
 
     /// <summary>
-    /// 将Func第一个、第二个参数类型（TIn）支持协变，即将TIn转换为指定类型TOut（TIn需是TOut的子类）
+    /// Support covariance for the first and second parameter types (TIn) of Func, that is, convert TIn to the specified type TOut (TIn needs to be a subclass of TOut)
     /// </summary>
     /// <typeparam name="TIn1"></typeparam>
     /// <typeparam name="TOut2"></typeparam>
@@ -40,7 +40,7 @@ public static class GenericsTool
     }
 
     /// <summary>
-    /// (in TIn, out TR)类型 将Func第一个参数类型（TIn）支持协变，即将TIn转换为指定类型TOut（TIn需是TOut的子类）
+    /// (in TIn, out TR) type The first parameter type of Func (TIn) supports covariance, that is, converts TIn to the specified type TOut (TIn needs to be a subclass of TOut)
     /// </summary>
     /// <typeparam name="TIn"></typeparam>
     /// <typeparam name="TOut"></typeparam>

@@ -9,8 +9,7 @@
     @if (RegistrationInfo != null)
     {
         <MudGrid Spacing="4" Class="mb-4">
-            <!-- 模块统计 -->
-            <MudItem xs="12" md="4">
+            <!-- Module Statistics -->            <MudItem xs="12" md="4">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -58,8 +57,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Info" Size="Size.Large" />
                                 </div>
                             </MudPaper>
-                            <!-- 模块分布图表 -->
-                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
+                            <!-- Module distribution chart -->                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:ModuleManagement:Labels:ModuleDistribution"]</MudText>
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudText Typo="Typo.body2">@L["ModuleSystem:ModuleManagement:Labels:EnabledModules"]</MudText>
@@ -82,8 +80,7 @@
                 </MudCard>
             </MudItem>
 
-            <!-- 模块列表 -->
-            <MudItem xs="12" md="8">
+            <!-- Module list -->            <MudItem xs="12" md="8">
                 <MudCard Class="modern-card">
                     <MudCardHeader>
                         <CardHeaderContent>
@@ -193,22 +190,22 @@
 
 @code {
     /// <summary>
-    /// 模块注册信息
+    /// Module registration information
     /// </summary>
     [Parameter] public ModuleRegistrationInfo? RegistrationInfo { get; set; }
 
     /// <summary>
-    /// 刷新数据事件
+    /// Refresh data event
     /// </summary>
     [Parameter] public EventCallback OnRefresh { get; set; }
 
     /// <summary>
-    /// 查看模块详情事件
+    /// View module details events
     /// </summary>
     [Parameter] public EventCallback<ModuleKey> OnModuleDetailClicked { get; set; }
 
     /// <summary>
-    /// 处理刷新按钮点击事件
+    /// Handle refresh button click event
     /// </summary>
     /// <returns></returns>
     private async Task OnRefreshClicked()
@@ -217,21 +214,21 @@
     }
 
     /// <summary>
-    /// 获取百分比
+    /// Get percentage
     /// </summary>
-    /// <param name="value">值</param>
-    /// <param name="total">总数</param>
-    /// <returns>百分比</returns>
+    /// <param name="value">value</param>
+    /// <param name="total">Total</param>
+    /// <returns>Percentage</returns>
     private double GetPercentage(int value, int total)
     {
         return total > 0 ? (double)value / total * 100 : 0;
     }
 
     /// <summary>
-    /// 获取初始化时间颜色
+    /// Get initialization time color
     /// </summary>
-    /// <param name="timeMs">时间毫秒</param>
-    /// <returns>颜色</returns>
+    /// <param name="timeMs">Time in milliseconds</param>
+    /// <returns>Color</returns>
     private Color GetInitTimeColor(long timeMs) => timeMs switch
     {
         <= 100 => Color.Success,
@@ -241,10 +238,10 @@
     };
 
     /// <summary>
-    /// 获取初始化时间百分比
+    /// Get initialization time percentage
     /// </summary>
-    /// <param name="timeMs">时间毫秒</param>
-    /// <returns>百分比</returns>
+    /// <param name="timeMs">Time in milliseconds</param>
+    /// <returns>Percentage</returns>
     private double GetInitTimePercentage(long timeMs)
     {
         if (RegistrationInfo == null) return 0;

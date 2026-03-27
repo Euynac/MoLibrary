@@ -142,7 +142,7 @@ public partial class AutoModelExpressionTokenizer<TModel>(
 
     public NormalizedResult GenFinalExpression(TokenizerContext context)
     {
-        var supplementObjects = new List<object>(); //补充的object parameter value，用于dynamic linq的赋值
+        var supplementObjects = new List<object>(); // Supplemental object parameter values for dynamic LINQ assignments.
         foreach (var (index, token) in context.Tokens.WithIndex())
         {
             var fieldInfo = token.FieldInfo!;
@@ -167,7 +167,7 @@ public partial class AutoModelExpressionTokenizer<TModel>(
 
 
     /// <summary>
-    /// 获取当前Enum类型枚举范围（仅当前是Enum类型）
+    /// Gets the current enum type's allowed range (only when the type is an enum).
     /// </summary>
     /// <returns></returns>
     private static string GetEnumRange(Type type)
@@ -178,7 +178,7 @@ public partial class AutoModelExpressionTokenizer<TModel>(
     }
 
     /// <summary>
-    /// 表达式正则
+    /// Regular expression for parsing expressions.
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex("""

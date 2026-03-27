@@ -1,7 +1,7 @@
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// DataChannel信息传输对象
+/// Transport DTO for exposing DataChannel metadata to the UI.
 /// </summary>
 public class DtoChannelInfo
 {
@@ -11,27 +11,27 @@ public class DtoChannelInfo
     public string Id { get; set; } = string.Empty;
     
     /// <summary>
-    /// Channel名称
+    /// Display name of the channel.
     /// </summary>
     public string Name { get; set; } = string.Empty;
     
     /// <summary>
-    /// Channel描述
+    /// Description of the channel.
     /// </summary>
     public string Description { get; set; } = string.Empty;
     
     /// <summary>
-    /// 是否启用
+    /// Indicates whether the channel is enabled.
     /// </summary>
     public bool IsEnabled { get; set; } = true;
     
     /// <summary>
-    /// 创建时间
+    /// Creation timestamp.
     /// </summary>
     public DateTime CreateTime { get; set; } = DateTime.Now;
     
     /// <summary>
-    /// 最后更新时间
+    /// Last modification timestamp.
     /// </summary>
     public DateTime UpdateTime { get; set; } = DateTime.Now;
 }

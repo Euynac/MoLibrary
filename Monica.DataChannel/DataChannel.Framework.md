@@ -219,7 +219,7 @@ public interface ISetupPipeline
 ```csharp
 services.AddDataChannel<MyChannelBuilder>(options => {
     options.EnableControllers = true;
-    // 其他配置...
+    // Other options...
 });
 ```
 
@@ -230,7 +230,7 @@ public class MyChannelBuilder : ISetupPipeline
 {
     public void Setup()
     {
-        // 创建和配置管道
+        // Create and configure the pipeline
         DataPipeline.Create()
             .SetOuterEndpoint(new MetadataForTcpClient {
                 ClientAddress = new KeyValuePair<string, int>("localhost", 8080),
@@ -266,7 +266,7 @@ public class MyService
         var channel = _channelManager.Fetch(channelId);
         if (channel != null)
         {
-            // 使用通道发送数据
+            // Send data through the channel
             var context = new DataContext(
                 EDataSource.Inner, 
                 EDataSource.Inner, 
@@ -294,12 +294,12 @@ public class MyCustomEndpoint : IPipeEndpoint
     
     public async Task ReceiveDataAsync(DataContext data)
     {
-        // 处理接收到的数据
+        // Handle received data
         Console.WriteLine($"Received data: {data.Data}");
         
-        // 可能的处理逻辑...
+        // Additional processing logic...
         
-        // 如果需要，可以将数据发送到管道的另一端
+        // Optionally forward data to the other end of the pipeline
         // await Pipe.SendDataAsync(newData);
     }
 }
@@ -316,10 +316,10 @@ public class JsonTransformMiddleware : IPipeTransformMiddleware
     
     public async Task<DataContext> PassAsync(DataContext context)
     {
-        // 在这里执行数据转换逻辑
+        // Perform data transformation here
         if (context.DataType == EDataType.String && context.Data is string json)
         {
-            // 假设将JSON字符串转换为对象
+            // Example: deserialize JSON string into an object
             var obj = JsonSerializer.Deserialize<MyDataObject>(json);
             context.Data = obj;
             context.DataType = EDataType.Poco;

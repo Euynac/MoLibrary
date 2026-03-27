@@ -26,14 +26,14 @@
         </div>
     </div>
 
-    @* 指标卡片 *@
+    @* indicator card *@
     <div class="mb-4">
         <QuickMonitorCard DataPoint="currentDataPoint"
                           PreviousDataPoint="previousDataPoint"
                           IsLoading="isLoading"/>
     </div>
 
-    @* 趋势图 *@
+    @* Trend chart *@
     <QuickMonitorTrendChart TrendData="trendData" IsLoading="isLoading"/>
 </MudContainer>
 
@@ -83,10 +83,10 @@
 
         try
         {
-            // 保存上一个数据点用于趋势显示
+            // Save the last data point for trend display
             previousDataPoint = currentDataPoint;
 
-            // 获取当前数据
+            // Get current data
             currentDataPoint = MetricsCollector.GetCurrentDataPoint();
             trendData = MetricsCollector.GetTrendData();
         }

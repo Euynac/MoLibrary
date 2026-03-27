@@ -3,40 +3,40 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 主题基类 - 提供默认的代码块主题实现
+/// Theme base class - provides the default code block theme implementation
 /// </summary>
 public abstract class ThemeBase : IThemeProvider
 {
     /// <summary>
-    /// 主题名称
+    /// Topic name
     /// </summary>
     public abstract string Name { get; }
     
     /// <summary>
-    /// 主题显示名称
+    /// Topic display name
     /// </summary>
     public abstract string DisplayName { get; }
     
     /// <summary>
-    /// 主题描述
+    /// Topic description
     /// </summary>
     public abstract string Description { get; }
     
     /// <summary>
-    /// 创建MudTheme实例
+    /// Create MudTheme instance
     /// </summary>
-    /// <returns>配置好的MudTheme实例</returns>
+    /// <returns>Configured MudTheme instance</returns>
     public abstract MudTheme CreateTheme();
     
     /// <summary>
-    /// 获取明亮模式下的代码块主题
-    /// 默认使用Github主题，子类可重写
+    /// Get the Code Blocks theme in light mode
+    /// Github theme is used by default, subclasses can be rewritten
     /// </summary>
     public virtual CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
     
     /// <summary>
-    /// 获取暗黑模式下的代码块主题
-    /// 默认使用GithubDark主题，子类可重写
+    /// Get the Code Blocks theme in dark mode
+    /// The GithubDark theme is used by default and can be overridden by subclasses
     /// </summary>
     public virtual CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;
 }

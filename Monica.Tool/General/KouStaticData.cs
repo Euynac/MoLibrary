@@ -1,12 +1,12 @@
 ﻿namespace Monica.Tool.General;
 
 /// <summary>
-/// Kou静态数据库
+/// Kou static database
 /// </summary>
 public static class KouStaticData
 {
     /// <summary>
-    /// 中文标点与英文标点
+    /// Chinese punctuation and English punctuation
     /// </summary>
     public static IReadOnlyDictionary<string, string> ZhToEnPunctuationDict { get; } =
         new Dictionary<string, string>
@@ -16,7 +16,7 @@ public static class KouStaticData
             {"￥", "$"}, {"、", "\\"}, {"～", "~"}
         };
     /// <summary>
-    /// bool值的转换
+    /// Conversion of bool values
     /// </summary>
     public static IReadOnlyDictionary<string, bool> StringToBoolDict { get; } = new Dictionary<string, bool>
     {
@@ -27,14 +27,14 @@ public static class KouStaticData
         {"开启", true},{"打开", true},{"t", true},{"f", false}
     };
     /// <summary>
-    /// 中文数学运算转对应符号
+    /// Convert Chinese mathematical operations to corresponding symbols
     /// </summary>
     public static IReadOnlyDictionary<string, string> ZhMathToSymbolMath { get; } = new Dictionary<string, string>()
     {
         {"加", "+"},{"减", "-"},{"乘", "*"},{"除","/"}
     };
     /// <summary>
-    /// 翻页使用的下一页的关键词
+    /// Keywords for the next page used when turning pages
     /// </summary>
     public static readonly HashSet<string> PageNextList = new()
     {
@@ -47,7 +47,7 @@ public static class KouStaticData
         "forward"
     };
     /// <summary>
-    /// 翻页使用的上一页的关键词
+    /// Keywords from the previous page used to turn pages
     /// </summary>
     public static readonly HashSet<string> PagePreviousList = new()
     {
@@ -60,7 +60,7 @@ public static class KouStaticData
     };
 
     /// <summary>
-    /// 数据库增加的关键词
+    /// Keywords added to the database
     /// </summary>
     public static readonly HashSet<string> AutoModelAddAction = new()
     {
@@ -80,7 +80,7 @@ public static class KouStaticData
         "post"
     };
     /// <summary>
-    /// 数据库删除的关键词
+    /// Database deleted keywords
     /// </summary>
     public static readonly HashSet<string> AutoModelDeleteAction = new()
     {
@@ -95,7 +95,7 @@ public static class KouStaticData
         "forget",
     };
     /// <summary>
-    /// 数据库修改的关键词
+    /// Database modification keywords
     /// </summary>
     public static readonly HashSet<string> AutoModelModifyAction = new()
     {
@@ -111,7 +111,7 @@ public static class KouStaticData
         "patch"
     };
     /// <summary>
-    /// 数据库查询的关键词
+    /// Database query keywords
     /// </summary>
     public static readonly HashSet<string> AutoModelSearchAction = new()
     {
@@ -127,7 +127,7 @@ public static class KouStaticData
     };
 
     /// <summary>
-    /// 动词列表
+    /// verb list
     /// </summary>
     public static readonly HashSet<string> Verb = new()
     {

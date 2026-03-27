@@ -240,7 +240,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             }
         }
 
-        //同种类Interceptor不应该注册多次？
+        //Shouldn't the same type of Interceptor be registered multiple times?
         IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
         {
             var types = context.InterceptorTypes;
@@ -293,7 +293,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                     var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
-                    //TODO 无法实现属性注入，因为工厂方法实例化只能执行一次。
+                    //TODO cannot implement property injection because factory method instantiation can only be executed once.
                     switch (context.Kind)
                     {
                         case EDynamicProxyKind.ClassProxy:
@@ -319,7 +319,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         }
         void AddNormalRegister(RegisterContext context)
         {
-            //巨坑：Controller如果不使用AddControllersAsServices，会导致Controller无法被动态代理
+            //Big Pitfall: If the Controller does not use AddControllersAsServices, the Controller cannot be dynamically proxied.
             collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {
@@ -368,7 +368,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 public enum EDynamicProxyKind
 {
     /// <summary>
-    /// Proxy class methods marked as virtual.   TODO 目前仅支持virtual方法的代理
+    /// Proxy class methods marked as virtual. TODO Currently only supports virtual method proxies
     /// </summary>
     ClassProxy,
     /// <summary>

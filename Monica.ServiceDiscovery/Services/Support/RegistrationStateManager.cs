@@ -9,7 +9,7 @@ using Monica.StateStore;
 namespace Monica.ServiceDiscovery.Services.Support;
 
 /// <summary>
-/// 基于 StateStore 的注册状态管理器
+/// Registration state manager based on StateStore
 /// </summary>
 public class RegistrationStateManager(
     [FromKeyedServices(nameof(ModuleServiceDiscovery))] IMoStateStore stateStore,
@@ -29,13 +29,13 @@ public class RegistrationStateManager(
     private readonly object _registrationTimeLock = new();
 
     /// <summary>
-    /// 获取注册 Key
+    /// Get registration key
     /// </summary>
     private string GetRegistrationKey() =>
         $"{(clientInfo.GetServiceStatus() is { } status ? $"{status.ServiceName}:{status.InstanceId}" : throw new InvalidOperationException("InstanceId is required"))}";
 
     /// <summary>
-    /// 获取 Leader Key
+    /// Get Leader Key
     /// </summary>
     private string GetLeaderKey() => clientInfo.GetServiceStatus().ServiceName;
 
@@ -46,17 +46,17 @@ public class RegistrationStateManager(
             var regKey = GetRegistrationKey();
             var now = DateTime.UtcNow;
 
-            // 获取基础实例状态（包含所有服务信息和元数据）
+            // Get the base instance status (contains all service information and metadata)
             var instanceState = clientInfo.GetServiceStatus();
 
-            // 使用缓存的注册时间，避免每次心跳都进行 Get 操作
+            // Use cached registration time to avoid Get operations for every heartbeat
             DateTime registrationTime;
             lock (_registrationTimeLock)
             {
                 registrationTime = _cachedRegistrationTime ?? now;
             }
 
-            // 设置运行时状态字段
+            // Set runtime status field
             instanceState.RegistrationTime = registrationTime;
             instanceState.LastHeartbeatTime = now;
             instanceState.IsLeader = leaderElectionService.IsLeader;
@@ -67,7 +67,7 @@ public class RegistrationStateManager(
                 ct,
                 _option.Election.RegistrationTTL);
 
-            // 首次成功保存后缓存注册时间
+            // Cache registration time after first successful save
             lock (_registrationTimeLock)
             {
                 _cachedRegistrationTime ??= registrationTime;
@@ -126,7 +126,7 @@ public class RegistrationStateManager(
                 ServiceName = serviceStatus.ServiceName
             };
 
-            // 尝试仅在 Key 不存在时保存
+            // Try to save only if Key does not exist
             var success = await stateStore.TrySaveStateIfNotExistsAsync(
                 LEADER_PREFIX + leaderKey,
                 leaderState,
@@ -135,7 +135,7 @@ public class RegistrationStateManager(
 
             if (success)
             {
-                // 获取 ETag
+                // Get ETag
                 var (_, eTag) = await stateStore.GetStateAndETagAsync<LeaderState>(LEADER_PREFIX + leaderKey, ct);
                 logger.LogInformation("成功成为 Leader: {InstanceId}", serviceStatus.InstanceId);
                 return (true, leaderState, eTag);
@@ -227,7 +227,7 @@ public class RegistrationStateManager(
     {
         try
         {
-            // 步骤 1：使用 glob pattern 扫描所有 reg 前缀下的 key
+            // Step 1: Use glob pattern to scan all keys under the reg prefix
             var instanceKeys = await stateStore.ScanKeysAsync(REG_PREFIX + "*", ct);
 
             if (instanceKeys.Count == 0)
@@ -236,7 +236,7 @@ public class RegistrationStateManager(
                 return [];
             }
 
-            // 步骤 2：批量获取所有 InstanceState
+            // Step 2: Get all InstanceState in batches
             var instances = await stateStore.GetBulkStateAsync<InstanceState>(
                 instanceKeys,
                 removeEmptyValue: true,
@@ -257,7 +257,7 @@ public class RegistrationStateManager(
     {
         try
         {
-            // 步骤 1：使用 glob pattern 扫描所有 leader 前缀下的 key
+            // Step 1: Use glob pattern to scan all keys under the leader prefix
             var leaderKeys = await stateStore.ScanKeysAsync(LEADER_PREFIX + "*", ct);
 
             if (leaderKeys.Count == 0)
@@ -266,13 +266,13 @@ public class RegistrationStateManager(
                 return [];
             }
 
-            // 步骤 2：批量获取所有 LeaderState
+            // Step 2: Get all LeaderState in batches
             var leaderStates = await stateStore.GetBulkStateAsync<LeaderState>(
                 leaderKeys,
                 removeEmptyValue: true,
                 cancellationToken: ct);
 
-            // 步骤 3：构建 InstanceState 的 key 列表
+            // Step 3: Build the key list of InstanceState
             var instanceKeys = leaderStates.Values
                 .Where(ls => ls != null && !string.IsNullOrEmpty(ls.ServiceName))
                 .Select(ls => REG_PREFIX + $"{ls!.ServiceName}:{ls.InstanceId}")
@@ -284,7 +284,7 @@ public class RegistrationStateManager(
                 return [];
             }
 
-            // 步骤 4：批量获取所有 Leader 的 InstanceState
+            // Step 4: Get the InstanceState of all Leaders in batches
             var instances = await stateStore.GetBulkStateAsync<InstanceState>(
                 instanceKeys,
                 removeEmptyValue: true,

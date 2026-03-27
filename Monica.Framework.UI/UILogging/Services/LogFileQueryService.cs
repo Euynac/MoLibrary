@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UILogging.Services;
 
 /// <summary>
-/// 日志文件查询与下载服务
+/// Log file query and download service
 /// </summary>
 public sealed class LogFileQueryService(
     IOptions<ModuleLoggingOption> loggingOptions,
@@ -75,13 +75,13 @@ public sealed class LogFileQueryService(
     }
 
     /// <summary>
-    /// 读取指定行号周围的上下文日志
+    /// Read the context log around the specified line number
     /// </summary>
-    /// <param name="filePath">日志文件路径（绝对路径）</param>
-    /// <param name="targetLineNumber">目标行号（绝对行号，从1开始）</param>
-    /// <param name="contextLines">上下文行数（前后各读取多少行）</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>包含目标行及其上下文的日志视图模型列表</returns>
+    /// <param name="filePath">Log file path (absolute path)</param>
+    /// <param name="targetLineNumber">Target line number (absolute line number, starting from 1)</param>
+    /// <param name="contextLines">Number of context lines (how many lines are read before and after)</param>
+    /// <param name="cancellationToken">Cancellation Token</param>
+    /// <returns>List of log view models containing the target row and its context</returns>
     public async Task<Res<ContextLogResult>> ReadContextAsync(
         string filePath,
         long targetLineNumber,
@@ -150,11 +150,11 @@ public sealed class LogFileQueryService(
     }
 
     /// <summary>
-    /// 将相对路径解析为完整的日志文件路径
+    /// Resolve relative path to full log file path
     /// </summary>
-    /// <param name="relativePath">相对于日志目录的路径</param>
-    /// <returns>完整的文件路径</returns>
-    /// <exception cref="InvalidOperationException">当路径试图访问日志目录之外的位置时抛出</exception>
+    /// <param name="relativePath">Path relative to the log directory</param>
+    /// <returns>Full file path</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the path attempts to access a location outside the log directory</exception>
     public string ResolveFilePath(string relativePath)
     {
         var combined = Path.Combine(_logDirectory, relativePath);

@@ -10,7 +10,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 作业健康指标服务（基于可配置的时间窗口）
+/// Job health indicator service (based on configurable time window)
 /// </summary>
 public class JobHealthMetricsService(
     IMoJobMetadataRepository metadataRepository,

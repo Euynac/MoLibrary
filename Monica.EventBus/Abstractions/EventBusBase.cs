@@ -52,7 +52,7 @@ public abstract class EventBusBase(
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
 
-        // 提取 Action 处理器的元数据
+        // Extract metadata for the action-based handler.
         var metadata = DelegateMetadataExtractor.ExtractMetadata(handler);
 
         var descriptor = new SubscriptionDescriptor

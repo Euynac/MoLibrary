@@ -3,107 +3,107 @@ using Microsoft.AspNetCore.Components.Routing;
 namespace Monica.UI.UICore.Models;
 
 /// <summary>
-/// UI页面信息
+/// UI page information
 /// </summary>
 public class UIPageInfo
 {
     /// <summary>
-    /// 路由路径
+    /// routing path
     /// </summary>
     public required string Route { get; init; }
 
     /// <summary>
-    /// 组件类型
+    /// Component type
     /// </summary>
     public required Type ComponentType { get; init; }
 
     /// <summary>
-    /// 显示名称
+    /// display name
     /// </summary>
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// 图标
+    /// icon
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// 分类
+    /// Classification
     /// </summary>
     public string? Category { get; init; }
 
     /// <summary>
-    /// 显示名称的本地化键
+    /// localization key for display name
     /// </summary>
     public string? DisplayNameKey { get; init; }
 
     /// <summary>
-    /// 分类的本地化键
+    /// Classification localization key
     /// </summary>
     public string? CategoryKey { get; init; }
 }
 
 /// <summary>
-/// 导航菜单项
+/// Navigation menu items
 /// </summary>
 public class UINavItem
 {
     /// <summary>
-    /// 显示文本
+    /// display text
     /// </summary>
     public required string Text { get; init; }
 
     /// <summary>
-    /// 链接地址
+    /// Link address
     /// </summary>
     public string? Href { get; init; }
 
     /// <summary>
-    /// 图标
+    /// icon
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// 是否展开（对于有子项的菜单）
+    /// Whether to expand (for menus with sub-items)
     /// </summary>
     public bool IsExpanded { get; set; }
 
     /// <summary>
-    /// 导航项分类
+    /// Navigation item classification
     /// </summary>
     public string? Category { get; set; }
     /// <summary>
-    /// 子菜单项
+    /// submenu item
     /// </summary>
     public List<UINavItem> Children { get; init; } = new();
 
     /// <summary>
-    /// 点击事件
+    /// click event
     /// </summary>
     public Action? OnClick { get; init; }
 
     /// <summary>
-    /// 是否禁用
+    /// Whether to disable
     /// </summary>
     public bool Disabled { get; init; }
 
     /// <summary>
-    /// 排序顺序
+    /// sort order
     /// </summary>
     public int Order { get; init; }
 
     /// <summary>
-    /// 导航链接匹配模式
+    /// Navigation link matching pattern
     /// </summary>
     public NavLinkMatch NavLinkMatch { get; init; } = NavLinkMatch.Prefix;
 
     /// <summary>
-    /// 显示文本的本地化键
+    /// Display localization key for text
     /// </summary>
     public string? TextKey { get; init; }
 
     /// <summary>
-    /// 分类的本地化键
+    /// Classification localization key
     /// </summary>
     public string? CategoryKey { get; init; }
 } 

@@ -9,72 +9,73 @@ namespace Monica.Configuration.Model;
 public class DtoOptionItem
 {
     /// <summary>
-    /// 显示标题
+    /// Display title.
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// 配置项名
+    /// Option name.
     /// </summary>
     public required string Name { get; set; }
 
     /// <summary>
-    /// 配置项Key，用此来进行配置项修改
+    /// Option key used for update operations.
     /// </summary>
     public required string Key { get; set; }
 
     /// <summary>
-    /// 配置项描述
+    /// Option description.
     /// </summary>
     public string? Desc { get; set; }
     /// <summary>
-    /// 配置项值
+    /// Option value.
     /// </summary>
     [JsonConverter(typeof(PreserveOriginalWithEnumStringConverter))]
     public object? Value { get; set; }
 
     /// <summary>
-    /// 是否是离线参数，是则需要重启微服务才能生效
+    /// Whether the option is offline-only and requires service restart to take effect.
     /// </summary>
     public bool IsOffline { get; set; }
 
     /// <summary>
-    /// 配置基本类型
+    /// Basic option value type.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EOptionItemValueBasicType Type { get; set; } = EOptionItemValueBasicType.String;
     /// <summary>
-    /// 配置特殊类型
+    /// Special option type.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EOptionItemValueSpecialType? SpecialType { get; set; }
 
     /// <summary>
-    /// 正则验证表达式
+    /// Regex validation pattern.
     /// </summary>
     public string? RegexPattern { get; set; }
 
     /// <summary>
-    /// 指示该配置是可空类型（可传入null）
+    /// Indicates whether this option is nullable (null is allowed).
     /// </summary>
     public bool IsNullable { get; set; }
 
     /// <summary>
-    /// 子配置结构类型
+    /// Nested sub-configuration structure.
     /// </summary>
     public DtoConfig? SubStructure { get; set; }
 
     /// <summary>
-    /// 最终配置Provider
+    /// Effective configuration provider.
     /// </summary>
     public string? Provider { get; set; }
     /// <summary>
-    /// 最终配置来源信息
+    /// Effective configuration source info.
     /// </summary>
     public string? Source { get; set; }
 
     /// <summary>
-    /// 所有配置来源列表，越后优先级越高（最后一个为最终生效的配置）
+    /// All configuration sources; later items have higher precedence
+    /// (the last one is the effective source).
     /// </summary>
     [JsonIgnore]
     public List<DtoConfigSource>? SourceList { get; set; }
@@ -84,59 +85,59 @@ public class DtoConfig
 {
 
     /// <summary>
-    /// 显示标题
+    /// Display title.
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// 配置类名
+    /// Configuration type name.
     /// </summary>
     public required string Name { get; set; }
 
     /// <summary>
-    /// 配置参数类别
+    /// Configuration category.
     /// </summary>
     public string? Type { get; set; }
 
     /// <summary>
-    /// 配置类描述
+    /// Configuration description.
     /// </summary>
     public string? Desc { get; set; }
 
     /// <summary>
-    /// 配置项
+    /// Configuration items.
     /// </summary>
     public List<DtoOptionItem> Items { get; set; } = [];
 
 
-    #region 审计字段
+    #region Audit Fields
 
     /// <summary>
-    /// 版本号
+    /// Version.
     /// </summary>
     public string? Version { get; set; }
 
     /// <summary>
-    /// 配置获取时间
+    /// Configuration fetch time.
     /// </summary>
     public DateTime FetchTime { get; } = DateTime.Now;
     /// <summary>
-    /// 配置上一次更新时间
+    /// Last configuration update time.
     /// </summary>
     public DateTime? LastModificationTime { get; set; }
     /// <summary>
-    /// 配置上一次更新来源人ID
+    /// Last updater ID.
     /// </summary>
     public string? LastModifierId { get; set; }
     /// <summary>
-    /// 配置上一次更新来源人名
+    /// Last updater name.
     /// </summary>
     public string? Username { get; set; }
 
     #endregion
 
     /// <summary>
-    /// 该配置类是否包含相应配置项
+    /// Determines whether this configuration contains the specified option key.
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
@@ -146,7 +147,7 @@ public class DtoConfig
     }
 
     /// <summary>
-    /// 获取配置类当前值
+    /// Gets current configuration values as JSON.
     /// </summary>
     /// <returns></returns>
     public string ToJsonValue()
@@ -164,12 +165,12 @@ public class DtoConfig
 public class DtoServiceGroup
 {
     /// <summary>
-    /// 显示标题
+    /// Display title.
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// 微服务名
+    /// Microservice name.
     /// </summary>
     public required string Name { get; set; }
 
@@ -179,7 +180,7 @@ public class DtoServiceGroup
     public required string AppId { get; set; }
 
     /// <summary>
-    /// 微服务内配置类
+    /// Configuration classes under this microservice.
     /// </summary>
     public List<DtoConfig> Children { get; set; } = [];
 }
@@ -187,38 +188,38 @@ public class DtoServiceGroup
 public class DtoDomainGroup
 {
     /// <summary>
-    /// 显示标题
+    /// Display title.
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// 子域名
+    /// Domain name.
     /// </summary>
     public required string Name { get; set; }
 
     /// <summary>
-    /// 子域内微服务信息
+    /// Microservice information under this domain.
     /// </summary>
     public List<DtoServiceGroup> Children { get; set; } = [];
 }
 
 /// <summary>
-/// 配置来源信息
+/// Configuration source metadata.
 /// </summary>
 public class DtoConfigSource
 {
     /// <summary>
-    /// 配置Provider类型名
+    /// Configuration provider type name.
     /// </summary>
     public required string Provider { get; set; }
 
     /// <summary>
-    /// 配置来源详细信息
+    /// Configuration source details.
     /// </summary>
     public string? SourceInfo { get; set; }
 
     /// <summary>
-    /// 是否为最终生效的配置源
+    /// Indicates whether this is the effective source.
     /// </summary>
     public bool IsActive { get; set; }
 }

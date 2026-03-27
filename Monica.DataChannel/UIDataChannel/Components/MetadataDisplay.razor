@@ -54,17 +54,17 @@
 
 @code {
     /// <summary>
-    /// 元数据对象
+    /// Metadata object to visualize.
     /// </summary>
     [Parameter] public object? Metadata { get; set; }
 
     /// <summary>
-    /// 处理后的元数据项列表
+    /// Processed list of metadata entries.
     /// </summary>
     private List<MetadataItem>? MetadataItems => ProcessMetadata();
 
     /// <summary>
-    /// 元数据项
+    /// Represents a single metadata entry.
     /// </summary>
     private class MetadataItem
     {
@@ -74,18 +74,18 @@
     }
 
     /// <summary>
-    /// 处理元数据对象，转换为可显示的项列表
+    /// Processes the metadata object and converts it into displayable entries.
     /// </summary>
-    /// <returns>元数据项列表</returns>
+    /// <returns>List of metadata entries.</returns>
     private List<MetadataItem>? ProcessMetadata()
     {
         if (Metadata == null) return null;
 
         try
         {
-            // 预处理枚举类型，将枚举转换为字符串
+            // Preprocess enums by converting them to strings
             var processedMetadata = PreprocessEnums(Metadata);
-            
+
             var jsonString = JsonSerializer.Serialize(processedMetadata, new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -98,7 +98,7 @@
         }
         catch (Exception)
         {
-            // 如果JSON序列化失败，尝试直接处理
+            // If JSON serialization fails, fall back to direct handling
             return new List<MetadataItem>
             {
                 new MetadataItem
@@ -112,36 +112,36 @@
     }
 
     /// <summary>
-    /// 预处理对象，将枚举类型转换为字符串
+    /// Preprocesses the object by converting enum values to strings.
     /// </summary>
-    /// <param name="obj">要处理的对象</param>
-    /// <returns>处理后的对象</returns>
+    /// <param name="obj">Object to process.</param>
+    /// <returns>Processed object.</returns>
     private object? PreprocessEnums(object? obj)
     {
         if (obj == null) return null;
 
         var type = obj.GetType();
 
-        // 如果是枚举类型，直接转换为字符串
+        // Enums are converted directly to strings
         if (type.IsEnum)
         {
             return obj.ToString();
         }
 
-        // 如果是基础类型，直接返回
+        // Primitive types are returned as-is
         if (type.IsPrimitive || type == typeof(string) || type == typeof(DateTime) || type == typeof(decimal) || type == typeof(Guid))
         {
             return obj;
         }
 
-        // 如果是可空枚举类型
+        // Nullable enums are converted to strings as well
         var underlyingType = Nullable.GetUnderlyingType(type);
         if (underlyingType?.IsEnum == true)
         {
             return obj.ToString();
         }
 
-        // 如果是集合类型
+        // Collections are processed element-wise
         if (obj is System.Collections.IEnumerable enumerable && type != typeof(string))
         {
             var list = new List<object?>();
@@ -152,12 +152,12 @@
             return list;
         }
 
-        // 如果是复杂对象，递归处理属性
+        // Complex objects have their public properties processed recursively
         if (type.IsClass || type.IsValueType)
         {
             var result = new Dictionary<string, object?>();
             var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            
+
             foreach (var property in properties)
             {
                 if (property.CanRead)
@@ -169,7 +169,7 @@
                     }
                     catch
                     {
-                        // 忽略无法读取的属性
+                        // Ignore properties that cannot be read
                         result[property.Name] = "无法读取";
                     }
                 }
@@ -181,11 +181,11 @@
     }
 
     /// <summary>
-    /// 从JsonElement中提取元数据项
+    /// Extracts metadata entries from a JsonElement.
     /// </summary>
-    /// <param name="element">JSON元素</param>
-    /// <param name="keyPrefix">键前缀</param>
-    /// <returns>元数据项列表</returns>
+    /// <param name="element">JSON element.</param>
+    /// <param name="keyPrefix">Optional key prefix.</param>
+    /// <returns>Metadata item list.</returns>
     private List<MetadataItem> ExtractMetadataItems(JsonElement element, string keyPrefix = "")
     {
         var items = new List<MetadataItem>();
@@ -197,9 +197,9 @@
                 var key = string.IsNullOrEmpty(keyPrefix) ? property.Name : $"{keyPrefix}.{property.Name}";
                 
                 if (property.Value.ValueKind == JsonValueKind.Object || property.Value.ValueKind == JsonValueKind.Array)
-                {
-                    // 复杂对象，直接序列化显示
-                    var complexValue = JsonSerializer.Serialize(property.Value, new JsonSerializerOptions
+                    {
+                        // Serialize complex objects directly for display
+                        var complexValue = JsonSerializer.Serialize(property.Value, new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -214,7 +214,7 @@
                 }
                 else
                 {
-                    // 简单值
+                    // Simple values
                     var value = property.Value.ValueKind switch
                     {
                         JsonValueKind.String => property.Value.GetString() ?? "",
@@ -249,10 +249,10 @@
                 IsComplexValue = true
             });
         }
-        else
-        {
-            // 原始值
-            var value = element.ValueKind switch
+            else
+            {
+                // Raw value
+                var value = element.ValueKind switch
             {
                 JsonValueKind.String => element.GetString() ?? "",
                 JsonValueKind.Number => element.GetDecimal().ToString(),
@@ -272,4 +272,4 @@
 
         return items;
     }
-} 
+}

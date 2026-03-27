@@ -21,12 +21,12 @@ public static class ModuleDaprStateStoreBuilderExtensions
     }
     
     /// <summary>
-    /// 添加 Dapr 状态存储作为 Keyed StateStore 提供者
+    /// Add Dapr state store as Keyed StateStore provider
     /// </summary>
-    /// <param name="guide">StateStore 模块指南</param>
-    /// <param name="serviceKey">服务键，用于标识此 StateStore 实例</param>
-    /// <param name="configureOptions">Dapr 状态存储配置委托</param>
-    /// <returns>StateStore 模块指南实例以支持链式调用</returns>
+    /// <param name="guide">StateStore Module Guide</param>
+    /// <param name="serviceKey">The service key that identifies this StateStore instance</param>
+    /// <param name="configureOptions">Dapr state storage configuration delegate</param>
+    /// <returns>StateStore module guide example to support chained calls</returns>
     public static ModuleStateStoreGuide AddKeyedDaprStateStore(
         this ModuleStateStoreGuide guide,
         string serviceKey,
@@ -37,10 +37,10 @@ public static class ModuleDaprStateStoreBuilderExtensions
         new ModuleDaprStateStoreGuide().Register();
         guide.ConfigureStateStoreServices(services =>
         {
-            // 注册 keyed options
+            // Register keyed options
             services.Configure(serviceKey, configureOptions);
 
-            // 注册 keyed DaprStateStore
+            // Register keyed DaprStateStore
             services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
             {
                 var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleDaprStateStoreOption>>();
@@ -92,7 +92,7 @@ public class
 public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
 {
     /// <summary>
-    /// Dapr StateStore名称。需要与Dapr StateStore.yaml文件metadata中的name定义一致
+    /// Dapr StateStore name. It needs to be consistent with the name definition in the metadata of the Dapr StateStore.yaml file.
     /// </summary>
     [Required]
     public string StateStoreName { get; set; } = null!;

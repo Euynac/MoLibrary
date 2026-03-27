@@ -8,8 +8,7 @@
     @if (SystemStatus != null)
     {
         <MudGrid Spacing="4" Class="mb-4">
-            <!-- 系统状态概览 -->
-            <MudItem xs="12" sm="6" md="3">
+            <!-- System status overview -->            <MudItem xs="12" sm="6" md="3">
                 <div class="overview-summary-item">
                     <MudCard Class="status-card modern-card">
                         <MudCardContent Class="pa-4">
@@ -37,8 +36,7 @@
                 </div>
             </MudItem>
 
-            <!-- 模块统计 -->
-            <MudItem xs="12" sm="6" md="3">
+            <!-- Module Statistics -->            <MudItem xs="12" sm="6" md="3">
                 <div class="overview-summary-item">
                     <MudCard Class="stats-card modern-card">
                         <MudCardContent Class="pa-4">
@@ -72,8 +70,7 @@
                 </div>
             </MudItem>
 
-            <!-- 初始化时间 -->
-            <MudItem xs="12" sm="6" md="3">
+            <!-- initialization time -->            <MudItem xs="12" sm="6" md="3">
                 <div class="overview-summary-item">
                     <MudCard Class="performance-card modern-card">
                         <MudCardContent Class="pa-4">
@@ -104,8 +101,7 @@
                 </div>
             </MudItem>
 
-            <!-- 健康状态 -->
-            <MudItem xs="12" sm="6" md="3">
+            <!-- health status -->            <MudItem xs="12" sm="6" md="3">
                 <div class="overview-summary-item">
                     <MudCard Class="health-card modern-card">
                         <MudCardContent Class="pa-4">
@@ -172,20 +168,20 @@
 
 @code {
     /// <summary>
-    /// 系统状态数据
+    /// System status data
     /// </summary>
     [Parameter] public ModuleSystemStatus? SystemStatus { get; set; }
 
     /// <summary>
-    /// 健康检查数据
+    /// health check data
     /// </summary>
     [Parameter] public ModuleSystemHealthCheck? HealthCheckData { get; set; }
 
     /// <summary>
-    /// 获取状态图标
+    /// Get status icon
     /// </summary>
-    /// <param name="state">系统状态</param>
-    /// <returns>图标名称</returns>
+    /// <param name="state">System status</param>
+    /// <returns>Icon name</returns>
     private string GetStatusIcon(ModuleSystemState state) => state switch
     {
         ModuleSystemState.NotInitialized => Icons.Material.Filled.HourglassEmpty,
@@ -196,10 +192,10 @@
     };
 
     /// <summary>
-    /// 获取状态颜色
+    /// Get status color
     /// </summary>
-    /// <param name="state">系统状态</param>
-    /// <returns>颜色</returns>
+    /// <param name="state">System status</param>
+    /// <returns>Color</returns>
     private Color GetStatusColor(ModuleSystemState state) => state switch
     {
         ModuleSystemState.NotInitialized => Color.Dark,
@@ -210,10 +206,10 @@
     };
 
     /// <summary>
-    /// 获取状态文本
+    /// Get status text
     /// </summary>
-    /// <param name="state">系统状态</param>
-    /// <returns>状态文本</returns>
+    /// <param name="state">System status</param>
+    /// <returns>Status text</returns>
     private string GetStatusText(ModuleSystemState state) => state switch
     {
         ModuleSystemState.NotInitialized => L["ModuleSystem:SystemOverview:States:NotInitialized"],
@@ -224,9 +220,9 @@
     };
 
     /// <summary>
-    /// 获取健康状态图标
+    /// Get health status icon
     /// </summary>
-    /// <returns>图标名称</returns>
+    /// <returns>Icon name</returns>
     private string GetHealthIcon()
     {
         if (HealthCheckData != null)
@@ -240,9 +236,9 @@
     }
 
     /// <summary>
-    /// 获取健康状态颜色
+    /// Get health status color
     /// </summary>
-    /// <returns>颜色</returns>
+    /// <returns>Color</returns>
     private Color GetHealthColor()
     {
         if (HealthCheckData != null)
@@ -256,9 +252,9 @@
     }
 
     /// <summary>
-    /// 获取健康状态文本
+    /// Get health status text
     /// </summary>
-    /// <returns>健康状态文本</returns>
+    /// <returns>Health status text</returns>
     private string GetHealthText()
     {
         if (HealthCheckData != null)
@@ -331,10 +327,10 @@
     };
 
     /// <summary>
-    /// 获取初始化时间进度
+    /// Get initialization time progress
     /// </summary>
-    /// <param name="totalTimeMs">总初始化时间（毫秒）</param>
-    /// <returns>进度值</returns>
+    /// <param name="totalTimeMs">Total initialization time (milliseconds)</param>
+    /// <returns>Progress value</returns>
     private double GetInitTimeProgress(long totalTimeMs)
     {
         if (totalTimeMs == 0) return 0;
@@ -342,10 +338,10 @@
     }
 
     /// <summary>
-    /// 获取初始化时间描述
+    /// Get initialization time description
     /// </summary>
-    /// <param name="totalTimeMs">总初始化时间（毫秒）</param>
-    /// <returns>描述文本</returns>
+    /// <param name="totalTimeMs">Total initialization time (milliseconds)</param>
+    /// <returns>Description text</returns>
     private string GetInitTimeDescription(long totalTimeMs)
     {
         if (totalTimeMs == 0) return L["ModuleSystem:SystemOverview:Messages:SystemStarting"];

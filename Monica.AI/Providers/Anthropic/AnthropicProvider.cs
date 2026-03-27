@@ -28,7 +28,7 @@ public class AnthropicProvider : IAIProvider
     {
         _options = options;
 
-        // Anthropic SDK v12 使用对象初始化器配置客户端
+        // Anthropic SDK v12 Configuring the client using object initializer
         _client = new AnthropicClient
         {
             ApiKey = options.ApiKey,

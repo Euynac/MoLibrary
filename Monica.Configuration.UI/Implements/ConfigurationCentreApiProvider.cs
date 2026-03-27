@@ -10,7 +10,7 @@ using ResExtensions = Monica.Tool.Results.ResExtensions;
 namespace Monica.Configuration.UI.Implements;
 
 /// <summary>
-/// 配置中心API提供者，使用注册中心的状态管理器获取已注册服务列表并调用其配置端点
+/// Configuration center API provider, uses the status manager of the registration center to obtain the registered service list and call its configuration endpoint
 /// </summary>
 public class ConfigurationCentreApiProvider(
     IMoConfigurationModifier modifier,

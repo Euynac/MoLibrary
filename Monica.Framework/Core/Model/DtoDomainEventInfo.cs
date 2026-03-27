@@ -1,17 +1,17 @@
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 领域事件信息Dto
+/// Domain event information Dto
 /// </summary>
 public class DtoDomainEventInfo
 {
     /// <summary>
-    /// 项目单元信息
+    /// Project unit information
     /// </summary>
     public DtoProjectUnit Info { get; set; } = null!;
 
     /// <summary>
-    /// 事件结构信息
+    /// event structure information
     /// </summary>
     public object? Structure { get; set; } = null!;
 }

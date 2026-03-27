@@ -1,58 +1,58 @@
 namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
-/// Leader 丢失原因
+/// Reason for leader loss
 /// </summary>
 public enum LeaderLostReason
 {
     /// <summary>
-    /// 网络隔离
+    /// network isolation
     /// </summary>
     NetworkIsolation,
 
     /// <summary>
-    /// Leader Key 被其他实例占用
+    /// Leader Key is occupied by other instances
     /// </summary>
     LeaderKeyTakenByOther,
 
     /// <summary>
-    /// 优雅关闭
+    /// graceful closing
     /// </summary>
     GracefulShutdown,
 
     /// <summary>
-    /// 挣扎超时
+    /// Struggle timeout
     /// </summary>
     StruggleTimeout,
 
     /// <summary>
-    /// Leader Key 已过期或被删除
+    /// Leader Key has expired or been deleted
     /// </summary>
     LeaderKeyExpired
 }
 
 /// <summary>
-/// Leader 丢失事件
+/// Leader loss event
 /// </summary>
 public class LeaderLostEvent
 {
     /// <summary>
-    /// 服务名称
+    /// Service name
     /// </summary>
     public required string ServiceName { get; init; }
 
     /// <summary>
-    /// 实例 ID
+    /// Instance ID
     /// </summary>
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// 丢失 Leader 的时间
+    /// The time the leader was lost
     /// </summary>
     public required DateTime LostTime { get; init; }
 
     /// <summary>
-    /// 丢失原因
+    /// Reason for loss
     /// </summary>
     public required LeaderLostReason Reason { get; init; }
 }

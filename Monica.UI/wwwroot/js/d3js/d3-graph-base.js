@@ -1,15 +1,15 @@
 /**
- * D3.js 图形基础模块
- * 提供通用的图形初始化、缩放、拖拽等基础功能
+ * D3.js graphics basic module
+ * Provides basic functions such as general graphics initialization, scaling, and dragging
  * 
  * @module d3-graph-base
  */
 
 /**
- * 创建 SVG 画布
- * @param {string} containerId - 容器元素ID
- * @param {Object} options - 配置选项
- * @returns {Object} SVG 元素和相关配置
+ * Create SVG canvas
+ * @param {string} containerId - container element ID
+ * @param {Object} options - configuration options
+ * @returns {Object} SVG elements and related configurations
  */
 export function createSvgCanvas(containerId, options = {}) {
     const container = document.getElementById(containerId);
@@ -17,20 +17,20 @@ export function createSvgCanvas(containerId, options = {}) {
         throw new Error(`Container with id '${containerId}' not found`);
     }
 
-    // 清空容器
+    // Empty container
     container.innerHTML = '';
     
     const width = options.width || container.clientWidth;
     const height = options.height || container.clientHeight;
 
-    // 创建 SVG
+    // Create SVG
     const svg = d3.select(`#${containerId}`)
         .append('svg')
         .attr('width', width)
         .attr('height', height)
         .attr('viewBox', [0, 0, width, height]);
 
-    // 创建主容器组
+    // Create the main container group
     const mainGroup = svg.append('g')
         .attr('class', 'graph-container');
 
@@ -38,11 +38,11 @@ export function createSvgCanvas(containerId, options = {}) {
 }
 
 /**
- * 添加缩放和平移功能
- * @param {Object} svg - D3 SVG 选择
- * @param {Object} targetGroup - 目标组元素
- * @param {Object} options - 缩放选项
- * @returns {Object} zoom 行为对象
+ * Add zoom and pan functionality
+ * @param {Object} svg - D3 SVG selection
+ * @param {Object} targetGroup - target group element
+ * @param {Object} options - scaling options
+ * @returns {Object} zoom behavior object
  */
 export function addZoomBehavior(svg, targetGroup, options = {}) {
     const zoom = d3.zoom()
@@ -56,9 +56,9 @@ export function addZoomBehavior(svg, targetGroup, options = {}) {
     
     svg.call(zoom);
     
-    // 添加点击空白处的事件处理
+    // Add event handling for clicking on the blank space
     svg.on('click', function(event) {
-        // 如果点击的是 svg 背景
+        // If you click on the svg background
         if (event.target === this || event.target.tagName === 'svg') {
             if (options.onBackgroundClick) {
                 options.onBackgroundClick(event);
@@ -70,29 +70,29 @@ export function addZoomBehavior(svg, targetGroup, options = {}) {
 }
 
 /**
- * 创建现代化圆润箭头标记 - 使用MudBlazor颜色系统
- * @param {Object} svg - SVG 元素
- * @param {string} id - 标记ID
- * @param {Object} options - 箭头配置
+ * Create modern rounded arrow markers - using the MudBlazor color system
+ * @param {Object} svg - SVG element
+ * @param {string} id - tag ID
+ * @param {Object} options - Arrow configuration
  */
 export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     const defs = svg.select('defs').empty() 
         ? svg.append('defs') 
         : svg.select('defs');
     
-    // 为每个图表实例生成唯一的marker ID前缀
+    // Generate a unique marker ID prefix for each chart instance
     const uniqueId = options.uniqueId || id;
     const outgoingId = `${uniqueId}-highlight-outgoing`;
     const incomingId = `${uniqueId}-highlight-incoming`;
     
-    // 移除已存在的标记（只移除当前实例的）
+    // Remove existing tags (only removes the current instance)
     defs.selectAll(`#${uniqueId}, #${uniqueId}-highlight, #${outgoingId}, #${incomingId}`).remove();
     
-    // 现代化箭头设计参数
+    // Modern arrow design parameters
     const arrowSize = options.size || 12;
     const viewBoxSize = arrowSize + 2; // 稍微大一点的viewBox以容纳圆润效果
     
-    // 创建正常状态的箭头
+    // Create a normal state arrow
     const marker = defs.append('marker')
         .attr('id', uniqueId)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
@@ -103,7 +103,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('markerHeight', arrowSize)
         .attr('markerUnits', 'strokeWidth');
     
-    // 现代化圆润箭头路径 - 更流畅的曲线设计
+    // Modern rounded arrow paths - smoother curved design
     const arrowPath = `M1,${viewBoxSize/2-4} 
                       C1,${viewBoxSize/2-4} 3,${viewBoxSize/2-5} 5,${viewBoxSize/2-3}
                       L${arrowSize-2},${viewBoxSize/2-1}
@@ -117,7 +117,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('class', 'arrow-marker modern-arrow')
         .style('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'); // 轻微阴影增加立体感
     
-    // 创建高亮状态的箭头（保持相同大小和位置）
+    // Creates a highlighted state arrow (keeping the same size and position)
     const highlightMarker = defs.append('marker')
         .attr('id', `${uniqueId}-highlight`)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
@@ -134,7 +134,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('class', 'arrow-marker-highlight modern-arrow')
         .style('filter', 'drop-shadow(0 2px 4px rgba(33,150,243,0.3))'); // 高亮时的蓝色阴影
     
-    // 创建出边高亮箭头（Info色系）
+    // Create an out-edge highlighted arrow (Info color system)
     const outgoingMarker = defs.append('marker')
         .attr('id', outgoingId)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
@@ -145,19 +145,19 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('markerHeight', arrowSize)
         .attr('markerUnits', 'strokeWidth');
     
-    // 创建一个容器组来应用CSS变量
+    // Create a container group to apply CSS variables
     const outgoingPath = outgoingMarker.append('path')
         .attr('d', arrowPath)
         .attr('class', 'arrow-marker-outgoing modern-arrow')
         .style('filter', 'drop-shadow(0 2px 4px rgba(25,118,210,0.3))');
     
-    // 使用JavaScript获取计算后的CSS变量值（trim去除空格）
+    // Get calculated CSS variable values ​​using JavaScript (trim to remove spaces)
     const outgoingColor = options.isDarkMode ? 
         (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info-lighten').trim() || '#29B6F6') :
         (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info').trim() || '#1976D2');
     outgoingPath.attr('fill', outgoingColor);
     
-    // 创建入边高亮箭头（Success色系）
+    // Create an in-edge highlighted arrow (Success color system)
     const incomingMarker = defs.append('marker')
         .attr('id', incomingId)
         .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
@@ -173,7 +173,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         .attr('class', 'arrow-marker-incoming modern-arrow')
         .style('filter', 'drop-shadow(0 2px 4px rgba(56,142,60,0.3))');
     
-    // 使用JavaScript获取计算后的CSS变量值（trim去除空格）
+    // Get calculated CSS variable values ​​using JavaScript (trim to remove spaces)
     const incomingColor = options.isDarkMode ? 
         (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success-lighten').trim() || '#66BB6A') :
         (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success').trim() || '#43A047');
@@ -184,7 +184,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         highlightMarker, 
         outgoingMarker, 
         incomingMarker,
-        // 返回ID供其他模块使用
+        // Return ID for use by other modules
         markerId: uniqueId,
         highlightMarkerId: `${uniqueId}-highlight`,
         outgoingMarkerId: outgoingId,
@@ -193,17 +193,17 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
 }
 
 /**
- * 获取箭头颜色 - 基于MudBlazor颜色系统
- * @param {boolean} isDarkMode - 是否为暗色模式
- * @param {boolean} isHighlight - 是否为高亮状态
- * @returns {string} 颜色值
+ * Get arrow color - based on MudBlazor color system
+ * @param {boolean} isDarkMode - whether it is dark mode
+ * @param {boolean} isHighlight - whether it is highlighted
+ * @returns {string} color value
  */
 function getArrowColor(isDarkMode, isHighlight) {
     if (isHighlight) {
-        // 高亮时使用MudBlazor的Primary色彩
+        // Use MudBlazor’s Primary color when highlighting
         return isDarkMode ? 'var(--mud-palette-primary-lighten, #9d7df7)' : 'var(--mud-palette-primary, #594ae2)';
     } else {
-        // 正常状态使用中性色彩
+        // Normally use neutral colors
         return isDarkMode 
             ? 'var(--mud-palette-text-secondary, rgba(255,255,255,0.5))' 
             : 'var(--mud-palette-text-secondary, rgba(0,0,0,0.54))';
@@ -211,11 +211,11 @@ function getArrowColor(isDarkMode, isHighlight) {
 }
 
 /**
- * 获取现代化连接线样式配置 - 使用MudBlazor颜色系统
- * @param {boolean} isDarkMode - 是否为暗色模式
- * @param {boolean} isHighlight - 是否为高亮状态
- * @param {Object} markerIds - 自定义marker IDs
- * @returns {Object} 样式配置对象
+ * Get a modern connector style configuration - using the MudBlazor color system
+ * @param {boolean} isDarkMode - whether it is dark mode
+ * @param {boolean} isHighlight - whether it is highlighted
+ * @param {Object} markerIds - custom marker IDs
+ * @returns {Object} style configuration object
  */
 export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = null) {
     const normalMarkerId = markerIds?.markerId || 'arrowhead';
@@ -247,63 +247,63 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
 }
 
 /**
- * 获取现代化节点样式配置 - 使用MudBlazor颜色系统
- * @param {boolean} isDarkMode - 是否为暗色模式
- * @param {string} nodeType - 节点类型
- * @returns {Object} 节点样式配置
+ * Get modern node style configuration - using MudBlazor color system
+ * @param {boolean} isDarkMode - whether it is dark mode
+ * @param {string} nodeType - node type
+ * @returns {Object} node style configuration
  */
 export function getModernNodeStyle(isDarkMode, nodeType = 'simple') {
     const baseStyle = {
-        // 文本颜色 - 使用主题文本颜色
+        // Text Color - Use theme text color
         textColor: isDarkMode 
             ? 'var(--mud-palette-text-primary, rgba(255,255,255,0.7))' 
             : 'var(--mud-palette-text-primary, rgba(66,66,66,1))',
         
-        // 边框颜色
+        // border color
         strokeColor: isDarkMode 
             ? 'var(--mud-palette-lines-default, rgba(255,255,255,0.12))' 
             : 'var(--mud-palette-lines-default, rgba(0,0,0,0.12))',
             
         strokeWidth: 2,
         
-        // 阴影效果
+        // shadow effect
         filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
     };
     
     if (nodeType === 'complex') {
         return {
             ...baseStyle,
-            // 复杂节点统一使用Surface色作为背景
+            // Complex nodes uniformly use the Surface color as the background
             backgroundColor: isDarkMode 
                 ? 'var(--mud-palette-surface, rgba(55,55,64,1))' 
                 : 'var(--mud-palette-surface, rgba(255,255,255,1))',
             
-            // 标题栏使用Primary色
+            // Use Primary color for title bar
             headerColor: isDarkMode 
                 ? 'var(--mud-palette-primary, rgba(119,107,231,1))' 
                 : 'var(--mud-palette-primary, rgba(89,74,226,1))',
                 
             headerTextColor: 'var(--mud-palette-primary-text, rgba(255,255,255,1))',
             
-            // 内容区文本颜色
+            // Content area text color
             contentTextColor: baseStyle.textColor,
             
-            // 状态栏背景
+            // status bar background
             footerColor: isDarkMode 
                 ? 'var(--mud-palette-background-gray, rgba(39,39,47,1))' 
                 : 'var(--mud-palette-background-gray, rgba(245,245,245,1))'
         };
     }
     
-    // 简单节点样式 - 使用类型相关颜色但调整亮度适应主题
+    // Simple node styles - use type-dependent colors but adjust brightness to fit the theme
     return baseStyle;
 }
 
 /**
- * 重置视图
- * @param {Object} svg - SVG 元素
- * @param {Object} zoom - zoom 行为对象
- * @param {number} duration - 动画持续时间
+ * reset view
+ * @param {Object} svg - SVG element
+ * @param {Object} zoom - zoom behavior object
+ * @param {number} duration - animation duration
  */
 export function resetView(svg, zoom, duration = 750) {
     svg.transition()
@@ -325,12 +325,12 @@ export function scaleView(svg, zoom, scaleBy, duration = 300) {
 }
 
 /**
- * 聚焦到指定位置
- * @param {Object} svg - SVG 元素
- * @param {Object} zoom - zoom 行为对象
- * @param {Object} position - 目标位置 {x, y}
- * @param {number} scale - 缩放比例
- * @param {Object} canvasSize - 画布尺寸 {width, height}
+ * Focus on specified location
+ * @param {Object} svg - SVG element
+ * @param {Object} zoom - zoom behavior object
+ * @param {Object} position - target position {x, y}
+ * @param {number} scale - scaling ratio
+ * @param {Object} canvasSize - canvas size {width, height}
  */
 export function focusOnPosition(svg, zoom, position, scale = 1.5, canvasSize) {
     const { width, height } = canvasSize;
@@ -347,9 +347,9 @@ export function focusOnPosition(svg, zoom, position, scale = 1.5, canvasSize) {
 }
 
 /**
- * 创建拖拽行为
- * @param {Object} options - 拖拽配置
- * @returns {Object} D3 拖拽行为
+ * Create drag behavior
+ * @param {Object} options - drag and drop configuration
+ * @returns {Object} D3 dragging behavior
  */
 export function createDragBehavior(options = {}) {
     return d3.drag()
@@ -373,7 +373,7 @@ export function createDragBehavior(options = {}) {
 }
 
 /**
- * 基础图形类
+ * Basic graphics class
  */
 export class GraphBase {
     constructor(containerId, options = {}) {
@@ -386,23 +386,23 @@ export class GraphBase {
         this.container = container;
         this.isDarkMode = options.isDarkMode || false;
         
-        // 添加缩放行为
+        // Add zoom behavior
         this.zoom = addZoomBehavior(svg, mainGroup, {
             scaleExtent: options.scaleExtent,
             onZoom: options.onZoom,
             onBackgroundClick: options.onBackgroundClick
         });
         
-        // 创建箭头标记（包括所有方向性箭头）
+        // Create arrow markers (including all directional arrows)
         if (options.showArrows) {
-            // 为每个图表实例生成唯一ID
+            // Generate a unique ID for each chart instance
             const instanceId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             this.arrowMarkers = createArrowMarker(svg, 'arrowhead', {
                 isDarkMode: this.isDarkMode,
                 size: options.arrowSize || 12,
                 uniqueId: instanceId
             });
-            // 保存marker IDs供其他模块使用
+            // Save marker IDs for use by other modules
             this.markerIds = this.arrowMarkers;
         }
     }

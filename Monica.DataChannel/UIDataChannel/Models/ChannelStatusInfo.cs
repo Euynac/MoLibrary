@@ -1,7 +1,7 @@
 namespace Monica.DataChannel.UIDataChannel.Models;
 
 /// <summary>
-/// DataChannel状态信息
+/// Status snapshot of a DataChannel for the UI layer.
 /// </summary>
 public class ChannelStatusInfo
 {
@@ -11,47 +11,47 @@ public class ChannelStatusInfo
     public string Id { get; set; } = string.Empty;
     
     /// <summary>
-    /// 中间件列表
+    /// Configured middleware instances.
     /// </summary>
     public List<ComponentInfo> Middlewares { get; set; } = new();
     
     /// <summary>
-    /// 内部端点
+    /// Representation of the pipeline's inner endpoint.
     /// </summary>
     public ComponentInfo InnerEndpoint { get; set; } = null!;
     
     /// <summary>
-    /// 外部端点
+    /// Representation of the pipeline's outer endpoint.
     /// </summary>
     public ComponentInfo OuterEndpoint { get; set; } = null!;
     
     /// <summary>
-    /// 是否不可用
+    /// Flag indicating whether the channel is currently unavailable.
     /// </summary>
     public bool IsNotAvailable { get; set; }
     
     /// <summary>
-    /// 是否已初始化
+    /// Indicates whether the channel has finished initialization.
     /// </summary>
     public bool IsInitialized { get; set; }
     
     /// <summary>
-    /// 是否正在初始化
+    /// Indicates whether the channel is currently initializing.
     /// </summary>
     public bool IsInitializing { get; set; }
     
     /// <summary>
-    /// 是否有异常
+    /// Indicates whether the channel has outstanding exceptions.
     /// </summary>
     public bool HasExceptions { get; set; }
     
     /// <summary>
-    /// 当前异常数量
+    /// Number of active exceptions in the channel.
     /// </summary>
     public int ExceptionCount { get; set; }
     
     /// <summary>
-    /// 总异常数量
+    /// Cumulative exception count for the channel.
     /// </summary>
     public int TotalExceptionCount { get; set; }
-} 
+}

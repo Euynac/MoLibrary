@@ -4,64 +4,64 @@ using Monica.Tool.Results;
 namespace Monica.Profiling.Services;
 
 /// <summary>
-///     类型分配跟踪服务接口
+/// Type allocation tracking service interface
 /// </summary>
 public interface ITypeAllocationService
 {
     /// <summary>
-    ///     是否正在收集分配数据
+    /// Whether allocation data is being collected
     /// </summary>
     bool IsCollecting { get; }
 
     /// <summary>
-    ///     当前采样模式
+    /// Current sampling mode
     /// </summary>
     AllocationSamplingMode CurrentMode { get; }
 
     /// <summary>
-    ///     获取当前分配快照
+    /// Get current allocation snapshot
     /// </summary>
     TypeAllocationSnapshot GetCurrentSnapshot();
 
     /// <summary>
-    ///     获取按字节数排序的前 N 个分配类型
+    /// Get the top N allocation types sorted by byte count
     /// </summary>
-    /// <param name="count">要返回的类型数量</param>
+    /// <param name="count">The number of types to return</param>
     IReadOnlyList<TypeAllocationInfo> GetTopAllocatingTypes(int count = 10);
 
     /// <summary>
-    ///     获取历史快照列表
+    /// Get a list of historical snapshots
     /// </summary>
     IReadOnlyList<TypeAllocationSnapshot> GetHistorySnapshots();
 
     /// <summary>
-    ///     开始分配跟踪
+    /// Start allocation tracking
     /// </summary>
-    /// <param name="mode">采样模式</param>
+    /// <param name="mode">Sampling mode</param>
     Res StartCollection(AllocationSamplingMode mode = AllocationSamplingMode.Low);
 
     /// <summary>
-    ///     停止分配跟踪
+    /// Stop allocation tracking
     /// </summary>
     Res StopCollection();
 
     /// <summary>
-    ///     重置所有收集的数据
+    /// Reset all collected data
     /// </summary>
     void ResetData();
 
     /// <summary>
-    ///     订阅快照更新
+    /// Subscribe to snapshot updates
     /// </summary>
-    /// <param name="callback">新快照可用时调用的回调函数</param>
-    /// <returns>取消订阅的 Action</returns>
+    /// <param name="callback">Callback function called when a new snapshot is available</param>
+    /// <returns>Unsubscribe Action</returns>
     Action SubscribeToUpdates(Action<TypeAllocationSnapshot> callback);
 
     /// <summary>
-    ///     获取堆快照 (使用 ClrMD)
+    /// Get a heap snapshot (using ClrMD)
     /// </summary>
     /// <remarks>
-    ///     此操作会短暂暂停进程，请谨慎使用
+    /// This operation will temporarily suspend the process, please use it with caution
     /// </remarks>
     Task<Res<TypeAllocationSnapshot>> TakeHeapSnapshotAsync();
 }

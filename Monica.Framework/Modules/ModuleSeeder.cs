@@ -14,7 +14,7 @@ public static class ModuleSeederBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Seeder 模块
+        /// Configure the Seeder module
         /// </summary>
         public static ModuleSeederGuide AddSeeder(Action<ModuleSeederOption>? action = null)
         {
@@ -34,7 +34,7 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
         {
             var seed = (IMoSeeder) ActivatorUtilities.CreateInstance(app.ApplicationServices, type);
             seed.SeedAsync();
-            //TODO 优化种子方法执行策略
+            //TODO optimize seed method execution strategy
         }
     }
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -68,7 +68,7 @@ public class ModuleSeederOption : MoModuleOption<ModuleSeeder>
 }
 
 ///// <summary>
-///// 指示该方法是用于在AppInit后执行的Static构造方法
+///// Indicates that this method is a Static constructor for execution after AppInit
 ///// </summary>
 //[AttributeUsage(AttributeTargets.Constructor)]
 //public class RunAfterAppInitAttribute : Attribute

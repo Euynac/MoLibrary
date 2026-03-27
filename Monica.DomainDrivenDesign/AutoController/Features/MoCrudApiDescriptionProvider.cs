@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.AutoController.Features;
 
-//仅需注册，ASP.NET Core会自动发现所有已注册的Provider进行处理。
+// This provider only needs to be registered; ASP.NET Core automatically discovers and executes all registered providers.
 public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProvider)
     : IApiDescriptionProvider
 {
@@ -24,7 +24,7 @@ public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataPr
 
     public void OnProvidersExecuting(ApiDescriptionProviderContext context)
     {
-        //TODO 增加Open API响应描述
+        // TODO: Add OpenAPI response descriptions.
 
         //IOptions<AbpRemoteServiceApiDescriptionProviderOptions> optionsAccessor
 
@@ -72,9 +72,9 @@ public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataPr
     }
 
     /// <summary>
-    /// 使得CRUD Dynamic类型的接口也能在swagger上显示出具体的Dto类型
+    /// Ensures CRUD endpoints that expose dynamic response types still display their concrete DTO types in Swagger.
     /// </summary>
-    /// <param name="context"></param>
+    /// <param name="context">The API description provider context.</param>
     protected virtual void UpdateDynamicListResponseTypeToExactType(ApiDescriptionProviderContext context)
     {
         foreach (var apiDescription in context.Results.Where(p=>p.ActionDescriptor.IsControllerAction()))

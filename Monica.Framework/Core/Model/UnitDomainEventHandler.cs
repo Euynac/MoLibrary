@@ -8,7 +8,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 领域事件处理
+/// Domain event handling
 /// </summary>
 /// <param name="type"></param>
 public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitType.DomainEventHandler), IHasProjectUnitFactory
@@ -19,7 +19,7 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
     }
 
     /// <summary>
-    /// 领域事件类型
+    /// Domain event type
     /// </summary>
     public Type EventType { get; set; } = null!;
 
@@ -47,7 +47,7 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
         if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EventType.FullName!, out var eventUnit))
         {
             var alertMessage = $"{this}无法关联其领域事件基类{EventType.GetCleanFullName()}，可能未继承{nameof(MoDomainEvent)}";
-            // 添加警告级别告警
+            // Add warning level alert
             Alerts.Add(new ProjectUnitAlert
             {
                 Level = EAlertLevel.Warning,

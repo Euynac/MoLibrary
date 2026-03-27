@@ -37,11 +37,11 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
 
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {
-        return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetKouEnumName()} \"{value}\""); //TODO 转义？
+        return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetKouEnumName()} \"{value}\""); // TODO: escape values?
     }
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, string filter)
     {
-        //测试后门
+        // Test/backdoor hook for debugging.
         if (filter.StartsWith('[') && filter.EndsWith(']'))
         {
             return queryable.Where(_config, filter.TrimStart('[').TrimEnd(']'));
@@ -70,7 +70,7 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
     {
         var config = new ParsingConfig
         {
-            AllowEqualsAndToStringMethodsOnObject = true //v1.6.0修复安全问题后需要设置该配置
+            AllowEqualsAndToStringMethodsOnObject = true // Required after the v1.6.0 security fix.
         };
         config.CustomTypeProvider = new LinqToSqlCustomProvider(config);
         return config;

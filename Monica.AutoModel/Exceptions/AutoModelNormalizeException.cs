@@ -1,13 +1,13 @@
 namespace Monica.AutoModel.Exceptions;
 
 /// <summary>
-/// 表达式/查询标准化/解析错误
+/// Expression or query normalization/parsing error.
 /// </summary>
 public class AutoModelNormalizeException(string displayMessage, string? technicalDetail = null)
     : AutoModelBaseException(displayMessage, technicalDetail);
 
 /// <summary>
-/// Token 表达式生成错误
+/// Token expression generation error.
 /// </summary>
 public class AutoModelTokenExpGenException(string displayMessage, string? technicalDetail = null)
     : AutoModelBaseException(displayMessage, technicalDetail);

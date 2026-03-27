@@ -8,7 +8,7 @@ using Monica.UI.UICore.Models;
 namespace Monica.UI.UICore.Services;
 
 /// <summary>
-/// UI组件注册服务实现
+/// UI component registration service implementation
 /// </summary>
 public class UIComponentRegistry : IUIComponentRegistry
 {
@@ -18,27 +18,27 @@ public class UIComponentRegistry : IUIComponentRegistry
     private readonly List<UINavItem> _navItems = [];
 
     /// <summary>
-    /// 已经注册的程序集不可再注册
+    /// Already registered assemblies cannot be registered again
     /// </summary>
     private readonly HashSet<Assembly> _excludedAssemblies = [typeof(MoRouter).Assembly];
 
     /// <summary>
-    /// 注册页面组件
+    /// Register page components
     /// </summary>
-    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
-    /// <param name="route">路由路径</param>
-    /// <param name="displayName">显示名称</param>
-    /// <param name="icon">图标</param>
-    /// <param name="category">分类</param>
-    /// <param name="addToNav">是否添加到导航菜单</param>
-    /// <param name="navOrder">导航菜单排序顺序</param>
-    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
+    /// <param name="route">Route path</param>
+    /// <param name="displayName">Display name</param>
+    /// <param name="icon">icon</param>
+    /// <param name="category">Category</param>
+    /// <param name="addToNav">Whether to add to the navigation menu</param>
+    /// <param name="navOrder">Navigation menu sort order</param>
+    /// <param name="navLinkMatch">Navigation link matching pattern</param>
     public void RegisterComponent<T>(string route, string displayName, string? icon = null, string? category = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
     {
         route = route.TrimStart('/');
         var componentType = typeof(T);
 
-        // 注册页面信息
+        // Registration page information
         var pageInfo = new UIPageInfo
         {
             Route = route,
@@ -49,10 +49,9 @@ public class UIComponentRegistry : IUIComponentRegistry
         };
         _pages.Add(pageInfo);
 
-        // 注册组件类型（用于名称查找）
-        _components[route] = componentType;
+        // Register component type (for name lookup)        _components[route] = componentType;
 
-        // 如果需要，自动创建导航菜单项
+        // Automatically create navigation menu items if needed
         if (addToNav)
         {
             var navItem = new UINavItem
@@ -69,29 +68,28 @@ public class UIComponentRegistry : IUIComponentRegistry
 
         if (!_excludedAssemblies.Contains(componentType.Assembly))
         {
-            // 添加组件所在的程序集
-            _assemblies.Add(componentType.Assembly);
+            // Add the assembly where the component is located            _assemblies.Add(componentType.Assembly);
         }
 
     }
 
     /// <summary>
-    /// 注册页面组件（支持本地化）
+    /// Register page components (support localization)
     /// </summary>
-    /// <typeparam name="T">组件类型，必须继承自ComponentBase</typeparam>
-    /// <param name="route">路由路径</param>
-    /// <param name="displayNameKey">显示名称的本地化键（使用UIRegistryResource）</param>
-    /// <param name="icon">图标</param>
-    /// <param name="categoryKey">分类的本地化键（使用UIRegistryResource）</param>
-    /// <param name="addToNav">是否添加到导航菜单</param>
-    /// <param name="navOrder">导航菜单排序顺序</param>
-    /// <param name="navLinkMatch">导航链接匹配模式</param>
+    /// <typeparam name="T">Component type, must inherit from ComponentBase</typeparam>
+    /// <param name="route">Route path</param>
+    /// <param name="displayNameKey">Localized key for display name (using UIRegistryResource)</param>
+    /// <param name="icon">icon</param>
+    /// <param name="categoryKey">Category localization key (using UIRegistryResource)</param>
+    /// <param name="addToNav">Whether to add to the navigation menu</param>
+    /// <param name="navOrder">Navigation menu sort order</param>
+    /// <param name="navLinkMatch">Navigation link matching pattern</param>
     public void RegisterLocalizedComponent<T>(string route, string displayNameKey, string? icon = null, string? categoryKey = null, bool addToNav = false, int navOrder = 0, NavLinkMatch navLinkMatch = NavLinkMatch.Prefix) where T : ComponentBase
     {
         route = route.TrimStart('/');
         var componentType = typeof(T);
 
-        // 注册页面信息
+        // Registration page information
         var pageInfo = new UIPageInfo
         {
             Route = route,
@@ -104,10 +102,9 @@ public class UIComponentRegistry : IUIComponentRegistry
         };
         _pages.Add(pageInfo);
 
-        // 注册组件类型（用于名称查找）
-        _components[route] = componentType;
+        // Register component type (for name lookup)        _components[route] = componentType;
 
-        // 如果需要，自动创建导航菜单项
+        // Automatically create navigation menu items if needed
         if (addToNav)
         {
             var navItem = new UINavItem
@@ -126,13 +123,12 @@ public class UIComponentRegistry : IUIComponentRegistry
 
         if (!_excludedAssemblies.Contains(componentType.Assembly))
         {
-            // 添加组件所在的程序集
-            _assemblies.Add(componentType.Assembly);
+            // Add the assembly where the component is located            _assemblies.Add(componentType.Assembly);
         }
     }
 
     /// <summary>
-    /// 获取所有注册的页面
+    /// Get all registered pages
     /// </summary>
     public IReadOnlyList<UIPageInfo> GetRegisteredPages()
     {
@@ -140,7 +136,7 @@ public class UIComponentRegistry : IUIComponentRegistry
     }
 
     /// <summary>
-    /// 获取所有注册的导航项
+    /// Get all registered navigation items
     /// </summary>
     public IReadOnlyList<UINavItem> GetNavItems()
     {
@@ -148,7 +144,7 @@ public class UIComponentRegistry : IUIComponentRegistry
     }
 
     /// <summary>
-    /// 获取注册的组件类型
+    /// Get the registered component type
     /// </summary>
     public Type? GetComponentType(string name)
     {
@@ -156,9 +152,9 @@ public class UIComponentRegistry : IUIComponentRegistry
     }
 
     /// <summary>
-    /// 获取当前注册组件相关的附加的程序集
+    /// Get additional assemblies related to the currently registered component
     /// </summary>
-    /// <returns>附加的程序集</returns>
+    /// <returns>Additional assemblies</returns>
     public Assembly[] GetAdditionalAssemblies()
     {
         return _assemblies.ToArray();

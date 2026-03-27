@@ -3,7 +3,7 @@
 namespace Monica.Tool.General;
 
 /// <summary>
-/// 排序工具
+/// Sorting tools
 /// </summary>
 public static class SortTool
 {
@@ -19,14 +19,14 @@ public static class SortTool
     public static IOrderedEnumerable<TSource> OrderNullToLast<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) => source.OrderByDescending(keySelector);
 
     /// <summary>
-    /// 两个对象进行降序比较，用于Compare相关方法的快捷实现，支持null比较，支持链式比较
-    /// （如果不相等返回null（判断返回为null才返回比较值），截断方法调用，返回值为比较结果。否则可以链式执行直到两者不相等后进行下一个权重的比较）（需要实现IComparable接口）
+    /// Compare two objects in descending order, which is used for quick implementation of Compare related methods. It supports null comparison and chain comparison.
+    /// (If they are not equal, return null (the comparison value will be returned only when the return value is null), truncate the method call, and the return value is the comparison result. Otherwise, you can chain execution until the two are not equal and then compare the next weight) (need to implement the IComparable interface)
     /// </summary>
-    /// <param name="obj">占位符，没什么用</param>
-    /// <param name="obj1">比较的第一个元素</param>
-    /// <param name="obj2">比较的第二个元素</param>
-    /// <param name="result">如果返回值为null，则证明两个obj不相等，需要返回out int结果，链式方法调用被截断。</param>
-    /// <param name="nullIsLast">自动将null放到最后一位</param>
+    /// <param name="obj">Placeholder, useless</param>
+    /// <param name="obj1">first element to compare</param>
+    /// <param name="obj2">The second element to compare</param>
+    /// <param name="result">If the return value is null, it proves that the two obj are not equal, an out int result needs to be returned, and the chain method call is truncated.</param>
+    /// <param name="nullIsLast">Automatically put null in the last position</param>
     /// <returns></returns>
     public static object? CompareToObjDesc(this object obj, object? obj1, object? obj2, out int result,
         bool nullIsLast = true)
@@ -43,14 +43,14 @@ public static class SortTool
     }
 
     /// <summary>
-    /// 两个对象进行升序比较，用于Compare相关方法的快捷实现，支持null比较，支持链式比较
-    /// （如果不相等返回null（判断返回为null才返回比较值），截断方法调用，返回值为比较结果。否则可以链式执行直到两者不相等后进行下一个权重的比较）（需要实现IComparable接口）
+    /// Compare two objects in ascending order, which is used for quick implementation of Compare related methods. It supports null comparison and chain comparison.
+    /// (If they are not equal, return null (the comparison value will be returned only when the return value is null), truncate the method call, and the return value is the comparison result. Otherwise, you can chain execution until the two are not equal and then compare the next weight) (need to implement the IComparable interface)
     /// </summary>
-    /// <param name="obj">占位符，没什么用</param>
-    /// <param name="obj1">比较的第一个元素</param>
-    /// <param name="obj2">比较的第二个元素</param>
-    /// <param name="result">如果返回值为null，则证明两个obj不相等，需要返回out int结果，链式方法调用被截断。</param>
-    /// <param name="nullIsLast">自动将null放到最后一位</param>
+    /// <param name="obj">Placeholder, useless</param>
+    /// <param name="obj1">first element to compare</param>
+    /// <param name="obj2">The second element to compare</param>
+    /// <param name="result">If the return value is null, it proves that the two obj are not equal, an out int result needs to be returned, and the chain method call is truncated.</param>
+    /// <param name="nullIsLast">Automatically put null in the last position</param>
     /// <returns></returns>
     public static object? CompareToObjAsc(this object obj, object? obj1, object? obj2, out int result,
         bool nullIsLast = true)
@@ -66,12 +66,12 @@ public static class SortTool
         return result != 0 ? null : new object();
     }
     /// <summary>
-    /// 实现比较器Comparison的快捷方法，支持null比较（需要实现IComparable接口）
+    /// A shortcut method to implement comparator Comparison, supporting null comparison (need to implement IComparable interface)
     /// </summary>
     /// <param name="obj1"></param>
     /// <param name="obj2"></param>
-    /// <param name="isDesc">是否是降序</param>
-    /// <param name="nullIsLast">自动将null放到最后一位</param>
+    /// <param name="isDesc">Is it in descending order?</param>
+    /// <param name="nullIsLast">Automatically put null in the last position</param>
     /// <returns></returns>
     public static int CompareToObj(this object? obj1, object? obj2, bool isDesc = false,
         bool nullIsLast = true)
@@ -84,11 +84,11 @@ public static class SortTool
 
 
     /// <summary>
-    /// Sort比较器中Comparison比较null的快捷方法。如果任意一个为null，返回true，此时需要返回out int为Compare结果
+    /// Comparison in Sort comparator is a shortcut method for comparing null. If any one is null, return true. In this case, out int needs to be returned as the Compare result.
     /// </summary>
     /// <param name="obj1"></param>
     /// <param name="obj2"></param>
-    /// <param name="nullIsLast">默认将null放到后一位</param>
+    /// <param name="nullIsLast">By default, null is placed last.</param>
     /// <param name="returnValue"></param>
     /// <returns></returns>
     [ContractAnnotation("obj1:null => true; obj2:null => true")]

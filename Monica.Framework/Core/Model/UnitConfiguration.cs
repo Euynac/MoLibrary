@@ -8,41 +8,41 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 配置使用方式枚举
+/// Configure usage enumeration
 /// </summary>
 public enum EConfigurationUsageType
 {
     /// <summary>
-    /// 未知使用方式
+    /// Unknown usage
     /// </summary>
     Unknown,
     /// <summary>
-    /// 离线配置 - 使用 <see cref="IOptions{T}"/>
+    /// Offline configuration - use <see cref="IOptions{T}"/>
     /// </summary>
     Offline,
     /// <summary>
-    /// 在线配置 - 使用 <see cref="IOptionsSnapshot{T}"/>
+    /// Online configuration - use <see cref="IOptionsSnapshot{T}"/>
     /// </summary>
     OnlineSnapshot,
     /// <summary>
-    /// 在线配置 - 使用 <see cref="IOptionsMonitor{T}"/>
+    /// Online configuration - use <see cref="IOptionsMonitor{T}"/>
     /// </summary>
     OnlineMonitor
 }
 
 /// <summary>
-/// 配置类
+/// Configuration class
 /// </summary>
 /// <param name="type"></param>
 public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.Configuration), IHasProjectUnitFactory
 {
     /// <summary>
-    /// 配置依赖详情：记录哪些项目单元使用了此配置，以及它们对配置的使用方式
+    /// Configuration dependency details: record which project units use this configuration and how they use it
     /// </summary>
     public Dictionary<ProjectUnit, EConfigurationUsageType> ConfigurationDependencies { get; private set; } = new();
 
     /// <summary>
-    /// 自动识别配置类是否为离线配置（根据依赖关系如果有一个使用了<see cref="IOptions{T}"/>，则为离线参数，如果都是在线类型则为在线参数，否则是未知）
+    /// Automatically identify whether the configuration class is an offline configuration (according to the dependency relationship, if one uses <see cref="IOptions{T}"/>, it is an offline parameter, if they are both online types, it is an online parameter, otherwise it is unknown)
     /// </summary>
     public bool? IsOffline => ConfigurationDependencies.Values.Any(v => v == EConfigurationUsageType.Offline) ? true : 
                               ConfigurationDependencies.Values.All(v => v is EConfigurationUsageType.OnlineSnapshot or EConfigurationUsageType.OnlineMonitor) && ConfigurationDependencies.Any() ? false : 
@@ -64,7 +64,7 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
         if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(configType.FullName ?? string.Empty,
                 out var unit) || unit is not UnitConfiguration configurationUnit) return null;
         
-        // 判断配置使用方式
+        // Determine configuration usage
         var usageType = EConfigurationUsageType.Unknown;
         if (parameterType.IsImplementInterfaceGeneric(typeof(IOptionsSnapshot<>)))
         {
@@ -79,7 +79,7 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
             usageType = EConfigurationUsageType.Offline;
         }
         
-        // 记录依赖关系和使用方式
+        // Document dependencies and usage
         configurationUnit.ConfigurationDependencies[dependentUnit] = usageType;
             
         return configurationUnit;

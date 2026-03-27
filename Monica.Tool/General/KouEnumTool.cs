@@ -6,17 +6,17 @@ using Monica.Tool.Extensions;
 namespace Monica.Tool.General;
 
 /// <summary>
-/// 指定某枚举是KouEnum的Name，可以设定该Enum的转换名
+/// Specify that an enumeration is the Name of KouEnum, and you can set the conversion name of the Enum.
 /// </summary>
 [AttributeUsage(AttributeTargets.Field)]
 public sealed class KouEnumName : Attribute
 {
     /// <summary>
-    /// 使用此类字符串来转换成该Enum
+    /// Use this type of string to convert to the Enum
     /// </summary>
     public string[] Names { get; }
     /// <summary>
-    /// 指示该枚举拥有的名字
+    /// Indicates the name this enumeration has
     /// </summary>
     /// <param name="names"></param>
     public KouEnumName(params string[] names)
@@ -25,17 +25,17 @@ public sealed class KouEnumName : Attribute
     }
 }
 /// <summary>
-/// KouEnum工具，可将string转换为对应的Enum
+/// KouEnum tool can convert string to corresponding Enum
 /// </summary>
 public static class KouEnumTool
 {
     private static readonly ConcurrentDictionary<Type, Dictionary<string, Enum>>
         _enumCache = new();
     /// <summary>
-    /// 通过字符串获取对应KouEnum标签枚举
+    /// Get the corresponding KouEnum tag enumeration through a string
     /// </summary>
     /// <param name="str"></param>
-    /// <returns>失败抛出异常</returns>
+    /// <returns>Exception thrown on failure</returns>
     public static T ToKouEnum<T>(this string str) where T : struct, Enum
     {
         if (!TryToKouEnum(typeof(T), str, out var resultEnum))
@@ -45,7 +45,7 @@ public static class KouEnumTool
         return (T)resultEnum;
     }
     /// <summary>
-    /// 尝试通过字符串获取对应KouEnum标签枚举
+    /// Try to get the corresponding KouEnum tag enumeration through a string
     /// </summary>
     /// <param name="str"></param>
     /// <param name="result"></param>
@@ -59,7 +59,7 @@ public static class KouEnumTool
     }
 
     /// <summary>
-    /// 尝试通过字符串模糊获取对应KouEnum标签枚举
+    /// Try to obtain the corresponding KouEnum tag enumeration through string fuzzy
     /// </summary>
     /// <param name="str"></param>
     /// <param name="result"></param>
@@ -72,7 +72,7 @@ public static class KouEnumTool
         return true;
     }
     /// <summary>
-    /// 读取 <see cref="System.Enum"/> 标记 <see cref="KouEnumName"/> 的标签对象
+    /// Reads the <see cref="KouEnumName"/> attribute object from a marked <see cref="System.Enum"/> value.
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
@@ -80,19 +80,19 @@ public static class KouEnumTool
         value?.GetType().GetCustomAttributeCached<KouEnumName>(value.ToString());
 
     /// <summary>
-    /// 读取 <see cref="System.Enum"/> 标记 <see cref="KouEnumName"/> 第<paramref name="valueAt"/>个的值
+    /// Reads the No.<paramref name="valueAt"/> value from <see cref="KouEnumName"/> on a marked <see cref="System.Enum"/>.
     /// </summary>
-    /// <param name="value">原始 <see cref="System.Enum"/> 值</param>
-    /// <param name="valueAt"> <see cref="KouEnumName"/> 中的第几个值</param>
-    /// <returns>如果成功获取返回特性标记的值，否则返回null</returns>
+    /// <param name="value">original <see cref="System.Enum"/> value</param>
+    /// <param name="valueAt"> <see cref="KouEnumName"/> Which value in</param>
+    /// <returns>Returns the value of the attribute tag if successfully retrieved, otherwise returns null</returns>
     public static string? GetKouEnumName(this Enum? value, int valueAt = 1)
         => value?.GetType().GetCustomAttributeCached<KouEnumName>(value.ToString())?.Names[valueAt - 1];
     /// <summary>
-    /// 读取 <see cref="System.Enum"/> 标记 <see cref="KouEnumName"/> 的值或自身ToString
+    /// Reads the <see cref="KouEnumName"/> value from a marked <see cref="System.Enum"/>, or falls back to ToString().
     /// </summary>
-    /// <param name="value">原始 <see cref="System.Enum"/> 值</param>
-    /// <param name="valueAt"> <see cref="KouEnumName"/> 中的第几个值</param>
-    /// <returns>如果成功获取返回特性标记的值，否则返回自身自身ToString</returns>
+    /// <param name="value">original <see cref="System.Enum"/> value</param>
+    /// <param name="valueAt"> <see cref="KouEnumName"/> Which value in</param>
+    /// <returns>If successfully obtained, the value of the attribute tag is returned, otherwise it returns its own ToString.</returns>
     public static string? GetKouEnumNameOrString(this Enum? value, int valueAt = 1) => GetKouEnumName(value, valueAt) ?? value?.ToString();
 
     private static Dictionary<string, Enum> GetDict(Type type)
@@ -102,19 +102,19 @@ public static class KouEnumTool
             return enumDict;
         }
 
-        CreateCache(type);//如果无缓存，自动创建该Enum缓存
+        CreateCache(type); // Automatically create the enum cache when it does not exist.
         return _enumCache.TryGetValue(type, out enumDict)
             ? enumDict
             : throw new InvalidOperationException($"Failed to create enum cache for type {type.FullName}.");
     }
 
     /// <summary>
-    /// 尝试通过字符串获取对应KouEnum标签枚举
+    /// Try to get the corresponding KouEnum tag enumeration through a string
     /// </summary>
-    /// <param name="enumType">枚举的类型</param>
+    /// <param name="enumType">enum type</param>
     /// <param name="str"></param>
     /// <param name="result"></param>
-    /// <param name="fuzzy">模糊则返回的是List</param>
+    /// <param name="fuzzy">Fuzzy returns a List</param>
     /// <returns></returns>
     public static bool TryToKouEnum(Type enumType, string str, out object result, bool fuzzy = false)
     {
@@ -136,7 +136,7 @@ public static class KouEnumTool
         return false;
     }
     /// <summary>
-    /// 创建该enum的枚举name缓存
+    /// Create an enumeration name cache for this enum
     /// </summary>
     /// <param name="enumType"></param>
     private static void CreateCache(Type enumType)

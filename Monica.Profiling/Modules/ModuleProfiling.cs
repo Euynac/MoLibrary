@@ -18,7 +18,7 @@ public static class ModuleProfilingBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Profiling 模块
+        /// Configure the Profiling module
         /// </summary>
         public static ModuleProfilingGuide AddProfiling(Action<ModuleProfilingOption>? action = null)
         {
@@ -33,26 +33,26 @@ public class ModuleProfiling(ModuleProfilingOption option)
 {
 
     /// <summary>
-    ///     配置服务
+    /// Configuration service
     /// </summary>
-    /// <param name="services">服务集合</param>
+    /// <param name="services">Service collection</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册性能指标收集器为单例 (维护历史数据)
+        // Register the performance indicator collector as a singleton (maintain historical data)
         services.AddSingleton<ProfilingMetricsCollector>();
     }
 
     /// <summary>
-    ///     配置端点
+    /// Configure endpoint
     /// </summary>
-    /// <param name="app">应用程序构建器</param>
+    /// <param name="app">application builder</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>
         {
             var tagName = option.GetApiGroupName();
 
-            // 获取系统性能信息
+            // Get system performance information
             endpoints.MapGet("/profiling/simple",
                 ([FromServices] ProfilingMetricsCollector collector) =>
                 {

@@ -1,6 +1,6 @@
 /**
- * 项目单元卡片渲染器
- * 专门用于渲染项目单元的复杂节点卡片
+ * Project unit card renderer
+ * Complex node cards dedicated to rendering project units
  * 
  * @module projectUnitCardRenderer
  */
@@ -8,22 +8,22 @@
 import { getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
 
 /**
- * 项目单元卡片渲染器类
- * 提供三层布局的现代化卡片式节点绘制
+ * Project unit card renderer class
+ * Provides modern card-style node drawing with three-layer layout
  */
 export class ProjectUnitCardRenderer {
     constructor(isDarkMode = false, sizeConfig = null) {
         this.isDarkMode = isDarkMode;
         this.style = getModernNodeStyle(isDarkMode, 'complex');
         
-        // 卡片布局配置
+        // Card layout configuration
         this.config = {
             minWidth: sizeConfig?.minWidth || 180,
             maxWidth: sizeConfig?.maxWidth || 280,
             padding: 12,
             borderRadius: 0,  // 直角设计
             
-            // 标题栏配置
+            // Title bar configuration
             header: {
                 height: 40,
                 padding: 12,
@@ -31,7 +31,7 @@ export class ProjectUnitCardRenderer {
                 fontWeight: '600'
             },
             
-            // 内容区配置（显示方法信息等）
+            // Content area configuration (display method information, etc.)
             content: {
                 minHeight: 60,
                 padding: 12,
@@ -40,7 +40,7 @@ export class ProjectUnitCardRenderer {
                 itemSpacing: 8
             },
             
-            // 状态栏配置（显示Chips）
+            // Status bar configuration (showing Chips)
             footer: {
                 height: 32,
                 padding: 8,
@@ -53,25 +53,25 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 计算项目单元卡片尺寸
-     * @param {Object} nodeData - 节点数据
-     * @returns {Object} 尺寸信息 {width, height}
+     * Calculate project unit card size
+     * @param {Object} nodeData - node data
+     * @returns {Object} size information {width, height}
      */
     calculateCardSize(nodeData) {
         const { config } = this;
         const contentItems = nodeData.metadata || [];
         
-        // 计算标题宽度（包括图标空间）
+        // Calculate title width (including icon space)
         const titleWidth = this.estimateTextWidth(nodeData.title, config.header.fontSize, config.header.fontWeight) + 80;
         
-        // 计算内容宽度 - 特别处理方法信息
+        // Calculate content width - special handling information
         let maxContentWidth = config.minWidth;
         if (contentItems.length > 0) {
             contentItems.forEach(item => {
                 const keyWidth = this.estimateTextWidth(`${item.key}: `, config.content.fontSize, '500');
                 const valueWidth = this.estimateTextWidth(item.value, config.content.fontSize);
                 
-                // 对于方法签名，限制最大宽度
+                // For method signatures, limit the maximum width
                 let effectiveValueWidth = valueWidth;
                 if (item.kind === 'method' && valueWidth > 200) {
                     effectiveValueWidth = Math.min(valueWidth, 250);
@@ -82,7 +82,7 @@ export class ProjectUnitCardRenderer {
             });
         }
         
-        // 根据内容复杂度动态调整最大宽度
+        // Dynamically adjust the maximum width based on content complexity
         let dynamicMaxWidth = config.maxWidth;
         if (contentItems.length > 3) {
             dynamicMaxWidth = Math.min(config.maxWidth * 1.5, 400);
@@ -90,7 +90,7 @@ export class ProjectUnitCardRenderer {
         
         const width = Math.max(config.minWidth, Math.min(dynamicMaxWidth, Math.max(titleWidth, maxContentWidth)));
         
-        // 计算高度
+        // Calculate height
         const contentHeight = contentItems.length > 0 
             ? Math.max(
                 config.content.minHeight,
@@ -105,7 +105,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 估算文本宽度
+     * Estimate text width
      */
     estimateTextWidth(text, fontSize, fontWeight = 'normal') {
         if (!this._measureCanvas) {
@@ -119,7 +119,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 计算状态栏高度（支持多行chips）
+     * Calculate status bar height (supports multi-line chips)
      */
     calculateFooterHeight(nodeData, width) {
         const { config } = this;
@@ -157,7 +157,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制项目单元卡片
+     * Draw project unit cards
      */
     drawCard(nodeElement, nodeData) {
         const { width, height } = this.calculateCardSize(nodeData);
@@ -169,7 +169,7 @@ export class ProjectUnitCardRenderer {
             .attr('class', 'project-unit-card')
             .attr('data-alert-level', nodeData.alertLevel || 'none');
         
-        // 添加阴影
+        // add shadow
         const shadowFilter = card.append('filter')
             .attr('id', `shadow-${nodeData.id || Math.random().toString(36).substr(2, 9)}`)
             .attr('x', '-50%')
@@ -183,7 +183,7 @@ export class ProjectUnitCardRenderer {
             .attr('stdDeviation', 3)
             .attr('flood-opacity', 0.15);
         
-        // 绘制卡片背景
+        // Draw card background
         const cardBackground = card.append('rect')
             .attr('class', 'card-background')
             .attr('width', width)
@@ -210,20 +210,20 @@ export class ProjectUnitCardRenderer {
         const footerY = height / 2 - footerHeight;
         this.drawFooter(card, nodeData, width, footerHeight, footerY);
         
-        // 存储尺寸信息
+        // Store size information
         nodeData._cardSize = { width, height };
         
         return card;
     }
     
     /**
-     * 绘制标题栏
+     * Draw title bar
      */
     drawHeader(card, nodeData, width, cardHeight, headerHeight) {
         const { config, style } = this;
         const headerY = -cardHeight / 2;
         
-        // 标题栏背景
+        // title bar background
         card.append('rect')
             .attr('class', 'card-header')
             .attr('width', width - style.strokeWidth * 2)
@@ -232,7 +232,7 @@ export class ProjectUnitCardRenderer {
             .attr('y', headerY + style.strokeWidth)
             .attr('fill', style.headerColor);
         
-        // 绘制图标和标题
+        // Draw icons and titles
         this.drawHeaderContent(card, nodeData, width, headerY, headerHeight);
     }
     
@@ -265,7 +265,7 @@ export class ProjectUnitCardRenderer {
             const keyText = `${item.key}:`;
             const keyWidth = this.estimateTextWidth(keyText, config.content.fontSize, '500');
             
-            // 键名
+            // Key name
             card.append('text')
                 .attr('class', 'content-key')
                 .attr('x', -width / 2 + config.content.padding)
@@ -278,11 +278,11 @@ export class ProjectUnitCardRenderer {
                 .style('pointer-events', 'none')
                 .text(keyText);
             
-            // 值（智能截断）
+            // value (smart truncation)
             const valueStartX = -width / 2 + config.content.padding + keyWidth + 5;
             let displayValue = item.value;
             
-            // 对方法信息进行特殊处理
+            // Special handling of method information
             if (item.kind === 'method') {
                 const colonIndex = item.value.indexOf(':');
                 if (colonIndex > 0) {
@@ -309,18 +309,18 @@ export class ProjectUnitCardRenderer {
                 .style('pointer-events', 'none')
                 .text(displayValue);
             
-            // 添加tooltip显示完整内容
+            // Add tooltip to display complete content
             valueText.append('title').text(item.value);
         });
     }
     
     /**
-     * 绘制状态栏 - 显示各种状态Chips
+     * Draw status bar - display various status Chips
      */
     drawFooter(card, nodeData, width, footerHeight, y) {
         const { config, style } = this;
         
-        // 状态栏背景
+        // status bar background
         card.append('rect')
             .attr('class', 'card-footer')
             .attr('width', width - style.strokeWidth * 2)
@@ -329,12 +329,12 @@ export class ProjectUnitCardRenderer {
             .attr('y', y)
             .attr('fill', style.footerColor);
         
-        // 绘制chips
+        // Draw chips
         this.drawChipsLayout(card, nodeData.chips || [], width, footerHeight, y);
     }
     
     /**
-     * 计算chips的行分组
+     * Calculate row grouping of chips
      */
     calculateChipRows(chips, availableWidth, chipSpacing) {
         const rows = [];
@@ -364,7 +364,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制chips布局
+     * Draw chips layout
      */
     drawChipsLayout(container, chips, width, height, startY) {
         const { config } = this;
@@ -405,7 +405,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制单个Chip
+     * Draw a single Chip
      */
     drawChip(container, chipData, x, y) {
         const { config } = this;
@@ -416,7 +416,7 @@ export class ProjectUnitCardRenderer {
         const chipWidth = this.estimateChipWidth(chipData.text, hasIcon);
         const colors = this.getChipColors(chipData.color);
         
-        // Chip背景
+        // Chip background
         container.append('rect')
             .attr('class', `chip chip-${chipData.color}`)
             .attr('width', chipWidth)
@@ -432,14 +432,14 @@ export class ProjectUnitCardRenderer {
         
         let textX = x + chipWidth / 2;
         
-        // 绘制图标
+        // draw icon
         if (hasIcon) {
             const iconX = x + config.footer.chipPadding;
             this.drawChipIcon(container, chipData.icon, iconX, y, iconSize, colors.text);
             textX = iconX + iconSize + iconPadding;
         }
         
-        // Chip文字
+        // Chip text
         container.append('text')
             .attr('class', 'chip-text')
             .attr('x', textX)
@@ -453,7 +453,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 获取chip颜色配置
+     * Get chip color configuration
      */
     getChipColors(colorName) {
         const isDark = this.isDarkMode;
@@ -466,7 +466,7 @@ export class ProjectUnitCardRenderer {
             };
         }
         
-        // MudBlazor颜色映射
+        // MudBlazor color mapping
         const colorMap = {
             'primary': {
                 background: isDark ? 'var(--mud-palette-primary-darken, #4a44bc)' : 'var(--mud-palette-primary-lighten, #a394f7)',
@@ -508,7 +508,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制Chip图标
+     * Draw Chip Icon
      */
     drawChipIcon(container, iconSvg, x, y, size, color) {
         const iconGroup = container.append('g')
@@ -519,7 +519,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 估算Chip宽度
+     * Estimate Chip Width
      */
     estimateChipWidth(text, hasIcon = false) {
         const { config } = this;
@@ -536,7 +536,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制标题栏内容
+     * Draw title bar content
      */
     drawHeaderContent(container, nodeData, width, headerY, headerHeight) {
         const { config, style } = this;
@@ -547,13 +547,13 @@ export class ProjectUnitCardRenderer {
         let currentX = -width / 2 + leftPadding;
         const centerY = headerY + style.strokeWidth + headerHeight / 2;
         
-        // 绘制图标
+        // draw icon
         if (nodeData.icon) {
             this.drawHeaderIcon(container, nodeData.icon, currentX, centerY, iconSize);
             currentX += iconSize + iconTextSpacing;
         }
         
-        // 绘制标题
+        // draw title
         container.append('text')
             .attr('class', 'card-title')
             .attr('x', currentX)
@@ -568,7 +568,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 绘制标题栏图标
+     * Draw title bar icon
      */
     drawHeaderIcon(container, iconSvg, x, y, size) {
         const { style } = this;
@@ -581,7 +581,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 渲染MudBlazor SVG图标
+     * Rendering MudBlazor SVG icon
      */
     renderMudBlazorIcon(container, iconSvg, color) {
         if (!iconSvg || iconSvg.trim() === '') {
@@ -629,7 +629,7 @@ export class ProjectUnitCardRenderer {
     }
     
     /**
-     * 更新主题
+     * Update theme
      */
     updateTheme(isDarkMode) {
         this.isDarkMode = isDarkMode;
@@ -638,7 +638,7 @@ export class ProjectUnitCardRenderer {
 }
 
 /**
- * 创建项目单元卡片渲染器实例
+ * Create a project unit card renderer instance
  */
 export function createProjectUnitCardRenderer(isDarkMode = false, sizeConfig = null) {
     return new ProjectUnitCardRenderer(isDarkMode, sizeConfig);

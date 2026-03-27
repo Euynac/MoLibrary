@@ -62,7 +62,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     }
 
     /// <summary>
-    /// 扩展DbContext默认字段设置
+    /// Extend DbContext default field settings
     /// </summary>
     /// <param name="builder"></param>
     protected virtual void OnModelCreatingExtend(ModelBuilder builder)
@@ -73,7 +73,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         {
             foreach (var property in entityType.GetProperties())
             {
-                //设置自动生成雪花ID
+                //Set up automatic generation of Snowflake ID
                 if (property.Name.Equals("Id") && property.ValueGenerated != ValueGenerated.Never &&
                     property.ClrType == typeof(long))
                 {
@@ -86,13 +86,13 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                     property.SetDefaultValue("");
                 }
 
-                //pgsql对于char类型会自动补空格
+                //pgsql will automatically fill in spaces for char type
                 if (property.GetColumnType() == "char")
                 {
                     property.SetValueConverter(new CharTrimEndValueConverter());
                 }
 
-                //Enum转换 数据库存储为字符串
+                //Enum conversion database storage as string
                 if (property.ClrType.BaseType == typeof(Enum))
                 {
                     var columnType = property.GetColumnType();
@@ -104,7 +104,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                     }
                 }
 
-                //Tidb不支持ascii_general_ci
+                //Tidb does not support ascii_general_ci
                 // if (property.ClrType == typeof(Guid?))
                 // {
                 //     property.SetCollation("utf8mb4_bin");
@@ -135,7 +135,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
                 .Invoke(this, [builder, entityType]);
         }
 
-        //Tidb与mysql8.0.0以上版本使用。
+        //Tidb is used with mysql8.0.0 or above.
         //builder.UseCollation("utf8mb4_bin"); 
 
         builder.ApplyEntitySelfConfigurations(Options, Logger);
@@ -294,10 +294,10 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
             case EntityState.Modified:
                 ApplyConceptsForModifiedEntity(entry);
 
-                //巨坑：ABP 8.0.2中对于新增判断没有考虑OnAdd的情况，导致不会触发相关事件
+                //Big Pitfall: In ABP 8.0.2, OnAdd is not considered for new addition judgment, resulting in no triggering of related events.
                 if (entry.Properties.Any(x => x is { IsModified: true, Metadata.ValueGenerated: ValueGenerated.Never or ValueGenerated.OnAdd }))
                 {
-                    //EFCore 可获取原始值！
+                    //EFCore can get the original value!
                     //entry.OriginalValues
 
                     //// Skip `PublishEntityDeletedEvent/PublishEntityUpdatedEvent` if only foreign keys have changed.
@@ -363,14 +363,14 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
             if (entry.State is EntityState.Modified && enableIgnoreUpdate is true)
             {
-                //如果有IgnoreUpdate特性，则忽略更新
+                //If the IgnoreUpdate attribute is present, updates are ignored
                 foreach (var property in entry.Members)
                 {
-                    // 检查属性是否有IgnoreUpdateAttribute特性
+                    // Check whether the attribute has the IgnoreUpdateAttribute attribute
                     if (property is PropertyEntry {IsModified: true} propertyEntry && 
                         propertyEntry.Metadata.PropertyInfo?.GetCustomAttributes(typeof(IgnoreUpdateAttribute), false).Any() == true)
                     {
-                        // 如果属性有IgnoreUpdateAttribute特性且被修改，则将IsModified设置为false来忽略更新
+                        // If the attribute has the IgnoreUpdateAttribute attribute and is modified, set IsModified to false to ignore the update.
                         propertyEntry.IsModified = false;
                     }
                 }
@@ -487,7 +487,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     protected virtual void ConfigureValueConverter<TEntity>(ModelBuilder modelBuilder, IMutableEntityType mutableEntityType)
         where TEntity : class
     {
-        //TODO 自动UTC DateTime类型与本地时间的转换
+        //TODO Automatic conversion between UTC DateTime type and local time
         //if (mutableEntityType.BaseType == null &&
         //    !typeof(TEntity).IsDefined(typeof(DisableDateTimeNormalizationAttribute), true) &&
         //    !typeof(TEntity).IsDefined(typeof(OwnedAttribute), true) &&

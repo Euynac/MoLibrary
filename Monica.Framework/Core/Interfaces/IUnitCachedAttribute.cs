@@ -1,7 +1,7 @@
 namespace Monica.Framework.Core.Interfaces;
 
 /// <summary>
-/// 项目单位缓存枚举
+/// Project unit cache enumeration
 /// </summary>
 public interface IUnitCachedAttribute
 {

@@ -13,7 +13,7 @@
 
 <PageTitle>SignalR调试</PageTitle>
 
-<!-- 引用SignalR JavaScript库 -->
+<!-- Reference the SignalR JavaScript library -->
 <script src="_content/Monica.Framework.UI/lib/signalr.js" onload="console.log('SignalR loaded successfully')" onerror="console.error('Failed to load SignalR')"></script>
 <script src="_content/Monica.Framework.UI/js/signalr-debug.js" onload="console.log('Chat.js loaded successfully')" onerror="console.error('Failed to load signalr-debug.js')"></script>
 
@@ -23,7 +23,7 @@
         SignalR调试
     </MudText>
 
-    <!-- 连接配置 -->
+    <!-- Connection configuration -->
     <SignalRConnectionConfig AccessToken="@_accessToken"
                            AccessTokenChanged="OnAccessTokenChanged"
                            SelectedHubRoute="@_selectedHubRoute"
@@ -35,7 +35,7 @@
                            OnDisconnect="DisconnectAsync"
                            OnRefreshHubs="LoadHubsAsync" />
 
-    <!-- 调试设置 -->
+    <!-- Debug settings -->
     <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudText Typo="Typo.h6" Class="mb-2">调试设置</MudText>
         <MudSwitch T="bool"
@@ -47,22 +47,22 @@
         </MudText>
     </MudPaper>
 
-    <!-- 连接状态 -->
+    <!-- connection status -->
     <SignalRConnectionStatus ConnectionState="@_connectionState"
                            SelectedHubRoute="@_selectedHubRoute" />
 
-    <!-- 已连接用户 -->
+    <!-- Connected user -->
     <SignalRConnectedUsers ConnectedUsers="@_connectedUsers"
                           OnRefreshClicked="LoadConnectedUsersAsync" />
 
-    <!-- Hub方法监听 -->
+    <!-- Hub method listening -->
     <SignalRMethodListener HubMethods="@_hubMethods"
                          IsConnected="@_connectionState.IsConnected"
                          OnToggleMethodListener="ToggleMethodListenerAsync"
                          OnEnableAllListeners="EnableAllListenersAsync"
                          OnDisableAllListeners="DisableAllListenersAsync" />
 
-    <!-- 方法调用 -->
+    <!-- method call -->
     <SignalRMethodInvoker HubMethods="@_hubMethods"
                         IsConnected="@_connectionState.IsConnected"
                         SelectedMethodName="@_selectedMethodName"
@@ -70,7 +70,7 @@
                         MethodParameters="@_methodParameters"
                         OnInvokeMethod="InvokeMethodAsync" />
 
-    <!-- 快速消息发送 -->
+    <!-- Quick message sending -->
     <SignalRMessageSender UserName="@_userName"
                         UserNameChanged="OnUserNameChanged"
                         Message="@_message"
@@ -78,14 +78,14 @@
                         IsConnected="@_connectionState.IsConnected"
                         OnSendMessage="SendMessageAsync" />
 
-    <!-- 消息列表 -->
+    <!-- Message list -->
     <SignalRMessageLog Messages="@_messages"
                      OnClearMessages="ClearMessages" />
 </MudContainer>
 
 @code {
     /// <summary>
-    /// SignalR调试页面URL
+    /// SignalR debug page URL
     /// </summary>
     public const string UI_SIGNALR_URL = "/signalr-debug";
 
@@ -104,7 +104,7 @@
     private bool _verboseLogging = false; // 详细调试日志开关
 
     /// <summary>
-    /// 详细调试日志属性，变化时自动更新服务
+    /// Detailed debugging log properties, automatically updating services when changes occur
     /// </summary>
     private bool VerboseLogging
     {
@@ -124,37 +124,37 @@
     }
 
     /// <summary>
-    /// 组件渲染后处理
+    /// Component rendering post-processing
     /// </summary>
-    /// <param name="firstRender">是否首次渲染</param>
+    /// <param name="firstRender">Whether to render for the first time</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // 初始化SignalR调试服务
+            // Initialize SignalR debugging service
             await SignalRDebugService.InitializeAsync();
-            // 确保初始化后立即设置详细日志状态
+            // Ensure verbose log status is set immediately after initialization
             SignalRDebugService.IsVerboseLoggingEnabled = _verboseLogging;
             
-            // 订阅事件
+            // Subscribe to events
             SignalRDebugService.MessageReceived += OnMessageReceived;
             SignalRDebugService.ConnectionStateChanged += OnConnectionStateChanged;
             SignalRDebugService.MethodListenerChanged += OnMethodListenerChanged;
             SignalRDebugService.ConnectedUsersChanged += OnConnectedUsersChanged;
 
-            // 加载Hub信息
+            // Load Hub information
             await LoadHubsAsync();
 
-            // 加载已连接用户信息
+            // Load connected user information
             await LoadConnectedUsersAsync();
             
-            // 初始化组件状态
+            // Initialize component state
             await UpdateComponentState();
         }
     }
 
     /// <summary>
-    /// 组件初始化
+    /// Component initialization
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
@@ -166,7 +166,7 @@
     }
 
     /// <summary>
-    /// 更新组件状态
+    /// Update component status
     /// </summary>
     private async Task UpdateComponentState()
     {
@@ -182,7 +182,7 @@
     }
 
     /// <summary>
-    /// 加载Hub信息
+    /// Load Hub information
     /// </summary>
     private async Task LoadHubsAsync()
     {
@@ -192,17 +192,17 @@
 
             if (success)
             {
-                // 更新可用Hub列表
+                // Update available Hub list
                 _availableHubs.Clear();
 
-                // 从服务中获取真实的Hub组信息
+                // Get the real Hub group information from the service
                 var hubGroups = SignalRDebugService.GetHubGroups();
                 if (hubGroups.Any())
                 {
                     _availableHubs.AddRange(hubGroups);
                 }
 
-                // 如果没有选择Hub，默认选择第一个
+                // If Hub is not selected, the first one is selected by default.
                 if (string.IsNullOrEmpty(_selectedHubRoute) && _availableHubs.Any())
                 {
                     _selectedHubRoute = _availableHubs.First().Route;
@@ -218,7 +218,7 @@
     }
 
     /// <summary>
-    /// 加载已连接用户信息
+    /// Load connected user information
     /// </summary>
     private async Task LoadConnectedUsersAsync()
     {
@@ -241,7 +241,7 @@
     }
 
     /// <summary>
-    /// 连接到SignalR Hub
+    /// Connect to SignalR Hub
     /// </summary>
     private async Task ConnectAsync()
     {
@@ -269,7 +269,7 @@
     }
 
     /// <summary>
-    /// 断开连接
+    /// Disconnect
     /// </summary>
     private async Task DisconnectAsync()
     {
@@ -293,7 +293,7 @@
     }
 
     /// <summary>
-    /// 发送消息
+    /// Send message
     /// </summary>
     private async Task SendMessageAsync((string userName, string message) data)
     {
@@ -313,7 +313,7 @@
     }
 
     /// <summary>
-    /// 调用方法
+    /// call method
     /// </summary>
     private async Task InvokeMethodAsync((string methodName, List<MethodCallParameter> parameters) data)
     {
@@ -337,7 +337,7 @@
     }
 
     /// <summary>
-    /// 切换方法监听
+    /// Switch method listening
     /// </summary>
     private async Task ToggleMethodListenerAsync((HubMethodInfo method, bool isListening) data)
     {
@@ -347,7 +347,7 @@
             
             if (!success)
             {
-                // 如果失败，恢复UI状态
+                // If failed, restore UI state
                 data.method.IsListening = !data.isListening;
                 StateHasChanged();
                 SnackBar.Add($"切换监听器失败", Severity.Error);
@@ -355,7 +355,7 @@
         }
         catch (Exception ex)
         {
-            // 如果异常，恢复UI状态
+            // If abnormal, restore UI state
             data.method.IsListening = !data.isListening;
             StateHasChanged();
             SnackBar.Add($"切换监听器失败: {ex.Message}", Severity.Error);
@@ -363,7 +363,7 @@
     }
 
     /// <summary>
-    /// 启用所有监听器
+    /// Enable all listeners
     /// </summary>
     private async Task EnableAllListenersAsync()
     {
@@ -379,7 +379,7 @@
     }
 
     /// <summary>
-    /// 禁用所有监听器
+    /// Disable all listeners
     /// </summary>
     private async Task DisableAllListenersAsync()
     {
@@ -395,7 +395,7 @@
     }
 
     /// <summary>
-    /// 清空消息
+    /// Clear messages
     /// </summary>
     private void ClearMessages()
     {
@@ -405,7 +405,7 @@
     }
 
     /// <summary>
-    /// 访问令牌变化处理
+    /// Access token change handling
     /// </summary>
     private void OnAccessTokenChanged(string token)
     {
@@ -413,7 +413,7 @@
     }
 
     /// <summary>
-    /// 选择Hub路由变化处理
+    /// Select Hub route change processing
     /// </summary>
     private void OnSelectedHubRouteChanged(string route)
     {
@@ -421,7 +421,7 @@
     }
 
     /// <summary>
-    /// 用户名变化处理
+    /// Username change processing
     /// </summary>
     private void OnUserNameChanged(string name)
     {
@@ -429,7 +429,7 @@
     }
 
     /// <summary>
-    /// 消息变化处理
+    /// Message change processing
     /// </summary>
     private void OnMessageChanged(string msg)
     {
@@ -437,27 +437,27 @@
     }
 
     /// <summary>
-    /// 选择方法名变化处理
+    /// Select method name change processing
     /// </summary>
     private void OnSelectedMethodNameChanged(string methodName)
     {
         _selectedMethodName = methodName;
         
-        // 获取新选择的方法
+        // How to get a new selection
         var method = _hubMethods.FirstOrDefault(m => m.Name == methodName);
         if (method != null)
         {
-            // 只为新方法的参数添加默认值，保留已有的参数值
+            // Only add default values ​​for the parameters of the new method, retaining existing parameter values.
             foreach (var arg in method.Args)
             {
                 if (!_methodParameters.ContainsKey(arg.Name))
                 {
                     _methodParameters[arg.Name] = "";
                 }
-                // 不清空已有的参数值，让用户手动管理
+                // Do not clear existing parameter values ​​and allow users to manage them manually
             }
             
-            // 移除不属于当前方法的参数（可选，也可以保留以便切换回来时使用）
+            // Remove parameters that do not belong to the current method (optional, can also be retained for use when switching back)
             var currentMethodArgNames = method.Args.Select(a => a.Name).ToHashSet();
             var keysToRemove = _methodParameters.Keys.Where(k => !currentMethodArgNames.Contains(k)).ToList();
             foreach (var key in keysToRemove)
@@ -470,13 +470,13 @@
     }
 
     /// <summary>
-    /// 消息接收事件处理
+    /// Message receiving event processing
     /// </summary>
     private void OnMessageReceived(SignalRMessage message)
     {
         _messages.Insert(0, message);
         
-        // 限制消息数量
+        // Limit the number of messages
         if (_messages.Count > 1000)
         {
             _messages.RemoveAt(_messages.Count - 1);
@@ -486,7 +486,7 @@
     }
 
     /// <summary>
-    /// 连接状态变化事件处理
+    /// Connection status change event handling
     /// </summary>
     private void OnConnectionStateChanged(SignalRConnectionState state)
     {
@@ -495,7 +495,7 @@
     }
 
     /// <summary>
-    /// 方法监听状态变化事件处理
+    /// Method to listen for state change event processing
     /// </summary>
     private void OnMethodListenerChanged(HubMethodInfo method)
     {
@@ -509,7 +509,7 @@
     }
 
     /// <summary>
-    /// 已连接用户列表变化事件处理
+    /// Connected user list change event handling
     /// </summary>
     private void OnConnectedUsersChanged(IReadOnlyList<SignalRConnectedUserInfo> users)
     {
@@ -519,17 +519,17 @@
     }
 
     /// <summary>
-    /// 组件销毁
+    /// Component destroyed
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        // 取消订阅事件
+        // Unsubscribe from events
         SignalRDebugService.MessageReceived -= OnMessageReceived;
         SignalRDebugService.ConnectionStateChanged -= OnConnectionStateChanged;
         SignalRDebugService.MethodListenerChanged -= OnMethodListenerChanged;
         SignalRDebugService.ConnectedUsersChanged -= OnConnectedUsersChanged;
 
-        // 释放服务资源
+        // Release service resources
         await SignalRDebugService.DisposeAsync();
     }
 } 

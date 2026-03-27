@@ -1,4 +1,4 @@
-/* 使用MudBlazor CSS变量 */
+/* Using MudBlazor CSS variables */
 
 .ui-event-bus-tabs ::deep .ui-event-bus-tab-panels {
     padding: 24px;
@@ -18,12 +18,12 @@
     background-color: var(--mud-palette-background-gray);
 }
 
-/* 详情面板样式 */
+/* Details panel style */
 .subscription-detail-wrapper ::deep .mud-card {
     border-left: 4px solid var(--mud-palette-primary);
 }
 
-/* 变更流样式 */
+/* Change flow style */
 .change-feed-item {
     padding: 8px;
     border-radius: 4px;
@@ -36,7 +36,7 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* 统计卡片动画 */
+/* Statistics card animation */
 .subscription-table-wrapper ::deep .mud-card {
     transition: transform 0.2s, box-shadow 0.2s;
 }

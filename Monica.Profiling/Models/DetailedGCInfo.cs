@@ -1,110 +1,110 @@
 namespace Monica.Profiling.Models;
 
 /// <summary>
-///     详细 GC 信息 - 基于 GCMemoryInfo
+/// Detailed GC information - based on GCMemoryInfo
 /// </summary>
 public class DetailedGCInfo
 {
     /// <summary>
-    ///     GC 索引 (从 1 开始)
+    /// GC index (starting from 1)
     /// </summary>
     public long GCIndex { get; init; }
 
     /// <summary>
-    ///     触发的代数 (0, 1, 或 2)
+    /// Number of generations to trigger (0, 1, or 2)
     /// </summary>
     public int Generation { get; init; }
 
     /// <summary>
-    ///     是否为压缩 GC
+    /// Is it a compact GC?
     /// </summary>
     public bool WasCompacting { get; init; }
 
     /// <summary>
-    ///     是否为并发 GC
+    /// Whether it is concurrent GC
     /// </summary>
     public bool WasConcurrent { get; init; }
 
     /// <summary>
-    ///     堆大小 (字节)
+    /// Heap size (bytes)
     /// </summary>
     public long HeapSizeBytes { get; init; }
 
     /// <summary>
-    ///     碎片化字节数
+    /// Number of fragmented bytes
     /// </summary>
     public long FragmentedBytes { get; init; }
 
     /// <summary>
-    ///     碎片化百分比
+    /// fragmentation percentage
     /// </summary>
     public double FragmentationPercent => HeapSizeBytes > 0
         ? (double) FragmentedBytes / HeapSizeBytes * 100
         : 0;
 
     /// <summary>
-    ///     已提交内存 (字节)
+    /// Committed memory (bytes)
     /// </summary>
     public long CommittedBytes { get; init; }
 
     /// <summary>
-    ///     提升的字节数 (从低代提升到高代)
+    /// Number of bytes promoted (from low generation to high generation)
     /// </summary>
     public long PromotedBytes { get; init; }
 
     /// <summary>
-    ///     固定对象数量
+    /// Fixed number of objects
     /// </summary>
     public long PinnedObjectsCount { get; init; }
 
     /// <summary>
-    ///     待终结队列中的对象数量
+    /// The number of objects in the queue to be finalized
     /// </summary>
     public long FinalizationPendingCount { get; init; }
 
     /// <summary>
-    ///     GC 暂停时间
+    /// GC pause time
     /// </summary>
     public TimeSpan PauseDuration { get; init; }
 
     /// <summary>
-    ///     GC 时间占比
+    /// GC time proportion
     /// </summary>
     public double PauseTimePercentage { get; init; }
 
     /// <summary>
-    ///     高内存负载阈值 (字节)
+    /// High memory load threshold (bytes)
     /// </summary>
     public long HighMemoryLoadThresholdBytes { get; init; }
 
     /// <summary>
-    ///     当前内存负载 (字节)
+    /// Current memory load (bytes)
     /// </summary>
     public long MemoryLoadBytes { get; init; }
 
     /// <summary>
-    ///     总可用内存 (字节)
+    /// Total available memory (bytes)
     /// </summary>
     public long TotalAvailableMemoryBytes { get; init; }
 
     /// <summary>
-    ///     各代详细信息
+    /// Detailed information for each generation
     /// </summary>
     public GenerationDetailInfo[] GenerationDetails { get; init; } = [];
 }
 
 /// <summary>
-///     单个代的详细信息
+/// Details of a single generation
 /// </summary>
 public class GenerationDetailInfo
 {
     /// <summary>
-    ///     代数 (0, 1, 2, 3=LOH, 4=POH)
+    /// Algebra (0, 1, 2, 3=LOH, 4=POH)
     /// </summary>
     public int Generation { get; init; }
 
     /// <summary>
-    ///     代数显示名称
+    /// algebra display name
     /// </summary>
     public string GenerationName => Generation switch
     {
@@ -117,27 +117,27 @@ public class GenerationDetailInfo
     };
 
     /// <summary>
-    ///     GC 前大小 (字节)
+    /// Pre-GC size (bytes)
     /// </summary>
     public long SizeBeforeBytes { get; init; }
 
     /// <summary>
-    ///     GC 后大小 (字节)
+    /// Post-GC size (bytes)
     /// </summary>
     public long SizeAfterBytes { get; init; }
 
     /// <summary>
-    ///     GC 前碎片化 (字节)
+    /// Pre-GC fragmentation (bytes)
     /// </summary>
     public long FragmentationBeforeBytes { get; init; }
 
     /// <summary>
-    ///     GC 后碎片化 (字节)
+    /// Post-GC fragmentation (bytes)
     /// </summary>
     public long FragmentationAfterBytes { get; init; }
 
     /// <summary>
-    ///     回收的字节数
+    /// Number of bytes recycled
     /// </summary>
     public long CollectedBytes => SizeBeforeBytes - SizeAfterBytes;
 }

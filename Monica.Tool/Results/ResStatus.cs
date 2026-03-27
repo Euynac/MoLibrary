@@ -1,50 +1,50 @@
 namespace Monica.Tool.Results;
 
 /// <summary>
-/// 通用返回码
+/// Universal return code
 /// </summary>
 public enum ResStatus
 {
     Unknown = 0,
     /// <summary>
-    /// 请求正常
+    /// Request normal
     /// </summary>
     Ok = 200,
     /// <summary>
-    /// 请求+新建资源
+    /// Request + create new resource
     /// </summary>
     Created = 201,
     /// <summary>
-    /// 请求错误
+    /// Request error
     /// </summary>
     BadRequest = 400,
     /// <summary>
-    /// 未登录
+    /// Not logged in
     /// </summary>
     Unauthorized = 401,
     /// <summary>
-    /// 刷新Token失效
+    /// Refresh Token invalid
     /// </summary>
     RefreshTokenExpired = 452,
     /// <summary>
-    /// 访问Token失效
+    /// Access Token is invalid
     /// </summary>
     AccessTokenExpired = 453,
 
     /// <summary>
-    /// 警告错误，一般需用户确认
+    /// Warning error, generally requires user confirmation
     /// </summary>
     ErrorWarning = 460,
     /// <summary>
-    /// 权限不足
+    /// Insufficient permissions
     /// </summary>
     Forbidden = 403,
     /// <summary>
-    /// 输入验证错误
+    /// Input validation error
     /// </summary>
     ValidateError = 451,
     /// <summary>
-    /// 系统异常
+    /// System exception
     /// </summary>
     InternalError = 500,
 }

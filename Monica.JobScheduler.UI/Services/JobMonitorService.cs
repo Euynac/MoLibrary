@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 实时监控服务
+/// Real-time monitoring service
 /// </summary>
 public class JobMonitorService(
     IMoJobMetadataRepository metadataRepository,
@@ -17,7 +17,7 @@ public class JobMonitorService(
     ILogger<JobMonitorService> logger)
 {
     /// <summary>
-    /// 获取实时执行列表
+    /// Get real-time execution list
     /// </summary>
     public async Task<Res<List<LiveExecution>>> GetLiveExecutionsAsync(
         CancellationToken cancellationToken = default)
@@ -71,7 +71,7 @@ public class JobMonitorService(
     }
 
     /// <summary>
-    /// 获取队列状态
+    /// Get queue status
     /// </summary>
     public async Task<Res<QueueStatus>> GetQueueStatusAsync(
         CancellationToken cancellationToken = default)
@@ -118,7 +118,7 @@ public class JobMonitorService(
     }
 
     /// <summary>
-    /// 获取并发使用情况
+    /// Get concurrent usage
     /// </summary>
     public async Task<Res<List<ConcurrencyUsage>>> GetConcurrencyUsageAsync(
         bool onlyActive = true,
@@ -157,7 +157,7 @@ public class JobMonitorService(
     }
 
     /// <summary>
-    /// 获取完整的监控状态（一次性获取所有数据）
+    /// Get complete monitoring status (get all data at once)
     /// </summary>
     public async Task<Res<MonitorState>> GetMonitorStateAsync(
         CancellationToken cancellationToken = default)
@@ -199,7 +199,7 @@ public class JobMonitorService(
     }
 
     /// <summary>
-    /// 获取详细的并发监控状态（包含实例列表和一致性检测）
+    /// Get detailed concurrency monitoring status (including instance list and consistency detection)
     /// </summary>
     public async Task<Res<ConcurrencyMonitorState>> GetConcurrencyMonitorStateAsync(
         CancellationToken cancellationToken = default)
@@ -241,7 +241,7 @@ public class JobMonitorService(
     }
 
     /// <summary>
-    /// 触发并发状态同步
+    /// Trigger concurrent state synchronization
     /// </summary>
     public async Task<Res<ReconcileResult>> ReconcileAsync(CancellationToken cancellationToken = default)
     {

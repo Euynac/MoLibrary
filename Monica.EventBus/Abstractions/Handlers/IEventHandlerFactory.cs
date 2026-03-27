@@ -1,18 +1,22 @@
 namespace Monica.EventBus.Abstractions.Handlers;
 
 /// <summary>
-/// Defines an interface for factories those are responsible to create/get and release of event handlers.
+/// Defines a factory that creates event handlers and releases any related resources.
 /// </summary>
 public interface IEventHandlerFactory
 {
     /// <summary>
-    /// Gets an event handler.
+    /// Creates or resolves an event handler instance.
     /// </summary>
-    /// <returns>The event handler</returns>
+    /// <returns>A wrapper around the event handler instance.</returns>
     IEventHandlerDisposeWrapper GetHandler();
+
     /// <summary>
-    /// Gets the type of the event handler. if it is action event handler behind the factory, return nul.  
+    /// Gets the concrete handler type when the factory is backed by a handler type.
+    /// Returns <see langword="null"/> for action-based handlers.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>
+    /// The concrete handler type, or <see langword="null"/> when the factory wraps a delegate.
+    /// </returns>
     Type? GetHandlerType();
 }

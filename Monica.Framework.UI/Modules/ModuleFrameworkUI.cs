@@ -11,7 +11,7 @@ public static class ModuleFrameworkUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 FrameworkUI 模块
+        /// Configure the FrameworkUI module
         /// </summary>
         public static ModuleFrameworkUIGuide AddFrameworkUI(Action<ModuleFrameworkUIOption>? action = null)
         {
@@ -27,7 +27,7 @@ public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
 
     public override void ClaimDependencies()
     {
-        // 依赖 UIStackTrace 模块（用于堆栈跟踪可视化）
+        // Depends on UIStackTrace module (for stack trace visualization)
         DependsOnModule<ModuleUIStackTraceGuide>().Register();
     }
 }

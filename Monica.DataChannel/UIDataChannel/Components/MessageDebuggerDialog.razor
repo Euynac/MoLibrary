@@ -167,7 +167,7 @@
 
     protected override void OnInitialized()
     {
-        // 初始化值
+        // Initialize default state
         _filterKeyword = Middleware.FilterKeyword;
         _maxQueueSize = Middleware.MaxQueueSize;
         _isListening = Middleware.IsActive;
@@ -185,7 +185,7 @@
 
         if (_isListening)
         {
-            // 应用设置并开始监听
+            // Apply settings and start listening
             Middleware.FilterKeyword = _filterKeyword;
             Middleware.MaxQueueSize = _maxQueueSize;
             Middleware.IsActive = true;
@@ -193,7 +193,7 @@
         }
         else
         {
-            // 停止监听
+            // Stop listening
             Middleware.IsActive = false;
             StopRefreshTimer();
         }
@@ -202,7 +202,7 @@
     private void StartRefreshTimer()
     {
         _refreshTimer?.Dispose();
-        _refreshTimer = new Timer(500); // 每500ms刷新一次
+        _refreshTimer = new Timer(500); // Refresh every 500ms
         _refreshTimer.Elapsed += async (sender, e) =>
         {
             await InvokeAsync(() =>

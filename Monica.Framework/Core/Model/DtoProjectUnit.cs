@@ -6,59 +6,59 @@ namespace Monica.Framework.Core.Model;
 public class DtoProjectUnit
 {
     /// <summary>
-    /// 项目单元键值，也即项目单元FullName名
+    /// Project unit key value, that is, project unit FullName name
     /// </summary>
     public required string Key { get; set; }
 
     /// <summary>
-    /// 项目单元显示名
+    /// Project unit display name
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// 项目单元描述
+    /// Project unit description
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 项目单元作者
+    /// Project unit author
     /// </summary>
     public string? Author { get; set; }
 
     /// <summary>
-    /// 项目单元分组信息
+    /// Project unit grouping information
     /// </summary>
     public List<string>? Group { get; set; }
 
     /// <summary>
-    /// 项目单元类型
+    /// Project unit type
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EProjectUnitType UnitType { get; set; }
 
     /// <summary>
-    /// 所依赖的项目单元
+    /// The project unit it depends on
     /// </summary>
     public List<DtoProjectUnitDependency> DependencyUnits { get; set; } = [];
 
     /// <summary>
-    /// 项目单元特性
+    /// Project unit properties
     /// </summary>
     public List<IUnitCachedAttribute> Attributes { get; set; } = [];
     
     /// <summary>
-    /// 告警信息列表
+    /// Alarm information list
     /// </summary>
     public List<ProjectUnitAlert> Alerts { get; set; } = [];
 
     /// <summary>
-    /// 项目单元方法列表
+    /// Project unit method list
     /// </summary>
     [JsonIgnore]
     public List<ProjectUnitMethod> Methods { get; set; } = [];
     
     /// <summary>
-    /// 被依赖的数量（在数据传输时计算）
+    /// The number of dependencies (calculated during data transfer)
     /// </summary>
     public int DependedByCount { get; set; } = 0;
 }

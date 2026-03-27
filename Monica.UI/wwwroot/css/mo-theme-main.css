@@ -1,20 +1,20 @@
 /* Monica Theme Main Entry Point */
-/* 这是主CSS文件，引入所有主题相关的CSS */
-/* 颜色由 MudBlazor 主题系统管理，CSS 只负责组件样式 */
+/* This is the main CSS file that pulls in all theme-related CSS */
+/* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
-/* 1. 引入默认主题样式（包含日间和夜间模式） */
+/* 1. Introduce default theme styles (including day and night modes) */
 @import url('./themes/mo-theme-default.css');
 
-/* 2. 引入现代化毛玻璃主题 */
+/* 2. Introducing a modern frosted glass theme */
 @import url('./themes/mo-theme-glassmorphic.css');
 
-/* 3. 引入霓虹脉冲主题 */
+/* 3. Introducing Neon Pulse theme */
 @import url('./themes/mo-theme-neonpulse.css');
 
-/* 4. 引入小清新主题 */
+/* 4. Introduce a fresh theme */
 @import url('./themes/mo-theme-fresh.css');
 
-/* 5. 引入新增的精美主题 */
+/* 5. Introduce new exquisite themes */
 @import url('./themes/mo-theme-aurora-flow.css');        /* 极光流彩主题 */
 @import url('./themes/mo-theme-ink-landscape.css');      /* 墨韵山水主题 */
 @import url('./themes/mo-theme-macaron-sweet.css');      /* 马卡龙甜心主题 */
@@ -26,11 +26,11 @@
 @import url('./markdown/mo-markdown-neonpulse.css');
 @import url('./markdown/mo-markdown-deep-ocean.css');
 @import url('./markdown/mo-markdown-vintage-press.css');
-/* 6. 自定义主题样式示例 */
-/* 如需创建新主题，可以创建新的CSS文件并在此引入 */
+/* 6. Custom theme style example */
+/* If you want to create a new theme, you can create a new CSS file and introduce it here */
 /* @import url('./themes/mo-theme-custom.css'); */
 
-/* 防止过渡动画影响性能的元素 */
+/* Prevent transition animations from affecting performance of elements */
 .mud-table *,
 .mud-data-grid *,
 .mud-treeview *,
@@ -39,12 +39,12 @@
     transition: none !important;
 }
 
-/* 平滑滚动 */
+/* smooth scrolling */
 html {
     scroll-behavior: smooth;
 }
 
-/* 自定义滚动条样式 */
+/* Custom scroll bar style */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -63,19 +63,19 @@ html {
     background: var(--mud-palette-action-default);
 }
 
-/* Firefox滚动条 */
+/* Firefox scroll bars */
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--mud-palette-action-disabled) transparent;
 }
 
-/* Container 全局内边距 */
+/* Container global padding */
 .mud-container {
     padding-top: 24px;
     padding-bottom: 24px;
 }
 
-/* 打印样式优化 */
+/* Print style optimization */
 @media print {
     .mud-app-bar,
     .mud-drawer,

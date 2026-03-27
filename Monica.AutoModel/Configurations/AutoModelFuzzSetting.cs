@@ -1,16 +1,16 @@
 namespace Monica.AutoModel.Configurations;
 
 /// <summary>
-/// 字段模糊查询设置
+/// Fuzzy-search settings for a field.
 /// </summary>
 public class AutoModelFuzzSetting
 {
     /// <summary>
-    /// 目前不支持的类型
+    /// Indicates that fuzzy search is currently unsupported for this field type.
     /// </summary>
     public bool IsNotSupported { get; set; }
     /// <summary>
-    /// 全字段模糊查询时是否忽略该字段
+    /// Whether this field should be ignored during full-field fuzzy searches.
     /// </summary>
     public bool IsIgnored { get; set; }
 }

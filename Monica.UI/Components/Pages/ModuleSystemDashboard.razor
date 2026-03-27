@@ -68,8 +68,7 @@
     </MudContainer>
 </div>
 
-<!-- 模块详情对话框 -->
-<ModuleDetailDialog IsVisible="showModuleDetail"
+<!-- Module Details Dialog --><ModuleDetailDialog IsVisible="showModuleDetail"
                    IsVisibleChanged="OnModuleDetailVisibilityChanged"
                    SelectedModuleDetail="selectedModuleDetail" />
 
@@ -96,7 +95,7 @@
         }
     }
     /// <summary>
-    /// 刷新数据
+    /// Refresh data
     /// </summary>
     /// <returns></returns>
     private Task RefreshData()
@@ -153,9 +152,9 @@
     }
 
     /// <summary>
-    /// 查看模块详情
+    /// View module details
     /// </summary>
-    /// <param name="moduleKey">模块键</param>
+    /// <param name="moduleKey">Module key</param>
     /// <returns></returns>
     private Task ViewModuleDetail(ModuleKey moduleKey)
     {

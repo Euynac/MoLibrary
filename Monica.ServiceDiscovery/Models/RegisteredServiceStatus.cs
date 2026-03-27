@@ -2,40 +2,40 @@ namespace Monica.ServiceDiscovery.Models;
 
 public class RegisteredServiceStatus
 {
-    /// <summary>服务AppId</summary>
+    /// <summary>ServiceAppId</summary>
     public required string AppId { get; set; }
     
-    /// <summary>服务名称</summary>
+    /// <summary>Service name</summary>
     public required string AppName { get; set; }
     
-    /// <summary>领域名</summary>
+    /// <summary>Domain name</summary>
     public string? DomainName { get; set; }
     
-    /// <summary>项目名</summary>
+    /// <summary>Project name</summary>
     public string? ProjectName { get; set; }
     /// <summary>
-    /// 依赖子域列表
+    /// Dependent subdomain list
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
-    /// <summary>服务实例字典（Key: FromClient, Value: InstanceState）</summary>
+    /// <summary>Service instance dictionary (Key: FromClient, Value: InstanceState)</summary>
     public Dictionary<string, InstanceState> Instances { get; set; } = new();
 
     /// <summary>Evicted instances (UI layer only, not serialized)</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public List<EvictedInstanceInfo> EvictedInstances { get; set; } = new();
     
-    /// <summary>获取运行中的实例数量</summary>
+    /// <summary>Get the number of running instances</summary>
     public int RunningInstanceCount => 
         Instances.Count(x => x.Value.Status == ServiceStatus.Running);
     
-    /// <summary>获取总实例数量</summary>
+    /// <summary>Get the total number of instances</summary>
     public int TotalInstanceCount => Instances.Count;
     
-    /// <summary>服务整体状态（基于所有实例状态判断）</summary>
+    /// <summary>The overall status of the service (based on the status of all instances)</summary>
     public ServiceStatus OverallStatus => DetermineOverallStatus();
 
     /// <summary>
-    /// 获取有效的服务实例信息
+    /// Get valid service instance information
     /// </summary>
     /// <returns></returns>
     public InstanceState? GetValidInstanceInfo() => Instances.Values.FirstOrDefault(x => x.Status is not ServiceStatus.Offline);
@@ -47,7 +47,7 @@ public class RegisteredServiceStatus
 
         var statuses = Instances.Values.Select(x => x.Status).ToList();
 
-        // 优先级：Error > Running > Unhealthy > Updating > Offline
+        // Priority: Error > Running > Unhealthy > Updating > Offline
         if (statuses.Any(s => s == ServiceStatus.Error))
             return ServiceStatus.Error;
 

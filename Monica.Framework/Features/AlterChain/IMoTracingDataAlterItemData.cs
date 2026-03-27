@@ -3,38 +3,38 @@ namespace Monica.Framework.Features.AlterChain;
 public interface IMoTracingDataAlterItemData<in TEntity> where TEntity : class, IMoTracingDataEntity
 {
     /// <summary>
-    /// 应用当前变更
+    /// Apply current changes
     /// </summary>
     /// <param name="entity"></param>
     void Apply(TEntity entity);
     
     /// <summary>
-    /// 获取当前变更信息
+    /// Get current change information
     /// </summary>
-    /// <param name="entity">如果传入此值将会返回变更相关的实体值</param>
+    /// <param name="entity">If this value is passed in, the entity value related to the change will be returned.</param>
     /// <returns></returns>
     IEnumerable<PropertyAlterData> GetChanges(TEntity? entity = null);
 }
 
 /// <summary>
-/// 属性变更信息
+/// Property change information
 /// </summary>
 public class PropertyAlterData
 {
     /// <summary>
-    /// 变更显示名（优先使用 AlterItemPropertyAttribute 的Title，否则就是PropertyName）
+    /// Change the display name (the Title of AlterItemPropertyAttribute is used first, otherwise it is PropertyName)
     /// </summary>
     public required string DisplayName { get; set; }
     /// <summary>
-    /// 变更属性名
+    /// Change attribute name
     /// </summary>
     public required string PropertyName { get; set; }
     /// <summary>
-    /// 来自于 Entity 的相关的值
+    /// The associated value from the Entity
     /// </summary>
     public object? OldValue { get; set; }
     /// <summary>
-    /// 来自于 PropertyAlterData 的相关的值
+    /// The associated value from PropertyAlterData
     /// </summary>
     public object? NewValue { get; set; }
 }

@@ -23,7 +23,7 @@ public static class ModuleRepositoryBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Repository 模块
+        /// Configure the Repository module
         /// </summary>
         public static ModuleRepositoryGuide AddRepository(Action<ModuleRepositoryOption>? action = null)
         {
@@ -85,7 +85,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
                 context.Services.AddDbContext<TDbContext>(optionsAction);
             }
 
-            //TODO 使用Module优化自动注册
+            //TODO Use Module to optimize automatic registration
             var options = new MoEfCoreRegistrationOptions(typeof(TDbContext), context.Services);
 
             context.Services.AddTransient(serviceProvider =>
@@ -102,7 +102,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             context.Services
                 .AddTransient<IMoDbContextDatabaseManager<TDbContext>, MoDbContextDatabaseManager<TDbContext>>();
 
-            //TODO 优化无需AOP
+            //TODO optimization does not require AOP
             context.Services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
                 proxyBuildContext =>
                 {
@@ -129,27 +129,28 @@ public class ModuleRepositoryOption : MoModuleOption<ModuleRepository>
     public bool UseDbFunction { get; set; }
 
     /// <summary>
-    /// 自动注册DbContext Factory
+    /// Automatically register DbContext Factory
     /// </summary>
     public bool UseDbContextFactory { get; set; }
 
     /// <summary>
-    /// 是否启用敏感数据日志。默认为null，表示当环境为Development时启用。
+    /// Whether to enable sensitive data logging. The default is null, which means it is enabled when the environment is Development.
     /// </summary>
     public bool? EnableSensitiveDataLogging { get; set; }
 
     /// <summary>
-    /// 禁用实体 <see cref="IHasEntitySelfConfig{TEntity}"/> 功能，当不使用此功能时可关闭
+    /// Disable the entity <see cref="IHasEntitySelfConfig{TEntity}"/> function, which can be turned off when not in use
     /// </summary>
     public bool DisableEntitySelfConfiguration { get; set; }
 
     /// <summary>
-    /// 禁用自动发现实体原生配置 <see cref="IEntityTypeConfiguration{TEntity}"/> 功能，当不使用<see cref="MoDbContext{TDbContext}"/>提供的此接口自动注册功能可关闭
+    /// Disables automatic discovery of entity-specific configuration via <see cref="IEntityTypeConfiguration{TEntity}"/>.
+    /// You can disable this when automatic registration from <see cref="MoDbContext{TDbContext}"/> is not needed.
     /// </summary>
     public bool DisableEntitySeparateConfiguration { get; set; }
 
     /// <summary>
-    /// 并发令牌最大长度
+    /// Maximum length of concurrent tokens
     /// </summary>
     public static int ConcurrencyStampMaxLength = 40;
 }

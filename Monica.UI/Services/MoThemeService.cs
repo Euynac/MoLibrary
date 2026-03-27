@@ -6,7 +6,7 @@ using Monica.Modules;
 namespace Monica.UI.Services;
 
 /// <summary>
-/// Monica主题服务 - 管理主题切换和自定义样式
+/// Monica Theme Service - Manage theme switching and custom styles
 /// </summary>
 public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeService
 {
@@ -47,13 +47,13 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
     }
 
     /// <summary>
-    /// 可用的主题列表
+    /// List of available themes
     /// </summary>
     public static (string Name, string DisplayName, string Description)[] AvailableThemes 
         => ThemeRegistry.GetAvailableThemes();
 
     /// <summary>
-    /// 根据主题名称创建主题
+    /// Create a topic based on topic name
     /// </summary>
     private MudTheme CreateThemeByName(string themeName)
     {
@@ -62,7 +62,7 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
 
 
     /// <summary>
-    /// 切换主题模式
+    /// Switch theme mode
     /// </summary>
     public void ToggleTheme()
     {
@@ -70,7 +70,7 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
     }
 
     /// <summary>
-    /// 获取当前主题的CSS类名
+    /// Get the CSS class name of the current theme
     /// </summary>
     public string GetThemeCssClass()
     {
@@ -79,7 +79,7 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
     }
     
     /// <summary>
-    /// 获取主题的data-theme属性值
+    /// Get the data-theme attribute value of the theme
     /// </summary>
     public string GetThemeDataAttribute()
     {
@@ -88,10 +88,10 @@ public class MoThemeService(IOptions<ModuleUICoreOption> options) : IMoThemeServ
     }
 
     /// <summary>
-    /// 根据 MudBlazor Color 枚举获取当前主题对应的十六进制颜色值
+    /// Get the hexadecimal color value corresponding to the current theme according to the MudBlazor Color enumeration
     /// </summary>
-    /// <param name="color">MudBlazor 颜色枚举</param>
-    /// <returns>十六进制颜色值（格式：#rrggbb）</returns>
+    /// <param name="color">MudBlazor color enumeration</param>
+    /// <returns>Hex color value (format: #rrggbb)</returns>
     public string GetColorHex(Color color)
     {
         Palette palette = IsDarkMode ? CurrentTheme.PaletteDark : CurrentTheme.PaletteLight;

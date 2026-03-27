@@ -2,9 +2,9 @@ namespace Monica.ServiceDiscovery.Models;
 
 public class ServiceHeartbeatResponse
 {
-    /// <summary>是否需要重新注册</summary>
+    /// <summary>Do you need to re-register?</summary>
     public bool RequireReRegister { get; set; }
     
-    /// <summary>响应消息</summary>
+    /// <summary>response message</summary>
     public string? Message { get; set; }
 }

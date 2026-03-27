@@ -19,7 +19,7 @@
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent>
-        <!-- 搜索和筛选 -->
+        <!-- Search and filter -->
         <MudGrid Class="mb-4">
             <MudItem xs="12" md="4">
                 <MudTextField @bind-Value="_searchKeyword" 
@@ -59,7 +59,7 @@
             </MudItem>
         </MudGrid>
 
-        <!-- 数据表格 -->
+        <!-- data table -->
         <MudTable Items="@_configurations" 
                   Dense="@_dense" 
                   Hover="true" 
@@ -132,7 +132,7 @@
             </LoadingContent>
         </MudTable>
 
-        <!-- 分页 -->
+        <!-- Pagination -->
         @if (_totalCount > _pageSize)
         {
             <div class="d-flex justify-center mt-4">
@@ -156,12 +156,12 @@
     private bool _loading = false;
     private bool _dense = false;
 
-    // 搜索和筛选
+    // Search and filter
     private string _searchKeyword = string.Empty;
     private string? _selectedAppId;
     private bool? _selectedStatus;
 
-    // 分页
+    // Pagination
     private int _currentPage = 0;
     private int _pageSize = 20;
     private int _totalCount = 0;
@@ -185,7 +185,7 @@
                 return;
             }
 
-            // 从领域配置中提取所有配置项
+            // Extract all configuration items from realm configuration
             var allItems = new List<DtoOptionItem>();
             foreach (var domain in domainConfigs)
             {
@@ -201,14 +201,14 @@
             _configurations = allItems;
             _totalCount = allItems.Count;
 
-            // 提取来源列表作为AppId替代
+            // Extract source list as AppId replacement
             _appIds = allItems.Where(c => !string.IsNullOrEmpty(c.Source))
                          .Select(c => c.Source!)
                          .Distinct()
                          .OrderBy(x => x)
                          .ToList();
 
-            // 应用筛选
+            // Apply filters
             ApplyFilters();
         }
         catch (Exception ex)
@@ -239,7 +239,7 @@
     {
         var filtered = _configurations.AsEnumerable();
 
-        // 关键字搜索
+        // keyword search
         if (!string.IsNullOrWhiteSpace(_searchKeyword))
         {
             filtered = filtered.Where(c => 
@@ -249,13 +249,13 @@
                 (c.Title ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase));
         }
 
-        // 来源筛选
+        // Source filtering
         if (!string.IsNullOrEmpty(_selectedAppId))
         {
             filtered = filtered.Where(c => c.Source == _selectedAppId);
         }
 
-        // 状态筛选
+        // status filter
         if (_selectedStatus.HasValue)
         {
             filtered = filtered.Where(c => !c.IsOffline == _selectedStatus.Value);

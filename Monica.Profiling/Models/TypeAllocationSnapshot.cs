@@ -1,104 +1,104 @@
 namespace Monica.Profiling.Models;
 
 /// <summary>
-///     类型分配快照 - 某一时刻的类型分配数据
+/// Type allocation snapshot - type allocation data at a certain point in time
 /// </summary>
 public class TypeAllocationSnapshot
 {
     /// <summary>
-    ///     快照时间戳
+    /// snapshot timestamp
     /// </summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
 
     /// <summary>
-    ///     收集持续时间 (从收集开始或上次重置算起)
+    /// Collection duration (measured from start of collection or last reset)
     /// </summary>
     public TimeSpan Duration { get; init; }
 
     /// <summary>
-    ///     所有跟踪的类型及其分配信息，按 TotalBytes 降序排列
+    /// All tracked types and their allocation information, sorted by TotalBytes in descending order
     /// </summary>
     public IReadOnlyList<TypeAllocationInfo> Types { get; init; } = [];
 
     /// <summary>
-    ///     所有类型的总分配数
+    /// Total allocations for all types
     /// </summary>
     public long TotalAllocationCount { get; init; }
 
     /// <summary>
-    ///     所有类型的总字节数
+    /// Total bytes of all types
     /// </summary>
     public long TotalBytes { get; init; }
 
     /// <summary>
-    ///     唯一类型数��
+    /// Unique type number ��
     /// </summary>
     public int UniqueTypeCount => Types.Count;
 
     /// <summary>
-    ///     是否正在收集数据
+    /// Whether data is being collected
     /// </summary>
     public bool IsCollecting { get; init; }
 
     /// <summary>
-    ///     当前采样模式
+    /// Current sampling mode
     /// </summary>
     public AllocationSamplingMode SamplingMode { get; init; }
 
     /// <summary>
-    ///     丢弃的事件数量 (例如由于未知类型)
+    /// Number of events dropped (e.g. due to unknown type)
     /// </summary>
     public long DroppedEventCount { get; init; }
 
     /// <summary>
-    ///     数据来源类型
+    /// Data source type
     /// </summary>
     public TypeAllocationDataSource DataSource { get; init; }
 
     /// <summary>
-    ///     错误消息 (如果有)
+    /// Error message (if any)
     /// </summary>
     public string? ErrorMessage { get; init; }
 }
 
 /// <summary>
-///     分配采样模式
+/// Assign sampling mode
 /// </summary>
 public enum AllocationSamplingMode
 {
     /// <summary>
-    ///     收集已禁用
+    /// Collection is disabled
     /// </summary>
     Disabled = 0,
 
     /// <summary>
-    ///     低频采样 (~5 事件/秒) - 较低开销
+    /// Low frequency sampling (~5 events/second) - lower overhead
     /// </summary>
     Low = 1,
 
     /// <summary>
-    ///     高频采样 (~100 事件/秒) - 较高精度
+    /// High frequency sampling (~100 events/second) - higher accuracy
     /// </summary>
     High = 2
 }
 
 /// <summary>
-///     类型分配数据来源
+/// Type assignment data source
 /// </summary>
 public enum TypeAllocationDataSource
 {
     /// <summary>
-    ///     无数据
+    /// No data
     /// </summary>
     None = 0,
 
     /// <summary>
-    ///     实时分配跟踪 (ETW/EventPipe)
+    /// Real-time allocation tracking (ETW/EventPipe)
     /// </summary>
     AllocationTracking = 1,
 
     /// <summary>
-    ///     堆快照 (ClrMD)
+    /// Heap snapshot (ClrMD)
     /// </summary>
     HeapSnapshot = 2
 }

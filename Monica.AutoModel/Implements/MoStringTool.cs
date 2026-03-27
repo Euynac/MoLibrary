@@ -103,7 +103,7 @@ public static partial class MoStringTool
     private static readonly string[] _supportedDateTimeFormats =
        ["yyyy-MM-dd", "yyyyMMdd", "MMdd", "yyyy-MM-dd HH:mm:ss", "yyMMdd"];
     /// <summary>
-    /// 转换为DateTime
+    /// Converts value to DateTime.
     /// </summary>
     /// <param name="value"></param>
     /// <param name="dateTime"></param>

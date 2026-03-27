@@ -1,27 +1,27 @@
 namespace Monica.ServiceDiscovery.Events;
 
 /// <summary>
-/// 服务孤立事件
+/// Service Orphaned Incident
 /// </summary>
 public class ServiceIsolatedEvent
 {
     /// <summary>
-    /// 服务名称
+    /// Service name
     /// </summary>
     public required string ServiceName { get; init; }
 
     /// <summary>
-    /// 实例 ID
+    /// Instance ID
     /// </summary>
     public required string InstanceId { get; init; }
 
     /// <summary>
-    /// 检测到孤立的时间
+    /// Orphaned time detected
     /// </summary>
     public required DateTime IsolationDetectedTime { get; init; }
 
     /// <summary>
-    /// 最后成功心跳时间
+    /// Last successful heartbeat time
     /// </summary>
     public DateTime? LastSuccessfulHeartbeat { get; init; }
 }

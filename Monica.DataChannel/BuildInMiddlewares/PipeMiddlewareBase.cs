@@ -5,7 +5,7 @@ using Monica.DataChannel.Pipeline;
 namespace Monica.DataChannel.BuildInMiddlewares;
 
 /// <summary>
-/// 转换中间件基类
+/// Base class for transform middleware.
 /// </summary>
 public abstract class PipeTransformMiddlewareBase : IPipeTransformMiddleware
 {
@@ -23,7 +23,7 @@ public abstract class PipeTransformMiddlewareBase : IPipeTransformMiddleware
 }
 
 /// <summary>
-/// 监控中间件基类
+/// Base class for monitor middleware.
 /// </summary>
 public abstract class PipeMonitorMiddlewareBase : IPipeMonitorMiddleware
 {
@@ -49,30 +49,30 @@ public abstract class PipeMonitorMiddlewareBase : IPipeMonitorMiddleware
 }
 
 /// <summary>
-/// 信息展示中间件基类
-/// 提供并发字典用于存储和展示统计信息，专门用于UI管理界面展示
-/// 开发者可以继承此类并根据消息传递写入信息到字典中
+/// Base class for information-display middleware.
+/// Provides a concurrent dictionary for storing and exposing statistics for the management UI.
+/// Derived classes can write message-related information into the dictionary as needed.
 /// </summary>
 public abstract class PipeInfoDisplayMiddlewareBase : PipeMonitorMiddlewareBase
 {
     /// <summary>
-    /// 信息展示字典，用于存储各种统计信息
-    /// Key: 信息标识
-    /// Value: 信息内容（支持各种类型）
+    /// Stores the information exposed by the middleware.
+    /// Key: information identifier.
+    /// Value: information payload of any supported type.
     /// </summary>
     protected readonly ConcurrentDictionary<string, object> InfoDictionary = new();
 
     /// <summary>
-    /// 获取所有信息字典的只读副本
+    /// Gets a read-only snapshot of the information dictionary.
     /// </summary>
-    /// <returns>信息字典的只读集合</returns>
+    /// <returns>A read-only view of the information dictionary.</returns>
     public IReadOnlyDictionary<string, object> GetInfoDictionary()
     {
         return InfoDictionary.AsReadOnly();
     }
 
     /// <summary>
-    /// 清空信息字典
+    /// Clears the information dictionary.
     /// </summary>
     public void ClearInfo()
     {
@@ -80,32 +80,32 @@ public abstract class PipeInfoDisplayMiddlewareBase : PipeMonitorMiddlewareBase
     }
 
     /// <summary>
-    /// 设置信息项
+    /// Sets an information entry.
     /// </summary>
-    /// <param name="key">信息键</param>
-    /// <param name="value">信息值</param>
+    /// <param name="key">The information key.</param>
+    /// <param name="value">The information value.</param>
     protected void SetInfo(string key, object value)
     {
         InfoDictionary.AddOrUpdate(key, value, (_, _) => value);
     }
 
     /// <summary>
-    /// 获取信息项
+    /// Gets an information entry.
     /// </summary>
-    /// <param name="key">信息键</param>
-    /// <param name="defaultValue">默认值</param>
-    /// <returns>信息值</returns>
+    /// <param name="key">The information key.</param>
+    /// <param name="defaultValue">The default value to return when the key is missing.</param>
+    /// <returns>The information value.</returns>
     protected T GetInfo<T>(string key, T defaultValue = default!)
     {
         return InfoDictionary.TryGetValue(key, out var value) && value is T typedValue ? typedValue : defaultValue;
     }
 
     /// <summary>
-    /// 增加计数器
+    /// Increments a counter entry.
     /// </summary>
-    /// <param name="key">计数器键</param>
-    /// <param name="increment">增量，默认为1</param>
-    /// <returns>增加后的值</returns>
+    /// <param name="key">The counter key.</param>
+    /// <param name="increment">The increment value. Defaults to <c>1</c>.</param>
+    /// <returns>The updated counter value.</returns>
     protected long IncrementCounter(string key, long increment = 1)
     {
         return InfoDictionary.AddOrUpdate(key, increment, (_, existingValue) =>
@@ -119,18 +119,18 @@ public abstract class PipeInfoDisplayMiddlewareBase : PipeMonitorMiddlewareBase
     }
 
     /// <summary>
-    /// 重置计数器
+    /// Resets a counter entry.
     /// </summary>
-    /// <param name="key">计数器键</param>
+    /// <param name="key">The counter key.</param>
     protected void ResetCounter(string key)
     {
         InfoDictionary.AddOrUpdate(key, 0L, (_, _) => 0L);
     }
 
     /// <summary>
-    /// 重写元数据方法，包含信息展示标识
+    /// Overrides the metadata payload to include the information-display marker.
     /// </summary>
-    /// <returns>包含信息展示标识的元数据</returns>
+    /// <returns>Metadata that includes the information-display flag.</returns>
     public new dynamic GetMetadata()
     {
         var baseMetadata = base.GetMetadata();

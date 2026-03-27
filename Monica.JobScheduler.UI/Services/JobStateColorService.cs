@@ -5,16 +5,16 @@ using MudBlazor;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 作业状态颜色服务
-/// 提供统一的作业状态到 MudBlazor 颜色的映射
+/// Job status color service
+/// Provides a unified mapping of job status to MudBlazor colors
 /// </summary>
 public class JobStateColorService(IMoThemeService themeService)
 {
     /// <summary>
-    /// 获取作业状态对应的 MudBlazor 颜色
+    /// Get the MudBlazor color corresponding to the job status
     /// </summary>
-    /// <param name="state">作业状态</param>
-    /// <returns>对应的 MudBlazor 颜色</returns>
+    /// <param name="state">Job status</param>
+    /// <returns>Corresponding MudBlazor color</returns>
     public Color GetStateColor(JobState state)
     {
         return state switch
@@ -32,11 +32,11 @@ public class JobStateColorService(IMoThemeService themeService)
     }
 
     /// <summary>
-    /// 获取作业状态对应的十六进制颜色值
-    /// 根据当前主题和明暗模式返回对应的颜色
+    /// Get the hexadecimal color value corresponding to the job status
+    /// Returns the corresponding color based on the current theme and light and dark mode
     /// </summary>
-    /// <param name="state">作业状态</param>
-    /// <returns>十六进制颜色值</returns>
+    /// <param name="state">Job status</param>
+    /// <returns>Hex color value</returns>
     public string GetStateColorHex(JobState state)
     {
         if(state == JobState.Skipped) return Colors.Gray.Lighten1;

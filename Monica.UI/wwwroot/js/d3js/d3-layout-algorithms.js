@@ -1,12 +1,12 @@
 /**
- * D3.js 布局算法集合
- * 提供多种图形布局算法的通用实现
+ * D3.js layout algorithm collection
+ * Provides general implementation of multiple graph layout algorithms
  * 
  * @module d3-layout-algorithms
  */
 
 /**
- * 布局算法管理器
+ * Layout Algorithm Manager
  */
 export class LayoutAlgorithms {
     constructor(width, height) {
@@ -15,7 +15,7 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 更新画布尺寸
+     * Update canvas size
      */
     updateDimensions(width, height) {
         this.width = width;
@@ -23,25 +23,25 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 层次布局 - 基于节点度数的分层布局
-     * @param {Array} nodes - 节点数组
-     * @param {Array} links - 连接数组
-     * @returns {Object} 包含节点位置的对象
+     * Hierarchical Layout - Hierarchical layout based on node degree
+     * @param {Array} nodes - array of nodes
+     * @param {Array} links - linked arrays
+     * @returns {Object} Object containing node location
      */
     hierarchicalLayout(nodes, links) {
-        // 使用更大的虚拟画布避免节点密集
+        // Use a larger virtual canvas to avoid node density
         const width = Math.max(this.width * 2, 2000);
         const height = Math.max(this.height * 2, 1500);
         
-        // 计算节点度数
+        // Calculate node degree
         const nodeDegrees = new Map();
         
-        // 初始化度数
+        // Initialize degree
         nodes.forEach(node => {
             nodeDegrees.set(node.id, 0);
         });
         
-        // 计算出度和入度
+        // Calculate out-degree and in-degree
         links.forEach(link => {
             const sourceId = link.source.id || link.source;
             const targetId = link.target.id || link.target;
@@ -54,7 +54,7 @@ export class LayoutAlgorithms {
             }
         });
         
-        // 根据度数分层
+        // Stratified by degree
         const layers = [];
         const maxDegree = Math.max(...nodeDegrees.values());
         
@@ -67,10 +67,10 @@ export class LayoutAlgorithms {
             layers[degree].push(node);
         });
         
-        // 过滤空层并反转（度数高的在上层）
+        // Filter the empty layers and invert them (those with higher degrees are on the upper layer)
         const nonEmptyLayers = layers.filter(layer => layer.length > 0).reverse();
         
-        // 计算布局
+        // Calculate layout
         const layerHeight = (height - 200) / Math.max(nonEmptyLayers.length, 1);
         const padding = 100;
         const minNodeSpacing = 120;
@@ -89,7 +89,7 @@ export class LayoutAlgorithms {
                 node.x = startX + nodeSpacing * nodeIndex + nodeSpacing / 2;
                 node.y = y;
                 
-                // 之字形布局避免重叠
+                // Zigzag layout avoids overlap
                 if (layer.length > 10) {
                     node.y += (nodeIndex % 2 === 0 ? -30 : 30);
                 }
@@ -100,10 +100,10 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 环形布局
-     * @param {Array} nodes - 节点数组
-     * @param {Object} options - 布局选项
-     * @returns {Object} 包含节点位置的对象
+     * ring layout
+     * @param {Array} nodes - array of nodes
+     * @param {Object} options - layout options
+     * @returns {Object} Object containing node location
      */
     circularLayout(nodes, options = {}) {
         const centerX = this.width / 2;
@@ -112,23 +112,23 @@ export class LayoutAlgorithms {
         
         if (nodeCount === 0) return { nodes };
         
-        // 配置选项
+        // Configuration options
         const minRadius = options.minRadius || 100;
         const maxRadius = options.maxRadius || 2500;
         const avgNodeSize = options.avgNodeSize || 60;
         
-        // 计算平均节点尺寸
+        // Calculate average node size
         let actualAvgSize = avgNodeSize;
         if (options.complexNodeCount) {
             actualAvgSize = avgNodeSize + options.complexNodeCount * 10;
         }
         
-        // 计算所需周长和半径
+        // Calculate required perimeter and radius
         const requiredCircumference = nodeCount * actualAvgSize * 1.5;
         const calculatedRadius = requiredCircumference / (2 * Math.PI);
         const radius = Math.max(minRadius, Math.min(calculatedRadius, maxRadius));
         
-        // 单环布局
+        // Single ring layout
         const angleStep = (2 * Math.PI) / nodeCount;
         
         nodes.forEach((node, i) => {
@@ -141,10 +141,10 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 多层环形布局
-     * @param {Array} nodes - 节点数组
-     * @param {Object} options - 布局选项
-     * @returns {Object} 包含节点位置的对象
+     * Multi-level ring layout
+     * @param {Array} nodes - array of nodes
+     * @param {Object} options - layout options
+     * @returns {Object} Object containing node location
      */
     multiCircularLayout(nodes, options = {}) {
         const centerX = this.width / 2;
@@ -153,16 +153,16 @@ export class LayoutAlgorithms {
         
         if (nodeCount === 0) return { nodes };
         
-        // 配置参数
+        // Configuration parameters
         const minRadius = options.minRadius || 100;
         const maxRadius = options.maxRadius || 2500;
         const nodesPerRing = options.nodesPerRing || 15;
         
-        // 计算环数
+        // Calculate the number of rings
         const ringsNeeded = Math.ceil(nodeCount / nodesPerRing);
         const ringSpacing = ringsNeeded > 1 ? (maxRadius - minRadius) / (ringsNeeded - 1) : 0;
         
-        // 分配节点到各环
+        // Assign nodes to each ring
         nodes.forEach((node, i) => {
             const ringIndex = Math.floor(i / nodesPerRing);
             const positionInRing = i % nodesPerRing;
@@ -179,10 +179,10 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 网格布局
-     * @param {Array} nodes - 节点数组
-     * @param {Object} options - 布局选项
-     * @returns {Object} 包含节点位置的对象
+     * grid layout
+     * @param {Array} nodes - array of nodes
+     * @param {Object} options - layout options
+     * @returns {Object} Object containing node location
      */
     gridLayout(nodes, options = {}) {
         const nodeCount = nodes.length;
@@ -191,11 +191,11 @@ export class LayoutAlgorithms {
         const padding = options.padding || 50;
         const nodeSpacing = options.nodeSpacing || 100;
         
-        // 计算网格大小
+        // Calculate grid size
         const cols = Math.ceil(Math.sqrt(nodeCount));
         const rows = Math.ceil(nodeCount / cols);
         
-        // 计算起始位置（居中）
+        // Calculate starting position (centered)
         const totalWidth = (cols - 1) * nodeSpacing;
         const totalHeight = (rows - 1) * nodeSpacing;
         const startX = (this.width - totalWidth) / 2;
@@ -213,11 +213,11 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 树形布局
-     * @param {Array} nodes - 节点数组
-     * @param {Array} links - 连接数组
-     * @param {Object} options - 布局选项
-     * @returns {Object} 包含节点位置的对象
+     * tree layout
+     * @param {Array} nodes - array of nodes
+     * @param {Array} links - linked arrays
+     * @param {Object} options - layout options
+     * @returns {Object} Object containing node location
      */
     treeLayout(nodes, links, options = {}) {
         if (nodes.length === 0) return { nodes };
@@ -226,17 +226,17 @@ export class LayoutAlgorithms {
         const levelSpacing = options.levelSpacing || 100;
         const nodeSpacing = options.nodeSpacing || 50;
         
-        // 构建父子关系
+        // Build a parent-child relationship
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
         const roots = [];
         const children = new Map();
         
-        // 初始化子节点映射
+        // Initialize child node mapping
         nodes.forEach(node => {
             children.set(node.id, []);
         });
         
-        // 构建层次结构
+        // Build a hierarchy
         links.forEach(link => {
             const sourceId = link.source.id || link.source;
             const targetId = link.target.id || link.target;
@@ -246,7 +246,7 @@ export class LayoutAlgorithms {
             }
         });
         
-        // 找出根节点（没有入边的节点）
+        // Find the root node (the node with no incoming edges)
         const hasIncomingEdge = new Set();
         links.forEach(link => {
             const targetId = link.target.id || link.target;
@@ -259,12 +259,12 @@ export class LayoutAlgorithms {
             }
         });
         
-        // 如果没有根节点，选择度数最高的节点作为根
+        // If there is no root node, select the node with the highest degree as the root
         if (roots.length === 0 && nodes.length > 0) {
             roots.push(nodes[0].id);
         }
         
-        // 广度优先遍历分配位置
+        // Breadth-first traversal assigns positions
         const visited = new Set();
         const queue = roots.map(id => ({ id, level: 0, index: 0 }));
         const levelNodes = new Map();
@@ -288,7 +288,7 @@ export class LayoutAlgorithms {
             });
         }
         
-        // 分配坐标
+        // Assign coordinates
         const maxLevel = Math.max(...levelNodes.keys());
         
         levelNodes.forEach((levelNodeIds, level) => {
@@ -313,11 +313,11 @@ export class LayoutAlgorithms {
     }
     
     /**
-     * 径向树布局
-     * @param {Array} nodes - 节点数组
-     * @param {Array} links - 连接数组
-     * @param {Object} options - 布局选项
-     * @returns {Object} 包含节点位置的对象
+     * Radial tree layout
+     * @param {Array} nodes - array of nodes
+     * @param {Array} links - linked arrays
+     * @param {Object} options - layout options
+     * @returns {Object} Object containing node location
      */
     radialTreeLayout(nodes, links, options = {}) {
         const result = this.treeLayout(nodes, links, { ...options, orientation: 'vertical' });
@@ -328,7 +328,7 @@ export class LayoutAlgorithms {
         const centerY = this.height / 2;
         const radiusStep = options.radiusStep || 80;
         
-        // 转换为径向坐标
+        // Convert to radial coordinates
         nodes.forEach(node => {
             const dx = node.x - centerX;
             const dy = node.y - 100; // 相对于第一层的偏移
@@ -346,7 +346,7 @@ export class LayoutAlgorithms {
 }
 
 /**
- * 创建布局算法实例
+ * Create a layout algorithm instance
  */
 export function createLayoutAlgorithms(width, height) {
     return new LayoutAlgorithms(width, height);

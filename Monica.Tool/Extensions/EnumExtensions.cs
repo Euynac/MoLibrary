@@ -10,7 +10,7 @@ namespace Monica.Tool.Extensions;
 /// </summary>
 public static class EnumExtensions
 {
-    #region Enum类拓展
+    #region Enum Extensions
     /// <summary>
     /// Converts the string representation of the name or numeric value of one or more enumerated constants to an equivalent enumerated object.
     /// A parameter specifies whether the operation is case-sensitive.
@@ -39,13 +39,12 @@ public static class EnumExtensions
 
 
     /// <summary>
-    /// 读取 <see cref="System.Enum"/> 标记 <see cref="System.ComponentModel.DescriptionAttribute"/> 的值。
-    /// <br/>English: Get the value of <see cref="System.ComponentModel.DescriptionAttribute"/> of <see cref="System.Enum"/>.
+    /// Reads the value of <see cref="System.ComponentModel.DescriptionAttribute"/> from a marked <see cref="System.Enum"/>.
     /// </summary>
-    /// <param name="value">原始 <see cref="System.Enum"/> 值</param>
-    /// <param name="notReturnDefaultEnum">找不到标签值时不返回给定的枚举的<seealso cref="string"/>形式，直接返回null</param>
-    /// <returns>如果成功获取返回特性标记的值，否则返回给定的枚举的<seealso cref="string"/>形式，或 null。
-    ///<br/>English: If the value is successfully obtained, the value of the attribute tag is returned, otherwise the <seealso cref="string"/> form of the given enumeration is returned, or null.
+    /// <param name="value">original <see cref="System.Enum"/> value</param>
+    /// <param name="notReturnDefaultEnum">Does not return the given enum when the tag value is not found<seealso cref="string"/>form, directly returns null</param>
+    /// <returns>
+    /// Returns the attribute value when available; otherwise returns the enumeration value in <seealso cref="string"/> form, or null.
     /// </returns>
     [ContractAnnotation("notReturnDefaultEnum:false => notnull")]
     public static string? GetDescription(this Enum value, bool notReturnDefaultEnum = false)
@@ -62,13 +61,13 @@ public static class EnumExtensions
     public static int ToInt(this Enum value) => Convert.ToInt32(value);
 
     /// <summary>
-    /// 使用指定分割符批量格式化按位枚举<see cref="System.Enum"/> 中含有的枚举值。格式化方式是使用 <see cref="System.ComponentModel.DescriptionAttribute"/>标记的值或string类型枚举。
-    /// <br/>English: Format the enumeration values contained in the bit enumeration <see cref="System.Enum"/> in batches using the specified separator. The formatting method is the value marked by <see cref="System.ComponentModel.DescriptionAttribute"/> or string type enumeration.
+    /// Batch-formats values contained in a flags <see cref="System.Enum"/> using the specified separator.
+    /// Values are formatted by <see cref="System.ComponentModel.DescriptionAttribute"/> when available, otherwise by enum string value.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="separator">分隔符</param>
-    /// <param name="ignoreNoDesc">忽略没有Description特性的字段</param>
-    /// <param name="ignoreEnums">忽略格式化的Enum值</param>
+    /// <param name="separator">delimiter</param>
+    /// <param name="ignoreNoDesc">Ignore fields without Description attribute</param>
+    /// <param name="ignoreEnums">Ignore formatted Enum values</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static string GetFlagsDescription<T>(this T flags, char separator = '、', bool ignoreNoDesc = false, params T[] ignoreEnums) where T : Enum
@@ -93,13 +92,13 @@ public static class EnumExtensions
     }
 
     /// <summary>
-    /// 将字符串类型的Flags值变为其对应的枚举对象（一般用于GetFlagsString方法转换回去）
+    /// Convert the Flags value of the string type into its corresponding enumeration object (generally used to convert it back using the GetFlagsString method)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="flagsStr"></param>
     /// <param name="separator"></param>
     /// <param name="ignoreCase"></param>
-    /// <param name="strictMode">如果无法处理为相应Flag就报错</param>
+    /// <param name="strictMode">If it cannot be processed into the corresponding Flag, an error will be reported.</param>
     /// <returns></returns>
     public static T RetrieveFlags<T>(this string flagsStr, char separator, bool ignoreCase = false, bool strictMode = true) where T: struct, Enum
     {
@@ -116,11 +115,11 @@ public static class EnumExtensions
         return (T)(e as object);
     }
     /// <summary>
-    /// 一个一个返回给定按位枚举中含有的枚举值。
+    /// Returns the enumeration values ​​contained in the given bitwise enumeration one by one.
     /// <br/>English: Returns the enumeration values contained in the bit enumeration given one by one.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="ignoreEnums">忽略格式化的Enum值</param>
+    /// <param name="ignoreEnums">Ignore formatted Enum values</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static IEnumerable<T> GetFlags<T>(this T flags, params T[] ignoreEnums) where T : Enum
@@ -138,12 +137,12 @@ public static class EnumExtensions
         }
     }
     /// <summary>
-    /// 使用指定分割符批量格式化给定按位枚举中含有的枚举值。格式化方式是使用string类型枚举。
+    /// Batch formats the enumeration values ​​contained in the given bitwise enumeration using the specified delimiter. The formatting method is to use string type enumeration.
     /// <br/>English: Format the enumeration values contained in the given bit enumeration in batches using the specified separator. The formatting method is the string type enumeration.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="separator">分隔符</param>
-    /// <param name="ignoreEnums">忽略格式化的Enum值</param>
+    /// <param name="separator">delimiter</param>
+    /// <param name="ignoreEnums">Ignore formatted Enum values</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static string GetFlagsString<T>(this T flags, char separator = ',', params T[] ignoreEnums) where T : Enum
@@ -165,29 +164,29 @@ public static class EnumExtensions
         return stringBuilder.ToString().TrimEnd(separator);
     }
     /// <summary>
-    /// 移除按位枚举中的指定枚举。
+    /// Removes the specified enumeration from the bitwise enumeration.
     /// <br/>English: Remove the specified enumeration from the bit enumeration.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="removeFlags">要移除的枚举</param>
+    /// <param name="removeFlags">enum to remove</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static T Remove<T>(this T flags, params T[] removeFlags) where T : Enum
     {
         var flagInt = flags.GetHashCode();
-        foreach (var removeFlag in removeFlags)//其实var直接用dynamic更好，不过当前版本不支持?
+        foreach (var removeFlag in removeFlags) // Using dynamic here might be nicer, but the current version does not support it.
         {
-            flagInt &= ~removeFlag.GetHashCode();//避免装箱产生过多损耗 
+            flagInt &= ~removeFlag.GetHashCode(); // Avoid extra boxing overhead.
         }
 
         return (T)(flagInt as object);
     }
     /// <summary>
-    /// 添加指定枚举到指定按位枚举中。
+    /// Adds the specified enumeration to the specified bitwise enumeration.
     /// <br/>English: Add the specified enumeration to the specified bit enumeration.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="addFlags">要添加的枚举</param>
+    /// <param name="addFlags">enum to add</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static T Add<T>(this T flags, params T[] addFlags) where T : Enum
@@ -202,12 +201,12 @@ public static class EnumExtensions
     }
 
     /// <summary>
-    /// 从指定按位枚举中，添加或删除给定枚举。
+    /// Adds or removes the given enumeration from the specified bitwise enumeration.
     /// <br/>English: Add or remove the given enumeration from the specified bit enumeration.
     /// </summary>
     /// <param name="flags"></param>
-    /// <param name="judgeAdd">如果为true，说明要添加，否则要删除</param>
-    /// <param name="alterFlags">要添加或删除的枚举</param>
+    /// <param name="judgeAdd">If true, it means to add, otherwise it needs to be deleted.</param>
+    /// <param name="alterFlags">enum to add or remove</param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
     public static T AddOrRemove<T>(this T flags, bool judgeAdd, params T[] alterFlags) where T : Enum
@@ -216,7 +215,7 @@ public static class EnumExtensions
     }
 
     /// <summary>
-    /// 判断按位枚举是否存在指定的任意一个选项。
+    /// Determine whether any of the specified options exists in the bitwise enumeration.
     /// <br/>English: Determine if the bit enumeration has any of the specified options.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -228,7 +227,7 @@ public static class EnumExtensions
         return flags.Any(flag => value.HasFlag(flag));
     }
     /// <summary>
-    /// 判断按位枚举是否存在指定的所有选项。
+    /// Determines whether all specified options exist in a bitwise enumeration.
     /// <br/>English: Determine if the bit enumeration has all of the specified options.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -240,7 +239,7 @@ public static class EnumExtensions
         return flags.All(flag => value.HasFlag(flag));
     }
     /// <summary>
-    /// 判断按位枚举是否存在指定的选项。
+    /// Determines whether the specified option exists in a bitwise enumeration.
     /// <br/>English: Determine if the bit enumeration has the specified option.
     /// </summary>
     /// <typeparam name="T"></typeparam>

@@ -6,11 +6,11 @@ public class AutoModelExpressionOptions
     public string FilterMultiSeparator { get; set; } = ",";
     public string Fuzzy { get; set; } = "%";
     /// <summary>
-    /// 表达式and
+    /// Logical AND token used in expressions.
     /// </summary>
     public string And { get; set; } = "and";
     /// <summary>
-    /// 表达式or
+    /// Logical OR token used in expressions.
     /// </summary>
     public string Or { get; set; } = "or";
 

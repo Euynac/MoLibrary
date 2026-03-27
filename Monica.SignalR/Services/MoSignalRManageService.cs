@@ -11,14 +11,14 @@ using SignalRSwaggerGen.Attributes;
 namespace Monica.SignalR.Services;
 
 /// <summary>
-/// SignalR业务服务，实现Hub信息获取和连接管理等核心业务逻辑
+/// SignalR business service implements core business logic such as Hub information acquisition and connection management
 /// </summary>
 /// <remarks>
-/// 构造函数
+/// Constructor
 /// </remarks>
-/// <param name="logger">日志记录器</param>
-/// <param name="signalROptions">SignalR模块选项</param>
-/// <param name="connectionManager">SignalR连接管理器</param>
+/// <param name="logger">Logger</param>
+/// <param name="signalROptions">SignalR module options</param>
+/// <param name="connectionManager">SignalR connection manager</param>
 public class MoSignalRManageService(
     ILogger<MoSignalRManageService> logger,
     IOptions<ModuleSignalROption> signalROptions,
@@ -27,9 +27,9 @@ public class MoSignalRManageService(
     private readonly ModuleSignalROption _signalROption = signalROptions.Value;
 
     /// <summary>
-    /// 获取SignalR所有Server端Hub信息
+    /// Get all server-side Hub information of SignalR
     /// </summary>
-    /// <returns>SignalR服务端Hub信息列表</returns>
+    /// <returns>SignalR server Hub information list</returns>
     public async Task<Res<List<SignalRServerGroupInfo>>> GetHubInfosAsync()
     {
         try
@@ -66,9 +66,9 @@ public class MoSignalRManageService(
     }
 
     /// <summary>
-    /// 获取当前所有已连接的SignalR用户
+    /// Get all currently connected SignalR users
     /// </summary>
-    /// <returns>已连接用户信息列表</returns>
+    /// <returns>Connected user information list</returns>
     public async Task<Res<List<SignalRConnectedUserInfo>>> GetConnectedUsersAsync()
     {
         try

@@ -9,7 +9,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Configuration.Model;
 
 /// <summary>
-/// 已注册的热配置类信息卡片，记录各种相关配置信息
+/// Metadata card for a registered hot-configuration type.
 /// </summary>
 public class MoConfigurationCard
 {
@@ -20,7 +20,9 @@ public class MoConfigurationCard
     }
 
     /// <summary>
-    /// 使用配置节点名称作为Key。未配置配置节点时，使用配置类名作为配置节点。设置为孤立配置项时，则以配置类名作为Key
+    /// Uses the section name as the key.
+    /// If no section is configured, falls back to the configuration type name.
+    /// For isolated key-value configuration, the type name is also used as the key.
     /// </summary>
     public string Key => SectionName ?? Configuration.Name;
 
@@ -30,7 +32,7 @@ public class MoConfigurationCard
     public string Title => Configuration.Info?.Title ?? Configuration.Name;
 
     /// <summary>
-    /// 配置版本
+    /// Configuration version.
     /// </summary>
     public string Version => Configuration.Version;
 
@@ -49,11 +51,11 @@ public class MoConfigurationCard
    
 
     /// <summary>
-    /// 配置卡片池
+    /// Configuration card registry.
     /// </summary>
     public static Dictionary<string, MoConfigurationCard> Cards { get; } = [];
     /// <summary>
-    /// 配置卡注册
+    /// Registers a configuration card.
     /// </summary>
     public static void Register(MoConfigurationCard card)
     {
@@ -63,7 +65,7 @@ public class MoConfigurationCard
         }
     }
     /// <summary>
-    /// 配置卡注销
+    /// Unregisters a configuration card.
     /// </summary>
     public static void UnRegister(MoConfigurationCard card)
     {
@@ -103,7 +105,7 @@ public class MoConfigurationCard
     }
 
     /// <summary>
-    /// 刷新配置类来源
+    /// Refreshes provider-source metadata for all configuration options.
     /// </summary>
     internal static void RefreshProviders()
     {

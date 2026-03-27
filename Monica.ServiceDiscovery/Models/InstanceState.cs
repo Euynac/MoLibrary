@@ -4,43 +4,43 @@ using Monica.Core.JsonSerialization.Converters;
 namespace Monica.ServiceDiscovery.Models;
 
 /// <summary>
-/// 实例注册状态
+/// Instance registration status
 /// </summary>
 public class InstanceState
 {
     /// <summary>
-    /// 是否为领导者（心跳时从内存更新）
+    /// Whether to be the leader (updated from memory during heartbeat)
     /// </summary>
     public bool IsLeader { get; set; }
 
     /// <summary>
-    /// 实例状态（按需计算，不持久化）
+    /// Instance status (computed on demand, not persisted)
     /// </summary>
     [JsonIgnore]
     public ServiceStatus Status { get; set; }
 
     /// <summary>
-    /// 服务名称（对应 AppId）
+    /// Service name (corresponding to AppId)
     /// </summary>
     public required string ServiceName { get; set; }
 
     /// <summary>
-    /// 实例 ID（对应 FromInstance）
+    /// Instance ID (corresponding to FromInstance)
     /// </summary>
     public required string InstanceId { get; set; }
 
     /// <summary>
-    /// 微服务显示名
+    /// Microservice display name
     /// </summary>
     public required string AppName { get; set; }
 
     /// <summary>
-    /// 项目名
+    /// Project name
     /// </summary>
     public required string ProjectName { get; set; }
 
     /// <summary>
-    /// 子域名
+    /// Subdomain name
     /// </summary>
     public string? DomainName { get; set; }
 
@@ -50,32 +50,32 @@ public class InstanceState
     public DateTime BuildTime { get; set; }
 
     /// <summary>
-    /// 微服务程序集版本号
+    /// Microservice assembly version number
     /// </summary>
     public string? AssemblyVersion { get; set; }
 
     /// <summary>
-    /// 微服务发布版本号
+    /// Microservice release version number
     /// </summary>
     public string? ReleaseVersion { get; set; }
 
     /// <summary>
-    /// 依赖子域列表
+    /// Dependent subdomain list
     /// </summary>
     public List<string>? DependentSubDomains { get; set; }
 
     /// <summary>
-    /// 注册时间
+    /// Registration time
     /// </summary>
     public DateTime RegistrationTime { get; set; }
 
     /// <summary>
-    /// 最后心跳时间
+    /// Last heartbeat time
     /// </summary>
     public DateTime LastHeartbeatTime { get; set; }
 
     /// <summary>
-    /// 服务实例元数据
+    /// Service instance metadata
     /// </summary>
     [JsonConverter(typeof(PreserveOriginalConverter<Dictionary<string, string>>))]
     public Dictionary<string, string> Metadata { get; set; } = new();

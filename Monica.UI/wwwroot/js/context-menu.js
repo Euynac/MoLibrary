@@ -1,7 +1,7 @@
 window.MoContextMenu = (function() {
     'use strict';
     
-    // 获取窗口大小
+    // Get window size
     function getWindowSize() {
         return {
             width: window.innerWidth,
@@ -9,7 +9,7 @@ window.MoContextMenu = (function() {
         };
     }
     
-    // 获取元素边界
+    // Get element bounds
     function getElementBounds(element) {
         if (!element) return { width: 0, height: 0, x: 0, y: 0 };
         
@@ -22,9 +22,9 @@ window.MoContextMenu = (function() {
         };
     }
     
-    // 计算菜单宽度
+    // Calculate menu width
     function calculateMenuWidth(menuItems) {
-        // 创建一个临时的隐藏元素来测量文字宽度
+        // Create a temporary hidden element to measure text width
         var tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.visibility = 'hidden';
@@ -39,14 +39,14 @@ window.MoContextMenu = (function() {
             var item = menuItems[i];
             if (item.isDivider) continue;
             
-            // 计算图标宽度 (18px + 16px margin)
+            // Calculate icon width (18px + 16px margin)
             var iconWidth = 34;
             
-            // 测量文字宽度
+            // Measure text width
             tempDiv.textContent = item.text || '';
             var textWidth = tempDiv.offsetWidth;
             
-            // 计算快捷键或箭头宽度
+            // Calculate shortcut key or arrow width
             var rightContentWidth = 0;
             if (item.hasSubMenu) {
                 rightContentWidth = 16; // 箭头图标宽度
@@ -55,7 +55,7 @@ window.MoContextMenu = (function() {
                 rightContentWidth = tempDiv.offsetWidth;
             }
             
-            // 总宽度 = 图标宽度 + 文字宽度 + 右侧内容宽度 + 内边距 + 5rem(80px)
+            // Total width = icon width + text width + right content width + padding + 5rem (80px)
             var totalWidth = iconWidth + textWidth + rightContentWidth + 32 + 80; // 32px是左右内边距
             
             if (totalWidth > maxWidth) {
@@ -65,11 +65,11 @@ window.MoContextMenu = (function() {
         
         document.body.removeChild(tempDiv);
         
-        // 确保在最小和最大宽度范围内
+        // Make sure to stay within the minimum and maximum width
         return Math.max(200, Math.min(400, maxWidth));
     }
     
-    // 公开的API
+    // Public API
     return {
         getWindowSize: getWindowSize,
         getElementBounds: getElementBounds,

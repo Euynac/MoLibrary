@@ -9,24 +9,24 @@ using Monica.JobScheduler.UI.Localization;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// Cron 表达式格式类型
+/// Cron expression format type
 /// </summary>
 public enum CronFormat
 {
     /// <summary>
-    /// 标准格式（5段）：分 时 日 月 周
+    /// Standard format (5 paragraphs): minute hour day month week
     /// </summary>
     Standard,
 
     /// <summary>
-    /// Quartz 格式（6段）：秒 分 时 日 月 周
+    /// Quartz format (6 segments): seconds, minutes, hours, days, months, weeks
     /// </summary>
     Quartz
 }
 
 /// <summary>
-/// Cron 表达式服务，提供表达式解析、验证和执行时间计算
-/// 注意：解析描述功能需要组件提供 JS 模块引用
+/// Cron expression service, providing expression parsing, validation and execution time calculation
+/// Note: The parsing description function requires the component to provide a JS module reference
 /// </summary>
 public class CronExpressionService(
     IStringLocalizer<JobSchedulerResource> localizer,
@@ -35,7 +35,7 @@ public class CronExpressionService(
     private readonly TimeZoneInfo _cronTimeZone = clockOptions.Value.ConfiguredTimeZone ?? TimeZoneInfo.Local;
 
     /// <summary>
-    /// 验证 Cron 表达式是否有效
+    /// Verify that Cron expression is valid
     /// </summary>
     public Res<bool> ValidateExpression(string expression, CronFormat format)
     {
@@ -60,7 +60,7 @@ public class CronExpressionService(
     }
 
     /// <summary>
-    /// 获取表达式的下 N 次执行时间
+    /// Get the next N execution times of an expression
     /// </summary>
     public Res<List<DateTime>> GetNextOccurrences(string expression, CronFormat format, int count = 5, DateTime? fromTime = null)
     {
@@ -105,11 +105,11 @@ public class CronExpressionService(
     }
 
     /// <summary>
-    /// 将表达式解析为可读的中文描述（使用 JavaScript cronstrue 库）
+    /// Parse expressions into readable Chinese descriptions (using JavaScript cronstrue library)
     /// </summary>
-    /// <param name="jsModule">由组件提供的 JS 模块引用</param>
-    /// <param name="expression">Cron 表达式</param>
-    /// <param name="format">表达式格式</param>
+    /// <param name="jsModule">JS module reference provided by the component</param>
+    /// <param name="expression">Cron expression</param>
+    /// <param name="format">Expression format</param>
     public async Task<Res<string>> ParseToDescriptionAsync(IJSObjectReference jsModule, string expression, CronFormat format)
     {
         if (jsModule == null)
@@ -124,7 +124,7 @@ public class CronExpressionService(
 
         try
         {
-            // 调用 JavaScript 函数
+            // Call JavaScript function
             var result = await jsModule.InvokeAsync<CronParseResult>(
                 "parseCronExpression",
                 expression,
@@ -145,7 +145,7 @@ public class CronExpressionService(
     }
 
     /// <summary>
-    /// 从简易设置构建 Cron 表达式
+    /// Build cron expressions from easy setup
     /// </summary>
     public Res<string> BuildFromSimpleSettings(SimpleSettings settings, CronFormat format)
     {
@@ -185,7 +185,7 @@ public class CronExpressionService(
     }
 
     /// <summary>
-    /// 转换表达式格式（Standard ↔ Quartz）
+    /// Convert expression format (Standard ↔ Quartz)
     /// </summary>
     public Res<string> ConvertFormat(string expression, CronFormat fromFormat, CronFormat toFormat)
     {
@@ -204,12 +204,12 @@ public class CronExpressionService(
         {
             if (fromFormat == CronFormat.Standard && toFormat == CronFormat.Quartz)
             {
-                // Standard (5段) -> Quartz (6段)：添加秒位（默认为 0）
+                // Standard (5 segments) -> Quartz (6 segments): Add seconds (default is 0)
                 return Res.Ok<string>($"0 {expression}");
             }
             else
             {
-                // Quartz (6段) -> Standard (5段)：移除秒位
+                // Quartz (6 segments) -> Standard (5 segments): Remove seconds digit
                 var parts = expression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length != 6)
                 {
@@ -227,7 +227,7 @@ public class CronExpressionService(
 }
 
 /// <summary>
-/// JavaScript 返回结果模型
+/// JavaScript return result model
 /// </summary>
 internal class CronParseResult
 {
@@ -237,7 +237,7 @@ internal class CronParseResult
 }
 
 /// <summary>
-/// 简易设置类型
+/// Easy setup type
 /// </summary>
 public enum SimpleSettingsType
 {
@@ -250,7 +250,7 @@ public enum SimpleSettingsType
 }
 
 /// <summary>
-/// Cron 表达式简易设置
+/// Easy setup of Cron expressions
 /// </summary>
 public class SimpleSettings
 {
@@ -264,17 +264,17 @@ public class SimpleSettings
 }
 
 /// <summary>
-/// Cron 表达式显示模式
+/// Cron expression display mode
 /// </summary>
 public enum CronDisplayMode
 {
     /// <summary>
-    /// 紧凑模式：悬浮显示描述
+    /// Compact mode: Hover display description
     /// </summary>
     Compact,
 
     /// <summary>
-    /// 完整模式：直接显示描述
+    /// Full mode: display description directly
     /// </summary>
     Full
 }

@@ -1,64 +1,64 @@
-/* 霓虹脉冲主题样式 - Neon Pulse Theme */
+/* Neon Pulse Theme - Neon Pulse Theme */
 
-/* 主题变量定义 */
+/* theme variable definition */
 :root[data-theme="neonpulse-light"],
 .mo-theme-neonpulse-light {
-    /* 霓虹效果变量 */
+    /* neon effect variable */
     --mo-neon-glow-sm: 0 0 10px;
     --mo-neon-glow-md: 0 0 20px;
     --mo-neon-glow-lg: 0 0 30px;
     --mo-neon-glow-xl: 0 0 40px;
     
-    /* 渐变背景 */
+    /* gradient background */
     --mo-neon-gradient-1: linear-gradient(120deg, var(--mud-palette-primary), var(--mud-palette-secondary));
     --mo-neon-gradient-2: linear-gradient(135deg, var(--mud-palette-tertiary), var(--mud-palette-info));
     --mo-neon-gradient-3: linear-gradient(90deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 50%, var(--mud-palette-tertiary) 100%);
     
-    /* 动画时长 */
+    /* Animation duration */
     --mo-neon-pulse-duration: 2s;
     --mo-neon-flow-duration: 3s;
     --mo-neon-flash-duration: 4s;
     
-    /* 边框和圆角 */
+    /* Borders and rounded corners */
     --mo-neon-border-radius: 16px;
     --mo-neon-border-width: 2px;
     
-    /* 特效透明度 */
+    /* Effect transparency */
     --mo-neon-overlay-opacity: 0.1;
     --mo-neon-border-opacity: 0.5;
 }
 
 :root[data-theme="neonpulse-dark"],
 .mo-theme-neonpulse-dark {
-    /* 霓虹效果变量 - 暗色模式增强 */
+    /* Neon Effect Variable - Dark Mode Enhanced */
     --mo-neon-glow-sm: 0 0 15px;
     --mo-neon-glow-md: 0 0 30px;
     --mo-neon-glow-lg: 0 0 45px;
     --mo-neon-glow-xl: 0 0 60px;
     
-    /* 渐变背景 */
+    /* gradient background */
     --mo-neon-gradient-1: linear-gradient(120deg, var(--mud-palette-primary), var(--mud-palette-secondary));
     --mo-neon-gradient-2: linear-gradient(135deg, var(--mud-palette-tertiary), var(--mud-palette-info));
     --mo-neon-gradient-3: linear-gradient(90deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 50%, var(--mud-palette-tertiary) 100%);
     
-    /* 动画时长 */
+    /* Animation duration */
     --mo-neon-pulse-duration: 2s;
     --mo-neon-flow-duration: 3s;
     --mo-neon-flash-duration: 4s;
     
-    /* 边框和圆角 */
+    /* Borders and rounded corners */
     --mo-neon-border-radius: 16px;
     --mo-neon-border-width: 2px;
     
-    /* 特效透明度 */
+    /* Effect transparency */
     --mo-neon-overlay-opacity: 0.2;
     --mo-neon-border-opacity: 0.8;
 }
 
-/* 通用样式（明暗两种模式） */
+/* Universal style (light and dark modes) */
 .mo-theme-neonpulse-light,
 .mo-theme-neonpulse-dark {
-    /* 按钮样式 */
+    /* button style */
     .mud-button {
         border-radius: var(--mo-neon-border-radius) !important;
         padding: 10px 24px !important;
@@ -118,7 +118,7 @@
                     var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
     }
     
-    /* 卡片样式 */
+    /* card style */
     .mud-card {
         border-radius: var(--mo-neon-border-radius) !important;
         background: var(--mud-palette-surface) !important;
@@ -153,7 +153,7 @@
                     var(--mo-neon-glow-md) var(--mud-palette-primary) !important;
     }
     
-    /* 输入框样式 */
+    /* Input box style */
     .mud-input-outlined .mud-input-outlined-border {
         border-radius: var(--mo-neon-border-radius) !important;
         border-width: var(--mo-neon-border-width) !important;
@@ -170,7 +170,7 @@
         animation: neon-pulse-subtle 2s ease-in-out infinite !important;
     }
     
-    /* 芯片样式 */
+    /* chip style */
     .mud-chip {
         border-radius: 20px !important;
         padding: 4px 16px !important;
@@ -184,7 +184,7 @@
         box-shadow: var(--mo-neon-glow-sm) currentColor !important;
     }
     
-    /* 开关样式 */
+    /* Switch style */
     .mud-switch-track {
         background: var(--mud-palette-lines-inputs) !important;
         transition: all 0.3s ease !important;
@@ -203,7 +203,7 @@
         box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
     }
     
-    /* 进度条样式 */
+    /* Progress bar style */
     .mud-progress-linear .mud-progress-linear-bars {
         background: var(--mo-neon-gradient-1) !important;
         box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
@@ -216,7 +216,7 @@
         animation: neon-pulse-subtle 2s ease-in-out infinite !important;
     }
     
-    /* 标签页样式 */
+    /* Tab style */
     .mud-tabs-tabbar {
         border-bottom: 2px solid var(--mud-palette-lines-default) !important;
     }
@@ -242,7 +242,7 @@
         animation: neon-flash var(--mo-neon-flash-duration) ease-in-out infinite;
     }
     
-    /* 对话框样式 */
+    /* Dialog style */
     .mud-dialog {
         border-radius: var(--mo-neon-border-radius) !important;
         border: 1px solid transparent !important;
@@ -263,7 +263,7 @@
         animation: neon-flow var(--mo-neon-flow-duration) linear infinite;
     }
     
-    /* 表格样式 */
+    /* table style */
     .mud-table {
         border-radius: var(--mo-neon-border-radius) !important;
         overflow: hidden !important;
@@ -278,7 +278,7 @@
         transition: background 0.3s ease !important;
     }
     
-    /* 工具提示样式 */
+    /* Tooltip style */
     .mud-tooltip {
         background: var(--mud-palette-surface) !important;
         border: 1px solid var(--mud-palette-primary) !important;
@@ -286,7 +286,7 @@
         box-shadow: var(--mo-neon-glow-sm) var(--mud-palette-primary) !important;
     }
     
-    /* 抽屉样式 */
+    /* Drawer style */
     .mud-drawer .mud-drawer-content {
         border-right: 1px solid transparent !important;
         position: relative !important;
@@ -304,7 +304,7 @@
     }
 }
 
-/* 明亮模式特定样式 */
+/* Bright mode specific styles */
 .mo-theme-neonpulse-light {
     background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%) !important;
     
@@ -320,7 +320,7 @@
     }
 }
 
-/* 暗色模式特定样式 */
+/* Dark mode specific styles */
 .mo-theme-neonpulse-dark {
     background: linear-gradient(135deg, #0f1419 0%, #0a0e27 100%) !important;
     
@@ -336,13 +336,13 @@
         border-bottom: 1px solid var(--mud-palette-lines-default) !important;
     }
     
-    /* 增强的霓虹效果 */
+    /* Enhanced neon effect */
     .mud-button-filled-primary:hover,
     .mud-button-filled-secondary:hover {
         filter: brightness(1.2) !important;
     }
     
-    /* 暗色模式下的文字发光 */
+    /* Text glow in dark mode */
     .mud-typography-h1,
     .mud-typography-h2,
     .mud-typography-h3 {
@@ -350,7 +350,7 @@
     }
 }
 
-/* 动画定义 */
+/* animation definition */
 @keyframes neon-pulse {
     0%, 100% {
         box-shadow: var(--mo-neon-glow-md) var(--mud-palette-primary);
@@ -398,7 +398,7 @@
     }
 }
 
-/* 特殊效果类 */
+/* Special effects */
 .mo-neon-border {
     position: relative !important;
     border: 2px solid transparent !important;
@@ -419,7 +419,7 @@
     text-shadow: var(--mo-neon-glow-md) currentColor !important;
 }
 
-/* 响应式调整 */
+/* Responsive adjustments */
 @media (max-width: 960px) {
     .mo-theme-neonpulse-light,
     .mo-theme-neonpulse-dark {
@@ -431,7 +431,7 @@
     }
 }
 
-/* 减少动画模式 */
+/* Reduce animation mode */
 @media (prefers-reduced-motion: reduce) {
     .mo-theme-neonpulse-light *,
     .mo-theme-neonpulse-dark * {

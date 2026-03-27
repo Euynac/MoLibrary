@@ -1,29 +1,30 @@
 namespace Monica.UI.Services;
 
 /// <summary>
-/// Monica用户上下文服务 - 提供当前用户信息
+/// Monica user context service - provides current user information
 /// </summary>
 public class MoUserContextService
 {
     /// <summary>
-    /// 用户名称
+    /// Username
     /// </summary>
     public string UserName => "Mo User";
 
     /// <summary>
-    /// 用户角色
+    /// user role
     /// </summary>
     public string UserRole => "Administrator";
 
     /// <summary>
-    /// 是否在线
+    /// Is online
     /// </summary>
     public bool IsOnline => true;
 
     /// <summary>
-    /// 用户缩写（用于头像显示）
+    /// User abbreviation (for avatar display)
     /// </summary>
     public string UserInitials => "MO";
 
-    // TODO: 未来可扩展为从 IHttpContextAccessor 或认证系统获取真实用户信息
+    // TODO: In the future, this can be expanded to obtain real user information from IHttpContextAccessor
+    // or the authentication system.
 }

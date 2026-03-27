@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 霓虹脉冲主题 - 具有现代科技感的动态主题
+/// Neon Pulse Theme - a dynamic theme with a modern technological feel
 /// </summary>
 public class ThemeNeonPulse : ThemeBase
 {

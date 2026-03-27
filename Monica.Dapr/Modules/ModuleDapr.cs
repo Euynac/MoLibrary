@@ -16,7 +16,7 @@ public static class ModuleDaprBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 Dapr 模块
+        /// Configure the Dapr module
         /// </summary>
         public static ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
         {

@@ -6,7 +6,7 @@ using Monica.Tool.Results;
 namespace Monica.AI.UI.Services;
 
 /// <summary>
-/// AI Provider UI 服务
+/// AI Provider UI service
 /// </summary>
 public class AIProviderUIService(IAIProviderFactory providerFactory)
 {

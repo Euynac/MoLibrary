@@ -16,11 +16,11 @@ using Monica.Tool.Utils;
 namespace Monica.DomainDrivenDesign.AutoController;
 
 /// <summary>
-/// 仅针对自动CRUD Controller的约定
+/// Convention applied only to auto-generated CRUD controllers.
 /// </summary>
-/// <param name="conventionalRouteBuilder"></param>
-/// <param name="logger"></param>
-/// <param name="options"></param>
+/// <param name="conventionalRouteBuilder">Builds conventional routes for generated controllers.</param>
+/// <param name="logger">The logger instance.</param>
+/// <param name="options">Auto CRUD controller configuration.</param>
 public class MoCrudControllerServiceConvention(
     IMoConventionalRouteBuilder conventionalRouteBuilder, ILogger<MoCrudControllerServiceConvention> logger, IOptions<MoCrudControllerOption> options)
     : IMoServiceConvention
@@ -63,7 +63,7 @@ public class MoCrudControllerServiceConvention(
         ConfigureSelector(controller, configuration);
         ConfigureParameters(controller);
     }
-    #region 对Controller方法Api显示及Aciton进行整体修正
+    #region Controller API Visibility and Action Cleanup
 
     protected virtual void ConfigureApiExplorer(ControllerModel controller)
     {
@@ -133,7 +133,7 @@ public class MoCrudControllerServiceConvention(
 
    
 
-    #region 对Controller的方法参数进行修正，如添加FromBody特性
+    #region Controller Parameter Adjustments
     protected virtual void ConfigureParameters(ControllerModel controller)
     {
         /* Default binding system of Asp.Net Core for a parameter
@@ -193,18 +193,18 @@ public class MoCrudControllerServiceConvention(
     #endregion
 
 
-    #region 对Controller及其Action的Selector进行配置
+    #region Controller and Action Selector Configuration
 
     protected virtual void ConfigureSelector(ControllerModel controller, ConventionalControllerSetting? configuration)
     {
         RemoveEmptySelectors(controller.Selectors);
 
 
-        // 检查Controller级别是否有RouteAttribute，如果有则使用其路径覆盖全局RootPath
+        // Check whether the controller defines a RouteAttribute; if it does, use it instead of the global root path.
         var controllerRouteAttribute = controller.Attributes.OfType<RouteAttribute>().FirstOrDefault();
-        // 当Controller有[Route]属性时，创建相对路径
+        // When a controller already has [Route], generate a relative path.
 
-        //配置接口route前缀path
+        // Configure the route prefix for the endpoint.
         var rootPath = controllerRouteAttribute == null ? options.Value.RoutePath : "";
 
         foreach (var action in controller.Actions)
@@ -260,25 +260,25 @@ public class MoCrudControllerServiceConvention(
     }
 
     /// <summary>
-    /// 根据Action类名自动判断HttpMethod
+    /// Infers the HTTP method from the action name.
     /// </summary>
-    /// <param name="action"></param>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
+    /// <param name="action">The action model to inspect.</param>
+    /// <param name="configuration">Optional conventional controller settings.</param>
+    /// <returns>The inferred HTTP method.</returns>
     protected virtual string SelectHttpMethod(ActionModel action, ConventionalControllerSetting? configuration)
     {
         return HttpMethodHelper.GetConventionalVerbForMethodName(action.ActionName);
     }
 
     /// <summary>
-    /// 自动生成Route信息设置
+    /// Creates the route metadata used for the generated endpoint.
     /// </summary>
-    /// <param name="rootPath"></param>
-    /// <param name="controllerName"></param>
-    /// <param name="action"></param>
-    /// <param name="httpMethod"></param>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
+    /// <param name="rootPath">The root path prefix.</param>
+    /// <param name="controllerName">The controller name.</param>
+    /// <param name="action">The action model.</param>
+    /// <param name="httpMethod">The resolved HTTP method.</param>
+    /// <param name="configuration">Optional conventional controller settings.</param>
+    /// <returns>The generated route model.</returns>
     protected virtual AttributeRouteModel CreateMoServiceAttributeRouteModel(string rootPath, string controllerName, ActionModel action, string httpMethod, ConventionalControllerSetting? configuration)
     {
         return new AttributeRouteModel(

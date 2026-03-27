@@ -1,67 +1,67 @@
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI Provider 元数据信息
+/// AI Provider metadata information
 /// </summary>
 public class AIProviderInfo
 {
     /// <summary>
-    /// Provider 唯一标识符
+    /// Provider unique identifier
     /// </summary>
     public required string ProviderId { get; init; }
 
     /// <summary>
-    /// Provider 显示名称
+    /// Provider display name
     /// </summary>
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Provider 描述
+    /// Provider Description
     /// </summary>
     public string? Description { get; init; }
 
     /// <summary>
-    /// Provider 类型（如 OpenAI, Anthropic 等）
+    /// Provider type (such as OpenAI, Anthropic, etc.)
     /// </summary>
     public required string ProviderType { get; init; }
 
     /// <summary>
-    /// 默认使用的模型
+    /// The model used by default
     /// </summary>
     public string? DefaultModel { get; init; }
 
     /// <summary>
-    /// 默认系统提示词
+    /// Default system prompt word
     /// </summary>
     public string? SystemPrompt { get; init; }
     
     /// <summary>
-    /// 模型元数据信息
+    /// Model metadata information
     /// </summary>
     public IReadOnlyList<AIModelInfo>? SupportedModels { get; init; }
 
     /// <summary>
-    /// Provider 是否有效（模型配置完整）
+    /// Is the Provider valid (the model configuration is complete)
     /// </summary>
     public bool IsValid { get; init; } = true;
 
     /// <summary>
-    /// 缺失的模型名称
+    /// Missing model name
     /// </summary>
     public IReadOnlyList<string>? InvalidModels { get; init; }
 
     /// <summary>
-    /// 是否是默认 Provider
+    /// Whether it is the default Provider
     /// </summary>
     public bool IsDefault { get; init; }
 
     /// <summary>
-    /// 图标（用于 UI 显示）
+    /// Icon (for UI display)
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// Provider 状态
+    /// Provider status
     /// </summary>
     public AIProviderStatus Status { get; set; } = AIProviderStatus.Unknown;
 
@@ -78,27 +78,27 @@ public class AIProviderInfo
 }
 
 /// <summary>
-/// Provider 状态枚举
+/// Provider status enum
 /// </summary>
 public enum AIProviderStatus
 {
     /// <summary>
-    /// 未知状态
+    /// unknown status
     /// </summary>
     Unknown,
 
     /// <summary>
-    /// 可用
+    /// Available
     /// </summary>
     Available,
 
     /// <summary>
-    /// 不可用
+    /// Not available
     /// </summary>
     Unavailable,
 
     /// <summary>
-    /// 配置错误
+    /// Configuration error
     /// </summary>
     ConfigurationError
 }

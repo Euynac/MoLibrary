@@ -7,17 +7,17 @@ using Monica.DataChannel.Pipeline;
 namespace Monica.DataChannel;
 
 /// <summary>
-/// 消息通路中控，负责管理和协调所有数据通道
-/// 提供统一的注册、访问以及配置管理功能
+/// Central coordinator for the messaging channel infrastructure.
+/// Manages all data channels and provides unified registration, access, and configuration behavior.
 /// </summary>
 public static class DataChannelCentral
 {
     private static ModuleDataChannelOption? _setting;
-    
+
     /// <summary>
-    /// 获取或设置数据通道的全局配置设置
+    /// Gets or sets the global configuration for the data channel module.
     /// </summary>
-    /// <exception cref="InvalidOperationException">当未初始化设置时抛出</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the settings have not been initialized.</exception>
     internal static ModuleDataChannelOption Setting
     {
         get => _setting ?? throw new InvalidOperationException(
@@ -26,44 +26,43 @@ public static class DataChannelCentral
     }
 
     /// <summary>
-    /// 获取全局日志记录器，如果未配置则创建默认控制台日志记录器
+    /// Gets the global logger.
     /// </summary>
     internal static ILogger Logger => Setting.Logger;
 
     /// <summary>
-    /// 所有已注册的数据通道的字典集合，键为通道ID
+    /// Gets all registered data channels keyed by channel identifier.
     /// </summary>
     public static Dictionary<string, DataChannel> Channels { get; } = [];
 
     /// <summary>
-    /// 所有数据管道构建器的集合
+    /// Gets the collection of registered data pipeline builders.
     /// </summary>
     internal static List<DataPipelineBuilder> Builders { get; } = [];
 
     /// <summary>
-    /// 注册数据管道为消息通路
-    /// 将一个已配置的数据管道添加到中央管理器中
+    /// Registers a configured data pipeline with the central manager.
     /// </summary>
-    /// <param name="pipe">要注册的数据管道</param>
+    /// <param name="pipe">The data pipeline to register.</param>
     public static void RegisterPipeline(DataPipeline pipe)
     {
         Channels.Add(pipe.Id, new DataChannel(pipe));
     }
 
     /// <summary>
-    /// 注册一个数据管道构建器
+    /// Registers a data pipeline builder.
     /// </summary>
-    /// <param name="builder">要注册的数据管道构建器</param>
+    /// <param name="builder">The data pipeline builder to register.</param>
     internal static void RegisterBuilder(DataPipelineBuilder builder)
     {
         Builders.Add(builder);
     }
 
     /// <summary>
-    /// 使用已注册的构建器开始构建所有数据管道
-    /// 并对支持动态配置的组件执行应用程序配置
+    /// Builds all data pipelines from the registered builders.
+    /// Also applies application-level configuration for components that support dynamic ASP.NET Core setup.
     /// </summary>
-    /// <param name="app">应用程序构建器实例</param>
+    /// <param name="app">The application builder instance.</param>
     internal static void StartBuild(IApplicationBuilder app)
     {
         foreach (var builder in Builders)
@@ -77,10 +76,9 @@ public static class DataChannelCentral
         }
     }
     /// <summary>
-    /// 使用已注册的构建器开始构建所有数据管道
-    /// 并对支持动态配置的组件执行应用程序配置
+    /// Configures endpoints for all registered data channel components that support dynamic endpoint setup.
     /// </summary>
-    /// <param name="app">应用程序构建器实例</param>
+    /// <param name="app">The application builder instance.</param>
     internal static void ConfigEndpoints(IApplicationBuilder app)
     {
         foreach (var component in Channels.Values.SelectMany(p => p.Pipe.GetComponents()))

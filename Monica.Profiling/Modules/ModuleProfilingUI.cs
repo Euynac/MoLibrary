@@ -16,7 +16,7 @@ public static class ModuleProfilingUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ProfilingUI 模块
+        /// Configure the ProfilingUI module
         /// </summary>
         public static ModuleProfilingUIGuide AddProfilingUI(Action<ModuleProfilingUIOption>? action = null)
         {
@@ -26,7 +26,7 @@ public static class ModuleProfilingUIBuilderExtensions
 }
 
 /// <summary>
-///     Profiling UI 模块 - 提供内存分析和性能监控界面
+/// Profiling UI module - provides memory analysis and performance monitoring interface
 /// </summary>
 [ModuleKey(EMoModuleKey.ProfilingUI)]
 public class ModuleProfilingUI(ModuleProfilingUIOption option)
@@ -37,10 +37,10 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
     {
         if (!Option.DisableProfilingPage)
         {
-            // 依赖 Profiling 模块
+            // Depends on Profiling module
             DependsOnModule<ModuleProfilingGuide>().Register();
 
-            // 依赖 UI 核心模块并注册 UI 组件
+            // Depend on the UI core module and register UI components
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
@@ -65,12 +65,12 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // ProfilingMetricsCollector 已在 ModuleProfiling 中注册
+        // ProfilingMetricsCollector is registered in ModuleProfiling
 
-        // 注册内存分析服务为 Scoped
+        // Register the memory analysis service as Scoped
         services.AddScoped<IMemoryAnalysisService, MemoryAnalysisService>();
 
-        // 注册类型分配跟踪服务 (如果启用)
+        // Register type allocation tracking service (if enabled)
         if (Option.EnableTypeAllocationTracking)
         {
             services.AddSingleton(sp =>
@@ -83,7 +83,7 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
             });
             services.AddScoped<ITypeAllocationService, TypeAllocationService>();
 
-            // 注册自动启动服务 (如果启用)
+            // Register the autostart service (if enabled)
             if (Option.AutoStartCollection)
             {
                 services.AddHostedService<TypeAllocationAutoStartService>();
@@ -93,7 +93,7 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 }
 
 /// <summary>
-///     Profiling UI 模块配置指南
+/// Profiling UI module configuration guide
 /// </summary>
 public class ModuleProfilingUIGuide
     : MoModuleGuide<ModuleProfilingUI, ModuleProfilingUIOption, ModuleProfilingUIGuide>
@@ -101,57 +101,57 @@ public class ModuleProfilingUIGuide
 }
 
 /// <summary>
-///     Profiling UI 模块选项
+/// Profiling UI module options
 /// </summary>
 public class ModuleProfilingUIOption : MoModuleOption<ModuleProfilingUI>
 {
     /// <summary>
-    ///     禁用 Profiling 管理页面
+    /// Disable Profiling management page
     /// </summary>
     public bool DisableProfilingPage { get; set; } = false;
 
     /// <summary>
-    ///     自动刷新间隔 (毫秒)，0 表示禁用自动刷新
+    /// Auto-refresh interval (milliseconds), 0 means auto-refresh is disabled
     /// </summary>
     public int AutoRefreshIntervalMs { get; set; } = 2000;
 
     /// <summary>
-    ///     最大历史数据点数
+    /// Maximum number of historical data points
     /// </summary>
     public int MaxHistoryPoints { get; set; } = 300;
 
     /// <summary>
-    ///     允许手动触发 GC
+    /// Allow manual triggering of GC
     /// </summary>
     public bool AllowManualGC { get; set; } = true;
 
     /// <summary>
-    ///     允许生成 GC Dump
+    /// Allow GC Dump generation
     /// </summary>
     public bool AllowGcDump { get; set; } = true;
 
     /// <summary>
-    ///     启用类型分配跟踪功能
+    /// Enable type assignment tracking
     /// </summary>
     public bool EnableTypeAllocationTracking { get; set; } = true;
 
     /// <summary>
-    ///     应用启动时自动开始收集分配事件
+    /// Automatically start collecting distribution events when the application starts
     /// </summary>
     public bool AutoStartCollection { get; set; } = false;
 
     /// <summary>
-    ///     默认采样模式 (用于自动启动时)
+    /// Default sampling mode (for automatic startup)
     /// </summary>
     public AllocationSamplingMode DefaultSamplingMode { get; set; } = AllocationSamplingMode.High;
 
     /// <summary>
-    ///     最大跟踪类型数量
+    /// Maximum number of tracking types
     /// </summary>
     public int MaxTrackedTypes { get; set; } = 500;
 
     /// <summary>
-    ///     自动停止收集时间，null 表示不自动停止
+    /// Automatically stop collection time, null means not to stop automatically
     /// </summary>
     public TimeSpan? AutoStopAfter { get; set; } = TimeSpan.FromMinutes(10);
 }

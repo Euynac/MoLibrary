@@ -4,17 +4,17 @@ using Monica.Tool.Extensions;
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// 数据上下文类
-/// 用于在数据传输和处理过程中包装和携带数据及其元数据
-/// 作为数据管道中的主要传输单元
+/// Represents the data context that flows through a pipeline.
+/// Wraps the payload together with its metadata during transport and processing.
+/// Serves as the primary transfer unit inside the data pipeline.
 /// </summary>
 public class DataContext
 {
     /// <summary>
-    /// 初始化DataContext的新实例
+    /// Initializes a new instance of <see cref="DataContext"/>.
     /// </summary>
-    /// <param name="source">数据来源</param>
-    /// <param name="data">数据内容</param>
+    /// <param name="source">The origin side of the data.</param>
+    /// <param name="data">The payload.</param>
     public DataContext(EDataSource source, object? data)
     {
         Source = source;
@@ -22,35 +22,34 @@ public class DataContext
     }
     
     /// <summary>
-    /// 消息数据进入入口
-    /// 表示数据从哪个端点进入管道，仅Inner或Outer
+    /// Gets or sets the side from which the data entered the pipeline.
+    /// The value is either <see cref="EDataSource.Inner"/> or <see cref="EDataSource.Outer"/>.
     /// </summary>
     public EDataSource Source { get; set; }
-   
+
     /// <summary>
-    /// 元数据
-    /// 用于存储额外的上下文信息，可由Endpoint或中间件进行解析和使用
+    /// Gets or sets the metadata bag.
+    /// Stores additional contextual information that endpoints or middleware can inspect and use.
     /// </summary>
     public ExpandoObject Metadata { get; set; } = new();
-    
+
     /// <summary>
-    /// 数据对象
-    /// 实际传输的数据内容
+    /// Gets or sets the payload.
+    /// Represents the actual data being transported.
     /// </summary>
     public object? Data { get; set; }
 
     /// <summary>
-    /// 数据CLR类型
+    /// Gets the CLR type of the current payload.
     /// </summary>
     public Type? DataType => Data?.GetType();
-    //TODO 处理ERROR
+    // TODO: Handle error payloads.
 
     /// <summary>
-    /// 复制数据上下文元数据
-    /// 将指定数据上下文的元数据复制到当前实例
+    /// Copies metadata from another data context into the current instance.
     /// </summary>
-    /// <param name="data">源数据上下文</param>
-    /// <returns>当前数据上下文实例</returns>
+    /// <param name="data">The source data context.</param>
+    /// <returns>The current data context instance.</returns>
     public DataContext CopyMetadata(DataContext data)
     {
         Metadata.Copy(data.Metadata);
@@ -59,17 +58,18 @@ public class DataContext
 }
 
 /// <summary>
-/// 数据来源枚举，决定数据在消息通路中的流向。如数据来源于内部端点则由Outer端点接收。
+/// Identifies the side where the data originated and therefore the direction it travels in the channel.
+/// Data originating from the inner endpoint is delivered to the outer endpoint, and vice versa.
 /// </summary>
 public enum EDataSource
 {
     /// <summary>
-    /// 数据来源于内部端点
+    /// The data originated from the inner endpoint.
     /// </summary>
     Inner,
-    
+
     /// <summary>
-    /// 数据来源于外部端点
+    /// The data originated from the outer endpoint.
     /// </summary>
     Outer
 }

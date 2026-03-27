@@ -6,55 +6,55 @@ namespace Monica.AutoModel.Model;
 public class FieldToken(string fieldStr, string conditionStr, string valueStr, int start, int end)
 {
     /// <summary>
-    /// 表达式中的字段激活名
+    /// Field activation name in the expression.
     /// </summary>
     public string FieldStr { get; set; } = fieldStr;
 
     /// <summary>
-    /// 表达式中的条件
+    /// Condition token in the expression.
     /// </summary>
     public string ConditionStr { get; set; } = conditionStr;
 
     /// <summary>
-    /// 表达式中的值
+    /// Value token in the expression.
     /// </summary>
     public string ValueStr { get; set; } = valueStr;
 
     /// <summary>
-    /// 相应字段信息
+    /// Resolved field metadata.
     /// </summary>
     public AutoField? FieldInfo { get; set; }
 
     /// <summary>
-    /// 字段条件
+    /// Parsed field condition.
     /// </summary>
     public EFieldConditions Conditions { get; set; }
 
     /// <summary>
-    /// 字段条件特性
+    /// Parsed field-condition features.
     /// </summary>
     public EFieldConditionFeatures Features { get; set; }
 
     /// <summary>
-    /// 转换后的值对象
+    /// Converted value object.
     /// </summary>
     public object? ConvertedValue { get; set; }
 
     /// <summary>
-    /// 位于原始表达式的开始位置
+    /// Start position in the original expression.
     /// </summary>
     public int Start { get; set; } = start;
 
     /// <summary>
-    /// 位于原始表达式的结束位置
+    /// End position in the original expression.
     /// </summary>
     public int End { get; set; } = end;
 
     public string? TokenExpression { get; set; }
     /// <summary>
-    /// 获取字段属性参数
+    /// Gets the field parameter used in the generated condition expression.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The field parameter expression, or <c>null</c> if the field is unresolved.</returns>
     public string? GetFieldParam()
     {
         if (FieldInfo == null) return null;
@@ -76,7 +76,7 @@ public class TokenizerContext(string originExpression)
 
     public string GetFinalExpression()
     {
-        //TODO 优化同维度数据表达式
+        // TODO: Optimize expressions built from tokens at the same logical level.
         var final = OriginExpression;
         for (var i = Tokens.Count - 1; i >= 0; i--)
         {
@@ -93,96 +93,96 @@ public class TokenizerContext(string originExpression)
 }
 
 /// <summary>
-/// 字段条件特性
+/// Field-condition features.
 /// </summary>
 [Flags]
 public enum EFieldConditionFeatures
 {
     None,
     /// <summary>
-    /// 正则表达式(暂未实现)
+    /// Regular expression matching. Not implemented yet.
     /// </summary>
     UseRegex = 1 << 0,
     /// <summary>
-    /// 需使用客户端侧评估。指明该字段无法被数据库直接处理，需要执行后在客户端进行处理(暂未实现)
+    /// Requires client-side evaluation because the field cannot be handled directly by the database. Not implemented yet.
     /// </summary>
     UseClientSideEvaluations = 1 << 1,
     /// <summary>
-    /// 多选。默认当同时使用in 与,时将会启用
+    /// Multi-value mode. Enabled by default when both <c>in</c> and <c>,</c> are used.
     /// </summary>
     Multi = 1 << 2,
     /// <summary>
-    /// 模糊。默认当使用like时，且字段类型支持时将启用
+    /// Fuzzy mode. Enabled by default when <c>like</c> is used and the field type supports it.
     /// </summary>
     Fuzzy = 1 << 3,
 
     /// <summary>
-    /// 非，当使用此枚举意味着该条件结果取反
+    /// Negation. When this flag is set, the condition result is inverted.
     /// </summary>
     Not = 1 << 4,
 }
 
 /// <summary>
-/// AutoModel字段条件
+/// AutoModel field conditions.
 /// </summary>
 public enum EFieldConditions
 {
     /// <summary>
-    /// 无条件
+    /// No condition.
     /// </summary>
     None,
     /// <summary>
-    /// 相等
+    /// Equal to.
     /// </summary>
     [KouEnumName("=")]
     Equal,
     /// <summary>
-    /// 相似（string适用）比如使用了xx%
+    /// Pattern match for strings, such as <c>xx%</c>.
     /// </summary>
     [KouEnumName("like")]
     Like,
     /// <summary>
-    /// 存在于
+    /// Exists within.
     /// </summary>
     [KouEnumName("in")]
     In,
     /// <summary>
-    /// 大于
+    /// Greater than.
     /// </summary>
     [KouEnumName(">")]
     GreaterThan,
     /// <summary>
-    /// 小于
+    /// Less than.
     /// </summary>
     [KouEnumName("<")]
     LessThan,
     /// <summary>
-    /// 大于等于
+    /// Greater than or equal to.
     /// </summary>
     [KouEnumName(">=")]
     GreaterThanOrEqual,
     /// <summary>
-    /// 小于等于
+    /// Less than or equal to.
     /// </summary>
     [KouEnumName("<=")]
     LessThanOrEqual,
     /// <summary>
-    /// 不等于
+    /// Not equal to.
     /// </summary>
     [KouEnumName("!=")]
     Unequal,
     /// <summary>
-    /// 表达式相似
+    /// Expression-based pattern match.
     /// </summary>
     [KouEnumName("explike")]
     ExpLike,
     /// <summary>
-    /// 不相似
+    /// Not like.
     /// </summary>
     [KouEnumName("notlike")]
     NotLike,
     /// <summary>
-    /// 是 专门用于判断是空的、不是空的等
+    /// Identity check, primarily used for null and non-null checks.
     /// </summary>
     [KouEnumName("is")]
     Is,

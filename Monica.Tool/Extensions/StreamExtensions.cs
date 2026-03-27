@@ -87,7 +87,7 @@ public static class StreamExtensions
         return content;
     }
     /// <summary>
-    /// 读取流中的所有字节。如果流是MemoryStream，则直接返回ToArray()，否则将流复制到内存流中并返回ToArray()。
+    /// Read all bytes in the stream. If the stream is a MemoryStream, ToArray() is returned directly, otherwise the stream is copied to the memory stream and ToArray() is returned.
     /// Read all bytes in the stream. If the stream is MemoryStream, return ToArray() directly, otherwise copy the stream to the memory stream and return ToArray().
     /// </summary>
     /// <param name="stream"></param>

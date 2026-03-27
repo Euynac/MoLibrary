@@ -1,54 +1,54 @@
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 枚举值信息Dto
+/// Enumeration value information Dto
 /// </summary>
 public class DtoEnumValue
 {
     /// <summary>
-    /// 索引
+    /// index
     /// </summary>
     public int Index { get; set; }
 
     /// <summary>
-    /// 名称
+    /// name
     /// </summary>
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// 描述
+    /// describe
     /// </summary>
     public string? Description { get; set; }
 }
 
 /// <summary>
-/// 枚举信息Dto
+/// Enumeration information Dto
 /// </summary>
 public class DtoEnumInfo
 {
     /// <summary>
-    /// 枚举名称
+    /// enum name
     /// </summary>
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// 枚举值列表
+    /// List of enumeration values
     /// </summary>
     public List<DtoEnumValue> Values { get; set; } = [];
 }
 
 /// <summary>
-/// 程序集枚举信息Dto
+/// Assembly enumeration information Dto
 /// </summary>
 public class DtoAssemblyEnumInfo
 {
     /// <summary>
-    /// 程序集来源
+    /// Assembly source
     /// </summary>
     public string? From { get; set; }
 
     /// <summary>
-    /// 枚举列表
+    /// enumeration list
     /// </summary>
     public List<DtoEnumInfo> Enums { get; set; } = [];
 }

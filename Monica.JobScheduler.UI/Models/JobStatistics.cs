@@ -3,7 +3,7 @@ namespace Monica.JobScheduler.UI.Models;
 using Monica.JobScheduler.Models;
 
 /// <summary>
-/// 作业统计信息
+/// Job Statistics
 /// </summary>
 public class JobStatistics
 {

@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 极光流彩主题 - 现代渐变主题，灵感来自北极光
+/// Aurora Color Theme - Modern gradient theme inspired by the Northern Lights
 /// </summary>
 public class ThemeAuroraFlow : ThemeBase
 {

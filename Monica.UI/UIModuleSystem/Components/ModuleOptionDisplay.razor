@@ -75,8 +75,7 @@
     }
 </div>
 
-<!-- JSON详情对话框 -->
-<div class="dialog-wrapper">
+<!-- JSON details dialog --><div class="dialog-wrapper">
     <MudDialog @bind-Visible="_showJsonDialog" Options="_dialogOptions">
         <TitleContent>
             <div class="d-flex align-center">
@@ -97,12 +96,12 @@
 
 @code {
     /// <summary>
-    /// 模块选项类型
+    /// Module option type
     /// </summary>
     [Parameter] public Type? OptionType { get; set; }
 
     /// <summary>
-    /// 模块选项实例
+    /// Module option examples
     /// </summary>
     [Parameter] public object? OptionInstance { get; set; }
 
@@ -136,7 +135,7 @@
     ];
 
     /// <summary>
-    /// 获取需要显示的属性列表
+    /// Get the list of properties that need to be displayed
     /// </summary>
     private IEnumerable<PropertyInfo> GetDisplayProperties()
     {
@@ -148,16 +147,16 @@
     }
 
     /// <summary>
-    /// 判断是否为需要忽略的属性
+    /// Determine whether it is an attribute that needs to be ignored
     /// </summary>
     private static bool IsIgnoredProperty(PropertyInfo property)
     {
-        // 忽略基类中的Logger等属性
+        // Ignore properties such as Logger in the base class
         return property.Name is "Logger" or "Item";
     }
 
     /// <summary>
-    /// 获取属性的图标
+    /// Get the icon of the property
     /// </summary>
     private string GetPropertyIcon(PropertyInfo property)
     {
@@ -176,7 +175,7 @@
     }
 
     /// <summary>
-    /// 获取属性图标颜色
+    /// Get property icon color
     /// </summary>
     private Color GetPropertyIconColor(PropertyInfo property)
     {
@@ -192,7 +191,7 @@
     }
 
     /// <summary>
-    /// 判断是否为复杂类型（需要点击查看JSON）
+    /// Determine whether it is a complex type (you need to click to view JSON)
     /// </summary>
     private bool IsComplexType(PropertyInfo property)
     {
@@ -201,7 +200,7 @@
     }
 
     /// <summary>
-    /// 显示JSON详情
+    /// Show JSON details
     /// </summary>
     private void ShowJsonDetail(PropertyInfo property)
     {
@@ -212,7 +211,7 @@
     }
 
     /// <summary>
-    /// 关闭JSON对话框
+    /// Close JSON dialog
     /// </summary>
     private void CloseJsonDialog()
     {
@@ -220,7 +219,7 @@
     }
 
     /// <summary>
-    /// 渲染属性值
+    /// Render property values
     /// </summary>
     private RenderFragment RenderValue(PropertyInfo property) => builder =>
     {
@@ -260,7 +259,7 @@
             return;
         }
 
-        // 集合类型 - 可点击查看JSON
+        // Collection type - clickable to view JSON
         if (IsCollectionType(property.PropertyType))
         {
             var count = GetCollectionCount(value);
@@ -275,7 +274,7 @@
             return;
         }
 
-        // 复杂对象类型 - 可点击查看JSON
+        // Complex object types - clickable to view JSON
         if (type.IsClass && type != typeof(string))
         {
             builder.OpenComponent<MudChip<string>>(0);
@@ -289,7 +288,7 @@
             return;
         }
 
-        // 默认文本显示
+        // Default text display
         var displayValue = FormatValue(value, type);
         builder.OpenElement(0, "span");
         builder.AddAttribute(1, "class", "option-value");
@@ -299,7 +298,7 @@
     };
 
     /// <summary>
-    /// 格式化类型名称
+    /// Format type name
     /// </summary>
     private static string FormatTypeName(Type type)
     {
@@ -320,7 +319,7 @@
     }
 
     /// <summary>
-    /// 获取底层类型（处理Nullable）
+    /// Get the underlying type (handling Nullable)
     /// </summary>
     private static Type GetUnderlyingType(Type type)
     {
@@ -332,7 +331,7 @@
     }
 
     /// <summary>
-    /// 判断是否为集合类型
+    /// Determine whether it is a collection type
     /// </summary>
     private static bool IsCollectionType(Type type)
     {
@@ -345,7 +344,7 @@
     }
 
     /// <summary>
-    /// 获取集合元素数量
+    /// Get the number of collection elements
     /// </summary>
     private static int GetCollectionCount(object? value)
     {
@@ -365,7 +364,7 @@
     }
 
     /// <summary>
-    /// 格式化值显示
+    /// Format value display
     /// </summary>
     private static string FormatValue(object? value, Type type)
     {
@@ -389,7 +388,7 @@
     }
 
     /// <summary>
-    /// 截断过长的值
+    /// Truncate values ​​that are too long
     /// </summary>
     private static string TruncateValue(string value, int maxLength)
     {
@@ -398,7 +397,7 @@
     }
 
     /// <summary>
-    /// 判断是否为数值类型
+    /// Determine whether it is a numeric type
     /// </summary>
     private static bool IsNumericType(Type type)
     {

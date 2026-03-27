@@ -7,7 +7,7 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.Core.Model;
 
 /// <summary>
-/// 项目单元信息
+/// Project unit information
 /// </summary>
 public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
 {
@@ -15,7 +15,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     private static Func<ConstructorAnalysisContext, ProjectUnit?> _constructorAnalyzerFactories = ConstructorDefaultAnalyzerFactory;
 
     /// <summary>
-    /// 默认通过类型全名查找项目单元
+    /// By default, the project unit is searched by the full name of the type.
     /// </summary>
     /// <param name="context"></param>
     /// <returns></returns>
@@ -23,7 +23,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     {
         if (context.ParameterType.FullName == null) return null;
 
-        // 直接通过类型全名查找
+        // Search directly by type full name
         return ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(context.ParameterType.FullName, out var unit) ? unit : null;
     }
    
@@ -31,7 +31,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     internal static ModuleFrameworkMonitorOption Option { get; set; } = null!;
 
     /// <summary>
-    /// 初始化类元数据
+    /// Initialize class metadata
     /// </summary>
     private void InitializeClassInfo()
     {
@@ -40,13 +40,13 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 初始化构造函数参数类型信息
+    /// Initialize constructor parameter type information
     /// </summary>
     private void InitializeConstructorParameterTypes()
     {
         var constructors = Type.GetConstructors();
         
-        // 选择参数最多的构造函数（通常是主构造函数）
+        // Choose the constructor with the most parameters (usually the primary constructor)
         var mainConstructor = constructors.OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
         
         if (mainConstructor != null)
@@ -56,14 +56,14 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         }
     }
     /// <summary>
-    /// 初始化方法元数据
+    /// Initialization method metadata
     /// </summary>
     protected void InitializeMethods()
     {
         Methods = ProjectUnitXmlDocHelper.GetPublicMethods(Type);
     }
     /// <summary>
-    /// 初始化方法元数据
+    /// Initialization method metadata
     /// </summary>
     protected void InitializeMethods<T>()
     {
@@ -71,7 +71,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 默认命名惯例规则
+    /// Default naming convention rules
     /// </summary>
     /// <returns></returns>
     protected virtual UnitNameConventionOption? DefaultConventionOption()
@@ -83,7 +83,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         Option.ConventionOptions.Dict.TryGetValue(UnitType, out var option) ? option : DefaultConventionOption();
 
     /// <summary>
-    /// 验证类型：类型限制和命名惯例
+    /// Validating Types: Type Restrictions and Naming Conventions
     /// </summary>
     /// <returns></returns>
     protected virtual bool VerifyType()
@@ -94,7 +94,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 验证命名惯例
+    /// Verify naming convention
     /// </summary>
     /// <returns></returns>
     protected virtual bool VerifyNameConvention()
@@ -113,7 +113,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 验证类型限制
+    /// Validation type restrictions
     /// </summary>
     /// <returns></returns>
     protected virtual bool VerifyTypeConstrain()
@@ -122,7 +122,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 检查命名限制模式
+    /// Check naming restriction pattern
     /// </summary>
     /// <exception cref="InvalidOperationException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
@@ -137,7 +137,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         switch (option.NameConventionMode ?? Option.ConventionOptions.NameConventionMode)
         {
             case ENameConventionMode.Strict:
-                // 添加错误级别告警
+                // Add error level alert
                 Alerts.Add(new ProjectUnitAlert
                 {
                     Level = EAlertLevel.Error,
@@ -146,7 +146,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
                 });
                 throw new InvalidOperationException(alertMessage);
             case ENameConventionMode.Warning:
-                // 添加警告级别告警
+                // Add warning level alert
                 Alerts.Add(new ProjectUnitAlert
                 {
                     Level = EAlertLevel.Warning,
@@ -165,14 +165,14 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
 
 
     /// <summary>
-    /// 项目单元初始化完毕后。将项目单元间联系起来
+    /// After the project unit is initialized. Connect project units
     /// </summary>
     public virtual void DoingConnect()
     {
 
     }
     /// <summary>
-    /// 添加单元构造函数依赖解析工厂
+    /// Add unit constructor dependency resolution factory
     /// </summary>
     /// <param name="func"></param>
     public static void AddConstructorAnalyzerFactory(Func<ConstructorAnalysisContext, ProjectUnit?> func)
@@ -192,7 +192,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
         }
     }
     /// <summary>
-    /// 添加单元注册工厂
+    /// Add unit registration factory
     /// </summary>
     /// <param name="func"></param>
     public static void AddUnitRegisterFactory(Func<FactoryContext, ProjectUnit?> func)
@@ -213,7 +213,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 尝试建造项目单元
+    /// Try building a project unit
     /// </summary>
     /// <param name="context"></param>
     /// <returns></returns>
@@ -223,7 +223,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 进一步完善项目单元信息，如提取项目单元特性
+    /// Further improve project unit information, such as extracting project unit characteristics
     /// </summary>
     public virtual void PolishUnitInfo()
     {
@@ -244,67 +244,67 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 项目单元键值，也即项目单元FullName名
+    /// Project unit key value, that is, project unit FullName name
     /// </summary>
     public string Key => Type.FullName!;
 
     /// <summary>
-    /// 项目单元显示名
+    /// Project unit display name
     /// </summary>
     public string Title { get; set; } = type.Name;
 
     /// <summary>
-    /// 项目单元描述
+    /// Project unit description
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// 项目单元作者
+    /// Project unit author
     /// </summary>
     public string? Author { get; set; }
 
     /// <summary>
-    /// 项目单元分组信息
+    /// Project unit grouping information
     /// </summary>
     public List<string>? Group { get; set; }
 
     /// <summary>
-    /// 系统类型
+    /// System type
     /// </summary>
     public Type Type { get; init; } = type;
 
     /// <summary>
-    /// 项目单元类型
+    /// Project unit type
     /// </summary>
     public EProjectUnitType UnitType { get; protected set; } = unitType;
 
     /// <summary>
-    /// 所依赖的项目单元
+    /// The project unit it depends on
     /// </summary>
     public HashSet<ProjectUnit> DependencyUnits { get; protected set; } = [];
 
     /// <summary>
-    /// 项目单元特性
+    /// Project unit properties
     /// </summary>
     public List<IUnitCachedAttribute> Attributes { get; protected set; } = [];
     
     /// <summary>
-    /// 告警信息列表
+    /// Alarm information list
     /// </summary>
     public List<ProjectUnitAlert> Alerts { get; protected set; } = [];
     
     /// <summary>
-    /// 项目单元方法列表
+    /// Project unit method list
     /// </summary>
     public List<ProjectUnitMethod> Methods { get; protected set; } = [];
 
     /// <summary>
-    /// 构造函数参数信息列表
+    /// Constructor parameter information list
     /// </summary>
     public List<Type> ConstructorParameterTypes { get; protected set; } = [];
 
     /// <summary>
-    /// 声明项目单元相关性
+    /// Declare project unit dependencies
     /// </summary>
     /// <param name="unit"></param>
     /// <param name="isDependent"></param>
@@ -318,7 +318,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     }
 
     /// <summary>
-    /// 获取所依赖的项目单元
+    /// Get the dependent project units
     /// </summary>
     /// <typeparam name="TProjectUnit"></typeparam>
     /// <returns></returns>
@@ -330,7 +330,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
     #region 检测依赖
 
     /// <summary>
-    /// 检测构造函数中的项目单元依赖
+    /// Detect project unit dependencies in constructor
     /// </summary>
     protected void DetectConstructorUnitDependencies()
     {
@@ -345,7 +345,7 @@ public abstract class ProjectUnit(Type type, EProjectUnitType unitType)
                 var parameterType = parameter.ParameterType;
                 var context = new ConstructorAnalysisContext(parameterType, this);
 
-                // 检查参数类型是否是一个已注册的项目单元
+                // Check if the parameter type is a registered project unit
                 if (_constructorAnalyzerFactories(context) is {} dependentUnit)
                 {
                     DeclareRelevance(dependentUnit, true);

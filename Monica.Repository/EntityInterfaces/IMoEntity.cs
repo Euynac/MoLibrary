@@ -12,9 +12,9 @@ public interface IMoEntity
     /// <returns></returns>
     object?[] GetKeys();
     /// <summary>
-    /// 自动设置Id；若有子表需要设置，则重写该方法
+    /// Automatically set the Id; if there is a sub-table that needs to be set, rewrite this method
     /// </summary>
-    /// <param name="notSetWhenNotDefault">当已有值时不设置</param>
+    /// <param name="notSetWhenNotDefault">Not set when there is already a value</param>
     public void AutoSetNewId(bool notSetWhenNotDefault = false);
 }
 
@@ -29,7 +29,7 @@ public interface IMoEntity<TKey> : IMoEntity
     /// </summary>
     TKey Id { get; }
     /// <summary>
-    /// 设置实体Id
+    /// Set entityId
     /// </summary>
     /// <param name="key"></param>
     public void SetNewId(TKey key);

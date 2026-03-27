@@ -34,27 +34,27 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     }
 
     /// <summary>
-    /// 最后一次可跟踪的修改时间
+    /// Last trackable modification time
     /// </summary>
     [JsonIgnore]
     public DateTime? LastModifiedTime { get; protected set; }
     /// <summary>
-    /// 原始追踪数据，从该状态开始追踪
+    /// Original tracking data, starting tracking from this state
     /// </summary>
     [JsonInclude]
     public string TracingData { get; init; }
 
     /// <summary>
-    /// 变更链
+    /// change chain
     /// </summary>
     private readonly SortedList<DateTime, TAlterItem> _changingList = new SortedList<DateTime, TAlterItem>(new DuplicateKeyComparer<DateTime>());
 
     /// <summary>
-    /// 变更链
+    /// change chain
     /// </summary>
     public IReadOnlyList<TAlterItem> ChangingList => _changingList.Values.ToList();
     /// <summary>
-    /// 获取指定变更属性变更历史（按照最初->最后的值顺序返回）（已剔除回滚过的AlterItem）
+    /// Get the change history of the specified change attribute (returned in the order of initial -> last value) (rolled-back AlterItem has been eliminated)
     /// </summary>
     /// <returns></returns>
     public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1>(Expression<Func<TAlterItemData, T1>> expr)
@@ -62,7 +62,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
         return GetSingleAlterItemHistory<T1, bool>(expr, null);
     }
     /// <summary>
-    /// 获取指定变更属性变更历史（按照最初->最后的值顺序返回）（已剔除回滚过的AlterItem）
+    /// Get the change history of the specified change attribute (returned in the order of initial -> last value) (rolled-back AlterItem has been eliminated)
     /// </summary>
     /// <returns></returns>
     public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1, T2>(Expression<Func<TAlterItemData, T1>> expr,  Expression<Func<TTargetEntity, T2>>? nestedSelectExpr)
@@ -86,7 +86,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
         }
     }
     /// <summary>
-    /// 初始化变更
+    /// Initialize changes
     /// </summary>
     public void InitChangingChain(List<TAlterItem> items)
     {
@@ -98,7 +98,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
 
 
     /// <summary>
-    /// 添加变更
+    /// Add changes
     /// </summary>
     /// <param name="item"></param>
     public void Add(TAlterItem item)
@@ -111,7 +111,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
         _changingList.Add(item.OrderTime, item);
 
 
-        // 应用回滚项
+        // Apply rollback items
         if (item.TargetRollbackIds is null)
         {
             LastModifiedTime = _changingList.LastOrDefault().Value?.OrderTime;
@@ -139,7 +139,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     }
 
     /// <summary>
-    /// 获取变更链初始状态
+    /// Get the initial state of the change chain
     /// </summary>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
@@ -159,7 +159,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
 
 
     /// <summary>
-    /// 计算最终状态
+    /// Calculate the final state
     /// </summary>
     /// <returns></returns>
     public TTargetEntity GetFinalStatus()
@@ -174,7 +174,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     }
 
     /// <summary>
-    /// 判断是否需要重排变更项
+    /// Determine whether changes need to be rearranged
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
@@ -184,7 +184,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     }
 
     /// <summary>
-    /// 判断是否一致，若不一致生成变更链补丁
+    /// Determine whether they are consistent and generate a change chain patch if they are inconsistent.
     /// </summary>
     public bool IsConsistent(TTargetEntity entity, [NotNullWhen(false)] out TAlterItemData? data)
     {
@@ -199,7 +199,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
     }
 
     /// <summary>
-    /// 补全变更链
+    /// Complete change chain
     /// </summary>
     public void PatchChain()
     {
@@ -209,7 +209,7 @@ public class MoAlterItemChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAl
 
 
     /// <summary>
-    /// 创建将指定来源ID的所有变更项回滚操作，如果没有找到相关需要回滚项，返回null
+    /// Create an operation to roll back all changes with the specified source ID. If no relevant items that need to be rolled back are found, null will be returned.
     /// </summary>
     public TAlterItem? CreateRollbackAlterItemBySourceId(string id, TEnumAlterSource source, string sourceId, string? sourceInfo, string targetSourceId)
     {

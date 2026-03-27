@@ -41,10 +41,10 @@ else
         if (KeyInfo.RawValue == null) return "";
 
         var value = KeyInfo.RawValue;
-        // 移除换行符以便预览
+        // Remove line breaks for preview
         value = value.Replace("\n", " ").Replace("\r", "");
 
-        // 截断过长的值
+        // Truncate values ​​that are too long
         if (value.Length > 100)
         {
             return value[..100] + "...";

@@ -3,7 +3,7 @@ using Monica.DataChannel.Pipeline;
 namespace Monica.DataChannel.BuildInMiddlewares.DataTransformer;
 
 /// <summary>
-/// 数据协议转换中间件基类
+/// Base class for data transformation middleware.
 /// </summary>
 public abstract class DataTransformerMiddlewareBase : PipeTransformMiddlewareBase, IDataConverterCore
 {
@@ -15,7 +15,7 @@ public abstract class DataTransformerMiddlewareBase : PipeTransformMiddlewareBas
             var convertedData = Convert(data);
             if (convertedData == null)
             {
-                //TODO 应需要返回转换失败原因？
+                // TODO: Consider returning the reason for conversion failure.
                 return context;
             }
             context.Data = convertedData;
@@ -29,11 +29,11 @@ public abstract class DataTransformerMiddlewareBase : PipeTransformMiddlewareBas
 }
 
 /// <summary>
-/// 单向数据协议转换中间件基类
+/// Base class for unidirectional data transformation middleware.
 /// </summary>
-/// <typeparam name="TConverterCore"></typeparam>
-/// <typeparam name="TSource"></typeparam>
-/// <typeparam name="TDestination"></typeparam>
+/// <typeparam name="TConverterCore">The converter core type.</typeparam>
+/// <typeparam name="TSource">The source payload type.</typeparam>
+/// <typeparam name="TDestination">The destination payload type.</typeparam>
 public abstract class UniDataTransformerMiddlewareBase<TConverterCore, TSource, TDestination> :
     DataTransformerMiddlewareBase,
     IDataUniConverterCore<TSource, TDestination>
@@ -55,11 +55,11 @@ public abstract class UniDataTransformerMiddlewareBase<TConverterCore, TSource, 
 
 }
 /// <summary>
-/// 双向数据协议转换中间件基类
+/// Base class for bidirectional data transformation middleware.
 /// </summary>
-/// <typeparam name="TConverterCore"></typeparam>
-/// <typeparam name="T1"></typeparam>
-/// <typeparam name="T2"></typeparam>
+/// <typeparam name="TConverterCore">The converter core type.</typeparam>
+/// <typeparam name="T1">The first supported payload type.</typeparam>
+/// <typeparam name="T2">The second supported payload type.</typeparam>
 public abstract class BiDataTransformerMiddlewareBase<TConverterCore, T1, T2> :
     DataTransformerMiddlewareBase,
     IDataBiConverterCore<T1, T2>

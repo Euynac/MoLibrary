@@ -15,7 +15,7 @@ public static class ModuleSwaggerUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 SwaggerUI 模块
+        /// Configure the SwaggerUI module
         /// </summary>
         public static ModuleSwaggerUIGuide AddSwaggerUI(Action<ModuleSwaggerUIOption>? action = null)
         {
@@ -25,7 +25,7 @@ public static class ModuleSwaggerUIBuilderExtensions
 }
 
 /// <summary>
-/// Swagger UI增强模块 - 提供自定义导航按钮等UI扩展功能
+/// Swagger UI enhancement module - provides UI extension functions such as custom navigation buttons
 /// </summary>
 [ModuleKey(EMoModuleKey.SwaggerUI)]
 public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
@@ -78,17 +78,17 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
 }
 
 /// <summary>
-/// SwaggerUI模块向导
+/// SwaggerUI module wizard
 /// </summary>
 public class ModuleSwaggerUIGuide : MoModuleGuide<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>
 {
     /// <summary>
-    /// 添加自定义导航按钮到Swagger UI
+    /// Add custom navigation buttons to Swagger UI
     /// </summary>
-    /// <param name="name">按钮显示文本</param>
-    /// <param name="path">导航路径（例如 "home" 会导航到 "~/home"）</param>
-    /// <param name="description">鼠标悬停时显示的工具提示</param>
-    /// <param name="order">显示顺序（数字越小越靠前，默认为0）</param>
+    /// <param name="name">Button display text</param>
+    /// <param name="path">Navigation path (e.g. "home" will navigate to "~/home")</param>
+    /// <param name="description">Tooltip displayed on mouseover</param>
+    /// <param name="order">Display order (the smaller the number, the higher it is, the default is 0)</param>
     public ModuleSwaggerUIGuide AddNavigationButton(
         string name,
         string path,
@@ -111,12 +111,12 @@ public class ModuleSwaggerUIGuide : MoModuleGuide<ModuleSwaggerUI, ModuleSwagger
 }
 
 /// <summary>
-/// SwaggerUI模块选项
+/// SwaggerUI module options
 /// </summary>
 public class ModuleSwaggerUIOption : MoModuleOption<ModuleSwaggerUI>
 {
     /// <summary>
-    /// 自定义导航按钮，显示在Swagger UI顶部工具栏的右侧。
+    /// Custom navigation buttons that appear on the right side of the Swagger UI top toolbar.
     /// </summary>
     public List<SwaggerNavigationButton> NavigationButtons { get; set; } = new();
 }

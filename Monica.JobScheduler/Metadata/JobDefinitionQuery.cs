@@ -1,27 +1,27 @@
 namespace Monica.JobScheduler.Metadata;
 
 /// <summary>
-/// JobDefinition 查询条件
+/// JobDefinition query conditions
 /// </summary>
 public record JobDefinitionQuery
 {
     /// <summary>
-    /// 按项目名称过滤
+    /// Filter by project name
     /// </summary>
     public string? FromProject { get; init; }
 
     /// <summary>
-    /// 是否包含已软删除的定义
+    /// Whether to include soft deleted definitions
     /// </summary>
     public bool IncludeDeleted { get; init; } = false;
 
     /// <summary>
-    /// 页码（从 1 开始）
+    /// Page number (starting from 1)
     /// </summary>
     public int PageNumber { get; init; } = 1;
 
     /// <summary>
-    /// 每页大小
+    /// page size
     /// </summary>
     public int PageSize { get; init; } = 20;
 }

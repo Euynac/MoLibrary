@@ -11,38 +11,38 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
     public class TcpUtils
     {
         static public ConcurrentDictionary<string, TcpClientExtends>
-          clients = new(); //维护TCP客户端
+          clients = new(); // Tracks TCP client instances.
 
         static public ConcurrentDictionary<string, TcpServerExtends>
-         servers = new(); //维护TCP服务端
+         servers = new(); // Tracks TCP server listeners.
 
         /// <summary>
-        /// 切换链路标志
+        /// Flag that signals a thread switchover is required.
         /// </summary>
         public static bool switchoverFlag = false;
 
         /// <summary>
-        /// 主线程key
+        /// Keys representing main thread connections.
         /// </summary>
         public static HashSet<string> mainKeys = new HashSet<string>();
 
         /// <summary>
-        /// 备用线程key
+        /// Keys for standby thread connections.
         /// </summary>
         public static HashSet<string> standbyKeys = new HashSet<string>();
 
         private readonly static object _lockObject = new object();
 
         /// <summary>
-        /// 计算器
+        /// Counter used during switchover rotations.
         /// </summary>
         public static int number = 0;
 
         public static int Counts = 0;
 
-        public static readonly int MaxReadEmptyCnt = 5; // 接收内容为空最大次数
-        public static readonly double WaitDataInterval = 0.02; // 接收为空后休眠时间，单位秒
-        public static readonly int WaitConnectInterval = 2; // 等数数据库重连时间，单位秒
+        public static readonly int MaxReadEmptyCnt = 5; // Maximum consecutive empty reads.
+        public static readonly double WaitDataInterval = 0.02; // Pause after an empty read, in seconds.
+        public static readonly int WaitConnectInterval = 2; // Interval between reconnection attempts, in seconds.
 
         public static ConcurrentDictionary<string, bool> ServerMainConnect = new();
 
@@ -169,7 +169,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
 
 
         /// <summary>
-        /// 配置处理
+        /// Parses the configured channels and addresses into connection metadata.
         /// </summary>
         /// <param name="channels"></param>
         /// <param name="validaddress"></param>
@@ -239,7 +239,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
                 using (var stream = new MemoryStream())
                 {
                     var buffer = new byte[2048];
-                    // 设置客户端接收超时时间,否则将一直等待服务端回复
+                    // Configure the socket receive timeout so ClientReceive does not block indefinitely.
                     client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 5 * 1000);
                     bytesRead = client.Receive(buffer, 0, buffer.Length, SocketFlags.None);
                     //  bytesRead = await client.ReceiveAsync(buffer);
@@ -247,7 +247,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
                     {
                         await stream.WriteAsync(buffer, 0, bytesRead);
                         recvBytes = stream.ToArray();
-                        // 读一次TCP数据接收后的处理
+                        // Handle a single TCP receive operation.
                         if (clientExtends.IsMainThread)
                         {
                             if (isServer)
@@ -266,8 +266,8 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
                                     ConnectionName = connectionName,
                                 });
                             }
-                            logger.LogInformation($"主线程：{connectionName} 接收的消息 {Encoding.UTF8.GetString(recvBytes, 0, bytesRead).Trim()}");
-                        }
+                        logger.LogInformation($"主线程：{connectionName} 接收的消息 {Encoding.UTF8.GetString(recvBytes, 0, bytesRead).Trim()}");
+                    }
                         else
                         {
                             var remoteEndPoint = client.LocalEndPoint;
@@ -333,7 +333,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
         }
 
         /// <summary>
-        /// 心跳机制
+        /// Sends periodic heartbeat packets from the server.
         /// </summary>
         /// <param name="tcpClientExtends"></param>
         /// <param name="logger"></param>
@@ -373,7 +373,7 @@ namespace Monica.DataChannel.CoreCommunicationProvider.TCP.Utils
         // public static async Task 
 
         /// <summary>
-        /// 心跳包
+        /// Builds the heartbeat packet payload.
         /// </summary>
         /// <returns></returns>
         private  static async Task<string> SHBT()

@@ -7,7 +7,7 @@ public static class GenericTypeExtensions
 {
 
     /// <summary>
-    /// 获取类型的完整命名空间路径名称，处理泛型、嵌套类和匿名类型，一般用于日志格式化
+    /// Get the full namespace path name of the type, handle generics, nested classes and anonymous types, generally used for log formatting
     /// </summary>
     public static string GetCleanFullName(this Type type)
     {
@@ -15,7 +15,7 @@ public static class GenericTypeExtensions
         return InnerGetCleanName(type);
         string InnerGetCleanName(Type curType, bool jumpDeclareType = false, bool getFullName = true)
         {
-            // 处理嵌套类（优先级最高） 类型名称中的 + 符号表示 ​嵌套类（Nested Class）​。
+            // Handle nested classes (highest priority) The + symbol in the type name indicates ​Nested Class​.
             if (curType.DeclaringType != null && !jumpDeclareType)
             {
                 var parentName = curType.DeclaringType.GetCleanFullName();
@@ -23,7 +23,7 @@ public static class GenericTypeExtensions
                 return $"{parentName}.{currentName}";
             }
 
-            // 处理匿名类型
+            // Handling anonymous types
             if (curType.Name.Contains("AnonymousType", StringComparison.Ordinal))
             {
                 var signature = string.Join("-", curType.GetProperties()
@@ -31,13 +31,13 @@ public static class GenericTypeExtensions
                 return $"{curType.Assembly.GetName().Name}:AnonymousType_{signature}";
             }
 
-            // 处理泛型类型
+            // Handling generic types
             if (curType.IsGenericType)
             {
                 var genericTypeDef = curType.GetGenericTypeDefinition();
                 var genericArgs = curType.GetGenericArguments().Select(t => InnerGetCleanName(t, true)).ToArray();
 
-                // 构造完整类型名称
+                // Construct full type name
                 var typeName = getFullName ? genericTypeDef.FullName ?? genericTypeDef.Name : genericTypeDef.Name;
                 var index = typeName.IndexOf('`');
                 if (index != -1) typeName = typeName[..index];
@@ -49,7 +49,7 @@ public static class GenericTypeExtensions
     }
 
     /// <summary>
-    /// 获取类型的简洁名称（不包含命名空间），处理泛型、嵌套类和匿名类型
+    /// Get the compact name of the type (without namespace), handles generics, nested classes, and anonymous types
     /// </summary>
     public static string GetCleanName(this Type type)
     {
@@ -58,7 +58,7 @@ public static class GenericTypeExtensions
         
         string InnerGetCleanName(Type curType, bool jumpDeclareType = false)
         {
-            // 处理嵌套类（优先级最高）
+            // Handle nested classes (highest priority)
             if (curType.DeclaringType != null && !jumpDeclareType)
             {
                 var parentName = curType.DeclaringType.GetCleanName();
@@ -66,7 +66,7 @@ public static class GenericTypeExtensions
                 return $"{parentName}.{currentName}";
             }
 
-            // 处理匿名类型
+            // Handling anonymous types
             if (curType.Name.Contains("AnonymousType", StringComparison.Ordinal))
             {
                 var signature = string.Join("-", curType.GetProperties()
@@ -74,13 +74,13 @@ public static class GenericTypeExtensions
                 return $"AnonymousType_{signature}";
             }
 
-            // 处理泛型类型
+            // Handling generic types
             if (curType.IsGenericType)
             {
                 var genericTypeDef = curType.GetGenericTypeDefinition();
                 var genericArgs = curType.GetGenericArguments().Select(t => InnerGetCleanName(t, true)).ToArray();
 
-                // 获取不含命名空间的类型名称
+                // Get the type name without namespace
                 var typeName = genericTypeDef.Name;
                 var index = typeName.IndexOf('`');
                 if (index != -1) typeName = typeName[..index];

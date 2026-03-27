@@ -24,7 +24,7 @@ public static class ModuleConfigurationUIBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 ConfigurationUI 模块
+        /// Configure the ConfigurationUI module
         /// </summary>
         public static ModuleConfigurationUIGuide AddConfigurationUI(Action<ModuleConfigurationUIOption>? action = null)
         {
@@ -34,7 +34,7 @@ public static class ModuleConfigurationUIBuilderExtensions
 }
 
 /// <summary>
-/// 配置管理UI模块
+/// Configuration management UI module
 /// </summary>
 [ModuleKey(EMoModuleKey.ConfigurationUI)]
 public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
@@ -43,21 +43,21 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
     public override void ClaimDependencies()
     {
-        // 依赖配置模块
+        // Depend on configuration module
         DependsOnModule<ModuleConfigurationGuide>().Register();
         DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
         DependsOnModule<ModuleServiceInvocationGuide>().Register();
         
         if (!option.DisableConfigurationPage)
         {
-            // 依赖差异对比模块
+            // Dependency difference comparison module
             DependsOnModule<ModuleDiffHighlightGuide>().Register();
 
-            // 依赖UI核心模块并注册UI组件
+            // Depend on UI core module and register UI components
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
-                    // 注册面板配置页面
+                    // Registration panel configuration page
                     registry.RegisterLocalizedComponent<UIConfigurationDashboardPage>(
                         UIConfigurationDashboardPage.PAGE_URL,
                         "Pages:ConfigurationDashboard:Title",
@@ -71,7 +71,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册统一配置UI服务
+        // Register the unified configuration UI service
         services.AddScoped<ConfigurationUIService>();
         services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
         services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
@@ -169,7 +169,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 }
 
 /// <summary>
-/// 回滚请求模型
+/// Rollback request model
 /// </summary>
 public class RollbackRequest
 {
@@ -179,13 +179,13 @@ public class RollbackRequest
 }
 
 /// <summary>
-/// 配置管理UI模块配置指南
+/// Configuration Management UI Module Configuration Guide
 /// </summary>
 public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
     ModuleConfigurationUIGuide>
 {
     /// <summary>
-    /// 配置自定义配置存储
+    /// Configure a custom configuration store
     /// </summary>
     public ModuleConfigurationUIGuide ConfigCustomStore<TStore>()
         where TStore : class, IMoConfigurationStores
@@ -197,47 +197,47 @@ public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, M
 }
 
 /// <summary>
-/// 配置管理UI模块选项
+/// Configure management UI module options
 /// </summary>
 public class ModuleConfigurationUIOption : MoModuleOptionWithMinimalApi<ModuleConfigurationUI>
 {
     /// <summary>
-    /// 是否禁用配置管理页面
+    /// Whether to disable the configuration management page
     /// </summary>
     public bool DisableConfigurationPage { get; set; } = false;
 
     /// <summary>
-    /// 页面标题
+    /// Page title
     /// </summary>
     public string PageTitle { get; set; } = "配置管理";
 
     /// <summary>
-    /// 是否启用实时更新
+    /// Whether to enable real-time updates
     /// </summary>
     public bool EnableRealTimeUpdates { get; set; } = true;
 
     /// <summary>
-    /// 默认页面大小
+    /// Default page size
     /// </summary>
     public int DefaultPageSize { get; set; } = 20;
 
     /// <summary>
-    /// 是否显示历史记录
+    /// Whether to display history records
     /// </summary>
     public bool ShowHistory { get; set; } = true;
 
     /// <summary>
-    /// 历史记录保留天数
+    /// Number of days to keep historical records
     /// </summary>
     public int HistoryRetentionDays { get; set; } = 180;
 
     /// <summary>
-    /// 是否允许配置编辑
+    /// Whether to allow configuration editing
     /// </summary>
     public bool AllowEdit { get; set; } = true;
 
     /// <summary>
-    /// 是否允许配置回滚
+    /// Whether to allow configuration rollback
     /// </summary>
     public bool AllowRollback { get; set; } = true;
 }

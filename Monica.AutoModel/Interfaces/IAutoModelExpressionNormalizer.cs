@@ -5,45 +5,45 @@ using Monica.Tool.General;
 namespace Monica.AutoModel.Interfaces;
 
 /// <summary>
-/// AutoModel表达式标准化器
+/// AutoModel expression normalizer.
 /// </summary>
-/// <typeparam name="TModel"></typeparam>
+/// <typeparam name="TModel">The model type.</typeparam>
 public interface IAutoModelExpressionNormalizer<TModel>
 {
     /// <summary>
-    /// 标准化选择指定字段表达式
+    /// Normalizes a selected-field expression.
     /// </summary>
-    /// <param name="selectColumns"></param>
-    /// <param name="isReverseSelect">是否是反向选择，即选择除了给定字段的字段</param>
-    /// <returns></returns>
+    /// <param name="selectColumns">The selected-field expression.</param>
+    /// <param name="isReverseSelect">Whether this is a reverse selection that excludes the specified fields.</param>
+    /// <returns>The normalized expression.</returns>
     string NormalizeSelectColumns(string selectColumns, bool isReverseSelect = false);
 
     /// <summary>
-    /// 标准化过滤条件表达式
+    /// Normalizes a filter expression.
     /// </summary>
-    /// <param name="filter"></param>
-    /// <returns></returns>
+    /// <param name="filter">The filter expression.</param>
+    /// <returns>The normalized result.</returns>
     NormalizedResult NormalizeFilter(string filter);
 
     /// <summary>
-    /// 标准化模糊查询表达式
+    /// Normalizes a fuzzy-search expression.
     /// </summary>
-    /// <param name="fuzzy"></param>
-    /// <param name="fuzzyColumns"></param>
-    /// <returns></returns>
+    /// <param name="fuzzy">The fuzzy-search value.</param>
+    /// <param name="fuzzyColumns">Optional fields to include in fuzzy searching.</param>
+    /// <returns>The normalized result.</returns>
     NormalizedResult NormalizeFuzzy(string fuzzy, string? fuzzyColumns = null);
 
     /// <summary>
-    /// 将执行转化为Linq to object
+    /// Switches execution to LINQ to Objects.
     /// </summary>
     void SetToLinqToObject();
 
     /// <summary>
-    /// 将选择字段表达式转换为自动模型字段对象，需要使用 <see cref="AutoModelExpressionOptions.SelectSeparator"/> 分割
+    /// Converts a selected-field expression into AutoModel field objects.
     /// </summary>
-    /// <param name="columns"></param>
-    /// <param name="isReverseSelect">是否是反向选择，即选择除了给定字段的字段</param>
-    /// <returns></returns>
+    /// <param name="columns">The selected-field expression separated by <see cref="AutoModelExpressionOptions.SelectSeparator"/>.</param>
+    /// <param name="isReverseSelect">Whether this is a reverse selection that excludes the specified fields.</param>
+    /// <returns>The normalized AutoModel field objects.</returns>
     List<AutoField> NormalizeLiteralSelect(string columns, bool isReverseSelect = false);
 
     /// <summary>

@@ -1,12 +1,12 @@
 namespace Monica.StateStore.MemoryProvider;
 
 /// <summary>
-/// 内存状态存储条目的非泛型接口，用于类型无关的访问
+/// Non-generic interface to memory state storage entries for type-independent access
 /// </summary>
 public interface IStateEntry
 {
     /// <summary>
-    /// 状态数据（以 object 形式访问）
+    /// Status data (accessed as object)
     /// </summary>
     object? Value { get; }
 
@@ -16,12 +16,12 @@ public interface IStateEntry
     string ETag { get; }
 
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     DateTimeOffset CreatedAt { get; }
 
     /// <summary>
-    /// 最后更新时间
+    /// Last updated
     /// </summary>
     DateTimeOffset UpdatedAt { get; }
 
@@ -29,38 +29,38 @@ public interface IStateEntry
 }
 
 /// <summary>
-/// 内存状态存储条目
+/// Memory state storage entries
 /// </summary>
-/// <typeparam name="T">状态数据类型</typeparam>
+/// <typeparam name="T">Status data type</typeparam>
 public class StateEntry<T> : IStateEntry
 {
     /// <summary>
-    /// 状态数据
+    /// status data
     /// </summary>
     public T? Value { get; set; }
 
     /// <summary>
-    /// IStateEntry 显式接口实现，将泛型值作为 object 返回
+    /// IStateEntry explicit interface implementation, returning generic values ​​as object
     /// </summary>
     object? IStateEntry.Value => Value;
     
     /// <summary>
-    /// 版本号，从0开始，每次更新递增
+    /// Version number, starting from 0 and incrementing with each update
     /// </summary>
     public int Version { get; set; }
     
     /// <summary>
-    /// ETag，基于版本号生成
+    /// ETag, generated based on version number
     /// </summary>
     public string ETag => Version.ToString();
     
     /// <summary>
-    /// 创建时间
+    /// creation time
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; }
     
     /// <summary>
-    /// 最后更新时间
+    /// Last updated
     /// </summary>
     public DateTimeOffset UpdatedAt { get; set; }
 

@@ -1,18 +1,18 @@
 namespace Monica.Framework.Features.AlterChain.Attributes;
 
 /// <summary>
-/// 用于配置AlterItemData生成时的属性行为
+/// Used to configure the property behavior when AlterItemData is generated
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class AlterItemPropertyAttribute : Attribute
 {
     /// <summary>
-    /// 是否忽略该属性，不在AlterItemData中生成
+    /// Whether to ignore this attribute and not generate it in AlterItemData
     /// </summary>
     public bool Ignore { get; set; } = false;
     
     /// <summary>
-    /// 属性的标题，用于后续生成Format方法
+    /// The title of the attribute, used for subsequent generation of the Format method
     /// </summary>
     public string? Title { get; set; }
 }

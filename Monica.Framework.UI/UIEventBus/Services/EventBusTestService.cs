@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UIEventBus.Services;
 
 /// <summary>
-/// 事件总线测试服务，用于管理测试订阅和消息收集
+/// Event bus test service for managing test subscriptions and message collection
 /// </summary>
 public sealed class EventBusTestService(
     IMoDistributedEventBus distributedEventBus,
@@ -21,7 +21,7 @@ public sealed class EventBusTestService(
     private ISubscription? _activeSubscription;
 
     /// <summary>
-    /// 是否已订阅
+    /// Have you subscribed
     /// </summary>
     public bool IsSubscribed
     {
@@ -35,12 +35,12 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 当前订阅的主题名称
+    /// The name of the currently subscribed topic
     /// </summary>
     public string? CurrentTopicName { get; private set; }
 
     /// <summary>
-    /// 发布测试消息
+    /// Publish test message
     /// </summary>
     public async Task<Res> PublishTestMessageAsync(string message, string? topicName, CancellationToken cancellationToken = default)
     {
@@ -77,7 +77,7 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 订阅测试主题
+    /// Subscribe to test topic
     /// </summary>
     public async Task<Res<ISubscription>> SubscribeToTestTopicAsync(string topicName)
     {
@@ -96,7 +96,7 @@ public sealed class EventBusTestService(
                 }
             }
 
-            // 订阅主题
+            // Subscribe to topics
             var subscription = await distributedEventBus.SubscribeAsync<TestEventMessage>(async eventData =>
             {
                 var receivedMessage = new ReceivedTestMessage
@@ -108,7 +108,7 @@ public sealed class EventBusTestService(
 
                 _receivedMessages.Enqueue(receivedMessage);
 
-                // 限制队列大小
+                // Limit queue size
                 while (_receivedMessages.Count > MaxMessageCount)
                 {
                     _receivedMessages.TryDequeue(out _);
@@ -137,7 +137,7 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 取消订阅测试主题
+    /// Unsubscribe from test topic
     /// </summary>
     public async Task<Res> UnsubscribeFromTestTopicAsync()
     {
@@ -168,7 +168,7 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 获取接收到的消息列表
+    /// Get a list of received messages
     /// </summary>
     public List<ReceivedTestMessage> GetReceivedMessages()
     {
@@ -176,7 +176,7 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 清空接收到的消息
+    /// Clear received messages
     /// </summary>
     public void ClearReceivedMessages()
     {
@@ -185,7 +185,7 @@ public sealed class EventBusTestService(
     }
 
     /// <summary>
-    /// 释放资源
+    /// Release resources
     /// </summary>
     public async ValueTask DisposeAsync()
     {
@@ -196,22 +196,22 @@ public sealed class EventBusTestService(
 }
 
 /// <summary>
-/// 接收到的测试消息
+/// Test message received
 /// </summary>
 public class ReceivedTestMessage
 {
     /// <summary>
-    /// 事件数据
+    /// event data
     /// </summary>
     public required TestEventMessage EventData { get; init; }
 
     /// <summary>
-    /// 接收时间（本地时间）
+    /// Receive time (local time)
     /// </summary>
     public DateTime ReceivedAt { get; init; }
 
     /// <summary>
-    /// 主题名称
+    /// Topic name
     /// </summary>
     public required string TopicName { get; init; }
 }

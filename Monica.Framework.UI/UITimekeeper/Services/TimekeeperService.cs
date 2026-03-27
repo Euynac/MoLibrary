@@ -7,15 +7,15 @@ using Monica.Tool.Results;
 namespace Monica.Framework.UI.UITimekeeper.Services;
 
 /// <summary>
-/// Timekeeper服务，实现核心业务逻辑
+/// Timekeeper service to implement core business logic
 /// </summary>
-/// <param name="logger">日志服务</param>
+/// <param name="logger">Log service</param>
 public class TimekeeperService(ILogger<TimekeeperService> logger)
 {
     /// <summary>
-    /// 获取Timekeeper统计状态
+    /// Get Timekeeper statistical status
     /// </summary>
-    /// <returns>统计信息列表</returns>
+    /// <returns>statistical information list</returns>
     public async Task<Res<List<TimekeeperStatisticsResponse>>> GetTimekeeperStatusAsync()
     {
         try
@@ -45,9 +45,9 @@ public class TimekeeperService(ILogger<TimekeeperService> logger)
     }
 
     /// <summary>
-    /// 获取当前正在运行的Timekeeper
+    /// Get the currently running Timekeeper
     /// </summary>
-    /// <returns>正在运行的Timekeeper信息列表</returns>
+    /// <returns>Running Timekeeper information list</returns>
     public async Task<Res<List<RunningTimekeeperResponse>>> GetRunningTimekeepersAsync()
     {
         try

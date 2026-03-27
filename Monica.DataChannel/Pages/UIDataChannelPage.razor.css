@@ -1,6 +1,6 @@
-/* DataChannel管理页面样式 */
+/* Styles for the DataChannel management page */
 
-/* 主标题栏样式 */
+/* Header bar styles */
 .title-header {
     background: linear-gradient(45deg, #1976D2 30%, #42A5F5 90%);
     color: white;
@@ -16,12 +16,12 @@
     color: white;
 }
 
-/* 统计卡片样式 */
+/* Statistic card styles */
 .stats-card-title {
     font-weight: 500;
 }
 
-/* 加载状态样式 */
+/* Loading indicator styles */
 .loading-container {
     padding: 2rem;
 }
@@ -30,12 +30,12 @@
     font-weight: 500;
 }
 
-/* 空状态样式 */
+/* Empty state layout */
 .empty-state-container {
     margin: 1rem;
 }
 
-/* 响应式设计 */
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .title-header {
         flex-direction: column;
@@ -47,7 +47,7 @@
     }
 }
 
-/* MudBlazor组件自定义样式 */
+/* Custom MudBlazor overrides */
 ::deep .mud-paper.title-header .mud-button-root {
     border-color: white !important;
     color: white !important;
@@ -57,7 +57,7 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* 统计网格间距优化 */
+/* Statistic grid spacing tweaks */
 ::deep .stats-grid .mud-grid-item {
     display: flex;
 }
@@ -67,17 +67,17 @@
     height: 100%;
 }
 
-/* 卡片内容布局 */
+/* Card content padding */
 ::deep .stats-grid .mud-card-content {
     padding: 1.5rem;
 }
 
-/* 图标和文字对齐 */
+/* Icon and text alignment */
 ::deep .stats-grid .mud-stack-row {
     align-items: center;
 }
 
-/* Channel列表布局 */
+/* Channel list layout */
 ::deep .channel-grid .mud-grid-item {
     display: flex;
     flex-direction: column;

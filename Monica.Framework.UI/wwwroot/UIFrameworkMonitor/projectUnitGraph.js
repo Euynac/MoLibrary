@@ -1,32 +1,32 @@
 /**
- * 项目单元架构可视化图表
- * 使用模块化的 D3.js 组件
+ * Project unit architecture visualization chart
+ * Use modular D3.js components
  * 
  * @module projectUnitGraph
  */
 
-// 导入通用的D3.js模块
+// Import common D3.js modules
 import { GraphBase, getModernLinkStyle, getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
 import { ForceLayoutManager } from '../../Monica.UI/js/d3js/d3-force-layout.js';
 import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algorithms.js';
 
-// 导入项目单元特定的模块
+// Import project unit-specific modules
 import { createProjectUnitCardRenderer } from './projectUnitCardRenderer.js';
 
-// ==================== 配置 ====================
+// ==================== Configuration ====================
 
-// 节点配置现在由C#层提供，不再在JS层硬编码
+// Node configuration is now provided by the C# layer and is no longer hardcoded in the JS layer
 
 /**
- * 节点尺寸配置
+ * Node size configuration
  */
 const NODE_SIZE = {
     circle: { 
         radius: 32,
         textOffset: 45  // 文字在圆形下方的偏移距离
     },
-    // 复杂节点尺寸现在由卡片渲染器动态计算
+    // Complex node sizes are now dynamically calculated by the card renderer
     complex: {
         minWidth: 200,
         maxWidth: 500
@@ -34,7 +34,7 @@ const NODE_SIZE = {
 };
 
 /**
- * 布局类型
+ * layout type
  */
 const LAYOUT_TYPES = {
     FORCE: 'force',
@@ -43,10 +43,10 @@ const LAYOUT_TYPES = {
     MULTI_CIRCULAR: 'multi_circular'
 };
 
-// ==================== 主类 ====================
+// ==================== Main class ====================
 
 /**
- * 项目单元图表类
+ * Project unit chart class
  */
 class ProjectUnitGraph {
     constructor(containerId, isDarkMode, dotNetRef) {
@@ -57,14 +57,14 @@ class ProjectUnitGraph {
         this.nodes = [];
         this.links = [];
         
-        // 初始化基础图形
+        // Initialize base graphics
         this.graphBase = new GraphBase(containerId, {
             isDarkMode,
             showArrows: true,
             onBackgroundClick: () => this.handleBackgroundClick()
         });
         
-        // 初始化力导向布局管理器
+        // Initialize force-directed layout manager
         this.forceManager = new ForceLayoutManager(
             this.graphBase.width,
             this.graphBase.height,
@@ -75,7 +75,7 @@ class ProjectUnitGraph {
             }
         );
         
-        // 初始化交互处理器
+        // Initialize interaction handler
         this.interactionHandler = new NodeInteractionHandler({
             onClick: (event, d) => this.handleNodeClick(d),
             onRightClick: (event, d, position) => this.handleNodeRightClick(d, position),
@@ -88,42 +88,42 @@ class ProjectUnitGraph {
             markerIds: this.graphBase.markerIds // 传递marker IDs
         });
         
-        // 初始化项目单元卡片渲染器 - 传递尺寸配置
+        // Initializing project unit card renderer - passing size configuration
         this.cardRenderer = createProjectUnitCardRenderer(isDarkMode, NODE_SIZE.complex);
         
-        // 获取现代化节点样式
+        // Get modern node styles
         this.nodeStyle = getModernNodeStyle(isDarkMode, 'simple');
         
-        // 初始化布局算法管理器
+        // Initialize layout algorithm manager
         this.layoutAlgorithms = createLayoutAlgorithms(
             this.graphBase.width,
             this.graphBase.height
         );
         
-        // 静态布局拖拽行为
+        // Static layout dragging behavior
         this.staticDragBehavior = null;
     }
     
     /**
-     * 更新图表数据
+     * Update chart data
      */
     updateGraph(data) {
         this.nodes = data.nodes;
         this.links = data.links;
         
-        // 清空现有内容
+        // Clear existing content
         this.graphBase.mainGroup.selectAll('.links').remove();
         this.graphBase.mainGroup.selectAll('.nodes').remove();
         
-        // 创建连接线组
+        // Create a connection line group
         const linkGroup = this.graphBase.mainGroup.append('g')
             .attr('class', 'links');
         
-        // 创建节点组
+        // Create node group
         const nodeGroup = this.graphBase.mainGroup.append('g')
             .attr('class', 'nodes');
         
-        // 绘制现代化连接线 - 使用MudBlazor颜色系统和圆润样式
+        // Draw modern connecting lines - using the MudBlazor color system and rounded styles
         const linkStyle = getModernLinkStyle(this.isDarkMode, false, this.graphBase.markerIds);
         this.linkSelection = linkGroup.selectAll('path')
             .data(this.links)
@@ -139,68 +139,68 @@ class ProjectUnitGraph {
             .style('filter', linkStyle.filter)
             .style('pointer-events', 'none'); // 现代化过渡动画
         
-        // 创建节点
+        // Create node
         this.nodeSelection = nodeGroup.selectAll('g')
             .data(this.nodes)
             .enter().append('g')
             .attr('class', 'node');
         
-        // 绘制节点图形
+        // Draw node graph
         this.nodeSelection.each((d, i, nodes) => {
             const nodeElement = d3.select(nodes[i]);
             this.drawNode(nodeElement, d);
         });
         
-        // 绑定交互事件
+        // Bind interaction events
         this.interactionHandler.bindNodeEvents(this.nodeSelection, {
             nodes: this.nodes,
             links: this.links,
             linkSelection: this.linkSelection
         });
         
-        // 添加工具提示
+        // Add tooltip
         this.nodeSelection.append('title')
             .text(d => d.tooltip || d.title);
         
-        // 应用当前布局
+        // Apply current layout
         this.applyLayout(this.currentLayout);
     }
     
     /**
-     * 绘制节点
+     * draw node
      */
     drawNode(nodeElement, nodeData) {
-        // 添加告警级别属性
+        // Add alarm level attribute
         nodeElement.attr('data-alert-level', nodeData.alertLevel || 'none');
         
-        // 使用来自C#层的配置判断节点类型
+        // Determine node type using configuration from C# layer
         if (nodeData.isComplex) {
             this.drawComplexNode(nodeElement, nodeData);
         } else {
             this.drawSimpleNode(nodeElement, nodeData);
         }
         
-        // 添加告警视觉效果
+        // Add alert visual effects
         this.addAlertEffects(nodeElement, nodeData);
     }
     
     /**
-     * 绘制复杂节点（卡片式）
+     * Draw complex nodes (card style)
      */
     drawComplexNode(nodeElement, nodeData) {
-        // 使用卡片渲染器绘制
+        // Draw using card renderer
         this.cardRenderer.drawCard(nodeElement, nodeData);
     }
     
     /**
-     * 绘制简单节点（圆形，文字在下方）
+     * Draw a simple node (circle, text below)
      */
     drawSimpleNode(nodeElement, nodeData) {
         const { radius, textOffset } = NODE_SIZE.circle;
-        // 使用来自C#层的颜色配置
+        // Use color configuration from C# layer
         const color = nodeData.color || '#9E9E9E';
         
-        // 绘制圆形
+        // Draw a circle
         nodeElement.append('circle')
             .attr('class', 'node-circle')
             .attr('r', radius)
@@ -211,7 +211,7 @@ class ProjectUnitGraph {
             .style('filter', this.nodeStyle.filter)
             .style('cursor', 'pointer');
         
-        // 在圆形下方绘制文字 - 不截断，完整显示
+        // Draw text below circle - no truncation, full display
         nodeElement.append('text')
             .attr('y', textOffset)
             .attr('text-anchor', 'middle')
@@ -234,22 +234,22 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 添加告警视觉效果
+     * Add alert visual effects
      */
     addAlertEffects(nodeElement, nodeData) {
         if (!nodeData.alertLevel || nodeData.alertLevel === 'none') {
             return;
         }
         
-        // 为节点添加告警发光效果
+        // Add an alarm glowing effect to the node
         const alertId = `alert-${nodeData.id || Math.random().toString(36).substr(2, 9)}`;
         
-        // 创建告警滤镜
+        // Create an alert filter
         const defs = this.graphBase.svg.select('defs').empty() 
             ? this.graphBase.svg.append('defs') 
             : this.graphBase.svg.select('defs');
         
-        // 移除旧的告警滤镜（如果存在）
+        // Remove old alert filter (if present)
         defs.select(`#${alertId}`).remove();
         
         const filter = defs.append('filter')
@@ -259,7 +259,7 @@ class ProjectUnitGraph {
             .attr('width', '300%')
             .attr('height', '300%');
         
-        // 根据告警级别设置不同的发光效果
+        // Set different lighting effects according to alarm levels
         let glowColor, glowStdDeviation, animationClass;
         
         switch (nodeData.alertLevel) {
@@ -282,12 +282,12 @@ class ProjectUnitGraph {
                 return;
         }
         
-        // 添加高斯模糊
+        // Add Gaussian Blur
         const gaussianBlur = filter.append('feGaussianBlur')
             .attr('stdDeviation', glowStdDeviation)
             .attr('result', 'coloredBlur');
         
-        // 添加发光颜色
+        // Add glow color
         filter.append('feFlood')
             .attr('flood-color', glowColor)
             .attr('flood-opacity', 0.6)
@@ -299,14 +299,14 @@ class ProjectUnitGraph {
             .attr('operator', 'in')
             .attr('result', 'softGlow');
         
-        // 合并原图和发光
+        // Merge original image and glow
         const merge = filter.append('feMerge');
         merge.append('feMergeNode')
             .attr('in', 'softGlow');
         merge.append('feMergeNode')
             .attr('in', 'SourceGraphic');
         
-        // 应用滤镜到节点的主要元素
+        // Apply a filter to the main element of the node
         const mainElement = nodeData.isComplex 
             ? nodeElement.select('.card-background')
             : nodeElement.select('.node-circle');
@@ -314,7 +314,7 @@ class ProjectUnitGraph {
         if (!mainElement.empty()) {
             mainElement.style('filter', `url(#${alertId})`);
             
-            // 为warning和error级别添加闪烁动画
+            // Add flash animation for warning and error levels
             if (nodeData.alertLevel === 'warning' || nodeData.alertLevel === 'error') {
                 this.addPulseAnimation(gaussianBlur, nodeData.alertLevel);
             }
@@ -322,14 +322,14 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 添加脉冲动画
+     * Add pulse animation
      */
     addPulseAnimation(element, alertLevel) {
         const duration = alertLevel === 'error' ? 800 : 1200; // error闪烁更快
         const minStd = alertLevel === 'error' ? 6 : 4;
         const maxStd = alertLevel === 'error' ? 12 : 8;
         
-        // 创建动画
+        // Create animation
         const animate = () => {
             element
                 .transition()
@@ -345,12 +345,12 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 应用布局
+     * Apply layout
      */
     applyLayout(layoutType) {
         this.currentLayout = layoutType;
         
-        // 移除之前的拖拽行为
+        // Remove previous dragging behavior
         this.nodeSelection.on('.drag', null);
         
         switch (layoutType) {
@@ -370,47 +370,47 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 应用力导向布局
+     * Apply force-directed layout
      */
     applyForceLayout() {
-        // 释放所有固定节点
+        // Release all pinned nodes
         this.forceManager.releaseAllFixed(this.nodes);
         
-        // 设置数据
+        // Set data
         this.forceManager.setData(this.nodes, this.links);
         
-        // 应用拖拽行为
+        // Apply drag behavior
         this.nodeSelection.call(this.forceManager.getDragBehavior());
         
-        // 启动模拟
+        // Start simulation
         this.forceManager.start(() => {
             this.linkSelection
                 .attr('d', d => {
-                    // 计算从源到目标的路径，根据目标节点类型调整终点
+                    // Calculate the path from source to destination, adjusting the end point based on the destination node type
                     const dx = d.target.x - d.source.x;
                     const dy = d.target.y - d.source.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     const normX = dx / distance;
                     const normY = dy / distance;
                     
-                    // 根据目标节点类型计算箭头终点
+                    // Calculate arrow end point based on target node type
                     const targetNode = this.nodes.find(n => n.id === d.target.id);
                     let arrowOffset = 35; // 默认圆形节点的偏移量
                     
                     if (targetNode && targetNode.isComplex && targetNode._cardSize) {
-                        // 复杂节点：计算到矩形边界的距离
+                        // Complex nodes: Calculate distance to rectangular bounds
                         const halfWidth = targetNode._cardSize.width / 2;
                         const halfHeight = targetNode._cardSize.height / 2;
                         
-                        // 使用更稳定的算法计算矩形边界交点
+                        // Compute rectangular boundary intersection points using a more stable algorithm
                         const angle = Math.atan2(dy, dx);
                         const cos = Math.cos(angle);
                         const sin = Math.sin(angle);
                         
-                        // 计算射线与矩形四条边的交点，选择最近的
+                        // Calculate the intersection points of the ray and the four sides of the rectangle and select the closest
                         let t = Infinity;
                         
-                        // 检查与垂直边的交点
+                        // Check intersections with vertical edges
                         if (Math.abs(cos) > 0.001) {
                             const signX = cos > 0 ? 1 : -1;
                             const tVertical = (signX * halfWidth) / cos;
@@ -419,7 +419,7 @@ class ProjectUnitGraph {
                             }
                         }
                         
-                        // 检查与水平边的交点
+                        // Check intersection with horizontal edge
                         if (Math.abs(sin) > 0.001) {
                             const signY = sin > 0 ? 1 : -1;
                             const tHorizontal = (signY * halfHeight) / sin;
@@ -428,16 +428,16 @@ class ProjectUnitGraph {
                             }
                         }
                         
-                        // 添加额外间距
+                        // Add extra spacing
                         arrowOffset = t + 10;
                         
-                        // 防止无限大的值
+                        // Prevent infinite values
                         if (!isFinite(arrowOffset) || arrowOffset > 200) {
                             arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
                         }
                     }
                     
-                    // 缩短路径末端，为箭头留出空间
+                    // Shorten path ends to make room for arrows
                     const endX = d.target.x - normX * arrowOffset;
                     const endY = d.target.y - normY * arrowOffset;
                     return `M${d.source.x},${d.source.y} L${endX},${endY}`;
@@ -449,46 +449,46 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 应用层次布局
+     * Apply hierarchical layout
      */
     applyHierarchyLayout() {
         this.forceManager.stop();
         
-        // 计算层次布局
+        // Compute hierarchical layout
         this.calculateHierarchyLayout();
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用环形布局
+     * Apply ring layout
      */
     applyCircularLayout() {
         this.forceManager.stop();
         
-        // 计算环形布局
+        // Calculate ring layout
         this.calculateCircularLayout();
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 计算层次布局 - 使用通用布局算法
+     * Compute hierarchical layout - using a common layout algorithm
      */
     calculateHierarchyLayout() {
         this.layoutAlgorithms.hierarchicalLayout(this.nodes, this.links);
     }
     
     /**
-     * 计算环形布局 - 使用通用布局算法
+     * Calculate ring layout - using universal layout algorithm
      */
     calculateCircularLayout() {
         const complexNodeCount = this.nodes.filter(n => n.isComplex).length;
@@ -499,7 +499,7 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 计算多层环形布局 - 使用通用布局算法
+     * Calculate multi-level ring layout - using universal layout algorithm
      */
     calculateMultiCircularLayout() {
         this.layoutAlgorithms.multiCircularLayout(this.nodes, {
@@ -508,30 +508,30 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 应用多层环形布局
+     * Apply a multi-layered ring layout
      */
     applyMultiCircularLayout() {
         this.forceManager.stop();
         
-        // 计算多层环形布局
+        // Compute multi-level ring layout
         this.calculateMultiCircularLayout();
         
-        // 应用静态拖拽
+        // Apply static drag
         this.applyStaticDrag();
         
-        // 更新位置
+        // Update location
         this.updateStaticPositions();
     }
     
     /**
-     * 应用静态拖拽
+     * Apply static drag
      */
     applyStaticDrag() {
         const self = this;
         
         this.staticDragBehavior = createStaticDragBehavior({
             updateLinks: (draggedNode) => {
-                // 实时更新连接线 - 使用path的d属性而不是x1,y1,x2,y2
+                // Live update of connecting lines - use path's d attribute instead of x1,y1,x2,y2
                 self.linkSelection
                     .attr('d', d => {
                         const sourceId = d.source.id || d.source;
@@ -544,7 +544,7 @@ class ProjectUnitGraph {
                         
                         if (!source || !target) return '';
                         
-                        // 计算从源到目标的路径
+                        // Calculate the path from source to destination
                         const dx = target.x - source.x;
                         const dy = target.y - source.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -554,11 +554,11 @@ class ProjectUnitGraph {
                         const normX = dx / distance;
                         const normY = dy / distance;
                         
-                        // 根据目标节点类型计算箭头终点
+                        // Calculate arrow end point based on target node type
                         let arrowOffset = 35; // 默认圆形节点的偏移量
                         
                         if (target.isComplex && target._cardSize) {
-                            // 复杂节点：计算到矩形边界的距离
+                            // Complex nodes: Calculate distance to rectangular bounds
                             const halfWidth = target._cardSize.width / 2;
                             const halfHeight = target._cardSize.height / 2;
                             
@@ -568,7 +568,7 @@ class ProjectUnitGraph {
                             
                             let t = Infinity;
                             
-                            // 检查与垂直边的交点
+                            // Check intersections with vertical edges
                             if (Math.abs(cos) > 0.001) {
                                 const signX = cos > 0 ? 1 : -1;
                                 const tVertical = (signX * halfWidth) / cos;
@@ -577,7 +577,7 @@ class ProjectUnitGraph {
                                 }
                             }
                             
-                            // 检查与水平边的交点
+                            // Check intersection with horizontal edge
                             if (Math.abs(sin) > 0.001) {
                                 const signY = sin > 0 ? 1 : -1;
                                 const tHorizontal = (signY * halfHeight) / sin;
@@ -604,7 +604,7 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 更新静态位置
+     * Update static location
      */
     updateStaticPositions() {
         this.nodeSelection
@@ -621,7 +621,7 @@ class ProjectUnitGraph {
                 
                 if (!source || !target) return '';
                 
-                // 计算从源到目标的路径，根据目标节点类型调整终点
+                // Calculate the path from source to destination, adjusting the end point based on the destination node type
                 const dx = target.x - source.x;
                 const dy = target.y - source.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -631,23 +631,23 @@ class ProjectUnitGraph {
                 const normX = dx / distance;
                 const normY = dy / distance;
                 
-                // 根据目标节点类型计算箭头终点
+                // Calculate arrow end point based on target node type
                 let arrowOffset = 35; // 默认圆形节点的偏移量
                 
                 if (target.isComplex && target._cardSize) {
-                    // 复杂节点：计算到矩形边界的距离
+                    // Complex nodes: Calculate distance to rectangular bounds
                     const halfWidth = target._cardSize.width / 2;
                     const halfHeight = target._cardSize.height / 2;
                     
-                    // 使用更稳定的算法计算矩形边界交点
+                    // Compute rectangular boundary intersection points using a more stable algorithm
                     const angle = Math.atan2(dy, dx);
                     const cos = Math.cos(angle);
                     const sin = Math.sin(angle);
                     
-                    // 计算射线与矩形四条边的交点，选择最近的
+                    // Calculate the intersection points of the ray and the four sides of the rectangle and select the closest
                     let t = Infinity;
                     
-                    // 检查与垂直边的交点
+                    // Check intersections with vertical edges
                     if (Math.abs(cos) > 0.001) {
                         const signX = cos > 0 ? 1 : -1;
                         const tVertical = (signX * halfWidth) / cos;
@@ -656,7 +656,7 @@ class ProjectUnitGraph {
                         }
                     }
                     
-                    // 检查与水平边的交点
+                    // Check intersection with horizontal edge
                     if (Math.abs(sin) > 0.001) {
                         const signY = sin > 0 ? 1 : -1;
                         const tHorizontal = (signY * halfHeight) / sin;
@@ -665,16 +665,16 @@ class ProjectUnitGraph {
                         }
                     }
                     
-                    // 添加额外间距
+                    // Add extra spacing
                     arrowOffset = t + 10;
                     
-                    // 防止无限大的值
+                    // Prevent infinite values
                     if (!isFinite(arrowOffset) || arrowOffset > 200) {
                         arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
                     }
                 }
                 
-                // 缩短路径末端，为箭头留出空间
+                // Shorten path ends to make room for arrows
                 const endX = target.x - normX * arrowOffset;
                 const endY = target.y - normY * arrowOffset;
                 return `M${source.x},${source.y} L${endX},${endY}`;
@@ -682,42 +682,42 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 设置布局
+     * Set layout
      */
     setLayout(layoutType) {
         this.applyLayout(layoutType);
     }
     
     /**
-     * 设置力导向距离
+     * Set force guide distance
      */
     setForceDistance(distance) {
         this.forceManager.updateLinkDistance(distance);
     }
     
     /**
-     * 设置斥力强度
+     * Set repulsion strength
      */
     setForceStrength(strength) {
         this.forceManager.updateChargeStrength(strength);
     }
     
     /**
-     * 重置视图
+     * reset view
      */
     resetView() {
         this.graphBase.resetView();
     }
     
     /**
-     * 聚焦节点
+     * focus node
      */
     focusOnNode(nodeId) {
         const node = this.nodes.find(n => n.id === nodeId);
         if (node) {
             this.graphBase.focusOnPosition({ x: node.x, y: node.y });
             
-            // 高亮节点
+            // Highlight node
             const nodeElement = this.nodeSelection.filter(d => d.id === nodeId);
             nodeElement.select('circle, rect')
                 .transition()
@@ -730,10 +730,10 @@ class ProjectUnitGraph {
         }
     }
     
-    // 获取单元颜色的方法已移除 - 现在由C#层提供颜色配置
+    // Method to get cell color removed - color configuration is now provided by C# layer
     
     /**
-     * 处理节点点击
+     * Handle node clicks
      */
     handleNodeClick(nodeData) {
         if (this.dotNetRef) {
@@ -742,11 +742,11 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 处理节点右键
+     * Process node right click
      */
     handleNodeRightClick(nodeData, position) {
         if (this.dotNetRef) {
-            // 优先使用 clientX/clientY（相对于视口），如果不存在则使用 pageX/pageY
+            // Prefer clientX/clientY (relative to the viewport), use pageX/pageY if not present
             const x = position.clientX !== undefined ? position.clientX : position.pageX;
             const y = position.clientY !== undefined ? position.clientY : position.pageY;
             
@@ -755,7 +755,7 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 处理节点双击（释放固定）
+     * Handle node double click (release pinned)
      */
     handleNodeDoubleClick(nodeData) {
         if (this.currentLayout === LAYOUT_TYPES.FORCE) {
@@ -766,17 +766,17 @@ class ProjectUnitGraph {
     }
     
     /**
-     * 处理背景点击
+     * Handling background clicks
      */
     handleBackgroundClick() {
-        // 关闭右键菜单
+        // Close right-click menu
         if (this.dotNetRef) {
             this.dotNetRef.invokeMethodAsync('OnSvgBackgroundClick');
         }
     }
     
     /**
-     * 销毁
+     * destroy
      */
     dispose() {
         if (this.forceManager) {
@@ -788,7 +788,7 @@ class ProjectUnitGraph {
     }
 }
 
-// ==================== 导出函数 ====================
+// ==================== Exported functions ====================
 
 let graphInstance = null;
 

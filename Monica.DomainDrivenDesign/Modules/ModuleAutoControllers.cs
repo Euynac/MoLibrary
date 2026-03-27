@@ -24,7 +24,7 @@ public static class ModuleAutoControllersBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 AutoControllers 模块
+        /// Configure the AutoControllers module.
         /// </summary>
         public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null)
         {

@@ -8,69 +8,69 @@ using Monica.Tool.Extensions;
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// 数据管道类
-/// 作为数据通道的核心组件，负责数据的传输、转换和处理
-/// 管理数据端点和中间件的连接和协作
+/// Represents a data pipeline.
+/// Acts as the core component of a data channel and is responsible for data transport, transformation, and processing.
+/// Manages how endpoints and middleware are connected and coordinated.
 /// </summary>
 public class DataPipeline : IObservableInstance
 {
     /// <summary>
-    /// 内部端点
-    /// 处理从外部流向内部的数据
+    /// Gets or sets the inner endpoint.
+    /// Handles data flowing from the outer side into the inner side.
     /// </summary>
     public IPipeEndpoint InnerEndpoint { get; set; }
-    
+
     /// <summary>
-    /// 外部端点
-    /// 处理从内部流向外部的数据
+    /// Gets or sets the outer endpoint.
+    /// Handles data flowing from the inner side out to the outer side.
     /// </summary>
     public IPipeEndpoint OuterEndpoint { get; set; }
 
     /// <summary>
-    /// 管道唯一标识符
+    /// Gets or sets the unique pipeline identifier.
     /// </summary>
     public string Id { get; set; }
 
     /// <summary>
-    /// 管道组标识符
-    /// 用于将多个相关管道分组管理
+    /// Gets or sets the pipeline group identifier.
+    /// Used to organize related pipelines together.
     /// </summary>
     public string? GroupId { get; set; }
 
     /// <summary>
-    /// 是否已成功初始化
+    /// Gets a value indicating whether initialization completed successfully.
     /// </summary>
     public bool IsInitialized { get; private set; }
 
     /// <summary>
-    /// 是否正在初始化
+    /// Gets a value indicating whether initialization is currently in progress.
     /// </summary>
     public bool IsInitializing { get; private set; }
 
     /// <summary>
-    /// 是否已不可用
-    /// 当初始化失败或发生致命错误时设置为true
+    /// Gets or sets a value indicating whether the pipeline is unavailable.
+    /// This is set to <see langword="true"/> when initialization fails or a fatal error occurs.
     /// </summary>
     public bool IsNotAvailable { get; set; }
 
     /// <summary>
-    /// 可观测代理，用于收集和管理管道运行中的状态和异常
+    /// Gets or sets the observable tracker used to record runtime state and exceptions.
     /// </summary>
     public ObservableInstanceTracker ObservableTracker { get; set; } = null!;
 
     /// <summary>
-    /// 是否存在异常
+    /// Gets a value indicating whether the pipeline has recorded exceptions.
     /// </summary>
     public bool HasExceptions => ObservableTracker?.HasExceptions ?? false;
 
     /// <summary>
-    /// 初始化数据管道的新实例
+    /// Initializes a new instance of <see cref="DataPipeline"/>.
     /// </summary>
-    /// <param name="innerEndpoint">内部端点</param>
-    /// <param name="outerEndpoint">外部端点</param>
-    /// <param name="id">管道标识符</param>
-    /// <param name="observableManager">可观测实例管理器</param>
-    /// <param name="groupId">可选的管道组标识符</param>
+    /// <param name="innerEndpoint">The inner endpoint.</param>
+    /// <param name="outerEndpoint">The outer endpoint.</param>
+    /// <param name="id">The pipeline identifier.</param>
+    /// <param name="observableManager">The observable instance registry.</param>
+    /// <param name="groupId">An optional pipeline group identifier.</param>
     internal DataPipeline(
         IPipeEndpoint innerEndpoint,
         IPipeEndpoint outerEndpoint,
@@ -83,7 +83,7 @@ public class DataPipeline : IObservableInstance
         Id = id;
         GroupId = groupId;
 
-        // 使用管理器创建可观测代理
+        // Register the pipeline with the observable tracker.
         ObservableTracker = observableManager.Register(id, opt =>
         {
             opt.MaxHistorySize = DataChannelCentral.Setting.RecentExceptionToKeep;
@@ -95,27 +95,27 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 创建新的数据管道构建器
+    /// Creates a new data pipeline builder.
     /// </summary>
-    /// <returns>数据管道构建器实例</returns>
+    /// <returns>A new <see cref="DataPipelineBuilder"/> instance.</returns>
     public static DataPipelineBuilder Create() => new();
 
     /// <summary>
-    /// 端点中间件列表
-    /// 处理端点之间的数据交互
+    /// Gets the endpoint middleware collection.
+    /// These middleware components participate in endpoint-related behavior.
     /// </summary>
     public List<IPipeEndpointMiddleware> EndpointMiddlewares { get; private set; } = [];
-    
+
     /// <summary>
-    /// 转换中间件列表
-    /// 处理数据的转换和处理
+    /// Gets the transform middleware collection.
+    /// These middleware components handle data transformation and processing.
     /// </summary>
     public List<IPipeTransformMiddleware> TransformMiddlewares { get; private set; } = [];
 
     /// <summary>
-    /// 获取所有中间件的集合
+    /// Enumerates all middleware registered in the pipeline.
     /// </summary>
-    /// <returns>所有管道中间件的枚举</returns>
+    /// <returns>An enumeration of all pipeline middleware.</returns>
     internal IEnumerable<IPipeMiddleware> GetMiddlewares()
     {
         foreach (var endpointMiddleware in EndpointMiddlewares)
@@ -130,9 +130,9 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 获取所有端点的集合
+    /// Enumerates all endpoints in the pipeline.
     /// </summary>
-    /// <returns>所有管道端点的枚举</returns>
+    /// <returns>An enumeration of all pipeline endpoints.</returns>
     internal IEnumerable<IPipeEndpoint> GetEndpoints()
     {
         yield return InnerEndpoint;
@@ -140,10 +140,9 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 获取所有管道组件的集合
-    /// 包括端点和中间件
+    /// Enumerates all components in the pipeline, including endpoints and middleware.
     /// </summary>
-    /// <returns>所有管道组件的枚举</returns>
+    /// <returns>An enumeration of all pipeline components.</returns>
     internal IEnumerable<IPipeComponent> GetComponents()
     {
         foreach (var endpoint in GetEndpoints())
@@ -158,10 +157,9 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 设置管道中间件
-    /// 将中间件按类型分配到相应的集合中
+    /// Assigns middleware to the appropriate internal collections based on type.
     /// </summary>
-    /// <param name="middlewares">要设置的中间件列表</param>
+    /// <param name="middlewares">The middleware collection to assign.</param>
     internal void SetMiddlewares(IReadOnlyList<IPipeMiddleware> middlewares)
     {
         EndpointMiddlewares = middlewares.OfType<IPipeEndpointMiddleware>().ToList();
@@ -169,11 +167,11 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 收集异常信息到可观测代理
+    /// Records exception details in the observable tracker.
     /// </summary>
-    /// <param name="exception">发生的异常</param>
-    /// <param name="source">异常来源对象</param>
-    /// <param name="description">异常描述信息</param>
+    /// <param name="exception">The exception that occurred.</param>
+    /// <param name="source">The source object that caused the exception.</param>
+    /// <param name="description">An optional description of the exception.</param>
     public void CollectException(Exception exception, object source, string? description = null)
     {
         var message = description ?? exception.Message;
@@ -181,27 +179,28 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 记录管道状态变化
+    /// Records a pipeline state transition.
     /// </summary>
-    /// <param name="state">新状态</param>
-    /// <param name="message">状态描述</param>
+    /// <param name="state">The new state.</param>
+    /// <param name="message">The state description.</param>
     public void RecordState(PipelineState state, string message)
     {
         ObservableTracker.RecordState(message, state);
     }
 
     /// <summary>
-    /// 记录异常并切换到错误状态
+    /// Records an exception and switches the pipeline to the error state.
     /// </summary>
-    /// <param name="exception">异常对象</param>
-    /// <param name="message">异常描述</param>
+    /// <param name="exception">The exception instance.</param>
+    /// <param name="message">The exception description.</param>
     public void RecordException(Exception exception, string message)
     {
         ObservableTracker.RecordState(message, PipelineState.Error, exception);
     }
 
     /// <summary>
-    /// 获取所有异常记录（向后兼容）
+    /// Gets all recorded exceptions.
+    /// Kept for backward compatibility.
     /// </summary>
     public IReadOnlyList<ObservableStateEntry> GetExceptions()
     {
@@ -209,7 +208,8 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 获取最近的异常记录（向后兼容）
+    /// Gets the most recent exception records.
+    /// Kept for backward compatibility.
     /// </summary>
     public IReadOnlyList<ObservableStateEntry> GetRecentExceptions(int count)
     {
@@ -217,14 +217,14 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 发送数据到管道
-    /// 数据将经过转换中间件处理，然后根据入口方向发送到相应的端点
+    /// Sends data through the pipeline.
+    /// The data is processed by transform middleware and then dispatched to the opposite endpoint based on its source side.
     /// </summary>
-    /// <param name="data">要发送的数据上下文</param>
-    /// <returns>表示异步操作的任务</returns>
+    /// <param name="data">The data context to send.</param>
+    /// <returns>A task that represents the asynchronous send operation.</returns>
     public async Task SendDataAsync(DataContext data)
     {
-        // 处理转换中间件
+        // Run transform middleware.
         await TransformMiddlewares.DoAsync(async p =>
         {
             try
@@ -234,12 +234,12 @@ public class DataPipeline : IObservableInstance
             catch (Exception ex)
             {
                 CollectException(ex, p);
-                throw; // 重新抛出异常以保持原有行为
+                throw; // Rethrow to preserve the existing behavior.
             }
         });
-      
 
-        // 处理端点
+
+        // Dispatch to the target endpoint.
         try
         {
             if (data.Source == EDataSource.Outer)
@@ -255,15 +255,15 @@ public class DataPipeline : IObservableInstance
         {
             var targetEndpoint = data.Source == EDataSource.Outer ? InnerEndpoint : OuterEndpoint;
             CollectException(ex, targetEndpoint);
-            throw; // 重新抛出异常以保持原有行为
+            throw; // Rethrow to preserve the existing behavior.
         }
     }
 
     /// <summary>
-    /// 初始化管道及其组件
-    /// 设置管道引用并初始化所有通信核心
+    /// Initializes the pipeline and its components.
+    /// Assigns pipeline references and initializes all communication cores.
     /// </summary>
-    /// <returns>初始化结果，包含成功状态和可能的错误信息</returns>
+    /// <returns>A task that represents the initialization operation.</returns>
     internal async Task InitAsync(CancellationToken cancellationToken = default)
     {
         if(IsInitializing)
@@ -283,7 +283,7 @@ public class DataPipeline : IObservableInstance
             }
             catch (Exception e)
             {
-                // 收集异常信息
+                // Record the initialization failure.
                 CollectException(e, communicationCore, $"DataPipeline:{Id}，初始化通信核心时发生错误，通信核心：{communicationCore.GetType().Name}");
                 
                 IsNotAvailable = true;
@@ -297,9 +297,9 @@ public class DataPipeline : IObservableInstance
     }
 
     /// <summary>
-    /// 释放管道及其组件的资源
+    /// Releases pipeline resources and disposes its components.
     /// </summary>
-    /// <returns>表示异步操作的任务</returns>
+    /// <returns>A task that represents the asynchronous dispose operation.</returns>
     internal async Task DisposeAsync()
     {
         await GetEndpoints().OfType<ICommunicationCore>().DoAsync(async p => await p.DisposeAsync());

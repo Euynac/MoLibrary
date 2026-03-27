@@ -166,27 +166,27 @@
 
 @code {
     /// <summary>
-    /// 是否显示对话框
+    /// Whether to display the dialog box
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
 
     /// <summary>
-    /// 是否显示对话框改变事件
+    /// Whether to display dialog change events
     /// </summary>
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
     /// <summary>
-    /// Provider 信息
+    /// Provider information
     /// </summary>
     [Parameter] public EventBusProviderInfo? Provider { get; set; }
 
     /// <summary>
-    /// 该 Provider 的订阅列表
+    /// This Provider's subscription list
     /// </summary>
     [Parameter] public List<SubscriptionViewModel> Subscriptions { get; set; } = [];
 
     /// <summary>
-    /// 对话框选项
+    /// Dialog options
     /// </summary>
     private DialogOptions DialogOptions = new()
     {
@@ -197,7 +197,7 @@
     };
 
     /// <summary>
-    /// 关闭对话框
+    /// Close dialog
     /// </summary>
     private Task OnClose() => SetVisibilityAsync(false);
 

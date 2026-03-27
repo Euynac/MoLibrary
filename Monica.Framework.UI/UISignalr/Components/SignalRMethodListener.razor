@@ -1,6 +1,6 @@
 @using Monica.Framework.UI.UISignalr.Models
 
-<!-- Hub方法监听 -->
+<!-- Hub method listening -->
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudText Typo="Typo.h5" Class="mb-3">Hub方法监听</MudText>
     <MudGrid Class="mb-3">
@@ -51,42 +51,42 @@
 
 @code {
     /// <summary>
-    /// Hub方法列表
+    /// Hub method list
     /// </summary>
     [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
 
     /// <summary>
-    /// 是否已连接
+    /// Is it connected?
     /// </summary>
     [Parameter] public bool IsConnected { get; set; }
 
     /// <summary>
-    /// 切换方法监听回调
+    /// Switch method listening callback
     /// </summary>
     [Parameter] public EventCallback<(HubMethodInfo method, bool isListening)> OnToggleMethodListener { get; set; }
 
     /// <summary>
-    /// 启用所有监听器回调
+    /// Enable all listener callbacks
     /// </summary>
     [Parameter] public EventCallback OnEnableAllListeners { get; set; }
 
     /// <summary>
-    /// 禁用所有监听器回调
+    /// Disable all listener callbacks
     /// </summary>
     [Parameter] public EventCallback OnDisableAllListeners { get; set; }
 
     /// <summary>
-    /// 切换方法监听器
+    /// Switch method listener
     /// </summary>
-    /// <param name="method">方法信息</param>
-    /// <param name="isListening">是否监听</param>
+    /// <param name="method">Method information</param>
+    /// <param name="isListening">Whether to listen</param>
     private async Task ToggleMethodListenerAsync(HubMethodInfo method, bool isListening)
     {
         await OnToggleMethodListener.InvokeAsync((method, isListening));
     }
 
     /// <summary>
-    /// 启用所有监听器
+    /// Enable all listeners
     /// </summary>
     private async Task EnableAllListenersAsync()
     {
@@ -94,7 +94,7 @@
     }
 
     /// <summary>
-    /// 禁用所有监听器
+    /// Disable all listeners
     /// </summary>
     private async Task DisableAllListenersAsync()
     {

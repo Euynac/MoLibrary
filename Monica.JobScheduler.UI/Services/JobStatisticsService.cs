@@ -8,7 +8,7 @@ using Monica.Tool.Results;
 namespace Monica.JobScheduler.UI.Services;
 
 /// <summary>
-/// 作业统计信息计算服务
+/// Job statistics calculation service
 /// </summary>
 public class JobStatisticsService(
     IMoJobMetadataRepository metadataRepository,

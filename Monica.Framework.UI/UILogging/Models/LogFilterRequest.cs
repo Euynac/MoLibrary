@@ -1,7 +1,7 @@
 namespace Monica.Framework.UI.UILogging.Models;
 
 /// <summary>
-/// 前端传递的筛选请求
+/// Filter requests passed by the front end
 /// </summary>
 public sealed class LogFilterRequest
 {

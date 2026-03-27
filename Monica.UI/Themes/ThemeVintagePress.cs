@@ -3,7 +3,7 @@ using MudBlazor;
 namespace Monica.UI.Themes;
 
 /// <summary>
-/// 复古印刷主题 - 怀旧报纸风格
+/// Retro printing theme - nostalgic newspaper style
 /// </summary>
 public class ThemeVintagePress : ThemeBase
 {

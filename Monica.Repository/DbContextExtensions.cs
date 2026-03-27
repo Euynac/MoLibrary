@@ -8,7 +8,7 @@ namespace Monica.Repository;
 public static class DbContextExtensions
 {
     /// <summary>
-    /// 统一配置实体
+    /// Unified configuration entities
     /// </summary>
     /// <param name="builder"></param>
     public static void UnifiedConfigEntity(this EntityTypeBuilder builder)
@@ -16,7 +16,7 @@ public static class DbContextExtensions
         builder.ConfigureByConvention();
     }
     /// <summary>
-    /// 判断IQueryable是否已被OrderBy或OrderByDescending过
+    /// Determine whether IQueryable has been OrderBy or OrderByDescending
     /// </summary>
     /// <param name="query"></param>
     /// <param name="orderedQueryable"></param>

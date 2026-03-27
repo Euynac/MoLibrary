@@ -15,10 +15,10 @@ public static class HttpApiExtensions
 {
     private static readonly ILogger _logger = LogManager.For(typeof(HttpApiExtensions));
     /// <summary>
-    /// 统一获取内部微服务调用API响应
+    /// Unifiedly obtain API responses from internal microservice calls
     /// </summary>
     /// <typeparam name="TResponse"></typeparam>
-    /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 <typeparamref name="TResponse"/> 的属性全为null或默认值，非有效值</param>
+    /// <param name="response">Need to check if the IsSuccess property is <b>true</b>,otherwise <typeparamref name="TResponse"/> All attributes are null or default values, not valid values</param>
     /// <returns></returns>
     public static async Task<TResponse> GetResponse<TResponse>(this Task<HttpResponseMessage> response)
         where TResponse : class, IResultEnvelope, new()
@@ -127,9 +127,9 @@ public static class HttpApiExtensions
     }
     #region 非泛型版
     /// <summary>
-    /// 统一获取内部微服务调用API响应
+    /// Unifiedly obtain API responses from internal microservice calls
     /// </summary>
-    /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 response 的属性全为null或默认值，非有效值</param>
+    /// <param name="response">Need to check if the IsSuccess property is <b>true</b>, otherwise the attributes of response are all null or default values, which are not valid values.</param>
     /// <param name="responseType">Must implement <see cref="IResultEnvelope" /> and expose a parameterless constructor.</param>
     /// <returns></returns>
     public static async Task<IResultEnvelope> GetResponse(this Task<HttpResponseMessage> response, Type responseType)

@@ -19,17 +19,17 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Modules;
 
 /// <summary>
-/// AI 模块构建器扩展方法
+/// AI module builder extension methods
 /// </summary>
 public static class ModuleAIBuilderExtensions
 {
     extension(Mo)
     {
         /// <summary>
-        /// 配置 AI 模块
+        /// Configure AI module
         /// </summary>
-        /// <param name="action">模块配置选项</param>
-        /// <returns>AI 模块配置引导器</returns>
+        /// <param name="action">Module configuration options</param>
+        /// <returns>AI module configuration guide</returns>
         public static ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
         {
             return new ModuleAIGuide().Register(action);
@@ -38,7 +38,7 @@ public static class ModuleAIBuilderExtensions
 }
 
 /// <summary>
-/// AI 模块
+/// AI module
 /// </summary>
 [ModuleKey(EMoModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
@@ -47,7 +47,7 @@ public class ModuleAI(ModuleAIOption option)
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        // 注册模型目录
+        // Register model directory
         services.AddSingleton(sp =>
         {
             var catalog = new AIModelCatalog();
@@ -61,7 +61,7 @@ public class ModuleAI(ModuleAIOption option)
             return catalog;
         });
 
-        // 注册 Provider 管理器
+        // Register Provider Manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.AddSingleton<AIProviderManager>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
@@ -69,22 +69,22 @@ public class ModuleAI(ModuleAIOption option)
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IAIChatAgentDecorator, ToolInvocationTrackingAgentDecorator>());
 
-        // 注册聊天服务
+        // Sign up for chat service
         services.AddSingleton<AIChatService>();
     }
 }
 
 /// <summary>
-/// AI 模块配置引导器
+/// AI module configuration guide
 /// </summary>
 public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
     /// <summary>
-    /// 添加 OpenAI Provider
+    /// Add OpenAI Provider
     /// </summary>
-    /// <param name="configure">配置委托</param>
+    /// <param name="configure">Configure delegation</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
-    /// <returns>当前引导器实例</returns>
+    /// <returns>Current bootloader instance</returns>
     public ModuleAIGuide AddOpenAIProvider(
         Action<OpenAIProviderOptions> configure,
         string? providerId = null)
@@ -105,11 +105,11 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// 添加 Anthropic Provider
+    /// Add Anthropic Provider
     /// </summary>
-    /// <param name="configure">配置委托</param>
+    /// <param name="configure">Configure delegation</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
-    /// <returns>当前引导器实例</returns>
+    /// <returns>Current bootloader instance</returns>
     public ModuleAIGuide AddAnthropicProvider(
         Action<AnthropicProviderOptions> configure,
         string? providerId = null)
@@ -167,11 +167,11 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// 添加自定义 Provider
+    /// Add custom provider
     /// </summary>
-    /// <typeparam name="TProvider">Provider 类型</typeparam>
-    /// <param name="providerFactory">Provider 工厂方法</param>
-    /// <returns>当前引导器实例</returns>
+    /// <typeparam name="TProvider">Provider type</typeparam>
+    /// <param name="providerFactory">Provider factory method</param>
+    /// <returns>Current bootloader instance</returns>
     public ModuleAIGuide AddProvider<TProvider>(Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
@@ -211,7 +211,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
 }
 
 /// <summary>
-/// AI 模块选项
+/// AI module options
 /// </summary>
 public class ModuleAIOption : MoModuleOption<ModuleAI>
 {
@@ -231,17 +231,17 @@ public class ModuleAIOption : MoModuleOption<ModuleAI>
     }
 
     /// <summary>
-    /// 默认系统提示词
+    /// Default system prompt word
     /// </summary>
     public string? DefaultSystemPrompt { get; set; }
 
     /// <summary>
-    /// 默认最大上下文消息数量（0 表示不限制）
+    /// Default maximum number of context messages (0 means no limit)
     /// </summary>
     public int MaxContextMessages { get; set; }
 
     /// <summary>
-    /// 是否启用请求日志
+    /// Whether to enable request logging
     /// </summary>
     public bool EnableRequestLogging { get; set; }
 }

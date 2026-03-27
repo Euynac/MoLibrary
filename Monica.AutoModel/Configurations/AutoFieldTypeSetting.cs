@@ -8,32 +8,32 @@ namespace Monica.AutoModel.Configurations;
 public class AutoFieldTypeSetting
 {
     /// <summary>
-    /// 来源定义类型
+    /// Declaring type that defines this field.
     /// </summary>
     [JsonIgnore] public Type? DeclaringType { get; set; }
     /// <summary>
-    /// 原始参数的类型
+    /// Original parameter type.
     /// </summary>
     [JsonIgnore] public Type OriginType { get; set; } = null!;
 
     /// <summary>
-    /// 原始参数的类型的潜在类型(即去除nullable、IEnumerable之后的纯粹类型)
+    /// Underlying type of the original parameter after unwrapping nullable and <see cref="IEnumerable"/> wrappers.
     /// </summary>
     [JsonIgnore] public Type OriginUnderlyingType { get; set; } = null!;
 
     /// <summary>
-    /// 参数类型特征
+    /// Type features.
     /// </summary>
     public ETypeFeatures TypeFeatures { get; set; }
 
     /// <summary>
-    /// 基本类型
+    /// Basic type classification.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public EBasicType BasicType { get; set; }
 
     /// <summary>
-    /// 原始参数类型名
+    /// Underlying type name.
     /// </summary>
     public string TypeName => OriginUnderlyingType.Name;
 
@@ -44,9 +44,9 @@ public class AutoFieldTypeSetting
     }
 
     /// <summary>
-    /// 根据参数类型自动设置TypeSetting(比如OriginType、TypeClass、OriginUnderlyingType等)
+    /// Automatically populates the type settings from the parameter type.
     /// </summary>
-    /// <param name="parameterType"></param>
+    /// <param name="parameterType">The parameter type to analyze.</param>
     private void AutoSetTypeSetting(Type parameterType)
     {
         OriginType = parameterType;
@@ -56,12 +56,12 @@ public class AutoFieldTypeSetting
     }
 
     /// <summary>
-    /// 获取指定类型的BasicType
+    /// Gets the basic type classification for the specified type.
     /// </summary>
-    /// <param name="parameterType"></param>
-    /// <param name="underlyingType"></param>
-    /// <param name="features"></param>
-    /// <returns></returns>
+    /// <param name="parameterType">The type to classify.</param>
+    /// <param name="underlyingType">The extracted underlying type.</param>
+    /// <param name="features">The detected type features.</param>
+    /// <returns>The basic type classification.</returns>
     public static EBasicType GetTypeClass(Type? parameterType, out Type underlyingType, out ETypeFeatures features)
     {
         var origin = parameterType;

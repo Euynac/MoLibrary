@@ -5,49 +5,49 @@ using Monica.Tool.Results;
 namespace Monica.Framework.Services;
 
 /// <summary>
-/// 框架监控服务接口
+/// Framework monitoring service interface
 /// </summary>
 public interface IFrameworkMonitorService
 {
     /// <summary>
-    /// 获取所有项目单元信息
+    /// Get all project unit information
     /// </summary>
-    /// <returns>项目单元列表</returns>
+    /// <returns>Project unit list</returns>
     Task<Res<List<DtoProjectUnit>>> GetAllProjectUnitsAsync();
 
     /// <summary>
-    /// 获取领域事件信息
+    /// Get domain event information
     /// </summary>
-    /// <returns>领域事件信息列表</returns>
+    /// <returns>Domain event information list</returns>
     Task<Res<List<DtoDomainEventInfo>>> GetDomainEventsAsync();
 
     /// <summary>
-    /// 发布领域事件
+    /// Publish domain events
     /// </summary>
-    /// <param name="eventKey">事件键</param>
-    /// <param name="eventContent">事件内容</param>
-    /// <returns>发布结果</returns>
+    /// <param name="eventKey">event key</param>
+    /// <param name="eventContent">Event content</param>
+    /// <returns>publish results</returns>
     Task<Res> PublishDomainEventAsync(string eventKey, JsonNode eventContent);
 
     /// <summary>
-    /// 管理请求过滤
+    /// Manage request filtering
     /// </summary>
-    /// <param name="urls">URL列表</param>
-    /// <param name="disable">是否禁用</param>
-    /// <returns>被禁用的URL列表</returns>
+    /// <param name="urls">URL list</param>
+    /// <param name="disable">Whether to disable</param>
+    /// <returns>List of banned URLs</returns>
     Task<Res<List<string>>> ManageRequestFilterAsync(List<string>? urls, bool? disable);
 
     /// <summary>
-    /// 获取枚举信息
+    /// Get enumeration information
     /// </summary>
-    /// <param name="name">枚举名称</param>
-    /// <returns>枚举信息</returns>
+    /// <param name="name">enum name</param>
+    /// <returns>Enumeration information</returns>
     Task<Res<List<DtoAssemblyEnumInfo>>> GetEnumInfoAsync(string? name = null);
 
     /// <summary>
-    /// 通过键值获取项目单元
+    /// Get project unit by key value
     /// </summary>
-    /// <param name="key">项目单元键值</param>
-    /// <returns>项目单元</returns>
+    /// <param name="key">Project unit key value</param>
+    /// <returns>project unit</returns>
     ProjectUnit? GetProjectUnitByKey(string key);
 }

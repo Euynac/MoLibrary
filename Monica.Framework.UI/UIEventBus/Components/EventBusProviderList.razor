@@ -48,7 +48,7 @@
     }
 </MudGrid>
 
-<!-- Provider 详情对话框 -->
+<!-- Provider details dialog -->
 <EventBusProviderDetailDialog IsVisible="_showProviderDetail"
                               IsVisibleChanged="OnProviderDetailVisibilityChanged"
                               Provider="_selectedProvider"
@@ -68,7 +68,7 @@
     {
         _selectedProvider = provider;
 
-        // 过滤出该 Provider 的订阅
+        // Filter out subscriptions for this Provider
         _providerSubscriptions = AllSubscriptions.Where(s =>
         {
             var keyMatches = s.ServiceKey == provider.ServiceKey;
