@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Features.ObservableInstance;
+
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.DataChannel.CoreCommunication;
 using Monica.DataChannel.CoreCommunicationProvider.Default;
 
@@ -160,7 +161,7 @@ public class DataPipelineBuilder
         outerEndpoint.EntranceType = EDataSource.Outer;
 
         // 获取可观测实例管理器
-        var observableManager = provider.GetRequiredService<IObservableInstanceManager>();
+        var observableManager = provider.GetRequiredService<IObservableInstanceRegistry>();
 
         // 创建管道
         var pipe = new DataPipeline(innerEndpoint, outerEndpoint, Id, observableManager, GroupId);

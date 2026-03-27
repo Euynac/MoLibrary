@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Events;
@@ -21,7 +22,7 @@ public abstract class CoordinatedLeaderService(
     IOptions<ModuleServiceDiscoveryOption> options,
     ILogger logger,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions) : MoBackgroundService(observableManager, hostedServiceOptions, logger)
 {
     /// <summary>

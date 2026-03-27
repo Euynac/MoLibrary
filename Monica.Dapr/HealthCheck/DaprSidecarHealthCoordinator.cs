@@ -2,9 +2,10 @@ using Dapr.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.Dapr.Interfaces;
 
@@ -17,7 +18,7 @@ namespace Monica.Dapr.HealthCheck;
 /// </summary>
 public class DaprSidecarHealthCoordinator(
     DaprClient daprClient,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleDaprClientOption> clientOptions,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,

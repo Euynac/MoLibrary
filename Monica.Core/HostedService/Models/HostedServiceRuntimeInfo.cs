@@ -1,4 +1,5 @@
-using Monica.Core.Features.ObservableInstance;
+
+using Monica.Core.ObservableInstance.Models;
 
 namespace Monica.Core.HostedService.Models;
 
@@ -7,56 +8,56 @@ namespace Monica.Core.HostedService.Models;
 /// </summary>
 public class HostedServiceRuntimeInfo
 {
-    private readonly ObservableAgent _agent;
+    private readonly ObservableInstanceTracker _tracker;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HostedServiceRuntimeInfo"/> class.
     /// </summary>
-    /// <param name="agent">The observable agent that tracks state and history</param>
-    public HostedServiceRuntimeInfo(ObservableAgent agent)
+    /// <param name="tracker">The observable tracker that tracks state and history</param>
+    public HostedServiceRuntimeInfo(ObservableInstanceTracker tracker)
     {
-        _agent = agent ?? throw new ArgumentNullException(nameof(agent));
+        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
     }
 
     /// <summary>
-    /// Gets the underlying observable agent for internal runtime operations.
+    /// Gets the underlying observable tracker for internal runtime operations.
     /// </summary>
-    internal ObservableAgent Agent => _agent;
+    internal ObservableInstanceTracker Tracker => _tracker;
 
-    // Service Identity (delegates to agent)
+    // Service Identity (delegates to tracker)
 
     /// <summary>
     /// Gets the name of the service
     /// </summary>
-    public string ServiceName => _agent.InstanceName;
+    public string ServiceName => _tracker.InstanceName;
 
     /// <summary>
     /// Gets the type of the service
     /// </summary>
-    public Type ServiceType => _agent.InstanceType ?? typeof(object);
+    public Type ServiceType => _tracker.InstanceType ?? typeof(object);
 
     /// <summary>
     /// Gets the service key for keyed service instances (optional)
     /// </summary>
-    public string? ServiceKey => _agent.InstanceKey;
+    public string? ServiceKey => _tracker.InstanceKey;
 
-    // Current State (delegates to agent with typed state)
+    // Current State (delegates to tracker with typed state)
 
     /// <summary>
     /// Gets the current state of the service
     /// </summary>
     public HostedServiceState CurrentState =>
-        _agent.CurrentState is HostedServiceState state ? state : HostedServiceState.NotStarted;
+        _tracker.CurrentState is HostedServiceState state ? state : HostedServiceState.NotStarted;
 
     /// <summary>
     /// Gets the timestamp when the current state was entered
     /// </summary>
-    public DateTime StateChangedAt => _agent.StateChangedAt;
+    public DateTime StateChangedAt => _tracker.StateChangedAt;
 
     /// <summary>
     /// Gets the timestamp when the service was registered
     /// </summary>
-    public DateTime RegisteredAt => _agent.RegisteredAt;
+    public DateTime RegisteredAt => _tracker.RegisteredAt;
 
     /// <summary>
     /// Gets or sets the timestamp when the service was started (StartAsync called)
@@ -118,7 +119,7 @@ public class HostedServiceRuntimeInfo
     /// Gets the state history for this service
     /// </summary>
     public IReadOnlyList<HostedServiceStateTransition> StateHistory =>
-        _agent.GetHistory()
+        _tracker.GetHistory()
             .Select(h => new HostedServiceStateTransition
             {
                 Timestamp = h.Timestamp,
@@ -133,14 +134,14 @@ public class HostedServiceRuntimeInfo
     /// <summary>
     /// Gets the maximum number of history entries to retain
     /// </summary>
-    public int MaxHistorySize => _agent.MaxHistorySize;
+    public int MaxHistorySize => _tracker.MaxHistorySize;
 
     // Execution Statistics
 
     /// <summary>
     /// Gets the total number of state changes that have occurred
     /// </summary>
-    public long TotalStateChanges => _agent.TotalStateChanges;
+    public long TotalStateChanges => _tracker.TotalStateChanges;
 
     /// <summary>
     /// Gets the uptime of the service (time since started, null if not started or already stopped)

@@ -1,9 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Facades;
+using Monica.Core.ObservableInstance.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -33,9 +36,8 @@ public class ModuleObservableInstance(ModuleObservableInstanceOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-     
-        // Register ObservableInstance manager as singleton
-        services.AddSingleton<IObservableInstanceManager, ObservableInstanceManager>();
+        services.AddSingleton<ObservableInstanceFacade>();
+        services.AddSingleton<IObservableInstanceRegistry, ObservableInstanceRegistry>();
     }
 }
 

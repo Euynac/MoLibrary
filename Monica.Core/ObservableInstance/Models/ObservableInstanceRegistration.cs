@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 
-namespace Monica.Core.Features.ObservableInstance;
+namespace Monica.Core.ObservableInstance.Models;
 
 /// <summary>
-/// Configuration options for ObservableAgent instances
+/// Registration options for observable instance trackers.
 /// </summary>
-public class ObservableAgentOption
+public class ObservableInstanceRegistration
 {
     /// <summary>
     /// Instance identifier

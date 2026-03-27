@@ -1,16 +1,15 @@
 using Microsoft.Extensions.Logging;
 
-namespace Monica.Core.Features.ObservableInstance;
+namespace Monica.Core.ObservableInstance.Models;
 
 /// <summary>
-/// Provides observable tracking for any instance with state changes, exceptions, and history.
-/// Replaces both ExceptionPool and HostedServiceRuntimeInfo internal state history functionality.
+/// Tracks state transitions, exceptions, and history for a single observable instance.
 /// </summary>
-public class ObservableAgent : IDisposable
+public class ObservableInstanceTracker : IDisposable
 {
-    public delegate void StateChangedHandler(ObservableStateHistory stateChange);
+    public delegate void StateChangedHandler(ObservableStateEntry stateChange);
 
-    private readonly List<ObservableStateHistory> _stateHistory = [];
+    private readonly List<ObservableStateEntry> _stateHistory = [];
     private readonly ReaderWriterLockSlim _lock = new();
     private readonly ILogger? _logger;
     private LogLevel? _defaultLogLevel;
@@ -63,7 +62,7 @@ public class ObservableAgent : IDisposable
     public DateTime StateChangedAt { get; private set; }
 
     /// <summary>
-    /// Gets the timestamp when this agent was created/registered
+    /// Gets the timestamp when this tracker was created and registered
     /// </summary>
     public DateTime RegisteredAt { get; init; }
 
@@ -146,12 +145,12 @@ public class ObservableAgent : IDisposable
     public event StateChangedHandler? StateChanged;
 
     /// <summary>
-    /// Initializes a new instance of the ObservableAgent class
+    /// Initializes a new instance of the <see cref="ObservableInstanceTracker"/> class.
     /// </summary>
     /// <param name="instanceId">Unique instance identifier</param>
     /// <param name="maxHistorySize">Maximum number of history entries to retain</param>
     /// <param name="option">Configuration options for logger and log level mappings</param>
-    internal ObservableAgent(string instanceId, int maxHistorySize, ObservableAgentOption option)
+    internal ObservableInstanceTracker(string instanceId, int maxHistorySize, ObservableInstanceRegistration option)
     {
         if (string.IsNullOrEmpty(instanceId))
             throw new ArgumentException("Instance ID cannot be empty", nameof(instanceId));
@@ -178,7 +177,7 @@ public class ObservableAgent : IDisposable
     public void RecordState(string message, object? newState = null, Exception? exception = null,
         LogLevel? logLevel = null)
     {
-        ObservableStateHistory? history = null;
+        ObservableStateEntry? stateEntry = null;
         var shouldNotifyStateChanged = false;
         var shouldLog = false;
 
@@ -187,7 +186,7 @@ public class ObservableAgent : IDisposable
         {
             var previousState = CurrentState;
             logLevel ??= GetLogLevel(newState);
-            history = new ObservableStateHistory
+            stateEntry = new ObservableStateEntry
             {
                 Sequence = ++_historySequence,
                 PreviousState = previousState,
@@ -198,7 +197,7 @@ public class ObservableAgent : IDisposable
                 LogLevel = logLevel
             };
 
-            _stateHistory.Add(history);
+            _stateHistory.Add(stateEntry);
             if (_stateHistory.Count > MaxHistorySize)
             {
                 _stateHistory.RemoveAt(0);
@@ -228,9 +227,9 @@ public class ObservableAgent : IDisposable
             LogStateChange(logLevel.Value, message, newState, exception);
         }
 
-        if (shouldNotifyStateChanged && history != null)
+        if (shouldNotifyStateChanged && stateEntry != null)
         {
-            StateChanged?.Invoke(history);
+            StateChanged?.Invoke(stateEntry);
         }
     }
 
@@ -238,7 +237,7 @@ public class ObservableAgent : IDisposable
     /// Gets all state history entries
     /// </summary>
     /// <returns>Read-only list of all history entries ordered by timestamp</returns>
-    public IReadOnlyList<ObservableStateHistory> GetHistory()
+    public IReadOnlyList<ObservableStateEntry> GetHistory()
     {
         _lock.EnterReadLock();
         try
@@ -256,9 +255,9 @@ public class ObservableAgent : IDisposable
     /// </summary>
     /// <param name="count">Number of recent entries to retrieve</param>
     /// <returns>Read-only list of recent history entries</returns>
-    public IReadOnlyList<ObservableStateHistory> GetRecentHistory(int count)
+    public IReadOnlyList<ObservableStateEntry> GetRecentHistory(int count)
     {
-        if (count <= 0) return new List<ObservableStateHistory>().AsReadOnly();
+        if (count <= 0) return new List<ObservableStateEntry>().AsReadOnly();
 
         _lock.EnterReadLock();
         try
@@ -280,7 +279,7 @@ public class ObservableAgent : IDisposable
     /// Gets all exceptions from history (convenience method for backward compatibility)
     /// </summary>
     /// <returns>Read-only list of history entries that have exceptions</returns>
-    public IReadOnlyList<ObservableStateHistory> GetExceptions()
+    public IReadOnlyList<ObservableStateEntry> GetExceptions()
     {
         _lock.EnterReadLock();
         try
@@ -303,9 +302,9 @@ public class ObservableAgent : IDisposable
     /// </summary>
     /// <param name="count">Number of recent exceptions to retrieve</param>
     /// <returns>Read-only list of recent history entries with exceptions</returns>
-    public IReadOnlyList<ObservableStateHistory> GetRecentExceptions(int count)
+    public IReadOnlyList<ObservableStateEntry> GetRecentExceptions(int count)
     {
-        if (count <= 0) return new List<ObservableStateHistory>().AsReadOnly();
+        if (count <= 0) return new List<ObservableStateEntry>().AsReadOnly();
 
         _lock.EnterReadLock();
         try
@@ -327,7 +326,7 @@ public class ObservableAgent : IDisposable
     /// <summary>
     /// Clears all history
     /// </summary>
-    public void Clear()
+    public void ClearHistory()
     {
         _lock.EnterWriteLock();
         try
@@ -379,7 +378,7 @@ public class ObservableAgent : IDisposable
     /// <param name="logLevel">The Microsoft.Extensions.Logging.LogLevel to use</param>
     /// <param name="states">One or more state values to map to this log level</param>
     /// <returns>This agent instance for fluent chaining</returns>
-    public ObservableAgent SetLogLevel<TState>(LogLevel logLevel, params TState[] states)
+    public ObservableInstanceTracker SetLogLevel<TState>(LogLevel logLevel, params TState[] states)
         where TState : struct, Enum
     {
         if (states == null || states.Length == 0)
@@ -402,42 +401,42 @@ public class ObservableAgent : IDisposable
     /// <summary>
     /// Maps states to Debug log level
     /// </summary>
-    public ObservableAgent SetDebugStates<TState>(params TState[] states)
+    public ObservableInstanceTracker SetDebugStates<TState>(params TState[] states)
         where TState : struct, Enum
         => SetLogLevel(LogLevel.Debug, states);
 
     /// <summary>
     /// Maps states to Information log level
     /// </summary>
-    public ObservableAgent SetInformationStates<TState>(params TState[] states)
+    public ObservableInstanceTracker SetInformationStates<TState>(params TState[] states)
         where TState : struct, Enum
         => SetLogLevel(LogLevel.Information, states);
 
     /// <summary>
     /// Maps states to Warning log level
     /// </summary>
-    public ObservableAgent SetWarningStates<TState>(params TState[] states)
+    public ObservableInstanceTracker SetWarningStates<TState>(params TState[] states)
         where TState : struct, Enum
         => SetLogLevel(LogLevel.Warning, states);
 
     /// <summary>
     /// Maps states to Error log level
     /// </summary>
-    public ObservableAgent SetErrorStates<TState>(params TState[] states)
+    public ObservableInstanceTracker SetErrorStates<TState>(params TState[] states)
         where TState : struct, Enum
         => SetLogLevel(LogLevel.Error, states);
 
     /// <summary>
     /// Maps states to Critical log level
     /// </summary>
-    public ObservableAgent SetCriticalStates<TState>(params TState[] states)
+    public ObservableInstanceTracker SetCriticalStates<TState>(params TState[] states)
         where TState : struct, Enum
         => SetLogLevel(LogLevel.Critical, states);
 
     /// <summary>
     /// Sets the default log level for unmapped states
     /// </summary>
-    public ObservableAgent SetDefaultLogLevel(LogLevel? logLevel)
+    public ObservableInstanceTracker SetDefaultLogLevel(LogLevel? logLevel)
     {
         _defaultLogLevel = logLevel;
         return this;
@@ -487,7 +486,7 @@ public class ObservableAgent : IDisposable
     
 
     /// <summary>
-    /// Disposes resources used by this ObservableAgent
+    /// Disposes resources used by this tracker.
     /// </summary>
     public void Dispose()
     {

@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
@@ -18,7 +19,7 @@ namespace Monica.JobScheduler.WorkerPlane;
 /// Inherits from MoBackgroundService for enhanced observability with state tracking.
 /// </summary>
 public class JobWorkerManagerHostedService(
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleJobSchedulerOption> jobSchedulerOptions,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,

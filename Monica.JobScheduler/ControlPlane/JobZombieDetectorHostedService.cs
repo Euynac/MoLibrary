@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
@@ -27,7 +28,7 @@ public class JobZombieDetectorHostedService(
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IRegistrationStateManager? registrationStateManager = null

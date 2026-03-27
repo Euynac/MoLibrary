@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Events;
@@ -21,7 +22,7 @@ public class ServiceDiscoveryClientHostedService(
     IServiceDiscoveryClientInfo clientInfo,
     ILogger<ServiceDiscoveryClientHostedService> logger,
     IOptions<ModuleServiceDiscoveryOption> option,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ResiliencePipelineProvider<string> pipelineProvider)
     : MoBackgroundService(observableManager, hostedServiceOptions, logger), IServiceRegistrationCoordinator

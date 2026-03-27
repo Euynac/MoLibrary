@@ -6,7 +6,7 @@ using MudBlazor;
 namespace Monica.Framework.UI.UIObservableInstance.Models;
 
 /// <summary>
-/// UI-friendly view model for ObservableAgent instances
+/// UI-friendly view model for ObservableInstanceTracker instances
 /// </summary>
 public class ObservableInstanceViewModel
 {

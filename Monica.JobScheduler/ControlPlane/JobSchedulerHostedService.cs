@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
@@ -31,7 +32,7 @@ public class JobSchedulerHostedService(
     ILeaderElectionService leaderService,
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
 {

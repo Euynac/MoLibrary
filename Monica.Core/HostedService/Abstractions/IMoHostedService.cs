@@ -4,7 +4,7 @@ namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Interface for observable hosted services with state management and exception tracking.
-/// Now uses ObservableAgent for unified tracking.
+/// Now uses ObservableInstanceTracker for unified tracking.
 /// </summary>
 public interface IMoHostedService
 {

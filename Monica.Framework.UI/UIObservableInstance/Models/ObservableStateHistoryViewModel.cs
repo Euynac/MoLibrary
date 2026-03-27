@@ -6,7 +6,7 @@ using MudBlazor;
 namespace Monica.Framework.UI.UIObservableInstance.Models;
 
 /// <summary>
-/// UI-friendly view model for ObservableStateHistory entries
+/// UI-friendly view model for ObservableStateEntry entries
 /// </summary>
 public class ObservableStateHistoryViewModel
 {

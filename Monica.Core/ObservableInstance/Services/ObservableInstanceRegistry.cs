@@ -1,47 +1,53 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
+using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
 
-namespace Monica.Core.Features.ObservableInstance;
+namespace Monica.Core.ObservableInstance.Services;
 
 /// <summary>
-/// Default implementation of IObservableInstanceManager.
-/// Provides centralized management and query capabilities for all observable instances.
+/// Default registry for observable instance trackers.
 /// </summary>
-public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> globalOptions) : IObservableInstanceManager
+public class ObservableInstanceRegistry(IOptions<ModuleObservableInstanceOption> globalOptions) : IObservableInstanceRegistry
 {
-    private readonly ConcurrentDictionary<string, ObservableAgent> _instances = new();
+    private readonly ConcurrentDictionary<string, ObservableInstanceTracker> _instances = new();
 
     /// <summary>
-    /// Creates a new ObservableAgent instance
+    /// Registers a new observable instance tracker.
     /// </summary>
-    public ObservableAgent Create(string instanceId, Action<ObservableAgentOption>? configure = null)
+    public ObservableInstanceTracker Register(string instanceId, Action<ObservableInstanceRegistration>? configure = null)
     {
-        if (string.IsNullOrEmpty(instanceId))
-            throw new ArgumentException("Instance ID cannot be empty", nameof(instanceId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceId);
 
-        var instanceOption = new ObservableAgentOption { InstanceId = instanceId };
+        var instanceOption = new ObservableInstanceRegistration { InstanceId = instanceId };
         configure?.Invoke(instanceOption);
 
         var globalOption = globalOptions.Value;
         var maxHistorySize = instanceOption.MaxHistorySize ?? globalOption.DefaultMaxHistorySize;
 
-        var agent = new ObservableAgent(instanceId, maxHistorySize, instanceOption)
+        var tracker = new ObservableInstanceTracker(instanceId, maxHistorySize, instanceOption)
         {
             InstanceName = instanceOption.InstanceName ?? instanceId,
             InstanceType = instanceOption.InstanceType,
             InstanceKey = instanceOption.InstanceKey,
             GroupId = instanceOption.GroupId
         };
-        _instances.TryAdd(agent.InstanceId, agent);
-        return agent;
+
+        if (!_instances.TryAdd(tracker.InstanceId, tracker))
+        {
+            tracker.Dispose();
+            throw new InvalidOperationException($"Observable instance '{tracker.InstanceId}' is already registered.");
+        }
+
+        return tracker;
     }
 
    
     /// <summary>
     /// Gets all registered observable instances
     /// </summary>
-    public IReadOnlyList<ObservableAgent> GetAllInstances()
+    public IReadOnlyList<ObservableInstanceTracker> GetAllInstances()
     {
         return _instances.Values.ToList();
     }
@@ -49,7 +55,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// <summary>
     /// Gets an observable instance by instance ID
     /// </summary>
-    public ObservableAgent? GetInstance(string instanceId)
+    public ObservableInstanceTracker? GetById(string instanceId)
     {
         return _instances.GetValueOrDefault(instanceId);
     }
@@ -57,7 +63,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// <summary>
     /// Gets all instances by type
     /// </summary>
-    public IReadOnlyList<ObservableAgent> GetInstancesByType(Type type)
+    public IReadOnlyList<ObservableInstanceTracker> GetInstancesByType(Type type)
     {
         return _instances.Values
             .Where(a => a.InstanceType == type)
@@ -67,7 +73,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// <summary>
     /// Gets all instances by group ID
     /// </summary>
-    public IReadOnlyList<ObservableAgent> GetInstancesByGroup(string groupId)
+    public IReadOnlyList<ObservableInstanceTracker> GetInstancesByGroup(string groupId)
     {
         return _instances.Values
             .Where(a => a.GroupId == groupId)
@@ -77,7 +83,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// <summary>
     /// Gets all instances that have exceptions
     /// </summary>
-    public IReadOnlyList<ObservableAgent> GetInstancesWithExceptions()
+    public IReadOnlyList<ObservableInstanceTracker> GetInstancesWithExceptions()
     {
         return _instances.Values
             .Where(a => a.HasExceptions)
@@ -87,7 +93,7 @@ public class ObservableInstanceManager(IOptions<ModuleObservableInstanceOption> 
     /// <summary>
     /// Gets all instances in a specific state (for typed states)
     /// </summary>
-    public IReadOnlyList<ObservableAgent> GetInstancesByState<TState>(TState state) where TState : notnull
+    public IReadOnlyList<ObservableInstanceTracker> GetInstancesByState<TState>(TState state) where TState : notnull
     {
         return _instances.Values
             .Where(a => a.CurrentState != null && a.CurrentState.Equals(state))

@@ -1,4 +1,6 @@
-using Monica.Core.Features.ObservableInstance;
+
+using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Models;
 using Monica.DataChannel.CoreCommunication;
 using Monica.DataChannel.Interfaces;
 using Monica.Tool.Extensions;
@@ -54,12 +56,12 @@ public class DataPipeline : IObservableInstance
     /// <summary>
     /// 可观测代理，用于收集和管理管道运行中的状态和异常
     /// </summary>
-    public ObservableAgent ObservableAgent { get; set; } = null!;
+    public ObservableInstanceTracker ObservableTracker { get; set; } = null!;
 
     /// <summary>
     /// 是否存在异常
     /// </summary>
-    public bool HasExceptions => ObservableAgent?.HasExceptions ?? false;
+    public bool HasExceptions => ObservableTracker?.HasExceptions ?? false;
 
     /// <summary>
     /// 初始化数据管道的新实例
@@ -73,7 +75,7 @@ public class DataPipeline : IObservableInstance
         IPipeEndpoint innerEndpoint,
         IPipeEndpoint outerEndpoint,
         string id,
-        IObservableInstanceManager observableManager,
+        IObservableInstanceRegistry observableManager,
         string? groupId = null)
     {
         InnerEndpoint = innerEndpoint;
@@ -82,7 +84,7 @@ public class DataPipeline : IObservableInstance
         GroupId = groupId;
 
         // 使用管理器创建可观测代理
-        ObservableAgent = observableManager.Create(id, opt =>
+        ObservableTracker = observableManager.Register(id, opt =>
         {
             opt.MaxHistorySize = DataChannelCentral.Setting.RecentExceptionToKeep;
             opt.InstanceName = id;
@@ -175,7 +177,7 @@ public class DataPipeline : IObservableInstance
     public void CollectException(Exception exception, object source, string? description = null)
     {
         var message = description ?? exception.Message;
-        ObservableAgent.RecordState(message, PipelineState.Error, exception);
+        ObservableTracker.RecordState(message, PipelineState.Error, exception);
     }
 
     /// <summary>
@@ -185,7 +187,7 @@ public class DataPipeline : IObservableInstance
     /// <param name="message">状态描述</param>
     public void RecordState(PipelineState state, string message)
     {
-        ObservableAgent.RecordState(message, state);
+        ObservableTracker.RecordState(message, state);
     }
 
     /// <summary>
@@ -195,23 +197,23 @@ public class DataPipeline : IObservableInstance
     /// <param name="message">异常描述</param>
     public void RecordException(Exception exception, string message)
     {
-        ObservableAgent.RecordState(message, PipelineState.Error, exception);
+        ObservableTracker.RecordState(message, PipelineState.Error, exception);
     }
 
     /// <summary>
     /// 获取所有异常记录（向后兼容）
     /// </summary>
-    public IReadOnlyList<ObservableStateHistory> GetExceptions()
+    public IReadOnlyList<ObservableStateEntry> GetExceptions()
     {
-        return ObservableAgent.GetExceptions();
+        return ObservableTracker.GetExceptions();
     }
 
     /// <summary>
     /// 获取最近的异常记录（向后兼容）
     /// </summary>
-    public IReadOnlyList<ObservableStateHistory> GetRecentExceptions(int count)
+    public IReadOnlyList<ObservableStateEntry> GetRecentExceptions(int count)
     {
-        return ObservableAgent.GetRecentExceptions(count);
+        return ObservableTracker.GetRecentExceptions(count);
     }
 
     /// <summary>
@@ -301,7 +303,7 @@ public class DataPipeline : IObservableInstance
     internal async Task DisposeAsync()
     {
         await GetEndpoints().OfType<ICommunicationCore>().DoAsync(async p => await p.DisposeAsync());
-        ObservableAgent?.Dispose();
+        ObservableTracker?.Dispose();
         IsInitialized = false;
     }
 }

@@ -2,25 +2,27 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
 
 namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Base class for observable IHostedService implementations with built-in state management and exception tracking.
-/// Now uses ObservableAgent for unified tracking.
+/// Now uses ObservableInstanceTracker for unified tracking.
 /// </summary>
 public abstract class MoHostedService : IHostedService, IMoHostedService
 {
     protected readonly ILogger Logger;
     private readonly ModuleHostedServiceOption _options;
-    private readonly IObservableInstanceManager _observableManager;
+    private readonly IObservableInstanceRegistry _observableManager;
     private HostedServiceRuntimeInfo? _runtimeInfo;
 
     public MoHostedService(
-        IObservableInstanceManager observableManager,
+        IObservableInstanceRegistry observableManager,
         IOptions<ModuleHostedServiceOption> options,
         ILogger? logger = null)
     {
@@ -56,8 +58,8 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     /// </summary>
     private HostedServiceRuntimeInfo CreateRuntimeInfo()
     {
-        var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        var agent = _observableManager.Create(agentId, opt =>
+        var trackerId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
+        var tracker = _observableManager.Register(trackerId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
@@ -65,10 +67,9 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
             opt.Logger = Logger;
         });
 
-        // Configure log level mappings on the agent
-        ConfigureStateLogLevels(agent);
+        ConfigureStateLogLevels(tracker);
 
-        return new HostedServiceRuntimeInfo(agent)
+        return new HostedServiceRuntimeInfo(tracker)
         {
             HeartbeatInterval = HeartbeatInterval
         };
@@ -78,27 +79,27 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     /// Configures default log level mappings for HostedServiceState.
     /// Override to customize per service.
     /// </summary>
-    protected virtual void ConfigureStateLogLevels(ObservableAgent agent)
+    protected virtual void ConfigureStateLogLevels(ObservableInstanceTracker tracker)
     {
-        agent.SetDebugStates(HostedServiceState.NotStarted, HostedServiceState.Starting);
-        agent.SetInformationStates(
+        tracker.SetDebugStates(HostedServiceState.NotStarted, HostedServiceState.Starting);
+        tracker.SetInformationStates(
             HostedServiceState.Running,
             HostedServiceState.Executing,
             HostedServiceState.WaitingDependency,
             HostedServiceState.Stopping,
             HostedServiceState.Stopped
         );
-        agent.SetWarningStates(HostedServiceState.Degraded);
-        agent.SetErrorStates(HostedServiceState.Faulted);
+        tracker.SetWarningStates(HostedServiceState.Degraded);
+        tracker.SetErrorStates(HostedServiceState.Faulted);
     }
 
-    /// <inheritdoc cref="ObservableAgent.RecordState" />
+    /// <inheritdoc cref="ObservableInstanceTracker.RecordState" />
     protected void RecordState(string message,
         HostedServiceState? newState,
         Exception? exception = null,
         LogLevel? logLevel = null)
     {
-        RuntimeInfo.Agent.RecordState(message, newState, exception, logLevel);
+        RuntimeInfo.Tracker.RecordState(message, newState, exception, logLevel);
     }
 
     /// <summary>
@@ -114,7 +115,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
             await OnStartingAsync(cancellationToken);
 
             // Only transition to Running if not already unhealthy
-            if (!RuntimeInfo.Agent.IsUnhealthy())
+            if (!RuntimeInfo.Tracker.IsUnhealthy())
             {
                 RecordState("Service started successfully", HostedServiceState.Running);
             }

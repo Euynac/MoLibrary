@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
 
-namespace Monica.Core.Features.ObservableInstance;
+namespace Monica.Core.ObservableInstance.Models;
 
 /// <summary>
 /// Represents a single state change entry in the observable history.
 /// Unifies state tracking and exception tracking.
 /// </summary>
-public class ObservableStateHistory
+public class ObservableStateEntry
 {
     /// <summary>
     /// Gets the per-instance sequence number of this history entry.

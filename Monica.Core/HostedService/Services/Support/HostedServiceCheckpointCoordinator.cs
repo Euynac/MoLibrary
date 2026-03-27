@@ -1,9 +1,10 @@
 using Monica.Core.Extensions;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Models;
 using Monica.Core.HostedService.Models.Internal;
+using Monica.Core.ObservableInstance.Models;
 
 namespace Monica.Core.HostedService.Services.Support;
 
@@ -17,7 +18,7 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
     {
         ArgumentNullException.ThrowIfNull(service);
 
-        service.RuntimeInfo.Agent.StateChanged += stateChange => OnServiceStateChanged(service.GetType(), stateChange);
+        service.RuntimeInfo.Tracker.StateChanged += stateChange => OnServiceStateChanged(service.GetType(), stateChange);
 
         if (service.RuntimeInfo.CurrentState == HostedServiceState.Faulted)
         {
@@ -132,7 +133,7 @@ internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistr
         }
     }
 
-    private void OnServiceStateChanged(Type serviceType, ObservableStateHistory stateChange)
+    private void OnServiceStateChanged(Type serviceType, ObservableStateEntry stateChange)
     {
         if (stateChange.CurrentState is not HostedServiceState.Faulted)
         {

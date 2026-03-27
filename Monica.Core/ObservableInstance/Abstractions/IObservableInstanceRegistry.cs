@@ -1,46 +1,48 @@
-namespace Monica.Core.Features.ObservableInstance;
+using Monica.Core.ObservableInstance.Models;
+
+namespace Monica.Core.ObservableInstance.Abstractions;
 
 /// <summary>
 /// Provides centralized management and query capabilities for all observable instances.
 /// Replaces IExceptionPoolManager functionality.
 /// </summary>
-public interface IObservableInstanceManager
+public interface IObservableInstanceRegistry
 {
     /// <summary>
-    /// Creates a new ObservableAgent instance
+    /// Registers a new observable instance tracker.
     /// </summary>
     /// <param name="instanceId">Unique instance identifier</param>
     /// <param name="configure">Configuration delegate (optional)</param>
-    /// <returns>Configured ObservableAgent instance</returns>
-    ObservableAgent Create(string instanceId, Action<ObservableAgentOption>? configure = null);
+    /// <returns>The registered tracker</returns>
+    ObservableInstanceTracker Register(string instanceId, Action<ObservableInstanceRegistration>? configure = null);
 
     /// <summary>
     /// Gets all registered observable instances
     /// </summary>
-    IReadOnlyList<ObservableAgent> GetAllInstances();
+    IReadOnlyList<ObservableInstanceTracker> GetAllInstances();
 
     /// <summary>
     /// Gets an observable instance by instance ID
     /// </summary>
-    ObservableAgent? GetInstance(string instanceId);
+    ObservableInstanceTracker? GetById(string instanceId);
 
     /// <summary>
     /// Gets all instances by type
     /// </summary>
-    IReadOnlyList<ObservableAgent> GetInstancesByType(Type type);
+    IReadOnlyList<ObservableInstanceTracker> GetInstancesByType(Type type);
 
     /// <summary>
     /// Gets all instances by group ID
     /// </summary>
-    IReadOnlyList<ObservableAgent> GetInstancesByGroup(string groupId);
+    IReadOnlyList<ObservableInstanceTracker> GetInstancesByGroup(string groupId);
 
     /// <summary>
     /// Gets all instances that have exceptions
     /// </summary>
-    IReadOnlyList<ObservableAgent> GetInstancesWithExceptions();
+    IReadOnlyList<ObservableInstanceTracker> GetInstancesWithExceptions();
 
     /// <summary>
     /// Gets all instances in a specific state (for typed states)
     /// </summary>
-    IReadOnlyList<ObservableAgent> GetInstancesByState<TState>(TState state) where TState : notnull;
+    IReadOnlyList<ObservableInstanceTracker> GetInstancesByState<TState>(TState state) where TState : notnull;
 }

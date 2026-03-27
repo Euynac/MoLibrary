@@ -4,9 +4,10 @@ using Dapr.Messaging.PublishSubscribe;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Models;
 using Monica.Core.JsonSerialization.Abstractions;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.Dapr.Interfaces;
 using Monica.EventBus.Abstractions;
@@ -26,7 +27,7 @@ internal class DaprEventBusSubscriptionHostedService(
     ISubscriptionManager subscriptionManager, 
     IHostApplicationLifetime applicationLifetime,
     IMoDistributedEventBus eventBus,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,

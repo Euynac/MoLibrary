@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
@@ -23,7 +24,7 @@ public class LongIntervalSchedulerService(
     IJobDefinitionCacheService cacheService,
     IMoJobMetadataRepository metadataRepository,
     IOptions<ModuleJobSchedulerOption> options,
-    IObservableInstanceManager observableManager,
+    IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ILogger<LongIntervalSchedulerService> logger)
     : MoBackgroundService(observableManager, hostedServiceOptions, logger)

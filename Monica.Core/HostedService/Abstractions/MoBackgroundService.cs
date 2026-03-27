@@ -2,8 +2,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.ObservableInstance;
+
 using Monica.Core.HostedService.Models;
+using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 
@@ -12,13 +14,13 @@ namespace Monica.Core.HostedService.Abstractions;
 /// <summary>
 /// Base class for observable BackgroundService implementations with built-in state management,
 /// exception tracking, and heartbeat monitoring.
-/// Now uses ObservableAgent for unified tracking.
+/// Now uses ObservableInstanceTracker for unified tracking.
 /// </summary>
 public abstract class MoBackgroundService : BackgroundService, IMoHostedService
 {
     protected readonly ILogger Logger;
     private readonly ModuleHostedServiceOption _options;
-    private readonly IObservableInstanceManager _observableManager;
+    private readonly IObservableInstanceRegistry _observableManager;
     private HostedServiceRuntimeInfo? _runtimeInfo;
 
     // Heartbeat mechanism
@@ -26,7 +28,7 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     private Task? _heartbeatTask;
 
     public MoBackgroundService(
-        IObservableInstanceManager observableManager,
+        IObservableInstanceRegistry observableManager,
         IOptions<ModuleHostedServiceOption> options,
         ILogger? logger = null)
     {
@@ -62,8 +64,8 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     /// </summary>
     private HostedServiceRuntimeInfo CreateRuntimeInfo()
     {
-        var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        var agent = _observableManager.Create(agentId, opt =>
+        var trackerId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
+        var tracker = _observableManager.Register(trackerId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
@@ -71,10 +73,9 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
             opt.Logger = Logger;
         });
 
-        // Configure log level mappings on the agent
-        ConfigureStateLogLevels(agent);
+        ConfigureStateLogLevels(tracker);
 
-        return new HostedServiceRuntimeInfo(agent)
+        return new HostedServiceRuntimeInfo(tracker)
         {
             HeartbeatInterval = HeartbeatInterval
         };
@@ -84,27 +85,27 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     /// Configures default log level mappings for HostedServiceState.
     /// Override to customize per service.
     /// </summary>
-    protected virtual void ConfigureStateLogLevels(ObservableAgent agent)
+    protected virtual void ConfigureStateLogLevels(ObservableInstanceTracker tracker)
     {
-        agent.SetDebugStates(HostedServiceState.NotStarted, HostedServiceState.Starting);
-        agent.SetInformationStates(
+        tracker.SetDebugStates(HostedServiceState.NotStarted, HostedServiceState.Starting);
+        tracker.SetInformationStates(
             HostedServiceState.Running,
             HostedServiceState.Executing,
             HostedServiceState.WaitingDependency,
             HostedServiceState.Stopping,
             HostedServiceState.Stopped
         );
-        agent.SetWarningStates(HostedServiceState.Degraded);
-        agent.SetErrorStates(HostedServiceState.Faulted);
+        tracker.SetWarningStates(HostedServiceState.Degraded);
+        tracker.SetErrorStates(HostedServiceState.Faulted);
     }
 
-    /// <inheritdoc cref="ObservableAgent.RecordState" />
+    /// <inheritdoc cref="ObservableInstanceTracker.RecordState" />
     protected void RecordState(string message,
         HostedServiceState? newState = null,
         Exception? exception = null,
         LogLevel? logLevel = null)
     {
-        RuntimeInfo.Agent.RecordState(message, newState, exception, logLevel);
+        RuntimeInfo.Tracker.RecordState(message, newState, exception, logLevel);
     }
 
     /// <summary>

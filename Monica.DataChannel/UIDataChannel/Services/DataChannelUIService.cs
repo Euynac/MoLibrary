@@ -34,8 +34,8 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
                 IsInitialized = channel.Pipe.IsInitialized,
                 IsInitializing = channel.Pipe.IsInitializing,
                 HasExceptions = channel.Pipe.HasExceptions,
-                ExceptionCount = channel.Pipe.ObservableAgent.ExceptionCount,
-                TotalExceptionCount = channel.Pipe.ObservableAgent.TotalExceptions
+                ExceptionCount = channel.Pipe.ObservableTracker.ExceptionCount,
+                TotalExceptionCount = channel.Pipe.ObservableTracker.TotalExceptions
             }).ToList();
 
             return await Task.FromResult(Res.Ok(channels));
@@ -94,10 +94,10 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
             var result = new ChannelExceptionInfo
             {
                 ChannelId = id,
-                PipelineId = channel.Pipe.ObservableAgent.InstanceId,
-                CurrentExceptions = channel.Pipe.ObservableAgent.ExceptionCount,
-                TotalExceptions = channel.Pipe.ObservableAgent.TotalStateChanges,
-                MaxPoolSize = channel.Pipe.ObservableAgent.MaxHistorySize,
+                PipelineId = channel.Pipe.ObservableTracker.InstanceId,
+                CurrentExceptions = channel.Pipe.ObservableTracker.ExceptionCount,
+                TotalExceptions = channel.Pipe.ObservableTracker.TotalStateChanges,
+                MaxPoolSize = channel.Pipe.ObservableTracker.MaxHistorySize,
                 HasExceptions = channel.Pipe.HasExceptions,
                 Exceptions = exceptions.Select(ex => new ExceptionDetailInfo
                 {
@@ -134,15 +134,15 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
             {
                 TotalChannels = channels.Count,
                 ChannelsWithExceptions = channels.Count(c => c.Pipe.HasExceptions),
-                TotalCurrentExceptions = channels.Sum(c => c.Pipe.ObservableAgent.ExceptionCount),
-                TotalHistoricalExceptions = channels.Sum(c => c.Pipe.ObservableAgent.TotalStateChanges),
+                TotalCurrentExceptions = channels.Sum(c => c.Pipe.ObservableTracker.ExceptionCount),
+                TotalHistoricalExceptions = channels.Sum(c => c.Pipe.ObservableTracker.TotalStateChanges),
                 ChannelSummaries = channels.Select(channel => new ChannelSummaryInfo
                 {
                     ChannelId = channel.Id,
-                    PipelineId = channel.Pipe.ObservableAgent.InstanceId,
-                    CurrentExceptionCount = channel.Pipe.ObservableAgent.ExceptionCount,
-                    TotalExceptionCount = channel.Pipe.ObservableAgent.TotalStateChanges,
-                    MaxPoolSize = channel.Pipe.ObservableAgent.MaxHistorySize,
+                    PipelineId = channel.Pipe.ObservableTracker.InstanceId,
+                    CurrentExceptionCount = channel.Pipe.ObservableTracker.ExceptionCount,
+                    TotalExceptionCount = channel.Pipe.ObservableTracker.TotalStateChanges,
+                    MaxPoolSize = channel.Pipe.ObservableTracker.MaxHistorySize,
                     HasExceptions = channel.Pipe.HasExceptions,
                     LatestException = channel.Pipe.GetRecentExceptions(1).FirstOrDefault()?.Timestamp
                 }).ToList()
@@ -172,7 +172,7 @@ public class DataChannelUIService(IDataChannelManager manager, ILogger<DataChann
                 return Res.Fail("未找到指定的DataChannel");
             }
 
-            channel.Pipe.ObservableAgent.Clear();
+            channel.Pipe.ObservableTracker.ClearHistory();
             return await Task.FromResult(Res.Ok("异常信息已清空"));
         }
         catch (Exception ex)
