@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-PROJECT_MARKERS = (".git", ".codex", "AGENTS.md")
+PROJECT_MARKERS = (".git", ".claude", "CLAUDE.md")
 ROOT_PATTERN = re.compile(r"^(?P<stamp>\d{8}-\d{6})-agent-session$")
 CLOSED_PREFIX = "(Closed)"
 

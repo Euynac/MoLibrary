@@ -10,7 +10,11 @@ for %%I in ("%SCRIPT_DIR%\..") do set "ROOT_DIR=%%~fI"
 set "CONFIG_FILE=%ROOT_DIR%\.agentfolder"
 set "SOURCE_COMMANDS=%ROOT_DIR%\%CURRENT_AGENT%\commands"
 set "SOURCE_SKILLS=%ROOT_DIR%\%CURRENT_AGENT%\skills"
+call :get_doc_name "%CURRENT_AGENT%" SOURCE_DOC_NAME
+set "SOURCE_DOC_FILE=%ROOT_DIR%\%SOURCE_DOC_NAME%"
 set /a syncCount=0
+set /a docSyncCount=0
+set "SYNCED_DOC_NAMES=|"
 
 if not exist "%CONFIG_FILE%" (
     echo [error] Missing config file: %CONFIG_FILE%
@@ -27,8 +31,14 @@ if not exist "%SOURCE_SKILLS%" (
     exit /b 1
 )
 
+if not exist "%SOURCE_DOC_FILE%" (
+    echo [error] Missing source doc file: %SOURCE_DOC_FILE%
+    exit /b 1
+)
+
 echo Source agent: %CURRENT_AGENT%
 echo Root folder: %ROOT_DIR%
+echo Source doc: %SOURCE_DOC_NAME%
 
 for /f "usebackq tokens=* delims=" %%L in ("%CONFIG_FILE%") do (
     set "line=%%L"
@@ -81,6 +91,32 @@ for /f "usebackq tokens=* delims=" %%L in ("%CONFIG_FILE%") do (
                     exit /b 1
                 )
 
+                call :get_doc_name "!TARGET_AGENT!" TARGET_DOC_NAME
+
+                call :replace_in_path "!SYNC_TARGET_DIR!\commands" "%CURRENT_AGENT%" "!TARGET_AGENT!" "%SOURCE_DOC_NAME%" "!TARGET_DOC_NAME!"
+                if errorlevel 1 exit /b 1
+
+                call :replace_in_path "!SYNC_TARGET_DIR!\skills" "%CURRENT_AGENT%" "!TARGET_AGENT!" "%SOURCE_DOC_NAME%" "!TARGET_DOC_NAME!"
+                if errorlevel 1 exit /b 1
+
+                if /I not "!TARGET_DOC_NAME!"=="%SOURCE_DOC_NAME%" (
+                    echo "!SYNCED_DOC_NAMES!" | findstr /I /L /C:"|!TARGET_DOC_NAME!|" >nul
+                    if errorlevel 1 (
+                        copy /y "%SOURCE_DOC_FILE%" "%ROOT_DIR%\!TARGET_DOC_NAME!" >nul
+                        if errorlevel 1 (
+                            echo [error] Failed to copy doc file to !TARGET_DOC_NAME!.
+                            exit /b 1
+                        )
+
+                        call :replace_in_path "%ROOT_DIR%\!TARGET_DOC_NAME!" "%CURRENT_AGENT%" "%CURRENT_AGENT%" "%SOURCE_DOC_NAME%" "!TARGET_DOC_NAME!"
+                        if errorlevel 1 exit /b 1
+
+                        set "SYNCED_DOC_NAMES=!SYNCED_DOC_NAMES!!TARGET_DOC_NAME!|"
+                        set /a docSyncCount+=1
+                        echo [doc] !TARGET_DOC_NAME!
+                    )
+                )
+
                 set /a syncCount+=1
                 echo [ok] !TARGET_AGENT!
             )
@@ -93,5 +129,46 @@ if !syncCount! EQU 0 (
     exit /b 0
 )
 
-echo Sync completed. Updated !syncCount! agent folder(s).
+echo Sync completed. Updated !syncCount! agent folder(s) and !docSyncCount! doc file(s).
+exit /b 0
+
+:get_doc_name
+set "%~2=AGENTS.md"
+if /I "%~1"==".claude" set "%~2=CLAUDE.md"
+exit /b 0
+
+:replace_in_path
+set "TARGET_PATH=%~1"
+set "SOURCE_AGENT_NAME=%~2"
+set "TARGET_AGENT_NAME=%~3"
+set "SOURCE_DOC_BASENAME=%~4"
+set "TARGET_DOC_BASENAME=%~5"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$path = [System.IO.Path]::GetFullPath($env:TARGET_PATH);" ^
+    "$sourceAgent = $env:SOURCE_AGENT_NAME;" ^
+    "$targetAgent = $env:TARGET_AGENT_NAME;" ^
+    "$sourceDoc = $env:SOURCE_DOC_BASENAME;" ^
+    "$targetDoc = $env:TARGET_DOC_BASENAME;" ^
+    "$replacements = New-Object 'System.Collections.Specialized.OrderedDictionary';" ^
+    "if (-not [string]::IsNullOrEmpty($sourceAgent) -and -not [string]::IsNullOrEmpty($targetAgent) -and $sourceAgent -ne $targetAgent) { $replacements[$sourceAgent] = $targetAgent }" ^
+    "$replacements[$sourceDoc] = $targetDoc;" ^
+    "if ($sourceDoc -eq 'AGENTS.md') { $replacements['AGNETS.md'] = $targetDoc }" ^
+    "if ($sourceDoc -eq 'CLAUDE.md') { $replacements['CLAUD.md'] = $targetDoc }" ^
+    "$allowedExtensions = @('.md', '.json', '.ps1', '.py', '.razor', '.sh', '.yaml', '.yml', '.bat', '.txt');" ^
+    "if (Test-Path -LiteralPath $path -PathType Leaf) { $files = @(Get-Item -LiteralPath $path) }" ^
+    "elseif (Test-Path -LiteralPath $path -PathType Container) { $files = Get-ChildItem -LiteralPath $path -Recurse -File | Where-Object { $allowedExtensions -contains $_.Extension.ToLowerInvariant() } }" ^
+    "else { throw ('Path not found: ' + $path) }" ^
+    "foreach ($file in $files) {" ^
+    "    $content = [System.IO.File]::ReadAllText($file.FullName);" ^
+    "    $updated = $content;" ^
+    "    foreach ($entry in $replacements.GetEnumerator()) { $updated = $updated.Replace([string]$entry.Key, [string]$entry.Value) }" ^
+    "    if ($updated -ne $content) { [System.IO.File]::WriteAllText($file.FullName, $updated) }" ^
+    "}"
+
+if errorlevel 1 (
+    echo [error] Failed to replace text in %TARGET_PATH%
+    exit /b 1
+)
+
 exit /b 0

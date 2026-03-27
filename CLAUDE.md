@@ -78,6 +78,12 @@ When handling questions around how to work with native Microsoft technologies, s
 - **Optimization First**: Always prioritize the most optimal design and implementation approaches. Proactively identify and propose refactoring or redesign opportunities when improvements are possible.
 - **Testing Policy**: Unit testing is not required during this phase. Do not include testing-related tasks in planning or implementation unless explicitly requested.
 
+## Build Warning Policy
+
+- The entire Monica solution must build with **zero warnings**.
+- If any warning appears while working on the current task, you **MUST** resolve it before finishing the task.
+- Do not leave warnings for later cleanup, and do not silence them with suppression or `NoWarn` unless the user explicitly requires that approach.
+
 ## WSL Environment - dotnet Build Path Issue
 
 **Environment**: This project runs in WSL (Windows Subsystem for Linux) where dotnet CLI is a Windows binary accessed through WSL interoperability.

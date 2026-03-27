@@ -1,6 +1,6 @@
 ---
 name: mo-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", or needs guidance on Monica module architecture, the unified response model Res, module registration patterns, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
 version: 1.0.0
 ---
 
@@ -154,11 +154,11 @@ public class ModuleExampleGuide
 4. **Strong Typing**: Leverages C# type system for compile-time safety
 5. **Performance Optimization**: Reduces reflection usage through cached metadata
 
-## Unified Response Model (Res)
+## Unified Result Model (Res)
 
-**Scope**: `Res`/`Res<T>` is used in **Facades** — the public entry points defined in infrastructure modules that serve both Minimal API and UI consumers. Internal services within modules must use standard .NET patterns (direct return types + exceptions).
+**Scope**: `Res`/`Res<T>` is the lightweight result-envelope model used in Monica entry points that intentionally follow the `IsFailed` consumption pattern. In the current repository guidance, prefer `Res` for UI-facing flows and keep internal infrastructure services on standard .NET returns plus exceptions.
 
-Facade methods use the unified response model `Res<T>` or `Res` for return values. UI modules inject Facades directly — no separate UI service layer needed for data access.
+Use `Res<T>` or `Res` only at the boundary that is meant to expose Monica's result-envelope pattern. Do not wrap every internal service in `Res` just for uniformity.
 
 ### Quick Reference
 
@@ -184,12 +184,12 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 
 ### Important Rules
 
-1. **Facade methods** must return `Res<T>` or `Res` — never return null
+1. **Result-envelope entry points** must return `Res<T>` or `Res` — never return null
 2. **Internal services** (in `Services/`) must use standard return types and throw exceptions — do not use `Res`
-3. **Use implicit conversions** for cleaner code when returning success or error in Facades
+3. **Use implicit conversions** for cleaner code when returning success or error from result-envelope entry points
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
-5. **Required using**: Include `using Monica.Tool.MoResponse;` in Facade files
-6. **UI modules inject Facades directly** — no separate UI service layer needed for data access
+5. **Required using**: Include `using Monica.Tool.Results;` where `Res` is used
+6. **Typed error details**: Use `AppendExtraInfo("error", payload)` rather than introducing a separate `ResError` model
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 
@@ -258,13 +258,13 @@ For detailed hosted service patterns including `CoordinatedLeaderService` for le
 
 ### Reference Files
 
-- **`references/res-type-guide.md`** - Complete Res type documentation with implicit conversions and best practices
+- **`references/res-type-guide.md`** - Complete Res result-envelope documentation with implicit conversions and best practices
 - **`references/module-patterns.md`** - Module naming conventions, file structure, and implementation patterns
 - **`references/hosted-service-guide.md`** - MoBackgroundService patterns, RecordState usage, and CoordinatedLeaderService
 
 ### Source Code Reference
 
-- **Res type definition**: `Monica.Tool/MoResponse/Res.cs`
+- **Res type definition**: `Monica.Tool/Results/Res.cs`
 - **Module base class**: `Monica.Core/Module/MoModule.cs`
 - **MoBackgroundService**: `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
 - **CoordinatedLeaderService**: `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`

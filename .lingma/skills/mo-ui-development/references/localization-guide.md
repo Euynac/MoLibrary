@@ -264,22 +264,22 @@ public class StateStoreResource { }
 
 **Basic validation:**
 ```bash
-python .codex/skills/mo-ui-development/scripts/validate_localization.py
+python .lingma/skills/mo-ui-development/scripts/validate_localization.py
 ```
 
 **Summary only:**
 ```bash
-python .codex/skills/mo-ui-development/scripts/validate_localization.py --summary
+python .lingma/skills/mo-ui-development/scripts/validate_localization.py --summary
 ```
 
 **Strict mode** (treat unused keys as errors):
 ```bash
-python .codex/skills/mo-ui-development/scripts/validate_localization.py --strict
+python .lingma/skills/mo-ui-development/scripts/validate_localization.py --strict
 ```
 
 **JSON output** (for CI/CD):
 ```bash
-python .codex/skills/mo-ui-development/scripts/validate_localization.py --json
+python .lingma/skills/mo-ui-development/scripts/validate_localization.py --json
 ```
 
 ### Validation Checks
@@ -326,7 +326,7 @@ Summary:
 ```yaml
 - name: Validate Localization
   run: |
-    python .codex/skills/mo-ui-development/scripts/validate_localization.py --strict --json
+    python .lingma/skills/mo-ui-development/scripts/validate_localization.py --strict --json
 ```
 
 ## Troubleshooting
@@ -351,7 +351,7 @@ Summary:
 1. Keep page-local text in the module resource JSON files
 2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
 3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
-4. Re-run `python .codex/skills/mo-ui-development/scripts/validate_localization.py`
+4. Re-run `python .lingma/skills/mo-ui-development/scripts/validate_localization.py`
 
 ### Parameterized String Shows {0}
 

@@ -217,7 +217,7 @@ See:
 
 ## Service Error Handling in Components
 
-For `Res/Res<T>` usage and `IsFailed` pattern in UI service calls, use the `mo-development` skill.
+For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI service calls, use the `mo-development` skill.
 
 ## References
 

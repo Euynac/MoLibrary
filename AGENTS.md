@@ -9,12 +9,13 @@ Proactively invoke these skills when encountering relevant development patterns:
 ### /mo-development
 
 Invoke when:
-- Writing UI service layer methods with `Res` or `Res<T>` return types
+- Writing Facade methods with `Res` or `Res<T>` return types
 - Uncertain about Res implicit conversions or IsFailed pattern
-- Determining whether a service should use Res (UI) or standard returns (infrastructure)
+- Determining whether code belongs in Facades (Res<T>) or internal Services (exceptions)
 - Creating modules (Module{Name}, Option, Guide, BuilderExtensions)
 - Configuring module registration or dependencies
 - Implementing hosted services (MoBackgroundService, RecordState)
+- Structuring module folders (Abstractions, Models, Facades, Services, Providers)
 
 ### /mo-ui-development
 
@@ -59,9 +60,11 @@ When handling questions around how to work with native Microsoft technologies, s
 
 ## Res Usage Policy
 
-- `Res` and `Res<T>` are **only for UI module-related services** — services directly consumed by Blazor components or UI layers where the `IsFailed` pattern is used for error handling in the view.
-- **Non-UI / infrastructure modules** must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `FileNotFoundException`, `InvalidOperationException`) for error cases.
-- Do not wrap returns in `Res<T>` in infrastructure modules just for consistency — use it only where the UI consumption pattern requires it.
+- `Res` and `Res<T>` are used in **Facades** — the public entry points defined in infrastructure modules that serve both Minimal API and UI consumers.
+- Facades are defined in the **infrastructure module** (e.g., `Monica.AI/RAG/Facades/RAGFacade.cs`), not in UI modules. UI modules inject Facades directly.
+- **Internal services** (`Services/`) must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `InvalidOperationException`) for error cases.
+- **Other infrastructure modules** do not consume Facades — they depend on `Abstractions/` interfaces instead.
+- See the `mo-architecture` skill for the full architecture specification.
 
 ## Dependency Injection Guidelines
 
