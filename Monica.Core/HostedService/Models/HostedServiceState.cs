@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.HostedServices.Models;
+namespace Monica.Core.HostedService.Models;
 
 /// <summary>
 /// Represents the current state of a hosted service

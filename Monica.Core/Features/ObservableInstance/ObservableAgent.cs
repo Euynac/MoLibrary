@@ -4,7 +4,7 @@ namespace Monica.Core.Features.ObservableInstance;
 
 /// <summary>
 /// Provides observable tracking for any instance with state changes, exceptions, and history.
-/// Replaces both ExceptionPool and HostedServiceObservableInfo internal state history functionality.
+/// Replaces both ExceptionPool and HostedServiceRuntimeInfo internal state history functionality.
 /// </summary>
 public class ObservableAgent : IDisposable
 {

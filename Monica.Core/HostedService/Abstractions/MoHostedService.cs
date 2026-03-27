@@ -2,12 +2,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.HostedServices.Interfaces;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Models;
 using Monica.Modules;
 
-namespace Monica.Core.Features.HostedServices;
+namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Base class for observable IHostedService implementations with built-in state management and exception tracking.
@@ -17,17 +16,17 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
 {
     protected readonly ILogger Logger;
     private readonly ModuleHostedServiceOption _options;
-    private readonly IObservableInstanceManager observableManager;
+    private readonly IObservableInstanceManager _observableManager;
+    private HostedServiceRuntimeInfo? _runtimeInfo;
 
     public MoHostedService(
         IObservableInstanceManager observableManager,
         IOptions<ModuleHostedServiceOption> options,
         ILogger? logger = null)
     {
-        this.observableManager = observableManager;
+        _observableManager = observableManager;
         Logger = logger ?? NullLogger.Instance;
         _options = options.Value;
-        InitializeObservableInfo();
     }
 
     // IMoHostedService implementation
@@ -35,7 +34,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     /// <summary>
     /// Gets the name of the service for identification purposes
     /// </summary>
-    public abstract string ServiceName { get; }
+    public virtual string ServiceName => GetType().Name;
 
     /// <summary>
     /// Gets the maximum number of state history entries to retain
@@ -48,18 +47,17 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
     public virtual TimeSpan? HeartbeatInterval => null;
 
     /// <summary>
-    /// Gets the observable information for this service
+    /// Gets the runtime information for this service.
     /// </summary>
-    public HostedServiceObservableInfo ObservableInfo { get; private set; } = null!;
-
+    public HostedServiceRuntimeInfo RuntimeInfo => _runtimeInfo ??= CreateRuntimeInfo();
 
     /// <summary>
-    /// Initializes observable info (called by manager during registration)
+    /// Creates runtime information lazily after the derived hosted service has finished construction.
     /// </summary>
-    private void InitializeObservableInfo()
+    private HostedServiceRuntimeInfo CreateRuntimeInfo()
     {
         var agentId = $"HostedService_{ServiceName}_{Guid.NewGuid():N}";
-        var agent = observableManager.Create(agentId, opt =>
+        var agent = _observableManager.Create(agentId, opt =>
         {
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
@@ -70,7 +68,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
         // Configure log level mappings on the agent
         ConfigureStateLogLevels(agent);
 
-        ObservableInfo = new HostedServiceObservableInfo(agent)
+        return new HostedServiceRuntimeInfo(agent)
         {
             HeartbeatInterval = HeartbeatInterval
         };
@@ -100,7 +98,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
         Exception? exception = null,
         LogLevel? logLevel = null)
     {
-        ObservableInfo.Agent.RecordState(message, newState, exception, logLevel);
+        RuntimeInfo.Agent.RecordState(message, newState, exception, logLevel);
     }
 
     /// <summary>
@@ -111,12 +109,12 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
         try
         {
             RecordState("Service starting", HostedServiceState.Starting);
-            ObservableInfo.StartedAt = DateTime.UtcNow;
+            RuntimeInfo.StartedAt = DateTime.UtcNow;
 
             await OnStartingAsync(cancellationToken);
 
             // Only transition to Running if not already unhealthy
-            if (!ObservableInfo.Agent.IsUnhealthy())
+            if (!RuntimeInfo.Agent.IsUnhealthy())
             {
                 RecordState("Service started successfully", HostedServiceState.Running);
             }
@@ -146,7 +144,7 @@ public abstract class MoHostedService : IHostedService, IMoHostedService
 
             await OnStoppingAsync(cancellationToken);
 
-            ObservableInfo.StoppedAt = DateTime.UtcNow;
+            RuntimeInfo.StoppedAt = DateTime.UtcNow;
             RecordState("Service stopped successfully", HostedServiceState.Stopped);
 
             await OnStoppedAsync(cancellationToken);

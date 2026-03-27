@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Monica.Core;
-using Monica.Core.Features.HostedServices;
-using Monica.Core.Features.HostedServices.Interfaces;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Abstractions.Internal;
+using Monica.Core.HostedService.Services;
+using Monica.Core.HostedService.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -43,34 +43,20 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<MoHostedServiceManager>();
-        services.AddSingleton<IMoHostedServiceManager>(provider => provider.GetRequiredService<MoHostedServiceManager>());
-        services.AddSingleton<IMoHostedServiceDependencyCoordinator>(provider => provider.GetRequiredService<MoHostedServiceManager>());
+        services.AddSingleton<HostedServiceRegistry>();
+        services.AddSingleton<IHostedServiceRegistryWriter>(provider => provider.GetRequiredService<HostedServiceRegistry>());
+        services.AddSingleton<IMoHostedServiceRegistry>(provider => provider.GetRequiredService<HostedServiceRegistry>());
+        services.AddSingleton<HostedServiceCheckpointCoordinator>();
+        services.AddSingleton<IHostedServiceCheckpointObserver>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
+        services.AddSingleton<IMoHostedServiceCheckpointCoordinator>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
+        services.AddSingleton<HostedServiceRegistryInitializer>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        Task.Run(() =>
-        {
-            try
-            {
-                // Register all IHostedService instances that implement IMoHostedService
-                var manager = app.ApplicationServices.GetRequiredService<IMoHostedServiceManager>();
-                var hostedServices = app.ApplicationServices.GetServices<IHostedService>();
-
-                foreach (var service in hostedServices)
-                {
-                    if (service is not IMoHostedService moHostedService) continue;
-
-                    // Register with manager
-                    manager.RegisterService(moHostedService);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error registering MoHostedServices");
-            }
-        });
+        app.ApplicationServices
+            .GetRequiredService<HostedServiceRegistryInitializer>()
+            .Initialize(app.ApplicationServices);
     }
 }
 

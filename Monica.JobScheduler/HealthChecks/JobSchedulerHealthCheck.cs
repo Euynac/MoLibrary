@@ -1,14 +1,14 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Monica.Core.Features.HostedServices.Interfaces;
+using Monica.Core.HostedService.Abstractions;
 using Monica.JobScheduler.ControlPlane;
 using Monica.JobScheduler.WorkerPlane;
 
 namespace Monica.JobScheduler.HealthChecks;
 
 /// <summary>
-/// Health check for monitoring JobScheduler hosted services initialization status using the observable hosted service manager
+/// Health check for monitoring JobScheduler hosted services initialization status using the hosted service registry.
 /// </summary>
-public class JobSchedulerHealthCheck(IMoHostedServiceManager serviceManager) : IHealthCheck
+public class JobSchedulerHealthCheck(IMoHostedServiceRegistry serviceRegistry) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -26,7 +26,7 @@ public class JobSchedulerHealthCheck(IMoHostedServiceManager serviceManager) : I
         };
 
         var services = serviceTypes
-            .Select(serviceManager.GetService)
+            .Select(serviceRegistry.GetService)
             .Where(info => info != null)
             .ToList();
 

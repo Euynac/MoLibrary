@@ -1,81 +1,30 @@
-using System.Collections.Concurrent;
 using Monica.Core.Extensions;
-using Monica.Core.Features.HostedServices.Interfaces;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Abstractions.Internal;
+using Monica.Core.HostedService.Models;
+using Monica.Core.HostedService.Models.Internal;
 
-namespace Monica.Core.Features.HostedServices;
+namespace Monica.Core.HostedService.Services.Support;
 
-/// <summary>
-/// Implementation of IMoHostedServiceManager that tracks all registered MoHostedServices
-/// </summary>
-public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceDependencyCoordinator
+internal sealed class HostedServiceCheckpointCoordinator(IMoHostedServiceRegistry serviceRegistry)
+    : IMoHostedServiceCheckpointCoordinator, IHostedServiceCheckpointObserver
 {
-    private readonly ConcurrentDictionary<Type, IMoHostedService> _services = new();
     private readonly Lock _checkpointLock = new();
     private readonly Dictionary<HostedServiceCheckpointKey, HostedServiceCheckpointState> _checkpoints = [];
 
-    /// <inheritdoc />
-    public void RegisterService(IMoHostedService service)
+    public void Observe(IMoHostedService service)
     {
-        if (!_services.TryAdd(service.GetType(), service))
-        {
-            return;
-        }
+        ArgumentNullException.ThrowIfNull(service);
 
-        service.ObservableInfo.Agent.StateChanged += stateChange => OnServiceStateChanged(service.GetType(), stateChange);
+        service.RuntimeInfo.Agent.StateChanged += stateChange => OnServiceStateChanged(service.GetType(), stateChange);
 
-        if (service.ObservableInfo.CurrentState == HostedServiceState.Faulted)
+        if (service.RuntimeInfo.CurrentState == HostedServiceState.Faulted)
         {
-            FailWaitersForFaultedService(service.GetType(), service.ObservableInfo);
+            FailWaitersForFaultedService(service.GetType(), service.RuntimeInfo);
         }
     }
 
-    /// <inheritdoc />
-    public IReadOnlyList<HostedServiceObservableInfo> GetAllServices()
-    {
-        return _services.Values.Select(s => s.ObservableInfo).ToList();
-    }
-
-    /// <inheritdoc />
-    public HostedServiceObservableInfo? GetService<TService>() where TService : IMoHostedService
-    {
-        return GetService(typeof(TService));
-    }
-
-    /// <inheritdoc />
-    public HostedServiceObservableInfo? GetService(Type serviceType)
-    {
-        return _services.TryGetValue(serviceType, out var service) ? service.ObservableInfo : null;
-    }
-
-    /// <inheritdoc />
-    public HostedServiceObservableInfo? GetServiceByName(string serviceName)
-    {
-        return _services.Values
-            .Select(s => s.ObservableInfo)
-            .FirstOrDefault(info => info.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <inheritdoc />
-    public IReadOnlyList<HostedServiceObservableInfo> GetServicesByState(HostedServiceState state)
-    {
-        return _services.Values
-            .Select(s => s.ObservableInfo)
-            .Where(info => info.CurrentState == state)
-            .ToList();
-    }
-
-    /// <inheritdoc />
-    public IReadOnlyList<HostedServiceObservableInfo> GetUnhealthyServices()
-    {
-        return _services.Values
-            .Select(s => s.ObservableInfo)
-            .Where(info => !info.IsHealthy)
-            .ToList();
-    }
-
-    /// <inheritdoc />
     public async Task WaitForCheckpointAsync<TService>(
         string checkpoint,
         DateTime? notBeforeUtc = null,
@@ -125,16 +74,21 @@ public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceD
         using var cancellationRegistration = cancellationToken.Register(
             static state =>
             {
-                var (manager, key, pendingWaiter, token) =
-                    ((MoHostedServiceManager Manager, HostedServiceCheckpointKey Key, HostedServiceCheckpointWaiter Waiter, CancellationToken Token))state!;
-                manager.CancelWaiter(key, pendingWaiter, token);
+                var (coordinator, key, pendingWaiter, token) =
+                    ((HostedServiceCheckpointCoordinator Coordinator, HostedServiceCheckpointKey Key, HostedServiceCheckpointWaiter Waiter, CancellationToken Token))state!;
+                coordinator.CancelWaiter(key, pendingWaiter, token);
             },
             (this, checkpointKey, waiter, cancellationToken));
 
         await waiter.CompletionSource.Task.ConfigureAwait(false);
     }
 
-    /// <inheritdoc />
+    public void SignalCheckpoint<TService>(string checkpoint, DateTime? occurredAtUtc = null)
+        where TService : IMoHostedService
+    {
+        SignalCheckpoint(typeof(TService), checkpoint, occurredAtUtc);
+    }
+
     public void SignalCheckpoint(Type serviceType, string checkpoint, DateTime? occurredAtUtc = null)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
@@ -180,10 +134,15 @@ public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceD
 
     private void OnServiceStateChanged(Type serviceType, ObservableStateHistory stateChange)
     {
-        if (stateChange.CurrentState is HostedServiceState.Faulted &&
-            _services.TryGetValue(serviceType, out var service))
+        if (stateChange.CurrentState is not HostedServiceState.Faulted)
         {
-            FailWaitersForFaultedService(serviceType, service.ObservableInfo);
+            return;
+        }
+
+        var serviceInfo = serviceRegistry.GetService(serviceType);
+        if (serviceInfo != null)
+        {
+            FailWaitersForFaultedService(serviceType, serviceInfo);
         }
     }
 
@@ -215,7 +174,7 @@ public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceD
         waiter.CompletionSource.TrySetCanceled(cancellationToken);
     }
 
-    private void FailWaitersForFaultedService(Type serviceType, HostedServiceObservableInfo serviceInfo)
+    private void FailWaitersForFaultedService(Type serviceType, HostedServiceRuntimeInfo serviceInfo)
     {
         List<(string Checkpoint, HostedServiceCheckpointWaiter Waiter)>? waitersToFail = null;
 
@@ -255,18 +214,18 @@ public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceD
         out Exception? exception)
     {
         exception = null;
-        if (!_services.TryGetValue(serviceType, out var service) ||
-            service.ObservableInfo.CurrentState != HostedServiceState.Faulted)
+        var serviceInfo = serviceRegistry.GetService(serviceType);
+        if (serviceInfo?.CurrentState != HostedServiceState.Faulted)
         {
             return false;
         }
 
-        exception = CreateFaultedServiceException(service.ObservableInfo, checkpoint);
+        exception = CreateFaultedServiceException(serviceInfo, checkpoint);
         return true;
     }
 
     private static Exception CreateFaultedServiceException(
-        HostedServiceObservableInfo serviceInfo,
+        HostedServiceRuntimeInfo serviceInfo,
         string checkpoint)
     {
         var lastError = serviceInfo.StateHistory
@@ -280,19 +239,5 @@ public class MoHostedServiceManager : IMoHostedServiceManager, IMoHostedServiceD
             : $"Hosted service '{serviceInfo.ServiceName}' faulted before checkpoint '{checkpoint}' was reached: {lastError.GetMessageRecursively()}";
 
         return new InvalidOperationException(message, lastError);
-    }
-
-    private sealed record HostedServiceCheckpointKey(Type ServiceType, string Checkpoint);
-
-    private sealed class HostedServiceCheckpointState
-    {
-        public DateTime? LastOccurredAtUtc { get; set; }
-        public List<HostedServiceCheckpointWaiter> Waiters { get; } = [];
-    }
-
-    private sealed class HostedServiceCheckpointWaiter(DateTime? notBeforeUtc)
-    {
-        public DateTime? NotBeforeUtc { get; } = notBeforeUtc;
-        public TaskCompletionSource<bool> CompletionSource { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 }

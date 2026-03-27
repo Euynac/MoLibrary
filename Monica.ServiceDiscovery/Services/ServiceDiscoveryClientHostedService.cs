@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.HostedServices;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Events;
@@ -36,7 +36,7 @@ public class ServiceDiscoveryClientHostedService(
     public override string ServiceName => "ServiceDiscoveryClient";
     public override TimeSpan? HeartbeatInterval => null;
 
-    public bool IsRegistered => ObservableInfo.CurrentState == HostedServiceState.Running;
+    public bool IsRegistered => RuntimeInfo.CurrentState == HostedServiceState.Running;
 
     public async Task<bool> WaitForRegistrationAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
@@ -151,7 +151,7 @@ public class ServiceDiscoveryClientHostedService(
         _consecutiveFailures = 0;
 
         // Ensure registration status is completed
-        if (ObservableInfo.CurrentState != HostedServiceState.Running)
+        if (RuntimeInfo.CurrentState != HostedServiceState.Running)
         {
             _registrationCompletionSource.TrySetResult(true);
         }

@@ -1,55 +1,49 @@
-using Monica.Core.Features.HostedServices.Models;
+using Monica.Core.HostedService.Models;
 
-namespace Monica.Core.Features.HostedServices.Interfaces;
+namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
-/// Provides centralized management and query capabilities for all registered MoHostedServices
+/// Provides centralized query capabilities for registered Monica hosted services.
 /// </summary>
-public interface IMoHostedServiceManager
+public interface IMoHostedServiceRegistry
 {
     /// <summary>
-    /// Registers a hosted service with the manager (called internally during startup)
+    /// Gets all registered hosted services.
     /// </summary>
-    /// <param name="service">The hosted service instance to register</param>
-    void RegisterService(IMoHostedService service);
-
-    /// <summary>
-    /// Gets all registered hosted services
-    /// </summary>
-    /// <returns>A readonly list of observable information for all registered services</returns>
-    IReadOnlyList<HostedServiceObservableInfo> GetAllServices();
+    /// <returns>A read-only list of runtime information for all registered services.</returns>
+    IReadOnlyList<HostedServiceRuntimeInfo> GetAllServices();
 
     /// <summary>
     /// Gets observable information for a specific service by type
     /// </summary>
     /// <typeparam name="TService">The hosted service type</typeparam>
     /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceObservableInfo? GetService<TService>() where TService : IMoHostedService;
+    HostedServiceRuntimeInfo? GetService<TService>() where TService : IMoHostedService;
 
     /// <summary>
     /// Gets observable information for a specific service by type
     /// </summary>
     /// <param name="serviceType">The hosted service type</param>
     /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceObservableInfo? GetService(Type serviceType);
+    HostedServiceRuntimeInfo? GetService(Type serviceType);
 
     /// <summary>
     /// Gets observable information for a service by its name
     /// </summary>
     /// <param name="serviceName">The service name</param>
     /// <returns>Observable information for the service, or null if not found</returns>
-    HostedServiceObservableInfo? GetServiceByName(string serviceName);
+    HostedServiceRuntimeInfo? GetServiceByName(string serviceName);
 
     /// <summary>
     /// Gets all services in a specific state
     /// </summary>
     /// <param name="state">The state to filter by</param>
     /// <returns>A readonly list of services in the specified state</returns>
-    IReadOnlyList<HostedServiceObservableInfo> GetServicesByState(HostedServiceState state);
+    IReadOnlyList<HostedServiceRuntimeInfo> GetServicesByState(HostedServiceState state);
 
     /// <summary>
     /// Gets all services that are not healthy (Faulted or Degraded)
     /// </summary>
     /// <returns>A readonly list of unhealthy services</returns>
-    IReadOnlyList<HostedServiceObservableInfo> GetUnhealthyServices();
+    IReadOnlyList<HostedServiceRuntimeInfo> GetUnhealthyServices();
 }

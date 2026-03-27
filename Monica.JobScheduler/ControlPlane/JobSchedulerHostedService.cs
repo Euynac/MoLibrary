@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.HostedServices.Interfaces;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
@@ -27,7 +27,7 @@ public class JobSchedulerHostedService(
     RecurringJobScheduler recurringJobScheduler,
     TriggeredJobScheduler triggeredJobScheduler,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
-    IMoHostedServiceDependencyCoordinator hostedServiceDependencyCoordinator,
+    IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
     ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
@@ -49,7 +49,7 @@ public class JobSchedulerHostedService(
             HostedServiceState.WaitingDependency,
             logLevel: LogLevel.Information);
 
-        await hostedServiceDependencyCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
+        await hostedServiceCheckpointCoordinator.WaitForCheckpointAsync<JobRegistrationHostedService>(
             JobSchedulerHostedServiceCheckpoints.JobDefinitionsReady,
             LeaderService.LeaderBecomeTime,
             cancellationToken);

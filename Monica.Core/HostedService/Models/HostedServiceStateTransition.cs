@@ -1,9 +1,9 @@
-namespace Monica.Core.Features.HostedServices.Models;
+namespace Monica.Core.HostedService.Models;
 
 /// <summary>
 /// Represents a single state transition entry in the service history
 /// </summary>
-public class HostedServiceStateHistory
+public class HostedServiceStateTransition
 {
     /// <summary>
     /// Gets the timestamp when this state change occurred

@@ -1,28 +1,27 @@
 using Monica.Core.Features.ObservableInstance;
 
-namespace Monica.Core.Features.HostedServices.Models;
+namespace Monica.Core.HostedService.Models;
 
 /// <summary>
-/// Provides observable information about a hosted service including state, health, and history.
-/// Now uses ObservableAgent for core tracking functionality.
+/// Provides runtime information about a hosted service including state, health, and history.
 /// </summary>
-public class HostedServiceObservableInfo
+public class HostedServiceRuntimeInfo
 {
     private readonly ObservableAgent _agent;
 
     /// <summary>
-    /// Initializes a new instance of HostedServiceObservableInfo with an ObservableAgent
+    /// Initializes a new instance of the <see cref="HostedServiceRuntimeInfo"/> class.
     /// </summary>
     /// <param name="agent">The observable agent that tracks state and history</param>
-    public HostedServiceObservableInfo(ObservableAgent agent)
+    public HostedServiceRuntimeInfo(ObservableAgent agent)
     {
         _agent = agent ?? throw new ArgumentNullException(nameof(agent));
     }
 
     /// <summary>
-    /// Gets the underlying ObservableAgent for advanced operations
+    /// Gets the underlying observable agent for internal runtime operations.
     /// </summary>
-    public ObservableAgent Agent => _agent;
+    internal ObservableAgent Agent => _agent;
 
     // Service Identity (delegates to agent)
 
@@ -118,9 +117,9 @@ public class HostedServiceObservableInfo
     /// <summary>
     /// Gets the state history for this service
     /// </summary>
-    public IReadOnlyList<HostedServiceStateHistory> StateHistory =>
+    public IReadOnlyList<HostedServiceStateTransition> StateHistory =>
         _agent.GetHistory()
-            .Select(h => new HostedServiceStateHistory
+            .Select(h => new HostedServiceStateTransition
             {
                 Timestamp = h.Timestamp,
                 PreviousState = h.PreviousState as HostedServiceState?,

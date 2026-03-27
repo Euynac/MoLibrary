@@ -1,6 +1,6 @@
-using Monica.Core.Features.HostedServices.Models;
+using Monica.Core.HostedService.Models;
 
-namespace Monica.Core.Features.HostedServices.Interfaces;
+namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Interface for observable hosted services with state management and exception tracking.
@@ -24,7 +24,7 @@ public interface IMoHostedService
     TimeSpan? HeartbeatInterval { get; }
 
     /// <summary>
-    /// Gets the observable information for this service
+    /// Gets the runtime information for this service.
     /// </summary>
-    HostedServiceObservableInfo ObservableInfo { get; }
+    HostedServiceRuntimeInfo RuntimeInfo { get; }
 }

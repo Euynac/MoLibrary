@@ -2,9 +2,9 @@ using Dapr.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.HostedServices;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
 using Monica.Modules;
 using Monica.Dapr.Interfaces;
 

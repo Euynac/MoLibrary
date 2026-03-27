@@ -1,9 +1,9 @@
-namespace Monica.Core.Features.HostedServices.Interfaces;
+namespace Monica.Core.HostedService.Abstractions;
 
 /// <summary>
 /// Coordinates readiness checkpoints between hosted services.
 /// </summary>
-public interface IMoHostedServiceDependencyCoordinator
+public interface IMoHostedServiceCheckpointCoordinator
 {
     /// <summary>
     /// Waits until the specified hosted service signals the target checkpoint.
@@ -20,6 +20,15 @@ public interface IMoHostedServiceDependencyCoordinator
 
     /// <summary>
     /// Signals that a hosted service has reached a named checkpoint.
+    /// </summary>
+    /// <typeparam name="TService">The hosted service type that reached the checkpoint.</typeparam>
+    /// <param name="checkpoint">The checkpoint name.</param>
+    /// <param name="occurredAtUtc">Optional checkpoint timestamp.</param>
+    void SignalCheckpoint<TService>(string checkpoint, DateTime? occurredAtUtc = null)
+        where TService : IMoHostedService;
+
+    /// <summary>
+     /// Signals that a hosted service has reached a named checkpoint.
     /// </summary>
     /// <param name="serviceType">The hosted service type that reached the checkpoint.</param>
     /// <param name="checkpoint">The checkpoint name.</param>

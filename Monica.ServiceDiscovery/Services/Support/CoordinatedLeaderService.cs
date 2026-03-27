@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
-using Monica.Core.Features.HostedServices;
-using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
+using Monica.Core.HostedService.Abstractions;
+using Monica.Core.HostedService.Models;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Events;
@@ -70,7 +70,7 @@ public abstract class CoordinatedLeaderService(
     /// Gets a value indicating whether the service has completed initialization.
     /// Used by health checks to monitor service status.
     /// </summary>
-    public bool IsInitialized => ObservableInfo is { CurrentState: HostedServiceState.Running or HostedServiceState.Executing };
+    public bool IsInitialized => RuntimeInfo is { CurrentState: HostedServiceState.Running or HostedServiceState.Executing };
 
     /// <summary>
     /// Gets a value indicating whether this instance is currently the leader.
@@ -82,7 +82,7 @@ public abstract class CoordinatedLeaderService(
     /// Null if initialization succeeded or has not completed yet.
     /// </summary>
     public string? InitializationError =>
-        ObservableInfo.StateHistory
+        RuntimeInfo.StateHistory
             .Where(h => h.Exception != null)
             .OrderByDescending(h => h.Timestamp)
             .FirstOrDefault()
