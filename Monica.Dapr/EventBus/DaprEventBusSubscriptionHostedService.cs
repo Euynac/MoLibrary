@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Features.HostedServices.Models;
 using Monica.Core.Features.ObservableInstance;
-using Monica.Core.JsonSerialization.Interfaces;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Modules;
 using Monica.Dapr.Interfaces;
 using Monica.EventBus.Abstractions;

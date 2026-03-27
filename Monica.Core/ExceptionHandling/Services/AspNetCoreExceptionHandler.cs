@@ -1,15 +1,15 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.ExceptionHandling.Interfaces;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Core.ExceptionHandling;
+namespace Monica.Core.ExceptionHandling.Services;
 
 /// <summary>
 /// ASP.NET Core exception handler that converts unhandled exceptions into Monica responses.

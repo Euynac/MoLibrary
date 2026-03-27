@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Monica.Core.JsonSerialization;
+using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Repository.EFCoreExtensions;
 

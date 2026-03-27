@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
-namespace Monica.Core.JsonSerialization.Interfaces;
+namespace Monica.Core.JsonSerialization.Abstractions;
 
 public interface IJsonSerializerOptionsProvider
 {

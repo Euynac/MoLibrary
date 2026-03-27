@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Core.JsonSerialization.Converters;
 
@@ -20,19 +21,19 @@ public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            if (DateTime.TryParseExact(input, SharedJsonSerializerOptionsProvider.DateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            if (DateTime.TryParseExact(input, JsonSerializerOptionsProvider.DateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
             {
-                return SharedJsonSerializerOptionsProvider.NormalizeInTime(date);
+                return JsonSerializerOptionsProvider.NormalizeInTime(date);
             }
 
 
             if (DateTime.TryParse(input, out var defaultDate))
             {
-                return SharedJsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
+                return JsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
             }
         }
 
-        return SharedJsonSerializerOptionsProvider.NormalizeInTime(reader.GetDateTime());
+        return JsonSerializerOptionsProvider.NormalizeInTime(reader.GetDateTime());
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
@@ -42,6 +43,6 @@ public class NullableDateTimeJsonConverter : JsonConverter<DateTime?>
             writer.WriteNullValue();
             return;
         }
-        writer.WriteStringValue(SharedJsonSerializerOptionsProvider.NormalizeOutTime(value.Value).ToString(SharedJsonSerializerOptionsProvider.OutputDateTimeFormat));
+        writer.WriteStringValue(JsonSerializerOptionsProvider.NormalizeOutTime(value.Value).ToString(JsonSerializerOptionsProvider.OutputDateTimeFormat));
     }
 }

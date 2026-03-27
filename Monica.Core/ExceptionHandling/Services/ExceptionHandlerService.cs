@@ -1,15 +1,14 @@
-using System.Net;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Extensions;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Core.ExceptionHandling.Interfaces;
-using Monica.Core.ExceptionHandling.Models;
+using Monica.Core.ExceptionHandling.Models.Internal;
+using Monica.Core.Extensions;
 using Monica.Tool.MoResponse;
 
-namespace Monica.Core.ExceptionHandling;
+namespace Monica.Core.ExceptionHandling.Services;
 
 internal class ExceptionHandlerService(
     ILogger<ExceptionHandlerService> logger,

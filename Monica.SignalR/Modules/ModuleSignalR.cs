@@ -7,7 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Core;
 using Monica.Core.Extensions;
-using Monica.Core.JsonSerialization;
+using Monica.Core.JsonSerialization.Services;
+using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -112,7 +113,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
             });
             signalRBuilder.AddJsonProtocol(options =>
             {
-                options.PayloadSerializerOptions.CloneFrom(SharedJsonSerializerOptionsProvider.SharedSerializerOptions);
+                options.PayloadSerializerOptions.CloneFrom(JsonSerializerOptionsProvider.SharedSerializerOptions);
                 jsonConfigure?.Invoke(options);
             });
         });

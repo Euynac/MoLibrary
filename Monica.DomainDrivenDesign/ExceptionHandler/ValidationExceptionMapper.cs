@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
-using Monica.Core.ExceptionHandling.Interfaces;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.DomainDrivenDesign.Validation;
 using Monica.Tool.MoResponse;
 

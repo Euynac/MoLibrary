@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
-using Monica.Core.JsonSerialization;
+using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -48,7 +48,7 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
             MaxReceiveMessageSize = Option.MaxReceiveMessageSize,
             MaxSendMessageSize = Option.MaxSendMessageSize,
             MaxRetryBufferSize = Option.MaxRetryBufferSize,
-        }).UseJsonSerializationOptions(SharedJsonSerializerOptionsProvider.SharedSerializerOptions));
+        }).UseJsonSerializationOptions(JsonSerializerOptionsProvider.SharedSerializerOptions));
 
         // Register health coordinator (singleton implementing both interface and IHostedService)
         services.AddSingleton<DaprSidecarHealthCoordinator>();

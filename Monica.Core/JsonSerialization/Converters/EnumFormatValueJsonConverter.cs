@@ -2,7 +2,8 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Monica.Core.JsonSerialization.Attributes;
+using Monica.Core.JsonSerialization.Annotations;
+using Monica.Core.JsonSerialization.Services;
 
 namespace Monica.Core.JsonSerialization.Converters;
 

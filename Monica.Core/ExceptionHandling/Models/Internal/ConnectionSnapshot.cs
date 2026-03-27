@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace Monica.Core.ExceptionHandling.Models;
+namespace Monica.Core.ExceptionHandling.Models.Internal;
 
 internal sealed class ConnectionSnapshot
 {

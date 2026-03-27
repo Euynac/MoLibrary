@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
-using Monica.Core.JsonSerialization.Interfaces;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Framework.Core.Extensions;
 using Monica.EventBus.Abstractions;
 using Monica.Framework.Core;

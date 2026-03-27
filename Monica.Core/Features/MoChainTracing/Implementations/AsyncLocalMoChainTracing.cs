@@ -5,7 +5,7 @@ using Monica.Modules;
 using Monica.Tool.Extensions;
 using Monica.Tool.MoResponse;
 using System.Text.Json;
-using Monica.Core.JsonSerialization.Interfaces;
+using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Tool.General;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;

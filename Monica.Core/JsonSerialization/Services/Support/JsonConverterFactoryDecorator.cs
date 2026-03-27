@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.JsonSerialization.Converters;
+namespace Monica.Core.JsonSerialization.Services.Support;
 
 public class JsonConverterFactoryDecorator(JsonConverterFactory innerFactory) : JsonConverterFactory
 {

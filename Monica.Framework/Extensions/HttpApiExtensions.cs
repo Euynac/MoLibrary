@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Features.MoLogProvider;
-using Monica.Core.JsonSerialization;
+using Monica.Core.JsonSerialization.Services;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 using Monica.Tool.MoResponse;
@@ -30,7 +30,7 @@ public static class HttpApiExtensions
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = JsonSerializer.Deserialize<TResponse>(resContent, SharedJsonSerializerOptionsProvider.SharedSerializerOptions);
+            res = JsonSerializer.Deserialize<TResponse>(resContent, JsonSerializerOptionsProvider.SharedSerializerOptions);
             res?.AutoParseResponseFromOrigin(resContent);
             if (res?.IsServiceNormal() is true)
             {
@@ -141,7 +141,7 @@ public static class HttpApiExtensions
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = (IMoResponse?)JsonSerializer.Deserialize(resContent, responseType, SharedJsonSerializerOptionsProvider.SharedSerializerOptions);
+            res = (IMoResponse?)JsonSerializer.Deserialize(resContent, responseType, JsonSerializerOptionsProvider.SharedSerializerOptions);
             if (res?.IsServiceNormal() is true)
             {
                 return res;

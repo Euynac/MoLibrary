@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Monica.Tool.Extensions;
 
-namespace Monica.Core.JsonSerialization.Converters;
+namespace Monica.Core.JsonSerialization.Services.Support;
 
 public class JsonCamelCaseNamingPolicy : JsonNamingPolicy
 {

@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Monica.Core.JsonSerialization.Interfaces;
+using Monica.Core.JsonSerialization.Abstractions;
 
-namespace Monica.Core.JsonSerialization;
+namespace Monica.Core.JsonSerialization.Services;
 
-public class SharedJsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
+public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
 {
     /// <summary>
     /// Gets or sets the shared JSON serializer options used by MVC and other global pipelines.

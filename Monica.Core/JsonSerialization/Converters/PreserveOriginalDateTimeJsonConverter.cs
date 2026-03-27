@@ -1,46 +1,11 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Monica.Core.JsonSerialization.Converters;
 
 /// <summary>
-/// JSON converter that serializes and deserializes <see cref="DateTime"/> values
-/// with the global Monica date-time formats.
-/// </summary>
-public class MoDateTimeJsonConverter : JsonConverter<DateTime>
-{
-    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var input = reader.GetString();
-        if (reader.TokenType == JsonTokenType.String)
-        {
-            foreach (var format in SharedJsonSerializerOptionsProvider.DateTimeFormats)
-            {
-                if (DateTime.TryParseExact(input, format, null, DateTimeStyles.None, out var date))
-                {
-                    return SharedJsonSerializerOptionsProvider.NormalizeInTime(date);
-                }
-            }
-
-            if (DateTime.TryParse(input, out var defaultDate))
-            {
-                return SharedJsonSerializerOptionsProvider.NormalizeInTime(defaultDate);
-            }
-        }
-
-        return SharedJsonSerializerOptionsProvider.NormalizeInTime(reader.GetDateTime());
-    }
-
-    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
-    {
-        writer.WriteStringValue(SharedJsonSerializerOptionsProvider.NormalizeOutTime(value).ToString(SharedJsonSerializerOptionsProvider.OutputDateTimeFormat));
-    }
-}
-
-/// <summary>
 /// JSON converter that preserves the default <see cref="DateTime"/> serialization behavior for marked properties,
-/// even when <see cref="MoDateTimeJsonConverter"/> is registered globally.
+/// even when <see cref="DateTimeJsonConverter"/> is registered globally.
 /// </summary>
 public class PreserveOriginalDateTimeJsonConverter : JsonConverter<DateTime>
 {

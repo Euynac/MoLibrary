@@ -1,4 +1,4 @@
-namespace Monica.Core.JsonSerialization.Attributes;
+namespace Monica.Core.JsonSerialization.Annotations;
 
 /// <summary>
 /// Specifies a custom format value for an enum field that will be used during serialization and deserialization.

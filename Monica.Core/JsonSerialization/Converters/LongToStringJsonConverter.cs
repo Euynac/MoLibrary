@@ -6,7 +6,7 @@ namespace Monica.Core.JsonSerialization.Converters;
 /// <summary>
 /// Serializes <see cref="long"/> values as strings to avoid precision loss for snowflake-style identifiers.
 /// </summary>
-public class NullableLongToStringJsonConverter : JsonConverter<long>
+public class LongToStringJsonConverter : JsonConverter<long>
 {
     public override long Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

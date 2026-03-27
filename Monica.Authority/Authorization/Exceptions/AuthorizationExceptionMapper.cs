@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Monica.Authority.Authorization.Services.Support;
+using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Core.ExceptionHandling.Interfaces;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Authority.Authorization.Exceptions;
