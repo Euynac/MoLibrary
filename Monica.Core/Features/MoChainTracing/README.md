@@ -1,6 +1,6 @@
 # MoChainTracing 调用链追踪模块
 
-MoChainTracing 是一个基于 `AsyncLocal` 技术的应用层调用链追踪模块，用于记录接口调用过程中的各种行为，包括领域服务调用、数据库调用、Redis 调用、外部 API 调用等，并将调用链信息附加到 `IServiceResponse` 的 `ExtraInfo` 中。
+MoChainTracing 是一个基于 `AsyncLocal` 技术的应用层调用链追踪模块，用于记录接口调用过程中的各种行为，包括领域服务调用、数据库调用、Redis 调用、外部 API 调用等，并将调用链信息附加到 `IResultEnvelope` 的 `ExtraInfo` 中。
 
 ## 主要特性
 
@@ -579,7 +579,7 @@ builder.Services.AddMoChainTracing(options =>
 
 ## 响应格式
 
-调用链信息会自动附加到 `IServiceResponse.ExtraInfo` 中，支持微服务调用链的合并：
+调用链信息会自动附加到 `IResultEnvelope.ExtraInfo` 中，支持微服务调用链的合并：
 
 ```json
 {

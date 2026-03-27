@@ -34,8 +34,8 @@ public record InvocationInfo(MethodInfo MethodInfo)
 
 
 /// <summary>
-/// 基于新的 ChainTracking 系统的方法调用链追踪拦截器
-/// 用于自动记录返回类型为 IServiceResponse 的方法调用链信息
+/// Method-invocation chain-tracing interceptor built on the current ChainTracking pipeline.
+/// Records chain data automatically for methods that return <see cref="IResultEnvelope" />.
 /// </summary>
 /// <param name="chainTracing">调用链追踪服务</param>
 /// <param name="timekeeperFactory">计时器工厂</param>
@@ -62,7 +62,7 @@ public class ChainTrackingProviderInvocationInterceptor(
             returnType = returnType.GetGenericArguments()[0];
         }
         
-        // 判断返回类型是否实现 IServiceResponse 接口
+        // Record chain data only for result-envelope return types.
         var shouldRecord = returnType.IsImplementInterface(typeof(IResultEnvelope));
         
         if (shouldRecord)

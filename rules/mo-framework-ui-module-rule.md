@@ -318,7 +318,7 @@ public class DomainEventService(IMoDistributedEventBus eventBus, IGlobalJsonOpti
 #### 5.3.2 重要规则
 - 所有服务方法的返回值必须不为空
 - 成功时返回`Res.Ok(data)`，失败时返回`Res.Fail(errorMessage)`，没有泛型类型的`Res.Fail<T>`以及`OK<T>`这种方法，因为本身有隐式转换！
-- 记得必须引用using Monica.Tool.MoResponse，否则会报错
+- 记得必须引用 `using Monica.Tool.Results;`，否则会报错
 - 异常情况必须捕获并返回`Res.Fail`
 - 调用方使用`IsFailed(out var error, out var data)`模式检查结果
 - 成功时`data`保证不为null，失败时`error`包含错误信息

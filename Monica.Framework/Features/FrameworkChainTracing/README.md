@@ -14,7 +14,7 @@
 ### ChainTrackingProviderInvocationInterceptor
 
 #### 新功能和改进：
-- **优化的调用判断逻辑**：不再使用命名判断，直接检查返回类型是否实现 `IServiceResponse` 接口
+- **优化的调用判断逻辑**：不再使用命名判断，直接检查返回类型是否实现 `IResultEnvelope` 接口
 - **更好的异常处理**：完整的异常处理流程，自动创建错误响应
 - **详细的调用信息记录**：记录方法名、参数信息等详细信息
 - **自动响应链路附加**：自动为响应对象附加调用链信息
@@ -112,7 +112,7 @@ Mo.AddChainTracing(options =>
 ### 注意事项：
 
 - 新版本的调用链信息结构可能与旧版本不同，需要更新相关的日志解析逻辑
-- 确保所有需要记录调用链的服务方法返回类型都实现了 `IServiceResponse` 接口
+- 确保所有需要记录调用链的服务方法返回类型都实现了 `IResultEnvelope` 接口
 - 数据库拦截器现在会自动记录所有数据库操作，如果不需要可以通过配置禁用
 
 ## 故障排查
@@ -121,7 +121,7 @@ Mo.AddChainTracing(options =>
 
 1. **调用链信息未记录**
    - 检查 ChainTracking 模块是否正确配置
-   - 确认方法返回类型是否实现 `IServiceResponse`
+   - 确认方法返回类型是否实现 `IResultEnvelope`
    - 检查 DI 容器中是否正确注册了 Provider
 
 2. **性能问题**

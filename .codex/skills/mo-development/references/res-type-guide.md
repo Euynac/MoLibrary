@@ -1,8 +1,10 @@
-# Unified Response Model Res - Complete Guide
+# Unified Result Model Res - Complete Guide
 
-This guide provides comprehensive documentation for the unified interface return model `Res` used throughout Monica.
+This guide documents Monica's lightweight result-envelope model built around `Res` and `Res<T>`.
 
-**Source location**: `Monica.Tool/MoResponse/Res.cs`
+**Source location**: `Monica.Tool/Results/Res.cs`
+
+**Related types**: `IResultEnvelope`, `ResStatus`, `ResPaged<T>`, `ResExtensions`
 
 ## Scope
 
@@ -12,11 +14,14 @@ This guide provides comprehensive documentation for the unified interface return
 
 ## Overview
 
-The `Res` and `Res<T>` types provide a consistent way to return results from service methods, supporting:
+The `Res` and `Res<T>` types provide a consistent way to return result envelopes from service methods, supporting:
 - Success/failure status
 - Error messages and codes
 - Data payload (for `Res<T>`)
+- Optional metadata in `ExtraInfo`
 - Implicit conversions for cleaner code
+
+The serialized contract remains compatible with Monica's existing API shape, including fields such as `code` and `message`.
 
 ## Res<T> Generic Type
 
@@ -218,7 +223,8 @@ public class UserUIService(
 2. **Never return null** - Always return `Res.Fail()` or `Res.Ok()`
 3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
 4. **Use implicit conversions** - Makes code cleaner and more readable
-5. **Include using statement** - `using Monica.Tool.MoResponse;`
+5. **Include using statement** - `using Monica.Tool.Results;`
+6. **Attach structured error payloads** - use `AppendExtraInfo("error", payload)` when extra error detail is needed
 
 ## API Response Integration
 
@@ -233,7 +239,7 @@ endpoints.MapGet("/users/{id}", async (int id, IUserService userService) =>
 });
 
 // With message appending
-return Res.Ok(data).AppendMsg("Operation completed successfully").GetResponse();
+return Res.Ok(data).AppendMessage("Operation completed successfully").GetResponse();
 ```
 
 ## Summary Table

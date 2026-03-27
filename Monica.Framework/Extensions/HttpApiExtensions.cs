@@ -130,7 +130,7 @@ public static class HttpApiExtensions
     /// 统一获取内部微服务调用API响应
     /// </summary>
     /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 response 的属性全为null或默认值，非有效值</param>
-    /// <param name="responseType">必须是IServiceResponse类型，且包含无参构造函数</param>
+    /// <param name="responseType">Must implement <see cref="IResultEnvelope" /> and expose a parameterless constructor.</param>
     /// <returns></returns>
     public static async Task<IResultEnvelope> GetResponse(this Task<HttpResponseMessage> response, Type responseType)
     {
