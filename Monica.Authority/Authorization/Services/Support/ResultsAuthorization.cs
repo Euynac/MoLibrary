@@ -1,19 +1,21 @@
+using Monica.Authority.Localization;
 using Monica.Tool.MoResponse;
 
 namespace Monica.Authority.Authorization.Services.Support;
 
 public static class ResultsAuthorization
 {
-    public static Res NotLogin()
+    public static Res NotLogin(AuthorityMessageLocalizer authorityLocalizer)
     {
-        return new Res("用户未登录", ResponseCode.Unauthorized);
+        return new Res(authorityLocalizer.GetNotLoggedInMessage(), ResponseCode.Unauthorized);
     }
-    public static Res AccessTokenExpired(string? msg = null)
+    public static Res AccessTokenExpired(AuthorityMessageLocalizer authorityLocalizer, string? msg = null)
     {
-        return new Res("用户访问凭证已过期", ResponseCode.AccessTokenExpired).AppendExtraInfo("detail", msg);
+        return new Res(authorityLocalizer.GetAccessTokenExpiredMessage(), ResponseCode.AccessTokenExpired)
+            .AppendExtraInfo("detail", msg);
     }
-    public static Res RefreshTokenExpired()
+    public static Res RefreshTokenExpired(AuthorityMessageLocalizer authorityLocalizer)
     {
-        return new Res("用户刷新凭证已过期", ResponseCode.RefreshTokenExpired);
+        return new Res(authorityLocalizer.GetRefreshTokenExpiredMessage(), ResponseCode.RefreshTokenExpired);
     }
 }

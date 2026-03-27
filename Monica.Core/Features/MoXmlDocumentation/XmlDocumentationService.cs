@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.XPath;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 
 namespace Monica.Core.Features.MoXmlDocumentation;
 
@@ -16,7 +16,7 @@ public class XmlDocumentationService : IXmlDocumentationService
     private readonly ConcurrentDictionary<string, XPathNavigator?> _navigatorCache = new();
     private static readonly Regex CleanWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly Regex RemoveTagsRegex = new(@"<[^>]*>", RegexOptions.Compiled);
-    private readonly ILogger<XmlDocumentationService> _logger = LogProvider.For<XmlDocumentationService>();
+    private readonly ILogger<XmlDocumentationService> _logger = LogManager.For<XmlDocumentationService>();
 
     /// <summary>
     /// Gets XML documentation for a method.

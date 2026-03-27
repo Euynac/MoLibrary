@@ -13,4 +13,8 @@
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
 </Project>

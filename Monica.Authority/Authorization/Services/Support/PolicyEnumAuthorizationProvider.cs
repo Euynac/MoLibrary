@@ -18,7 +18,7 @@ public class PolicyEnumAuthorizationProvider(
             return policy;
         }
 
-        //TODO 验证是否能够转换为EnumPermission
+        //TODO: verify whether this can be converted to an EnumPermission
 
         var permission = policyName;
         if (permission != null)

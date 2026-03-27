@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
@@ -28,7 +28,7 @@ public class MoModuleGuide
     public MoModuleGuide()
     {
         GuideFrom = null; // null means direct developer configuration
-        _loggerLazy = new Lazy<ILogger>(() => LogProvider.For(GetType()));
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
     }
 
     /// <summary>

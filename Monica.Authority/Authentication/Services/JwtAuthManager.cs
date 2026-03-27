@@ -9,11 +9,14 @@ using Monica.Authority.Authentication.Abstractions;
 using Monica.Authority.Authentication.Models;
 using Monica.Authority.Authorization.Exceptions;
 using Monica.Authority.Identity.Extensions;
+using Monica.Authority.Localization;
 using Monica.Modules;
 
 namespace Monica.Authority.Authentication.Services;
 
-public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig) : IJwtAuthManager, IAccessTokenIssuer
+public class JwtAuthManager(
+    IOptions<ModuleAuthenticationOption> jwtTokenConfig,
+    AuthorityMessageLocalizer authorityLocalizer) : IJwtAuthManager, IAccessTokenIssuer
 {
     protected ModuleAuthenticationOption JwtTokenConfig => jwtTokenConfig.Value;
     public IImmutableDictionary<string, RefreshToken> UsersRefreshTokensReadOnlyDictionary => _usersRefreshTokens.ToImmutableDictionary();
@@ -75,7 +78,7 @@ public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig)
         var (principal, jwtToken) = DecodeJwtToken(accessToken);
         if (jwtToken == null || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256Signature))
         {
-            throw new SecurityTokenException("Invalid token");
+            throw new SecurityTokenException(authorityLocalizer.GetInvalidTokenMessage());
         }
 
         var username = principal.AsCurrentUser().Username;
@@ -95,7 +98,7 @@ public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
-            throw new SecurityTokenException("Invalid token");
+            throw new SecurityTokenException(authorityLocalizer.GetInvalidTokenMessage());
         }
 
         if (token.StartsWith("bearer", StringComparison.OrdinalIgnoreCase))
@@ -113,7 +116,7 @@ public class JwtAuthManager(IOptions<ModuleAuthenticationOption> jwtTokenConfig)
                     IssuerSigningKey = JwtTokenConfig.SecurityKey,
                     ValidAudience = JwtTokenConfig.Audience,
                     ValidateAudience = true,
-                    ValidateLifetime = false,//不校验Token有效期
+                    ValidateLifetime = false, // Skip token lifetime validation
                     ClockSkew = TimeSpan.FromMinutes(1),
                 },
                 out var validatedToken);

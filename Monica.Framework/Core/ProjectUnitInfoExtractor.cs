@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Framework.Core.Model;
 using Monica.Tool.Extensions;
 
@@ -8,7 +8,7 @@ namespace Monica.Framework.Core;
 
 public static class ProjectUnitInfoExtractor
 {
-    private static readonly ILogger _logger = LogProvider.For(typeof(ProjectUnitInfoExtractor));
+    private static readonly ILogger _logger = LogManager.For(typeof(ProjectUnitInfoExtractor));
 
     internal static IEnumerable<Type> ExtractUnitInfo(this IEnumerable<Type> types, IServiceCollection services)
     {

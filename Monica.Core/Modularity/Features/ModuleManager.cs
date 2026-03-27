@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoLogProvider;
+using Monica.Core.Logging;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Features;
@@ -9,7 +9,7 @@ namespace Monica.Core.Modularity.Features;
 /// </summary>
 public static class ModuleManager
 {
-    public static ILogger Logger { get; set; } = LogProvider.For(typeof(ModuleManager));
+    public static ILogger Logger { get; set; } = LogManager.For(typeof(ModuleManager));
 
     /// <summary>
     /// List of disabled module types

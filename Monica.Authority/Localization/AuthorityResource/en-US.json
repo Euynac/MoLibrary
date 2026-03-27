@@ -1,0 +1,22 @@
+{
+  "Messages": {
+    "NotLoggedIn": "User is not logged in.",
+    "AccessTokenExpired": "The user's access token has expired.",
+    "RefreshTokenExpired": "The user's refresh token has expired.",
+    "TokenException": "The user's token is invalid.",
+    "InvalidToken": "Invalid token.",
+    "MissingPermission": "Permission \"{0}\" is required."
+  },
+  "Errors": {
+    "CurrentSystemUserNotConfigured": "The current system user is not configured.",
+    "SystemUserEnumNotConfigured": "Enum value \"{0}\" from \"{1}\" is not configured as a system user."
+  },
+  "AuthorizationExceptionTitles": {
+    "Unknown": "Unknown error",
+    "PermissionDenied": "Permission denied",
+    "NotLogin": "Not logged in",
+    "AccessTokenExpired": "Access token expired",
+    "RefreshTokenExpired": "Refresh token expired",
+    "TokenException": "Invalid token"
+  }
+}

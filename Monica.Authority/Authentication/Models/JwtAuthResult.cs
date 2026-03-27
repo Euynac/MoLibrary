@@ -8,11 +8,11 @@ public class JwtAuthResult
     public string RefreshToken => RefreshTokenObj.TokenString;
 
     /// <summary>
-    /// Token类型
+    /// Token type
     /// </summary>
     public string TokenType => "bearer";
     /// <summary>
-    /// AccessToken失效时间
+    /// Expiration time of the AccessToken
     /// </summary>
     public DateTime ExpiresAt { get; set; }
     [JsonIgnore]

@@ -4,12 +4,13 @@ using Monica.Authority.Authorization.Abstractions;
 namespace Monica.Authority.Authorization.Services.Support;
 
 /// <summary>
-/// 二进制权限枚举检查器管理器
+/// Manager for binary permission bit checkers
 /// </summary>
 public class PermissionBitCheckerManager
 {
     private static readonly Dictionary<Type, object> _dict = [];
     public static IPermissionBitChecker Singleton { get; internal set; } = null!;
+
     public static void AddChecker<TEnum>(IPermissionBitChecker<TEnum> checker) where TEnum : struct, Enum
     {
         _dict.Add(typeof(TEnum), checker);

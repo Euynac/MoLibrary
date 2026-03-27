@@ -1,7 +1,7 @@
-using System.ComponentModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
+using Monica.Authority.Localization;
 using Monica.Tool.Extensions;
 
 namespace Monica.Authority.Authorization.Exceptions;
@@ -14,30 +14,22 @@ public class AuthorizationException : Exception
     public string? Reason { get; set; }
 
     public ExceptionType Type { get; set; }
-    public string Title => Type.GetDescription()!;
-
     public enum ExceptionType
     {
-        [Description("未知异常")]
         Unknown = 0,
-        [Description("权限不足")]
         PermissionDenied,
-        [Description("用户未登录")]
         NotLogin,
-        [Description("访问令牌已过期")]
         AccessTokenExpired,
-        [Description("刷新令牌已过期")]
         RefreshTokenExpired,
-        [Description("用户令牌异常")]
         TokenException
     }
 
-    public AuthorizationException(ExceptionType type) : base($"权限异常：{type}")
+    public AuthorizationException(ExceptionType type) : base($"Authorization error: {type}")
     {
         Type = type;
     }
 
-    public AuthorizationException(AuthorizationFailure? failure) : base("认证失败")
+    public AuthorizationException(AuthorizationFailure? failure) : base("Authorization failed")
     {
         Type = ExceptionType.PermissionDenied;
         Failure = failure;
@@ -55,7 +47,7 @@ public class AuthorizationException : Exception
         }
 
     }
-    public AuthorizationException(Exception? failure) : base($"认证失败：{failure?.Message}")
+    public AuthorizationException(Exception? failure) : base($"Authorization failed: {failure?.Message}")
     {
         FailureException = failure;
         if (failure != null)
@@ -68,7 +60,7 @@ public class AuthorizationException : Exception
                     break;
                 case SecurityTokenArgumentException:
                 case SecurityTokenException:
-                    Reason = $"用户Token异常：[{failure.GetType()}]{failure.Message}";
+                    Reason = $"Token exception: [{failure.GetType()}]{failure.Message}";
                     Type = ExceptionType.TokenException;
                     break;
                 default:
@@ -76,5 +68,10 @@ public class AuthorizationException : Exception
                     break;
             }
         }
+    }
+
+    public string GetTitle(AuthorityMessageLocalizer localizer)
+    {
+        return localizer.GetAuthorizationExceptionTitle(Type);
     }
 }

@@ -13,7 +13,7 @@ public static class ModuleCorsBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// 配置 CORS (跨域资源共享) 模块
+        /// Configure the CORS (Cross-Origin Resource Sharing) module
         /// </summary>
         public static ModuleCorsGuide AddCors()
         {
@@ -30,11 +30,11 @@ public class ModuleCors(ModuleCorsOption option) : MoModule<ModuleCors, ModuleCo
 public class ModuleCorsGuide : MoModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
 {
     /// <summary>
-    /// 配置允许所有来源的 CORS 策略（开发/测试环境使用）。
-    /// <para>允许任意来源、方法、请求头，并支持凭据（cookies/authorization headers）。</para>
-    /// <para>内部使用 <c>SetIsOriginAllowed(_ => true)</c> 代替 <c>AllowAnyOrigin()</c>，
-    /// 以支持 SignalR 等需要动态填写 Access-Control-Allow-Origin 的场景。</para>
-    /// <para>注意：生产环境应配置具体的允许来源列表。</para>
+    /// Configure a permissive CORS policy (intended for development/testing).
+    /// <para>Allows any origin, method, and header while supporting credentials (cookies/authorization headers).</para>
+    /// <para>Uses <c>SetIsOriginAllowed(_ => true)</c> instead of <c>AllowAnyOrigin()</c> to enable dynamic
+    /// Access-Control-Allow-Origin headers required by SignalR and similar scenarios.</para>
+    /// <para>Note: restrict allowed origins explicitly in production environments.</para>
     /// </summary>
     public ModuleCorsGuide AllowAll()
     {
@@ -57,7 +57,7 @@ public class ModuleCorsGuide : MoModuleGuide<ModuleCors, ModuleCorsOption, Modul
 
     internal ModuleCorsGuide ConfigCorsMiddleware()
     {
-        //必须在UseRouting之后但在UseAuthorization之前。当请求带Origin Header时生效
+        // Must be registered after UseRouting but before UseAuthorization so CORS takes effect when Origin headers are present
         ConfigureApplicationBuilder(o =>
         {
             o.ApplicationBuilder.UseCors();

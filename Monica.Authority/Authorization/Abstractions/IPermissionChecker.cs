@@ -4,19 +4,19 @@ using Monica.Authority.Authorization.Models;
 namespace Monica.Authority.Authorization.Abstractions;
 
 /// <summary>
-/// 判断授权
+/// Perform permission checks
 /// </summary>
 public interface IPermissionChecker
 {
     /// <summary>
-    /// 判断当前用户是否有此权限
+    /// Determine whether the current user has the specified permission
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
     Task<bool> IsGrantedAsync(string name);
 
     /// <summary>
-    /// 判断给定用户信息是否有此权限
+    /// Determine whether the provided ClaimsPrincipal has the specified permission
     /// </summary>
     /// <param name="claimsPrincipal"></param>
     /// <param name="name"></param>
@@ -24,12 +24,12 @@ public interface IPermissionChecker
     Task<bool> IsGrantedAsync(ClaimsPrincipal? claimsPrincipal, string name);
 
     /// <summary>
-    /// 判断当前用户是否有这些权限
+    /// Determine whether the current user has the specified permissions
     /// </summary>
     Task<MultiplePermissionGrantResult> IsGrantedAsync(string[] names);
 
     /// <summary>
-    /// 判断给定用户信息是否有这些权限
+    /// Determine whether the provided ClaimsPrincipal has the specified permissions
     /// </summary>
     Task<MultiplePermissionGrantResult> IsGrantedAsync(ClaimsPrincipal? claimsPrincipal, string[] names);
 }

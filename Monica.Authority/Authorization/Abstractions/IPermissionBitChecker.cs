@@ -4,208 +4,208 @@ using Monica.Authority.Authorization.Annotations;
 namespace Monica.Authority.Authorization.Abstractions;
 
 /// <summary>
-/// 二进制权限检查器
+/// Binary permission bit checker
 /// </summary>
 public interface IPermissionBitChecker<TEnum> where TEnum : struct, Enum
 {
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定二进制位权限字符串中。
+    /// Determine whether the permission name exists within the provided permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits(string permissionBits, string permissionNameOfEnum);
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定二进制位权限字符串中。
+    /// Determine whether the permission enum entry exists within the provided permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits(string permissionBits, TEnum permissionEnum);
     /// <summary>
-    /// 判断枚举型权限名否都存在于给定二进制位权限字符串中。
+    /// Determine whether all provided permission enums exist within the given permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits(string permissionBits, params TEnum[] permissionEnums);
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether the permission name exists within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted(ClaimsPrincipal principal, string permissionNameOfEnum);
     /// <summary>
-    /// 判断枚举型权限是否存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether the permission enum exists within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted(ClaimsPrincipal principal, TEnum permissionEnum);
     /// <summary>
-    /// 判断给定枚举型权限是否都存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether all provided permission enums exist within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted(ClaimsPrincipal principal, params TEnum[] permissionEnums);
     /// <summary>
-    /// 从Claims中获取权限位字符串
+    /// Extract the permission bits string from the given ClaimsPrincipal.
     /// </summary>
     /// <param name="principal"></param>
     /// <returns></returns>
     string GetPermissionBits(ClaimsPrincipal principal);
 
     /// <summary>
-    /// 获取超级管理员权限位字符串，即全为1
+    /// Get the permission bits string for a super administrator (all bits set to 1).
     /// </summary>
     /// <returns></returns>
     string GetAdminPermissionBits();
 
     /// <summary>
-    /// 获取超级管理管理员权限Claims
+    /// Get the claim representing super administrator permissions.
     /// </summary>
     Claim GetAdminClaim();
 
     /// <summary>
-    /// 转为权限位字符串
+    /// Convert the provided permissions into a permission bits string.
     /// </summary>
     /// <returns></returns>
     string ToPermissionBits(List<TEnum> permissionEnums);
 
     /// <summary>
-    /// 获取已赋权的权限枚举列表
+    /// Return the list of permission enums granted by the specified bit string.
     /// </summary>
     /// <param name="permissionBits"></param>
     /// <returns></returns>
     List<TEnum> GrantedList(string permissionBits);
     /// <summary>
-    /// 获取已赋权的权限枚举列表
+    /// Return the list of permissions granted to the specified ClaimsPrincipal.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList(ClaimsPrincipal principal);
     /// <summary>
-    /// 获取在给定范围内已赋权的权限枚举列表
+    /// Return the list of granted permission enums within the provided scope from the bit string.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList(string permissionBits, params TEnum[] permissionScope);
     /// <summary>
-    /// 获取在给定范围内已赋权的权限枚举列表
+    /// Return the list of granted permission enums within the provided scope from a ClaimsPrincipal.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList(ClaimsPrincipal principal, params TEnum[] permissionScope);
     /// <summary>
-    /// 转为权限Claims
+    /// Convert the specified permissions into a Claim.
     /// </summary>
 
     /// <returns></returns>
     Claim ToClaim(List<TEnum> permissionEnums);
 
     /// <summary>
-    /// 获取所有权限Bit定义信息
+    /// Get the metadata for all permission bits.
     /// </summary>
     /// <returns></returns>
     Dictionary<TEnum, IPermissionBitData> GetAllBitData();
 
     /// <summary>
-    /// 获取权限Bit定义信息
+    /// Get the metadata for a permission enum by name.
     /// </summary>
-    /// <param name="key">权限枚举名</param>
+    /// <param name="key">Permission enum name</param>
     /// <returns></returns>
     (TEnum, IPermissionBitData)? GetBitData(string key);
 
     /// <summary>
-    /// 获取权限Bit定义信息
+    /// Get the metadata for the specified permission enum.
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
     IPermissionBitData? GetBitData(TEnum key);
 }
 /// <summary>
-/// 二进制权限检查器
+/// Binary permission bit checker
 /// </summary>
 public interface IPermissionBitChecker 
 {
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定二进制位权限字符串中。
+    /// Determine whether the permission name exists within the provided permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits<TEnum>(string permissionBits, string permissionNameOfEnum) where TEnum : struct, Enum;
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定二进制位权限字符串中。
+    /// Determine whether the permission enum entry exists within the provided permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits<TEnum>(string permissionBits, TEnum permissionEnum) where TEnum : struct, Enum;
     /// <summary>
-    /// 判断枚举型权限名否都存在于给定二进制位权限字符串中。
+    /// Determine whether all provided permission enums exist within the given permission bits string.
     /// </summary>
     /// <returns></returns>
     bool IsInBits<TEnum>(string permissionBits, params TEnum[] permissionEnums) where TEnum : struct, Enum;
     /// <summary>
-    /// 判断枚举型权限名是否存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether the permission name exists within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted<TEnum>(ClaimsPrincipal principal, string permissionNameOfEnum) where TEnum : struct, Enum;
     /// <summary>
-    /// 判断枚举型权限是否存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether the permission enum exists within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted<TEnum>(ClaimsPrincipal principal, TEnum permissionEnum) where TEnum : struct, Enum;
     /// <summary>
-    /// 判断给定枚举型权限是否都存在于给定ClaimsPrincipal的二进制位权限字符串中。
+    /// Determine whether all provided permission enums exist within the ClaimsPrincipal's permission bits string.
     /// </summary>
     bool IsGranted<TEnum>(ClaimsPrincipal principal, params TEnum[] permissionEnums) where TEnum : struct, Enum;
     /// <summary>
-    /// 从Claims中获取权限位字符串
+    /// Extract the permission bits string from the given ClaimsPrincipal.
     /// </summary>
     /// <param name="principal"></param>
     /// <returns></returns>
     string GetPermissionBits<TEnum>(ClaimsPrincipal principal) where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取超级管理员权限位字符串，即全为1
+    /// Get the permission bits string for a super administrator (all bits set to 1).
     /// </summary>
     /// <returns></returns>
     string GetAdminPermissionBits<TEnum>() where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取超级管理管理员权限Claims
+    /// Get the claim representing super administrator permissions.
     /// </summary>
     Claim GetAdminClaim<TEnum>() where TEnum : struct, Enum;
 
     /// <summary>
-    /// 转为权限位字符串
+    /// Convert the provided permissions into a permission bits string.
     /// </summary>
     /// <returns></returns>
     string ToPermissionBits<TEnum>(List<TEnum> permissionEnums) where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取已赋权的权限枚举列表
+    /// Return the list of permission enums granted by the specified bit string.
     /// </summary>
     /// <param name="permissionBits"></param>
     /// <returns></returns>
     List<TEnum> GrantedList<TEnum>(string permissionBits) where TEnum : struct, Enum;
     /// <summary>
-    /// 获取已赋权的权限枚举列表
+    /// Return the list of permissions granted to the specified ClaimsPrincipal.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList<TEnum>(ClaimsPrincipal principal) where TEnum : struct, Enum;
     /// <summary>
-    /// 获取在给定范围内已赋权的权限枚举列表
+    /// Return the list of granted permission enums within the provided scope from the bit string.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList<TEnum>(string permissionBits, params TEnum[] permissionScope) where TEnum : struct, Enum;
     /// <summary>
-    /// 获取在给定范围内已赋权的权限枚举列表
+    /// Return the list of granted permission enums within the provided scope from a ClaimsPrincipal.
     /// </summary>
     /// <returns></returns>
     List<TEnum> GrantedList<TEnum>(ClaimsPrincipal principal, params TEnum[] permissionScope) where TEnum : struct, Enum;
     /// <summary>
-    /// 转为权限Claims
+    /// Convert the specified permissions into a Claim.
     /// </summary>
 
     /// <returns></returns>
     Claim ToClaim<TEnum>(List<TEnum> permissionEnums) where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取所有权限Bit定义信息
+    /// Get the metadata for all permission bits.
     /// </summary>
     /// <returns></returns>
     Dictionary<TEnum, IPermissionBitData> GetAllBitData<TEnum>() where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取权限Bit定义信息
+    /// Get the metadata for a permission enum by name.
     /// </summary>
-    /// <param name="key">权限枚举名</param>
+    /// <param name="key">Permission enum name</param>
     /// <returns></returns>
     (TEnum, IPermissionBitData)? GetBitData<TEnum>(string key) where TEnum : struct, Enum;
 
     /// <summary>
-    /// 获取权限Bit定义信息
+    /// Get the metadata for the specified permission enum.
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
