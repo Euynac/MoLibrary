@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Extensions;
 
@@ -14,11 +14,11 @@ public static class RESTfulApiExtensions
     public static async Task<object> GetResponse(this Task<object> response, ControllerBase controller)
     {
         var res = await response;
-        if (res is IMoResponse serviceResponse)
+        if (res is IResultEnvelope serviceResponse)
         {
             return new ObjectResult(serviceResponse)
             {
-                StatusCode = (int?)serviceResponse.GetHttpStatusCode()
+                StatusCode = (int?)serviceResponse.ToHttpStatusCode()
             };
         }
         return res;
@@ -31,12 +31,12 @@ public static class RESTfulApiExtensions
     /// <param name="controller">The controller instance. Reserved for API symmetry.</param>
     /// <returns>An <see cref="ObjectResult"/> with the response payload and HTTP status code.</returns>
     public static async Task<ObjectResult> GetResponse<T>(this Task<T> response, ControllerBase controller)
-        where T : IMoResponse
+        where T : IResultEnvelope
     {
-        var res = await response as IMoResponse;
+        var res = await response as IResultEnvelope;
         return new ObjectResult(res)
         {
-            StatusCode = (int?)res.GetHttpStatusCode()
+            StatusCode = (int?)res.ToHttpStatusCode()
         };
     }
 
@@ -48,11 +48,11 @@ public static class RESTfulApiExtensions
     /// <param name="controller">The controller instance. Reserved for API symmetry.</param>
     /// <returns>An <see cref="ObjectResult"/> with the response payload and HTTP status code.</returns>
     public static ObjectResult GetResponse<T>(this T response, ControllerBase controller)
-        where T : IMoResponse
+        where T : IResultEnvelope
     {
         return new ObjectResult(response)
         {
-            StatusCode = (int?)response.GetHttpStatusCode()
+            StatusCode = (int?)response.ToHttpStatusCode()
         };
     }
 }

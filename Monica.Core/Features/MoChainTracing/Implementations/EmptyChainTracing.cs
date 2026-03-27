@@ -1,5 +1,5 @@
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 
@@ -78,7 +78,7 @@ public class EmptyChainTracing : IMoChainTracing
     /// </summary>
     /// <param name="traceId">The local trace identifier.</param>
     /// <param name="remoteRes">The remote response carrying chain metadata.</param>
-    public void MergeRemoteChain(string traceId, IMoResponse remoteRes)
+    public void MergeRemoteChain(string traceId, IResultEnvelope remoteRes)
     {
     }
 

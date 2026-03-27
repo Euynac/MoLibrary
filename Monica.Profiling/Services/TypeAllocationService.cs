@@ -1,7 +1,7 @@
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Profiling.Services;
 

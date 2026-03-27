@@ -6,7 +6,7 @@ using Monica.Repository.DtoInterfaces;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Exceptions;
 using Monica.Repository.Interfaces;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.AutoCrud;
 

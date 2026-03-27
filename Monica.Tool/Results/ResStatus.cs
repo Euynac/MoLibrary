@@ -1,9 +1,9 @@
-namespace Monica.Tool.MoResponse;
+namespace Monica.Tool.Results;
 
 /// <summary>
 /// 通用返回码
 /// </summary>
-public enum ResponseCode
+public enum ResStatus
 {
     Unknown = 0,
     /// <summary>

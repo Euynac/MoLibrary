@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Features.MoMapper;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.Interfaces;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign;
 

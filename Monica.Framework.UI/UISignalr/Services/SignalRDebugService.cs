@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 using Monica.Framework.UI.UISignalr.Models;
 using Monica.SignalR.Services;
 using Monica.SignalR.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.UI.UISignalr.Services
 {

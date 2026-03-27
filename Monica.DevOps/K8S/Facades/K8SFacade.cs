@@ -5,7 +5,7 @@ using Monica.DevOps.Localization;
 using Monica.DevOps.K8S.Models;
 using Monica.DevOps.K8S.Services;
 using Monica.DevOps.K8S.Services.Support;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DevOps.K8S.Facades;
 
@@ -252,7 +252,7 @@ public class K8SFacade(
     {
         if (!K8SResourceTypeExtensions.TryParse(resourceType, out var parsedResourceType))
         {
-            return Res.Fail(messageLocalizer.GetUnsupportedResourceTypeMessage(resourceType), ResponseCode.BadRequest);
+            return Res.Fail(messageLocalizer.GetUnsupportedResourceTypeMessage(resourceType), ResStatus.BadRequest);
         }
 
         return await action(parsedResourceType);
@@ -294,16 +294,16 @@ public class K8SFacade(
         }
     }
 
-    private static ResponseCode GetResponseCode(Exception exception)
+    private static ResStatus GetResponseCode(Exception exception)
     {
         return exception switch
         {
-            ArgumentException => ResponseCode.BadRequest,
-            InvalidOperationException => ResponseCode.BadRequest,
-            KeyNotFoundException => ResponseCode.BadRequest,
-            FileNotFoundException => ResponseCode.BadRequest,
-            K8SOperationException => ResponseCode.BadRequest,
-            _ => ResponseCode.InternalError
+            ArgumentException => ResStatus.BadRequest,
+            InvalidOperationException => ResStatus.BadRequest,
+            KeyNotFoundException => ResStatus.BadRequest,
+            FileNotFoundException => ResStatus.BadRequest,
+            K8SOperationException => ResStatus.BadRequest,
+            _ => ResStatus.InternalError
         };
     }
 }

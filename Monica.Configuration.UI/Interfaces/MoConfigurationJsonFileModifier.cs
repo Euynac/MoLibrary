@@ -7,7 +7,7 @@ using Monica.Configuration.Model;
 using Monica.Configuration.UI.Model;
 using Monica.Core.Extensions;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Configuration.UI.Interfaces;
 

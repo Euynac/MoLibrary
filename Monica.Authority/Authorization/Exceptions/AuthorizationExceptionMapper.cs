@@ -6,7 +6,7 @@ using Monica.Authority.Localization;
 using Monica.Authority.Authorization.Services.Support;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Authority.Authorization.Exceptions;
 
@@ -43,20 +43,20 @@ internal class AuthorizationExceptionMapper(AuthorityMessageLocalizer authorityL
             case AuthorizationException authorizationException:
             {
                 var problemDetail = new ProblemDetails { Title = authorizationException.Reason };
-                response = new ResError<ProblemDetails>(
-                    problemDetail,
-                    authorizationException.GetTitle(authorityLocalizer),
-                    ResponseCode.Forbidden);
+                response = Res.Fail(
+                        authorizationException.GetTitle(authorityLocalizer),
+                        ResStatus.Forbidden)
+                    .AppendExtraInfo("error", problemDetail);
                 return true;
             }
 
             case SecurityTokenArgumentException tokenMalformedException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResponseCode.Unauthorized).AppendExtraInfo("detail",
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendExtraInfo("detail",
                     tokenMalformedException.Message);
                 return true;
 
             case SecurityTokenException:
-                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResponseCode.Unauthorized).AppendExtraInfo("detail",
+                response = new Res(authorityLocalizer.GetTokenExceptionMessage(), ResStatus.Unauthorized).AppendExtraInfo("detail",
                     exception.Message);
                 return true;
 

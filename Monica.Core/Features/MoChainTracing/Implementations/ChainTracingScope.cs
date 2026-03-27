@@ -1,6 +1,6 @@
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 
@@ -79,7 +79,7 @@ public class ChainTracingScope : IDisposable
     /// Merges remote chain data into this scope.
     /// </summary>
     /// <param name="remoteChainInfo">The remote response carrying chain metadata.</param>
-    public void MergeRemoteChain(IMoResponse remoteChainInfo)
+    public void MergeRemoteChain(IResultEnvelope remoteChainInfo)
     {
         if (!_disposed)
         { 

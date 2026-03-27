@@ -8,7 +8,7 @@ using Monica.EventBus.Abstractions;
 using Monica.Framework.Core;
 using Monica.Framework.Core.Model;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.Services;
 
@@ -104,7 +104,7 @@ public class FrameworkMonitorService(
                 await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
                 
                 return Res.Ok(eventToPublish)
-                          .AppendMsg($"已发布{eventKey}信息");
+                          .AppendMessage($"已发布{eventKey}信息");
             }
             return Res.Fail($"获取{eventKey}相关单元信息失败");
         }

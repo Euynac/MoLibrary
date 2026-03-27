@@ -2,16 +2,16 @@ using System.Dynamic;
 using System.Text.Json.Serialization;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.MoResponse;
+namespace Monica.Tool.Results;
 
 /// <summary>
 /// 统一分页响应模型
 /// </summary>
 /// <typeparam name="TDto"></typeparam>
-public class ResPaged<TDto> : IMoResponse
+public class ResPaged<TDto> : IResultEnvelope
 {
     public string? Message { get; set; }
-    public ResponseCode? Code { get; set; } = ResponseCode.Ok;
+    public ResStatus? Code { get; set; } = ResStatus.Ok;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? ExtraInfo { get; set; }
 
@@ -90,7 +90,7 @@ public class ResPaged<TDto> : IMoResponse
     /// 提取为新响应数据
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res(ResPaged<TDto> res) => new(res.Message ?? "", res.Code ?? ResponseCode.BadRequest)
+    public static implicit operator Res(ResPaged<TDto> res) => new(res.Message ?? "", res.Code ?? ResStatus.BadRequest)
     {
         ExtraInfo = res.ExtraInfo
     };
@@ -104,6 +104,6 @@ public class ResPaged<TDto> : IMoResponse
 
     public static implicit operator ResPaged<TDto>(string res) => new(0, [])
     {
-        Message = res, Code = ResponseCode.BadRequest
+        Message = res, Code = ResStatus.BadRequest
     };
 }

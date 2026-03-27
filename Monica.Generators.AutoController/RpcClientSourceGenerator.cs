@@ -211,10 +211,14 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             var namespaceMatches = Regex.Matches(namespacesJson, @"""([^""]*)""");
             foreach (Match nsMatch in namespaceMatches)
             {
-                var ns = nsMatch.Groups[1].Value;
-                if (!string.IsNullOrEmpty(ns))
+                var ns = NormalizeRelatedNamespace(nsMatch.Groups[1].Value);
+                if (!string.IsNullOrEmpty(ns) && !metadata.RelatedNamespaces.Contains(ns))
+                {
                     metadata.RelatedNamespaces.Add(ns);
+                }
             }
+
+            metadata.RelatedNamespaces.Sort(StringComparer.Ordinal);
         }
 
         // Parse handlers array
@@ -234,6 +238,16 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         }
 
         return metadata;
+    }
+
+    private static string NormalizeRelatedNamespace(string namespaceName)
+    {
+        return namespaceName switch
+        {
+            "Monica.Tool.MoResponse" => "Monica.Tool.Results",
+            "Monica.Tool.MoRsponse" => "Monica.Tool.Results",
+            _ => namespaceName
+        };
     }
 
     /// <summary>

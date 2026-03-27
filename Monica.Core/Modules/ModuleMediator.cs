@@ -4,7 +4,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -32,7 +32,7 @@ public class ModuleMediator(ModuleMediatorOption option) : MoModule<ModuleMediat
         // TODO: move this into the shared business-type iteration pipeline.
         services.AddMediatR(cfg =>
         {
-            cfg.RegisterServicesFromAssemblyContaining<IMoResponse>();
+            cfg.RegisterServicesFromAssemblyContaining<IResultEnvelope>();
             cfg.RegisterServicesFromAssembly(Assembly.GetEntryAssembly()!);
         });
     }

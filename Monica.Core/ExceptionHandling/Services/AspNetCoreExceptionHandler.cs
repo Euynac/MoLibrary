@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.ExceptionHandling.Abstractions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.ExceptionHandling.Services;
 
@@ -21,7 +21,7 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
         var res = await handler.HandleAsync(httpContext, exception, cancellationToken);
         handler.LogException(httpContext, exception);
         httpContext.Response.StatusCode =
-            (int)(res.GetHttpStatusCode() ?? HttpStatusCode.InternalServerError);
+            (int)(res.ToHttpStatusCode() ?? HttpStatusCode.InternalServerError);
 
         return await WriteResponseAsync(httpContext, res, exception, cancellationToken);
     }
@@ -60,7 +60,7 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             httpContext.Response.ContentType = "application/json; charset=utf-8";
 
-            var fallbackResponse = Res.Fail(response.Message ?? "服务器出现异常", response.Code ?? ResponseCode.InternalError)
+            var fallbackResponse = Res.Fail(response.Message ?? "服务器出现异常", response.Code ?? ResStatus.InternalError)
                 .AppendExtraInfo("detail", "Exception response serialization failed.")
                 .AppendExtraInfo("originalException", new
                 {

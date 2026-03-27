@@ -6,7 +6,7 @@ using Monica.EventBus.Constants;
 using Monica.EventBus.Models;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.UI.UIEventBus.Services;
 
@@ -117,7 +117,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get all subscriptions");
-            return Res.Fail($"获取订阅列表失败: {ex.Message}", ResponseCode.InternalError);
+            return Res.Fail($"获取订阅列表失败: {ex.Message}", ResStatus.InternalError);
         }
     }
 
@@ -141,7 +141,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get subscription by ID: {SubscriptionId}", subscriptionId);
-            return Res.Fail($"获取订阅详情失败: {ex.Message}", ResponseCode.InternalError);
+            return Res.Fail($"获取订阅详情失败: {ex.Message}", ResStatus.InternalError);
         }
     }
 
@@ -195,7 +195,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to filter subscriptions");
-            return Res.Fail($"过滤订阅失败: {ex.Message}", ResponseCode.InternalError);
+            return Res.Fail($"过滤订阅失败: {ex.Message}", ResStatus.InternalError);
         }
     }
 

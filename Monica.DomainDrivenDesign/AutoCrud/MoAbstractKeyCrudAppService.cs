@@ -15,7 +15,7 @@ using Monica.Repository.Exceptions;
 using Monica.Repository.Interfaces;
 using Monica.Repository.Transaction;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.AutoCrud;
 

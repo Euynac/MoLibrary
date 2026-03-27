@@ -4,12 +4,12 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Decorators;
 
 /// <summary>
-/// Attaches chain data to controller responses that implement <see cref="IMoResponse" />.
+/// Attaches chain data to controller responses that implement <see cref="IResultEnvelope" />.
 /// </summary>
 public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOptions<ModuleChainTracingOption> options) : IActionFilter
 {
@@ -30,8 +30,8 @@ public class ChainTracingAttachingActionFilter(IMoChainTracing chainTracing, IOp
     /// <param name="context">The action execution context.</param>
     public void OnActionExecuted(ActionExecutedContext context)
     {
-        // Attach chain metadata only when the action returned IMoResponse.
-        if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IMoResponse serviceResponse)
+        // Attach chain metadata only when the action returned an IResultEnvelope.
+        if (chainTracing.GetCurrentChain() is { } chain && ChainTracingHelper.ExtractResult(context.Result) is IResultEnvelope serviceResponse)
         {
             chain.MarkComplete();
             serviceResponse.ExtraInfo ??= new ExpandoObject();

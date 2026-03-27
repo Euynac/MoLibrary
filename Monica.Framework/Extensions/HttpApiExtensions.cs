@@ -7,7 +7,7 @@ using Monica.Core.Logging;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.Extensions;
 
@@ -21,7 +21,7 @@ public static class HttpApiExtensions
     /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 <typeparamref name="TResponse"/> 的属性全为null或默认值，非有效值</param>
     /// <returns></returns>
     public static async Task<TResponse> GetResponse<TResponse>(this Task<HttpResponseMessage> response)
-        where TResponse : class, IMoResponse, new()
+        where TResponse : class, IResultEnvelope, new()
     {
         var resContent = string.Empty;
         HttpResponseMessage? httpResponse = null;
@@ -32,8 +32,8 @@ public static class HttpApiExtensions
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
             res = JsonSerializer.Deserialize<TResponse>(resContent, JsonSerializerOptionsProvider.SharedSerializerOptions);
-            res?.AutoParseResponseFromOrigin(resContent);
-            if (res?.IsServiceNormal() is true)
+            res?.AttachOriginIfMalformed(resContent);
+            if (res?.IsRemoteResultHealthy() is true)
             {
                 return res;
             }
@@ -45,7 +45,7 @@ public static class HttpApiExtensions
 
         var errorRes = new TResponse
         {
-            Code = ResponseCode.InternalError,
+            Code = ResStatus.InternalError,
             Message = "接口响应出错",
         };
 
@@ -132,18 +132,18 @@ public static class HttpApiExtensions
     /// <param name="response">需要检查 IsSuccess 属性是否是 <b>true</b>，否则 response 的属性全为null或默认值，非有效值</param>
     /// <param name="responseType">必须是IServiceResponse类型，且包含无参构造函数</param>
     /// <returns></returns>
-    public static async Task<IMoResponse> GetResponse(this Task<HttpResponseMessage> response, Type responseType)
+    public static async Task<IResultEnvelope> GetResponse(this Task<HttpResponseMessage> response, Type responseType)
     {
         var resContent = string.Empty;
         HttpResponseMessage? httpResponse = null;
         Exception? e = null;
-        IMoResponse? res = default;
+        IResultEnvelope? res = default;
         try
         {
             httpResponse = await response;
             resContent = await httpResponse.Content.ReadAsStringAsync();
-            res = (IMoResponse?)JsonSerializer.Deserialize(resContent, responseType, JsonSerializerOptionsProvider.SharedSerializerOptions);
-            if (res?.IsServiceNormal() is true)
+            res = (IResultEnvelope?)JsonSerializer.Deserialize(resContent, responseType, JsonSerializerOptionsProvider.SharedSerializerOptions);
+            if (res?.IsRemoteResultHealthy() is true)
             {
                 return res;
             }
@@ -153,8 +153,8 @@ public static class HttpApiExtensions
             e = ex;
         }
 
-        var errorRes = (IMoResponse?)Activator.CreateInstance(responseType)!;
-        errorRes.Code = ResponseCode.InternalError;
+        var errorRes = (IResultEnvelope?)Activator.CreateInstance(responseType)!;
+        errorRes.Code = ResStatus.InternalError;
         errorRes.Message = "接口响应出错";
 
         if (e != null)

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISystemInfo.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.UI.UISystemInfo.Services;
 

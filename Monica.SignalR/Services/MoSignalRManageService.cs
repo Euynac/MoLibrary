@@ -5,7 +5,7 @@ using Monica.Authority.Identity.Models;
 using Monica.SignalR.Interfaces;
 using Monica.SignalR.Models;
 using Monica.Modules;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 using SignalRSwaggerGen.Attributes;
 
 namespace Monica.SignalR.Services;

@@ -8,7 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -79,9 +79,9 @@ public class DaprServiceInvocationConnector(
                 throw new InvocationException(appId, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
-            if (res is IMoResponse serviceResponse)
+            if (res is IResultEnvelope serviceResponse)
             {
-                serviceResponse.AutoParseResponseFromOrigin(content);
+                serviceResponse.AttachOriginIfMalformed(content);
             }
 
             return res;
@@ -90,13 +90,13 @@ public class DaprServiceInvocationConnector(
         {
             var message = jsonException.GetMessageRecursively();
             logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
+            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
             logger.LogError(e, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
+            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
         }
     }
 
@@ -127,9 +127,9 @@ public class DaprServiceInvocationConnector(
                 throw new InvocationException(appId, callbackUrl,
                     new Exception("Json序列化为空"), response);
 
-            if (res is IMoResponse serviceResponse)
+            if (res is IResultEnvelope serviceResponse)
             {
-                serviceResponse.AutoParseResponseFromOrigin(content);
+                serviceResponse.AttachOriginIfMalformed(content);
             }
             return res;
         }
@@ -137,13 +137,13 @@ public class DaprServiceInvocationConnector(
         {
             var message = jsonException.GetMessageRecursively();
             logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
+            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
             logger.LogError(e, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
-            return Res.Fail(ResponseCode.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
+            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
         }
     }
 

@@ -6,7 +6,7 @@ using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.ExceptionHandling.Models.Internal;
 using Monica.Core.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.ExceptionHandling.Services;
 
@@ -46,7 +46,7 @@ internal class ExceptionHandlerService(
 
         return Task.FromResult(AppendExtraInfoList(result));
 
-        T AppendExtraInfoList<T>(T response) where T : IMoResponse
+        T AppendExtraInfoList<T>(T response) where T : IResultEnvelope
         {
             foreach (var kvp in extraInfoList)
             {
@@ -92,7 +92,7 @@ internal class ExceptionHandlerService(
         return response;
     }
 
-    private static ResError<ProblemDetails> CreateUnexpectedErrorResponse(HttpContext? httpContext, Exception exception)
+    private static Res CreateUnexpectedErrorResponse(HttpContext? httpContext, Exception exception)
     {
         var problemDetails = new ProblemDetails
         {
@@ -111,6 +111,7 @@ internal class ExceptionHandlerService(
             }
         };
 
-        return new ResError<ProblemDetails>(problemDetails, "服务器出现异常", ResponseCode.InternalError);
+        return Res.Fail("服务器出现异常", ResStatus.InternalError)
+            .AppendExtraInfo("error", problemDetails);
     }
 }

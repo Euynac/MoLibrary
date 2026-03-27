@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Decorators;
 
@@ -51,11 +51,11 @@ public class ChainTracingProviderController(IMoChainTracing chainTracing, ILogge
             }
             else
             {
-                // Derive a concise result description when the action returned IMoResponse.
+                // Derive a concise result description when the action returned an IResultEnvelope.
                 var result = ChainTracingHelper.ExtractResult(context.Result);
-                if (result is IMoResponse response)
+                if (result is IResultEnvelope response)
                 {
-                    chainTracing.EndTrace(actionTraceId, $"{ChainTracingHelper.GetResponseTypeName(response.GetType())}({response.Code}){(response.Message?.LimitMaxLength(100, "...").BeNullIfWhiteSpace() is { } msg ? $"[{msg}]" : null)}", response.Code == ResponseCode.Ok);
+                    chainTracing.EndTrace(actionTraceId, $"{ChainTracingHelper.GetResponseTypeName(response.GetType())}({response.Code}){(response.Message?.LimitMaxLength(100, "...").BeNullIfWhiteSpace() is { } msg ? $"[{msg}]" : null)}", response.Code == ResStatus.Ok);
                   
                 }
                 else

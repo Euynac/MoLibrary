@@ -231,7 +231,7 @@ endpoints.MapPost("/framework/units/domain-event/{eventKey}/publish",
         var json = eventContent.ToString();
         var eventToPublish = JsonSerializer.Deserialize(json, e.Type, jsonOption.GlobalOptions)!;
         await eventBus.PublishAsync(e.Type, eventToPublish);
-        return Res.Ok(eventToPublish).AppendMsg($"已发布{eventKey}信息").GetResponse();
+        return Res.Ok(eventToPublish).AppendMessage($"已发布{eventKey}信息").GetResponse();
     }
 
     return Res.Fail($"获取{eventKey}相关单元信息失败").GetResponse();
@@ -273,7 +273,7 @@ public class DomainEventService(IMoDistributedEventBus eventBus, IGlobalJsonOpti
             await eventBus.PublishAsync(unitEvent.Type, eventToPublish);
             
             return Res.Ok(eventToPublish)
-                      .AppendMsg($"已发布{eventKey}信息");
+                      .AppendMessage($"已发布{eventKey}信息");
         }
         return Res.Fail($"获取{eventKey}相关单元信息失败");
     }

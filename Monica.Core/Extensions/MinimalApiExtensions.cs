@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Extensions;
 
@@ -37,14 +37,14 @@ public static class MinimalApiExtensions
     }
 
     /// <summary>
-    /// Wraps an <see cref="IMoResponse"/> as a Minimal API JSON result.
+    /// Wraps an <see cref="IResultEnvelope"/> as a Minimal API JSON result.
     /// </summary>
     /// <typeparam name="T">The response type.</typeparam>
     /// <param name="response">The Monica response instance.</param>
     /// <returns>An <see cref="IResult"/> with the response payload and HTTP status code.</returns>
-    public static IResult GetResponse<T>(this T response) where T : IMoResponse
+    public static IResult GetResponse<T>(this T response) where T : IResultEnvelope
     {
-        return Results.Json(response, statusCode: (int?)response.GetHttpStatusCode());
+        return Results.Json(response, statusCode: (int?)response.ToHttpStatusCode());
     }
 
 }

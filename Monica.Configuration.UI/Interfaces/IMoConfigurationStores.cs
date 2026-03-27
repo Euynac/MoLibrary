@@ -1,5 +1,5 @@
 using Monica.Configuration.UI.Model;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Configuration.UI.Interfaces;
 

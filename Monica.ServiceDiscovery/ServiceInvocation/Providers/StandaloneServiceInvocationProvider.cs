@@ -1,5 +1,5 @@
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.ServiceDiscovery.ServiceInvocation.Providers;
 

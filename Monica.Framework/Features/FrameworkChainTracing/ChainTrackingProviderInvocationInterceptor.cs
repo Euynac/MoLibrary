@@ -8,7 +8,7 @@ using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.Features.FrameworkChainTracing;
 
@@ -63,7 +63,7 @@ public class ChainTrackingProviderInvocationInterceptor(
         }
         
         // 判断返回类型是否实现 IServiceResponse 接口
-        var shouldRecord = returnType.IsImplementInterface(typeof(IMoResponse));
+        var shouldRecord = returnType.IsImplementInterface(typeof(IResultEnvelope));
         
         if (shouldRecord)
         {
@@ -120,9 +120,9 @@ public class ChainTrackingProviderInvocationInterceptor(
             // 处理成功响应
             var responseTypeName = ChainTracingHelper.GetResponseTypeName(invocation.Method.ReturnType);
             
-            if (invocation.ReturnValue is IMoResponse response)
+            if (invocation.ReturnValue is IResultEnvelope response)
             {
-                var success = response.Code == ResponseCode.Ok;
+                var success = response.Code == ResStatus.Ok;
                 var resultDescription =
                     $"{responseTypeName}({response.Code}){(response.Message?.LimitMaxLength(1000, "...").BeNullIfWhiteSpace() is {} msg ? $"[{msg}]" : null)}";
 

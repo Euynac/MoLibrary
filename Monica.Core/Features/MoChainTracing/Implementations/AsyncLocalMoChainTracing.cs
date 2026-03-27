@@ -3,10 +3,11 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 using System.Text.Json;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Tool.General;
+using Monica.Tool.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 
@@ -225,7 +226,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// </summary>
     /// <param name="traceId">The local trace identifier that should receive the remote chain.</param>
     /// <param name="remoteRes">The remote response carrying chain metadata.</param>
-    public void MergeRemoteChain(string traceId, IMoResponse remoteRes)
+    public void MergeRemoteChain(string traceId, IResultEnvelope remoteRes)
     {
         try
         {

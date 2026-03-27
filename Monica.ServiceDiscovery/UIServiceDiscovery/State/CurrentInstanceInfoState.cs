@@ -1,6 +1,6 @@
 using Monica.ServiceDiscovery.Facades;
 using Monica.ServiceDiscovery.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.ServiceDiscovery.UIServiceDiscovery.State;
 

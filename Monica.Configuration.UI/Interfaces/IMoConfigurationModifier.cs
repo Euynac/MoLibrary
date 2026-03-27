@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Monica.Configuration.Model;
 using Monica.Configuration.UI.Model;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Configuration.UI.Interfaces;
 

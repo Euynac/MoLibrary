@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.AutoController.Components;
 
@@ -12,10 +12,10 @@ public class MoResultFilterMvc: IResultFilter
 {
     public void OnResultExecuting(ResultExecutingContext context)
     {
-        if (context.Result is ObjectResult { Value: IMoResponse response } && !response.IsOk())
+        if (context.Result is ObjectResult { Value: IResultEnvelope response } && !response.IsOk())
         {
             context.HttpContext.Response.StatusCode =
-                (int?) response.GetHttpStatusCode() ?? (int) HttpStatusCode.BadRequest;
+                (int?) response.ToHttpStatusCode() ?? (int) HttpStatusCode.BadRequest;
         }
     }
 

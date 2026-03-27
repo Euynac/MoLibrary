@@ -1,10 +1,11 @@
 using Cronos;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.JobScheduler.UI.Localization;
+using Monica.Tool.Results;
 
 namespace Monica.JobScheduler.UI.Services;
 

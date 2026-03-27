@@ -8,7 +8,7 @@ using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Framework.Features.FrameworkChainTracing;
 

@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.DomainDrivenDesign.Validation;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.ExceptionHandler;
 
@@ -18,8 +18,8 @@ internal class ValidationExceptionMapper : IExceptionResponseMapper
         switch (exception)
         {
             case MoValidationException validationException:
-                response = Res.CreateError<IList<ValidationResult>>(validationException.ValidationErrors, "接口请求参数校验失败",
-                    ResponseCode.ValidateError);
+                response = Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
+                    .AppendExtraInfo("error", validationException.ValidationErrors);
                 return true;
             default:
                 response = null;

@@ -4,7 +4,8 @@ using Monica.Configuration.Model;
 using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
 using Monica.ServiceDiscovery.Abstractions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
+using ResExtensions = Monica.Tool.Results.ResExtensions;
 
 namespace Monica.Configuration.UI.Implements;
 

@@ -1,5 +1,5 @@
 using MediatR;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DomainDrivenDesign.Interfaces;
 /// <summary>

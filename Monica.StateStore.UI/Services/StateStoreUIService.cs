@@ -10,7 +10,8 @@ using Monica.Modules;
 using Monica.StateStore.Providers;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
+using ResExtensions = Monica.Tool.Results.ResExtensions;
 
 namespace Monica.StateStore.UI.Services;
 

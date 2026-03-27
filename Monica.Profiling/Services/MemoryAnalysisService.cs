@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.Models;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Profiling.Services;
 
@@ -156,7 +156,7 @@ public class MemoryAnalysisService(
             using var proc = Process.Start(startInfo);
             if (proc == null)
                 return new Res<string>("无法启动 dotnet-gcdump 进程。请确保已安装: dotnet tool install -g dotnet-gcdump",
-                    ResponseCode.BadRequest);
+                    ResStatus.BadRequest);
 
             await proc.WaitForExitAsync();
 
@@ -164,7 +164,7 @@ public class MemoryAnalysisService(
             {
                 var procError = await proc.StandardError.ReadToEndAsync();
                 logger.LogWarning("dotnet-gcdump 执行失败: {Error}", procError);
-                return new Res<string>($"GC Dump 创建失败: {procError}", ResponseCode.BadRequest);
+                return new Res<string>($"GC Dump 创建失败: {procError}", ResStatus.BadRequest);
             }
 
             logger.LogInformation("GC Dump 已创建: {Path}", dumpPath);
@@ -173,12 +173,12 @@ public class MemoryAnalysisService(
         catch (Exception ex) when (ex is Win32Exception)
         {
             return new Res<string>("dotnet-gcdump 工具未安装。请运行: dotnet tool install -g dotnet-gcdump",
-                ResponseCode.BadRequest);
+                ResStatus.BadRequest);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "创建 GC Dump 失败");
-            return new Res<string>($"创建 GC Dump 失败: {ex.Message}", ResponseCode.BadRequest);
+            return new Res<string>($"创建 GC Dump 失败: {ex.Message}", ResStatus.BadRequest);
         }
     }
 

@@ -5,7 +5,7 @@ using Monica.DevOps.Localization;
 using Monica.DevOps.FileOps.Models;
 using Monica.DevOps.FileOps.Services;
 using Monica.DevOps.FileOps.Services.Support;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.DevOps.FileOps.Facades;
 
@@ -170,19 +170,19 @@ public class FileOpsFacade(
         }
     }
 
-    private static ResponseCode GetResponseCode(Exception exception)
+    private static ResStatus GetResponseCode(Exception exception)
     {
         return exception switch
         {
-            ArgumentException => ResponseCode.BadRequest,
-            InvalidOperationException => ResponseCode.BadRequest,
-            KeyNotFoundException => ResponseCode.BadRequest,
-            DirectoryNotFoundException => ResponseCode.BadRequest,
-            FileNotFoundException => ResponseCode.BadRequest,
-            IOException => ResponseCode.BadRequest,
-            UnauthorizedAccessException => ResponseCode.Forbidden,
-            FileOpsOperationException => ResponseCode.BadRequest,
-            _ => ResponseCode.InternalError
+            ArgumentException => ResStatus.BadRequest,
+            InvalidOperationException => ResStatus.BadRequest,
+            KeyNotFoundException => ResStatus.BadRequest,
+            DirectoryNotFoundException => ResStatus.BadRequest,
+            FileNotFoundException => ResStatus.BadRequest,
+            IOException => ResStatus.BadRequest,
+            UnauthorizedAccessException => ResStatus.Forbidden,
+            FileOpsOperationException => ResStatus.BadRequest,
+            _ => ResStatus.InternalError
         };
     }
 }

@@ -1,5 +1,5 @@
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 namespace Monica.Core.ExceptionHandling.Exceptions;
 
@@ -25,9 +25,9 @@ public abstract class DisplayMessageException : Exception
 
     /// <summary>
     /// Gets the response code returned to the client.
-    /// Derived types can override the default <see cref="ResponseCode.BadRequest"/>.
+    /// Derived types can override the default <see cref="ResStatus.BadRequest"/>.
     /// </summary>
-    public virtual ResponseCode ResponseCode => ResponseCode.BadRequest;
+    public virtual ResStatus ResponseCode => ResStatus.BadRequest;
 
     /// <summary>
     /// Initializes a new exception with a user-facing message and optional technical detail.

@@ -5,17 +5,17 @@ using System.Text.Json.Serialization;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 
-namespace Monica.Tool.MoResponse;
+namespace Monica.Tool.Results;
 
 /// <summary>
 /// 统一响应模型，仅含有响应码和响应信息
 /// </summary>
 [DebuggerDisplay("{GetDebugValue()}")]
-public class Res : IMoResponse
+public class Res : IResultEnvelope
 {
     public string? Message { get; set; }
 
-    public ResponseCode? Code { get; set; }
+    public ResStatus? Code { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? ExtraInfo { get; set; }
@@ -27,7 +27,7 @@ public class Res : IMoResponse
     public Res(Exception e)
     {
         Message = $"服务出现异常：{e}";
-        Code = ResponseCode.InternalError;
+        Code = ResStatus.InternalError;
     }
 
     /// <summary>
@@ -43,13 +43,13 @@ public class Res : IMoResponse
     /// </summary>
     /// <param name="message"></param>
     /// <param name="code"></param>
-    public Res(string message, ResponseCode code)
+    public Res(string message, ResStatus code)
     {
         Message = message;
         Code = code;
     }
 
-    public static implicit operator Res(string res) => new(res, ResponseCode.BadRequest);
+    public static implicit operator Res(string res) => new(res, ResStatus.BadRequest);
 
     public static implicit operator string(Res res) => res.Message ?? "";
 
@@ -60,7 +60,7 @@ public class Res : IMoResponse
     /// <returns></returns>
     public static Res Ok(string? hint = null)
     {
-        return new Res(hint ?? "", ResponseCode.Ok);
+        return new Res(hint ?? "", ResStatus.Ok);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class Res : IMoResponse
     /// <returns></returns>
     public static Res Ok([StringSyntax("CompositeFormat")] string format, params object?[] args)
     {
-        return new Res(string.Format(format, args), ResponseCode.Ok);
+        return new Res(string.Format(format, args), ResStatus.Ok);
     }
     /// <summary>
     /// 创建一个失败的响应
@@ -80,7 +80,7 @@ public class Res : IMoResponse
     /// <param name="code"></param>
     /// <param name="args"></param>
     /// <returns></returns>
-    public static Res Fail(ResponseCode code, [StringSyntax("CompositeFormat")] string format, params object?[] args)
+    public static Res Fail(ResStatus code, [StringSyntax("CompositeFormat")] string format, params object?[] args)
     {
         return new Res(string.Format(format, args), code);
     }
@@ -90,7 +90,7 @@ public class Res : IMoResponse
     /// <param name="failDesc"></param>
     /// <param name="code"></param>
     /// <returns></returns>
-    public static Res Fail(string failDesc, ResponseCode code = ResponseCode.BadRequest)
+    public static Res Fail(string failDesc, ResStatus code = ResStatus.BadRequest)
     {
         return new Res(failDesc, code);
     }
@@ -108,7 +108,7 @@ public class Res : IMoResponse
     /// <returns>数据不为空时返回成功响应，否则返回错误响应</returns>
     public static Res<T> OkOrFailWhenNull<T>(T? data, string errorWhenNull) => data == null ? errorWhenNull : data;
 
-    public static Res<T> Create<T>(T data, ResponseCode code)
+    public static Res<T> Create<T>(T data, ResStatus code)
     {
         return new Res<T>(data)
         {
@@ -116,11 +116,6 @@ public class Res : IMoResponse
         };
     }
 
-    public static ResError<T> CreateError<T>(T error, string? errorMsg = null, ResponseCode code = ResponseCode.BadRequest,
-        string? errorDataKey = null)
-    {
-        return new ResError<T>(error, errorMsg ?? "Error occured. see extra info for detail.", code, errorDataKey);
-    }
     /// <summary>
     /// 基于当前信息增加Data数据
     /// </summary>
@@ -162,10 +157,10 @@ public class Res : IMoResponse
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [DebuggerDisplay("{GetDebugValue()}")]
-public record Res<T> : IMoResponse
+public record Res<T> : IResultEnvelope
 {
     public string? Message { get; set; }
-    public ResponseCode? Code { get; set; }
+    public ResStatus? Code { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? ExtraInfo { get; set; }
@@ -188,10 +183,10 @@ public record Res<T> : IMoResponse
     public Res(T data)
     {
         Data = data;
-        Code = ResponseCode.Ok;
+        Code = ResStatus.Ok;
     }
 
-    public Res(string message, ResponseCode code)
+    public Res(string message, ResStatus code)
     {
         Message = message;
         Code = code;
@@ -200,10 +195,10 @@ public record Res<T> : IMoResponse
     public Res(Exception e)
     {
         Message = $"服务出现异常：{e}";
-        Code = ResponseCode.InternalError;
+        Code = ResStatus.InternalError;
     }
 
-    public static implicit operator Res<T>(string res) => new(res, ResponseCode.BadRequest);
+    public static implicit operator Res<T>(string res) => new(res, ResStatus.BadRequest);
 
     public static implicit operator Res<T>(T data) => new(data);
    
@@ -212,7 +207,7 @@ public record Res<T> : IMoResponse
     /// 提取为新响应数据
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Code ?? ResponseCode.BadRequest)
+    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Code ?? ResStatus.BadRequest)
     {
         ExtraInfo = res.ExtraInfo
     };
@@ -221,7 +216,7 @@ public record Res<T> : IMoResponse
     /// 提取为新响应数据
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Code ?? ResponseCode.BadRequest)
+    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Code ?? ResStatus.BadRequest)
     {
         ExtraInfo = res.ExtraInfo
     };

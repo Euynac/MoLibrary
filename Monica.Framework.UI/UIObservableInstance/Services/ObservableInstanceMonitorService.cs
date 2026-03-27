@@ -4,7 +4,8 @@ using Monica.Core.ObservableInstance.Facades;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Framework.UI.UIObservableInstance.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
+using ResExtensions = Monica.Tool.Results.ResExtensions;
 
 namespace Monica.Framework.UI.UIObservableInstance.Services;
 

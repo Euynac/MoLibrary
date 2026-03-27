@@ -4,45 +4,45 @@ using System.Net;
 using System.Text;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.MoResponse;
+namespace Monica.Tool.Results;
 
-public static class ResponseHelper
+public static class ResExtensions
 {
     /// <summary>
     /// 获取响应码对应的HttpStatusCode
     /// </summary>
     /// <returns></returns>
-    public static HttpStatusCode? GetHttpStatusCode(this IMoResponse? response)
+    public static HttpStatusCode? ToHttpStatusCode(this IResultEnvelope? response)
     {
         if (response == null) return null;
         switch (response.Code)
         {
-            case ResponseCode.Ok:
+            case ResStatus.Ok:
                 return HttpStatusCode.OK;
 
 
-            case ResponseCode.Unauthorized:
-            case ResponseCode.RefreshTokenExpired:
-            case ResponseCode.AccessTokenExpired:
+            case ResStatus.Unauthorized:
+            case ResStatus.RefreshTokenExpired:
+            case ResStatus.AccessTokenExpired:
                 return HttpStatusCode.Unauthorized;
 
 
-            case ResponseCode.Forbidden:
+            case ResStatus.Forbidden:
                 return HttpStatusCode.Forbidden;
 
 
-            case ResponseCode.ValidateError:
-            case ResponseCode.ErrorWarning:
-            case ResponseCode.BadRequest:
+            case ResStatus.ValidateError:
+            case ResStatus.ErrorWarning:
+            case ResStatus.BadRequest:
                 return HttpStatusCode.BadRequest;
 
 
-            case ResponseCode.InternalError:
+            case ResStatus.InternalError:
                 return HttpStatusCode.InternalServerError;
 
 
             case null:
-            case ResponseCode.Unknown:
+            case ResStatus.Unknown:
                 return null;
             default:
                 throw new ArgumentOutOfRangeException(response.ToString(), $"未填写当前状态码{response.Code}对应HTTP状态码的值！");
@@ -52,13 +52,13 @@ public static class ResponseHelper
     /// <summary>
     /// [500] 微服务调用后需要检查，如果为False，应为服务调用出错，需要记录到微服务调用日志中去。接口调用异常由Mediator自动进行AOP，try catch进行日志记录
     /// </summary>
-    public static bool IsServiceNormal(this IMoResponse res) =>
-        res.Code != ResponseCode.InternalError && !IsNotValidResponse(res);
+    public static bool IsRemoteResultHealthy(this IResultEnvelope res) =>
+        res.Code != ResStatus.InternalError && !IsMalformed(res);
 
     /// <summary>
     ///  [200] 代表请求正常处理
     /// </summary>
-    public static bool IsOk(this IMoResponse res) => res.Code == ResponseCode.Ok;
+    public static bool IsOk(this IResultEnvelope res) => res.Code == ResStatus.Ok;
 
     /// <summary>
     /// 从远程调用请求结果 自动验证并附加信息
@@ -66,9 +66,9 @@ public static class ResponseHelper
     /// <param name="res"></param>
     /// <param name="originInfo">HTTP等原始Response</param>
     /// <returns></returns>
-    public static void AutoParseResponseFromOrigin(this IMoResponse res, string originInfo)
+    public static void AttachOriginIfMalformed(this IResultEnvelope res, string originInfo)
     {
-        if (IsNotValidResponse(res))
+        if (IsMalformed(res))
         {
             res.AppendExtraInfo("originRes", originInfo);
         }
@@ -77,7 +77,7 @@ public static class ResponseHelper
     /// <summary>
     ///  不是一个有效的请求，代表可能返回值并不符合此规范，应注意此情况进行特殊处理。
     /// </summary>
-    public static bool IsNotValidResponse(this IMoResponse res)
+    public static bool IsMalformed(this IResultEnvelope res)
     {
         //TODO 需要判断 Res<T> 当OK的情况 Data = null时有规范问题
         return res.Code == null;
@@ -88,7 +88,7 @@ public static class ResponseHelper
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T SetExtraInfo<T>(this T res, string name, object? info = null) where T : IMoResponse
+    public static T SetExtraInfo<T>(this T res, string name, object? info = null) where T : IResultEnvelope
     {
         res.ExtraInfo ??= new ExpandoObject();
         res.ExtraInfo.Set(name, info);
@@ -100,7 +100,7 @@ public static class ResponseHelper
     /// <param name="res"></param>
     /// <param name="name"></param>
     /// <param name="info"></param>
-    public static T AppendExtraInfo<T>(this T res, string name, object? info = null) where T : IMoResponse
+    public static T AppendExtraInfo<T>(this T res, string name, object? info = null) where T : IResultEnvelope
     {
         res.ExtraInfo ??= new ExpandoObject();
         res.ExtraInfo.Append(name, info);
@@ -221,9 +221,9 @@ public static class ResponseHelper
     /// <param name="self"></param>
     /// <param name="hint"></param>
     /// <returns></returns>
-    public static T Ok<T>(this T self, string hint) where T : IMoResponse
+    public static T Ok<T>(this T self, string hint) where T : IResultEnvelope
     {
-        self.Code = ResponseCode.Ok;
+        self.Code = ResStatus.Ok;
         self.Message = hint;
         return self;
     }
@@ -239,7 +239,7 @@ public static class ResponseHelper
         var list = new List<T?>();
         var result = new Res<List<T>>()
         {
-            Code = ResponseCode.Ok,
+            Code = ResStatus.Ok,
             Message = ""
         };
         var sb = new StringBuilder();
@@ -255,7 +255,7 @@ public static class ResponseHelper
                 result.ExtraInfo ??= new ExpandoObject();
                 result.ExtraInfo.Append("bulk", extraInfo);
             }
-            if (!res.IsOk(out var data) && result.Code == ResponseCode.Ok)
+            if (!res.IsOk(out var data) && result.Code == ResStatus.Ok)
             {
                 result.Code = res.Code;
             }
@@ -273,7 +273,7 @@ public static class ResponseHelper
     /// </summary>
     /// <param name="self"></param>
     /// <param name="response"></param>
-    public static T Merge<T>(this T self, IMoResponse response) where T : IMoResponse
+    public static T Merge<T>(this T self, IResultEnvelope response) where T : IResultEnvelope
     {
         self.AppendExtraInfo("oriMsg", self.Message);
         self.AppendExtraInfo("oriCode", self.Code);
@@ -288,8 +288,8 @@ public static class ResponseHelper
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
-    public static T AppendMsg<T>(this T self, string? message)
-        where T : IMoResponse
+    public static T AppendMessage<T>(this T self, string? message)
+        where T : IResultEnvelope
     {
         return Append(self, message, null);
     }
@@ -299,8 +299,8 @@ public static class ResponseHelper
     /// <param name="self"></param>
     /// <param name="message"></param>
     /// <param name="code"></param>
-    private static T Append<T>(this T self, string? message, ResponseCode? code)
-        where T : IMoResponse
+    private static T Append<T>(this T self, string? message, ResStatus? code)
+        where T : IResultEnvelope
     {
         if (!string.IsNullOrWhiteSpace(message))
         {
@@ -320,8 +320,8 @@ public static class ResponseHelper
     /// <param name="self"></param>
     /// <param name="message"></param>
     /// <param name="code"></param>
-    public static T AppendError<T>(this T self, string? message, ResponseCode code = ResponseCode.BadRequest)
-        where T : IMoResponse
+    public static T AppendFailure<T>(this T self, string? message, ResStatus code = ResStatus.BadRequest)
+        where T : IResultEnvelope
     {
         return Append(self, message, code);
     }
@@ -337,29 +337,11 @@ public static class ResponseHelper
     /// <returns></returns>
     public static async Task<TResponse> OkOrFallback<TLastResponse, TResponse>(this Task<TLastResponse> res,
         TResponse okResponse,
-        TResponse? fallback = null) where TLastResponse : IMoResponse
-        where TResponse : class, IMoResponse, new()
+        TResponse? fallback = null) where TLastResponse : IResultEnvelope
+        where TResponse : class, IResultEnvelope, new()
     {
         var lastRes = await res;
-        return lastRes.IsOk() ? okResponse : (fallback ?? new TResponse()).AppendError(lastRes.Message);
+        return lastRes.IsOk() ? okResponse : (fallback ?? new TResponse()).AppendFailure(lastRes.Message);
     }
 
-    /// <summary>
-    /// 转换为接口返回
-    /// </summary>
-    /// <param name="response"></param>
-    /// <returns></returns>
-    public static IMoResponse ToServiceResponse(this IMoResponse response) => response;
-    /// <summary>
-    /// 转换为特定类型返回
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="response"></param>
-    /// <returns></returns>
-    public static T ToServiceResponse<T>(this IMoResponse response) where T : IMoResponse, new() => new()
-    {
-        Code = response.Code,
-        Message = response.Message,
-        ExtraInfo = response.ExtraInfo
-    };
 }

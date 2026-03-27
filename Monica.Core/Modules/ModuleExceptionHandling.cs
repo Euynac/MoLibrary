@@ -10,7 +10,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
-using Monica.Tool.MoResponse;
+using Monica.Tool.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -52,10 +52,8 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
         {
             options.InvalidModelStateResponseFactory = context =>
                 new BadRequestObjectResult(
-                    Res.CreateError(
-                        new SerializableError(context.ModelState),
-                        "接口请求参数校验失败",
-                        ResponseCode.ValidateError));
+                    Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
+                        .AppendExtraInfo("error", new SerializableError(context.ModelState)));
         });
 
         var currentDomain = AppDomain.CurrentDomain;
