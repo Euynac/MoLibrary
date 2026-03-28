@@ -50,7 +50,6 @@ public class ModuleMediator(ModuleMediatorOption option)
         foreach (var type in types)
         {
             RegisterRequestHandlers(_services, type);
-            RegisterPipelineBehaviors(_services, type);
             yield return type;
         }
     }
@@ -77,17 +76,30 @@ public class ModuleMediator(ModuleMediatorOption option)
         }
     }
 
-    private static void RegisterPipelineBehaviors(IServiceCollection services, Type implementationType)
+    internal static void RegisterPipelineBehavior(IServiceCollection services, Type implementationType)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(implementationType);
+
         if (implementationType is not { IsClass: true, IsAbstract: false })
         {
-            return;
+            throw new ArgumentException("Pipeline behavior must be a non-abstract class.", nameof(implementationType));
         }
 
-        foreach (var serviceType in implementationType
-                     .GetInterfaces()
-                     .Where(static serviceType => serviceType.IsGenericType &&
-                                                  serviceType.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>)))
+        var behaviorInterfaces = implementationType
+            .GetInterfaces()
+            .Where(static serviceType => serviceType.IsGenericType &&
+                                         serviceType.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>))
+            .ToArray();
+
+        if (behaviorInterfaces.Length == 0)
+        {
+            throw new ArgumentException(
+                $"Type '{implementationType.FullName}' does not implement IPipelineBehavior<,>.",
+                nameof(implementationType));
+        }
+
+        foreach (var serviceType in behaviorInterfaces)
         {
             var registrationServiceType = implementationType.IsGenericTypeDefinition
                 ? serviceType.GetGenericTypeDefinition()
@@ -100,7 +112,20 @@ public class ModuleMediator(ModuleMediatorOption option)
 
 public class ModuleMediatorGuide : MoModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>
 {
+    public ModuleMediatorGuide AddPipelineBehavior(Type behaviorType)
+    {
+        var behaviorKey = behaviorType.AssemblyQualifiedName ?? behaviorType.FullName ?? behaviorType.Name;
+        ConfigureServices(
+            context => ModuleMediator.RegisterPipelineBehavior(context.Services, behaviorType),
+            secondKey: behaviorKey);
+        return this;
+    }
 
+    public ModuleMediatorGuide AddPipelineBehavior<TBehavior>()
+        where TBehavior : class
+    {
+        return AddPipelineBehavior(typeof(TBehavior));
+    }
 }
 
 public class ModuleMediatorOption : MoModuleOption<ModuleMediator>
