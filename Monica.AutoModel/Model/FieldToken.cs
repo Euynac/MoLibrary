@@ -6,17 +6,17 @@ namespace Monica.AutoModel.Model;
 public class FieldToken(string fieldStr, string conditionStr, string valueStr, int start, int end)
 {
     /// <summary>
-    /// Field activation name in the expression.
+    /// Field activation name in the original expression.
     /// </summary>
     public string FieldStr { get; set; } = fieldStr;
 
     /// <summary>
-    /// Condition token in the expression.
+    /// Condition token in the original expression.
     /// </summary>
     public string ConditionStr { get; set; } = conditionStr;
 
     /// <summary>
-    /// Value token in the expression.
+    /// Value token in the original expression.
     /// </summary>
     public string ValueStr { get; set; } = valueStr;
 
@@ -26,33 +26,36 @@ public class FieldToken(string fieldStr, string conditionStr, string valueStr, i
     public AutoField? FieldInfo { get; set; }
 
     /// <summary>
-    /// Parsed field condition.
+    /// Resolved field condition.
     /// </summary>
     public EFieldConditions Conditions { get; set; }
 
     /// <summary>
-    /// Parsed field-condition features.
+    /// Resolved field-condition features.
     /// </summary>
     public EFieldConditionFeatures Features { get; set; }
 
     /// <summary>
-    /// Converted value object.
+    /// Converted value.
     /// </summary>
     public object? ConvertedValue { get; set; }
 
     /// <summary>
-    /// Start position in the original expression.
+    /// Start index in the original expression.
     /// </summary>
     public int Start { get; set; } = start;
 
     /// <summary>
-    /// End position in the original expression.
+    /// End index in the original expression.
     /// </summary>
     public int End { get; set; } = end;
 
+    /// <summary>
+    /// Generated token expression.
+    /// </summary>
     public string? TokenExpression { get; set; }
     /// <summary>
-    /// Gets the field parameter used in the generated condition expression.
+    /// Gets the field path used in the generated condition expression.
     /// </summary>
     /// <returns>The field parameter expression, or <c>null</c> if the field is unresolved.</returns>
     public string? GetFieldParam()
@@ -76,7 +79,7 @@ public class TokenizerContext(string originExpression)
 
     public string GetFinalExpression()
     {
-        // TODO: Optimize expressions built from tokens at the same logical level.
+        // TODO: Optimize expressions composed from tokens at the same logical level.
         var final = OriginExpression;
         for (var i = Tokens.Count - 1; i >= 0; i--)
         {
@@ -93,14 +96,14 @@ public class TokenizerContext(string originExpression)
 }
 
 /// <summary>
-/// Field-condition features.
+/// Field condition features.
 /// </summary>
 [Flags]
 public enum EFieldConditionFeatures
 {
     None,
     /// <summary>
-    /// Regular expression matching. Not implemented yet.
+    /// Regular-expression matching. Not implemented yet.
     /// </summary>
     UseRegex = 1 << 0,
     /// <summary>
@@ -112,18 +115,18 @@ public enum EFieldConditionFeatures
     /// </summary>
     Multi = 1 << 2,
     /// <summary>
-    /// Fuzzy mode. Enabled by default when <c>like</c> is used and the field type supports it.
+    /// Fuzzy-match mode. Enabled by default when <c>like</c> is used and the field type supports it.
     /// </summary>
     Fuzzy = 1 << 3,
 
     /// <summary>
-    /// Negation. When this flag is set, the condition result is inverted.
+    /// Negates the condition result.
     /// </summary>
     Not = 1 << 4,
 }
 
 /// <summary>
-/// AutoModel field conditions.
+/// Supported AutoModel field conditions.
 /// </summary>
 public enum EFieldConditions
 {
@@ -137,12 +140,12 @@ public enum EFieldConditions
     [KouEnumName("=")]
     Equal,
     /// <summary>
-    /// Pattern match for strings, such as <c>xx%</c>.
+    /// String pattern match, such as <c>xx%</c>.
     /// </summary>
     [KouEnumName("like")]
     Like,
     /// <summary>
-    /// Exists within.
+    /// Included in a value list.
     /// </summary>
     [KouEnumName("in")]
     In,
@@ -177,7 +180,7 @@ public enum EFieldConditions
     [KouEnumName("explike")]
     ExpLike,
     /// <summary>
-    /// Not like.
+    /// Negated pattern match.
     /// </summary>
     [KouEnumName("notlike")]
     NotLike,

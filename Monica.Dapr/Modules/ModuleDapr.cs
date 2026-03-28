@@ -16,7 +16,7 @@ public static class ModuleDaprBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the Dapr module
+        /// Registers and configures the Dapr module.
         /// </summary>
         public static ModuleDaprGuide AddDapr(Action<ModuleDaprOption>? action = null)
         {
@@ -48,10 +48,10 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
                 var res = await daprClient.GetMetadataAsync();
                 await context.Response.WriteAsJsonAsync(res);
             })
-            .WithName("获取Dapr边车元数据")
+            .WithName("Get Dapr sidecar metadata")
             .WithTags(tagName)
-            .WithSummary("获取Dapr边车元数据")
-            .WithDescription("获取Dapr边车元数据");
+            .WithSummary("Gets metadata reported by the Dapr sidecar.")
+            .WithDescription("Returns metadata reported by the Dapr sidecar.");
         });
     }
 

@@ -1,7 +1,7 @@
 namespace Monica.Core.Modularity.Models;
 
 /// <summary>
-/// Built-in Monica module keys.
+/// Built-in module keys used by Monica.
 /// </summary>
 public enum EMoModuleKey
 {

@@ -3,7 +3,7 @@
 /// Adapter that allows a delegate to be used as an <see cref="IMoLocalEventHandler{TEvent}"/>
 /// implementation.
 /// </summary>
-/// <typeparam name="TEvent">Event type</typeparam>
+/// <typeparam name="TEvent">Event type.</typeparam>
 public class ActionEventHandler<TEvent> : IMoLocalEventHandler<TEvent>
 {
     /// <summary>
@@ -52,7 +52,7 @@ internal class ActionEventHandlerFactory<TEvent>(Func<TEvent, Task> action) : IE
 
         public void Dispose()
         {
-            // Action handlers don't need disposal
+            // Delegate-based handlers do not require disposal.
         }
     }
 }

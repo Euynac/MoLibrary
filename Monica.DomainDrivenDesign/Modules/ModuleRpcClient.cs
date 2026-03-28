@@ -22,7 +22,7 @@ public static class ModuleRpcClientBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the RpcClient module.
+        /// Registers and configures the RPC client module.
         /// </summary>
         public static ModuleRpcClientGuide AddRpcClient(Action<ModuleRpcClientOption>? action = null)
         {
@@ -177,7 +177,7 @@ public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClie
 public class ModuleRpcClientOption : MoModuleOption<ModuleRpcClient>
 {
     /// <summary>
-    /// Enable gRPC client registration (HttpClient is used by default).
+    /// Registers RPC clients through gRPC instead of HttpClient.
     /// </summary>
     public bool UseGrpc { get; set; }
 
@@ -201,10 +201,10 @@ public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAcc
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        // 1. Acquire the current HttpContext
+        // Try to reuse the active request context when the call originates from the frontend.
         var context = httpContextAccessor.HttpContext;
 
-        if (context != null)// request initiated from the frontend
+        if (context != null) // Request initiated from the frontend.
         {
             if (context.Request.Headers.Authorization is { } authorization && !string.IsNullOrWhiteSpace(authorization.ToString()))
             {
@@ -224,13 +224,13 @@ public class AuthenticationDelegatingHandler(IHttpContextAccessor httpContextAcc
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
-        else // request initiated from the backend
+        else // Request initiated from the backend.
         {
             var token = systemUserManager.GetTokenOfCurSystemUser();
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        // 4. Continue sending the request
+        // Continue sending the request.
         return await base.SendAsync(request, cancellationToken);
     }
 }

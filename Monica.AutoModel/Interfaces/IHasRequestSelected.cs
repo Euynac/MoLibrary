@@ -3,17 +3,17 @@ namespace Monica.AutoModel.Interfaces;
 public interface IHasRequestSelect
 {
     /// <summary>
-    /// Response field selection that includes only specific fields.
+    /// Response field list that includes only the specified fields.
     /// </summary>
     string? SelectColumns { get; set; }
 
     /// <summary>
-    /// Response field selection that excludes the specified fields. Cannot be used with <see cref="SelectColumns"/>.
+    /// Response field list that excludes the specified fields. Cannot be used with <see cref="SelectColumns"/>.
     /// </summary>
     string? SelectExceptColumns { get; set; }
 
     /// <summary>
-    /// Indicates whether any field selection has been applied.
+    /// Determines whether any field-selection option has been provided.
     /// </summary>
 
     bool HasUsingSelected()

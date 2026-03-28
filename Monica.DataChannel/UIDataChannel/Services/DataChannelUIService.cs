@@ -9,7 +9,7 @@ namespace Monica.DataChannel.UIDataChannel.Services;
 /// Provides the UI service surface for managing DataChannels.
 /// </summary>
 /// <remarks>
-/// Initializes the service dependencies.
+/// The primary constructor receives the dependencies required by the UI service.
 /// </remarks>
 /// <param name="manager">Manager that exposes registered DataChannels.</param>
 /// <param name="logger">Logger used for auditing and error reporting.</param>

@@ -196,9 +196,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return $"未找到相应的{name}";
+            return $"{name} was not found.";
         }
-        return "未找到相应数据";
+        return "The requested data was not found.";
     }
     /// <summary>
     /// Creates the standard success response after an entity update.
@@ -209,9 +209,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return Res.Ok($"{name}更新成功");
+            return Res.Ok($"{name} updated successfully");
         }
-        return Res.Ok($"更新成功:{dto.Id}");
+        return Res.Ok($"Updated successfully: {dto.Id}");
     }
     /// <summary>
     /// Creates the standard success response after an entity update.
@@ -222,9 +222,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return Res.Ok($"{name}更新成功");
+            return Res.Ok($"{name} updated successfully");
         }
-        return Res.Ok($"更新成功:{entityId}");
+        return Res.Ok($"Updated successfully: {entityId}");
     }
     /// <summary>
     /// Creates the standard failure response for an entity update.
@@ -235,9 +235,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return $"{name}更新失败";
+            return $"{name} update failed.";
         }
-        return "更新失败";
+        return "Update failed.";
     }
     /// <summary>
     /// Creates the standard success response after an entity is created.
@@ -248,9 +248,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return Res.Ok($"{name}新增成功:{dto.Id}");
+            return Res.Ok($"{name} created successfully: {dto.Id}");
         }
-        return Res.Ok($"新增成功:{dto.Id}");
+        return Res.Ok($"Created successfully: {dto.Id}");
     }
     /// <summary>
     /// Creates the standard success response after an entity is created.
@@ -261,9 +261,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return Res.Ok($"{name}新增成功:{entityId}");
+            return Res.Ok($"{name} created successfully: {entityId}");
         }
-        return Res.Ok($"新增成功:{entityId}");
+        return Res.Ok($"Created successfully: {entityId}");
     }
     /// <summary>
     /// Creates the standard failure response for entity creation.
@@ -273,9 +273,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return $"{name}新增失败";
+            return $"{name} creation failed.";
         }
-        return "新增失败";
+        return "Creation failed.";
     }
     /// <summary>
     /// Creates the standard success response after an entity is deleted.
@@ -286,9 +286,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return Res.Ok($"{name}删除成功:{id}");
+            return Res.Ok($"{name} deleted successfully: {id}");
         }
-        return Res.Ok($"删除成功:{id}");
+        return Res.Ok($"Deleted successfully: {id}");
     }
     /// <summary>
     /// Creates the standard failure response for entity deletion.
@@ -298,9 +298,9 @@ public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto
     {
         if (EntityName is { } name)
         {
-            return $"{name}删除失败";
+            return $"{name} deletion failed.";
         }
-        return "删除失败";
+        return "Deletion failed.";
     }
     #endregion
 }

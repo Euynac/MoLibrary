@@ -7,11 +7,11 @@ public interface IHasRequestFilter
     /// </summary>
     string? Filter { get; set; }
     /// <summary>
-    /// Value used for fuzzy searching across multiple fields.
+    /// Value used for fuzzy matching across multiple fields.
     /// </summary>
     string? Fuzzy { get; set; }
     /// <summary>
-    /// Restricts fuzzy searching to specific fields.
+    /// Optional field list that limits fuzzy matching.
     /// </summary>
     string? FuzzyColumns { get; set; }
 }

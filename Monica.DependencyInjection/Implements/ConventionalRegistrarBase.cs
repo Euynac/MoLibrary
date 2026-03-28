@@ -24,7 +24,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
     /// <param name="type">The type to be registered.</param>
     public virtual void AddType(IServiceCollection services, Type type)
     {
-        //TODO supports generic automatic registration, but requires configuration.
+        // TODO: Support automatic registration of generic types through configuration.
         if(type is not { IsClass: true, IsAbstract: false, IsGenericType: false }) return;
 
         var dependencyAttribute = GetDependencyAttributeOrNull(type);
@@ -45,17 +45,20 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         {
             if (exposedServiceAndKeyedServiceTypes.Count == 0)
             {
-                logger.LogError("未能自动注册成功的类型：{name} {lifetime}", typeName, lifeTime);
+                logger.LogError("Failed to auto-register type: {TypeName} {Lifetime}", typeName, lifeTime);
             }
             else if (exposedServiceAndKeyedServiceTypes is [{ServiceType: { } typeSelf}] && typeSelf.Name == typeName)
             {
                 
-                logger.LogWarning("仅注册了本身类型：{name} {lifetime}", typeName, lifeTime);
+                logger.LogWarning("Only the concrete type was registered: {TypeName} {Lifetime}", typeName, lifeTime);
             }
             else
             {
                 
-                logger.LogInformation("自动注册：{name}->{serviceType} {lifetime}", typeName,$"[{exposedServiceAndKeyedServiceTypes.Select(p=>p.ServiceType.Name).StringJoin(", ")}]", lifeTime);
+                logger.LogInformation("Auto-registered: {TypeName}->{ServiceTypes} {Lifetime}",
+                    typeName,
+                    $"[{exposedServiceAndKeyedServiceTypes.Select(p => p.ServiceType.Name).StringJoin(", ")}]",
+                    lifeTime);
             }
         }
         
@@ -160,7 +163,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         List<ServiceIdentifier> allExposingServiceTypes,
         ServiceLifetime lifeTime)
     {
-        //TODO generic automatic registration
+        // TODO: Support automatic registration of generic types.
         //if (implementationType.IsGenericType)
         //{
         //    implementationType = implementationType.GetGenericTypeDefinition();
@@ -171,7 +174,7 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         //    exposingServiceType = exposingServiceType.GetGenericTypeDefinition();
         //}
 
-        //TODO Study whether this paragraph is necessary
+        // TODO: Revisit whether this redirection block is still necessary.
         if (lifeTime.EqualsAny(ServiceLifetime.Singleton, ServiceLifetime.Scoped))
         {
             var redirectedType = GetRedirectedTypeOrNull(

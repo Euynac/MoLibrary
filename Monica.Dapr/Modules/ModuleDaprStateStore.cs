@@ -21,12 +21,12 @@ public static class ModuleDaprStateStoreBuilderExtensions
     }
     
     /// <summary>
-    /// Add Dapr state store as Keyed StateStore provider
+    /// Registers Dapr state store as a keyed state store provider.
     /// </summary>
-    /// <param name="guide">StateStore Module Guide</param>
-    /// <param name="serviceKey">The service key that identifies this StateStore instance</param>
-    /// <param name="configureOptions">Dapr state storage configuration delegate</param>
-    /// <returns>StateStore module guide example to support chained calls</returns>
+    /// <param name="guide">The StateStore module guide.</param>
+    /// <param name="serviceKey">The service key that identifies this state store instance.</param>
+    /// <param name="configureOptions">Delegate that configures the Dapr state store.</param>
+    /// <returns>The same StateStore module guide to support chaining.</returns>
     public static ModuleStateStoreGuide AddKeyedDaprStateStore(
         this ModuleStateStoreGuide guide,
         string serviceKey,
@@ -92,14 +92,15 @@ public class
 public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
 {
     /// <summary>
-    /// Dapr StateStore name. It needs to be consistent with the name definition in the metadata of the Dapr StateStore.yaml file.
+    /// Name of the Dapr state store. Must match the <c>name</c> field in the Dapr state store
+    /// component YAML metadata.
     /// </summary>
     [Required]
     public string StateStoreName { get; set; } = null!;
 
     /// <summary>
-    /// The number of concurrent get operations the Dapr runtime will issue to the state store. a value equal to or smaller than 0 means max parallelism.
+    /// Number of concurrent get operations issued by the Dapr runtime to the state store. Values
+    /// less than or equal to 0 remove the limit.
     /// </summary>
     public int? DefaultBulkParallelism { get; set; } 
 }
-
