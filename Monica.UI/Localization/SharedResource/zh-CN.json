@@ -459,5 +459,10 @@
     "DevelopmentMode": "Development Mode",
     "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
     "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
+  },
+  "PageNotFound": {
+    "PageTitle": "页面未找到",
+    "Title": "页面未找到",
+    "Message": "抱歉，请求的页面不存在。"
   }
 }

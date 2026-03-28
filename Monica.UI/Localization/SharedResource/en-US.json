@@ -459,5 +459,10 @@
     "DevelopmentMode": "Development Mode",
     "DevelopmentModeWarning": "Swapping to Development environment will display more detailed information about the error that occurred.",
     "DevelopmentModeNote": "The Development environment shouldn't be enabled for deployed applications."
+  },
+  "PageNotFound": {
+    "PageTitle": "Not found",
+    "Title": "Page not found",
+    "Message": "Sorry, the page you requested does not exist."
   }
 }
