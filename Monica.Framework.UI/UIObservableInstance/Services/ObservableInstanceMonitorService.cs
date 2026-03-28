@@ -5,7 +5,6 @@ using Monica.Core.ObservableInstance.Models;
 using Monica.Framework.UI.UIObservableInstance.Models;
 using Monica.Tool.Extensions;
 using Monica.Core.Results;
-using ResExtensions = Monica.Core.Results.ResExtensions;
 
 namespace Monica.Framework.UI.UIObservableInstance.Services;
 

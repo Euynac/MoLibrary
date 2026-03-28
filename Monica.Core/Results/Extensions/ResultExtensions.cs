@@ -7,7 +7,7 @@ using Monica.Tool.Extensions;
 
 namespace Monica.Core.Results;
 
-public static class ResExtensions
+public static class ResultExtensions
 {
     /// <summary>
     /// Get the HttpStatusCode corresponding to the response code

@@ -103,7 +103,7 @@ public static class ResultEnvelopeProvider
         ArgumentNullException.ThrowIfNull(httpResponse);
 
         var responseContent = string.Empty;
-        TResponse? parsedResponse = default;
+        TResponse? parsedResponse = null;
         Exception? exception = null;
 
         try

@@ -6,7 +6,7 @@ namespace Monica.Core.Results;
 /// <summary>
 /// MVC helpers for Monica result envelopes.
 /// </summary>
-public static class ResMvcExtensions
+public static class ResultMvcExtensions
 {
     /// <summary>
     /// Awaits a task result and wraps Monica responses as <see cref="ObjectResult"/>.

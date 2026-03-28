@@ -6,7 +6,7 @@ namespace Monica.Core.Results;
 /// <summary>
 /// Minimal API helpers for Monica result envelopes.
 /// </summary>
-public static class ResMinimalApiExtensions
+public static class ResultMinimalApiExtensions
 {
     /// <summary>
     /// Wraps the Monica response as a Minimal API result.

@@ -5,7 +5,7 @@ namespace Monica.Core.Results;
 /// <summary>
 /// Remote HTTP helpers for Monica result envelopes.
 /// </summary>
-public static class ResRemoteExtensions
+public static class ResultRemoteExtensions
 {
     /// <summary>
     /// Awaits a remote HTTP response and resolves it as a Monica result envelope.
