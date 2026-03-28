@@ -211,7 +211,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             var namespaceMatches = Regex.Matches(namespacesJson, @"""([^""]*)""");
             foreach (Match nsMatch in namespaceMatches)
             {
-                var ns = NormalizeRelatedNamespace(nsMatch.Groups[1].Value);
+                var ns = nsMatch.Groups[1].Value;
                 if (!string.IsNullOrEmpty(ns) && !metadata.RelatedNamespaces.Contains(ns))
                 {
                     metadata.RelatedNamespaces.Add(ns);
@@ -239,17 +239,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
 
         return metadata;
     }
-
-    private static string NormalizeRelatedNamespace(string namespaceName)
-    {
-        return namespaceName switch
-        {
-            "Monica.Tool.MoResponse" => "Monica.Core.Results",
-            "Monica.Tool.MoRsponse" => "Monica.Core.Results",
-            _ => namespaceName
-        };
-    }
-
+    
     /// <summary>
     /// Extracts JSON objects from a JSON array content using balanced brace matching.
     /// Handles nested braces in string values correctly.
