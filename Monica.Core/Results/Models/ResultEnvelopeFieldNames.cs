@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Results.Internal;
 
 namespace Monica.Core.Results;
@@ -89,7 +90,7 @@ public sealed class ResultEnvelopeFieldNames
         }
 
         Validate(options);
-        options.TypeInfoResolver = ResultEnvelopeJsonTypeInfoResolver.Create(this, options.TypeInfoResolver);
+        options.TypeInfoResolver = ResultEnvelopeJsonTypeInfoResolver.Create(this, options.GetConfiguredTypeInfoResolver());
     }
 
     internal void Validate(JsonSerializerOptions options)

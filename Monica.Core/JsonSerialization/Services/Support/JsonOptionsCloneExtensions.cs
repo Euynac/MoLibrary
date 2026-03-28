@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Monica.Core.JsonSerialization.Services.Support;
 
@@ -38,9 +39,10 @@ public static class JsonOptionsCloneExtensions
         target.IncludeFields = cloneFromOptions.IncludeFields;
         target.MaxDepth = cloneFromOptions.MaxDepth;
         target.NumberHandling = cloneFromOptions.NumberHandling;
+        target.ReferenceHandler = cloneFromOptions.ReferenceHandler;
         target.ReadCommentHandling = cloneFromOptions.ReadCommentHandling;
         target.AllowTrailingCommas = cloneFromOptions.AllowTrailingCommas;
-        target.TypeInfoResolver = cloneFromOptions.TypeInfoResolver;
+        target.TypeInfoResolver = cloneFromOptions.GetConfiguredTypeInfoResolver();
     }
 
     internal static JsonSerializerOptions CloneButFilterConverter(this JsonSerializerOptions cloneFromOptions, Type filteredConverter)
@@ -56,5 +58,10 @@ public static class JsonOptionsCloneExtensions
         }
 
         return clonedOptions;
+    }
+
+    internal static IJsonTypeInfoResolver GetConfiguredTypeInfoResolver(this JsonSerializerOptions options)
+    {
+        return options.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver();
     }
 }

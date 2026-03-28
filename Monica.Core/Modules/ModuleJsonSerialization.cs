@@ -37,6 +37,7 @@ public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
         var jsonSerializerOptions = new JsonSerializerOptions();
         jsonSerializerOptions.ApplyJsonSerializationDefaults(Option);
         Option.ExtendAction?.Invoke(jsonSerializerOptions);
+        jsonSerializerOptions.TypeInfoResolver = jsonSerializerOptions.GetConfiguredTypeInfoResolver();
         JsonSerializerOptionsProvider.SharedSerializerOptions = jsonSerializerOptions;
 
         services.AddHttpContextAccessor();
