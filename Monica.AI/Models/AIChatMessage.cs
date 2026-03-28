@@ -3,37 +3,37 @@ using Microsoft.Extensions.AI;
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI chat message model
+/// Represents an AI chat message.
 /// </summary>
 public class AIChatMessage
 {
     /// <summary>
-    /// Message unique identifier
+    /// Unique message identifier.
     /// </summary>
     public string Id { get; init; } = Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// message role
+    /// Message role.
     /// </summary>
     public required AIChatRole Role { get; init; }
 
     /// <summary>
-    /// Message content
+    /// Message content.
     /// </summary>
     public required string Content { get; set; }
 
     /// <summary>
-    /// Message creation time
+    /// Time when the message was created.
     /// </summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>
-    /// Model name to use (valid only for helper messages)
+    /// The model name used for this message. Only applies to assistant messages.
     /// </summary>
     public string? ModelName { get; init; }
 
     /// <summary>
-    /// Provider ID to use (valid only for helper messages)
+    /// Provider ID used for this message. Only applies to assistant messages.
     /// </summary>
     public string? ProviderId { get; init; }
 
@@ -64,7 +64,7 @@ public class AIChatMessage
     public List<ToolCallInfo>? ToolCalls { get; set; }
 
     /// <summary>
-    /// Convert message to Microsoft.Extensions.AI's ChatMessage
+    /// Converts this message to a <see cref="ChatMessage"/> from Microsoft.Extensions.AI.
     /// </summary>
     public ChatMessage ToChatMessage()
     {
@@ -72,7 +72,7 @@ public class AIChatMessage
     }
 
     /// <summary>
-    /// Created from ChatMessage of Microsoft.Extensions.AI
+    /// Creates an <see cref="AIChatMessage"/> from a <see cref="ChatMessage"/>.
     /// </summary>
     public static AIChatMessage FromChatMessage(ChatMessage message, string? providerId = null, string? modelName = null)
     {
@@ -87,38 +87,38 @@ public class AIChatMessage
 }
 
 /// <summary>
-/// Chat message role
+/// Chat message roles.
 /// </summary>
 public enum AIChatRole
 {
     /// <summary>
-    /// System messages
+    /// System message.
     /// </summary>
     System,
 
     /// <summary>
-    /// User messages
+    /// User message.
     /// </summary>
     User,
 
     /// <summary>
-    /// Assistant message
+    /// Assistant message.
     /// </summary>
     Assistant,
 
     /// <summary>
-    /// tool news
+    /// Tool message.
     /// </summary>
     Tool
 }
 
 /// <summary>
-/// Chat role extension method
+/// Extensions for converting chat roles.
 /// </summary>
 public static class AIChatRoleExtensions
 {
     /// <summary>
-    /// ChatRole converted to Microsoft.Extensions.AI
+    /// Converts an <see cref="AIChatRole"/> to a <see cref="ChatRole"/>.
     /// </summary>
     public static ChatRole ToChatRole(this AIChatRole role)
     {
@@ -133,7 +133,7 @@ public static class AIChatRoleExtensions
     }
 
     /// <summary>
-    /// Convert from ChatRole of Microsoft.Extensions.AI
+    /// Converts a <see cref="ChatRole"/> to an <see cref="AIChatRole"/>.
     /// </summary>
     public static AIChatRole FromChatRole(ChatRole role)
     {
@@ -146,22 +146,22 @@ public static class AIChatRoleExtensions
 }
 
 /// <summary>
-/// Token usage
+/// Token usage information.
 /// </summary>
 public class TokenUsage
 {
     /// <summary>
-    /// Enter the number of Tokens
+    /// Number of input tokens.
     /// </summary>
     public int InputTokens { get; init; }
 
     /// <summary>
-    /// Output the number of Tokens
+    /// Number of output tokens.
     /// </summary>
     public int OutputTokens { get; init; }
 
     /// <summary>
-    /// Reasoning Token quantity
+    /// Number of reasoning tokens.
     /// </summary>
     public int ReasoningTokens { get; init; }
 

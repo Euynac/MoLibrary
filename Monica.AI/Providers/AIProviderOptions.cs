@@ -1,17 +1,17 @@
 namespace Monica.AI.Providers;
 
 /// <summary>
-/// AI Provider configuration base class
+/// Base class for AI provider configuration.
 /// </summary>
 public abstract class AIProviderOptions
 {
     /// <summary>
-    /// Provider unique identifier, or Provider name if not set
+    /// Unique provider identifier, or provider name if not set.
     /// </summary>
     public string? ProviderId { get; set; }
 
     /// <summary>
-    /// Provider display name
+    /// Provider display name.
     /// </summary>
     public string? DisplayName { get; set; }
 
@@ -21,33 +21,33 @@ public abstract class AIProviderOptions
     public required string ApiKey { get; set; }
 
     /// <summary>
-    /// Provider default system prompt word
+    /// Default system prompt for the provider.
     /// </summary>
     public string? SystemPrompt { get; set; }
 
     /// <summary>
-    /// List of supported models (if empty, the Provider is invalid)
+    /// List of supported models. If empty, the provider is considered invalid.
     /// </summary>
     public IList<string>? SupportedModels { get; set; }
 
     /// <summary>
-    /// API base URL (optional, for custom endpoints)
+    /// Base API URL for custom endpoints, if applicable.
     /// </summary>
     public string? BaseUrl { get; set; }
 
     /// <summary>
-    /// Whether to set it as the default Provider
+    /// Indicates whether this provider should be set as the default.
     /// </summary>
     public bool IsDefault { get; set; }
 
     /// <summary>
-    /// Request timeout (seconds)
+    /// Request timeout in seconds.
     /// </summary>
     public int TimeoutSeconds { get; set; } = 120;
 }
 
 /// <summary>
-/// OpenAI Provider configuration
+/// OpenAI provider configuration.
 /// </summary>
 public class OpenAIProviderOptions : AIProviderOptions
 {
@@ -63,12 +63,12 @@ public class OpenAIProviderOptions : AIProviderOptions
 }
 
 /// <summary>
-/// Anthropic Provider Configuration
+/// Anthropic provider configuration.
 /// </summary>
 public class AnthropicProviderOptions : AIProviderOptions
 {
     /// <summary>
-    /// Default maximum number of Tokens
+    /// Default maximum number of tokens.
     /// </summary>
     public int MaxTokens { get; set; } = 4096;
 }
