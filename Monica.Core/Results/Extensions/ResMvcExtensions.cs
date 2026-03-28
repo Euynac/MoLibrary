@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using Monica.Core.Results;
+using Monica.Core.Results.Services;
 
-namespace Monica.Core.Extensions;
+namespace Monica.Core.Results;
 
-public static class RESTfulApiExtensions
+/// <summary>
+/// MVC helpers for Monica result envelopes.
+/// </summary>
+public static class ResMvcExtensions
 {
     /// <summary>
     /// Awaits a task result and wraps Monica responses as <see cref="ObjectResult"/>.
@@ -13,13 +16,10 @@ public static class RESTfulApiExtensions
     /// <returns>The original result or an <see cref="ObjectResult"/> for Monica responses.</returns>
     public static async Task<object> GetResponse(this Task<object> response, ControllerBase controller)
     {
-        var res = await response;
-        if (res is IResultEnvelope serviceResponse)
-        {
-            return ToObjectResult(serviceResponse);
-        }
-
-        return res;
+        var result = await response;
+        return result is IResultEnvelope serviceResponse
+            ? ResultEnvelopeProvider.ToMvcResult(serviceResponse)
+            : result;
     }
 
     /// <summary>
@@ -31,9 +31,7 @@ public static class RESTfulApiExtensions
     /// <returns>An <see cref="ObjectResult"/> with the response payload and HTTP status code.</returns>
     public static async Task<ObjectResult> GetResponse<T>(this Task<T> response, ControllerBase controller)
         where T : IResultEnvelope
-    {
-        return ToObjectResult(await response);
-    }
+        => ResultEnvelopeProvider.ToMvcResult(await response);
 
     /// <summary>
     /// Wraps the Monica response as <see cref="ObjectResult"/>.
@@ -44,16 +42,5 @@ public static class RESTfulApiExtensions
     /// <returns>An <see cref="ObjectResult"/> with the response payload and HTTP status code.</returns>
     public static ObjectResult GetResponse<T>(this T response, ControllerBase controller)
         where T : IResultEnvelope
-    {
-        return ToObjectResult(response);
-    }
-
-    private static ObjectResult ToObjectResult(IResultEnvelope response)
-    {
-        var payload = ResultEnvelopeProvider.GetResponsePayload(response);
-        return new ObjectResult(payload)
-        {
-            StatusCode = (int?)response.ToHttpStatusCode()
-        };
-    }
+        => ResultEnvelopeProvider.ToMvcResult(response);
 }

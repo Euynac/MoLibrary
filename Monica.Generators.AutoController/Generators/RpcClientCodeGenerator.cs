@@ -167,6 +167,7 @@ internal static class RpcClientCodeGenerator
         }
 
         sb.AppendLine("using Monica.DependencyInjection.AppInterfaces;");
+        sb.AppendLine("using Monica.Core.Results;");
         sb.AppendLine("using Monica.Framework.Extensions;");
         sb.AppendLine();
 

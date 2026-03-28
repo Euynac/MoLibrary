@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Net;
 using System.Text;
+using Monica.Core.Results.Internal;
 using Monica.Tool.Extensions;
 
 namespace Monica.Core.Results;
@@ -19,6 +20,9 @@ public static class ResExtensions
         {
             case ResStatus.Ok:
                 return HttpStatusCode.OK;
+
+            case ResStatus.Created:
+                return HttpStatusCode.Created;
 
 
             case ResStatus.Unauthorized:
@@ -69,7 +73,9 @@ public static class ResExtensions
     {
         if (IsMalformed(res))
         {
-            res.AppendMetadata("originRes", originInfo);
+            res.AppendMetadata(
+                ResultEnvelopeMetadataKeys.OriginResponse,
+                ResultEnvelopeHttpResponseInfo.FromRawContent(originInfo));
         }
     }
 
@@ -212,21 +218,7 @@ public static class ResExtensions
         data = res.Data!;
         return res.IsOk();
     }
-
-    /// <summary>
-    /// The request is processed normally and a success description is provided.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="self"></param>
-    /// <param name="hint"></param>
-    /// <returns></returns>
-    public static T Ok<T>(this T self, string hint) where T : IResultEnvelope
-    {
-        self.Status = ResStatus.Ok;
-        self.Message = hint;
-        return self;
-    }
-
+    
     /// <summary>
     /// Batch call results are converted to single call results.
     /// </summary>
@@ -265,23 +257,7 @@ public static class ResExtensions
         result.Data = list.Cast<T>().ToList();
         return result;
     }
-
-   
-    /// <summary>
-    /// Merge the return value information to preserve the information of the two Res. It is generally used when the two Res types are inconsistent.
-    /// </summary>
-    /// <param name="self"></param>
-    /// <param name="response"></param>
-    public static T Merge<T>(this T self, IResultEnvelope response) where T : IResultEnvelope
-    {
-        self.AppendMetadata("originalMessage", self.Message);
-        self.AppendMetadata("originalStatus", self.Status);
-        response.Metadata ??= new ExpandoObject();
-        self.Metadata!.Merge(response.Metadata);
-        self.Message = response.Message;
-        self.Status = response.Status;
-        return self;
-    }
+    
     /// <summary>
     /// Additional information
     /// </summary>
@@ -320,23 +296,4 @@ public static class ResExtensions
         self.Status = status;
         return self;
     }
-
-    /// <summary>
-    /// Create a success response or failure response based on the upper layer response
-    /// </summary>
-    /// <typeparam name="TResponse"></typeparam>
-    /// <typeparam name="TLastResponse"></typeparam>
-    /// <param name="res"></param>
-    /// <param name="okResponse"></param>
-    /// <param name="fallback"></param>
-    /// <returns></returns>
-    public static async Task<TResponse> OkOrFallback<TLastResponse, TResponse>(this Task<TLastResponse> res,
-        TResponse okResponse,
-        TResponse? fallback = null) where TLastResponse : IResultEnvelope
-        where TResponse : class, IResultEnvelope, new()
-    {
-        var lastRes = await res;
-        return lastRes.IsOk() ? okResponse : (fallback ?? new TResponse()).AppendFailure(lastRes.Message);
-    }
-
 }

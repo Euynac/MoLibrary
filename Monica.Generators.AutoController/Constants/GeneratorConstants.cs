@@ -42,7 +42,7 @@ internal static class GeneratorConstants
         "System.Net", 
         "System.Threading.Tasks",
         "MediatR",
-        "Monica.Core.Extensions",
+        "Monica.Core.Results",
         "Monica.Tool.Extensions"
     ];
 
