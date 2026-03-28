@@ -3,39 +3,39 @@ using Monica.AI.Models;
 namespace Monica.AI.Abstractions;
 
 /// <summary>
-/// AI Provider factory interface, used to create and manage Provider instances
+/// Factory interface for creating and managing AI provider instances.
 /// </summary>
 public interface IAIProviderFactory
 {
     /// <summary>
-    /// Get the Provider with the specified ID
+    /// Gets the provider with the specified ID.
     /// </summary>
-    /// <param name="providerId">Provider ID</param>
-    /// <returns>Provider instance, or null if it does not exist</returns>
+    /// <param name="providerId">The provider ID.</param>
+    /// <returns>The provider instance, or <c>null</c> if it does not exist.</returns>
     IAIProvider? GetProvider(string providerId);
 
     /// <summary>
-    /// Get all registered Providers
+    /// Gets all registered providers.
     /// </summary>
-    /// <returns>Provider list</returns>
+    /// <returns>A list of registered providers.</returns>
     IReadOnlyList<IAIProvider> GetAllProviders();
 
     /// <summary>
-    /// Get metadata information of all Providers
+    /// Gets metadata for all providers.
     /// </summary>
-    /// <returns>Provider information list</returns>
+    /// <returns>A list of provider metadata.</returns>
     IReadOnlyList<AIProviderInfo> GetAllProviderInfos();
 
     /// <summary>
-    /// Get the default Provider
+    /// Gets the default provider.
     /// </summary>
-    /// <returns>Default Provider instance</returns>
+    /// <returns>The default provider instance.</returns>
     IAIProvider? GetDefaultProvider();
 
     /// <summary>
-    /// Check whether the specified Provider has been registered
+    /// Checks whether the specified provider is registered.
     /// </summary>
-    /// <param name="providerId">Provider ID</param>
-    /// <returns>Have you registered?</returns>
+    /// <param name="providerId">The provider ID.</param>
+    /// <returns><c>true</c> if the provider is registered; otherwise, <c>false</c>.</returns>
     bool HasProvider(string providerId);
 }

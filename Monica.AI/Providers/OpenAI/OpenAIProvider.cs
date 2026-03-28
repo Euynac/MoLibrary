@@ -10,7 +10,7 @@ using AIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 namespace Monica.AI.Providers.OpenAI;
 
 /// <summary>
-/// OpenAI Provider implementation
+/// OpenAI provider implementation.
 /// </summary>
 public class OpenAIProvider : IAIProvider
 {

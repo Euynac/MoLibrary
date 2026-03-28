@@ -81,27 +81,27 @@ public static class StreamingExtensions
 }
 
 /// <summary>
-/// Streaming chat data
+/// Streaming chat response data.
 /// </summary>
 public class StreamingChatData
 {
     /// <summary>
-    /// text content
+    /// Text content.
     /// </summary>
     public string? Text { get; set; }
 
     /// <summary>
-    /// Completion reason
+    /// Reason for completion.
     /// </summary>
     public string? FinishReason { get; set; }
 
     /// <summary>
-    /// Model ID
+    /// Model ID.
     /// </summary>
     public string? ModelId { get; set; }
 
     /// <summary>
-    /// Is it done?
+    /// Indicates whether streaming has completed.
     /// </summary>
     public bool Done { get; set; }
 }

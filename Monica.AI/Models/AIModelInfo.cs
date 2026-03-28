@@ -1,74 +1,74 @@
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI model metadata information base class
+/// Base class for AI model metadata.
 /// </summary>
 public abstract class AIModelInfo
 {
     /// <summary>
-    /// Model name
+    /// Model name.
     /// </summary>
     public required string ModelName { get; init; }
 
     /// <summary>
-    /// Model description
+    /// Model description.
     /// </summary>
     public string? Description { get; init; }
 }
 
 /// <summary>
-/// Large language model metadata information
+/// Metadata for a large language model.
 /// </summary>
 public class LLMModelInfo : AIModelInfo
 {
     /// <summary>
-    /// Whether to support image input
+    /// Indicates whether image input is supported.
     /// </summary>
     public bool SupportsImage { get; init; }
 
     /// <summary>
-    /// Whether it supports deep thinking/reasoning
+    /// Indicates whether reasoning is supported.
     /// </summary>
     public bool SupportsReasoning { get; init; }
 
     /// <summary>
-    /// Context window size (optional)
+    /// Context window size, if available.
     /// </summary>
     public int? ContextWindow { get; init; }
 
     /// <summary>
-    /// Maximum number of output tokens (optional)
+    /// Maximum number of output tokens, if available.
     /// </summary>
     public int? MaxOutputTokens { get; init; }
 
     /// <summary>
-    /// Enter fee (USD/1M tokens)
+    /// Input cost in USD per 1M tokens.
     /// </summary>
     public decimal InputCostPerMillionTokens { get; init; }
 
     /// <summary>
-    /// Output fee (USD/1M tokens)
+    /// Output cost in USD per 1M tokens.
     /// </summary>
     public decimal OutputCostPerMillionTokens { get; init; }
 
     /// <summary>
-    /// Cache hit input fee (USD/1M tokens)
+    /// Cached input cost in USD per 1M tokens.
     /// </summary>
     public decimal CachedInputCostPerMillionTokens { get; init; }
 }
 
 /// <summary>
-/// Image model metadata information
+/// Metadata for an image model.
 /// </summary>
 public class ImageModelInfo : AIModelInfo
 {
     /// <summary>
-    /// Maximum image size (optional, e.g. 1024 for 1024x1024)
+    /// Maximum image size, if available (for example, 1024 for 1024x1024).
     /// </summary>
     public int? MaxImageSize { get; init; }
 
     /// <summary>
-    /// Whether to support editing/transformation
+    /// Indicates whether editing or transformation is supported.
     /// </summary>
     public bool SupportsEditing { get; init; }
 }
@@ -96,17 +96,17 @@ public class EmbeddingModelInfo : AIModelInfo
 }
 
 /// <summary>
-/// Text-to-speech model metadata information
+/// Metadata for a text-to-speech model.
 /// </summary>
 public class TextToSpeechModelInfo : AIModelInfo
 {
     /// <summary>
-    /// Available sounds list
+    /// List of available voices.
     /// </summary>
     public IReadOnlyList<string>? Voices { get; init; }
 
     /// <summary>
-    /// Whether to support streaming output
+    /// Indicates whether streaming output is supported.
     /// </summary>
     public bool SupportsStreaming { get; init; }
 }

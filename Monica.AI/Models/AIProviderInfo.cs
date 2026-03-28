@@ -1,67 +1,67 @@
 namespace Monica.AI.Models;
 
 /// <summary>
-/// AI Provider metadata information
+/// Metadata for an AI provider.
 /// </summary>
 public class AIProviderInfo
 {
     /// <summary>
-    /// Provider unique identifier
+    /// Unique provider identifier.
     /// </summary>
     public required string ProviderId { get; init; }
 
     /// <summary>
-    /// Provider display name
+    /// Provider display name.
     /// </summary>
     public required string DisplayName { get; init; }
 
     /// <summary>
-    /// Provider Description
+    /// Provider description.
     /// </summary>
     public string? Description { get; init; }
 
     /// <summary>
-    /// Provider type (such as OpenAI, Anthropic, etc.)
+    /// Provider type, such as OpenAI or Anthropic.
     /// </summary>
     public required string ProviderType { get; init; }
 
     /// <summary>
-    /// The model used by default
+    /// Default model used by the provider.
     /// </summary>
     public string? DefaultModel { get; init; }
 
     /// <summary>
-    /// Default system prompt word
+    /// Default system prompt.
     /// </summary>
     public string? SystemPrompt { get; init; }
     
     /// <summary>
-    /// Model metadata information
+    /// Model metadata.
     /// </summary>
     public IReadOnlyList<AIModelInfo>? SupportedModels { get; init; }
 
     /// <summary>
-    /// Is the Provider valid (the model configuration is complete)
+    /// Indicates whether the provider is valid, meaning its model configuration is complete.
     /// </summary>
     public bool IsValid { get; init; } = true;
 
     /// <summary>
-    /// Missing model name
+    /// Names of missing models.
     /// </summary>
     public IReadOnlyList<string>? InvalidModels { get; init; }
 
     /// <summary>
-    /// Whether it is the default Provider
+    /// Indicates whether this is the default provider.
     /// </summary>
     public bool IsDefault { get; init; }
 
     /// <summary>
-    /// Icon (for UI display)
+    /// Icon used for UI display.
     /// </summary>
     public string? Icon { get; init; }
 
     /// <summary>
-    /// Provider status
+    /// Provider status.
     /// </summary>
     public AIProviderStatus Status { get; set; } = AIProviderStatus.Unknown;
 
@@ -78,12 +78,12 @@ public class AIProviderInfo
 }
 
 /// <summary>
-/// Provider status enum
+/// Provider status. enum
 /// </summary>
 public enum AIProviderStatus
 {
     /// <summary>
-    /// unknown status
+    /// Unknown status.
     /// </summary>
     Unknown,
 

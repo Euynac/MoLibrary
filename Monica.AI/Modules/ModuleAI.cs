@@ -19,17 +19,17 @@ using Monica.Core.Modularity.Models;
 namespace Monica.Modules;
 
 /// <summary>
-/// AI module builder extension methods
+/// Extension methods for configuring the AI module builder.
 /// </summary>
 public static class ModuleAIBuilderExtensions
 {
     extension(Mo)
     {
         /// <summary>
-        /// Configure AI module
+        /// Configures the AI module.
         /// </summary>
-        /// <param name="action">Module configuration options</param>
-        /// <returns>AI module configuration guide</returns>
+        /// <param name="action">The module configuration action.</param>
+        /// <returns>An AI module configuration builder.</returns>
         public static ModuleAIGuide AddAI(Action<ModuleAIOption>? action = null)
         {
             return new ModuleAIGuide().Register(action);
@@ -38,7 +38,7 @@ public static class ModuleAIBuilderExtensions
 }
 
 /// <summary>
-/// AI module
+/// AI module.
 /// </summary>
 [ModuleKey(EMoModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
@@ -61,7 +61,7 @@ public class ModuleAI(ModuleAIOption option)
             return catalog;
         });
 
-        // Register Provider Manager
+        // Register provider manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
         services.AddSingleton<AIProviderManager>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
@@ -69,22 +69,22 @@ public class ModuleAI(ModuleAIOption option)
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IAIChatAgentDecorator, ToolInvocationTrackingAgentDecorator>());
 
-        // Sign up for chat service
+        // Register chat service
         services.AddSingleton<AIChatService>();
     }
 }
 
 /// <summary>
-/// AI module configuration guide
+/// Builder for AI module configuration.
 /// </summary>
 public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
     /// <summary>
-    /// Add OpenAI Provider
+    /// Adds an OpenAI provider.
     /// </summary>
-    /// <param name="configure">Configure delegation</param>
+    /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
-    /// <returns>Current bootloader instance</returns>
+    /// <returns>The current builder instance.</returns>
     public ModuleAIGuide AddOpenAIProvider(
         Action<OpenAIProviderOptions> configure,
         string? providerId = null)
@@ -105,11 +105,11 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// Add Anthropic Provider
+    /// Adds an Anthropic provider.
     /// </summary>
-    /// <param name="configure">Configure delegation</param>
+    /// <param name="configure">The configuration delegate.</param>
     /// <param name="providerId">Optional provider identifier. Defaults to provider type.</param>
-    /// <returns>Current bootloader instance</returns>
+    /// <returns>The current builder instance.</returns>
     public ModuleAIGuide AddAnthropicProvider(
         Action<AnthropicProviderOptions> configure,
         string? providerId = null)
@@ -156,10 +156,10 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// Add model information to the catalog
+    /// Adds model information to the catalog.
     /// </summary>
-    /// <param name="model">Model information</param>
-    /// <returns>Current guide instance</returns>
+    /// <param name="model">The model information to add.</param>
+    /// <returns>The current builder instance.</returns>
     public ModuleAIGuide AddModel(AIModelInfo model)
     {
         ConfigureModuleOption(option => option.AddModel(model), secondKey: model.ModelName);
@@ -167,11 +167,11 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// Add custom provider
+    /// Adds a custom provider.
     /// </summary>
     /// <typeparam name="TProvider">Provider type</typeparam>
     /// <param name="providerFactory">Provider factory method</param>
-    /// <returns>Current bootloader instance</returns>
+    /// <returns>The current builder instance.</returns>
     public ModuleAIGuide AddProvider<TProvider>(Func<IServiceProvider, TProvider> providerFactory)
         where TProvider : class, IAIProvider
     {
@@ -186,10 +186,10 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
     }
 
     /// <summary>
-    /// Map AI chat endpoints
+    /// Maps AI chat endpoints.
     /// </summary>
-    /// <param name="routePrefix">Route prefix, defaults to "/ai"</param>
-    /// <returns>Current guide instance</returns>
+    /// <param name="routePrefix">The route prefix. Defaults to <c>"/ai"</c>.</param>
+    /// <returns>The current builder instance.</returns>
     public ModuleAIGuide MapAIEndpoints(string routePrefix = "/ai")
     {
         ConfigureEndpoints(builder =>
@@ -211,7 +211,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
 }
 
 /// <summary>
-/// AI module options
+/// Options for the AI module.
 /// </summary>
 public class ModuleAIOption : MoModuleOption<ModuleAI>
 {
@@ -223,7 +223,7 @@ public class ModuleAIOption : MoModuleOption<ModuleAI>
     }
 
     /// <summary>
-    /// Add model information
+    /// Adds model information.
     /// </summary>
     public void AddModel(AIModelInfo model)
     {
@@ -231,17 +231,17 @@ public class ModuleAIOption : MoModuleOption<ModuleAI>
     }
 
     /// <summary>
-    /// Default system prompt word
+    /// Default system prompt.
     /// </summary>
     public string? DefaultSystemPrompt { get; set; }
 
     /// <summary>
-    /// Default maximum number of context messages (0 means no limit)
+    /// Default maximum number of context messages. A value of 0 means no limit.
     /// </summary>
     public int MaxContextMessages { get; set; }
 
     /// <summary>
-    /// Whether to enable request logging
+    /// Indicates whether request logging is enabled.
     /// </summary>
     public bool EnableRequestLogging { get; set; }
 }
