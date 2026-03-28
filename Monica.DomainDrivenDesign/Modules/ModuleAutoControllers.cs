@@ -24,7 +24,7 @@ public static class ModuleAutoControllersBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the AutoControllers module.
+        /// Registers and configures the AutoControllers module.
         /// </summary>
         public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<MoCrudControllerOption>? crudOptionAction = null)
         {

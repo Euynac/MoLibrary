@@ -19,11 +19,11 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     private FieldToken _token = null!;
     private object? _curValue = null!;
     /// <summary>
-    /// Represents the expression's value property.
+    /// Placeholder for the current value parameter in the generated expression.
     /// </summary>
     private string _curValueParam = null!;
     /// <summary>
-    /// Represents the current field property.
+    /// Field path used in the generated expression.
     /// </summary>
     private string _curFieldParam = null!;
     private int _curTotalParamCount = 0;
@@ -33,17 +33,17 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     private bool _isMulti => (_features & EFieldConditionFeatures.Multi) != 0;
 
     /// <summary>
-    /// Dynamic extension methods for LinqToSql are not supported at runtime.
+    /// Function source used for generated <c>Like</c> expressions.
     /// </summary>
     protected virtual string LinqFunctions => (_features & EFieldConditionFeatures.UseClientSideEvaluations) != 0
         ? nameof(LinqToObjectFunctions)
         : "EF.Functions";
 
     /// <summary>
-    /// Determines whether the special ConvertedValue property requires ending generation early.
+    /// Handles special converted-value markers that short-circuit expression generation.
     /// </summary>
-    /// <param name="expression"></param>
-    /// <returns></returns>
+    /// <param name="expression">Receives the replacement expression when generation stops early.</param>
+    /// <returns><c>true</c> when generation should stop early; otherwise <c>false</c>.</returns>
     private bool ShouldBreakConvertedValue([NotNullWhen(true)] out string? expression)
     {
         expression = null;
@@ -76,7 +76,7 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
         {
             return $"{_curValueParam}.Contains({_curFieldParam})";
         }
-        //use https://eval-expression.net/linq-dynamic instead?
+        // Consider https://eval-expression.net/linq-dynamic instead.
 
         if (token.Conditions == EFieldConditions.Is)
         {
@@ -239,10 +239,10 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     }
 
     /// <summary>
-    /// Adds supplemental parameters and returns the index where it was inserted.
+    /// Appends an auxiliary parameter and returns its parameter index.
     /// </summary>
-    /// <param name="supplement"></param>
-    /// <returns></returns>
+    /// <param name="supplement">The auxiliary parameter value.</param>
+    /// <returns>The absolute parameter index used in the generated expression.</returns>
     private int SupplementParameter(object supplement)
     {
         _supplementParameterObjects.Add(supplement);
@@ -275,9 +275,9 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     #region Is
 
     /// <summary>
-    /// Parses an Is expression.
+    /// Generates the expression for an <c>is</c> condition.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The generated condition expression.</returns>
     private string ResolveIs()
     {
         if (_curValue is string exp && !string.IsNullOrWhiteSpace(exp))
@@ -309,9 +309,9 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
 
     #region ExpLike
     /// <summary>
-    /// Parses an ExpLike expression.
+    /// Generates the expression for an <c>explike</c> condition.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The generated condition expression.</returns>
     private string ResolveExpLike()
     {
         if (_curValue is string exp && !string.IsNullOrWhiteSpace(exp))
@@ -390,9 +390,9 @@ public partial class AutoModelTokenExpressionGenDynamicLinqProvider(IOptions<Aut
     }
 
     /// <summary>
-    /// ExpLike regular expression.
+    /// Regular expression used to split <c>explike</c> clauses.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The compiled <c>explike</c> splitter regex.</returns>
     [GeneratedRegex("""
                     [\|\(\)\&]
                     """, RegexOptions.Compiled)]

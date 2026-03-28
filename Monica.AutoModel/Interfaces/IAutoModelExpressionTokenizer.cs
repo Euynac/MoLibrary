@@ -5,10 +5,10 @@ namespace Monica.AutoModel.Interfaces;
 public interface IAutoModelExpressionTokenizer<TModel>
 {
     /// <summary>
-    /// Tokenize the expression
+    /// Tokenizes the supplied filter expression.
     /// </summary>
-    /// <param name="expression"></param>
-    /// <returns></returns>
+    /// <param name="expression">The raw filter expression.</param>
+    /// <returns>The tokenization context produced from the expression.</returns>
     TokenizerContext Tokenize(string expression)
     {
         var context = new TokenizerContext(expression);

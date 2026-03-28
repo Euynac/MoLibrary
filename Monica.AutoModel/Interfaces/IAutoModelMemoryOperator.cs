@@ -4,7 +4,7 @@ using Monica.AutoModel.Model;
 namespace Monica.AutoModel.Interfaces;
 
 /// <summary>
-/// AutoModel operations for in-memory queries.
+/// Provides AutoModel operations for in-memory queries.
 /// </summary>
 /// <typeparam name="TModel">The model type.</typeparam>
 public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
@@ -47,7 +47,7 @@ public interface IAutoModelMemoryOperator<TModel> : IAutoModelOperator<TModel>
     IEnumerable<TModel> ApplyFilter(IEnumerable<TModel> queryable, Expression<Func<TModel, object>> selector,
         EFieldConditions condition, string value);
     /// <summary>
-    /// Applies a fuzzy-search filter.
+    /// Applies a fuzzy-match filter.
     /// </summary>
     /// <param name="queryable">The source sequence.</param>
     /// <param name="fuzzy">The fuzzy-search value.</param>

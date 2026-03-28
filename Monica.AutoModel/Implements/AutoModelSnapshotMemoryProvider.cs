@@ -17,9 +17,9 @@ using Monica.Tool.Extensions;
 namespace Monica.AutoModel.Implements;
 
 /// <summary>
-/// AutoModel in-memory snapshot service.
+/// Builds and caches in-memory AutoModel snapshots.
 /// </summary>
-/// <typeparam name="TModel"></typeparam>
+/// <typeparam name="TModel">The model type.</typeparam>
 public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel>
 {
     private static AutoModelSnapshot _snapshot = null!;
@@ -33,7 +33,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
 
     private static IEnumerable<PropertyInfo> GetAutoFieldTypes(Type type)
     {
-        // Caveat: string is also a reference type class. string? merely adds NullableContextAttribute, so treat string? the same as string using typeof(string).
+        // Note: string is also a reference type. string? only adds NullableContextAttribute, so treat string? the same as string by checking typeof(string).
         return type.GetProperties().OrderByDescending(p => p.PropertyType == typeof(string)).ThenBy(p => p.PropertyType.IsClass);
     }
 
@@ -58,7 +58,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
             isActiveMode = tableAttribute.ActiveMode ?? isActiveMode;
         }
 
-        var navigatedTypeNames = new HashSet<Type>();// Prevent nested navigation from causing stack overflows; only support one level deep for the same type.
+        var navigatedTypeNames = new HashSet<Type>(); // Prevent recursive navigation from causing stack overflows. Only one nested level is supported for the same type.
         List<string> allOriginActivateNames = [];
 
         ExtractFieldInfo(GetAutoFieldTypes(typeof(TModel)));
@@ -83,7 +83,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                 // Skip when active mode is enabled but AutoFieldAttribute is missing.
                 if (isActiveMode && fieldAttribute == null) continue;
                 if (fieldAttribute?.Ignore is true) continue;
-                // Automatically ignore fields without AutoField attribute or annotated with NotMapped/JsonIgnore.
+                // Automatically ignore fields without AutoField when they are annotated with NotMapped or JsonIgnore.
                 if (fieldAttribute is null)
                 {
                     if (!options.DisableAutoIgnorePropertyWithNotMappedAttribute && p.GetCustomAttribute<NotMappedAttribute>() != null) continue;
@@ -94,7 +94,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                 // Dictionary types are not supported.
                 if (typeof(IDictionary).IsAssignableFrom(p.PropertyType)) continue;
 
-                // Determine whether the property is a navigation property.
+                // Determine whether the property should be treated as a navigation property.
                 if (p.PropertyType.GetGenericUnderlyingType() is { IsClass: true } underlyingType && underlyingType != typeof(string))
                 {
                     if (!navigatedTypeNames.Add(underlyingType)) continue;
@@ -128,7 +128,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     }
 
 
-                    CheckFuzzSetting(p, field);
+                    CheckFuzzSetting(field);
 
                     if (fieldAttribute != null)
                     {
@@ -146,7 +146,7 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
                     if (activateNames.Count == 0)
                     {
                         var propertyName = field.DefaultActiveName;
-                        activateNames.Add(propertyName.ToLowerInvariant());// Normalized active name used for case-insensitive matching.
+                        activateNames.Add(propertyName.ToLowerInvariant()); // Normalized activation name used for case-insensitive matching.
                         allOriginActivateNames.Add(propertyName);
                     }
 
@@ -182,15 +182,14 @@ public class AutoModelSnapshotMemoryProvider<TModel> : IAutoModelSnapshot<TModel
     }
 
     /// <summary>
-    /// Validates fuzzy field configuration.
+    /// Validates fuzzy-match support for a field.
     /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="fieldSetting"></param>
-    private static void CheckFuzzSetting(PropertyInfo propertyInfo, AutoField fieldSetting)
+    /// <param name="field">The field metadata to update.</param>
+    private static void CheckFuzzSetting(AutoField field)
     {
-        if (fieldSetting.TypeSetting.TypeFeatures.HasAnyFlag(ETypeFeatures.IsCollection, ETypeFeatures.IsClass))
+        if (field.TypeSetting.TypeFeatures.HasAnyFlag(ETypeFeatures.IsCollection, ETypeFeatures.IsClass))
         {
-            fieldSetting.FuzzSetting.IsNotSupported = true;
+            field.FuzzSetting.IsNotSupported = true;
         }
     }
 

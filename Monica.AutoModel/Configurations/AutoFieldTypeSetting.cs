@@ -8,21 +8,21 @@ namespace Monica.AutoModel.Configurations;
 public class AutoFieldTypeSetting
 {
     /// <summary>
-    /// Declaring type that defines this field.
+    /// Type that declares this field.
     /// </summary>
     [JsonIgnore] public Type? DeclaringType { get; set; }
     /// <summary>
-    /// Original parameter type.
+    /// Original field type.
     /// </summary>
     [JsonIgnore] public Type OriginType { get; set; } = null!;
 
     /// <summary>
-    /// Underlying type of the original parameter after unwrapping nullable and <see cref="IEnumerable"/> wrappers.
+    /// Underlying field type after unwrapping nullable and <see cref="IEnumerable"/> wrappers.
     /// </summary>
     [JsonIgnore] public Type OriginUnderlyingType { get; set; } = null!;
 
     /// <summary>
-    /// Type features.
+    /// Detected type features.
     /// </summary>
     public ETypeFeatures TypeFeatures { get; set; }
 
@@ -33,7 +33,7 @@ public class AutoFieldTypeSetting
     public EBasicType BasicType { get; set; }
 
     /// <summary>
-    /// Underlying type name.
+    /// Name of the underlying field type.
     /// </summary>
     public string TypeName => OriginUnderlyingType.Name;
 
@@ -44,9 +44,9 @@ public class AutoFieldTypeSetting
     }
 
     /// <summary>
-    /// Automatically populates the type settings from the parameter type.
+    /// Populates the type metadata from the supplied field type.
     /// </summary>
-    /// <param name="parameterType">The parameter type to analyze.</param>
+    /// <param name="parameterType">The field type to analyze.</param>
     private void AutoSetTypeSetting(Type parameterType)
     {
         OriginType = parameterType;
@@ -158,7 +158,7 @@ public class AutoFieldTypeSetting
 
 
         if (underlyingType == typeof(char)) return EBasicType.IsChar;
-        if (underlyingType.IsClass) return EBasicType.IsClass;//string is also class.
+        if (underlyingType.IsClass) return EBasicType.IsClass; // string is also a class.
         throw new AutoModelSnapshotNotSupportTypeException(
             displayMessage: "字段类型不支持",
             technicalDetail: $"不支持的类型: {underlyingType.GetCleanFullName()}",

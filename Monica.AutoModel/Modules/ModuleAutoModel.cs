@@ -18,7 +18,7 @@ public static class ModuleAutoModelBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Registers and configures the AutoModel module.
+        /// Adds and configures the AutoModel module.
         /// </summary>
         public static ModuleAutoModelGuide AddAutoModel(Action<ModuleAutoModelOption>? action = null)
         {
@@ -90,35 +90,35 @@ public class ModuleAutoModelGuide : MoModuleGuide<ModuleAutoModel, ModuleAutoMod
 public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoModel>
 {
     /// <summary>
-    /// Global active mode. Only fields marked with <c>AutoField</c> participate in AutoModel.
+    /// Enables global active mode. Only fields marked with <c>AutoField</c> participate in AutoModel.
     /// </summary>
     public bool EnableActiveMode { get; set; }
 
     /// <summary>
-    /// Enables prefix omission for default activation names.
+    /// Allows default activation names to omit prefixes.
     /// </summary>
     public bool EnableIgnorePrefix { get; set; }
 
     /// <summary>
-    /// When prefix omission is enabled for default activation names, automatic adjustment failures do not throw errors.
+    /// When prefix omission is enabled for default activation names, activation-name auto-adjustment failures do not throw exceptions.
     /// </summary>
     public bool EnableIgnorePrefixAutoAdjust { get; set; }
 
     /// <summary>
-    /// Enables debugging mode, for example to show the Expression generated from a filter.
+    /// Enables debugging mode, for example by showing the expression generated from a filter.
     /// </summary>
     public bool EnableDebugging { get; set; }
     /// <summary>
     /// Enables using the field display name as an activation name.
     /// </summary>
-    [Obsolete("暂未实现")]
+    [Obsolete("Not implemented yet.")]
     public bool EnableTitleAsActivateName { get; set; }
 
     public bool DisableAutoIgnorePropertyWithJsonIgnoreAttribute { get; set; }
     public bool DisableAutoIgnorePropertyWithNotMappedAttribute { get; set; }
 
     /// <summary>
-    /// Throws exceptions for unsupported field types.
+    /// Throws when a model contains unsupported field types.
     /// </summary>
     public bool EnableErrorForUnsupportedFieldTypes { get; set; }
 

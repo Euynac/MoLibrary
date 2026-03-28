@@ -27,7 +27,9 @@ public class LimitedResultRequestDto : IHasRequestLimitedResult, IValidatableObj
     public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (MaxResultCount > MaxMaxResultCount)
-            yield return new ValidationResult($"{nameof(MaxResultCount)}超过{MaxMaxResultCount}限制", [nameof(MaxResultCount)]);
+            yield return new ValidationResult(
+                $"{nameof(MaxResultCount)} exceeds the limit of {MaxMaxResultCount}.",
+                [nameof(MaxResultCount)]);
         //yield return new ValidationResult((string) validationContext.GetRequiredService<IStringLocalizer<AbpDddApplicationContractsResource>>()["MaxResultCountExceededExceptionMessage", new object[4]
         //    {
         //        (object) "MaxResultCount",

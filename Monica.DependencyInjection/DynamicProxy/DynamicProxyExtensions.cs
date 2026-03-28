@@ -240,7 +240,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
             }
         }
 
-        //Shouldn't the same type of Interceptor be registered multiple times?
+        // Avoid registering the same interceptor type more than once.
         IInterceptor[] GetInterceptors(IServiceProvider provider, RegisterContext context)
         {
             var types = context.InterceptorTypes;
@@ -293,7 +293,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                     var interceptors = GetInterceptors(provider, context);
                     var targetFromFactory = factory.Invoke(provider);
                     object? proxiedObject;
-                    //TODO cannot implement property injection because factory method instantiation can only be executed once.
+                    // TODO: Property injection is not supported here because the factory result is created only once.
                     switch (context.Kind)
                     {
                         case EDynamicProxyKind.ClassProxy:
@@ -319,7 +319,8 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         }
         void AddNormalRegister(RegisterContext context)
         {
-            //Big Pitfall: If the Controller does not use AddControllersAsServices, the Controller cannot be dynamically proxied.
+            // Important: Controllers must be added via AddControllersAsServices; otherwise, they
+            // cannot be proxied dynamically.
             collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {
@@ -368,7 +369,8 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 public enum EDynamicProxyKind
 {
     /// <summary>
-    /// Proxy class methods marked as virtual. TODO Currently only supports virtual method proxies
+    /// Creates proxies for virtual members on concrete classes. Currently only virtual methods are
+    /// supported.
     /// </summary>
     ClassProxy,
     /// <summary>

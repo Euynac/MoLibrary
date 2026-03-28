@@ -142,7 +142,7 @@ public partial class AutoModelExpressionTokenizer<TModel>(
 
     public NormalizedResult GenFinalExpression(TokenizerContext context)
     {
-        var supplementObjects = new List<object>(); // Supplemental object parameter values for dynamic LINQ assignments.
+        var supplementObjects = new List<object>(); // Additional parameter values injected into generated Dynamic LINQ expressions.
         foreach (var (index, token) in context.Tokens.WithIndex())
         {
             var fieldInfo = token.FieldInfo!;
@@ -167,9 +167,10 @@ public partial class AutoModelExpressionTokenizer<TModel>(
 
 
     /// <summary>
-    /// Gets the current enum type's allowed range (only when the type is an enum).
+    /// Returns the supported literal values for the specified enum type.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="type">The enum type to inspect.</param>
+    /// <returns>A comma-separated list of supported values.</returns>
     private static string GetEnumRange(Type type)
     {
         return Enum.GetValues(type).Cast<Enum>()
@@ -178,9 +179,9 @@ public partial class AutoModelExpressionTokenizer<TModel>(
     }
 
     /// <summary>
-    /// Regular expression for parsing expressions.
+    /// Regular expression used to tokenize filter expressions.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The compiled tokenizer regex.</returns>
     [GeneratedRegex("""
                     (?<Field>[^(\s]+) (?<Condition>[\S]+) "(?<Value>.*?)"
                     """, RegexOptions.Compiled)]

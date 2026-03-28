@@ -5,8 +5,9 @@ namespace Monica.AutoModel.Annotations;
 public class AutoTableAttribute : Attribute
 {
     /// <summary>
-    /// Active mode setting. When <c>false</c>, passive mode is used by default.
-    /// When <c>null</c>, the global module setting is used.
+    /// Controls whether the table uses active mode.
+    /// When <c>false</c>, passive mode is used by default.
+    /// When <c>null</c>, the module-level setting is used.
     /// </summary>
     public bool? ActiveMode { get; set; }
     /// <summary>

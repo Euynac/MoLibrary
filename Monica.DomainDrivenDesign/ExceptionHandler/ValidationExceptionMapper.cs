@@ -18,7 +18,7 @@ internal class ValidationExceptionMapper : IExceptionResponseMapper
         switch (exception)
         {
             case MoValidationException validationException:
-                response = Res.Fail("接口请求参数校验失败", ResStatus.ValidateError)
+                response = Res.Fail("Request parameter validation failed.", ResStatus.ValidateError)
                     .AppendMetadata("error", validationException.ValidationErrors);
                 return true;
             default:

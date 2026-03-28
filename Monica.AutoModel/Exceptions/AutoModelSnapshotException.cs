@@ -1,13 +1,13 @@
 namespace Monica.AutoModel.Exceptions;
 
 /// <summary>
-/// Snapshot construction or configuration error.
+/// Exception thrown when snapshot construction or configuration fails.
 /// </summary>
 public class AutoModelSnapshotException(string displayMessage, string? technicalDetail = null)
     : AutoModelBaseException(displayMessage, technicalDetail);
 
 /// <summary>
-/// Exception for unsupported types in a snapshot.
+/// Exception thrown when a snapshot encounters an unsupported field type.
 /// </summary>
 public class AutoModelSnapshotNotSupportTypeException(
     string displayMessage,
@@ -16,7 +16,7 @@ public class AutoModelSnapshotNotSupportTypeException(
     : AutoModelSnapshotException(displayMessage, technicalDetail)
 {
     /// <summary>
-    /// Unsupported field type related to the error.
+    /// Unsupported field type involved in the error.
     /// </summary>
     public Type FromPropertyType { get; } = fromPropertyType;
 }

@@ -41,7 +41,7 @@ public class AutoModelDbOperatorDynamicLinqProvider<TModel>(IAutoModelExpression
     }
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, string filter)
     {
-        // Test/backdoor hook for debugging.
+        // Debug escape hatch for raw Dynamic LINQ expressions.
         if (filter.StartsWith('[') && filter.EndsWith(']'))
         {
             return queryable.Where(_config, filter.TrimStart('[').TrimEnd(']'));
