@@ -2,6 +2,9 @@
 
 如需要查看完整定义，位于`Monica.Tool/Results/Res.cs`
 
+当前默认 JSON 返回字段为 `message`、`status`、`data`、`metadata`。
+如需对外部 API 暴露自定义响应模型，请设置 `Mo.Options.ResultProjector`，而不是通过 DI 注册投影器。
+
 ## `Res<T>`泛型类型介绍
 
 该类型定了许多隐式转换，支持以下隐式转换

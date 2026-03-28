@@ -15,7 +15,7 @@ public interface IResultEnvelope
     /// <summary>
     /// Gets or sets the result status.
     /// </summary>
-    public ResStatus? Status { get; set; }
+    public ResStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets additional debug metadata such as chain-tracing details.

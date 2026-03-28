@@ -13,13 +13,10 @@ namespace Monica.Tool.Results;
 [DebuggerDisplay("{GetDebugValue()}")]
 public class Res : IResultEnvelope
 {
-    [JsonPropertyName(ResJsonFieldNames.Message)]
     public string? Message { get; set; }
 
-    [JsonPropertyName(ResJsonFieldNames.Status)]
-    public ResStatus? Status { get; set; }
+    public ResStatus Status { get; set; } = ResStatus.Unknown;
 
-    [JsonPropertyName(ResJsonFieldNames.Metadata)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? Metadata { get; set; }
 
@@ -163,22 +160,18 @@ public class Res : IResultEnvelope
 /// </summary>
 /// <typeparam name="T"></typeparam>
 [DebuggerDisplay("{GetDebugValue()}")]
-public record Res<T> : IResultEnvelope
+public class Res<T> : IResultEnvelope
 {
-    [JsonPropertyName(ResJsonFieldNames.Message)]
     public string? Message { get; set; }
 
-    [JsonPropertyName(ResJsonFieldNames.Status)]
-    public ResStatus? Status { get; set; }
+    public ResStatus Status { get; set; } = ResStatus.Unknown;
 
-    [JsonPropertyName(ResJsonFieldNames.Metadata)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? Metadata { get; set; }
 
     /// <summary>
     /// Response data items of Response
     /// </summary>
-    [JsonPropertyName(ResJsonFieldNames.Data)]
     public T? Data { get; set; }
 
     /// <summary>
@@ -219,7 +212,7 @@ public record Res<T> : IResultEnvelope
     /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
+    public static implicit operator Res(Res<T> res) => new(res.Message ?? "", res.Status)
     {
         Metadata = res.Metadata
     };
@@ -228,7 +221,7 @@ public record Res<T> : IResultEnvelope
     /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
+    public static implicit operator Res<T>(Res res) => new(res.Message ?? "", res.Status)
     {
         Metadata = res.Metadata
     };
@@ -237,7 +230,7 @@ public record Res<T> : IResultEnvelope
     /// Get inheritable error information
     /// </summary>
     /// <returns></returns>
-    public Res Inherit() => this;
+    public Res ToRes() => this;
 
     /// <summary>
     /// Get Debug value

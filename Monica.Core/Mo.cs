@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Monica.Core.ApiProjection;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.TypeFinder;
 
@@ -49,6 +50,12 @@ public static class Mo
         /// When this value is <see langword="null"/>, modules use their own defaults.
         /// </summary>
         public static bool? DefaultMinimalApiDisabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional result projector for external API response customization.
+        /// When set, projected API helpers use this to transform Monica result envelopes.
+        /// </summary>
+        public static IResultProjector? ResultProjector { get; set; }
         
         /// <summary>
         /// Gets the global domain type finder used by the module system.

@@ -1,8 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.ApiProjection;
 using Monica.Tool.Extensions;
 using Monica.Tool.Results;
 
@@ -54,13 +52,11 @@ public static class MinimalApiExtensions
     /// </summary>
     /// <typeparam name="T">The response type.</typeparam>
     /// <param name="response">The Monica response instance.</param>
-    /// <param name="httpContext">The current HTTP context used to resolve projection options.</param>
+    /// <param name="httpContext">The current HTTP context. Reserved for API symmetry.</param>
     /// <returns>An <see cref="IResult"/> with the projected payload and HTTP status code.</returns>
     public static IResult GetProjectedResponse<T>(this T response, HttpContext httpContext) where T : IResultEnvelope
     {
-        var payload = httpContext.RequestServices
-            .GetRequiredService<IResultProjector>()
-            .ProjectToObject(response);
+        var payload = Mo.Options.ResultProjector?.ProjectToObject(response) ?? response;
         return Results.Json(payload, statusCode: (int?)response.ToHttpStatusCode());
     }
 
@@ -69,7 +65,7 @@ public static class MinimalApiExtensions
     /// </summary>
     /// <typeparam name="T">The Monica response type.</typeparam>
     /// <param name="response">The task that returns the Monica response.</param>
-    /// <param name="httpContext">The current HTTP context used to resolve projection options.</param>
+    /// <param name="httpContext">The current HTTP context. Reserved for API symmetry.</param>
     /// <returns>An <see cref="IResult"/> with the projected payload and HTTP status code.</returns>
     public static async Task<IResult> GetProjectedResponse<T>(this Task<T> response, HttpContext httpContext)
         where T : IResultEnvelope

@@ -520,7 +520,7 @@ public class StateStoreUIService(
     {
         if (GetProvider(serviceKey).IsFailed(out var error, out var provider))
         {
-            return Res.Fail(error);
+            return error;
         }
 
         try

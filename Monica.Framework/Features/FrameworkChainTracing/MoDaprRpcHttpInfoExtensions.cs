@@ -100,7 +100,7 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider 
 
                 if (jsonNode is JsonObject jsonObject)
                 {
-                    var metadataKey = ResJsonFieldNames.Metadata;
+                    var metadataKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(nameof(IResultEnvelope.Metadata));
                     var chainKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
 
                     if (!jsonObject.ContainsKey(metadataKey) || jsonObject[metadataKey] is not JsonObject)

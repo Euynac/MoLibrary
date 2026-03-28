@@ -60,7 +60,7 @@ public class AspNetCoreExceptionHandler(IExceptionHandlerService handler) : IExc
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             httpContext.Response.ContentType = "application/json; charset=utf-8";
 
-            var fallbackResponse = Res.Fail(response.Message ?? "服务器出现异常", response.Status ?? ResStatus.InternalError)
+            var fallbackResponse = Res.Fail(response.Message ?? "服务器出现异常", response.Status)
                 .AppendMetadata("detail", "Exception response serialization failed.")
                 .AppendMetadata("originalException", new
                 {

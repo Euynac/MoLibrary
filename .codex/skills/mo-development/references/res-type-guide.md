@@ -21,7 +21,7 @@ The `Res` and `Res<T>` types provide a consistent way to return result envelopes
 - Optional metadata in `Metadata`
 - Implicit conversions for cleaner code
 
-The CLR model uses `Status` and `Metadata`, while the internal serialized contract remains compatible with Monica's existing API shape, including fields such as `code`, `message`, and `extraInfo`.
+The CLR model and the serialized contract now align. With the repository's camelCase JSON policy, envelopes are serialized as `message`, `status`, `metadata`, and `data`.
 
 ## Res<T> Generic Type
 
@@ -242,7 +242,7 @@ endpoints.MapGet("/users/{id}", async (int id, IUserService userService) =>
 return Res.Ok(data).AppendMessage("Operation completed successfully").GetResponse();
 ```
 
-Use `GetResponse()` when you want Monica's stable internal wire contract (`message`, `code`, `data`, `extraInfo`).
+Use `GetResponse()` when you want Monica's standard wire contract (`message`, `status`, `data`, `metadata`).
 
 For external APIs that should expose a custom response shape without changing `Res` itself, implement a projector and opt into `GetProjectedResponse(...)`:
 
@@ -257,13 +257,13 @@ public sealed class PublicApiResProjector : IResultProjector<PublicApiRes>
 
         return new PublicApiRes(
             response.Message ?? string.Empty,
-            response.Status ?? ResStatus.Unknown,
+            response.Status,
             payload,
             response.Metadata);
     }
 }
 
-services.AddExternalApiResultProjection<PublicApiResProjector>();
+Mo.Options.ResultProjector = new PublicApiResProjector();
 
 // Controller
 return result.GetProjectedResponse(this);

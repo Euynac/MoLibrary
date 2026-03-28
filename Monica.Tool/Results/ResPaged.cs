@@ -10,17 +10,13 @@ namespace Monica.Tool.Results;
 /// <typeparam name="TDto"></typeparam>
 public class ResPaged<TDto> : IResultEnvelope
 {
-    [JsonPropertyName(ResJsonFieldNames.Message)]
     public string? Message { get; set; }
 
-    [JsonPropertyName(ResJsonFieldNames.Status)]
-    public ResStatus? Status { get; set; } = ResStatus.Ok;
+    public ResStatus Status { get; set; } = ResStatus.Unknown;
 
-    [JsonPropertyName(ResJsonFieldNames.Metadata)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExpandoObject? Metadata { get; set; }
 
-    [JsonPropertyName(ResJsonFieldNames.Data)]
     public PageData Data { get; set; }
 
     public class PageData(int? sum, IReadOnlyList<TDto>? items)
@@ -78,11 +74,13 @@ public class ResPaged<TDto> : IResultEnvelope
 
     public ResPaged(int sum, IReadOnlyList<TDto> items)
     {
+        Status = ResStatus.Ok;
         Data = new PageData(sum, items);
     }
 
     public ResPaged(int sum, IReadOnlyList<TDto> items, int? currentPage, int? pageSize)
     {
+        Status = ResStatus.Ok;
         Data = new PageData(sum, items)
         {
             CurrentPage = currentPage,
@@ -92,6 +90,7 @@ public class ResPaged<TDto> : IResultEnvelope
 
     public ResPaged(int sum, IReadOnlyList<TDto> items, int? currentPage, int? pageSize, string? cursor)
     {
+        Status = ResStatus.Ok;
         Data = new PageData(sum, items)
         {
             CurrentPage = currentPage,
@@ -104,13 +103,13 @@ public class ResPaged<TDto> : IResultEnvelope
     /// Get inheritable error information
     /// </summary>
     /// <returns></returns>
-    public Res Inherit() => this;
+    public Res ToRes() => this;
 
     /// <summary>
     /// Extract as new response data
     /// </summary>
     /// <param name="res"></param>
-    public static implicit operator Res(ResPaged<TDto> res) => new(res.Message ?? "", res.Status ?? ResStatus.BadRequest)
+    public static implicit operator Res(ResPaged<TDto> res) => new(res.Message ?? "", res.Status)
     {
         Metadata = res.Metadata
     };

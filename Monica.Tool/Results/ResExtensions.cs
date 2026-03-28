@@ -41,7 +41,6 @@ public static class ResExtensions
                 return HttpStatusCode.InternalServerError;
 
 
-            case null:
             case ResStatus.Unknown:
                 return null;
             default:
@@ -80,7 +79,7 @@ public static class ResExtensions
     public static bool IsMalformed(this IResultEnvelope res)
     {
         //TODO needs to judge Res<T> when OK Data = null There is a specification issue
-        return res.Status == null;
+        return res.Status == ResStatus.Unknown;
     }
     /// <summary>
     /// Additional information for interface settings (duplication will overwrite)
@@ -114,7 +113,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk(out data)) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
     /// <summary>
@@ -124,7 +123,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk()) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
     /// <summary>
@@ -134,7 +133,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk(out data)) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
     /// <summary>
@@ -144,7 +143,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk()) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
     /// <summary>
@@ -165,7 +164,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk(out data)) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
 
@@ -176,7 +175,7 @@ public static class ResExtensions
     {
         error = null;
         if (res.IsOk()) return false;
-        error = res.Inherit();
+        error = res.ToRes();
         return true;
     }
 
@@ -291,26 +290,20 @@ public static class ResExtensions
     public static T AppendMessage<T>(this T self, string? message)
         where T : IResultEnvelope
     {
-        return Append(self, message, null);
+        return Append(self, message);
     }
     /// <summary>
     /// Additional information
     /// </summary>
     /// <param name="self"></param>
     /// <param name="message"></param>
-    /// <param name="status"></param>
-    private static T Append<T>(this T self, string? message, ResStatus? status)
+    private static T Append<T>(this T self, string? message)
         where T : IResultEnvelope
     {
         if (!string.IsNullOrWhiteSpace(message))
         {
             self.Message += $";{message}";
             self.Message = self.Message.TrimStart(';');
-        }
-
-        if (status != null)
-        {
-            self.Status = status;
         }
         return self;
     }
@@ -323,7 +316,9 @@ public static class ResExtensions
     public static T AppendFailure<T>(this T self, string? message, ResStatus status = ResStatus.BadRequest)
         where T : IResultEnvelope
     {
-        return Append(self, message, status);
+        self = Append(self, message);
+        self.Status = status;
+        return self;
     }
 
     /// <summary>
