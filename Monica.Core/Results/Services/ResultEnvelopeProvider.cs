@@ -17,25 +17,14 @@ public static class ResultEnvelopeProvider
     private static readonly ILogger Logger = LogManager.For(typeof(ResultEnvelopeProvider));
 
     /// <summary>
-    /// Gets the configured result projector. Set during module registration.
-    /// </summary>
-    public static IResultProjector? Projector { get; internal set; }
-
-    /// <summary>
     /// Gets the serializer options used for inbound response deserialization.
     /// </summary>
     internal static JsonSerializerOptions SerializerOptions { get; set; } = new();
 
     /// <summary>
-    /// Returns the projected payload when a projector is configured; otherwise returns the original envelope.
+    /// Gets the maximum number of bytes captured for remote request and response diagnostics.
     /// </summary>
-    /// <param name="response">The Monica result envelope.</param>
-    /// <returns>The payload that should be serialized in the HTTP response.</returns>
-    public static object GetResponsePayload(IResultEnvelope response)
-    {
-        ArgumentNullException.ThrowIfNull(response);
-        return Projector?.Project(response) ?? response;
-    }
+    internal static int MaxDiagnosticBodyBytes { get; set; } = 32 * 1024;
 
     /// <summary>
     /// Converts a Monica result envelope into a Minimal API result.
@@ -47,7 +36,7 @@ public static class ResultEnvelopeProvider
         ArgumentNullException.ThrowIfNull(response);
 
         return Microsoft.AspNetCore.Http.Results.Json(
-            GetResponsePayload(response),
+            response,
             statusCode: (int?)response.ToHttpStatusCode());
     }
 
@@ -60,7 +49,7 @@ public static class ResultEnvelopeProvider
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        return new ObjectResult(GetResponsePayload(response))
+        return new ObjectResult(response)
         {
             StatusCode = (int?)response.ToHttpStatusCode()
         };
@@ -76,14 +65,21 @@ public static class ResultEnvelopeProvider
     public static TResponse DeserializeResponse<TResponse>(string json)
         where TResponse : class, IResultEnvelope, new()
     {
-        if (Projector is not null)
-        {
-            return Projector.Resolve<TResponse>(json, SerializerOptions)
-                   ?? throw new JsonException(
-                       $"The configured {nameof(IResultProjector)} returned null for {typeof(TResponse).GetCleanFullName()}.");
-        }
+        ArgumentNullException.ThrowIfNull(json);
 
         return JsonSerializer.Deserialize<TResponse>(json, SerializerOptions)
+               ?? throw new JsonException(
+                   $"The remote response could not be deserialized into {typeof(TResponse).GetCleanFullName()}.");
+    }
+
+    internal static async ValueTask<TResponse> DeserializeResponseAsync<TResponse>(
+        Stream jsonStream,
+        CancellationToken cancellationToken = default)
+        where TResponse : class, IResultEnvelope, new()
+    {
+        ArgumentNullException.ThrowIfNull(jsonStream);
+
+        return await JsonSerializer.DeserializeAsync<TResponse>(jsonStream, SerializerOptions, cancellationToken)
                ?? throw new JsonException(
                    $"The remote response could not be deserialized into {typeof(TResponse).GetCleanFullName()}.");
     }
@@ -102,23 +98,40 @@ public static class ResultEnvelopeProvider
     {
         ArgumentNullException.ThrowIfNull(httpResponse);
 
-        var responseContent = string.Empty;
+        var responseContent = ResultEnvelopeCapturedContent.Empty;
         TResponse? parsedResponse = null;
         Exception? exception = null;
+        Stream? responseStream = null;
+        ResultEnvelopeContentCaptureStream? captureStream = null;
 
         try
         {
-            responseContent = await httpResponse.Content.ReadAsStringAsync();
-            parsedResponse = DeserializeResponse<TResponse>(responseContent);
+            responseStream = await httpResponse.Content.ReadAsStreamAsync();
+            captureStream = new ResultEnvelopeContentCaptureStream(responseStream, MaxDiagnosticBodyBytes);
+            parsedResponse = await DeserializeResponseAsync<TResponse>(captureStream);
 
             if (parsedResponse.IsRemoteResultHealthy())
             {
                 return parsedResponse;
             }
+
+            responseContent = captureStream.ToCapturedContent(httpResponse.Content.Headers);
         }
         catch (Exception ex)
         {
             exception = ex;
+            responseContent = captureStream?.ToCapturedContent(httpResponse.Content.Headers) ?? ResultEnvelopeCapturedContent.Empty;
+        }
+        finally
+        {
+            if (captureStream is not null)
+            {
+                await captureStream.DisposeAsync();
+            }
+            else if (responseStream is not null)
+            {
+                await responseStream.DisposeAsync();
+            }
         }
 
         var errorResponse = new TResponse
@@ -130,7 +143,8 @@ public static class ResultEnvelopeProvider
             httpResponse,
             responseContent,
             parsedResponse,
-            SerializerOptions);
+            SerializerOptions,
+            MaxDiagnosticBodyBytes);
 
         AppendExceptionMetadata(errorResponse, exception, responseContent);
         AppendExchangeMetadata(errorResponse, exchangeInfo);
@@ -153,7 +167,7 @@ public static class ResultEnvelopeProvider
     private static void AppendExceptionMetadata(
         IResultEnvelope errorResponse,
         Exception? exception,
-        string responseContent)
+        ResultEnvelopeCapturedContent responseContent)
     {
         if (exception is null)
         {

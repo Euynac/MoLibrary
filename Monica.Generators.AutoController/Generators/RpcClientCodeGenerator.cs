@@ -243,23 +243,25 @@ internal static class RpcClientCodeGenerator
                 {
                     // Route has parameters - replace {id} with {query.Id} and append query string
                     var processedRoute = ProcessRouteWithParameters(route, paramName);
-                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + processedRoute + "{" + paramName + ".ToQueryString()}\")");
+                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + processedRoute + "{" + paramName + ".ToQueryString()}\", HttpCompletionOption.ResponseHeadersRead)");
                 }
                 else
                 {
                     // No route parameters
-                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "{" + paramName + ".ToQueryString()}\")");
+                    sb.AppendLine("        return await HttpClient.GetAsync($\"" + route + "{" + paramName + ".ToQueryString()}\", HttpCompletionOption.ResponseHeadersRead)");
                 }
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
 
             case "POST":
-                sb.AppendLine($"        return await HttpClient.PostAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
+                sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
 
             case "PUT":
-                sb.AppendLine($"        return await HttpClient.PutAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
+                sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
 
@@ -267,17 +269,20 @@ internal static class RpcClientCodeGenerator
                 // For DELETE, check if it needs a body
                 if (route.Contains("{"))
                 {
-                    sb.AppendLine($"        return await HttpClient.DeleteAsync($\"{route}\")");
+                    var processedRoute = ProcessRouteWithParameters(route, paramName);
+                    sb.AppendLine("        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $\"" + processedRoute + "{" + paramName + ".ToQueryString()}\");");
                 }
                 else
                 {
-                    sb.AppendLine($"        return await HttpClient.DeleteAsync(\"{route}\")");
+                    sb.AppendLine("        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $\"" + route + "{" + paramName + ".ToQueryString()}\");");
                 }
+                sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
 
             default:
-                sb.AppendLine($"        return await HttpClient.PostAsJsonAsync(\"{route}\", {paramName})");
+                sb.AppendLine($"        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, \"{route}\") {{ Content = JsonContent.Create({paramName}) }};");
+                sb.AppendLine("        return await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead)");
                 sb.AppendLine($"            .GetResponse<{handler.ResponseType}>();");
                 break;
         }

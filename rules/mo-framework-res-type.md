@@ -3,7 +3,17 @@
 如需要查看完整定义，位于`Monica.Core/Results/Res.cs`
 
 当前默认 JSON 返回字段为 `message`、`status`、`data`、`metadata`。
-如需对外部 API 暴露自定义响应模型，请通过 `Mo.AddResultEnvelope(o => o.Projector = new YourProjector())` 配置投影器，而不是通过 DI 注册投影器。
+如需调整 Monica 内置结果模型的顶层 JSON 字段名，请通过 `Mo.AddResultEnvelope().UseResultFieldNames(...)` 配置，例如将 `message` 映射为 `msg`、将 `status` 映射为 `code`。
+当前仅支持结果包顶层字段：`message`、`status`、`data`、`metadata`。
+
+```csharp
+Mo.AddResultEnvelope()
+    .UseResultFieldNames(names =>
+    {
+        names.Message = "msg";
+        names.Status = "code";
+    });
+```
 
 ## `Res<T>`泛型类型介绍
 
@@ -88,4 +98,3 @@ public override async Task<Res> Exist(User user,
 ```csharp
 if ((await userManger.Exist(user)).IsFailed(out var error)) return error;
 ```
-

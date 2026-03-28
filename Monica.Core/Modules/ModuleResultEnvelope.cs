@@ -35,19 +35,56 @@ public class ModuleResultEnvelope(ModuleResultEnvelopeOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        ResultEnvelopeProvider.Projector = Option.Projector;
+        ConfigureSharedSerializerOptions();
         ResultEnvelopeProvider.SerializerOptions = JsonSerializerOptionsProvider.SharedSerializerOptions;
+        ResultEnvelopeProvider.MaxDiagnosticBodyBytes = Option.MaxRemoteDiagnosticBodyBytes;
+    }
+
+    private void ConfigureSharedSerializerOptions()
+    {
+        var serializerOptions = JsonSerializerOptionsProvider.SharedSerializerOptions;
+        Option.FieldNames.ApplyTo(serializerOptions);
     }
 }
 
 public class ModuleResultEnvelopeGuide : MoModuleGuide<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>
 {
+    /// <summary>
+    /// Configures top-level JSON field names for Monica result envelopes.
+    /// </summary>
+    /// <param name="configure">The field-name configuration action.</param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleResultEnvelopeGuide UseResultFieldNames(Action<ResultEnvelopeFieldNames> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        ConfigureModuleOption(option => configure(option.FieldNames));
+        return this;
+    }
+
+    /// <summary>
+    /// Limits how much remote request or response content is kept for diagnostics.
+    /// </summary>
+    /// <param name="maxBodyBytes">The maximum number of bytes to capture.</param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleResultEnvelopeGuide SetMaxRemoteDiagnosticBodyBytes(int maxBodyBytes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxBodyBytes);
+
+        ConfigureModuleOption(option => option.MaxRemoteDiagnosticBodyBytes = maxBodyBytes);
+        return this;
+    }
 }
 
 public class ModuleResultEnvelopeOption : MoModuleOption<ModuleResultEnvelope>
 {
     /// <summary>
-    /// Gets or sets the optional custom result projector used for outbound API payloads.
+    /// Gets the top-level JSON field names used for Monica result envelopes.
     /// </summary>
-    public IResultProjector? Projector { get; set; }
+    public ResultEnvelopeFieldNames FieldNames { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the maximum number of request or response bytes captured for remote diagnostics.
+    /// </summary>
+    public int MaxRemoteDiagnosticBodyBytes { get; set; } = 32 * 1024;
 }

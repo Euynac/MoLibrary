@@ -14,6 +14,8 @@ internal sealed class ResultEnvelopeHttpResponseInfo
 
     public string RawContent { get; init; } = string.Empty;
 
+    public bool IsContentTruncated { get; init; }
+
     public Dictionary<string, string[]>? Headers { get; init; }
 
     public Dictionary<string, string[]>? ContentHeaders { get; init; }
@@ -26,7 +28,7 @@ internal sealed class ResultEnvelopeHttpResponseInfo
 
     public static ResultEnvelopeHttpResponseInfo Create<TResponse>(
         HttpResponseMessage response,
-        string responseContent,
+        ResultEnvelopeCapturedContent responseContent,
         TResponse? parsedResponse,
         JsonSerializerOptions serializerOptions)
         where TResponse : class, IResultEnvelope
@@ -37,8 +39,9 @@ internal sealed class ResultEnvelopeHttpResponseInfo
         {
             ResponseType = typeof(TResponse).GetCleanFullName(),
             Envelope = parsedResponse,
-            BodyJson = parsedResponse is not null ? null : TryDeserializeBody(responseContent, serializerOptions),
-            RawContent = string.IsNullOrWhiteSpace(responseContent) ? "<Empty>" : responseContent,
+            BodyJson = parsedResponse is not null ? null : TryDeserializeBody(responseContent.Content, serializerOptions),
+            RawContent = responseContent.DisplayContent,
+            IsContentTruncated = responseContent.IsTruncated,
             Headers = ToHeaderDictionary(response.Headers),
             ContentHeaders = ToHeaderDictionary(response.Content?.Headers),
             StatusCode = (int)response.StatusCode,

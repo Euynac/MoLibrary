@@ -40,6 +40,7 @@ public static class JsonOptionsCloneExtensions
         target.NumberHandling = cloneFromOptions.NumberHandling;
         target.ReadCommentHandling = cloneFromOptions.ReadCommentHandling;
         target.AllowTrailingCommas = cloneFromOptions.AllowTrailingCommas;
+        target.TypeInfoResolver = cloneFromOptions.TypeInfoResolver;
     }
 
     internal static JsonSerializerOptions CloneButFilterConverter(this JsonSerializerOptions cloneFromOptions, Type filteredConverter)

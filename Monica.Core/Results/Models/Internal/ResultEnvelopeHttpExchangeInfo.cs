@@ -10,9 +10,10 @@ internal sealed class ResultEnvelopeHttpExchangeInfo
 
     public static async Task<ResultEnvelopeHttpExchangeInfo> CreateAsync<TResponse>(
         HttpResponseMessage response,
-        string responseContent,
+        ResultEnvelopeCapturedContent responseContent,
         TResponse? parsedResponse,
-        JsonSerializerOptions serializerOptions)
+        JsonSerializerOptions serializerOptions,
+        int maxBodyBytes)
         where TResponse : class, IResultEnvelope
     {
         ArgumentNullException.ThrowIfNull(response);
@@ -20,7 +21,7 @@ internal sealed class ResultEnvelopeHttpExchangeInfo
 
         return new ResultEnvelopeHttpExchangeInfo
         {
-            Request = await ResultEnvelopeHttpRequestInfo.CreateAsync(response.RequestMessage),
+            Request = await ResultEnvelopeHttpRequestInfo.CreateAsync(response.RequestMessage, maxBodyBytes),
             Response = ResultEnvelopeHttpResponseInfo.Create(response, responseContent, parsedResponse, serializerOptions)
         };
     }

@@ -15,7 +15,9 @@ internal sealed class ResultEnvelopeDeserializationErrorInfo
 
     public string Details { get; init; } = string.Empty;
 
-    public static ResultEnvelopeDeserializationErrorInfo Create(JsonException exception, string responseContent)
+    public bool IsResponseContentTruncated { get; init; }
+
+    public static ResultEnvelopeDeserializationErrorInfo Create(JsonException exception, ResultEnvelopeCapturedContent responseContent)
     {
         ArgumentNullException.ThrowIfNull(exception);
 
@@ -25,7 +27,8 @@ internal sealed class ResultEnvelopeDeserializationErrorInfo
             Message = exception.Message,
             LineNumber = exception.LineNumber,
             BytePositionInLine = exception.BytePositionInLine,
-            Details = exception.GetJsonErrorDetails(responseContent)
+            Details = exception.GetJsonErrorDetails(responseContent.Content),
+            IsResponseContentTruncated = responseContent.IsTruncated
         };
     }
 }

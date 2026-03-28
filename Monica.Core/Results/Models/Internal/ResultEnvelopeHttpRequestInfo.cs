@@ -16,16 +16,20 @@ internal sealed class ResultEnvelopeHttpRequestInfo
 
     public string? Content { get; init; }
 
-    public static async Task<ResultEnvelopeHttpRequestInfo?> CreateAsync(HttpRequestMessage? request)
+    public bool IsContentTruncated { get; init; }
+
+    public static async Task<ResultEnvelopeHttpRequestInfo?> CreateAsync(HttpRequestMessage? request, int maxBodyBytes)
     {
         if (request is null)
         {
             return null;
         }
 
-        var content = request.Content is { } httpContent
-            ? await httpContent.ReadAsStringAsync()
-            : null;
+        ResultEnvelopeCapturedContent? content = null;
+        if (request.Content is not null)
+        {
+            content = await ResultEnvelopeCapturedContent.ReadAsync(request.Content, maxBodyBytes);
+        }
 
         return new ResultEnvelopeHttpRequestInfo
         {
@@ -34,7 +38,8 @@ internal sealed class ResultEnvelopeHttpRequestInfo
             Headers = ToHeaderDictionary(request.Headers),
             ContentHeaders = ToHeaderDictionary(request.Content?.Headers),
             RequestMessage = request.ToString(),
-            Content = content
+            Content = content?.Content,
+            IsContentTruncated = content?.IsTruncated ?? false
         };
     }
 
