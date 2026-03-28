@@ -28,7 +28,7 @@ public class AIChatMessage
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>
-    /// Model name. used for this message. Only applies to assistant messages.
+    /// The model name used for this message. Only applies to assistant messages.
     /// </summary>
     public string? ModelName { get; init; }
 

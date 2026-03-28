@@ -6,7 +6,7 @@ namespace Monica.AI.Providers;
 public abstract class AIProviderOptions
 {
     /// <summary>
-    /// Unique provider identifier., or Provider name if not set
+    /// Unique provider identifier, or provider name if not set.
     /// </summary>
     public string? ProviderId { get; set; }
 

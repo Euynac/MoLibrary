@@ -78,7 +78,7 @@ public class AIProviderInfo
 }
 
 /// <summary>
-/// Provider status. enum
+/// Represents the status of an AI provider.
 /// </summary>
 public enum AIProviderStatus
 {
