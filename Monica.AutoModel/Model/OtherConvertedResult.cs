@@ -10,10 +10,9 @@ public class FieldResult
 
 
 /// <summary>
-/// Indicates that this field condition should be skipped, for example when it always evaluates to false.
+/// Marker result indicating that this field condition should be skipped, for example when it always evaluates to false.
 /// </summary>
 public class ResultJumpThisField
 {
     public override string ToString() => nameof(ResultJumpThisField);
 }
-

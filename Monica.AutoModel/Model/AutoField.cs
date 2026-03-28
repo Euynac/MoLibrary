@@ -7,7 +7,7 @@ using Monica.Tool.Extensions;
 namespace Monica.AutoModel.Model;
 
 /// <summary>
-/// AutoModel field configuration.
+/// AutoModel field metadata.
 /// </summary>
 public class AutoField
 {
@@ -19,7 +19,7 @@ public class AutoField
     #region Navigation
 
     /// <summary>
-    /// Navigation-property segments from the root model to this field,
+    /// Navigation-property path segments from the root model to this field,
     /// together with a flag indicating whether each segment is an <c>ICollection</c>.
     /// </summary>
     [JsonIgnore]
@@ -56,7 +56,7 @@ public class AutoField
             var navigationInfo = NavigationProperties.ElementAtOrDefault(navigationIndex++);
             var navigationName = navigationInfo.RefelectName;
             var isCollection = navigationInfo.IsCollection;
-            if (navigationInfo == default) // Reached the actual field; no navigation property remains.
+            if (navigationInfo == default) // Reached the actual field; no navigation segment remains.
             {
                 var fieldName = ReflectionName;
                 if ((TypeSetting.TypeFeatures & ETypeFeatures.IsCollection) != 0)
@@ -144,7 +144,7 @@ public class AutoField
 
     #endregion
     /// <summary>
-    /// Display name of the field. If not specified, the reflected property name is used.
+    /// Display name of the field. Defaults to the reflected property name.
     /// </summary>
     public required string Title { get; set; }
     /// <summary>
@@ -153,12 +153,12 @@ public class AutoField
     public required string ReflectionName { get; set; }
 
     /// <summary>
-    /// Fuzzy-search configuration.
+    /// Fuzzy-match configuration.
     /// </summary>
     public required AutoModelFuzzSetting FuzzSetting { get; set; }
 
     /// <summary>
-    /// Field type configuration.
+    /// Field type metadata.
     /// </summary>
     public required AutoFieldTypeSetting TypeSetting { get; set; }
     /// <summary>
@@ -167,14 +167,14 @@ public class AutoField
     public bool EnableIgnorePrefix { get; set; }
 
     /// <summary>
-    /// Gets the default activation name.
+    /// Gets the default activation name for this field.
     /// </summary>
     public string DefaultActiveName =>
         EnableIgnorePrefix ? ReflectionName : $"{NavigationProperties?.Select(s => s.RefelectName).StringJoin(".").BeIfNotEmpty("{0}.", true)}{ReflectionName}";
     /// <summary>
-    /// Indicates that this field requires client-side evaluation because it cannot be translated to SQL.
+    /// Indicates that this field must be evaluated on the client because it cannot be translated to SQL.
     /// </summary>
-    [Obsolete("暂未实现")]
+    [Obsolete("Not implemented yet.")]
     public bool ShouldUseClientEvaluation { get; set; }
     public override string ToString()
     {

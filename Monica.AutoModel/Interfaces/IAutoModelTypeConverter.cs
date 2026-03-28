@@ -5,15 +5,15 @@ using Monica.AutoModel.Model;
 namespace Monica.AutoModel.Interfaces;
 
 /// <summary>
-/// AutoModel type converter.
+/// Converts raw filter values to typed AutoModel values.
 /// </summary>
 public interface IAutoModelTypeConverter
 {
     /// <summary>
-    /// Converts a field value.
+    /// Converts a raw field value.
     /// </summary>
     /// <param name="value">The raw string value.</param>
-    /// <param name="typeSetting">The field type settings.</param>
+    /// <param name="typeSetting">The target field type metadata.</param>
     /// <param name="features">Additional condition features that affect conversion.</param>
     /// <exception cref="AutoModelValueConvertException">Thrown when the value cannot be converted.</exception>
     /// <returns>The converted value.</returns>

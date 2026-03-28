@@ -1,7 +1,7 @@
 namespace Monica.AutoModel.Exceptions;
 
 /// <summary>
-/// Invocation execution error.
+/// Exception thrown when an AutoModel invocation fails.
 /// </summary>
 public class AutoModelInvokerException(string displayMessage, string? technicalDetail = null)
     : AutoModelBaseException(displayMessage, technicalDetail);

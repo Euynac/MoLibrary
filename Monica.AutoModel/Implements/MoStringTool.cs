@@ -103,11 +103,11 @@ public static partial class MoStringTool
     private static readonly string[] _supportedDateTimeFormats =
        ["yyyy-MM-dd", "yyyyMMdd", "MMdd", "yyyy-MM-dd HH:mm:ss", "yyMMdd"];
     /// <summary>
-    /// Converts value to DateTime.
+    /// Tries to parse a string into a <see cref="DateTime"/>.
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="dateTime"></param>
-    /// <returns></returns>
+    /// <param name="value">The raw input string.</param>
+    /// <param name="dateTime">The parsed <see cref="DateTime"/> value when parsing succeeds.</param>
+    /// <returns><c>true</c> when parsing succeeds; otherwise <c>false</c>.</returns>
     public static bool TryToDateTime(string value, out DateTime dateTime)
     {
         value = value.Trim();

@@ -65,8 +65,8 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     /// <summary>
     /// Builds the Dynamic LINQ select expression for a field.
     /// </summary>
-    /// <param name="field"></param>
-    /// <returns></returns>
+    /// <param name="field">The field metadata to translate.</param>
+    /// <returns>The Dynamic LINQ member-access expression for the field.</returns>
     private string GetSelectExpression(AutoField field)
     {
         if (field.NavigationProperties is { } list)
