@@ -48,7 +48,7 @@ public abstract class UniDataTransformerMiddlewareBase<TConverterCore, TSource, 
     {
         if (source is TSource from) return Convert(from);
         throw new InvalidOperationException(
-            $"Can not transform {source?.GetType()} to {typeof(TDestination)} in {nameof(TConverterCore)}");
+            $"Cannot transform {source?.GetType()} to {typeof(TDestination)} in {nameof(TConverterCore)}");
     }
 
     public abstract TDestination Convert(TSource data);
@@ -78,7 +78,7 @@ public abstract class BiDataTransformerMiddlewareBase<TConverterCore, T1, T2> :
             T1 t1 => Convert(t1),
             T2 t2 => Convert(t2),
             _ => throw new InvalidOperationException(
-                $"Can not transform {source?.GetType()} to {typeof(T1)} or {typeof(T2)} in {nameof(TConverterCore)}")
+                $"Cannot transform {source?.GetType()} to {typeof(T1)} or {typeof(T2)} in {nameof(TConverterCore)}")
         };
     }
 }

@@ -17,7 +17,7 @@ public class AutoFieldAttribute : Attribute
     /// <summary>
     /// Whether to use the field title as an activation name. If <c>null</c>, the parent setting is used.
     /// </summary>
-    [Obsolete("暂未实现")]
+    [Obsolete("Not implemented yet.")]
     public bool? TitleAsActivateName { get; set; }
 
     /// <summary>
@@ -28,7 +28,7 @@ public class AutoFieldAttribute : Attribute
     /// <summary>
     /// Whether this field is required in filter expressions.
     /// </summary>
-    [Obsolete("暂未实现")]
+    [Obsolete("Not implemented yet.")]
     public bool IsRequired { get; set; }
 
     /// <summary>

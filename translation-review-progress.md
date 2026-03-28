@@ -17,7 +17,8 @@
 - [x] Synced latest remote source.
 - [x] Created dedicated review branch.
 - [x] Located translation commit/range.
-- [~] Completed batch 1 review (Monica.AI module in progress).
+- [x] Completed batch 1 review (`Monica.AI/*`).
+- [~] Completed batch 2 review (`Monica.AutoModel/*`, `Monica.Configuration*`, `Monica.DataChannel/*`) — ongoing.
 - [ ] Completed full repository translation review.
 
 ## Findings
@@ -29,3 +30,7 @@
   - `输入 Token 数量` -> `Enter the number of Tokens` (corrected to `Number of input tokens`)
 - Batch 1 focus: `Monica.AI/*` files with obvious machine-translation artifacts and unnatural API/XML-doc phrasing.
 - Review strategy: prioritize files with obviously weak machine-translation patterns first, then continue module-by-module until the entire commit range is covered.
+- Batch 2 observations:
+  - Some XML docs were grammatically correct but semantically awkward in framework/API contexts; these are being rewritten for idiomatic .NET documentation style rather than left as literal translations.
+  - A few untranslated Chinese strings still remained inside developer-facing attributes/messages (for example `Obsolete` text), which are being normalized to English on the review branch.
+  - Several comments used unnatural wording such as "Configure the client API provider..." or "registration center"; these are being corrected to clearer domain language such as "client-side configuration API provider" and "registration-state manager".

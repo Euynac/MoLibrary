@@ -63,7 +63,7 @@ public class AutoModelExpressionNormalizerDynamicLinqProvider<TModel>(
     }
 
     /// <summary>
-    /// Gets the select expression for a field.
+    /// Builds the Dynamic LINQ select expression for a field.
     /// </summary>
     /// <param name="field"></param>
     /// <returns></returns>
