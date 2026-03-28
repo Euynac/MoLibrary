@@ -3,12 +3,11 @@
   <Import Project="..\common.xml" />
 
   <PropertyGroup>
-    <PackageDescription>Fundamental types, utilities, and base infrastructure for Monica framework including MediatR integration, Mapster mapping, and core abstractions.</PackageDescription>
+    <PackageDescription>Fundamental types, utilities, and base infrastructure for Monica framework including built-in mediator dispatch, Mapster mapping, and core abstractions.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
-    <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.9" />
 	<PackageReference Include="Microsoft.Extensions.Resilience" Version="10.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2">

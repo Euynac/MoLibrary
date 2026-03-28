@@ -98,7 +98,7 @@ public static class ResultEnvelopeProvider
     {
         ArgumentNullException.ThrowIfNull(httpResponse);
 
-        var responseContent = ResultEnvelopeCapturedContent.Empty;
+        ResultEnvelopeCapturedContent responseContent;
         TResponse? parsedResponse = null;
         Exception? exception = null;
         Stream? responseStream = null;

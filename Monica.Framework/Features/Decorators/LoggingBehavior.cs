@@ -1,5 +1,5 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Mediator;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Features.Decorators;

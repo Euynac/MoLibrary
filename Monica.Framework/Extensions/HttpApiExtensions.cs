@@ -1,12 +1,12 @@
-using MediatR;
 using Microsoft.AspNetCore.Http.Extensions;
+using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Extensions;
 
 public static class HttpApiExtensions
 {
-    public static string ToQueryString<T>(this T request) where T : class, IBaseRequest
+    public static string ToQueryString<T>(this T request) where T : class, IMoRequestBase
     {
         var builder = new QueryBuilder();
         foreach (var property in request.GetType().GetProperties().Where(p => p.CanRead))

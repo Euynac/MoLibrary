@@ -1,4 +1,4 @@
-using MediatR;
+using Monica.Core.Mediator;
 using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.Interfaces;

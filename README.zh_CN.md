@@ -188,7 +188,7 @@ Mo.Add{ModuleName}(options =>
 - **Entity Framework Core** - 数据访问 ORM
 - **MudBlazor** - Blazor UI 组件库
 - **Mapster** - 对象映射
-- **MediatR** - 中介者模式实现
+- **内置 Mediator** - 提供 Monica 请求/处理器分发与管道行为
 - **Dapr** - 分布式应用运行时
 - **Serilog** - 结构化日志
 - **FluentValidation** - 验证框架

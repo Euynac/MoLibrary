@@ -189,7 +189,7 @@ Mo.Add{ModuleName}(options =>
 - **Entity Framework Core** - ORM for data access
 - **MudBlazor** - Blazor UI component library
 - **Mapster** - Object mapping
-- **MediatR** - Mediator pattern implementation
+- **Built-in Mediator** - Request/handler dispatch with Monica pipeline behaviors
 - **Dapr** - Distributed application runtime
 - **Serilog** - Structured logging
 - **FluentValidation** - Validation framework

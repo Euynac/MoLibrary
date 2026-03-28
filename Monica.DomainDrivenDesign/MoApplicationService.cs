@@ -1,6 +1,6 @@
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Features.MoMapper;
+using Monica.Core.Mediator;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Core.Results;

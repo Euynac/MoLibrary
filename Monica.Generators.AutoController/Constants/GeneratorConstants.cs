@@ -41,7 +41,7 @@ internal static class GeneratorConstants
         "Microsoft.AspNetCore.Mvc",
         "System.Net", 
         "System.Threading.Tasks",
-        "MediatR",
+        "Monica.Core.Mediator",
         "Monica.Core.Results",
         "Monica.Tool.Extensions"
     ];
