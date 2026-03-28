@@ -75,4 +75,11 @@ public class JsonSerializerOptionsProvider : IJsonSerializerOptionsProvider
         if(str == null) return null;
         return SerializerOptions.PropertyNamingPolicy?.ConvertName(str) ?? str;
     }
+
+    [return: NotNullIfNotNull("str")]
+    public string? UsingJsonDictionaryKeyPolicy(string? str)
+    {
+        if (str == null) return null;
+        return SerializerOptions.DictionaryKeyPolicy?.ConvertName(str) ?? str;
+    }
 }

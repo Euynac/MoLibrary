@@ -39,6 +39,46 @@ public sealed class ResultEnvelopeFieldNames
         Data is not null ||
         Metadata is not null;
 
+    /// <summary>
+    /// Gets the effective JSON field name used for <see cref="Res.Message" />.
+    /// </summary>
+    /// <param name="options">The serializer options used by the application.</param>
+    /// <returns>The effective JSON field name.</returns>
+    public string GetMessagePropertyName(JsonSerializerOptions options)
+    {
+        return GetEffectiveName(MESSAGE_PROPERTY_NAME, options);
+    }
+
+    /// <summary>
+    /// Gets the effective JSON field name used for <see cref="Res.Status" />.
+    /// </summary>
+    /// <param name="options">The serializer options used by the application.</param>
+    /// <returns>The effective JSON field name.</returns>
+    public string GetStatusPropertyName(JsonSerializerOptions options)
+    {
+        return GetEffectiveName(STATUS_PROPERTY_NAME, options);
+    }
+
+    /// <summary>
+    /// Gets the effective JSON field name used for top-level <c>Data</c> payload properties.
+    /// </summary>
+    /// <param name="options">The serializer options used by the application.</param>
+    /// <returns>The effective JSON field name.</returns>
+    public string GetDataPropertyName(JsonSerializerOptions options)
+    {
+        return GetEffectiveName(DATA_PROPERTY_NAME, options);
+    }
+
+    /// <summary>
+    /// Gets the effective JSON field name used for <see cref="Res.Metadata" />.
+    /// </summary>
+    /// <param name="options">The serializer options used by the application.</param>
+    /// <returns>The effective JSON field name.</returns>
+    public string GetMetadataPropertyName(JsonSerializerOptions options)
+    {
+        return GetEffectiveName(METADATA_PROPERTY_NAME, options);
+    }
+
     internal void ApplyTo(JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -126,10 +166,10 @@ public sealed class ResultEnvelopeFieldNames
 
         return propertyName switch
         {
-            MESSAGE_PROPERTY_NAME => Message ?? GetDefaultName(MESSAGE_PROPERTY_NAME, options),
-            STATUS_PROPERTY_NAME => Status ?? GetDefaultName(STATUS_PROPERTY_NAME, options),
-            DATA_PROPERTY_NAME => Data ?? GetDefaultName(DATA_PROPERTY_NAME, options),
-            METADATA_PROPERTY_NAME => Metadata ?? GetDefaultName(METADATA_PROPERTY_NAME, options),
+            MESSAGE_PROPERTY_NAME => GetConfiguredOrDefaultName(Message, MESSAGE_PROPERTY_NAME, options),
+            STATUS_PROPERTY_NAME => GetConfiguredOrDefaultName(Status, STATUS_PROPERTY_NAME, options),
+            DATA_PROPERTY_NAME => GetConfiguredOrDefaultName(Data, DATA_PROPERTY_NAME, options),
+            METADATA_PROPERTY_NAME => GetConfiguredOrDefaultName(Metadata, METADATA_PROPERTY_NAME, options),
             _ => throw new ArgumentOutOfRangeException(nameof(propertyName), propertyName, "Unsupported result envelope property.")
         };
     }
@@ -152,6 +192,14 @@ public sealed class ResultEnvelopeFieldNames
     {
         return string.Equals(propertyName, clrPropertyName, StringComparison.Ordinal) ||
                string.Equals(propertyName, GetDefaultName(clrPropertyName, options), StringComparison.Ordinal);
+    }
+
+    private static string GetConfiguredOrDefaultName(
+        string? configuredName,
+        string defaultPropertyName,
+        JsonSerializerOptions options)
+    {
+        return GetDefaultName(configuredName ?? defaultPropertyName, options);
     }
 
     private static string GetDefaultName(string propertyName, JsonSerializerOptions options)

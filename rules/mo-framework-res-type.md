@@ -4,6 +4,8 @@
 
 当前默认 JSON 返回字段为 `message`、`status`、`data`、`metadata`。
 如需调整 Monica 内置结果模型的顶层 JSON 字段名，请通过 `Mo.AddResultEnvelope().UseResultFieldNames(...)` 配置，例如将 `message` 映射为 `msg`、将 `status` 映射为 `code`。
+注意：这里配置的是“属性名”，仍会继续经过当前全局 `JsonSerializerOptions.PropertyNamingPolicy` 处理。
+例如默认 camelCase 下，配置 `StatusCode` 最终会输出为 `statusCode`。
 当前仅支持结果包顶层字段：`message`、`status`、`data`、`metadata`。
 
 ```csharp

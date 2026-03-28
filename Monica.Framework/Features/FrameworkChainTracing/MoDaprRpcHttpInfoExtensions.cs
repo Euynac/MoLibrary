@@ -3,12 +3,13 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.Features.MoChainTracing;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
-using Monica.Core.Results;
+using Monica.Modules;
 
 namespace Monica.Framework.Features.FrameworkChainTracing;
 
@@ -30,7 +31,11 @@ public static class MoDaprRpcHttpInfoExtensions
 /// <summary>
 /// Extends Dapr actor HTTP processing with custom headers and chain tracing.
 /// </summary>
-internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider jsonSerializerOptionsProvider, IExceptionHandlerService handler, IMoChainTracing tracing) : IMiddleware
+internal sealed class MoRpcApiHttpInfoMiddleware(
+    IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
+    IOptions<ModuleResultEnvelopeOption> resultEnvelopeOptions,
+    IExceptionHandlerService handler,
+    IMoChainTracing tracing) : IMiddleware
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -100,8 +105,8 @@ internal sealed class MoRpcApiHttpInfoMiddleware(IJsonSerializerOptionsProvider 
 
                 if (jsonNode is JsonObject jsonObject)
                 {
-                    var metadataKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(nameof(IResultEnvelope.Metadata));
-                    var chainKey = jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY);
+                    var metadataKey = resultEnvelopeOptions.Value.FieldNames.GetMetadataPropertyName(jsonSerializerOptionsProvider.SerializerOptions);
+                    var chainKey = jsonSerializerOptionsProvider.UsingJsonDictionaryKeyPolicy(MoChainContext.CHAIN_KEY);
 
                     if (!jsonObject.ContainsKey(metadataKey) || jsonObject[metadataKey] is not JsonObject)
                     {

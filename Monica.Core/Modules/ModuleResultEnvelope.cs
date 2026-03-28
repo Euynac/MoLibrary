@@ -51,6 +51,8 @@ public class ModuleResultEnvelopeGuide : MoModuleGuide<ModuleResultEnvelope, Mod
 {
     /// <summary>
     /// Configures top-level JSON field names for Monica result envelopes.
+    /// Configured names are treated like property identifiers and are normalized by the current JSON <see cref="System.Text.Json.JsonSerializerOptions.PropertyNamingPolicy" />.
+    /// For example, under camel-case naming, configuring <c>StatusCode</c> produces <c>statusCode</c>.
     /// </summary>
     /// <param name="configure">The field-name configuration action.</param>
     /// <returns>The current guide instance.</returns>

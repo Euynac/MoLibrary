@@ -239,7 +239,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
           
             if (remoteRes.Metadata is { } expando)
             {
-                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonNamePolicy(MoChainContext.CHAIN_KEY)) is JsonElement
+                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonDictionaryKeyPolicy(MoChainContext.CHAIN_KEY)) is JsonElement
                         jsonElement && jsonElement.Deserialize<MoChainNode>(jsonSerializerOptionsProvider.SerializerOptions) is {} chainNode)
                 {
                     chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();

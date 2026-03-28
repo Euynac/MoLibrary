@@ -17,4 +17,12 @@ public interface IJsonSerializerOptionsProvider
     /// <returns>The converted string, or <see langword="null"/> when <paramref name="str"/> is <see langword="null"/>.</returns>
     [return: NotNullIfNotNull("str")]
     string? UsingJsonNamePolicy(string? str);
+
+    /// <summary>
+    /// Applies the current global JSON dictionary-key policy to the provided string.
+    /// </summary>
+    /// <param name="str">The source string.</param>
+    /// <returns>The converted string, or <see langword="null"/> when <paramref name="str"/> is <see langword="null"/>.</returns>
+    [return: NotNullIfNotNull("str")]
+    string? UsingJsonDictionaryKeyPolicy(string? str);
 }
