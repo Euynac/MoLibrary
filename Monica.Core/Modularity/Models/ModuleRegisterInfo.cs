@@ -143,7 +143,8 @@ public class ModuleRegisterInfo(Type moduleType)
 
         if (ModuleSingleton == null)
         {
-            throw new Exception($"{ModuleType.GetCleanFullName()}模块初始化最终设置失败！未能生成模块单例");
+            throw new Exception(
+                $"Failed to initialize final configuration for module '{ModuleType.GetCleanFullName()}': the module singleton could not be created.");
         }
 
 

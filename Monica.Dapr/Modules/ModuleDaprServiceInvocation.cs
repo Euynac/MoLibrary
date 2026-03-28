@@ -16,7 +16,7 @@ namespace Monica.Modules;
 public static class ModuleDaprServiceInvocationBuilderExtensions
 {
     /// <summary>
-    /// Using Dapr as service call provider
+    /// Registers Dapr as the service invocation provider.
     /// </summary>
     public static ModuleDaprServiceInvocationGuide UseDaprInvocationProvider(
         this ModuleServiceInvocationGuide guide, Action<ModuleDaprServiceInvocationOption>? action = null)
@@ -27,7 +27,7 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
 }
 
 /// <summary>
-/// Dapr service call module
+/// Dapr-based service invocation module.
 /// </summary>
 [ModuleKey(EMoModuleKey.DaprProviderClientConnector)]
 public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
@@ -58,7 +58,7 @@ public class ModuleDaprServiceInvocationOption : MoModuleOption<ModuleDaprServic
 }
 
 /// <summary>
-/// Dapr-based service call connector implementation
+/// Dapr-based service invocation connector.
 /// </summary>
 public class DaprServiceInvocationConnector(
     DaprClient client,
@@ -77,7 +77,7 @@ public class DaprServiceInvocationConnector(
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);
             if (res == null)
                 throw new InvocationException(appId, callbackUrl,
-                    new Exception("Json序列化为空"), response);
+                    new Exception("JSON deserialization returned null."), response);
 
             if (res is IResultEnvelope serviceResponse)
             {
@@ -89,14 +89,20 @@ public class DaprServiceInvocationConnector(
         catch (JsonException jsonException)
         {
             var message = jsonException.GetMessageRecursively();
-            logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
-            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
+            logger.LogError(jsonException,
+                "Failed to invoke service '{AppId}' at '{CallbackUrl}': {Message}. JSON payload: {Content}",
+                appId, callbackUrl, message, content);
+            return Res.Fail(ResStatus.BadRequest,
+                "Failed to invoke service '{0}' at '{1}': {2}. JSON payload: {3}",
+                appId, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
-            logger.LogError(e, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
-            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
+            logger.LogError(e, "Failed to invoke service '{AppId}' at '{CallbackUrl}': {Message}",
+                appId, callbackUrl, message);
+            return Res.Fail(ResStatus.BadRequest, "Failed to invoke service '{0}' at '{1}': {2}",
+                appId, callbackUrl, message);
         }
     }
 
@@ -125,7 +131,7 @@ public class DaprServiceInvocationConnector(
             var res = JsonSerializer.Deserialize<TResponse>(content, jsonSerializerOptionsProvider.SerializerOptions);
             if (res == null)
                 throw new InvocationException(appId, callbackUrl,
-                    new Exception("Json序列化为空"), response);
+                    new Exception("JSON deserialization returned null."), response);
 
             if (res is IResultEnvelope serviceResponse)
             {
@@ -136,14 +142,20 @@ public class DaprServiceInvocationConnector(
         catch (JsonException jsonException)
         {
             var message = jsonException.GetMessageRecursively();
-            logger.LogError(jsonException, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
-            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}，Json数据：{3}", appId, callbackUrl, message, content);
+            logger.LogError(jsonException,
+                "Failed to invoke service '{AppId}' at '{CallbackUrl}': {Message}. JSON payload: {Content}",
+                appId, callbackUrl, message, content);
+            return Res.Fail(ResStatus.BadRequest,
+                "Failed to invoke service '{0}' at '{1}': {2}. JSON payload: {3}",
+                appId, callbackUrl, message, content);
         }
         catch (Exception e)
         {
             var message = e.GetMessageRecursively();
-            logger.LogError(e, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
-            return Res.Fail(ResStatus.BadRequest, "执行{0}服务{1}失败:{2}", appId, callbackUrl, message);
+            logger.LogError(e, "Failed to invoke service '{AppId}' at '{CallbackUrl}': {Message}",
+                appId, callbackUrl, message);
+            return Res.Fail(ResStatus.BadRequest, "Failed to invoke service '{0}' at '{1}': {2}",
+                appId, callbackUrl, message);
         }
     }
 

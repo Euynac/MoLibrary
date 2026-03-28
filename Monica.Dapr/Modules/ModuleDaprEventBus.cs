@@ -16,7 +16,7 @@ namespace Monica.Modules;
 public static class ModuleDaprEventBusBuilderExtensions
 {
     /// <summary>
-    /// Using Dapr as a distributed event bus provider
+    /// Registers Dapr as the distributed event bus provider.
     /// </summary>
     public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
@@ -70,11 +70,13 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
 public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
 {
     /// <summary>
-    /// Add Keyed distributed Dapr event bus
-    /// Register the DaprEventBus instance with the specified ServiceKey and the corresponding HostedService
+    /// Registers a keyed Dapr distributed event bus together with its corresponding hosted
+    /// subscription service.
     /// </summary>
-    /// <param name="key">service key</param>
-    /// <param name="configureOptions">Optional Dapr configuration (like different PubSubName)</param>
+    /// <param name="key">Service key.</param>
+    /// <param name="configureOptions">
+    /// Optional Dapr event bus configuration, for example to use a different pub/sub component.
+    /// </param>
     [RequiresPreviewFeatures]
     public ModuleDaprEventBusGuide AddKeyedDaprEventBus(string key, Action<ModuleDaprEventBusOption> configureOptions)
     {

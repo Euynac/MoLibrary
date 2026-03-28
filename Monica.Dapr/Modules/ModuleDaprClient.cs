@@ -19,7 +19,7 @@ public static class ModuleDaprClientBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configuring the DaprClient module
+        /// Registers and configures the Dapr client module.
         /// </summary>
         public static ModuleDaprClientGuide AddDaprClient(Action<ModuleDaprClientOption>? action = null)
         {

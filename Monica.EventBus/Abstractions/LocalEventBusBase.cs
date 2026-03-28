@@ -19,7 +19,7 @@ public abstract class LocalEventBusBase(
     : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey), IMoLocalEventBus
 {
     /// <summary>
-    /// For local event bus, publishing = directly triggering handlers.
+    /// For the local event bus, publishing means triggering handlers directly.
     /// </summary>
     public override async Task PublishAsync(Type eventType, object eventData, string? topicName = null, CancellationToken cancellationToken = default)
     {
@@ -28,7 +28,7 @@ public abstract class LocalEventBusBase(
     }
 
     /// <summary>
-    /// For local event bus, bulk publishing = triggering handlers for each event.
+    /// For the local event bus, bulk publishing means triggering handlers for each event.
     /// </summary>
     public override async Task BulkPublishAsync(Type eventType, IEnumerable<object> eventDataList, string? topicName = null, CancellationToken cancellationToken = default)
     {

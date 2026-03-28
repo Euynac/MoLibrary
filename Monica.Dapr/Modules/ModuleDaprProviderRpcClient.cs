@@ -40,7 +40,7 @@ public class ModuleDaprProviderRpcClientGuide : MoModuleGuide<ModuleDaprProvider
 public class ModuleDaprProviderRpcClientOption : MoModuleOption<ModuleDaprProviderRpcClient>
 {
     /// <summary>
-    /// RPC interface call timeout
+    /// Timeout applied to RPC calls.
     /// </summary>
     public TimeSpan Timeout { get; set; } =  TimeSpan.FromSeconds(60);
 }
