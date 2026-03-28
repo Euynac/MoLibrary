@@ -3,7 +3,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.JobScheduler.UI.Services;
 

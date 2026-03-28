@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Monica.DomainDrivenDesign.AutoController.Extensions;
 using Monica.DomainDrivenDesign.AutoCrud;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.AutoController.Features;
 

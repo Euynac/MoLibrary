@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 
-namespace Monica.Tool.Results;
+namespace Monica.Core.Results;
 
 /// <summary>
 /// Unified response model, only containing response code and response information

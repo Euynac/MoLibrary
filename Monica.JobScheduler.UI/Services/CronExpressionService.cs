@@ -1,5 +1,5 @@
 using Cronos;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;

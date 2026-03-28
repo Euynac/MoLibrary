@@ -1,6 +1,6 @@
 using Monica.Core.Extensions;
 using Monica.Core.Features.MoChainTracing.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Implementations;
 

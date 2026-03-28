@@ -2,8 +2,8 @@ using Monica.Configuration.Model;
 using Monica.Configuration.UI.Interfaces;
 using Monica.Configuration.UI.Model;
 using Monica.Configuration.UI.Services;
-using Monica.Tool.Results;
-using ResExtensions = Monica.Tool.Results.ResExtensions;
+using Monica.Core.Results;
+using ResExtensions = Monica.Core.Results.ResExtensions;
 
 namespace Monica.Configuration.UI.Implements;
 

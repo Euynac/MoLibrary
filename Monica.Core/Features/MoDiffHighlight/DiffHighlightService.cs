@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Core.Features.MoDiffHighlight.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.Features.MoDiffHighlight;
 

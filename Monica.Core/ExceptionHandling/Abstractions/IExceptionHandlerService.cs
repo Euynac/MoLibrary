@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.ExceptionHandling.Abstractions;
 

@@ -8,7 +8,7 @@ using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.Features.FrameworkChainTracing;
 

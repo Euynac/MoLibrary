@@ -1,5 +1,5 @@
 using Monica.AI.RAG.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.AI.UI.Services;
 

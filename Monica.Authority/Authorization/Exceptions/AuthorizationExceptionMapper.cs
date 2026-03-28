@@ -6,7 +6,7 @@ using Monica.Authority.Localization;
 using Monica.Authority.Authorization.Services.Support;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Authority.Authorization.Exceptions;
 

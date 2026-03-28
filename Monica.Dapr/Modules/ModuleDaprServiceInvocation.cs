@@ -8,7 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

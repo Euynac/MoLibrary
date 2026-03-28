@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.Features.MoChainTracing.Decorators;
 

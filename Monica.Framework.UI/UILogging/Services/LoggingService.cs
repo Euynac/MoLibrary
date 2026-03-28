@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.Framework.UI.UILogging.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.UI.UILogging.Services;
 

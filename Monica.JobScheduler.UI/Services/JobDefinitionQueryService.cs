@@ -6,7 +6,7 @@ using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Api;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.JobScheduler.UI.Services;
 

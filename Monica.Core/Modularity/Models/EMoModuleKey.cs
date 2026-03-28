@@ -40,6 +40,7 @@ public enum EMoModuleKey
     ExceptionHandling,
     AutoControllers,
     JsonSerialization,
+    ResultEnvelope,
     Mediator,
     Swagger,
     /// <summary>

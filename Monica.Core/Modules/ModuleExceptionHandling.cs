@@ -10,7 +10,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

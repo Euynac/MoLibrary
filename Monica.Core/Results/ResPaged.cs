@@ -2,7 +2,7 @@ using System.Dynamic;
 using System.Text.Json.Serialization;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.Results;
+namespace Monica.Core.Results;
 
 /// <summary>
 /// Unified pagination response model

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.ObservableInstance.Facades;
 

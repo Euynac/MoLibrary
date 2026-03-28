@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.AutoController.Components;
 

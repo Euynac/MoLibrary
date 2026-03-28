@@ -1,7 +1,7 @@
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Microsoft.Extensions.AI;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.AI.UI.Services;
 

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Profiling.Services;
 

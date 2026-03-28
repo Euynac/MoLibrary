@@ -7,7 +7,7 @@ using Monica.Core.Logging;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.Extensions;
 

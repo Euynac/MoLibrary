@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.DomainDrivenDesign.Validation;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.ExceptionHandler;
 

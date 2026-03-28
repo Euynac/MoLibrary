@@ -6,7 +6,7 @@ using Monica.EventBus.Constants;
 using Monica.EventBus.Models;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.UI.UIEventBus.Services;
 

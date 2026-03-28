@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.Framework.UI.UIEventBus.Models;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.UI.UIEventBus.Services;
 

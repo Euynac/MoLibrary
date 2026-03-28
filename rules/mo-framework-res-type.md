@@ -1,9 +1,9 @@
 # 统一接口返回模型Res
 
-如需要查看完整定义，位于`Monica.Tool/Results/Res.cs`
+如需要查看完整定义，位于`Monica.Core/Results/Res.cs`
 
 当前默认 JSON 返回字段为 `message`、`status`、`data`、`metadata`。
-如需对外部 API 暴露自定义响应模型，请设置 `Mo.Options.ResultProjector`，而不是通过 DI 注册投影器。
+如需对外部 API 暴露自定义响应模型，请通过 `Mo.AddResultEnvelope(o => o.Projector = new YourProjector())` 配置投影器，而不是通过 DI 注册投影器。
 
 ## `Res<T>`泛型类型介绍
 

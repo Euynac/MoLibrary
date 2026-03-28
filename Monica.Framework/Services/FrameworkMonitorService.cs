@@ -8,7 +8,7 @@ using Monica.EventBus.Abstractions;
 using Monica.Framework.Core;
 using Monica.Framework.Core.Model;
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Framework.Services;
 

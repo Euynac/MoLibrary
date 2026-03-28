@@ -1,4 +1,4 @@
-namespace Monica.Tool.Results;
+namespace Monica.Core.Results;
 
 /// <summary>
 /// Universal return code

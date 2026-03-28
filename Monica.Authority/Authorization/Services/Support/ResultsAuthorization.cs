@@ -1,5 +1,5 @@
 using Monica.Authority.Localization;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Authority.Authorization.Services.Support;
 

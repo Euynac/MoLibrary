@@ -1,5 +1,5 @@
 using Monica.Tool.Extensions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.ExceptionHandling.Exceptions;
 

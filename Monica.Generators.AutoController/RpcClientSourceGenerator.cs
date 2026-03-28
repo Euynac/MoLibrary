@@ -244,8 +244,8 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
     {
         return namespaceName switch
         {
-            "Monica.Tool.MoResponse" => "Monica.Tool.Results",
-            "Monica.Tool.MoRsponse" => "Monica.Tool.Results",
+            "Monica.Tool.MoResponse" => "Monica.Core.Results",
+            "Monica.Tool.MoRsponse" => "Monica.Core.Results",
             _ => namespaceName
         };
     }

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.AI.UI.Services;
 

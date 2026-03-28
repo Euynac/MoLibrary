@@ -5,7 +5,7 @@ using Monica.Modules;
 using Monica.ServiceDiscovery.Localization;
 using Monica.ServiceDiscovery.Models;
 using Monica.ServiceDiscovery.Services;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.ServiceDiscovery.Facades;
 

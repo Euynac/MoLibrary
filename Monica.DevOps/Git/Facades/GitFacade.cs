@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using Monica.DevOps.Git.Abstractions;
 using Monica.DevOps.Git.Models;
 using Monica.Modules;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.DevOps.Git.Facades;
 

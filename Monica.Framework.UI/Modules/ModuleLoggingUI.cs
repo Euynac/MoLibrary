@@ -10,7 +10,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
 using Monica.Framework.UI.UILogging.Services;
 using Monica.Framework.UI.Pages;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace

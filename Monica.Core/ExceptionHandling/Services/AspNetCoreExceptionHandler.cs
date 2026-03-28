@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.ExceptionHandling.Abstractions;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Core.ExceptionHandling.Services;
 

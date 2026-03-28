@@ -10,7 +10,7 @@ using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.JobScheduler.Api;
 

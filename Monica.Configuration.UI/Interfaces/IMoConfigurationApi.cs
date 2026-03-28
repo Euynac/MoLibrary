@@ -1,6 +1,6 @@
 using Monica.Configuration.Model;
 using Monica.Configuration.UI.Model;
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.Configuration.UI.Interfaces;
 

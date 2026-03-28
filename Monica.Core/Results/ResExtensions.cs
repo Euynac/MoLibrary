@@ -4,7 +4,7 @@ using System.Net;
 using System.Text;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.Results;
+namespace Monica.Core.Results;
 
 public static class ResExtensions
 {

@@ -1,4 +1,4 @@
-using Monica.Tool.Results;
+using Monica.Core.Results;
 
 namespace Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 
