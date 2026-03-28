@@ -20,6 +20,7 @@
 - [x] Completed batch 1 review (`Monica.AI/*`).
 - [x] Completed batch 2 review (`Monica.AutoModel/*`, `Monica.Configuration*`, `Monica.DataChannel/*`).
 - [x] Completed batch 3 review (`Monica.Core/*`, `Monica.Dapr/*`, `Monica.DependencyInjection/*`, `Monica.EventBus/*`).
+- [x] Completed batch 4 review (`Monica.DomainDrivenDesign/*`).
 - [ ] Completed full repository translation review.
 
 ## Findings
@@ -47,3 +48,7 @@
   - A few developer-facing strings had been missed by the original translation commit, including Dapr endpoint metadata, service-invocation error text, DI auto-registration logs, and one core module initialization exception.
   - EventBus files in this batch mostly needed small cleanup passes for XML-doc polish and comment readability rather than semantic rewrites.
   - `git diff --check` passed after the batch; `dotnet` and `wslpath` are still unavailable in the environment, so build verification remains unavailable.
+- Batch 4 observations:
+  - `Monica.DomainDrivenDesign/*` still contained a mix of literal builder-summary translations and entirely untranslated developer-facing strings in CRUD response templates, validation errors, and auto-controller registration logs.
+  - The `OverrideServiceAttribute` and related auto-controller comments needed simplification to describe the contract-generation behavior directly instead of mirroring the original Chinese structure.
+  - A repository-wide Chinese-text scan for `Monica.DomainDrivenDesign/*` returned clean after the batch, and `git diff --check` still passed.

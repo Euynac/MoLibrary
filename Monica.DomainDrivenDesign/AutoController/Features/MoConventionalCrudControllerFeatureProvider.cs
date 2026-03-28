@@ -25,11 +25,15 @@ public class MoConventionalCrudControllerFeatureProvider(ILogger<MoConventionalC
         {
             if (typeInfo.Name.EndsWith(options.Value.CrudControllerPostfix))
             {
-                logger.LogInformation("自动注册 CRUD Controller：{name}", typeInfo.Name);
+                logger.LogInformation("Automatically registered CRUD controller: {ControllerName}",
+                    typeInfo.Name);
             }
             else
             {
-                logger.LogError("自动注册 CRUD Controller：{name} 失败，因为与要求后缀「{postfix}」不匹配", typeInfo.Name, options.Value.CrudControllerPostfix);
+                logger.LogError(
+                    "Failed to auto-register CRUD controller '{ControllerName}' because it does not match the required suffix '{RequiredSuffix}'.",
+                    typeInfo.Name,
+                    options.Value.CrudControllerPostfix);
             }
             return true;
         }

@@ -26,7 +26,8 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
                 if (c.ImplementationType.IsAssignableTo<IMoDomainService>() ||
                     c.ImplementationType.IsAssignableTo<IMoApplicationService>())
                 {
-                    Logger.LogDebug($"service inject: {c.ImplementationType.FullName}");
+                    Logger.LogDebug("Injecting service provider into {ImplementationType}",
+                        c.ImplementationType.FullName);
                     return true;
                 }
 
@@ -59,7 +60,8 @@ public static class ModuleDomainDrivenDesignBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the DomainDrivenDesign module (this module also depends on AutoController.Generator).
+        /// Registers and configures the DomainDrivenDesign module. This module also depends on
+        /// AutoController.Generator.
         /// </summary>
         public static ModuleDomainDrivenDesignGuide AddDomainDrivenDesign(Action<ModuleDomainDrivenDesignOption>? action = null)
         {

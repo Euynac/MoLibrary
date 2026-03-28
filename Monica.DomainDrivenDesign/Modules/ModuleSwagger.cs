@@ -38,7 +38,7 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
     {
         services.AddSwaggerGen(options =>
         {
-            // // Add a filter that maps ApiExplorer.GroupName values to Swagger tags.
+            // Add a filter that maps ApiExplorer.GroupName values to Swagger tags.
             // options.OperationFilter<GroupNameToTagsOperationFilter>();
             
             options.SwaggerDoc(Option.Version, new OpenApiInfo
@@ -79,7 +79,9 @@ public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger,
                     }
                     else if (!name.StartsWith(nameof(Monica)))
                     {
-                        Logger.LogWarning($"Swagger XML file not found: {filePath}, you need to add <GenerateDocumentationFile>True</GenerateDocumentationFile> into your .csproj file to generate swagger documents");
+                        Logger.LogWarning(
+                            "Swagger XML file not found: {FilePath}. Enable <GenerateDocumentationFile>True</GenerateDocumentationFile> in the project file to generate Swagger documentation.",
+                            filePath);
                     }
                 }
 
@@ -135,7 +137,7 @@ public static class ModuleSwaggerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the Swagger module.
+        /// Registers and configures the Swagger module.
         /// </summary>
         public static ModuleSwaggerGuide AddSwagger(Action<ModuleSwaggerOption>? action = null)
         {

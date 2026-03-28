@@ -6,7 +6,7 @@ using Monica.Tool.Results;
 namespace Monica.DomainDrivenDesign.AutoController.Components;
 
 /// <summary>
-/// Endpoint filter variant for Minimal API.
+/// Endpoint filter variant for Minimal API endpoints.
 /// </summary>
 public class MoEndpointFilterResult : IEndpointFilter
 {
@@ -17,10 +17,11 @@ public class MoEndpointFilterResult : IEndpointFilter
         {
             context.HttpContext.Response.StatusCode =
                 (int?) response.ToHttpStatusCode() ?? (int) HttpStatusCode.BadRequest;
+
+            // Minimal API serializes ObjectResult differently from MVC controllers.
+            // MVC returns ObjectResult.Value, while Minimal API would serialize the ObjectResult
+            // wrapper itself. Returning Value keeps the payload aligned with MVC behavior.
             return objResult.Value;
-            // Important: Minimal API serializes differently from MVC controllers.
-            // MVC returns ObjectResult.Value, while Minimal API serializes the ObjectResult itself.
-            // Later note: Minimal API should return Microsoft.AspNetCore.Http.Results; Results.Json() can replace ObjectResult.
         }
 
         return result;
