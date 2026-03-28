@@ -20,22 +20,26 @@ public class ThemeGlassmorphic : ThemeBase
         {
             PaletteLight = new PaletteLight()
             {
-                // Main Color - Fresh Gradient                Primary = "#667eea",
+                // Main Color - Fresh Gradient
+                Primary = "#667eea",
                 PrimaryLighten = "#a8b8ff",
                 PrimaryDarken = "#3d4ed8",
                 PrimaryContrastText = "#ffffff",
                 
-                // Secondary Color - Warm Gradient                Secondary = "#f093fb",
+                // Secondary Color - Warm Gradient
+                Secondary = "#f093fb",
                 SecondaryLighten = "#ffc3ff",
                 SecondaryDarken = "#b665c7",
                 SecondaryContrastText = "#ffffff",
                 
-                // Third shade - fresh blue                Tertiary = "#22d3ee",
+                // Third shade - fresh blue
+                Tertiary = "#22d3ee",
                 TertiaryLighten = "#67e8f9",
                 TertiaryDarken = "#0891b2",
                 TertiaryContrastText = "#ffffff",
                 
-                // status color                Info = "#3b82f6",
+                // Status color
+                Info = "#3b82f6",
                 InfoLighten = "#93c5fd",
                 InfoDarken = "#1d4ed8",
                 InfoContrastText = "#ffffff",
@@ -60,25 +64,30 @@ public class ThemeGlassmorphic : ThemeBase
                 DarkDarken = "#1f2937",
                 DarkContrastText = "#ffffff",
                 
-                // Text color - adapt to transparent background                TextPrimary = "rgba(31, 41, 55, 0.9)",
+                // Text color - adapt to transparent background
+                TextPrimary = "rgba(31, 41, 55, 0.9)",
                 TextSecondary = "rgba(75, 85, 99, 0.8)",
                 TextDisabled = "rgba(156, 163, 175, 0.6)",
                 
-                // Operation color                ActionDefault = "rgba(31, 41, 55, 0.9)",
+                // Operation color
+                ActionDefault = "rgba(31, 41, 55, 0.9)",
                 ActionDisabled = "rgba(156, 163, 175, 0.5)",
                 ActionDisabledBackground = "rgba(243, 244, 246, 0.3)",
                 
-                // Background Color - Transparent Gradient                Background = "rgba(255, 255, 255, 0.85)",
+                // Background Color - Transparent Gradient
+                Background = "rgba(255, 255, 255, 0.85)",
                 BackgroundGray = "rgba(249, 250, 251, 0.8)",
                 Surface = "rgba(255, 255, 255, 0.75)",
                 
-                // App bar and drawer                DrawerBackground = "rgba(255, 255, 255, 0.85)",
+                // App bar and drawer
+                DrawerBackground = "rgba(255, 255, 255, 0.85)",
                 DrawerText = "rgba(31, 41, 55, 0.9)",
                 DrawerIcon = "rgba(75, 85, 99, 0.7)",
                 AppbarBackground = "rgba(255, 255, 255, 0.8)",
                 AppbarText = "rgba(31, 41, 55, 0.9)",
                 
-                // lines and borders                LinesDefault = "rgba(229, 231, 235, 0.6)",
+                // Lines and borders
+                LinesDefault = "rgba(229, 231, 235, 0.6)",
                 LinesInputs = "rgba(156, 163, 175, 0.7)",
                 TableLines = "rgba(229, 231, 235, 0.5)",
                 TableStriped = "rgba(249, 250, 251, 0.4)",
@@ -88,33 +97,39 @@ public class ThemeGlassmorphic : ThemeBase
                 
                 HoverOpacity = 0.08,
                 
-                // grayscale color                GrayDefault = "#9ca3af",
+                // Grayscale color
+                GrayDefault = "#9ca3af",
                 GrayLight = "#e5e7eb",
                 GrayLighter = "#f9fafb",
                 GrayDark = "#6b7280",
                 GrayDarker = "#374151",
                 
-                // mask                OverlayDark = "rgba(31, 41, 55, 0.4)",
+                // Mask
+                OverlayDark = "rgba(31, 41, 55, 0.4)",
                 OverlayLight = "rgba(255, 255, 255, 0.3)"
             },
             PaletteDark = new PaletteDark()
             {
-                // Main Color - Bright Neon                Primary = "#00d4ff",
+                // Main Color - Bright Neon
+                Primary = "#00d4ff",
                 PrimaryLighten = "#66e0ff",
                 PrimaryDarken = "#0099cc",
                 PrimaryContrastText = "#0f172a",
                 
-                // Secondary Color - Neon Pink Purple                Secondary = "#ff006e",
+                // Secondary Color - Neon Pink Purple
+                Secondary = "#ff006e",
                 SecondaryLighten = "#ff5aa8",
                 SecondaryDarken = "#c70055",
                 SecondaryContrastText = "#ffffff",
                 
-                // Third Hue - Emerald Neon                Tertiary = "#39ff14",
+                // Third Hue - Emerald Neon
+                Tertiary = "#39ff14",
                 TertiaryLighten = "#7fff66",
                 TertiaryDarken = "#2dd40a",
                 TertiaryContrastText = "#0f172a",
                 
-                // Status Color - Neon Bright Color                Info = "#0ea5e9",
+                // Status Color - Neon Bright Color
+                Info = "#0ea5e9",
                 InfoLighten = "#38bdf8",
                 InfoDarken = "#0284c7",
                 InfoContrastText = "#ffffff",
@@ -139,25 +154,30 @@ public class ThemeGlassmorphic : ThemeBase
                 DarkDarken = "#0f172a",
                 DarkContrastText = "#f8fafc",
                 
-                // Text Color - High Contrast                TextPrimary = "rgba(248, 250, 252, 0.95)",
+                // Text Color - High Contrast
+                TextPrimary = "rgba(248, 250, 252, 0.95)",
                 TextSecondary = "rgba(203, 213, 225, 0.8)",
                 TextDisabled = "rgba(148, 163, 184, 0.5)",
                 
-                // Operation color                ActionDefault = "rgba(248, 250, 252, 0.9)",
+                // Operation color
+                ActionDefault = "rgba(248, 250, 252, 0.9)",
                 ActionDisabled = "rgba(148, 163, 184, 0.4)",
                 ActionDisabledBackground = "rgba(30, 41, 59, 0.4)",
                 
-                // Background color - dark transparent                Background = "rgba(15, 23, 42, 0.9)",
+                // Background color - dark transparent
+                Background = "rgba(15, 23, 42, 0.9)",
                 BackgroundGray = "rgba(30, 41, 59, 0.85)",
                 Surface = "rgba(30, 41, 59, 0.8)",
                 
-                // App bar and drawer                DrawerBackground = "rgba(30, 41, 59, 0.9)",
+                // App bar and drawer
+                DrawerBackground = "rgba(30, 41, 59, 0.9)",
                 DrawerText = "rgba(248, 250, 252, 0.9)",
                 DrawerIcon = "rgba(203, 213, 225, 0.7)",
                 AppbarBackground = "rgba(30, 41, 59, 0.85)",
                 AppbarText = "rgba(248, 250, 252, 0.9)",
                 
-                // Lines and Borders - Neon Borders                LinesDefault = "rgba(51, 65, 85, 0.6)",
+                // Lines and Borders - Neon Borders
+                LinesDefault = "rgba(51, 65, 85, 0.6)",
                 LinesInputs = "rgba(100, 116, 139, 0.8)",
                 TableLines = "rgba(51, 65, 85, 0.5)",
                 TableStriped = "rgba(30, 41, 59, 0.3)",
@@ -167,13 +187,15 @@ public class ThemeGlassmorphic : ThemeBase
                 
                 HoverOpacity = 0.12,
                 
-                // grayscale color                GrayDefault = "#64748b",
+                // Grayscale color
+                GrayDefault = "#64748b",
                 GrayLight = "#94a3b8",
                 GrayLighter = "#cbd5e1",
                 GrayDark = "#475569",
                 GrayDarker = "#334155",
                 
-                // mask                OverlayDark = "rgba(15, 23, 42, 0.6)",
+                // Mask
+                OverlayDark = "rgba(15, 23, 42, 0.6)",
                 OverlayLight = "rgba(248, 250, 252, 0.1)"
             },
             LayoutProperties = new LayoutProperties()

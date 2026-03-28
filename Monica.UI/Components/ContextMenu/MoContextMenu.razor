@@ -158,7 +158,8 @@
     
     private void OnItemMouseEnter(ContextMenuItem<TItem> item, MouseEventArgs e)
     {
-        // Cancel all timers        _hideSubMenuTimer?.Dispose();
+        // Cancel all timers.
+        _hideSubMenuTimer?.Dispose();
         _showSubMenuTimer?.Dispose();
         
         if (_hoveredItem != item)
@@ -208,7 +209,8 @@
     {
         if (item.HasSubMenu && item.SubItems?.Any() == true)
         {
-            // Calculate submenu position            _subMenuX = _x + _menuWidth + 1;
+            // Calculate submenu position.
+            _subMenuX = _x + _menuWidth + 1;
             
             // Calculate the index position of the current item in the menu
             var itemIndex = Items.Where(i => !i.IsDivider).ToList().IndexOf(item);

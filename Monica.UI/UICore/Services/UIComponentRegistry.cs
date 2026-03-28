@@ -49,7 +49,8 @@ public class UIComponentRegistry : IUIComponentRegistry
         };
         _pages.Add(pageInfo);
 
-        // Register component type (for name lookup)        _components[route] = componentType;
+        // Register component type (for name lookup)
+        _components[route] = componentType;
 
         // Automatically create navigation menu items if needed
         if (addToNav)
@@ -68,7 +69,8 @@ public class UIComponentRegistry : IUIComponentRegistry
 
         if (!_excludedAssemblies.Contains(componentType.Assembly))
         {
-            // Add the assembly where the component is located            _assemblies.Add(componentType.Assembly);
+            // Add the assembly where the component is located
+            _assemblies.Add(componentType.Assembly);
         }
 
     }
@@ -102,7 +104,8 @@ public class UIComponentRegistry : IUIComponentRegistry
         };
         _pages.Add(pageInfo);
 
-        // Register component type (for name lookup)        _components[route] = componentType;
+        // Register component type (for name lookup)
+        _components[route] = componentType;
 
         // Automatically create navigation menu items if needed
         if (addToNav)
@@ -123,7 +126,8 @@ public class UIComponentRegistry : IUIComponentRegistry
 
         if (!_excludedAssemblies.Contains(componentType.Assembly))
         {
-            // Add the assembly where the component is located            _assemblies.Add(componentType.Assembly);
+            // Add the assembly where the component is located
+            _assemblies.Add(componentType.Assembly);
         }
     }
 

@@ -21,79 +21,99 @@ public class ThemeFresh : ThemeBase
         {
             PaletteLight = new PaletteLight()
             {
-                // Main color: mint green                Primary = "#00c896",
+                // Main color: mint green
+                Primary = "#00c896",
                 PrimaryLighten = "#33d4aa",
                 PrimaryDarken = "#00a87d",
                 PrimaryContrastText = "#ffffff",
 
-                // Secondary color: soft coral pink                Secondary = "#ff8a95",
+                // Secondary color: soft coral pink
+                Secondary = "#ff8a95",
                 SecondaryLighten = "#ffb3ba",
                 SecondaryDarken = "#ff6b78",
                 SecondaryContrastText = "#ffffff",
 
-                // Third color: sky blue                Tertiary = "#85d7ff",
+                // Third color: sky blue
+                Tertiary = "#85d7ff",
                 TertiaryContrastText = "#1e5266",
 
-                // Information color: fresh blue                Info = "#64b5f6",
+                // Information color: fresh blue
+                Info = "#64b5f6",
                 InfoLighten = "#90caf9",
                 InfoDarken = "#42a5f5",
                 InfoContrastText = "#ffffff",
 
-                // Success color: fresh green                Success = "#66bb6a",
+                // Success color: fresh green
+                Success = "#66bb6a",
                 SuccessLighten = "#81c784",
                 SuccessDarken = "#4caf50",
                 SuccessContrastText = "#ffffff",
 
-                // Warning Color: Soft Orange                Warning = "#ffb74d",
+                // Warning Color: Soft Orange
+                Warning = "#ffb74d",
                 WarningLighten = "#ffcc80",
                 WarningDarken = "#ffa726",
                 WarningContrastText = "#1e1e1e",
 
-                // Wrong color: soft red                Error = "#ff7043",
+                // Wrong color: soft red
+                Error = "#ff7043",
                 ErrorLighten = "#ff8a65",
                 ErrorDarken = "#f4511e",
                 ErrorContrastText = "#ffffff",
 
-                // dark tones                Dark = "#424242",
+                // Dark tones
+                Dark = "#424242",
                 DarkLighten = "#616161",
                 DarkDarken = "#212121",
                 DarkContrastText = "#ffffff",
 
-                // Background color: very light mint tone                Background = "#f8fffe",
+                // Background color: very light mint tone
+                Background = "#f8fffe",
                 BackgroundGray = "#f5f7f7",
 
-                // Surface color: pure white with a little mint                Surface = "#ffffff",
+                // Surface color: pure white with a little mint
+                Surface = "#ffffff",
                 
-                // drawer background                DrawerBackground = "#fcfffe",
+                // Drawer background
+                DrawerBackground = "#fcfffe",
                 DrawerText = "#424242",
                 DrawerIcon = "#616161",
 
-                // App bar background: fresh white                AppbarBackground = "#ffffff",
+                // App bar background: fresh white
+                AppbarBackground = "#ffffff",
                 AppbarText = "#424242",
 
-                // text color                TextPrimary = "#2e3440",
+                // Text color
+                TextPrimary = "#2e3440",
                 TextSecondary = "#5e6772",
                 TextDisabled = "#adb3ba",
 
-                // Operation color                ActionDefault = "#64b5f6",
+                // Operation color
+                ActionDefault = "#64b5f6",
                 ActionDisabled = "#e0e4e8",
                 ActionDisabledBackground = "#f5f7f9",
 
-                // Borders and dividers: very soft gray                Divider = "#e8ecef",
+                // Borders and dividers: very soft gray
+                Divider = "#e8ecef",
                 DividerLight = "#f0f3f5",
 
-                // form stripes                TableStriped = "#fafbfb",
+                // Form stripes
+                TableStriped = "#fafbfb",
                 TableHover = "#f0f8f5",
 
-                // line                LinesDefault = "#e0e4e8",
+                // Line
+                LinesDefault = "#e0e4e8",
                 LinesInputs = "#d0d5da",
 
-                // Covering layer                OverlayDark = "rgba(33,33,33,0.3)",
+                // Covering layer
+                OverlayDark = "rgba(33,33,33,0.3)",
                 OverlayLight = "rgba(255,255,255,0.7)",
 
-                // hover state                HoverOpacity = 0.08,
+                // Hover state
+                HoverOpacity = 0.08,
 
-                // other                GrayDefault = "#9e9e9e",
+                // Other
+                GrayDefault = "#9e9e9e",
                 GrayLight = "#bdbdbd",
                 GrayLighter = "#e0e0e0",
                 GrayDark = "#757575",
@@ -101,79 +121,99 @@ public class ThemeFresh : ThemeBase
             },
             PaletteDark = new PaletteDark()
             {
-                // Main color: dark mint green                Primary = "#00e5a0",
+                // Main color: dark mint green
+                Primary = "#00e5a0",
                 PrimaryLighten = "#33eab3",
                 PrimaryDarken = "#00c586",
                 PrimaryContrastText = "#000000",
 
-                // Secondary color: deep coral pink                Secondary = "#ff9fa8",
+                // Secondary color: deep coral pink
+                Secondary = "#ff9fa8",
                 SecondaryLighten = "#ffb8bf",
                 SecondaryDarken = "#ff8691",
                 SecondaryContrastText = "#000000",
 
-                // Third color: deep sky blue                Tertiary = "#9ae3ff",
+                // Third color: deep sky blue
+                Tertiary = "#9ae3ff",
                 TertiaryContrastText = "#003548",
 
-                // information color                Info = "#81d4fa",
+                // Information color
+                Info = "#81d4fa",
                 InfoLighten = "#a1defc",
                 InfoDarken = "#4fc3f7",
                 InfoContrastText = "#000000",
 
-                // success color                Success = "#81c784",
+                // Success color
+                Success = "#81c784",
                 SuccessLighten = "#a5d6a7",
                 SuccessDarken = "#66bb6a",
                 SuccessContrastText = "#000000",
 
-                // warning color                Warning = "#ffcc80",
+                // Warning color
+                Warning = "#ffcc80",
                 WarningLighten = "#ffd699",
                 WarningDarken = "#ffb74d",
                 WarningContrastText = "#000000",
 
-                // wrong color                Error = "#ff8a65",
+                // Wrong color
+                Error = "#ff8a65",
                 ErrorLighten = "#ffab91",
                 ErrorDarken = "#ff7043",
                 ErrorContrastText = "#000000",
 
-                // dark tones                Dark = "#d0d0d0",
+                // Dark tones
+                Dark = "#d0d0d0",
                 DarkLighten = "#e0e0e0",
                 DarkDarken = "#b0b0b0",
                 DarkContrastText = "#000000",
 
-                // Background color: dark with a little green tint                Background = "#0f1614",
+                // Background color: dark with a little green tint
+                Background = "#0f1614",
                 BackgroundGray = "#141a18",
 
-                // Surface color: dark surface                Surface = "#1a211f",
+                // Surface color: dark surface
+                Surface = "#1a211f",
                 
-                // drawer background                DrawerBackground = "#161d1b",
+                // Drawer background
+                DrawerBackground = "#161d1b",
                 DrawerText = "#e0e0e0",
                 DrawerIcon = "#bdbdbd",
 
-                // app bar background                AppbarBackground = "#1a211f",
+                // App bar background
+                AppbarBackground = "#1a211f",
                 AppbarText = "#e0e0e0",
 
-                // text color                TextPrimary = "#eceff1",
+                // Text color
+                TextPrimary = "#eceff1",
                 TextSecondary = "#b0bec5",
                 TextDisabled = "#607d8b",
 
-                // Operation color                ActionDefault = "#81d4fa",
+                // Operation color
+                ActionDefault = "#81d4fa",
                 ActionDisabled = "#455a64",
                 ActionDisabledBackground = "#263238",
 
-                // Borders and dividing lines                Divider = "#2a3330",
+                // Borders and dividing lines
+                Divider = "#2a3330",
                 DividerLight = "#323b38",
 
-                // form stripes                TableStriped = "#1e2624",
+                // Form stripes
+                TableStriped = "#1e2624",
                 TableHover = "#232b29",
 
-                // line                LinesDefault = "#3a4340",
+                // Line
+                LinesDefault = "#3a4340",
                 LinesInputs = "#455a64",
 
-                // Covering layer                OverlayDark = "rgba(0,0,0,0.5)",
+                // Covering layer
+                OverlayDark = "rgba(0,0,0,0.5)",
                 OverlayLight = "rgba(255,255,255,0.1)",
 
-                // hover state                HoverOpacity = 0.12,
+                // Hover state
+                HoverOpacity = 0.12,
 
-                // other                GrayDefault = "#9e9e9e",
+                // Other
+                GrayDefault = "#9e9e9e",
                 GrayLight = "#bdbdbd",
                 GrayLighter = "#e0e0e0",
                 GrayDark = "#757575",
@@ -182,14 +222,17 @@ public class ThemeFresh : ThemeBase
            
             LayoutProperties = new LayoutProperties()
             {
-                // Use larger rounded corners to create a softer feel                DefaultBorderRadius = "12px",
+                // Use larger rounded corners to create a softer feel
+                DefaultBorderRadius = "12px",
                 
-                // Drawer width                DrawerWidthLeft = "260px",
+                // Drawer width
+                DrawerWidthLeft = "260px",
                 DrawerWidthRight = "260px",
                 DrawerMiniWidthLeft = "72px",
                 DrawerMiniWidthRight = "72px",
                 
-                // App bar height                AppbarHeight = "64px",
+                // App bar height
+                AppbarHeight = "64px",
             },
             Shadows = new Shadow()
             {

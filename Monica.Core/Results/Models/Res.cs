@@ -26,7 +26,7 @@ public class Res : IResultEnvelope
     /// <param name="e"></param>
     public Res(Exception e)
     {
-        Message = $"Service exception occurred: {e}";
+        Message = $"服务出现异常：{e}";
         Status = ResStatus.InternalError;
     }
 
@@ -200,7 +200,7 @@ public class Res<T> : IResultEnvelope
 
     public Res(Exception e)
     {
-        Message = $"Service exception occurred: {e}";
+        Message = $"服务出现异常：{e}";
         Status = ResStatus.InternalError;
     }
 

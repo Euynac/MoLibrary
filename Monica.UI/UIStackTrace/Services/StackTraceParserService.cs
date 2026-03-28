@@ -6,32 +6,8 @@ namespace Monica.UI.UIStackTrace.Services;
 /// <summary>
 /// .NET Stack Trace Resolution Service
 /// </summary>
-public class StackTraceParserService
+public partial class StackTraceParserService
 {
-    /// <summary>
-    /// Exception header regular expression (ExceptionType: Message)
-    /// </summary>
-    private static readonly Regex ExceptionHeaderRegex = new(
-        @"^(?<exceptionType>[\w\.]+(?:\[\w+\])?)\s*:\s*(?<message>.*)$",
-        RegexOptions.Compiled
-    );
-
-    /// <summary>
-    /// Stack frame regular expression (at Namespace.Class.Method(Params) in File.cs:line 123)
-    /// </summary>
-    private static readonly Regex StackFrameRegex = new(
-        @"^\s+at\s+(?<method>(?<namespace>[\w\.<>]+)\.(?<methodname>[\w<>]+))\s*(?<params>\([^\)]*\))?\s*(?:in\s+(?<file>.+?)\s*:line\s+(?<line>\d+))?",
-        RegexOptions.Compiled
-    );
-
-    /// <summary>
-    /// Internal abend marker regular expression
-    /// </summary>
-    private static readonly Regex InnerExceptionEndRegex = new(
-        @"^\s*---+\s*(?:End of\s+)?(?:Inner\s+)?[Ee]xception(?:\s+stack trace)?\s*---+",
-        RegexOptions.Compiled
-    );
-
     /// <summary>
     /// Parse .NET stack trace information
     /// </summary>
@@ -51,7 +27,7 @@ public class StackTraceParserService
 
         try
         {
-            var lines = stackTraceText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var lines = stackTraceText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
             var result = new ParseResult { Success = true, OriginalText = stackTraceText };
 
             int i = 0;
@@ -64,26 +40,27 @@ public class StackTraceParserService
                 // Check if it started with an internal exception (---> ExceptionType: Message)
                 if (line.TrimStart().StartsWith("--->"))
                 {
-                    // Increase internal exception block index                    currentInnerExceptionIndex++;
+                    // Increase the inner exception block index.
+                    currentInnerExceptionIndex++;
 
                     var innerExceptionLine = new StackTraceLine
                     {
                         LineType = StackLineType.InnerException,
                         RawContent = "--- Inner Exception ---",
-                        BelongToInnerExceptionIndex = -1  // 标记行本身不属于任何块
+                        BelongToInnerExceptionIndex = -1  // The marker line itself does not belong to any block.
                     };
                     result.Lines.Add(innerExceptionLine);
 
                     // Continue to process the exception header of this line (remove the 4 characters --->)
                     string cleanLine = line.TrimStart().Substring(4).TrimStart();
-                    var exceptionMatch = ExceptionHeaderRegex.Match(cleanLine);
-                    if (exceptionMatch.Success && IsValidExceptionType(exceptionMatch.Groups["exceptionType"].Value))
+                    var innerExceptionHeaderMatch = ExceptionHeaderPattern().Match(cleanLine);
+                    if (innerExceptionHeaderMatch.Success && IsValidExceptionType(innerExceptionHeaderMatch.Groups["exceptionType"].Value))
                     {
                         result.Lines.Add(new StackTraceLine
                         {
                             LineType = StackLineType.ExceptionHeader,
-                            ExceptionType = exceptionMatch.Groups["exceptionType"].Value,
-                            Message = exceptionMatch.Groups["message"].Value,
+                            ExceptionType = innerExceptionHeaderMatch.Groups["exceptionType"].Value,
+                            Message = innerExceptionHeaderMatch.Groups["message"].Value,
                             RawContent = cleanLine,
                             BelongToInnerExceptionIndex = currentInnerExceptionIndex
                         });
@@ -94,14 +71,14 @@ public class StackTraceParserService
                 }
 
                 // Check if it is an abnormal header
-                var exceptionMatch2 = ExceptionHeaderRegex.Match(line);
-                if (exceptionMatch2.Success && IsValidExceptionType(exceptionMatch2.Groups["exceptionType"].Value))
+                var exceptionHeaderMatch = ExceptionHeaderPattern().Match(line);
+                if (exceptionHeaderMatch.Success && IsValidExceptionType(exceptionHeaderMatch.Groups["exceptionType"].Value))
                 {
                     result.Lines.Add(new StackTraceLine
                     {
                         LineType = StackLineType.ExceptionHeader,
-                        ExceptionType = exceptionMatch2.Groups["exceptionType"].Value,
-                        Message = exceptionMatch2.Groups["message"].Value,
+                        ExceptionType = exceptionHeaderMatch.Groups["exceptionType"].Value,
+                        Message = exceptionHeaderMatch.Groups["message"].Value,
                         RawContent = line,
                         BelongToInnerExceptionIndex = currentInnerExceptionIndex
                     });
@@ -111,10 +88,10 @@ public class StackTraceParserService
                 }
 
                 // Check if it is a stack frame
-                var frameMatch = StackFrameRegex.Match(line);
-                if (frameMatch.Success)
+                var stackFrameMatch = StackFramePattern().Match(line);
+                if (stackFrameMatch.Success)
                 {
-                    var traceLine = ParseStackFrame(frameMatch, line);
+                    var traceLine = ParseStackFrame(stackFrameMatch, line);
                     traceLine.BelongToInnerExceptionIndex = currentInnerExceptionIndex;
                     result.Lines.Add(traceLine);
                     i++;
@@ -122,7 +99,7 @@ public class StackTraceParserService
                 }
 
                 // Check if it is an internal abnormal end tag
-                if (InnerExceptionEndRegex.IsMatch(line))
+                if (InnerExceptionBoundaryPattern().IsMatch(line))
                 {
                     result.Lines.Add(new StackTraceLine
                     {
@@ -131,7 +108,8 @@ public class StackTraceParserService
                         BelongToInnerExceptionIndex = currentInnerExceptionIndex
                     });
 
-                    // End the current inner exception block                    currentInnerExceptionIndex = -1;
+                    // End the current inner exception block.
+                    currentInnerExceptionIndex = -1;
 
                     i++;
                     continue;
@@ -369,6 +347,19 @@ public class StackTraceParserService
         return text.Contains("\n   at ") ||
                text.Contains("Exception:") ||
                text.Contains("StackTrace:") ||
-               ExceptionHeaderRegex.IsMatch(text);
+               ExceptionHeaderPattern().IsMatch(text);
     }
+
+    [GeneratedRegex(@"^(?<exceptionType>[\w\.]+(?:\[\w+\])?)\s*:\s*(?<message>.*)$", RegexOptions.Compiled)]
+    private static partial Regex ExceptionHeaderPattern();
+
+    [GeneratedRegex(
+        @"^\s+at\s+(?<method>(?<namespace>[\w\.<>]+)\.(?<methodname>[\w<>]+))\s*(?<params>\([^\)]*\))?\s*(?:in\s+(?<file>.+?)\s*:line\s+(?<line>\d+))?",
+        RegexOptions.Compiled)]
+    private static partial Regex StackFramePattern();
+
+    [GeneratedRegex(
+        @"^\s*---+\s*(?:End of\s+)?(?:Inner\s+)?[Ee]xception(?:\s+stack trace)?\s*---+",
+        RegexOptions.Compiled)]
+    private static partial Regex InnerExceptionBoundaryPattern();
 }
