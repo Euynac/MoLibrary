@@ -1,15 +1,22 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Monica.Core;
+using Monica.Core.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.DependencyInjection.DynamicProxy;
+using Monica.DomainDrivenDesign.AutoController.MoRpc;
+using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
 using Monica.Framework.ChainTracing.Providers.DynamicProxy;
 using Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
 using Monica.Framework.ChainTracing.Providers.MoRpc;
 using Monica.Framework.ChainTracing.Services;
+using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -45,21 +52,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
         }
 
         services.AddSingleton<IChainTracing, AsyncLocalChainTracingService>();
-
-        if (Option.EnableInvocationTracing)
-        {
-            services.AddTransient<ChainTracingInvocationInterceptor>();
-        }
-
-        if (Option.EnableDatabaseTracing)
-        {
-            services.AddScoped<ChainTracingDbCommandInterceptor>();
-        }
-
-        if (Option.EnableMoRpcTracing)
-        {
-            services.AddTransient<MoRpcChainTracingMiddleware>();
-        }
     }
 
     public override void ClaimDependencies()
@@ -67,20 +59,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
         if (!Option.Enabled)
         {
             return;
-        }
-
-        DependsOnModule<ModuleJsonSerializationGuide>().Register();
-
-        if (Option.EnableInvocationTracing)
-        {
-            DependsOnModule<ModuleDynamicProxyGuide>().Register();
-            DependsOnModule<ModuleTimekeeperGuide>().Register();
-        }
-
-        if (Option.EnableMoRpcTracing)
-        {
-            DependsOnModule<ModuleResultEnvelopeGuide>().Register();
-            DependsOnModule<ModuleExceptionHandlingGuide>().Register();
         }
 
         if (Option.EnableControllerTracing || Option.EnableAttachToRes)
@@ -99,14 +77,6 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
             });
         }
     }
-
-    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-        if (Option.Enabled && Option.EnableMoRpcTracing)
-        {
-            app.UseMiddleware<MoRpcChainTracingMiddleware>();
-        }
-    }
 }
 
 /// <summary>
@@ -114,6 +84,62 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
 /// </summary>
 public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
 {
+    /// <summary>
+    /// Enables method-invocation tracing through the DynamicProxy module.
+    /// </summary>
+    /// <param name="shouldIntercept">Optional predicate that controls which services should be proxied.</param>
+    public ModuleChainTracingGuide UseInvocationTracing(
+        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool>? shouldIntercept = null)
+    {
+        DependsOnModule<ModuleTimekeeperGuide>().Register();
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+            .AddInterceptor<ChainTracingInvocationInterceptor>(shouldIntercept ?? ShouldTraceInvocation);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Enables EF Core command tracing support.
+    /// </summary>
+    public ModuleChainTracingGuide UseDatabaseTracing()
+    {
+        ConfigureServices(context => { context.Services.TryAddScoped<ChainTracingDbCommandInterceptor>(); });
+        return this;
+    }
+
+    /// <summary>
+    /// Enables MoRpc response tracing middleware.
+    /// </summary>
+    public ModuleChainTracingGuide UseMoRpcTracing()
+    {
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+        DependsOnModule<ModuleResultEnvelopeGuide>().Register();
+        DependsOnModule<ModuleExceptionHandlingGuide>().Register();
+
+        ConfigureServices(context => { context.Services.TryAddTransient<MoRpcChainTracingMiddleware>(); });
+        ConfigureApplicationBuilder(
+            context => { context.ApplicationBuilder.UseMiddleware<MoRpcChainTracingMiddleware>(); },
+            EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+
+        return this;
+    }
+
+    private static bool ShouldTraceInvocation(
+        MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext context)
+    {
+        var type = context.ImplementationType;
+        if (!type.IsAssignableTo<IMoApplicationService>() &&
+            !type.IsAssignableTo<IMoDomainService>() &&
+            !type.IsSubclassOf(typeof(MoRpcApi)))
+        {
+            return false;
+        }
+
+        LogManager.For(typeof(ModuleChainTracingGuide))
+            .LogDebug("Invocation chain record bind: {Service}", type.GetCleanFullName());
+
+        return true;
+    }
 }
 
 /// <summary>
@@ -135,21 +161,6 @@ public class ModuleChainTracingOption : MoModuleOption<ModuleChainTracing>
     /// Enables attaching chain tracing information to responses.
     /// </summary>
     public bool EnableAttachToRes { get; set; } = true;
-
-    /// <summary>
-    /// Enables method-invocation tracing through the dynamic-proxy integration.
-    /// </summary>
-    public bool EnableInvocationTracing { get; set; }
-
-    /// <summary>
-    /// Enables EF Core command tracing support.
-    /// </summary>
-    public bool EnableDatabaseTracing { get; set; }
-
-    /// <summary>
-    /// Enables MoRpc response tracing middleware.
-    /// </summary>
-    public bool EnableMoRpcTracing { get; set; }
 
     /// <summary>
     /// Maximum chain depth to prevent unbounded recursion.

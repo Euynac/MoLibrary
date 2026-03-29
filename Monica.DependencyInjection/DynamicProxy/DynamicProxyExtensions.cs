@@ -14,15 +14,6 @@ namespace Monica.DependencyInjection.DynamicProxy;
 public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 {
     /// <summary>
-    /// Represents information about a proxy.
-    /// </summary>
-    /// <param name="judgeFunc">A function to determine if the proxy should be applied.</param>
-    public class ProxyInfo(Func<ProxyBuildContext, bool> judgeFunc)
-    {
-        public Func<ProxyBuildContext, bool> JudgeFunc { get; set; } = judgeFunc;
-    }
-
-    /// <summary>
     /// Context for building a proxy.
     /// </summary>
     /// <param name="implementationType">The type of the implementation.</param>
@@ -32,56 +23,6 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         public ServiceDescriptor ServiceDescriptor { get; set; } = descriptor;
         public Type ImplementationType { get; set; } = implementationType;
         public Type ServiceType => ServiceDescriptor.ServiceType;
-    }
-
-    /// <summary>
-    /// Builder for configuring proxies.
-    /// </summary>
-    public class ProxyBuilder
-    {
-        public static List<ProxyBuilder> Builders { get; } = [];
-        public List<Type> InterceptorTypes { get; } = [];
-        public ProxyInfo? Info { get; private set; }
-
-        /// <summary>
-        /// Adds an interceptor to the proxy.
-        /// </summary>
-        /// <typeparam name="TInterceptor">The type of the interceptor.</typeparam>
-        /// <returns>The proxy builder.</returns>
-        public ProxyBuilder AddInterceptor<TInterceptor>() where TInterceptor : MoInterceptor
-        {
-            var interceptorAdapterType =
-                typeof(MoAsyncDeterminationInterceptor<>).MakeGenericType(typeof(TInterceptor));
-            AddInterceptor(interceptorAdapterType);
-            return this;
-        }
-
-        internal void Build(ProxyInfo info)
-        {
-            Info = info;
-            Builders.Add(this);
-        }
-
-        protected ProxyBuilder AddInterceptor(Type type)
-        {
-            InterceptorTypes.Add(type);
-            return this;
-        }
-    }
-
-    /// <summary>
-    /// Adds an interceptor to the service collection.
-    /// </summary>
-    /// <typeparam name="TInterceptor">The type of the interceptor.</typeparam>
-    /// <param name="serviceCollection">The service collection.</param>
-    /// <returns>The proxy builder.</returns>
-    public static ProxyBuilder AddMoInterceptor<TInterceptor>(this IServiceCollection serviceCollection)
-        where TInterceptor : MoInterceptor
-    {
-        var builder = new ProxyBuilder();
-        serviceCollection.AddTransient<TInterceptor>();
-        builder.AddInterceptor<TInterceptor>();
-        return builder;
     }
 
     /// <summary>
@@ -203,11 +144,14 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             var interceptorTypes = new List<Type>();
 
-            foreach (var builder in ProxyBuilder.Builders)
+            foreach (var registration in option.InterceptorRegistrations)
             {
-                if (builder.Info is null) continue;
-                if (!builder.Info.JudgeFunc.Invoke(new ProxyBuildContext(implementType, oldDescriptor))) continue;
-                interceptorTypes.AddRange(builder.InterceptorTypes);
+                if (!registration.ShouldIntercept.Invoke(new ProxyBuildContext(implementType, oldDescriptor)))
+                {
+                    continue;
+                }
+
+                interceptorTypes.Add(registration.GetAdapterType());
             }
             if (interceptorTypes.Count <= 0) continue;
 
@@ -349,17 +293,6 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                 }, context.OldDescriptor.Lifetime));
         }
 
-    }
-
-    /// <summary>
-    /// Configures the proxy to be created when the specified condition is satisfied.
-    /// </summary>
-    /// <param name="proxyBuilder">The proxy builder.</param>
-    /// <param name="judgeFunc">The function to determine if the proxy should be created.</param>
-    public static void CreateProxyWhenSatisfy(this ProxyBuilder proxyBuilder,
-        Func<ProxyBuildContext, bool> judgeFunc)
-    {
-        proxyBuilder.Build(new ProxyInfo(judgeFunc));
     }
 }
 

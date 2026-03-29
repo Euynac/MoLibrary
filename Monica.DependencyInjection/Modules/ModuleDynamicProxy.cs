@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
@@ -18,7 +19,7 @@ public static class ModuleDynamicProxyBuilderExtensions
         /// </summary>
         public static ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
         {
-            return new ModuleDynamicProxyGuide().Register(action).ConfigDynamicProxyServices();
+            return new ModuleDynamicProxyGuide().Register(action).EnsureCoreServices();
         }
     }
 }
@@ -32,8 +33,9 @@ public class ModuleDynamicProxy(ModuleDynamicProxyOption option)
 public class
     ModuleDynamicProxyGuide : MoModuleGuide<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>
 {
+    private const string CONFIG_CORE_SERVICES = nameof(CONFIG_CORE_SERVICES);
 
-    internal ModuleDynamicProxyGuide ConfigDynamicProxyServices()
+    internal ModuleDynamicProxyGuide EnsureCoreServices()
     {
         PostConfigureServices(context =>
         {
@@ -41,7 +43,41 @@ public class
             context.Services.AddTransient(typeof(MoAsyncDeterminationInterceptor<>));
             MicrosoftDependencyInjectionDynamicProxyExtensions.ApplyInterceptors(context.Services,
                 context.ModuleOption);
-        }, EMoModuleOrder.PostConfig);
+        }, EMoModuleOrder.PostConfig, key: CONFIG_CORE_SERVICES);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a dynamic-proxy interceptor through the module guide.
+    /// </summary>
+    /// <typeparam name="TInterceptor">The interceptor type.</typeparam>
+    /// <param name="shouldIntercept">Predicate that decides whether the interceptor applies to a service.</param>
+    /// <param name="secondKey">Optional stable secondary key used when repeated calls should collapse into a single configuration.</param>
+    public ModuleDynamicProxyGuide AddInterceptor<TInterceptor>(
+        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool> shouldIntercept,
+        string? secondKey = null)
+        where TInterceptor : MoInterceptor
+    {
+        EnsureCoreServices();
+
+        var interceptorKey = secondKey ?? Guid.NewGuid().ToString();
+
+        ConfigureModuleOption(option => option.AddInterceptor<TInterceptor>(shouldIntercept), secondKey: interceptorKey);
+        ConfigureServices(context => { context.Services.TryAddTransient<TInterceptor>(); }, secondKey: interceptorKey);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the proxy kind for a specific service type.
+    /// </summary>
+    /// <typeparam name="TServiceType">The service type to configure.</typeparam>
+    /// <param name="kind">The proxy kind.</param>
+    public ModuleDynamicProxyGuide SetProxyKindOfServiceType<TServiceType>(EDynamicProxyKind kind)
+    {
+        EnsureCoreServices();
+        ConfigureModuleOption(option => option.SetProxyKindOfServiceType<TServiceType>(kind),
+            secondKey: typeof(TServiceType).FullName);
         return this;
     }
 }
@@ -52,6 +88,9 @@ public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
     /// Configured proxy kinds for specific types.
     /// </summary>
     public Dictionary<Type, EDynamicProxyKind> ConfiguredProxyKinds { get; internal set; } = new();
+
+    internal List<DynamicProxyInterceptorRegistration> InterceptorRegistrations { get; } = [];
+
     /// <summary>
     /// Sets the proxy kind for a specific service type.
     /// </summary>
@@ -61,5 +100,12 @@ public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
     {
         var serviceType = typeof(TServiceType);
         ConfiguredProxyKinds.Add(serviceType, kind);
+    }
+
+    internal void AddInterceptor<TInterceptor>(
+        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool> shouldIntercept)
+        where TInterceptor : MoInterceptor
+    {
+        InterceptorRegistrations.Add(new DynamicProxyInterceptorRegistration(typeof(TInterceptor), shouldIntercept));
     }
 }

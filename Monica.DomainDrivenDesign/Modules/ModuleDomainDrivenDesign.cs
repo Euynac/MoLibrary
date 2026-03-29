@@ -1,10 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using Monica.DomainDrivenDesign.ExceptionHandler;
 using Monica.DomainDrivenDesign.Interfaces;
@@ -16,31 +14,24 @@ namespace Monica.Modules;
 [ModuleKey(EMoModuleKey.DomainDrivenDesign)]
 public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : MoModule<ModuleDomainDrivenDesign, ModuleDomainDrivenDesignOption, ModuleDomainDrivenDesignGuide>(option)
 {
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // TODO: Optimize so the module no longer relies on AOP.
-        services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
-            c =>
-            {
-                if (c.ImplementationType.IsAssignableTo<IMoDomainService>() ||
-                    c.ImplementationType.IsAssignableTo<IMoApplicationService>())
-                {
-                    Logger.LogDebug("Injecting service provider into {ImplementationType}",
-                        c.ImplementationType.FullName);
-                    return true;
-                }
-
-                return false;
-            });
-    }
-
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleAutoControllersGuide>().Register();
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
-        DependsOnModule<ModuleDynamicProxyGuide>().Register();
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+            .AddInterceptor<PropertyInjectServiceProviderEmptyInterceptor>(context =>
+            {
+                if (context.ImplementationType.IsAssignableTo<IMoDomainService>() ||
+                    context.ImplementationType.IsAssignableTo<IMoApplicationService>())
+                {
+                    Logger.LogDebug("Injecting service provider into {ImplementationType}",
+                        context.ImplementationType.FullName);
+                    return true;
+                }
+
+                return false;
+            });
         DependsOnModule<ModuleSwaggerGuide>().Register();
         //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
         DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();

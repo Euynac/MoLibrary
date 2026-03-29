@@ -12,7 +12,6 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -136,9 +135,8 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
     public ModuleAuthorizationGuide AddAuthorizationInterceptor()
     {
-        ConfigureServices(context =>
-        {
-            context.Services.AddMoInterceptor<InterceptionAuthorizer>().CreateProxyWhenSatisfy((descriptor) =>
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+            .AddInterceptor<InterceptionAuthorizer>(descriptor =>
             {
                 if (InterceptionRegistrar.ShouldIntercept(descriptor.ImplementationType))
                 {
@@ -150,7 +148,6 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
 
                 return false;
             });
-        });
         return this;
     }
 }

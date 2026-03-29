@@ -6,14 +6,12 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using Monica.Repository;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Interfaces;
 using Monica.Repository.Registrar;
 using Monica.Repository.Transaction;
-using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -55,6 +53,13 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             DependsOnModule<ModuleScopedDataGuide>().Register()
                 .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
         }
+
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+            .AddInterceptor<PropertyInjectServiceProviderEmptyInterceptor>(proxyBuildContext =>
+            {
+                return proxyBuildContext.ImplementationType.IsAssignableTo(typeof(IMoRepository));
+            });
+
         ConfigureServices(context =>
         {
             switch (dbContextProviderType)
@@ -101,20 +106,6 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
 
             context.Services
                 .AddTransient<IMoDbContextDatabaseManager<TDbContext>, MoDbContextDatabaseManager<TDbContext>>();
-
-            //TODO optimization does not require AOP
-            context.Services.AddMoInterceptor<PropertyInjectServiceProviderEmptyInterceptor>().CreateProxyWhenSatisfy(
-                proxyBuildContext =>
-                {
-                    var type = proxyBuildContext.ImplementationType;
-                    if (type.IsAssignableTo<IMoRepository>())
-                    {
-                        //GlobalLog.LogInformation("property injection: {service}", type.GetGenericTypeName());
-                        return true;
-                    }
-
-                    return false;
-                });
         }, secondKey: typeof(TDbContext).Name);
         return this;
     }
