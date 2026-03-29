@@ -1,5 +1,3 @@
-using Monica.DomainDrivenDesign.AutoCrud;
-
 namespace Monica.DomainDrivenDesign.Attributes;
 
 

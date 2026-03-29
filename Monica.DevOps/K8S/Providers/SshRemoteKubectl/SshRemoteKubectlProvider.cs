@@ -8,10 +8,10 @@ using Renci.SshNet;
 namespace Monica.DevOps.K8S.Providers.SshRemoteKubectl;
 
 public class SshRemoteKubectlProvider(
-    IOptions<Monica.Modules.ModuleK8SOption> options,
+    IOptions<Modules.ModuleK8SOption> options,
     ILogger<SshRemoteKubectlProvider> logger) : IK8SProvider
 {
-    private readonly Monica.Modules.ModuleK8SOption _option = options.Value;
+    private readonly Modules.ModuleK8SOption _option = options.Value;
 
     public Task<string> ExecuteKubectlAsync(K8SRuntimeConfig runtimeConfig, string kubectlArguments, CancellationToken cancellationToken = default)
     {

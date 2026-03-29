@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Monica.Authority.Authorization;
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Exceptions;
 using Monica.Authority.Authorization.Services;

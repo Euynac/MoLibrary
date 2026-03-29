@@ -20,7 +20,7 @@ internal static class HandlerCandidateExtractor
     /// <param name="config">The generator configuration</param>
     /// <param name="context">The source production context for error reporting</param>
     /// <returns>A HandlerCandidate if extraction is successful, null otherwise</returns>
-    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, Models.GeneratorConfig config, SourceProductionContext context)
+    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, GeneratorConfig config, SourceProductionContext context)
     {
         var className = classDeclaration.Identifier.Text;
         var location = classDeclaration.GetLocation();
@@ -166,7 +166,7 @@ internal static class HandlerCandidateExtractor
     /// <param name="compilation">The compilation context</param>
     /// <param name="config">The generator configuration</param>
     /// <returns>A HandlerCandidate if extraction is successful, null otherwise</returns>
-    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, Models.GeneratorConfig config)
+    public static HandlerCandidate? ExtractHandlerCandidate(ClassDeclarationSyntax classDeclaration, Compilation compilation, GeneratorConfig config)
     {
         // Extract and validate the Route attribute (with fallback to configuration)
         var routeArg = AttributeHelper.ExtractRouteAttribute(classDeclaration, config);

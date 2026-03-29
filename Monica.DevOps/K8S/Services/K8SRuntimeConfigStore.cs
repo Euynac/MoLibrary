@@ -4,7 +4,7 @@ using Monica.DevOps.K8S.Models;
 
 namespace Monica.DevOps.K8S.Services;
 
-public class K8SRuntimeConfigStore(IOptions<Monica.Modules.ModuleK8SOption> options) : IK8SRuntimeConfigStore
+public class K8SRuntimeConfigStore(IOptions<Modules.ModuleK8SOption> options) : IK8SRuntimeConfigStore
 {
     private readonly object _syncRoot = new();
     private K8SRuntimeConfig _current = options.Value.RuntimeConfig.Clone().Normalize();

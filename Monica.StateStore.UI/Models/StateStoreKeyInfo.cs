@@ -1,5 +1,3 @@
-using Monica.StateStore;
-
 namespace Monica.StateStore.UI.Models;
 
 /// <summary>

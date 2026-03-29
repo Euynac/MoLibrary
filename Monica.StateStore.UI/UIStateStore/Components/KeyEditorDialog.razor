@@ -106,8 +106,8 @@
         editedValue = KeyInfo.RawValue ?? "";
         ttlSeconds = KeyInfo.TTLStatus switch
         {
-            Monica.StateStore.EStateStoreKeyTtlStatus.Expiring when KeyInfo.TTL.HasValue => (int)Math.Ceiling(KeyInfo.TTL.Value.TotalSeconds),
-            Monica.StateStore.EStateStoreKeyTtlStatus.Permanent => 0,
+            EStateStoreKeyTtlStatus.Expiring when KeyInfo.TTL.HasValue => (int)Math.Ceiling(KeyInfo.TTL.Value.TotalSeconds),
+            EStateStoreKeyTtlStatus.Permanent => 0,
             _ => ttlSeconds
         };
     }

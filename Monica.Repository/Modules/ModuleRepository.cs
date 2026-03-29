@@ -10,7 +10,6 @@ using Monica.Repository;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Interfaces;
 using Monica.Repository.Registrar;
-using Monica.Repository.Transaction;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

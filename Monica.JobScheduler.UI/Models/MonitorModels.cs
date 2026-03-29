@@ -1,7 +1,7 @@
 namespace Monica.JobScheduler.UI.Models;
 
-using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.ControlPlane;
+using Abstractions;
+using ControlPlane;
 using Monica.JobScheduler.Models;
 
 /// <summary>

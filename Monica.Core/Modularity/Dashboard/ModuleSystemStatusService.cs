@@ -4,7 +4,6 @@ using Monica.Core.Modularity.Features;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.TypeFinder;
-using Monica.Tool.Extensions;
 
 namespace Monica.Core.Modularity.Dashboard;
 

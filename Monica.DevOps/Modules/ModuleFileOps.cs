@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
-using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
@@ -194,7 +193,7 @@ public class ModuleFileOps(ModuleFileOpsOption option)
             FileNotFoundException => ResStatus.BadRequest,
             IOException => ResStatus.BadRequest,
             UnauthorizedAccessException => ResStatus.Forbidden,
-            Monica.DevOps.FileOps.Exceptions.FileOpsOperationException => ResStatus.BadRequest,
+            DevOps.FileOps.Exceptions.FileOpsOperationException => ResStatus.BadRequest,
             _ => ResStatus.InternalError
         };
     }

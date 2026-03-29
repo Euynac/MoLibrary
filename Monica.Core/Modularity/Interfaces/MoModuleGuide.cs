@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;

@@ -403,7 +403,7 @@ public class KnowledgeSearchToolProvider(
         TextSearchProvider.TextSearchResult result,
         IReadOnlyDictionary<string, KnowledgeBase> knowledgeBaseLookup)
     {
-        var rawResult = result.RawRepresentation as Monica.AI.RAG.Models.TextSearchResult;
+        var rawResult = result.RawRepresentation as TextSearchResult;
         var knowledgeBaseId = rawResult?.KnowledgeBaseId;
         knowledgeBaseLookup.TryGetValue(knowledgeBaseId ?? string.Empty, out var knowledgeBase);
 

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Monica.AutoModel.Interfaces;
 using Monica.DomainDrivenDesign.Attributes;
 using Monica.DomainDrivenDesign.AutoController.Settings;
 using Monica.DomainDrivenDesign.AutoCrud.Interfaces;
@@ -7,7 +6,6 @@ using Monica.Repository.DtoInterfaces;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Exceptions;
 using Monica.Repository.Interfaces;
-using Monica.Repository.Transaction;
 using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.AutoCrud;

@@ -242,7 +242,7 @@
         }
     }
 
-    private void OnExpandedChanged(MudBlazor.ITreeItemData<MarkdownDocumentNodeData> item, bool expanded)
+    private void OnExpandedChanged(ITreeItemData<MarkdownDocumentNodeData> item, bool expanded)
     {
         if (item is not DocumentTreeItem documentTreeItem)
         {
@@ -270,7 +270,7 @@
             ? "tree-item-label tree-item-label-file"
             : "tree-item-label tree-item-label-folder";
 
-    private sealed class DocumentTreeItem : MudBlazor.ITreeItemData<MarkdownDocumentNodeData>
+    private sealed class DocumentTreeItem : ITreeItemData<MarkdownDocumentNodeData>
     {
         public DocumentTreeItem(
             MarkdownDocumentNodeData value,
@@ -298,7 +298,7 @@
         public bool Expandable { get; set; }
         public bool Selected { get; set; }
         public bool Visible { get; set; }
-        public IReadOnlyCollection<MudBlazor.ITreeItemData<MarkdownDocumentNodeData>>? Children { get; set; }
+        public IReadOnlyCollection<ITreeItemData<MarkdownDocumentNodeData>>? Children { get; set; }
         public bool HasChildren => Children?.Count > 0;
     }
 }

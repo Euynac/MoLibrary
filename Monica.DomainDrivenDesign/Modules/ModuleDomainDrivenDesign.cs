@@ -3,8 +3,6 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DomainDrivenDesign.ExceptionHandler;
-using Monica.DomainDrivenDesign.Interfaces;
-using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

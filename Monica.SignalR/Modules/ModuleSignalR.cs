@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Core;
-using Monica.Core.Extensions;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;

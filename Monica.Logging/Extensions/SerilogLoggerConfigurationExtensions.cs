@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Monica.Logging.Providers.Serilog.Support;
 using Serilog;
 using Serilog.Configuration;

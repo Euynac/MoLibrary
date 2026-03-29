@@ -1,5 +1,3 @@
-using Monica.Modules;
-
 namespace Monica.AutoModel.Annotations;
 [AttributeUsage(AttributeTargets.Property)]
 public class AutoFieldAttribute : Attribute

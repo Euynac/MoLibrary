@@ -171,7 +171,7 @@ public partial class StackTraceParserService
         // Extract file name
         if (!string.IsNullOrEmpty(filePath))
         {
-            line.FileName = System.IO.Path.GetFileName(filePath);
+            line.FileName = Path.GetFileName(filePath);
         }
 
         // Try to extract the line number
