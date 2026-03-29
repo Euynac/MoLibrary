@@ -248,8 +248,17 @@ internal static class HandlerCandidateExtractor
     /// <returns>True if inheritance is valid, false otherwise</returns>
     private static bool ValidateApplicationServiceInheritance(ClassDeclarationSyntax classDeclaration, SourceProductionContext context)
     {
-        var baseTypeSyntax = classDeclaration.BaseList?.Types.First().Type as GenericNameSyntax;
-        if (baseTypeSyntax?.TypeArgumentList.Arguments.Count < 2)
+        var baseTypeSyntax = classDeclaration.BaseList?.Types.FirstOrDefault()?.Type;
+        var genericBaseTypeSyntax = baseTypeSyntax switch
+        {
+            GenericNameSyntax genericNameSyntax => genericNameSyntax,
+            QualifiedNameSyntax { Right: GenericNameSyntax genericNameSyntax } => genericNameSyntax,
+            AliasQualifiedNameSyntax { Name: GenericNameSyntax genericNameSyntax } => genericNameSyntax,
+            _ => null
+        };
+
+        var genericArgumentCount = genericBaseTypeSyntax?.TypeArgumentList.Arguments.Count;
+        if (genericArgumentCount is not 1 and not 2)
         {
             var diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.InvalidApplicationServiceInheritance,

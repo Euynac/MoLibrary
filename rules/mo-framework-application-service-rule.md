@@ -26,7 +26,7 @@
 
 ## 处理程序类
 
-- 处理程序类必须继承自`MoApplicationService<THandler, TRequest, TResponse>`。
+- 处理程序类必须继承自`MoApplicationService<TRequest, TResponse>`。
 - 处理程序类名称必须以`CommandHandler`或`QueryHandler`开头。
 - 处理程序类应包含类似`[Route("api/v1/$DomainName$")]`的`Route`特性。
 - 处理程序类必须重写`Handle`方法并包含`[HttpPost("$APIRoute$")]`特性。
@@ -59,7 +59,7 @@ public record Response$BusinessFunctionName$
 /// 
 /// </summary>
 [Route("api/v1/$DomainName$")]
-public class CommandHandler$BusinessFunctionName$ : MoApplicationService<CommandHandler$BusinessFunctionName$, Command$BusinessFunctionName$, Response$BusinessFunctionName$> 
+public class CommandHandler$BusinessFunctionName$ : MoApplicationService<Command$BusinessFunctionName$, Response$BusinessFunctionName$> 
 {
     [HttpPost("$APIRoute$")]
     public override Task<Res<Response$BusinessFunctionName$>> Handle(Command$BusinessFunctionName$ request, CancellationToken cancellationToken)

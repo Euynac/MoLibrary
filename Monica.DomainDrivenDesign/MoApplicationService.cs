@@ -18,11 +18,20 @@ public abstract class MoApplicationService :
     ITransientDependency,
     ICachedServiceProviderAccessor
 {
+    private readonly Lazy<ILogger> _loggerLazy;
+
+    protected MoApplicationService()
+    {
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+    }
+
     public ICachedServiceProvider CachedServiceProvider
     {
         get => field ?? throw CreateNotInitializedException();
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
+
+    protected ILogger Logger => _loggerLazy.Value;
 
     protected IMoMapper Mapper => CachedServiceProvider.GetRequiredService<IMoMapper>();
 
@@ -36,15 +45,12 @@ public abstract class MoApplicationService :
 /// <summary>
 /// Base class for custom application services with a specific handler, request, and response.
 /// </summary>
-/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-public abstract class MoCustomApplicationService<TSelfHandler, TRequest, TResponse> :
+public abstract class MoCustomApplicationService<TRequest, TResponse> :
     MoApplicationService, IRequestHandler<TRequest, TResponse>
-    where TSelfHandler : MoCustomApplicationService<TSelfHandler, TRequest, TResponse> where TRequest : IRequest<TResponse>
+    where TRequest : IRequest<TResponse>
 {
-    protected ILogger<TSelfHandler> _logger { get; } = LogManager.For<TSelfHandler>();
-
     /// <summary>
     /// Handles the specified request.
     /// </summary>
@@ -57,22 +63,20 @@ public abstract class MoCustomApplicationService<TSelfHandler, TRequest, TRespon
 /// <summary>
 /// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res{T}"/>.
 /// </summary>
-/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 /// <typeparam name="TResponse">The type of the response.</typeparam>
-public abstract class MoApplicationService<TSelfHandler, TRequest, TResponse> :
-    MoCustomApplicationService<TSelfHandler, TRequest, Res<TResponse>>
-    where TSelfHandler : MoApplicationService<TSelfHandler, TRequest, TResponse> where TRequest : IMoRequest<TResponse>
+public abstract class MoApplicationService<TRequest, TResponse> :
+    MoCustomApplicationService<TRequest, Res<TResponse>>
+    where TRequest : IMoRequest<TResponse>
 {
 }
 
 /// <summary>
 /// Base class for application services with a specific handler, request, and response wrapped in a <see cref="Res"/>.
 /// </summary>
-/// <typeparam name="TSelfHandler">The type of the handler.</typeparam>
 /// <typeparam name="TRequest">The type of the request.</typeparam>
-public abstract class MoApplicationService<TSelfHandler, TRequest> :
-    MoCustomApplicationService<TSelfHandler, TRequest, Res>
-    where TSelfHandler : MoApplicationService<TSelfHandler, TRequest> where TRequest : IMoRequest
+public abstract class MoApplicationService<TRequest> :
+    MoCustomApplicationService<TRequest, Res>
+    where TRequest : IMoRequest
 {
 }

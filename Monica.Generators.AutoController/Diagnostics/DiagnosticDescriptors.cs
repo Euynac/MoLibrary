@@ -27,11 +27,11 @@ internal static class DiagnosticDescriptors
     public static readonly DiagnosticDescriptor InvalidApplicationServiceInheritance = new DiagnosticDescriptor(
         id: "AC0003",
         title: "Invalid ApplicationService inheritance",
-        messageFormat: "AutoController generator: Class '{0}' does not properly inherit from ApplicationService<TRequest, TResponse>. Ensure the base class has exactly 2 generic type arguments.",
+        messageFormat: "AutoController generator: Class '{0}' does not properly inherit from ApplicationService<TRequest> or ApplicationService<TRequest, TResponse>. Ensure the base class has 1 or 2 generic type arguments.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Classes processed by AutoController generator must inherit from ApplicationService<TRequest, TResponse> with exactly 2 generic type arguments.");
+        description: "Classes processed by AutoController generator must inherit from ApplicationService<TRequest> or ApplicationService<TRequest, TResponse>.");
 
     public static readonly DiagnosticDescriptor MissingHandleMethod = new DiagnosticDescriptor(
         id: "AC0004",

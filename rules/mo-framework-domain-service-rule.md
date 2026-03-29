@@ -6,7 +6,7 @@
 
 ## 领域服务类
 
-- 领域服务类必须继承自`MoDomainService<TDomainService>`。
+- 领域服务类必须继承自`MoDomainService`。
 - 类名必须以`Domain`开头。
 - 领域服务类应通过构造函数注入必要的依赖项，使用[primary-constructor.mdc](mdc:Affilion/.cursor/rules/primary-constructor.mdc)。
 

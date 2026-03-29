@@ -9,11 +9,20 @@ namespace Monica.DomainDrivenDesign;
 
 public abstract class MoDomainService : IMoDomainService, ICachedServiceProviderAccessor
 {
+    private readonly Lazy<ILogger> _loggerLazy;
+
+    protected MoDomainService()
+    {
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+    }
+
     public ICachedServiceProvider CachedServiceProvider
     {
         get => field ?? throw CreateNotInitializedException();
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
+
+    protected ILogger Logger => _loggerLazy.Value;
 
     protected IMoMapper Mapper => CachedServiceProvider.GetRequiredService<IMoMapper>();
 
@@ -22,9 +31,4 @@ public abstract class MoDomainService : IMoDomainService, ICachedServiceProvider
         return new InvalidOperationException(
             $"Cached service provider is not initialized for {GetType().FullName}. Resolve the service through Monica DI instead of constructing it manually.");
     }
-}
-
-public abstract class MoDomainService<TSelf> : MoDomainService where TSelf : MoDomainService<TSelf>
-{
-    protected ILogger<TSelf> _logger { get; } = LogManager.For<TSelf>();
 }

@@ -60,11 +60,11 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         unit = unit.VerifyType() ? unit : null;
         if (unit != null)
         {
-            if (context.Type.IsSubclassOfRawGeneric(typeof(MoApplicationService<,,>), out var exactGenericType))
+            if (context.Type.IsSubclassOfRawGeneric(typeof(MoApplicationService<,>), out var exactGenericType))
             {
                 var args = exactGenericType.GetGenericArguments();
-                unit.RequestType = args[1];
-                unit.ResponseType = args[2];
+                unit.RequestType = args[0];
+                unit.ResponseType = args[1];
             }
         }
 
