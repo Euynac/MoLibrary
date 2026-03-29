@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Interfaces;
 using Monica.Core.Features.MoMapper;
 using Monica.DomainDrivenDesign.AutoCrud.Interfaces;
@@ -29,20 +30,18 @@ namespace Monica.DomainDrivenDesign.AutoCrud;
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-    IMoRepository<TEntity, TKey> repository,
-    IAutoModelDbOperator<TEntity> autoModel,
-    IMoUnitOfWorkManager unitOfWorkManager) : MoApplicationService
+    IMoRepository<TEntity, TKey> repository) : MoApplicationService
     where TEntity : class, IMoEntity<TKey>
 {
     /// <summary>
     /// Gets the auto model database operator for entity operations.
     /// </summary>
-    protected IAutoModelDbOperator<TEntity> AutoModel { get; } = autoModel;
+    protected IAutoModelDbOperator<TEntity> AutoModel => CachedServiceProvider.GetRequiredService<IAutoModelDbOperator<TEntity>>();
 
     /// <summary>
     /// Gets the unit of work manager.
     /// </summary>
-    protected IMoUnitOfWorkManager UnitOfWorkManager { get; } = unitOfWorkManager;
+    protected IMoUnitOfWorkManager UnitOfWorkManager => CachedServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
     
     /// <summary>
     /// Gets the repository for entity operations.

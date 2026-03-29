@@ -32,11 +32,9 @@ public interface IMoCrudAppService
 /// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
-    TRepository repository,
-    IAutoModelDbOperator<TEntity> autoModel,
-    IMoUnitOfWorkManager unitOfWorkManager)
+    TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, MoCrudDisableDto, MoCrudDisableDto,
-        MoCrudDisableDto, TRepository>(repository, autoModel, unitOfWorkManager)
+        MoCrudDisableDto, TRepository>(repository)
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -51,11 +49,9 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 /// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(
-    TRepository repository,
-    IAutoModelDbOperator<TEntity> autoModel,
-    IMoUnitOfWorkManager unitOfWorkManager)
+    TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, MoCrudPageRequestDto, TCreateInput, TUpdateInput,
-        MoCrudDisableDto, TRepository>(repository, autoModel, unitOfWorkManager)
+        MoCrudDisableDto, TRepository>(repository)
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -70,11 +66,9 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, 
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(
-        TRepository repository,
-        IAutoModelDbOperator<TEntity> autoModel,
-        IMoUnitOfWorkManager unitOfWorkManager)
+        TRepository repository)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, MoCrudDisableDto, TRepository>(
-        repository, autoModel, unitOfWorkManager)
+        repository)
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -99,15 +93,11 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 /// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
 /// <typeparam name="TRepository">The repository type. Must implement <see cref="IMoRepository{TEntity, TKey}"/>.</typeparam>
 /// <param name="repository">The repository instance.</param>
-/// <param name="autoModel">The auto model operator used for filtering and projection.</param>
-/// <param name="unitOfWorkManager">The unit of work manager used for streaming operations.</param>
 public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(
-        TRepository repository,
-        IAutoModelDbOperator<TEntity> autoModel,
-        IMoUnitOfWorkManager unitOfWorkManager) : 
+        TRepository repository) : 
     MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-        repository, autoModel, unitOfWorkManager), IMoCrudAppService
+        repository), IMoCrudAppService
     where TEntity : class, IMoEntity<TKey>
     where TGetOutputDto : IMoEntityDto<TKey>
     where TGetListOutputDto : IMoEntityDto<TKey>

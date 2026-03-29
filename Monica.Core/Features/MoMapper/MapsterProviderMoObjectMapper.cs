@@ -5,6 +5,11 @@ namespace Monica.Core.Features.MoMapper;
 
 public class MapsterProviderMoObjectMapper(IMapper mapper) : IMoMapper
 {
+    public TDestination Map<TDestination>(object source)
+    {
+        return mapper.Map<TDestination>(source);
+    }
+
     public TDestination Map<TSource, TDestination>(TSource source)
     {
         return mapper.Map<TSource, TDestination>(source);

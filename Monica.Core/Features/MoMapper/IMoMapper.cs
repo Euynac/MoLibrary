@@ -2,7 +2,12 @@ namespace Monica.Core.Features.MoMapper;
 
 public interface IMoMapper
 {
-
+    /// <summary>
+    /// Converts an object to another. Creates a new object of <typeparamref name="TDestination"/>.
+    /// </summary>
+    /// <typeparam name="TDestination">Type of the destination object</typeparam>
+    /// <param name="source">Source object</param>
+    TDestination Map<TDestination>(object source);
     /// <summary>
     /// Converts an object to another. Creates a new object of <typeparamref name="TDestination"/>.
     /// </summary>
