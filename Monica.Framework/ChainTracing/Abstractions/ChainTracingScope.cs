@@ -1,15 +1,15 @@
 using Monica.Core.Extensions;
-using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.Results;
+using Monica.Framework.ChainTracing.Models;
 
-namespace Monica.Core.Features.MoChainTracing.Implementations;
+namespace Monica.Framework.ChainTracing.Abstractions;
 
 /// <summary>
 /// Disposable scope wrapper for chain tracing.
 /// </summary>
 public class ChainTracingScope : IDisposable
 {
-    private readonly IMoChainTracing _chainTracing;
+    private readonly IChainTracing _chainTracing;
     private bool _disposed;
 
     /// <summary>
@@ -20,7 +20,7 @@ public class ChainTracingScope : IDisposable
     /// <param name="handler">The handler name.</param>
     /// <param name="extraInfo">Optional extra metadata.</param>
     /// <param name="type">The traced operation type.</param>
-    public ChainTracingScope(IMoChainTracing chainTracing, string operation, string? handler, object? extraInfo = null,
+    public ChainTracingScope(IChainTracing chainTracing, string operation, string? handler, object? extraInfo = null,
         EChainTracingType type = EChainTracingType.Unknown)
     {
         _chainTracing = chainTracing;
@@ -94,7 +94,7 @@ public class ChainTracingScope : IDisposable
     {
         if (!_disposed)
         {
-            if (!_chainTracing.ContainsTrace(TraceId))
+            if (_chainTracing.ContainsTrace(TraceId))
             {
                 _chainTracing.EndTrace(TraceId, "Auto-Completed", true, null);
             }

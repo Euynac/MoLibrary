@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Monica.Core.Features.MoChainTracing;
+namespace Monica.Framework.ChainTracing.Services.Support;
 
-public static class ChainTracingHelper
+public static class ChainTracingResultHelper
 {
     /// <summary>
     /// Gets the effective response type name.

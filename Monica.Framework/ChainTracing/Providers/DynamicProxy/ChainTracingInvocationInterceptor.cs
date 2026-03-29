@@ -1,18 +1,20 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Core.Features.MoChainTracing;
-using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.Features.MoTimekeeper;
+using Monica.Core.Results;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
+using Monica.Framework.ChainTracing.Abstractions;
+using Monica.Framework.ChainTracing.Extensions;
+using Monica.Framework.ChainTracing.Models;
+using Monica.Framework.ChainTracing.Services.Support;
 using Monica.Tool.Extensions;
-using Monica.Core.Results;
 
-namespace Monica.Framework.Features.FrameworkChainTracing;
+namespace Monica.Framework.ChainTracing.Providers.DynamicProxy;
 
-public record InvocationInfo(MethodInfo MethodInfo)
+public record ChainTracingInvocationDescriptor(MethodInfo MethodInfo)
 {
     public string HandlerName => MethodInfo.ReflectedType?.Name
                                    ?? MethodInfo.DeclaringType?.Name
@@ -42,8 +44,8 @@ public record InvocationInfo(MethodInfo MethodInfo)
 /// https://kozmic.net/dynamic-proxy-tutorial/
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
-public class ChainTrackingProviderInvocationInterceptor(
-    IMoChainTracing chainTracing,
+public class ChainTracingInvocationInterceptor(
+    IChainTracing chainTracing,
     IMoTimekeeperFactory timekeeperFactory) : MoInterceptor
 {
     /// <summary>
@@ -52,7 +54,7 @@ public class ChainTrackingProviderInvocationInterceptor(
     /// <param name="invocation">Method call information</param>
     /// <param name="info"></param>
     /// <returns>Whether the call chain should be logged</returns>
-    private static bool ShouldRecordChain(IMoMethodInvocation invocation, [NotNullWhen(true)] out InvocationInfo? info)
+    private static bool ShouldRecordChain(IMoMethodInvocation invocation, [NotNullWhen(true)] out ChainTracingInvocationDescriptor? info)
     {
         var returnType = invocation.Method.ReturnType;
         info = null;
@@ -67,7 +69,7 @@ public class ChainTrackingProviderInvocationInterceptor(
         
         if (shouldRecord)
         {
-            info = new InvocationInfo(invocation.Method);
+            info = new ChainTracingInvocationDescriptor(invocation.Method);
             return true;
         }
         
@@ -97,7 +99,7 @@ public class ChainTrackingProviderInvocationInterceptor(
                     ex)
                     .WithMetadata("declaringType", invocation.Method.DeclaringType?.Name)
                     .WithMetadata("methodName", invocation.Method.Name)
-                    .WithMetadata("invocationContext", "ChainTrackingProviderInvocationInterceptor");
+                    .WithMetadata("invocationContext", nameof(ChainTracingInvocationInterceptor));
             }
             return;
         }
@@ -118,7 +120,7 @@ public class ChainTrackingProviderInvocationInterceptor(
             timer.Finish();
 
             // Handle successful response
-            var responseTypeName = ChainTracingHelper.GetResponseTypeName(invocation.Method.ReturnType);
+            var responseTypeName = ChainTracingResultHelper.GetResponseTypeName(invocation.Method.ReturnType);
             
             if (invocation.ReturnValue is IResultEnvelope response)
             {

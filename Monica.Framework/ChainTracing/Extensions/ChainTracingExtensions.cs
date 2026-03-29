@@ -1,7 +1,7 @@
-using Monica.Core.Features.MoChainTracing.Implementations;
-using Monica.Core.Features.MoChainTracing.Models;
+using Monica.Framework.ChainTracing.Abstractions;
+using Monica.Framework.ChainTracing.Models;
 
-namespace Monica.Core.Features.MoChainTracing;
+namespace Monica.Framework.ChainTracing.Extensions;
 
 /// <summary>
 /// Extension methods for chain tracing.
@@ -17,7 +17,7 @@ public static class ChainTracingExtensions
     /// <param name="extraInfo">Optional extra metadata.</param>
     /// <param name="type">The traced operation type.</param>
     /// <returns>A disposable tracing scope.</returns>
-    public static ChainTracingScope BeginScope(this IMoChainTracing chainTracing,
+    public static ChainTracingScope BeginScope(this IChainTracing chainTracing,
         string operation,
         string? handler, object? extraInfo = null,
         EChainTracingType type = EChainTracingType.Unknown)

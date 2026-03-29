@@ -1,27 +1,28 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.MoChainTracing.Models;
+using Monica.Core.JsonSerialization.Abstractions;
+using Monica.Core.Results;
+using Monica.Framework.ChainTracing.Abstractions;
+using Monica.Framework.ChainTracing.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
-using Monica.Core.Results;
-using System.Text.Json;
-using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Tool.General;
 
-namespace Monica.Core.Features.MoChainTracing.Implementations;
+namespace Monica.Framework.ChainTracing.Services;
 
 /// <summary>
 /// Chain tracing implementation backed by <see cref="AsyncLocal{T}" />.
 /// </summary>
 /// <remarks>
-/// Creates a new <see cref="AsyncLocalMoChainTracing" /> instance.
+/// Creates a new <see cref="AsyncLocalChainTracingService" /> instance.
 /// </remarks>
 /// <param name="options">Chain tracing configuration options.</param>
 /// <param name="logger">The logger.</param>
 /// <param name="jsonSerializerOptionsProvider">Global JSON serialization options.</param>
-public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalMoChainTracing> logger, IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IMoChainTracing
+public class AsyncLocalChainTracingService(IOptions<ModuleChainTracingOption> options, ILogger<AsyncLocalChainTracingService> logger, IJsonSerializerOptionsProvider jsonSerializerOptionsProvider) : IChainTracing
 {
-    private static readonly AsyncLocal<MoChainContext?> _chainContext = new();
+    private static readonly AsyncLocal<ChainTraceContext?> _chainContext = new();
     private readonly ModuleChainTracingOption _options = options.Value;
 
     /// <summary>
@@ -37,7 +38,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     {
         try
         {
-            var context = _chainContext.Value ??= new MoChainContext();
+            var context = _chainContext.Value ??= new ChainTraceContext();
 
             if (IsMaxDepthReached())
             {
@@ -53,7 +54,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 return Guid.NewGuid().ToString("N"); // Return a synthetic TraceId so follow-up calls stay safe.
             }
 
-            var node = new MoChainNode
+            var node = new ChainTraceNode
             {
                 Handler = handler,
                 Operation = operation,
@@ -62,7 +63,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 StartTime = DateTime.UtcNow
             };
 
-            context.AddNode(node, _options.MaxNodeCount);
+            context.AddNode(node);
 
             logger.LogDebug("开始调用链节点: {Handler}.{Operation}, TraceId: {TraceId}, 当前深度: {Depth}, 总节点数: {NodeCount}", 
                 handler, operation, node.TraceId, context.ActiveNodes.Count, context.NodeMap.Count);
@@ -122,7 +123,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     {
         try
         {
-            var context = _chainContext.Value ??= new MoChainContext();
+            var context = _chainContext.Value ??= new ChainTraceContext();
 
             if (IsMaxNodeCountReached())
             {
@@ -131,7 +132,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 return;
             }
 
-            var node = new MoChainNode
+            var node = new ChainTraceNode
             {
                 Handler = handler,
                 Operation = operation,
@@ -152,7 +153,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
                 node.EndTime = DateTime.UtcNow;
             }
 
-            context.AddNode(node, _options.MaxNodeCount);
+            context.AddNode(node);
             context.CompleteNode(node.TraceId, result, success, null, extraInfo);
 
             logger.LogDebug("记录简单调用链: {Handler}.{Operation}, Success: {Success}, Duration: {Duration}ms, 总节点数: {NodeCount}", 
@@ -168,7 +169,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
     /// Gets the current call-chain context.
     /// </summary>
     /// <returns>The current chain context.</returns>
-    public MoChainContext? GetCurrentChain()
+    public ChainTraceContext? GetCurrentChain()
     {
         return _chainContext.Value;
     }
@@ -239,10 +240,10 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
           
             if (remoteRes.Metadata is { } expando)
             {
-                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonDictionaryKeyPolicy(MoChainContext.CHAIN_KEY)) is JsonElement
-                        jsonElement && jsonElement.Deserialize<MoChainNode>(jsonSerializerOptionsProvider.SerializerOptions) is {} chainNode)
+                if (expando.GetOrDefault(jsonSerializerOptionsProvider.UsingJsonDictionaryKeyPolicy(ChainTraceContext.CHAIN_KEY)) is JsonElement
+                        jsonElement && jsonElement.Deserialize<ChainTraceNode>(jsonSerializerOptionsProvider.SerializerOptions) is {} chainNode)
                 {
-                    chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != MoChainContext.CHAIN_KEY).ToDictionary();
+                    chainNode.EndExtraInfo = expando.Unfold().Where(p => p.Key != ChainTraceContext.CHAIN_KEY).ToDictionary();
                     success = context.MergeRemoteChain(traceId, chainNode, _options.MaxChainDepth);
                 }
             }
@@ -263,7 +264,7 @@ public class AsyncLocalMoChainTracing(IOptions<ModuleChainTracingOption> options
 
     public void Init()
     {
-        _chainContext.Value ??= new MoChainContext();
+        _chainContext.Value ??= new ChainTraceContext();
     }
 
     public bool ContainsTrace(string traceId)

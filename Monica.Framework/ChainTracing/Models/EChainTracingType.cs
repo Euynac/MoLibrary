@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoChainTracing.Models;
+namespace Monica.Framework.ChainTracing.Models;
 /// <summary>
 /// Identifies the kind of component represented by a trace node.
 /// </summary>

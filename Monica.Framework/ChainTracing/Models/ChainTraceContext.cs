@@ -3,44 +3,43 @@ using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.Features.MoChainTracing.Models;
+namespace Monica.Framework.ChainTracing.Models;
 
 /// <summary>
 /// Stores the state for a single call chain.
 /// </summary>
-public class MoChainContext
+public class ChainTraceContext
 {
     /// <summary>
     /// Extra-info key used to store serialized chain data.
     /// </summary>
     public const string CHAIN_KEY = "chain";
+
     /// <summary>
     /// Root node of the chain.
     /// </summary>
-    public MoChainNode? Root { get; set; }
+    public ChainTraceNode? Root { get; set; }
 
     /// <summary>
     /// Stack of currently active nodes.
     /// </summary>
     [JsonIgnore]
-    public Stack<MoChainNode> ActiveNodes { get; set; } = new();
+    public Stack<ChainTraceNode> ActiveNodes { get; set; } = new();
 
     /// <summary>
     /// Nodes that became detached because the trace closed out of order.
     /// </summary>
-    public List<MoChainNode>? IsolatedNodes { get; set; }
+    public List<ChainTraceNode>? IsolatedNodes { get; set; }
 
     /// <summary>
     /// Lookup table for trace nodes by identifier.
     /// </summary>
     [JsonIgnore]
-    public ConcurrentDictionary<string, MoChainNode> NodeMap { get; set; } = new();
-
+    public ConcurrentDictionary<string, ChainTraceNode> NodeMap { get; set; } = new();
 
     /// <summary>
     /// Time when the chain started.
     /// </summary>
-
     [JsonIgnore]
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
@@ -62,7 +61,7 @@ public class MoChainContext
     /// </summary>
     /// <param name="type">The trace node type.</param>
     /// <returns><see langword="true" /> when nodes of this type can participate in the active stack.</returns>
-    public static bool CanHasChildrenOperation(EChainTracingType type)
+    public static bool CanHaveChildOperations(EChainTracingType type)
     {
         return type != EChainTracingType.Database;
     }
@@ -71,13 +70,12 @@ public class MoChainContext
     /// Adds a new node to the current chain.
     /// </summary>
     /// <param name="node">The node to add.</param>
-    /// <param name="maxNodeCount">The configured maximum node count.</param>
-    public void AddNode(MoChainNode node, int maxNodeCount)
+    public void AddNode(ChainTraceNode node)
     {
         if (Root == null)
         {
             Root = node;
-            node.Deepth = 1;
+            node.Depth = 1;
         }
         else if (ActiveNodes.Count > 0)
         {
@@ -87,10 +85,11 @@ public class MoChainContext
             node.SetParent(parent);
         }
 
-        if (CanHasChildrenOperation(node.Type) || node.Deepth <= maxNodeCount)
+        if (CanHaveChildOperations(node.Type))
         {
             ActiveNodes.Push(node);
         }
+
         NodeMap[node.TraceId] = node;
     }
 
@@ -104,28 +103,36 @@ public class MoChainContext
     /// <param name="extraInfo">Optional completion metadata.</param>
     public void CompleteNode(string traceId, string? result = null, bool success = true, Exception? exception = null, object? extraInfo = null)
     {
-        if (NodeMap.TryGetValue(traceId, out var node))
+        if (!NodeMap.TryGetValue(traceId, out var node))
         {
-            node.EndTime = DateTime.UtcNow;
-            node.Result = result;
-            node.Exception = exception;
-            node.EndExtraInfo = extraInfo;
+            return;
+        }
 
-            // An exception always marks the node as failed.
-            if (exception != null || !success)
+        node.EndTime = DateTime.UtcNow;
+        node.Result = result;
+        node.Exception = exception;
+        node.EndExtraInfo = extraInfo;
+
+        if (exception != null || !success)
+        {
+            node.IsFailed = true;
+        }
+
+        if (ActiveNodes.Count <= 0)
+        {
+            return;
+        }
+
+        while (ActiveNodes.Count > 0)
+        {
+            var topNode = ActiveNodes.Pop();
+            if (topNode.TraceId == traceId)
             {
-                node.IsFailed = true;
+                break;
             }
 
-            // Pop active nodes until the completed trace is found; earlier mismatches become isolated nodes.
-            if (ActiveNodes.Count > 0)
-            {
-                while (ActiveNodes.Pop() is { } topNode && topNode.TraceId != traceId)
-                {
-                    IsolatedNodes ??= [];
-                    IsolatedNodes.Add(topNode);
-                }
-            }
+            IsolatedNodes ??= [];
+            IsolatedNodes.Add(topNode);
         }
     }
 
@@ -141,10 +148,10 @@ public class MoChainContext
     /// Creates a deep clone of the chain.
     /// </summary>
     /// <returns>A deep clone of the current chain.</returns>
-    public MoChainContext Clone()
+    public ChainTraceContext Clone()
     {
         var json = JsonSerializer.Serialize(this);
-        return JsonSerializer.Deserialize<MoChainContext>(json) ?? new MoChainContext();
+        return JsonSerializer.Deserialize<ChainTraceContext>(json) ?? new ChainTraceContext();
     }
 
     /// <summary>
@@ -154,19 +161,17 @@ public class MoChainContext
     /// <param name="remoteChainNode">The remote chain root node.</param>
     /// <param name="maxChainDepth">The maximum allowed chain depth.</param>
     /// <returns><see langword="true" /> when the merge succeeds; otherwise, <see langword="false" />.</returns>
-    public bool MergeRemoteChain(string traceId, MoChainNode? remoteChainNode, int maxChainDepth)
+    public bool MergeRemoteChain(string traceId, ChainTraceNode? remoteChainNode, int maxChainDepth)
     {
-        if (remoteChainNode == null) return false;
-        if (!NodeMap.TryGetValue(traceId, out var currentNode))
+        if (remoteChainNode == null || !NodeMap.TryGetValue(traceId, out var currentNode))
         {
             return false;
         }
 
-        // Attach the remote chain beneath the current node.
         currentNode.Children ??= [];
         currentNode.Children.Add(remoteChainNode);
         remoteChainNode.SetParent(currentNode);
-        remoteChainNode.ReCalculateDepthAndClean(remoteChainNode.Deepth, maxChainDepth);
+        remoteChainNode.RecalculateDepthAndTrim(remoteChainNode.Depth, maxChainDepth);
         return true;
     }
 }

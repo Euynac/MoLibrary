@@ -73,10 +73,6 @@ public enum EMoModuleKey
     /// </summary>
     ChainTracing,
     /// <summary>
-    /// Framework chain tracing module.
-    /// </summary>
-    FrameworkChainTracing,
-    /// <summary>
     /// Text diff highlight module.
     /// </summary>
     DiffHighlight,

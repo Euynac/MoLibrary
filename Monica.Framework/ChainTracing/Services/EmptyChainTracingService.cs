@@ -1,7 +1,8 @@
-using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.Results;
+using Monica.Framework.ChainTracing.Abstractions;
+using Monica.Framework.ChainTracing.Models;
 
-namespace Monica.Core.Features.MoChainTracing.Implementations;
+namespace Monica.Framework.ChainTracing.Services;
 
 /// <summary>
 /// No-op chain tracing implementation used when tracing is disabled.
@@ -9,17 +10,17 @@ namespace Monica.Core.Features.MoChainTracing.Implementations;
 /// <remarks>
 /// Uses the Null Object pattern. All methods are safe no-ops and do not produce trace data.
 /// </remarks>
-public class EmptyChainTracing : IMoChainTracing
+public class EmptyChainTracingService : IChainTracing
 {
     /// <summary>
     /// Singleton instance.
     /// </summary>
-    public static readonly EmptyChainTracing Instance = new();
+    public static readonly EmptyChainTracingService Instance = new();
 
     /// <summary>
     /// Prevents external construction.
     /// </summary>
-    private EmptyChainTracing() { }
+    private EmptyChainTracingService() { }
 
     /// <summary>
     /// Starts a new trace node.
@@ -68,7 +69,7 @@ public class EmptyChainTracing : IMoChainTracing
     /// Gets the current chain.
     /// </summary>
     /// <returns>Always <see langword="null" /> because tracing is disabled.</returns>
-    public MoChainContext? GetCurrentChain()
+    public ChainTraceContext? GetCurrentChain()
     {
         return null;
     }

@@ -1,12 +1,12 @@
-using Monica.Core.Features.MoChainTracing.Models;
 using Monica.Core.Results;
+using Monica.Framework.ChainTracing.Models;
 
-namespace Monica.Core.Features.MoChainTracing;
+namespace Monica.Framework.ChainTracing.Abstractions;
 
 /// <summary>
 /// Defines call-chain tracing operations for application flows.
 /// </summary>
-public interface IMoChainTracing
+public interface IChainTracing
 {
     /// <summary>
     /// Starts a new trace node.
@@ -54,7 +54,7 @@ public interface IMoChainTracing
     /// Gets the current call-chain context.
     /// </summary>
     /// <returns>The current chain, or <see langword="null" /> when no chain exists.</returns>
-    MoChainContext? GetCurrentChain();
+    ChainTraceContext? GetCurrentChain();
 
     /// <summary>
     /// Merges chain data returned from a remote call.

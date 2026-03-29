@@ -1,56 +1,54 @@
 using System.Text.Json.Serialization;
 
-namespace Monica.Core.Features.MoChainTracing.Models;
+namespace Monica.Framework.ChainTracing.Models;
 
 /// <summary>
 /// Represents a single node in a call chain.
 /// </summary>
-public class MoChainNode
+public class ChainTraceNode
 {
     /// <summary>
     /// Depth of the node within the chain.
     /// </summary>
-    public int Deepth { get; set; }
-    
-    /// <summary>
-    /// Sets the parent node and updates the depth.
-    /// </summary>
-    /// <param name="parent">The parent node.</param>
-    public void SetParent(MoChainNode parent)
-    {
-        Deepth = parent.Deepth + 1;
-        Parent = parent;
-    }
-    #region Merge support
+    public int Depth { get; set; }
 
     private string[]? _exceptionMessage;
     private string? _duration;
     private EChainTracingType _type;
+
+    /// <summary>
+    /// Sets the parent node and updates the depth.
+    /// </summary>
+    /// <param name="parent">The parent node.</param>
+    public void SetParent(ChainTraceNode parent)
+    {
+        Depth = parent.Depth + 1;
+        Parent = parent;
+    }
+
     /// <summary>
     /// Recalculates descendant depths and prunes children beyond the depth limit.
     /// </summary>
-    public void ReCalculateDepthAndClean(int currentDeepth, int maxChainDepth)
+    public void RecalculateDepthAndTrim(int currentDepth, int maxChainDepth)
     {
-        Deepth = currentDeepth;
+        Depth = currentDepth;
 
-        if (Children == null || Children.Count < 0)
+        if (Children is null or { Count: 0 })
         {
             return;
         }
 
-
-        if (currentDeepth > maxChainDepth)
+        if (currentDepth > maxChainDepth)
         {
-            Children?.Clear();
+            Children.Clear();
             return;
         }
 
         foreach (var child in Children)
         {
-            child.ReCalculateDepthAndClean(currentDeepth+1, maxChainDepth);
+            child.RecalculateDepthAndTrim(currentDepth + 1, maxChainDepth);
         }
     }
-    #endregion
 
     /// <summary>
     /// Trace node category.
@@ -62,7 +60,7 @@ public class MoChainNode
         set
         {
             _type = value;
-            SetRemoteAttr(_type);
+            IsRemoteCall = value == EChainTracingType.RemoteService;
         }
     }
 
@@ -134,7 +132,7 @@ public class MoChainNode
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string[]? ExceptionMessage
     {
-        get => _exceptionMessage ?? Exception?.ToString().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        get => _exceptionMessage ?? Exception?.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         set => _exceptionMessage = value;
     }
 
@@ -154,26 +152,19 @@ public class MoChainNode
     /// Child trace nodes.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<MoChainNode>? Children { get; set; }
+    public List<ChainTraceNode>? Children { get; set; }
 
     /// <summary>
     /// Parent trace node.
     /// </summary>
     [JsonIgnore]
-    public MoChainNode? Parent { get; private set; }
+    public ChainTraceNode? Parent { get; private set; }
 
     /// <summary>
     /// Optional notes.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Remarks { get; set; }
-
-
-    public void SetRemoteAttr(EChainTracingType type)
-    {
-        IsRemoteCall = type == EChainTracingType.RemoteService;
-    }
-
 
     public override string ToString()
     {
