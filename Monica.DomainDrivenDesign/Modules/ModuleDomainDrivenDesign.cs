@@ -19,7 +19,7 @@ public class ModuleDomainDrivenDesign(ModuleDomainDrivenDesignOption option) : M
         DependsOnModule<ModuleAutoControllersGuide>().Register();
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleDependencyInjectionGuide>().Register();
-        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()// TODO: Optimize so the module no longer relies on AOP.
             .AddInterceptor<PropertyInjectServiceProviderEmptyInterceptor>(context =>
             {
                 if (context.ImplementationType.IsAssignableTo<IMoDomainService>() ||

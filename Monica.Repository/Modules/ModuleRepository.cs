@@ -52,7 +52,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
         }
 
-        DependsOnModule<ModuleDynamicProxyGuide>().Register()
+        DependsOnModule<ModuleDynamicProxyGuide>().Register()//TODO optimization does not require AOP
             .AddInterceptor<PropertyInjectServiceProviderEmptyInterceptor>(proxyBuildContext =>
             {
                 return proxyBuildContext.ImplementationType.IsAssignableTo(typeof(IMoRepository));
