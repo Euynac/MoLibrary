@@ -10,14 +10,14 @@ namespace Monica.Core.Mediator;
 /// </summary>
 public sealed class Mediator(IServiceProvider serviceProvider) : IMediator
 {
-    private static readonly ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<Mediator, object, CancellationToken, Task<object?>>> DispatcherCache = new();
+    private static readonly ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<Mediator, object, CancellationToken, Task<object?>>> _dispatcherCache = new();
 
     /// <inheritdoc />
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var dispatcher = DispatcherCache.GetOrAdd(
+        var dispatcher = _dispatcherCache.GetOrAdd(
             (request.GetType(), typeof(TResponse)),
             static key => CreateDispatcher(key.RequestType, key.ResponseType));
 

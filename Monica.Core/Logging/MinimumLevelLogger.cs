@@ -7,9 +7,6 @@ namespace Monica.Core.Logging;
 /// </summary>
 public class MinimumLevelLogger(ILogger innerLogger, LogLevel minLogLevel) : ILogger
 {
-    private readonly ILogger _innerLogger = innerLogger;
-    private readonly LogLevel _minLogLevel = minLogLevel;
-
     /// <inheritdoc />
     public void Log<TState>(
         LogLevel logLevel,
@@ -23,19 +20,19 @@ public class MinimumLevelLogger(ILogger innerLogger, LogLevel minLogLevel) : ILo
             return;
         }
 
-        _innerLogger.Log(logLevel, eventId, state, exception, formatter);
+        innerLogger.Log(logLevel, eventId, state, exception, formatter);
     }
 
     /// <inheritdoc />
     public bool IsEnabled(LogLevel logLevel)
     {
-        return logLevel >= _minLogLevel && _innerLogger.IsEnabled(logLevel);
+        return logLevel >= minLogLevel && innerLogger.IsEnabled(logLevel);
     }
 
     /// <inheritdoc />
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
-        return _innerLogger.BeginScope(state);
+        return innerLogger.BeginScope(state);
     }
 }
 
@@ -44,9 +41,6 @@ public class MinimumLevelLogger(ILogger innerLogger, LogLevel minLogLevel) : ILo
 /// </summary>
 public class MinimumLevelLogger<T>(ILogger<T> innerLogger, LogLevel minLogLevel) : ILogger<T>
 {
-    private readonly ILogger<T> _innerLogger = innerLogger;
-    private readonly LogLevel _minLogLevel = minLogLevel;
-
     /// <inheritdoc />
     public void Log<TState>(
         LogLevel logLevel,
@@ -60,18 +54,18 @@ public class MinimumLevelLogger<T>(ILogger<T> innerLogger, LogLevel minLogLevel)
             return;
         }
 
-        _innerLogger.Log(logLevel, eventId, state, exception, formatter);
+        innerLogger.Log(logLevel, eventId, state, exception, formatter);
     }
 
     /// <inheritdoc />
     public bool IsEnabled(LogLevel logLevel)
     {
-        return logLevel >= _minLogLevel && _innerLogger.IsEnabled(logLevel);
+        return logLevel >= minLogLevel && innerLogger.IsEnabled(logLevel);
     }
 
     /// <inheritdoc />
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
-        return _innerLogger.BeginScope(state);
+        return innerLogger.BeginScope(state);
     }
 }

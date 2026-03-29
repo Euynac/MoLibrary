@@ -8,18 +8,16 @@ namespace Monica.Core.Logging;
 /// </summary>
 public static class LogManager
 {
-    private static readonly ILoggerFactory DefaultFactory = LoggerFactory.Create(builder =>
+    private static readonly ILoggerFactory _defaultFactory = LoggerFactory.Create(builder =>
     {
         builder.SetMinimumLevel(LogLevel.Trace);
         builder.AddConsole();
     });
 
-    private static ILoggerFactory _factory = DefaultFactory;
-
     /// <summary>
     /// Gets the current logger factory.
     /// </summary>
-    public static ILoggerFactory Factory => _factory;
+    public static ILoggerFactory Factory { get; private set; } = _defaultFactory;
 
     /// <summary>
     /// Replaces the current logger factory.
@@ -27,7 +25,7 @@ public static class LogManager
     /// <param name="factory">The factory to use for future logger creation.</param>
     public static void UseFactory(ILoggerFactory factory)
     {
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        Factory = factory ?? throw new ArgumentNullException(nameof(factory));
     }
 
     /// <summary>
@@ -35,7 +33,7 @@ public static class LogManager
     /// </summary>
     public static void UseNullFactory()
     {
-        _factory = NullLoggerFactory.Instance;
+        Factory = NullLoggerFactory.Instance;
     }
 
     /// <summary>
@@ -43,7 +41,7 @@ public static class LogManager
     /// </summary>
     public static ILogger<T> For<T>()
     {
-        return _factory.CreateLogger<T>();
+        return Factory.CreateLogger<T>();
     }
 
     /// <summary>
@@ -52,7 +50,7 @@ public static class LogManager
     public static ILogger For(Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return _factory.CreateLogger(type);
+        return Factory.CreateLogger(type);
     }
 
     /// <summary>
@@ -61,7 +59,7 @@ public static class LogManager
     public static ILogger For(string categoryName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(categoryName);
-        return _factory.CreateLogger(categoryName);
+        return Factory.CreateLogger(categoryName);
     }
 
     /// <summary>
@@ -69,7 +67,7 @@ public static class LogManager
     /// </summary>
     public static ILogger For<T>(LogLevel minLogLevel)
     {
-        return new MinimumLevelLogger<T>(_factory.CreateLogger<T>(), minLogLevel);
+        return new MinimumLevelLogger<T>(Factory.CreateLogger<T>(), minLogLevel);
     }
 
     /// <summary>
@@ -78,7 +76,7 @@ public static class LogManager
     public static ILogger For(Type type, LogLevel minLogLevel)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return new MinimumLevelLogger(_factory.CreateLogger(type), minLogLevel);
+        return new MinimumLevelLogger(Factory.CreateLogger(type), minLogLevel);
     }
 
     /// <summary>
@@ -87,6 +85,6 @@ public static class LogManager
     public static ILogger For(string categoryName, LogLevel minLogLevel)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(categoryName);
-        return new MinimumLevelLogger(_factory.CreateLogger(categoryName), minLogLevel);
+        return new MinimumLevelLogger(Factory.CreateLogger(categoryName), minLogLevel);
     }
 }
