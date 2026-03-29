@@ -1,7 +1,11 @@
+using Mapster;
+
 namespace Monica.Core.Features.MoMapper;
 
 public interface IMoMapper
 {
+    TypeAdapterConfig Config { get; }
+
     /// <summary>
     /// Converts an object to another. Creates a new object of <typeparamref name="TDestination"/>.
     /// </summary>
