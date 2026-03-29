@@ -163,6 +163,14 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
         List<ServiceIdentifier> allExposingServiceTypes,
         ServiceLifetime lifeTime)
     {
+        var requiresCachedServiceProviderAccess = RequiresCachedServiceProviderAccess(implementationType);
+
+        if (requiresCachedServiceProviderAccess && lifeTime == ServiceLifetime.Singleton)
+        {
+            throw new InvalidOperationException(
+                $"{implementationType.FullName} can not be registered as Singleton because it requires {nameof(ICachedServiceProvider)}.");
+        }
+
         // TODO: Support automatic registration of generic types.
         //if (implementationType.IsGenericType)
         //{
@@ -206,18 +214,66 @@ public class DefaultConventionalRegistrar(ModuleDependencyInjectionOption option
                     );
             }
         }
+        return CreateDirectServiceDescriptor(
+            implementationType,
+            serviceKey,
+            exposingServiceType,
+            lifeTime,
+            requiresCachedServiceProviderAccess);
+    }
+
+    protected virtual bool RequiresCachedServiceProviderAccess(Type implementationType)
+    {
+        return typeof(ICachedServiceProviderAccessor).IsAssignableFrom(implementationType);
+    }
+
+    protected virtual ServiceDescriptor CreateDirectServiceDescriptor(
+        Type implementationType,
+        object? serviceKey,
+        Type exposingServiceType,
+        ServiceLifetime lifeTime,
+        bool requiresCachedServiceProviderAccess)
+    {
+        if (!requiresCachedServiceProviderAccess)
+        {
+            return serviceKey == null
+                ? ServiceDescriptor.Describe(
+                    exposingServiceType,
+                    implementationType,
+                    lifeTime
+                )
+                : ServiceDescriptor.DescribeKeyed(
+                    exposingServiceType,
+                    serviceKey,
+                    implementationType,
+                    lifeTime
+                );
+        }
+
         return serviceKey == null
             ? ServiceDescriptor.Describe(
                 exposingServiceType,
-                implementationType,
+                provider => CreateImplementationInstance(provider, implementationType),
                 lifeTime
             )
             : ServiceDescriptor.DescribeKeyed(
                 exposingServiceType,
                 serviceKey,
-                implementationType,
+                (provider, _) => CreateImplementationInstance(provider, implementationType),
                 lifeTime
             );
+    }
+
+    protected virtual object CreateImplementationInstance(IServiceProvider provider, Type implementationType)
+    {
+        var instance = ActivatorUtilities.CreateInstance(provider, implementationType);
+
+        if (instance is ICachedServiceProviderAccessor accessor)
+        {
+            accessor.CachedServiceProvider = provider.GetRequiredService<ICachedServiceProvider>();
+        }
+
+        return instance;
     }
     /// <summary>
     /// Determines the redirected type for a service, if applicable.

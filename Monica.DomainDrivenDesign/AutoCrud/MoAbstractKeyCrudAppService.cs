@@ -30,16 +30,10 @@ namespace Monica.DomainDrivenDesign.AutoCrud;
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
     IMoRepository<TEntity, TKey> repository,
-    IMoMapper objectMapper,
     IAutoModelDbOperator<TEntity> autoModel,
     IMoUnitOfWorkManager unitOfWorkManager) : MoApplicationService
     where TEntity : class, IMoEntity<TKey>
 {
-    /// <summary>
-    /// Gets the object mapper.
-    /// </summary>
-    protected IMoMapper ObjectMapper { get; } = objectMapper;
-
     /// <summary>
     /// Gets the auto model database operator for entity operations.
     /// </summary>
@@ -600,7 +594,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     protected virtual Task<TGetOutputDto> MapToGetOutputDtoAsync(TEntity entity)
     {
-        var result = ObjectMapper.Map<TEntity, TGetOutputDto>(entity);
+        var result = Mapper.Map<TEntity, TGetOutputDto>(entity);
         return Task.FromResult(result);
     }
 
@@ -613,7 +607,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// <returns>The mapped DTO</returns>
     protected virtual Task<TCustomDto> MapToGetListOutputDtoStreamAsync<TCustomDto>(TEntity entity)
     {
-        var result = ObjectMapper.Map<TEntity, TCustomDto>(entity);
+        var result = Mapper.Map<TEntity, TCustomDto>(entity);
         return Task.FromResult(result);
     }
 
@@ -624,7 +618,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     protected virtual TEntity MapToEntity(TCreateInput createInput)
     {
-        var entity = ObjectMapper.Map<TCreateInput, TEntity>(createInput);
+        var entity = Mapper.Map<TCreateInput, TEntity>(createInput);
         return entity;
     }
 
@@ -636,7 +630,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     /// </summary>
     protected virtual void MapToEntity(TUpdateInput updateInput, TEntity entity)
     {
-        ObjectMapper.Map(updateInput, entity);
+        Mapper.Map(updateInput, entity);
     }
 
     /// <summary>
@@ -647,12 +641,12 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         // Important: if the DTO defines child-table fields, ProjectToType will query them automatically, so explicit Include is unnecessary.
         // As of 2024-04-22, Mapster does not support ProjectToType for complex types.
         //return await ObjectMapper.ProjectToType<TCustomDto>(query).ToListAsync();
-        return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
+        return Mapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
     }
 
     protected virtual async Task<List<TCustomDto>> MapToGetListOutputDtosAsync<TCustomDto>(List<TEntity> query)
     {
-        return ObjectMapper.Map<List<TEntity>, List<TCustomDto>>(query);
+        return Mapper.Map<List<TEntity>, List<TCustomDto>>(query);
     }
 
 

@@ -5,32 +5,30 @@ using Monica.DependencyInjection.AppInterfaces;
 namespace Monica.DependencyInjection.Implements;
 
 /// <summary>
-/// A service provider wrapper that caches resolved services for improved performance.
-/// Services are cached per scope lifetime.
+/// Wraps an underlying service provider and caches resolution results for the lifetime of the wrapper instance.
 /// </summary>
 public class CachedServiceProvider : ICachedServiceProvider
 {
-    public IServiceProvider NoCachedProvider { get; }
-    protected ConcurrentDictionary<ServiceIdentifier, Lazy<object?>> CachedServices { get; }
+    public IServiceProvider UnderlyingProvider { get; }
+    protected ConcurrentDictionary<ServiceIdentifier, Lazy<object?>> CachedServices { get; } = new();
 
-    public CachedServiceProvider(IServiceProvider serviceProvider)
+    public CachedServiceProvider(IServiceProvider underlyingProvider)
     {
-        NoCachedProvider = serviceProvider;
-        CachedServices = new ConcurrentDictionary<ServiceIdentifier, Lazy<object?>>();
-        CachedServices.TryAdd(new ServiceIdentifier(typeof(IServiceProvider)), new Lazy<object?>(() => NoCachedProvider));
+        UnderlyingProvider = underlyingProvider;
+        CachedServices.TryAdd(new ServiceIdentifier(typeof(IServiceProvider)), new Lazy<object?>(() => UnderlyingProvider));
     }
 
     public object? GetService(Type serviceType)
     {
         return CachedServices.GetOrAdd(
             new ServiceIdentifier(serviceType),
-            _ => new Lazy<object?>(() => NoCachedProvider.GetService(serviceType))
+            _ => new Lazy<object?>(() => UnderlyingProvider.GetService(serviceType))
         ).Value;
     }
 
     public object? GetKeyedService(Type serviceType, object? serviceKey)
     {
-        if (NoCachedProvider is not IKeyedServiceProvider keyedServiceProvider)
+        if (UnderlyingProvider is not IKeyedServiceProvider keyedServiceProvider)
         {
             throw new InvalidOperationException("This container does not support keyed services.");
         }
@@ -45,7 +43,7 @@ public class CachedServiceProvider : ICachedServiceProvider
     {
         return CachedServices.GetOrAdd(
             new ServiceIdentifier(serviceKey, serviceType),
-            _ => new Lazy<object?>(() => NoCachedProvider.GetRequiredKeyedService(serviceType, serviceKey))
+            _ => new Lazy<object?>(() => UnderlyingProvider.GetRequiredKeyedService(serviceType, serviceKey))
         ).Value!;
     }
 }

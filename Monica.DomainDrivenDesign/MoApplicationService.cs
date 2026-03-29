@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Features.MoMapper;
 using Monica.Core.Logging;
 using Monica.Core.Mediator;
 using Monica.DependencyInjection.AppInterfaces;
@@ -13,8 +15,22 @@ namespace Monica.DomainDrivenDesign;
 /// </summary>
 public abstract class MoApplicationService :
     IMoApplicationService,
-    ITransientDependency
+    ITransientDependency,
+    ICachedServiceProviderAccessor
 {
+    public ICachedServiceProvider CachedServiceProvider
+    {
+        get => field ?? throw CreateNotInitializedException();
+        set => field = value ?? throw new ArgumentNullException(nameof(value));
+    }
+
+    protected IMoMapper Mapper => CachedServiceProvider.GetRequiredService<IMoMapper>();
+
+    private InvalidOperationException CreateNotInitializedException()
+    {
+        return new InvalidOperationException(
+            $"Cached service provider is not initialized for {GetType().FullName}. Resolve the service through Monica DI instead of constructing it manually.");
+    }
 }
 
 /// <summary>

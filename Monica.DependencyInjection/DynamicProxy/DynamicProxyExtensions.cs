@@ -55,13 +55,13 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
     internal class RegisterContext
     {
-        public RegisterContext(ModuleDynamicProxyOption option, bool shouldInjectServiceProvider,
+        public RegisterContext(ModuleDynamicProxyOption option, bool shouldInjectCachedServiceProvider,
             ServiceDescriptor oldDescriptor,
             Type implementType,
             List<Type> interceptorTypes, ERegisterWays way)
         {
             Option = option;
-            ShouldInjectServiceProvider = shouldInjectServiceProvider;
+            ShouldInjectCachedServiceProvider = shouldInjectCachedServiceProvider;
             OldDescriptor = oldDescriptor;
             ImplementType = implementType;
             InterceptorTypes = interceptorTypes;
@@ -71,7 +71,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
         }
 
         public ModuleDynamicProxyOption Option { get; }
-        public bool ShouldInjectServiceProvider { get; }
+        public bool ShouldInjectCachedServiceProvider { get; }
         public ServiceDescriptor OldDescriptor { get; }
         public Type ServiceType => OldDescriptor.ServiceType;
         public Type ImplementType { get; }
@@ -157,9 +157,9 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
             collection.RemoveAt(index);
 
-            var shouldInjectServiceProvider = implementType.IsImplementInterface<ICachedServiceProviderInjector>();
-            var context = new RegisterContext(option, shouldInjectServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
-           
+            var shouldInjectCachedServiceProvider = implementType.IsImplementInterface<ICachedServiceProviderAccessor>();
+            var context = new RegisterContext(option, shouldInjectCachedServiceProvider, oldDescriptor, implementType, interceptorTypes, way);
+
             switch (way)
             {
                 case ERegisterWays.Factory:
@@ -176,11 +176,11 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
 
         return;
 
-        void InjectServiceProvider(object proxiedObject, IServiceProvider provider, RegisterContext context)
+        void InjectCachedServiceProvider(object proxiedObject, IServiceProvider provider, RegisterContext context)
         {
-            if (context.ShouldInjectServiceProvider)
+            if (context.ShouldInjectCachedServiceProvider)
             {
-                ((ICachedServiceProviderInjector) proxiedObject).ServiceProvider = provider.GetRequiredService<ICachedServiceProvider>();
+                ((ICachedServiceProviderAccessor) proxiedObject).CachedServiceProvider = provider.GetRequiredService<ICachedServiceProvider>();
             }
         }
 
@@ -212,21 +212,20 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                             proxiedObject = proxyGenerator.CreateClassProxyWithTargetAndDI(provider,
                                 context.ImplementType, null, instance, new ProxyGenerationOptions(), null,
                                 interceptors);
-                            InjectServiceProvider(proxiedObject, provider, context);
+                            InjectCachedServiceProvider(proxiedObject, provider, context);
                             break;
                         case EDynamicProxyKind.InterfaceProxy:
-                            InjectServiceProvider(instance, provider, context);
+                            InjectCachedServiceProvider(instance, provider, context);
                             proxiedObject = proxyGenerator.CreateInterfaceProxyWithTarget(
                                 context.OldDescriptor.ServiceType, instance, interceptors);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
-
-                    
                     return proxiedObject;
                 }, context.OldDescriptor.Lifetime));
         }
+
         void AddFactoryRegister(RegisterContext context)
         {
             var factory = context.OldDescriptor.ImplementationFactory!;
@@ -244,12 +243,10 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                             proxiedObject = proxyGenerator.CreateClassProxyWithTargetAndDI(provider,
                                 context.ImplementType, null, targetFromFactory, new ProxyGenerationOptions(), null,
                                 interceptors);
-
-                            InjectServiceProvider(proxiedObject, provider, context);
+                            InjectCachedServiceProvider(proxiedObject, provider, context);
                             break;
                         case EDynamicProxyKind.InterfaceProxy:
-
-                            InjectServiceProvider(targetFromFactory, provider, context);
+                            InjectCachedServiceProvider(targetFromFactory, provider, context);
                             proxiedObject =
                                 proxyGenerator.CreateInterfaceProxyWithTarget(context.OldDescriptor.ServiceType,
                                     targetFromFactory, interceptors);
@@ -261,6 +258,7 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                     return proxiedObject;
                 }, context.OldDescriptor.Lifetime));
         }
+
         void AddNormalRegister(RegisterContext context)
         {
             // Important: Controllers must be added via AddControllersAsServices; otherwise, they
@@ -276,11 +274,11 @@ public static class MicrosoftDependencyInjectionDynamicProxyExtensions
                         case EDynamicProxyKind.ClassProxy:
                             proxiedObject = proxyGenerator.CreateClassProxyAndDI(provider, context.ImplementType, null,
                                 new ProxyGenerationOptions(), null, interceptors);
-                            InjectServiceProvider(proxiedObject, provider, context);
+                            InjectCachedServiceProvider(proxiedObject, provider, context);
                             break;
                         case EDynamicProxyKind.InterfaceProxy:
                             proxiedObject = ActivatorUtilities.CreateInstance(provider, context.ImplementType);
-                            InjectServiceProvider(proxiedObject, provider, context); //run before create proxied instance because interface can not inject service provider.
+                            InjectCachedServiceProvider(proxiedObject, provider, context); // Run before creating the proxied instance because interface proxies cannot receive the property assignment later.
                             proxiedObject =
                                 proxyGenerator.CreateInterfaceProxyWithTarget(context.OldDescriptor.ServiceType, proxiedObject, interceptors);
                             break;
