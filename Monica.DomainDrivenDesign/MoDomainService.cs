@@ -1,4 +1,5 @@
-using Monica.DependencyInjection.AppInterfaces;
+using Microsoft.Extensions.Logging;
+using Monica.Core.Logging;
 using Monica.DomainDrivenDesign.Interfaces;
 
 namespace Monica.DomainDrivenDesign;
@@ -7,7 +8,7 @@ public abstract class MoDomainService : IMoDomainService
 {
 }
 
-public abstract class MoDomainService<TSelf> : MoDomainService, ICachedServiceProviderInjector where TSelf : MoDomainService<TSelf>
+public abstract class MoDomainService<TSelf> : MoDomainService where TSelf : MoDomainService<TSelf>
 {
-    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
+    protected ILogger<TSelf> _logger { get; } = LogManager.For<TSelf>();
 }

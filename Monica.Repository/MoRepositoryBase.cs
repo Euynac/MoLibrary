@@ -1,25 +1,16 @@
 using System.Linq.Expressions;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.DependencyInjection.AppInterfaces;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Exceptions;
 using Monica.Repository.Interfaces;
-using Monica.Repository.Transaction;
 using Monica.Tool.Extensions;
 
 namespace Monica.Repository;
 
-public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, ICachedServiceProviderInjector
+public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>
     where TEntity : class, IMoEntity
 {
-    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
-
-    protected ILogger Logger => ServiceProvider.GetRequiredService<ILogger<MoRepositoryBase<TEntity>>>();
-    protected IMoUnitOfWorkManager UnitOfWorkManager => ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
-
     public abstract Task<TEntity> InsertAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
 
     public virtual async Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
@@ -35,15 +26,7 @@ public abstract class MoRepositoryBase<TEntity> : IMoBasicRepository<TEntity>, I
         }
     }
 
-    protected virtual Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        if (UnitOfWorkManager?.Current != null)
-        {
-            return UnitOfWorkManager.Current.SaveChangesAsync(cancellationToken);
-        }
-
-        return Task.CompletedTask;
-    }
+    protected abstract Task SaveChangesAsync(CancellationToken cancellationToken);
 
     public abstract Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default);
 

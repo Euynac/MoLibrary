@@ -6,7 +6,6 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy.DefaultInterceptors;
 using Monica.Repository;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Interfaces;
@@ -51,12 +50,6 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
         {
             DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
         }
-
-        DependsOnModule<ModuleDynamicProxyGuide>().Register()//TODO optimization does not require AOP
-            .AddInterceptor<PropertyInjectServiceProviderEmptyInterceptor>(proxyBuildContext =>
-            {
-                return proxyBuildContext.ImplementationType.IsAssignableTo(typeof(IMoRepository));
-            });
 
         ConfigureServices(context =>
         {

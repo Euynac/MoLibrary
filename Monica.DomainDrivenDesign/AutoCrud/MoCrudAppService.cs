@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Monica.AutoModel.Interfaces;
+using Monica.Core.Features.MoMapper;
 using Monica.DomainDrivenDesign.Attributes;
 using Monica.DomainDrivenDesign.AutoController.Settings;
 using Monica.DomainDrivenDesign.AutoCrud.Interfaces;
@@ -6,6 +8,7 @@ using Monica.Repository.DtoInterfaces;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Exceptions;
 using Monica.Repository.Interfaces;
+using Monica.Repository.Transaction;
 using Monica.Core.Results;
 
 namespace Monica.DomainDrivenDesign.AutoCrud;
@@ -29,9 +32,13 @@ public interface IMoCrudAppService
 /// Implement <see cref="IMoCrudDisableDelete"/> as well to disable delete operations.
 /// </para>
 /// </summary>
-public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(TRepository repository)
+public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
+    TRepository repository,
+    IMoMapper objectMapper,
+    IAutoModelDbOperator<TEntity> autoModel,
+    IMoUnitOfWorkManager unitOfWorkManager)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, MoCrudDisableDto, MoCrudDisableDto,
-        MoCrudDisableDto, TRepository>(repository) 
+        MoCrudDisableDto, TRepository>(repository, objectMapper, autoModel, unitOfWorkManager) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -45,9 +52,13 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 /// and the default paged request DTO is used.
 /// </para>
 /// </summary>
-public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(TRepository repository)
+public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(
+    TRepository repository,
+    IMoMapper objectMapper,
+    IAutoModelDbOperator<TEntity> autoModel,
+    IMoUnitOfWorkManager unitOfWorkManager)
     : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, MoCrudPageRequestDto, TCreateInput, TUpdateInput,
-        MoCrudDisableDto, TRepository>(repository) 
+        MoCrudDisableDto, TRepository>(repository, objectMapper, autoModel, unitOfWorkManager) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -61,8 +72,13 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TCreateInput, 
 /// </para>
 /// </summary>
 public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
-    TRepository>(TRepository repository)
-    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, MoCrudDisableDto, TRepository>(repository) 
+    TRepository>(
+        TRepository repository,
+        IMoMapper objectMapper,
+        IAutoModelDbOperator<TEntity> autoModel,
+        IMoUnitOfWorkManager unitOfWorkManager)
+    : MoCrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, MoCrudDisableDto, TRepository>(
+        repository, objectMapper, autoModel, unitOfWorkManager) 
     where TEntity : class, IMoEntity<TKey>
     where TEntityDto : IMoEntityDto<TKey>
     where TRepository : IMoRepository<TEntity, TKey>
@@ -87,9 +103,17 @@ public abstract class MoCrudAppService<TEntity, TEntityDto, TKey, TGetListInput,
 /// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
 /// <typeparam name="TRepository">The repository type. Must implement <see cref="IMoRepository{TEntity, TKey}"/>.</typeparam>
 /// <param name="repository">The repository instance.</param>
+/// <param name="objectMapper">The object mapper used by CRUD operations.</param>
+/// <param name="autoModel">The auto model operator used for filtering and projection.</param>
+/// <param name="unitOfWorkManager">The unit of work manager used for streaming operations.</param>
 public abstract class MoCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
-    TUpdateInput, TBulkDeleteInput, TRepository>(TRepository repository) : 
-    MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(repository), IMoCrudAppService
+    TUpdateInput, TBulkDeleteInput, TRepository>(
+        TRepository repository,
+        IMoMapper objectMapper,
+        IAutoModelDbOperator<TEntity> autoModel,
+        IMoUnitOfWorkManager unitOfWorkManager) : 
+    MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
+        repository, objectMapper, autoModel, unitOfWorkManager), IMoCrudAppService
     where TEntity : class, IMoEntity<TKey>
     where TGetOutputDto : IMoEntityDto<TKey>
     where TGetListOutputDto : IMoEntityDto<TKey>

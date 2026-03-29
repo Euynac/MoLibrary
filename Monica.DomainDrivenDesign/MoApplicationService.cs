@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Features.MoMapper;
+using Microsoft.Extensions.Logging;
+using Monica.Core.Logging;
 using Monica.Core.Mediator;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.Interfaces;
@@ -12,18 +12,9 @@ namespace Monica.DomainDrivenDesign;
 /// Base class for application services, providing common properties and methods.
 /// </summary>
 public abstract class MoApplicationService :
-    ICachedServiceProviderInjector, IMoApplicationService,
+    IMoApplicationService,
     ITransientDependency
 {
-    /// <summary>
-    /// Gets or sets the lazy service provider.
-    /// </summary>
-    public ICachedServiceProvider ServiceProvider { get; set; } = null!;
-
-    /// <summary>
-    /// Gets the object mapper.
-    /// </summary>
-    protected IMoMapper ObjectMapper => ServiceProvider.GetRequiredService<IMoMapper>();
 }
 
 /// <summary>
@@ -36,6 +27,8 @@ public abstract class MoCustomApplicationService<TSelfHandler, TRequest, TRespon
     MoApplicationService, IRequestHandler<TRequest, TResponse>
     where TSelfHandler : MoCustomApplicationService<TSelfHandler, TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
+    protected ILogger<TSelfHandler> _logger { get; } = LogManager.For<TSelfHandler>();
+
     /// <summary>
     /// Handles the specified request.
     /// </summary>

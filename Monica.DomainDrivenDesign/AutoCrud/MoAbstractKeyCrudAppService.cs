@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Interfaces;
 using Monica.Core.Features.MoMapper;
 using Monica.DomainDrivenDesign.AutoCrud.Interfaces;
@@ -29,14 +28,27 @@ namespace Monica.DomainDrivenDesign.AutoCrud;
 /// <typeparam name="TGetListInput">The input type for GetList operations</typeparam>
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
-public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(IMoRepository<TEntity, TKey> repository) : MoApplicationService
+public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
+    IMoRepository<TEntity, TKey> repository,
+    IMoMapper objectMapper,
+    IAutoModelDbOperator<TEntity> autoModel,
+    IMoUnitOfWorkManager unitOfWorkManager) : MoApplicationService
     where TEntity : class, IMoEntity<TKey>
 {
     /// <summary>
+    /// Gets the object mapper.
+    /// </summary>
+    protected IMoMapper ObjectMapper { get; } = objectMapper;
+
+    /// <summary>
     /// Gets the auto model database operator for entity operations.
     /// </summary>
-    protected IAutoModelDbOperator<TEntity> AutoModel =>
-        ServiceProvider.GetRequiredService<IAutoModelDbOperator<TEntity>>();
+    protected IAutoModelDbOperator<TEntity> AutoModel { get; } = autoModel;
+
+    /// <summary>
+    /// Gets the unit of work manager.
+    /// </summary>
+    protected IMoUnitOfWorkManager UnitOfWorkManager { get; } = unitOfWorkManager;
     
     /// <summary>
     /// Gets the repository for entity operations.
@@ -192,8 +204,7 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // Important: IAsyncEnumerable loses AsyncLocal values; by the time execution reaches this method, the ambient state is already gone.
-        var unitOfWork = ServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
-        using var uow = unitOfWork.Begin();
+        using var uow = UnitOfWorkManager.Begin();
         var query = await CreateFilteredQueryAsync(input);
         
         await foreach (var dto in InnerGetListStreamAsync<TGetListOutputDto>(input, query, cancellationToken))
