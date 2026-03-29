@@ -9,9 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.MoScopedData;
 using Monica.DependencyInjection.AppInterfaces;
-using Monica.Repository.Attributes;
 using Monica.Repository.EFCoreExtensions;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Extensions;
@@ -30,7 +28,6 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
     public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
     protected IMoAuditPropertySetter AuditPropertySetter => CachedServiceProvider.GetRequiredService<IMoAuditPropertySetter>();
-    protected IMoScopedData? ScopedData => CachedServiceProvider.GetKeyedService<IMoScopedData>(nameof(ModuleRepository));
 
     protected ILogger<MoDbContext<TDbContext>> Logger => CachedServiceProvider.GetService<ILogger<MoDbContext<TDbContext>>>() ?? NullLogger<MoDbContext<TDbContext>>.Instance;
 
@@ -353,27 +350,11 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
 
     protected virtual void HandlePropertiesBeforeSave()
     {
-        var enableIgnoreUpdate = ScopedData?.HasData(IgnoreUpdateAttribute.FEATURE_KEY);
         foreach (var entry in ChangeTracker.Entries())
         {
             if (entry.State is EntityState.Modified or EntityState.Deleted)
             {
                 UpdateConcurrencyStamp(entry);
-            }
-
-            if (entry.State is EntityState.Modified && enableIgnoreUpdate is true)
-            {
-                //If the IgnoreUpdate attribute is present, updates are ignored
-                foreach (var property in entry.Members)
-                {
-                    // Check whether the attribute has the IgnoreUpdateAttribute attribute
-                    if (property is PropertyEntry {IsModified: true} propertyEntry && 
-                        propertyEntry.Metadata.PropertyInfo?.GetCustomAttributes(typeof(IgnoreUpdateAttribute), false).Any() == true)
-                    {
-                        // If the attribute has the IgnoreUpdateAttribute attribute and is modified, set IsModified to false to ignore the update.
-                        propertyEntry.IsModified = false;
-                    }
-                }
             }
         }
     }

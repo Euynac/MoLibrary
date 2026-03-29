@@ -350,9 +350,6 @@ public class MoRepository<TDbContext, TEntity, TKey>(IDbContextProvider<TDbConte
 
     public virtual async Task<bool> ExistAsync(TKey id)
     {
-        //var scopedData = ServiceProvider.GetRequiredService<IScopedData>();
-        //scopedData.DataDict.Add("disableFilter", "");
-
         return (await GetQueryableAsync()).Any(s => s.Id!.Equals(id));
     }
 

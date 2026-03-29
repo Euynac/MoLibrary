@@ -63,10 +63,6 @@ public enum EMoModuleKey
     /// XML documentation service module.
     /// </summary>
     XmlDocumentation,
-    /// <summary>
-    /// Scoped temporary data module.
-    /// </summary>
-    ScopedData,
     Controllers,
     /// <summary>
     /// Basic chain tracing module.

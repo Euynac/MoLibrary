@@ -50,8 +50,6 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
         if (dbContextProviderType == DbContextProviderType.UnitOfWork)
         {
             DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
-            DependsOnModule<ModuleScopedDataGuide>().Register()
-                .AddKeyedScopedData<MoScopedDataUnitOfWorkProvider>(nameof(ModuleRepository));
         }
 
         DependsOnModule<ModuleDynamicProxyGuide>().Register()
