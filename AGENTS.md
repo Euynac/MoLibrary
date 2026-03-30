@@ -116,3 +116,9 @@ wslpath -w /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
 ```
 
 **Always remember**: In WSL, use Windows path format for all dotnet commands.
+
+## WSL Environment - dotnet Parallel Build Rule
+
+Do **NOT** run multiple independent `dotnet build` commands in parallel when the projects share dependencies or output paths.
+
+Use MSBuild parallelism **inside one build** with `-m`, not by starting several `dotnet build` processes at the same time. Otherwise file locks may cause errors such as `CS2012` or `MSB3026`.
