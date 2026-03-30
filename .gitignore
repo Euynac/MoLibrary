@@ -218,6 +218,9 @@ rcf/
 AppPackages/
 BundleArtifacts/
 Package.StoreAssociation.xml
+
+# Rider bridge local MCP config
+.idea/rider-native-rename-mcp.json
 _pkginfo.txt
 *.appx
 *.appxbundle

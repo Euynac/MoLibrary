@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\common.xml" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <PackageDescription>Experimental Monica features under active development and not intended for NuGet publishing.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Tool\Monica.Tool.csproj" />
+  </ItemGroup>
+
+</Project>
