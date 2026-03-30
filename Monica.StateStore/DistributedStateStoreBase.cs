@@ -12,9 +12,9 @@ public abstract class DistributedStateStoreBase(ILogger logger) : StateStoreBase
     public abstract Task<Dictionary<string, T?>> QueryStateAsync<T>(Func<QueryBuilder<T>, IFinishedQueryBuilder<T>> query,
         CancellationToken cancellationToken = default) where T : class;
 
-    public abstract Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
+    public abstract Task<Dictionary<string, string>> GetRawBulkStateAsync(IReadOnlyList<string> keys,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default);
 
-    public abstract Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default);
+    public abstract Task<string?> GetRawStateAsync(string key, CancellationToken cancellationToken = default);
 }

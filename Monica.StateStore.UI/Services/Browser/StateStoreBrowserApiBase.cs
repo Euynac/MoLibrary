@@ -164,7 +164,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     {
         if (provider is IDistributedStateStore distributedProvider)
         {
-            return await distributedProvider.GetStateAsync(key, cancellationToken);
+            return await distributedProvider.GetRawStateAsync(key, cancellationToken);
         }
 
         var value = await provider.GetStateAsync<object>(key, cancellationToken);

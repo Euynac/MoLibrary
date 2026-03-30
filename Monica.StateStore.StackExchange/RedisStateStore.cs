@@ -132,7 +132,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
             "Redis does not have native query capabilities. Consider using DaprStateStore with a queryable backend.");
     }
 
-    public override async Task<Dictionary<string, string>> GetBulkStateAsync(
+    public override async Task<Dictionary<string, string>> GetRawBulkStateAsync(
         IReadOnlyList<string> keys,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
@@ -247,7 +247,7 @@ public class RedisStateStore : DistributedStateStoreBase, IStateStoreKeyTtlReade
         }
     }
 
-    public override async Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default)
+    public override async Task<string?> GetRawStateAsync(string key, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

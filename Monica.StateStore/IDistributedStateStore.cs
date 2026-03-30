@@ -9,13 +9,13 @@ namespace Monica.StateStore;
 public interface IDistributedStateStore : IMoStateStore
 {
     /// <summary>
-    /// Get multiple states as raw strings
+    /// Get multiple state payloads as their raw serialized text
     /// </summary>
     /// <param name="keys">State keys</param>
     /// <param name="removeEmptyValue">Whether to remove empty values from result</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Dictionary of key-value pairs as strings</returns>
-    Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
+    /// <returns>Dictionary of key-value pairs containing the raw serialized text for each state</returns>
+    Task<Dictionary<string, string>> GetRawBulkStateAsync(IReadOnlyList<string> keys,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default);
 
@@ -30,10 +30,10 @@ public interface IDistributedStateStore : IMoStateStore
         CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
-    /// Get single state as raw string
+    /// Get a state payload as its raw serialized text
     /// </summary>
     /// <param name="key">State key</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>State data as string or null</returns>
-    Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default);
+    /// <returns>The raw serialized text for the state, or null when the key does not exist</returns>
+    Task<string?> GetRawStateAsync(string key, CancellationToken cancellationToken = default);
 }

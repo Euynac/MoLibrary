@@ -45,7 +45,7 @@ public enum EStateStoreCapabilities
     KeyScanning = 1 << 0,
 
     /// <summary>
-    /// Supports raw string retrieval
+    /// Supports retrieving the raw serialized text of stored state values
     /// </summary>
     RawStringRetrieval = 1 << 1,
 

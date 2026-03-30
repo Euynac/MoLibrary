@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Dapr.Client;
 using Microsoft.Extensions.Logging;
@@ -74,7 +75,7 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override async Task<Dictionary<string, string>> GetBulkStateAsync(IReadOnlyList<string> keys,
+    public override async Task<Dictionary<string, string>> GetRawBulkStateAsync(IReadOnlyList<string> keys,
         bool removeEmptyValue = true,
         CancellationToken cancellationToken = default)
     {
@@ -104,11 +105,12 @@ public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOp
         }
     }
 
-    public override async Task<string?> GetStateAsync(string key, CancellationToken cancellationToken = default)
+    public override async Task<string?> GetRawStateAsync(string key, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await dapr.GetStateAsync<string>(StateStoreName, key, cancellationToken: cancellationToken);
+            var data = await dapr.GetByteStateAsync(StateStoreName, key, cancellationToken: cancellationToken);
+            return data.IsEmpty ? null : Encoding.UTF8.GetString(data.Span);
         }
         catch (Exception e)
         {
