@@ -1,0 +1,124 @@
+using System.Globalization;
+using Monica.Office.Excel.Annotations;
+using Monica.Office.Excel.Models;
+using Monica.Office.Excel.Models.Internal;
+using Monica.Office.Excel.Services.Support;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+
+namespace Monica.Office.Excel.Providers.EpPlus.Export
+{
+    /// <summary>
+    /// EpPlus Excel export implementation. Versions earlier than 5.0.0 were free to use.
+    /// </summary>
+    /// <remarks>
+    /// Initializes a new instance.
+    /// </remarks>
+    internal class EpPlusExcelExportBase(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportProviderBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange, ExcelStyle>
+    {
+        protected override ExcelWorkbook GetWorkbook(ExcelExportOptions options)
+        {
+            var excelPackage = new ExcelPackage();
+            return excelPackage.Workbook;
+        }
+
+        protected override ExcelWorksheet CreateSheet(ExcelWorkbook workbook, ExcelExportOptions options)
+        {
+            return workbook.Worksheets.Add(options.SheetName);
+        }
+
+        protected override ExcelRange CreateCell(ExcelWorkbook workbook, ExcelWorksheet sheet, int rowIndex, int columnIndex)
+        {
+            return sheet.Cells[rowIndex + 1, columnIndex + 1];
+        }
+
+        protected override void SetCellValue(ExcelWorkbook workbook, ExcelWorksheet sheet, ExcelRange cell, Type valueType, object value)
+        {
+            if (valueType.IsDateTime())
+            {
+                var date = value.GetTypedCellValue<DateTime>();
+                if (date == default)
+                {
+                    cell.Value = date.ToString(CultureInfo.CurrentCulture);
+                }
+                else
+                {
+                    cell.Value = date;
+                }
+            }
+            else if (valueType.IsTimeSpan())
+            {
+                cell.Value = value.GetTypedCellValue<DateTime>().ToString(CultureInfo.CurrentCulture);
+            }
+            else
+            {
+                cell.Value = value;
+            }
+        }
+
+        protected override ExcelStyle CreateHeaderStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
+            HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
+        {
+            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetHeaderCellStyleAndFont(style, styleAttr, fontAttr));
+        }
+
+        protected override ExcelStyle CreateDataStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
+            DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
+        {
+            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetDataCellStyleAndFont(style, styleAttr, fontAttr));
+        }
+
+        protected override void SetHeaderCellStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell,
+            ExcelCellStyleOutput<ExcelStyle, HeaderStyleAttribute, HeaderFontAttribute> cellStyleInfo)
+        {
+            epPlusCellStyleHandle.SetHeaderCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
+
+        }
+
+        protected override void SetDataCellStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell,
+            ExcelCellStyleOutput<ExcelStyle, DataStyleAttribute, DataFontAttribute> cellStyleInfo)
+        {
+            epPlusCellStyleHandle.SetDataCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
+        }
+
+
+        protected override void SetColumnWidth(ExcelWorkbook workbook, ExcelWorksheet sheet, int columnIndex, int columnSize, bool columnAutoSize)
+        {
+            epPlusExcelHandle.SetColumnWidth(sheet, columnIndex + 1, columnSize, columnAutoSize);
+        }
+
+        protected override void SetRowHeight(ExcelWorkbook workbook, ExcelWorksheet worksheet, int rowIndex, short rowHeight)
+        {
+            epPlusExcelHandle.SetRowHeight(worksheet, rowIndex + 1, rowHeight);
+        }
+
+        protected override void SetMergedRegion(ExcelWorkbook workbook, ExcelWorksheet worksheet, int fromRowIndex, int toRowIndex,
+            int fromColumnIndex, int toColumnIndex)
+        {
+            epPlusExcelHandle.MergedRegion(worksheet, fromRowIndex + 1, toRowIndex + 1, fromColumnIndex + 1, toColumnIndex + 1);
+        }
+
+        protected override string GetCellAddress(ExcelWorkbook workbook, ExcelWorksheet worksheet, int rowIndex, int columnIndex)
+        {
+            return epPlusExcelHandle.GetCellAddress(rowIndex + 1, columnIndex + 1);
+        }
+
+
+        protected override void SetCellFormula(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell, string cellFormula)
+        {
+            cell.Formula = cellFormula;
+        }
+
+        protected override byte[] GetAsByteArray(ExcelWorkbook workbook, ExcelWorksheet sheet)
+        {
+            return epPlusExcelHandle.GetAsByteArray(workbook, sheet);
+        }
+
+        private static ExcelStyle CreateStyle(ExcelWorkbook workbook, Action<ExcelStyle> configure)
+        {
+            var namedStyle = workbook.Styles.CreateNamedStyle(Guid.NewGuid().ToString("N"));
+            configure(namedStyle.Style);
+            return namedStyle.Style;
+        }
+    }
+}

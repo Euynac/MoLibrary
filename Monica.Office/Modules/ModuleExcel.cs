@@ -4,12 +4,13 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Office.Excel;
-using Monica.Office.Excel.EpPlus;
-using Monica.Office.Excel.EpPlus.Export;
-using Monica.Office.Excel.EpPlus.Import;
-using Monica.Office.Excel.Npoi;
-using Monica.Office.Excel.Npoi.Export;
-using Monica.Office.Excel.Npoi.Import;
+using Monica.Office.Excel.Abstractions;
+using Monica.Office.Excel.Providers.EpPlus;
+using Monica.Office.Excel.Providers.EpPlus.Export;
+using Monica.Office.Excel.Providers.EpPlus.Import;
+using Monica.Office.Excel.Providers.Npoi;
+using Monica.Office.Excel.Providers.Npoi.Export;
+using Monica.Office.Excel.Providers.Npoi.Import;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -52,15 +53,15 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     /// Uses NPOI for Excel import and export
     /// </summary>
     /// <returns></returns>
-    public ModuleExcelGuide UseNpoiExcel()
+    public ModuleExcelGuide UseNpoi()
     {
         ConfigureServices(context =>
         {
             context.Services.AddSingleton<INpoiCellStyleHandle, NpoiCellStyleHandle>();
             context.Services.AddSingleton<INpoiExcelHandle, NpoiExcelHandle>();
 
-            context.Services.AddSingleton<IMoExcelImportManager, NpoiExcelImportProvider>();
-            context.Services.AddSingleton<IMoExcelExportManager, NpoiExcelExportProvider>();
+            context.Services.AddSingleton<IExcelImporter, NpoiExcelImportProvider>();
+            context.Services.AddSingleton<IExcelExporter, NpoiExcelExportProvider>();
         }, key: SET_EXCEL_PROVIDER);
         return this;
     }
@@ -69,15 +70,15 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     /// Uses EpPlus for Excel import and export
     /// </summary>
     /// <returns></returns>
-    public ModuleExcelGuide UseEpPlusExcel()
+    public ModuleExcelGuide UseEpPlus()
     {
         ConfigureServices(context =>
         {
             context.Services.AddSingleton<IEpPlusCellStyleHandle, EpPlusCellStyleHandle>();
             context.Services.AddSingleton<IEpPlusExcelHandle, EpPlusExcelHandle>();
 
-            context.Services.AddSingleton<IMoExcelImportManager, EpPlusExcelImportProvider>();
-            context.Services.AddSingleton<IMoExcelExportManager, EpPlusExcelExportProvider>();
+            context.Services.AddSingleton<IExcelImporter, EpPlusExcelImportProvider>();
+            context.Services.AddSingleton<IExcelExporter, EpPlusExcelExportProvider>();
         }, key: SET_EXCEL_PROVIDER);
         return this;
     }

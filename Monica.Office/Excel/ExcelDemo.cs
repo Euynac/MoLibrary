@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using Monica.Office.Excel.Attributes;
+using Monica.Office.Excel.Abstractions;
+using Monica.Office.Excel.Annotations;
 using Monica.Office.Excel.Models;
 using NPOI.HSSF.Util;
 using NPOI.SS.UserModel;
@@ -13,7 +14,7 @@ namespace Monica.Office.Excel
     /// <remarks>
     /// Initializes a new instance
     /// </remarks>
-    public class ExcelDemo(IMoExcelImportManager excelImportManager, IMoExcelExportManager excelExportManager)
+    internal class ExcelDemo(IExcelImporter excelImportManager, IExcelExporter excelExportManager)
     {
         /// <summary>
         /// Import test
@@ -207,7 +208,7 @@ namespace Monica.Office.Excel
             /// </summary>
             [Display(Name = "日期")]
             [DataStyle(DataFormat = "yyyy\"年\"m\"月\"d\"日\";@")]
-            [ColumnStats((int)FunctionEnum.Avg)]
+            [ColumnSummary((int)ColumnSummaryFunction.Avg)]
             public virtual DateTime? Date { get; set; }
 
             /// <summary>
@@ -221,7 +222,7 @@ namespace Monica.Office.Excel
             /// Age
             /// </summary>
             [Display(Name = "年龄")]
-            [ColumnStats((int)FunctionEnum.Avg)]
+            [ColumnSummary((int)ColumnSummaryFunction.Avg)]
             public virtual int Age { get; set; }
 
             /// <summary>
@@ -230,8 +231,8 @@ namespace Monica.Office.Excel
             [Display(Name = "成绩")]
             [HeaderFont(Color = 15)]
             [DataStyle(DataFormat = "#,##0.00_ ")]
-            [ColumnStats((int)FunctionEnum.Avg, OffsetRow = 4)]
-            [ColumnStats((int)FunctionEnum.Sum)]
+            [ColumnSummary((int)ColumnSummaryFunction.Avg, OffsetRow = 4)]
+            [ColumnSummary((int)ColumnSummaryFunction.Sum)]
             public virtual decimal? Score { get; set; }
 
             /// <summary>
