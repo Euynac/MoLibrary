@@ -190,6 +190,7 @@ if ((await service.GetDataAsync(id)).IsFailed(out var error, out var data))
 4. **Handle responses** using the `IsFailed` pattern to extract error and data
 5. **Required using**: Include `using Monica.Tool.Results;` where `Res` is used
 6. **Typed error details**: Use `AppendMetadata("error", payload)` rather than introducing a separate `ResError` model
+7. **Caught exceptions to `Res.Fail`**: When a UI service, Facade, or other result-envelope entry point converts a caught exception into `Res.Fail(...)`, return the full recursive message with `ex.GetMessageRecursively()` instead of only `ex.Message`, so nested exception details are preserved for diagnostics. This usually also requires `using Monica.Core.Extensions;`.
 
 For detailed `Res` type documentation, see `references/res-type-guide.md`.
 

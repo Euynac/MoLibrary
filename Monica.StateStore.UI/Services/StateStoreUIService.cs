@@ -4,6 +4,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
 using Monica.Modules;
@@ -85,7 +86,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get registered state store providers.");
-            return Res.Fail($"获取已注册 Provider 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("获取已注册 Provider 失败", ex));
         }
     }
 
@@ -107,7 +108,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get state store provider: {ServiceKey}", serviceKey);
-            return Res.Fail($"获取 Provider 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("获取 Provider 失败", ex));
         }
     }
 
@@ -418,7 +419,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to search keys for query: {Query}", request.Query);
-            return Res.Fail($"搜索 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("搜索 Key 失败", ex));
         }
     }
 
@@ -440,12 +441,12 @@ public class StateStoreUIService(
         }
         catch (KeyNotFoundException ex)
         {
-            return Res.Fail(ex.Message);
+            return Res.Fail(ex.GetMessageRecursively());
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load state store key: {Key}", key);
-            return Res.Fail($"获取 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("获取 Key 失败", ex));
         }
     }
 
@@ -466,7 +467,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to check whether key exists: {Key}", key);
-            return Res.Fail($"检查 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("检查 Key 失败", ex));
         }
     }
 
@@ -508,7 +509,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save state store key: {Key}", request.Key);
-            return Res.Fail($"保存 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("保存 Key 失败", ex));
         }
     }
 
@@ -552,7 +553,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create state store key: {Key}", request.Key);
-            return Res.Fail($"创建 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("创建 Key 失败", ex));
         }
     }
 
@@ -587,7 +588,7 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete state store key: {Key}", key);
-            return Res.Fail($"删除 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("删除 Key 失败", ex));
         }
     }
 
@@ -609,11 +610,16 @@ public class StateStoreUIService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete state store keys in bulk.");
-            return Res.Fail($"批量删除 Key 失败: {ex.Message}");
+            return Res.Fail(BuildDetailedErrorMessage("批量删除 Key 失败", ex));
         }
     }
 
     #endregion
+
+    private static string BuildDetailedErrorMessage(string operation, Exception ex)
+    {
+        return $"{operation}: {ex.GetMessageRecursively()}";
+    }
 
     private static object? ParseRequestValue(StateStoreKeyUpdateRequest request)
     {
