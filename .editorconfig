@@ -1,5 +1,14 @@
-[*.*]
+root = true
+
+[*]
 charset = utf-8
+end_of_line = lf
+
+[*.bat]
+end_of_line = crlf
+
+[*.cmd]
+end_of_line = crlf
 
 # Microsoft .NET properties
 csharp_new_line_before_members_in_object_initializers = false
