@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Monica.Core.Logging;
 using Monica.JobScheduler.Abstractions;
 
 namespace Monica.JobScheduler.Jobs;
@@ -32,5 +34,14 @@ namespace Monica.JobScheduler.Jobs;
 /// </remarks>
 public abstract class MoRecurringJob : IMoRecurringJob
 {
+    private readonly Lazy<ILogger> _loggerLazy;
+
+    protected MoRecurringJob()
+    {
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+    }
+
+    protected ILogger Logger => _loggerLazy.Value;
+
     public abstract Task ExecuteAsync(CancellationToken cancellationToken);
 }
