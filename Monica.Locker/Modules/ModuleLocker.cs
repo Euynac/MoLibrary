@@ -1,12 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
-using Medallion.Threading;
 using Monica.Core;
+using Monica.Locker.Abstractions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Locker.DistributedLocking;
-using Monica.Locker.Providers.Local;
+using Monica.Locker.Providers.InProcess;
 using Monica.Locker.Providers.Medallion;
+using Monica.Locker.Services;
+using MedallionDistributedLockProvider = Medallion.Threading.IDistributedLockProvider;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -31,7 +32,8 @@ public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, Mo
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IDistributedLockKeyNormalizer, DistributedLockKeyNormalizer>();
+        services.AddSingleton<LockKeyNormalizer>();
+        services.AddSingleton<IDistributedLock, DistributedLockService>();
     }
 }
 
@@ -39,15 +41,16 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(SetDistributedLockProvider)];
+        return [nameof(UseProvider)];
     }
 
-    public ModuleLockerGuide SetDistributedLockProvider<TProvider>() where TProvider : class, IMoDistributedLock
+    public ModuleLockerGuide UseProvider<TProvider>() where TProvider : class, ILockProvider
     {
         ConfigureServices(context =>
         {
-            context.Services.AddScoped<IMoDistributedLock, TProvider>();
+            context.Services.AddSingleton<ILockProvider, TProvider>();
         });
+
         return this;
     }
 
@@ -56,14 +59,17 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     /// </summary>
     /// <param name="distributedLockProvider">The Medallion distributed lock provider to use.</param>
     /// <returns>The service collection for chaining.</returns>
-    public ModuleLockerGuide AddMedallionDistributedLock(
-        IDistributedLockProvider distributedLockProvider)
+    public ModuleLockerGuide UseMedallionProvider(
+        MedallionDistributedLockProvider distributedLockProvider)
     {
+        ArgumentNullException.ThrowIfNull(distributedLockProvider);
+
+        UseProvider<MedallionLockProvider>();
         ConfigureServices(context =>
         {
             context.Services.AddSingleton(distributedLockProvider);
-            context.Services.AddSingleton<IMoDistributedLock, MedallionMoDistributedLock>();
         });
+
         return this;
     }
 
@@ -71,20 +77,21 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     /// Adds the local distributed locking provider to the service collection.
     /// </summary>
     /// <returns>The service collection for chaining.</returns>
-    public ModuleLockerGuide AddLocalDistributedLock()
+    public ModuleLockerGuide UseInProcessProvider()
     {
-        ConfigureServices(context =>
-        {
-            context.Services.AddSingleton<IMoDistributedLock, LocalMoDistributedLock>();
-        });
-        return this;
+        return UseProvider<InProcessLockProvider>();
     }
 }
 
 public class ModuleLockerOption : MoModuleOption<ModuleLocker>
 {
     /// <summary>
-    /// DistributedLock key prefix.
+    /// Lock key prefix used when normalizing logical resource names.
     /// </summary>
-    public string KeyPrefix { get; set; } = "";
+    public string LockKeyPrefix { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Default time to wait when acquiring a lock before returning null.
+    /// </summary>
+    public TimeSpan DefaultWaitTimeout { get; set; } = TimeSpan.FromMinutes(2);
 }

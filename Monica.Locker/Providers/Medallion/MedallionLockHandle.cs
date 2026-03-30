@@ -1,9 +1,9 @@
-﻿using Medallion.Threading;
-using Monica.Locker.DistributedLocking;
+using Medallion.Threading;
+using Monica.Locker.Abstractions;
 
 namespace Monica.Locker.Providers.Medallion;
 
-public class MedallionMoDistributedLockHandle(IDistributedSynchronizationHandle handle) : IMoDistributedLockHandle
+internal sealed class MedallionLockHandle(IDistributedSynchronizationHandle handle) : IDistributedLockHandle
 {
     public IDistributedSynchronizationHandle Handle { get; } = handle;
 

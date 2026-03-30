@@ -14,7 +14,7 @@ public static class ModuleDaprLockerBuilderExtensions
     public static ModuleDaprLockerGuide UseDaprProvider(this ModuleLockerGuide guide,
         Action<ModuleDaprLockerOption>? action = null)
     {
-        guide.SetDistributedLockProvider<DaprMoDistributedLock>();
+        guide.UseProvider<DaprLockProvider>();
         return new ModuleDaprLockerGuide().Register(action);
     }
 }
@@ -57,17 +57,15 @@ public class ModuleDaprLocker(ModuleDaprLockerOption option)
 
 public class ModuleDaprLockerGuide : MoModuleGuide<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>
 {
-    
-
 }
 
 public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
 {
     public string StoreName { get; set; } = default!;
 
-    public string? OwnerPrefix { get; set; }
+    public string? LockOwnerPrefix { get; set; }
 
-    public TimeSpan DefaultExpirationTimeout { get; set; } = TimeSpan.FromMinutes(2);
+    public TimeSpan DefaultLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Custom HTTP endpoint for Dapr sidecar. Falls back to DAPR_HTTP_ENDPOINT environment variable if not specified.

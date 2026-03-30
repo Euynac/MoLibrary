@@ -1,12 +1,12 @@
-﻿using Dapr.DistributedLock.Models;
-using Monica.Locker.DistributedLocking;
+using Dapr.DistributedLock.Models;
+using Monica.Locker.Abstractions;
 
 namespace Monica.Dapr.Locker;
 
 #pragma warning disable DAPR_DISTRIBUTEDLOCK // DaprDistributedLockClient is evaluation API
-public class DaprMoDistributedLockHandle(LockResponse lockResponse) : IMoDistributedLockHandle
+internal sealed class DaprLockHandle(LockResponse lockResponse) : IDistributedLockHandle
 {
-    protected LockResponse LockResponse { get; } = lockResponse;
+    private LockResponse LockResponse { get; } = lockResponse;
 
     public async ValueTask DisposeAsync()
     {

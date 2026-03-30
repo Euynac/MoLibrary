@@ -19,16 +19,16 @@ Mo.AddLocker()
     .UseDaprProvider(options =>
     {
         options.StoreName = "lockstore";
-        options.OwnerPrefix = "myapp-";
-        options.DefaultExpirationTimeout = TimeSpan.FromMinutes(2);
+        options.LockOwnerPrefix = "myapp-";
+        options.DefaultLeaseDuration = TimeSpan.FromMinutes(2);
     });
 ```
 
 **Configuration Options:**
 
 - **`StoreName`** (required): Name of the Dapr lock store component
-- **`OwnerPrefix`** (optional): Prefix for auto-generated lock owner IDs
-- **`DefaultExpirationTimeout`** (optional): Default lock expiration timeout (defaults to 2 minutes)
+- **`LockOwnerPrefix`** (optional): Prefix for auto-generated lock owner IDs
+- **`DefaultLeaseDuration`** (optional): Default lock lease duration (defaults to 2 minutes)
 
 ### Advanced Configuration
 
@@ -79,9 +79,9 @@ This enables environment-specific configuration without code changes.
 ```csharp
 public class MyService
 {
-    private readonly IMoDistributedLock _lock;
+    private readonly IDistributedLock _lock;
 
-    public MyService(IMoDistributedLock lock)
+    public MyService(IDistributedLock lock)
     {
         _lock = lock;
     }
@@ -90,8 +90,11 @@ public class MyService
     {
         // Try to acquire lock with automatic owner ID generation
         await using var handle = await _lock.TryAcquireAsync(
-            name: resourceId,
-            timeout: TimeSpan.FromSeconds(30)
+            resourceId,
+            new LockAcquisitionOptions
+            {
+                WaitTimeout = TimeSpan.FromSeconds(30)
+            }
         );
 
         if (handle == null)
@@ -115,9 +118,12 @@ public class MyService
 public async Task ProcessWithOwnerAsync(string resourceId, string instanceId)
 {
     await using var handle = await _lock.TryAcquireAsync(
-        name: resourceId,
-        owner: $"instance-{instanceId}",
-        timeout: TimeSpan.FromMinutes(5)
+        resourceId,
+        new LockAcquisitionOptions
+        {
+            Owner = $"instance-{instanceId}",
+            WaitTimeout = TimeSpan.FromMinutes(5)
+        }
     );
 
     if (handle == null)
@@ -161,7 +167,7 @@ Lock keys are automatically normalized with the configured prefix from `ModuleLo
 ```csharp
 Mo.AddLocker(options =>
 {
-    options.KeyPrefix = "myapp:locks:";
+    options.LockKeyPrefix = "myapp:locks:";
 });
 
 // Lock name "resource-123" becomes "myapp:locks:resource-123"
@@ -194,12 +200,13 @@ This module previously used `DaprClient.Lock()` but has been migrated to `DaprDi
 
 ### Breaking Changes
 
-None for consumers of the `IMoDistributedLock` interface. The migration is transparent:
+The current locker contract was simplified during the module refactor:
 
-- Same `IMoDistributedLock` interface
-- Same method signatures
-- Same behavior and semantics
-- Configuration structure unchanged (only new optional properties added)
+- `IMoDistributedLock` was renamed to `IDistributedLock`
+- `TryAcquireAsync()` now accepts `LockAcquisitionOptions`
+- `KeyPrefix` was renamed to `LockKeyPrefix`
+- `OwnerPrefix` was renamed to `LockOwnerPrefix`
+- `DefaultExpirationTimeout` was renamed to `DefaultLeaseDuration`
 
 ### Internal Changes
 
@@ -233,12 +240,13 @@ The implementation includes automatic retry logic:
 Locks automatically expire after the specified timeout:
 
 - Prevents deadlocks if a process crashes while holding a lock
-- Timeout applies to both acquisition attempt and lock hold duration
-- Configure appropriate timeouts based on expected operation duration
+- Wait timeout controls how long acquisition is retried
+- Lease duration controls how long the acquired Dapr lock is held
+- Configure both values based on expected operation duration
 
 ### Owner IDs
 
-- Auto-generated: `{OwnerPrefix}{Guid.NewGuid()}`
+- Auto-generated: `{LockOwnerPrefix}{Guid.NewGuid()}`
 - Custom: Provide explicit owner ID for tracking and debugging
 - Useful for identifying which instance holds a lock
 
@@ -284,7 +292,7 @@ catch (Exception ex)
 
 ### Timeout Errors
 
-1. Increase `DefaultExpirationTimeout` in configuration
+1. Increase `DefaultWaitTimeout` or `DefaultLeaseDuration` in configuration
 2. Reduce duration of locked operations
 3. Check for deadlocks or stuck locks
 4. Monitor lock contention metrics
