@@ -6,11 +6,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Office.Excel;
 using Monica.Office.Excel.Abstractions;
 using Monica.Office.Excel.Providers.EpPlus;
-using Monica.Office.Excel.Providers.EpPlus.Export;
-using Monica.Office.Excel.Providers.EpPlus.Import;
 using Monica.Office.Excel.Providers.Npoi;
-using Monica.Office.Excel.Providers.Npoi.Export;
-using Monica.Office.Excel.Providers.Npoi.Import;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -57,8 +53,8 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<INpoiCellStyleHandle, NpoiCellStyleHandle>();
-            context.Services.AddSingleton<INpoiExcelHandle, NpoiExcelHandle>();
+            context.Services.AddSingleton<INpoiCellStyleSupport, NpoiCellStyleSupport>();
+            context.Services.AddSingleton<INpoiWorkbookSupport, NpoiWorkbookSupport>();
 
             context.Services.AddSingleton<IExcelImporter, NpoiExcelImportProvider>();
             context.Services.AddSingleton<IExcelExporter, NpoiExcelExportProvider>();
@@ -74,8 +70,8 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IEpPlusCellStyleHandle, EpPlusCellStyleHandle>();
-            context.Services.AddSingleton<IEpPlusExcelHandle, EpPlusExcelHandle>();
+            context.Services.AddSingleton<IEpPlusCellStyleSupport, EpPlusCellStyleSupport>();
+            context.Services.AddSingleton<IEpPlusWorkbookSupport, EpPlusWorkbookSupport>();
 
             context.Services.AddSingleton<IExcelImporter, EpPlusExcelImportProvider>();
             context.Services.AddSingleton<IExcelExporter, EpPlusExcelExportProvider>();

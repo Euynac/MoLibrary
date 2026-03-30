@@ -4,14 +4,14 @@ using OfficeOpenXml;
 namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
-    /// EpPlus workbook handler
+    /// EpPlus workbook support.
     /// </summary>
-    internal class EpPlusExcelHandle : IEpPlusExcelHandle
+    internal class EpPlusWorkbookSupport : IEpPlusWorkbookSupport
     {
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public EpPlusExcelHandle()
+        public EpPlusWorkbookSupport()
         {
         }
 
@@ -22,7 +22,7 @@ namespace Monica.Office.Excel.Providers.EpPlus
         /// <returns></returns>
         public virtual ExcelWorkbook GetWorkbook(string physicalPath)
         {
-            ExcelHelper.ValidationExcel(physicalPath);
+            ExcelFileValidator.Validate(physicalPath);
 
             using var stream = new FileStream(physicalPath, FileMode.Open, FileAccess.Read);
             return GetWorkbook(stream);
@@ -85,10 +85,10 @@ namespace Monica.Office.Excel.Providers.EpPlus
         /// <param name="columnIndex">The current column index, one-based.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        public virtual object? ConverterCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex, Type valueType)
+        public virtual object? ConvertCellValue(ExcelWorksheet sheet, int rowIndex, int columnIndex, Type valueType)
         {
             var cell = sheet.Cells[rowIndex, columnIndex];
-            return ConverterCellValue(sheet, cell, valueType);
+            return ConvertCellValue(sheet, cell, valueType);
         }
 
         /// <summary>
@@ -98,10 +98,10 @@ namespace Monica.Office.Excel.Providers.EpPlus
         /// <param name="cell">The cell.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        public virtual object? ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType)
+        public virtual object? ConvertCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType)
         {
             var cellValue = GetMergedCellValue(sheet, cell);
-            return cellValue.ConvertExcelCellValue(valueType);
+            return cellValue.ConvertCellValue(valueType);
         }
 
         /// <summary>

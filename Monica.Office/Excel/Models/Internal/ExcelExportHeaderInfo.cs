@@ -5,7 +5,7 @@ namespace Monica.Office.Excel.Models.Internal
     /// <summary>
     /// Exported Excel header information.
     /// </summary>
-    public class ExcelExportHeaderInfo
+    internal class ExcelExportHeaderInfo
     {
         /// <summary>
         /// Associated property.

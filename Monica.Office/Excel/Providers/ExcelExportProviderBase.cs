@@ -111,7 +111,7 @@ namespace Monica.Office.Excel.Providers
         public ExcelExportHeaderInfo[] CheckHeader<TExportDto>(ExcelHeaderRequest[] requests,
             ExcelExportOptions options) where TExportDto : class
         {
-            return ExcelHelper.CheckHeader<TExportDto>(requests, options.DisallowDuplicateHeader);
+            return ExcelHeaderResolver.ResolveHeaders<TExportDto>(requests, options.DisallowDuplicateHeader);
         }
 
         #region Private
@@ -651,7 +651,7 @@ namespace Monica.Office.Excel.Providers
         /// <returns></returns>
         private PropertyInfo[] GetHeaderProperties<TExportDto>() where TExportDto : class
         {
-            return ExcelHelper.GetProperties<TExportDto>();
+            return ExcelPropertyResolver.GetProperties<TExportDto>();
         }
 
         /// <summary>

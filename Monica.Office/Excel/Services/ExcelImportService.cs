@@ -30,7 +30,7 @@ namespace Monica.Office.Excel.Services
         {
             try
             {
-                ExcelHelper.ValidationExcel(filePhysicalPath);
+                ExcelFileValidator.Validate(filePhysicalPath);
 
                 using var stream = new FileStream(filePhysicalPath, FileMode.Open, FileAccess.Read);
                 return Import<TImportDto>(stream, optionAction);

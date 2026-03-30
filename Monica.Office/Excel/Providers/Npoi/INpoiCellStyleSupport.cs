@@ -4,9 +4,9 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
-    /// NPOI cell style handler
+    /// NPOI cell style support.
     /// </summary>
-    internal interface INpoiCellStyleHandle
+    internal interface INpoiCellStyleSupport
     {
         /// <summary>
         /// Applies the header cell style and font.

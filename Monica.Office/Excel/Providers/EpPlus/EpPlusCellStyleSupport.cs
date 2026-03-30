@@ -4,14 +4,14 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
-    /// EpPlus cell style handler
+    /// EpPlus cell style support.
     /// </summary>
-    internal class EpPlusCellStyleHandle : IEpPlusCellStyleHandle
+    internal class EpPlusCellStyleSupport : IEpPlusCellStyleSupport
     {
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public EpPlusCellStyleHandle()
+        public EpPlusCellStyleSupport()
         {
         }
 

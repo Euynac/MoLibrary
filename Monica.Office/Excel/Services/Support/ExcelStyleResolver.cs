@@ -18,7 +18,7 @@ namespace Monica.Office.Excel.Services.Support
         //{
         //    var list = new List<ExcelCellStyleInfo<HeaderStyleAttribute, HeaderFontAttribute>>();
 
-        //    foreach (var p in ExcelHelper.GetProperties<TExportDto>())
+        //    foreach (var p in ExcelPropertyResolver.GetProperties<TExportDto>())
         //    {
         //        list.Add(p.GetHeaderStyleFont<TExportDto>());
         //    }
@@ -35,7 +35,7 @@ namespace Monica.Office.Excel.Services.Support
         //{
         //    var list = new List<ExcelCellStyleInfo<DataStyleAttribute, DataFontAttribute>>();
 
-        //    foreach (var p in ExcelHelper.GetProperties<TExportDto>())
+        //    foreach (var p in ExcelPropertyResolver.GetProperties<TExportDto>())
         //    {
         //        list.Add(p.GetDataStyleFont<TExportDto>());
         //    }

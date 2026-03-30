@@ -223,7 +223,7 @@ namespace Monica.Office.Excel.Providers
                 if (entity != null)
                 {
                     // Validate the row data
-                    var errors = ExcelHelper.GetValidationResult(entity) ?? [];
+                    var errors = ExcelObjectValidator.GetValidationResults(entity) ?? [];
 
                     var rowInfo = new ExcelImportRowResult<TImportDto>
                     {
@@ -311,7 +311,7 @@ namespace Monica.Office.Excel.Providers
             }
 
             // Property names
-            var propertyNames = ExcelHelper.GetDisplayNameListFromProperty<TImportDto>();
+            var propertyNames = ExcelPropertyResolver.GetDisplayNames<TImportDto>();
 
             if (!propertyNames.Any())
             {
@@ -356,11 +356,11 @@ namespace Monica.Office.Excel.Providers
             };
 
             // Properties
-            var properties = ExcelHelper.GetProperties<TImportDto>();
+            var properties = ExcelPropertyResolver.GetProperties<TImportDto>();
 
             foreach (var p in properties)
             {
-                var name = p.GetDisplayNameFromProperty()?.Trim();
+                var name = p.GetDisplayName().Trim();
                 var cell = headerCellInfo.HeaderCells.FirstOrDefault(a => a.Name.Trim() == name);
                 if (cell != null)
                 {

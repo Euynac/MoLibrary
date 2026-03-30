@@ -1,7 +1,7 @@
 using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Services;
 
-namespace Monica.Office.Excel.Providers.Npoi.Import
+namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
     /// NPOI Excel import provider
@@ -9,11 +9,11 @@ namespace Monica.Office.Excel.Providers.Npoi.Import
     /// <remarks>
     /// Initializes a new instance.
     /// </remarks>
-    internal class NpoiExcelImportProvider(INpoiExcelHandle npoiExcelHandle) : ExcelImportService
+    internal class NpoiExcelImportProvider(INpoiWorkbookSupport npoiWorkbookSupport) : ExcelImportService
     {
         protected override List<ExcelSheetImportResult<TImportDto>> ImplementImport<TImportDto>(Stream fileStream, Action<ExcelImportOptions>? optionAction)
         {
-            var import = new NpoiExcelImportBase(npoiExcelHandle);
+            var import = new NpoiExcelImportBase(npoiWorkbookSupport);
 
             return import.ProcessExcelFile<TImportDto>(fileStream, optionAction);
         }

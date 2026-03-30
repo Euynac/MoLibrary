@@ -4,9 +4,9 @@ using OfficeOpenXml.Style;
 namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
-    /// EpPlus cell style handler
+    /// EpPlus cell style support.
     /// </summary>
-    internal interface IEpPlusCellStyleHandle
+    internal interface IEpPlusCellStyleSupport
     {
         /// <summary>
         /// Applies the header cell style and font.

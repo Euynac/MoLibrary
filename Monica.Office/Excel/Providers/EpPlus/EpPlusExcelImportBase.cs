@@ -3,7 +3,7 @@ using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Models.Internal;
 using OfficeOpenXml;
 
-namespace Monica.Office.Excel.Providers.EpPlus.Import
+namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
     /// EpPlus Excel import implementation. Versions earlier than 5.0.0 were free to use.
@@ -11,7 +11,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Import
     /// <remarks>
     /// Initializes a new instance.
     /// </remarks>
-    internal class EpPlusExcelImportBase(IEpPlusExcelHandle epPlusExcelHandle) : ExcelImportProviderBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange>
+    internal class EpPlusExcelImportBase(IEpPlusWorkbookSupport epPlusWorkbookSupport) : ExcelImportProviderBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange>
     {
         protected override ExcelWorkbook GetWorkbook(Stream fileStream)
         {
@@ -45,7 +45,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Import
 
             for (var i = 1; i <= worksheet.Dimension.End.Column; i++)
             {
-                var name = epPlusExcelHandle.GetMergedCellValue(worksheet, headerRow.Row, i)?.ToString();
+                var name = epPlusWorkbookSupport.GetMergedCellValue(worksheet, headerRow.Row, i)?.ToString();
 
                 if (string.IsNullOrWhiteSpace(name))
                 {
@@ -78,12 +78,12 @@ namespace Monica.Office.Excel.Providers.EpPlus.Import
 
         protected override object? ConvertCellValue(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRow dataRow, int columnIndex, PropertyInfo property)
         {
-            return epPlusExcelHandle.ConverterCellValue(worksheet, dataRow.Row, columnIndex, property.PropertyType);
+            return epPlusWorkbookSupport.ConvertCellValue(worksheet, dataRow.Row, columnIndex, property.PropertyType);
         }
 
         protected override string GetCellAddress(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRow dataRow, int columnIndex)
         {
-            return epPlusExcelHandle.GetCellAddress(dataRow.Row, columnIndex);
+            return epPlusWorkbookSupport.GetCellAddress(dataRow.Row, columnIndex);
         }
     }
 }

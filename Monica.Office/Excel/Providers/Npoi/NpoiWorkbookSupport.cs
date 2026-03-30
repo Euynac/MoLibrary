@@ -10,14 +10,14 @@ using NPOI.XSSF.UserModel;
 namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
-    /// NPOI workbook handler
+    /// NPOI workbook support.
     /// </summary>
-    internal class NpoiExcelHandle : INpoiExcelHandle
+    internal class NpoiWorkbookSupport : INpoiWorkbookSupport
     {
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public NpoiExcelHandle()
+        public NpoiWorkbookSupport()
         {
         }
 
@@ -28,7 +28,7 @@ namespace Monica.Office.Excel.Providers.Npoi
         /// <returns></returns>
         public virtual IWorkbook GetWorkbook(string physicalPath)
         {
-            ExcelHelper.ValidationExcel(physicalPath);
+            ExcelFileValidator.Validate(physicalPath);
 
             using var stream = new FileStream(physicalPath, FileMode.Open, FileAccess.Read);
             return GetWorkbook(stream);
@@ -283,7 +283,7 @@ namespace Monica.Office.Excel.Providers.Npoi
         /// <param name="columnIndex">The current column index, zero-based.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        public virtual object? ConverterCellValue(IRow? row, int columnIndex, Type valueType)
+        public virtual object? ConvertCellValue(IRow? row, int columnIndex, Type valueType)
         {
             var cell = row?.GetCell(columnIndex);
             if (cell == null)
@@ -292,7 +292,7 @@ namespace Monica.Office.Excel.Providers.Npoi
             }
 
             var cellValue = GetMergedCellValue(cell.Sheet, cell);
-            return cellValue.ConvertExcelCellValue(valueType);
+            return cellValue.ConvertCellValue(valueType);
         }
 
         /// <summary>

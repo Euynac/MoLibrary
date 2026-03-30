@@ -7,15 +7,15 @@ using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
-namespace Monica.Office.Excel.Providers.Npoi.Export
-{
+namespace Monica.Office.Excel.Providers.Npoi
+{   
     /// <summary>
     /// NPOI Excel export implementation
     /// </summary>
     /// <remarks>
     /// Initializes a new instance.
     /// </remarks>
-    internal class NpoiExcelExportBase(INpoiCellStyleHandle npoiCellStyleHandle, INpoiExcelHandle npoiExcelHandle) : ExcelExportProviderBase<IWorkbook, ISheet, IRow, ICell, ICellStyle>
+    internal class NpoiExcelExportBase(INpoiCellStyleSupport npoiCellStyleSupport, INpoiWorkbookSupport npoiWorkbookSupport) : ExcelExportProviderBase<IWorkbook, ISheet, IRow, ICell, ICellStyle>
     {
         protected override IWorkbook GetWorkbook(ExcelExportOptions options)
         {
@@ -48,13 +48,13 @@ namespace Monica.Office.Excel.Providers.Npoi.Export
         {
             if (value != null)
             {
-                if (valueType.IsDouble())
+                if (valueType.IsNumeric())
                 {
-                    cell.SetCellValue(value.GetTypedCellValue<double>());
+                    cell.SetCellValue(value.GetTypedValue<double>());
                 }
                 else if (valueType.IsDateTime())
                 {
-                    var date = value.GetTypedCellValue<DateTime>();
+                    var date = value.GetTypedValue<DateTime>();
                     if (date == default)
                     {
                         cell.SetCellValue(date.ToString(CultureInfo.CurrentCulture));
@@ -66,11 +66,11 @@ namespace Monica.Office.Excel.Providers.Npoi.Export
                 }
                 else if (valueType.IsTimeSpan())
                 {
-                    cell.SetCellValue(value.GetTypedCellValue<DateTime>().ToString(CultureInfo.CurrentCulture));
+                    cell.SetCellValue(value.GetTypedValue<DateTime>().ToString(CultureInfo.CurrentCulture));
                 }
                 else if (valueType.IsBool())
                 {
-                    cell.SetCellValue(value.GetTypedCellValue<bool>());
+                    cell.SetCellValue(value.GetTypedValue<bool>());
                 }
                 else
                 {
@@ -81,12 +81,12 @@ namespace Monica.Office.Excel.Providers.Npoi.Export
 
         protected override ICellStyle CreateHeaderStyleAndFont<TExportDto>(IWorkbook workbook, ISheet worksheet, HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
         {
-            return npoiCellStyleHandle.SetHeaderCellStyleAndFont(workbook, styleAttr, fontAttr);
+            return npoiCellStyleSupport.SetHeaderCellStyleAndFont(workbook, styleAttr, fontAttr);
         }
 
         protected override ICellStyle CreateDataStyleAndFont<TExportDto>(IWorkbook workbook, ISheet worksheet, DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
         {
-            return npoiCellStyleHandle.SetDataCellStyleAndFont(workbook, styleAttr, fontAttr);
+            return npoiCellStyleSupport.SetDataCellStyleAndFont(workbook, styleAttr, fontAttr);
         }
 
         protected override void SetHeaderCellStyleAndFont<TExportDto>(IWorkbook workbook, ISheet worksheet, ICell cell,
@@ -102,23 +102,23 @@ namespace Monica.Office.Excel.Providers.Npoi.Export
 
         protected override void SetColumnWidth(IWorkbook workbook, ISheet sheet, int columnIndex, int columnSize, bool columnAutoSize)
         {
-            npoiExcelHandle.SetColumnWidth(sheet, columnIndex, columnSize, columnAutoSize);
+            npoiWorkbookSupport.SetColumnWidth(sheet, columnIndex, columnSize, columnAutoSize);
         }
 
         protected override void SetRowHeight(IWorkbook workbook, ISheet worksheet, int rowIndex, short rowHeight)
         {
-            npoiExcelHandle.SetRowHeight(worksheet, worksheet.GetRow(rowIndex), rowHeight);
+            npoiWorkbookSupport.SetRowHeight(worksheet, worksheet.GetRow(rowIndex), rowHeight);
         }
 
         protected override void SetMergedRegion(IWorkbook workbook, ISheet worksheet, int fromRowIndex, int toRowIndex,
             int fromColumnIndex, int toColumnIndex)
         {
-            npoiExcelHandle.MergedRegion(worksheet, fromRowIndex, toRowIndex, fromColumnIndex, toColumnIndex);
+            npoiWorkbookSupport.MergedRegion(worksheet, fromRowIndex, toRowIndex, fromColumnIndex, toColumnIndex);
         }
 
         protected override string GetCellAddress(IWorkbook workbook, ISheet worksheet, int rowIndex,int columnIndex)
         {
-            return npoiExcelHandle.GetCellAddress(rowIndex, columnIndex);
+            return npoiWorkbookSupport.GetCellAddress(rowIndex, columnIndex);
         }
 
         protected override void SetCellFormula(IWorkbook workbook, ISheet worksheet, ICell cell, string cellFormula)
@@ -128,7 +128,7 @@ namespace Monica.Office.Excel.Providers.Npoi.Export
 
         protected override byte[] GetAsByteArray(IWorkbook workbook, ISheet sheet)
         {
-            return npoiExcelHandle.GetAsByteArray(workbook);
+            return npoiWorkbookSupport.GetAsByteArray(workbook);
         }
 
     }

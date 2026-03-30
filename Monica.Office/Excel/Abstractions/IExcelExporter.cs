@@ -16,6 +16,15 @@ namespace Monica.Office.Excel.Abstractions
         List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class;
 
         /// <summary>
+        /// Validates export header requests against the export DTO.
+        /// </summary>
+        /// <typeparam name="TExportDto">The DTO type to export.</typeparam>
+        /// <param name="requests">The requested headers. An empty array means all exportable headers.</param>
+        /// <param name="disallowDuplicateHeader">Whether duplicate requested headers should be rejected.</param>
+        void ValidateHeaders<TExportDto>(ExcelHeaderRequest[] requests, bool disallowDuplicateHeader = false)
+            where TExportDto : class;
+
+        /// <summary>
         /// Exports data
         /// </summary>
         /// <typeparam name="TExportDto">The element type in <paramref name="data"/>. Columns are exported in <typeparamref name="TExportDto"/> property order.</typeparam>

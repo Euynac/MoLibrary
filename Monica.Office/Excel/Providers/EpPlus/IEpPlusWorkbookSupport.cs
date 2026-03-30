@@ -3,9 +3,9 @@ using OfficeOpenXml;
 namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
-    /// EpPlus workbook handler
+    /// EpPlus workbook support.
     /// </summary>
-    internal interface IEpPlusExcelHandle
+    internal interface IEpPlusWorkbookSupport
     {
         /// <summary>
         /// Gets an <see cref="ExcelWorkbook"/>.
@@ -46,7 +46,7 @@ namespace Monica.Office.Excel.Providers.EpPlus
         /// <param name="column">The current column index, one-based.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        object? ConverterCellValue(ExcelWorksheet sheet, int row, int column, Type valueType);
+        object? ConvertCellValue(ExcelWorksheet sheet, int row, int column, Type valueType);
 
         /// <summary>
         /// Converts a cell value.
@@ -55,7 +55,7 @@ namespace Monica.Office.Excel.Providers.EpPlus
         /// <param name="cell">The cell.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        object? ConverterCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType);
+        object? ConvertCellValue(ExcelWorksheet sheet, ExcelRange cell, Type valueType);
 
         /// <summary>
         /// Sets the width for a single column. Call this after creating the column. Auto-fit requires existing cell data.

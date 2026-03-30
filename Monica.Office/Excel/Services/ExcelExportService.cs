@@ -24,10 +24,22 @@ namespace Monica.Office.Excel.Services
         /// <returns></returns>
         public List<ExcelExportHeaderOutput> GetExportHeader<TExportDto>() where TExportDto : class
         {
-            return ExcelHelper.GetProperties<TExportDto>().Select(a => new ExcelExportHeaderOutput
+            return ExcelPropertyResolver.GetProperties<TExportDto>().Select(a => new ExcelExportHeaderOutput
             {
-                HeaderName = a.GetDisplayNameFromProperty()
+                HeaderName = a.GetDisplayName()
             }).ToList();
+        }
+
+        /// <summary>
+        /// Validates export header requests against the export DTO.
+        /// </summary>
+        /// <typeparam name="TExportDto">The DTO type to export.</typeparam>
+        /// <param name="requests">The requested headers. An empty array means all exportable headers.</param>
+        /// <param name="disallowDuplicateHeader">Whether duplicate requested headers should be rejected.</param>
+        public void ValidateHeaders<TExportDto>(ExcelHeaderRequest[] requests, bool disallowDuplicateHeader = false)
+            where TExportDto : class
+        {
+            ExcelHeaderResolver.ResolveHeaders<TExportDto>(requests, disallowDuplicateHeader);
         }
 
         public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null,

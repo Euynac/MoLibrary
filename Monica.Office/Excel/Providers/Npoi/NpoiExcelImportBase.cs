@@ -3,7 +3,7 @@ using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Models.Internal;
 using NPOI.SS.UserModel;
 
-namespace Monica.Office.Excel.Providers.Npoi.Import
+namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
     /// NPOI Excel import implementation
@@ -11,13 +11,11 @@ namespace Monica.Office.Excel.Providers.Npoi.Import
     /// <remarks>
     /// Initializes a new instance.
     /// </remarks>
-    internal class NpoiExcelImportBase(INpoiExcelHandle npoiExcelHandle) : ExcelImportProviderBase<IWorkbook, ISheet, IRow, ICell>
+    internal class NpoiExcelImportBase(INpoiWorkbookSupport npoiWorkbookSupport) : ExcelImportProviderBase<IWorkbook, ISheet, IRow, ICell>
     {
-        public INpoiExcelHandle _npoiExcelHandle = npoiExcelHandle;
-
         protected override IWorkbook GetWorkbook(Stream fileStream)
         {
-            return _npoiExcelHandle.GetWorkbook(fileStream);
+            return npoiWorkbookSupport.GetWorkbook(fileStream);
         }
         protected override int GetWorksheetNumber(IWorkbook workbook)
         {
@@ -50,7 +48,7 @@ namespace Monica.Office.Excel.Providers.Npoi.Import
 
             foreach (var cell in headerRow.Cells)
             {
-                var name = _npoiExcelHandle.GetMergedCellValue(worksheet, cell)?.ToString();
+                var name = npoiWorkbookSupport.GetMergedCellValue(worksheet, cell)?.ToString();
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     continue;
@@ -80,12 +78,12 @@ namespace Monica.Office.Excel.Providers.Npoi.Import
 
         protected override object? ConvertCellValue(IWorkbook workbook, ISheet worksheet, IRow dataRow, int columnIndex, PropertyInfo property)
         {
-            return _npoiExcelHandle.ConverterCellValue(dataRow, columnIndex, property.PropertyType);
+            return npoiWorkbookSupport.ConvertCellValue(dataRow, columnIndex, property.PropertyType);
         }
 
         protected override string GetCellAddress(IWorkbook workbook, ISheet worksheet, IRow dataRow, int columnIndex)
         {
-            return _npoiExcelHandle.GetCellAddress(dataRow.RowNum, columnIndex);
+            return npoiWorkbookSupport.GetCellAddress(dataRow.RowNum, columnIndex);
         }
     }
 }

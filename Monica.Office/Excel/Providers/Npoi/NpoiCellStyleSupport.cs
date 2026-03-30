@@ -4,14 +4,14 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
-    /// NPOI cell style handler
+    /// NPOI cell style support.
     /// </summary>
-    internal class NpoiCellStyleHandle : INpoiCellStyleHandle
+    internal class NpoiCellStyleSupport : INpoiCellStyleSupport
     {
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public NpoiCellStyleHandle()
+        public NpoiCellStyleSupport()
         {
         }
 

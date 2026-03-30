@@ -3,9 +3,9 @@ using NPOI.SS.UserModel;
 namespace Monica.Office.Excel.Providers.Npoi
 {
     /// <summary>
-    /// NPOI workbook handler interface
+    /// NPOI workbook support.
     /// </summary>
-    internal interface INpoiExcelHandle
+    internal interface INpoiWorkbookSupport
     {
         /// <summary>
         /// Gets an <see cref="IWorkbook"/>.
@@ -68,7 +68,7 @@ namespace Monica.Office.Excel.Providers.Npoi
         /// <param name="columnIndex">The current column index, zero-based.</param>
         /// <param name="valueType">The target value type, for example <c>PropertyInfo.PropertyType</c>, <c>typeof(int?)</c>, <c>typeof(bool)</c>, or <c>typeof(string)</c>.</param>
         /// <returns></returns>
-        object? ConverterCellValue(IRow? row, int columnIndex, Type valueType);
+        object? ConvertCellValue(IRow? row, int columnIndex, Type valueType);
 
         /// <summary>
         /// Gets the default cell style.

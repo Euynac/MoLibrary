@@ -6,7 +6,7 @@ using Monica.Office.Excel.Services.Support;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
-namespace Monica.Office.Excel.Providers.EpPlus.Export
+namespace Monica.Office.Excel.Providers.EpPlus
 {
     /// <summary>
     /// EpPlus Excel export implementation. Versions earlier than 5.0.0 were free to use.
@@ -14,7 +14,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Export
     /// <remarks>
     /// Initializes a new instance.
     /// </remarks>
-    internal class EpPlusExcelExportBase(IEpPlusCellStyleHandle epPlusCellStyleHandle, IEpPlusExcelHandle epPlusExcelHandle) : ExcelExportProviderBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange, ExcelStyle>
+    internal class EpPlusExcelExportBase(IEpPlusCellStyleSupport epPlusCellStyleSupport, IEpPlusWorkbookSupport epPlusWorkbookSupport) : ExcelExportProviderBase<ExcelWorkbook, ExcelWorksheet, ExcelRow, ExcelRange, ExcelStyle>
     {
         protected override ExcelWorkbook GetWorkbook(ExcelExportOptions options)
         {
@@ -36,7 +36,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Export
         {
             if (valueType.IsDateTime())
             {
-                var date = value.GetTypedCellValue<DateTime>();
+                var date = value.GetTypedValue<DateTime>();
                 if (date == default)
                 {
                     cell.Value = date.ToString(CultureInfo.CurrentCulture);
@@ -48,7 +48,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Export
             }
             else if (valueType.IsTimeSpan())
             {
-                cell.Value = value.GetTypedCellValue<DateTime>().ToString(CultureInfo.CurrentCulture);
+                cell.Value = value.GetTypedValue<DateTime>().ToString(CultureInfo.CurrentCulture);
             }
             else
             {
@@ -59,48 +59,48 @@ namespace Monica.Office.Excel.Providers.EpPlus.Export
         protected override ExcelStyle CreateHeaderStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
             HeaderStyleAttribute styleAttr, HeaderFontAttribute fontAttr)
         {
-            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetHeaderCellStyleAndFont(style, styleAttr, fontAttr));
+            return CreateStyle(workbook, style => epPlusCellStyleSupport.SetHeaderCellStyleAndFont(style, styleAttr, fontAttr));
         }
 
         protected override ExcelStyle CreateDataStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet,
             DataStyleAttribute styleAttr, DataFontAttribute fontAttr)
         {
-            return CreateStyle(workbook, style => epPlusCellStyleHandle.SetDataCellStyleAndFont(style, styleAttr, fontAttr));
+            return CreateStyle(workbook, style => epPlusCellStyleSupport.SetDataCellStyleAndFont(style, styleAttr, fontAttr));
         }
 
         protected override void SetHeaderCellStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell,
             ExcelCellStyleOutput<ExcelStyle, HeaderStyleAttribute, HeaderFontAttribute> cellStyleInfo)
         {
-            epPlusCellStyleHandle.SetHeaderCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
+            epPlusCellStyleSupport.SetHeaderCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
 
         }
 
         protected override void SetDataCellStyleAndFont<TExportDto>(ExcelWorkbook workbook, ExcelWorksheet worksheet, ExcelRange cell,
             ExcelCellStyleOutput<ExcelStyle, DataStyleAttribute, DataFontAttribute> cellStyleInfo)
         {
-            epPlusCellStyleHandle.SetDataCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
+            epPlusCellStyleSupport.SetDataCellStyleAndFont(cell.Style, cellStyleInfo.StyleAttr, cellStyleInfo.FontAttr);
         }
 
 
         protected override void SetColumnWidth(ExcelWorkbook workbook, ExcelWorksheet sheet, int columnIndex, int columnSize, bool columnAutoSize)
         {
-            epPlusExcelHandle.SetColumnWidth(sheet, columnIndex + 1, columnSize, columnAutoSize);
+            epPlusWorkbookSupport.SetColumnWidth(sheet, columnIndex + 1, columnSize, columnAutoSize);
         }
 
         protected override void SetRowHeight(ExcelWorkbook workbook, ExcelWorksheet worksheet, int rowIndex, short rowHeight)
         {
-            epPlusExcelHandle.SetRowHeight(worksheet, rowIndex + 1, rowHeight);
+            epPlusWorkbookSupport.SetRowHeight(worksheet, rowIndex + 1, rowHeight);
         }
 
         protected override void SetMergedRegion(ExcelWorkbook workbook, ExcelWorksheet worksheet, int fromRowIndex, int toRowIndex,
             int fromColumnIndex, int toColumnIndex)
         {
-            epPlusExcelHandle.MergedRegion(worksheet, fromRowIndex + 1, toRowIndex + 1, fromColumnIndex + 1, toColumnIndex + 1);
+            epPlusWorkbookSupport.MergedRegion(worksheet, fromRowIndex + 1, toRowIndex + 1, fromColumnIndex + 1, toColumnIndex + 1);
         }
 
         protected override string GetCellAddress(ExcelWorkbook workbook, ExcelWorksheet worksheet, int rowIndex, int columnIndex)
         {
-            return epPlusExcelHandle.GetCellAddress(rowIndex + 1, columnIndex + 1);
+            return epPlusWorkbookSupport.GetCellAddress(rowIndex + 1, columnIndex + 1);
         }
 
 
@@ -111,7 +111,7 @@ namespace Monica.Office.Excel.Providers.EpPlus.Export
 
         protected override byte[] GetAsByteArray(ExcelWorkbook workbook, ExcelWorksheet sheet)
         {
-            return epPlusExcelHandle.GetAsByteArray(workbook, sheet);
+            return epPlusWorkbookSupport.GetAsByteArray(workbook, sheet);
         }
 
         private static ExcelStyle CreateStyle(ExcelWorkbook workbook, Action<ExcelStyle> configure)
