@@ -4,6 +4,9 @@ using Monica.Locker.Models;
 
 namespace Monica.Locker.Providers.Medallion;
 
+/// <summary>
+/// Adapts a Medallion distributed lock provider to Monica's locker abstraction.
+/// </summary>
 public sealed class MedallionLockProvider(
     IDistributedLockProvider distributedLockProvider)
     : ILockProvider

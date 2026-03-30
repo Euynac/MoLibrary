@@ -48,6 +48,13 @@ When handling questions around how to work with native Microsoft technologies, s
 ## Coding Annotations
 
 - All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.
+- Add necessary developer-facing documentation, not just code that compiles.
+- Public and developer-facing types must have appropriate XML doc comments, especially `Abstractions/`, public `Models/`, `Annotations/`, module `Option` classes, module `Guide` classes, and builder extension methods.
+- `Option` properties must explain purpose, effect, important defaults, and when a developer should configure them.
+- `Guide` methods and builder extensions must explain what they register or enable, required prerequisites, and notable side effects or usage constraints.
+- Public abstractions must explain the contract clearly, including intended usage, lifecycle/ownership expectations, nullability semantics, and exception/timeout behavior when relevant.
+- Internal code should also include brief comments for non-obvious logic, especially complex branching, concurrency, normalization rules, caching, retries, or cross-module coordination.
+- Do not add comments for obvious code; comments must provide real developer guidance.
 
 ## Code Quality Principles
 

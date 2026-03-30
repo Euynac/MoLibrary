@@ -4,6 +4,7 @@ using Monica.Locker.Abstractions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Locker.Models;
 using Monica.Locker.Providers.InProcess;
 using Monica.Locker.Providers.Medallion;
 using Monica.Locker.Services;
@@ -17,8 +18,10 @@ public static class ModuleLockerBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configure the Locker module
+        /// Registers the Locker module and returns its guide for provider configuration.
         /// </summary>
+        /// <param name="action">Optional module option configuration.</param>
+        /// <returns>The locker guide used to select a concrete lock provider.</returns>
         public static ModuleLockerGuide AddLocker(Action<ModuleLockerOption>? action = null)
         {
             return new ModuleLockerGuide().Register(action);
@@ -26,10 +29,12 @@ public static class ModuleLockerBuilderExtensions
     }
 }
 
+/// <summary>
+/// Registers the shared locker services and exposes <see cref="IDistributedLock"/> to application code.
+/// </summary>
 [ModuleKey(EMoModuleKey.Locker)]
 public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<LockKeyNormalizer>();
@@ -37,6 +42,9 @@ public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, Mo
     }
 }
 
+/// <summary>
+/// Configures which lock provider backs the Locker module.
+/// </summary>
 public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
@@ -44,6 +52,11 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
         return [nameof(UseProvider)];
     }
 
+    /// <summary>
+    /// Registers a custom <see cref="ILockProvider"/> implementation.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider type used to acquire and release locks.</typeparam>
+    /// <returns>The current guide instance.</returns>
     public ModuleLockerGuide UseProvider<TProvider>() where TProvider : class, ILockProvider
     {
         ConfigureServices(context =>
@@ -55,10 +68,10 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     }
 
     /// <summary>
-    /// Adds the Medallion distributed locking provider to the service collection.
+    /// Registers the Medallion-based distributed lock provider.
     /// </summary>
     /// <param name="distributedLockProvider">The Medallion distributed lock provider to use.</param>
-    /// <returns>The service collection for chaining.</returns>
+    /// <returns>The current guide instance.</returns>
     public ModuleLockerGuide UseMedallionProvider(
         MedallionDistributedLockProvider distributedLockProvider)
     {
@@ -74,24 +87,27 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
     }
 
     /// <summary>
-    /// Adds the local distributed locking provider to the service collection.
+    /// Registers the in-process lock provider for single-process scenarios and local development.
     /// </summary>
-    /// <returns>The service collection for chaining.</returns>
+    /// <returns>The current guide instance.</returns>
     public ModuleLockerGuide UseInProcessProvider()
     {
         return UseProvider<InProcessLockProvider>();
     }
 }
 
+/// <summary>
+/// Configures cross-provider locker defaults.
+/// </summary>
 public class ModuleLockerOption : MoModuleOption<ModuleLocker>
 {
     /// <summary>
-    /// Lock key prefix used when normalizing logical resource names.
+    /// Prefix applied to every logical lock name before it reaches the active provider.
     /// </summary>
     public string LockKeyPrefix { get; set; } = string.Empty;
 
     /// <summary>
-    /// Default time to wait when acquiring a lock before returning null.
+    /// Default time to wait for a lock when a caller does not provide <see cref="LockAcquisitionOptions.WaitTimeout"/>.
     /// </summary>
     public TimeSpan DefaultWaitTimeout { get; set; } = TimeSpan.FromMinutes(2);
 }

@@ -5,12 +5,19 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Locker;
+using Monica.Locker.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
 public static class ModuleDaprLockerBuilderExtensions
 {
+    /// <summary>
+    /// Registers the Dapr lock provider on top of the Locker module and returns the Dapr-specific guide.
+    /// </summary>
+    /// <param name="guide">The locker guide that should use the Dapr provider.</param>
+    /// <param name="action">Optional Dapr locker option configuration.</param>
+    /// <returns>The Dapr locker guide.</returns>
     public static ModuleDaprLockerGuide UseDaprProvider(this ModuleLockerGuide guide,
         Action<ModuleDaprLockerOption>? action = null)
     {
@@ -19,29 +26,28 @@ public static class ModuleDaprLockerBuilderExtensions
     }
 }
 
+/// <summary>
+/// Registers the Dapr distributed lock client integration used by <see cref="DaprLockProvider"/>.
+/// </summary>
 [ModuleKey(EMoModuleKey.DaprLocker)]
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
     : MoModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register DaprDistributedLockClient with configuration
+        // Keep client customization here so provider code only focuses on acquisition semantics.
         services.AddDaprDistributedLock((serviceProvider, clientBuilder) =>
         {
-            // Apply custom HTTP endpoint if configured
             if (!string.IsNullOrWhiteSpace(option.DaprHttpEndpoint))
             {
                 clientBuilder.UseHttpEndpoint(option.DaprHttpEndpoint);
             }
 
-            // Apply custom API token if configured
             if (!string.IsNullOrWhiteSpace(option.DaprApiToken))
             {
                 clientBuilder.UseDaprApiToken(option.DaprApiToken);
             }
 
-            // Apply custom gRPC channel options if configured
             if (option.GrpcChannelOptions != null)
             {
                 clientBuilder.UseGrpcChannelOptions(option.GrpcChannelOptions);
@@ -55,35 +61,51 @@ public class ModuleDaprLocker(ModuleDaprLockerOption option)
     }
 }
 
+/// <summary>
+/// Configures the Dapr-backed locker integration.
+/// </summary>
 public class ModuleDaprLockerGuide : MoModuleGuide<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>
 {
 }
 
+/// <summary>
+/// Configures how Monica talks to Dapr when acquiring distributed locks.
+/// </summary>
 public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
 {
+    /// <summary>
+    /// Name of the Dapr lock store component used by lock requests.
+    /// </summary>
     public string StoreName { get; set; } = default!;
 
+    /// <summary>
+    /// Prefix added to auto-generated owner ids when a caller does not supply <see cref="LockAcquisitionOptions.Owner"/>.
+    /// </summary>
     public string? LockOwnerPrefix { get; set; }
 
+    /// <summary>
+    /// Default lease duration used when <see cref="LockAcquisitionOptions.LeaseDuration"/> is not provided.
+    /// </summary>
     public TimeSpan DefaultLeaseDuration { get; set; } = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Custom HTTP endpoint for Dapr sidecar. Falls back to DAPR_HTTP_ENDPOINT environment variable if not specified.
+    /// Custom HTTP endpoint for the Dapr sidecar. When omitted, Dapr's default endpoint resolution still applies.
     /// </summary>
     public string? DaprHttpEndpoint { get; set; }
 
     /// <summary>
-    /// Custom gRPC endpoint for Dapr sidecar. Falls back to DAPR_GRPC_ENDPOINT environment variable if not specified.
+    /// Reserved for future explicit gRPC endpoint customization. The current registration path relies on Dapr's default
+    /// endpoint resolution and optional <see cref="GrpcChannelOptions"/> overrides.
     /// </summary>
     public string? DaprGrpcEndpoint { get; set; }
 
     /// <summary>
-    /// API token for Dapr authentication. Falls back to DAPR_API_TOKEN environment variable if not specified.
+    /// API token used for Dapr authentication. When omitted, Dapr's default token resolution still applies.
     /// </summary>
     public string? DaprApiToken { get; set; }
 
     /// <summary>
-    /// Custom gRPC channel options for advanced scenarios.
+    /// Custom gRPC channel options applied to the distributed lock client.
     /// </summary>
     public GrpcChannelOptions? GrpcChannelOptions { get; set; }
 }

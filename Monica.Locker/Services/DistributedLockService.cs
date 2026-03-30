@@ -5,6 +5,10 @@ using Monica.Modules;
 
 namespace Monica.Locker.Services;
 
+/// <summary>
+/// Orchestrates lock acquisition by normalizing resource names and applying module defaults before delegating to the
+/// configured provider.
+/// </summary>
 internal sealed class DistributedLockService(
     ILockProvider lockProvider,
     LockKeyNormalizer keyNormalizer,
@@ -27,6 +31,7 @@ internal sealed class DistributedLockService(
 
     private LockAcquisitionOptions CreateEffectiveOptions(LockAcquisitionOptions? options)
     {
+        // Centralize default resolution here so providers only need to handle concrete effective values.
         return new LockAcquisitionOptions
         {
             Owner = options?.Owner,

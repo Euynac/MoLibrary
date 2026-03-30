@@ -5,8 +5,12 @@ using Monica.Locker.Models;
 
 namespace Monica.Locker.Providers.InProcess;
 
+/// <summary>
+/// Provides process-local locking backed by <c>AsyncKeyedLock</c>.
+/// </summary>
 public sealed class InProcessLockProvider : ILockProvider
 {
+    // Reuse keyed semaphore instances across acquisitions to avoid allocating a new lock object per key.
     private readonly AsyncKeyedLocker<string> _lockPool = new(options =>
     {
         options.PoolSize = 20;
