@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.Core.Features.MoDecorator;
+using Monica.Experimental.Features.MoDecorator;
 
 namespace Examples.Monica;
 

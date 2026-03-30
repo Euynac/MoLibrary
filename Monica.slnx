@@ -16,6 +16,7 @@
   <Project Path="Monica.DataChannel/Monica.DataChannel.csproj" />
   <Project Path="Monica.DevOps/Monica.DevOps.csproj" />
   <Project Path="Monica.DependencyInjection/Monica.DependencyInjection.csproj" />
+  <Project Path="Monica.Experimental/Monica.Experimental.csproj" />
   <Project Path="Monica.DomainDrivenDesign/Monica.DomainDrivenDesign.csproj" />
   <Project Path="Monica.EventBus/Monica.EventBus.csproj" />
   <Project Path="Monica.Framework.Generators/Monica.Framework.Generators.csproj" />

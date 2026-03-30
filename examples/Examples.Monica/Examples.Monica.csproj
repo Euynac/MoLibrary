@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Monica.DataChannel\Monica.DataChannel.csproj" />
+    <ProjectReference Include="..\..\Monica.Experimental\Monica.Experimental.csproj" />
     <ProjectReference Include="..\..\Monica.Framework\Monica.Framework.csproj" />
   </ItemGroup>
 
