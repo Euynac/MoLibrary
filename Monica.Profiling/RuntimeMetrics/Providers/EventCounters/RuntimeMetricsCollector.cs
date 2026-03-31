@@ -1,29 +1,27 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Tracing;
-using Monica.Profiling.Models;
+using Monica.Profiling.RuntimeMetrics.Models;
 
-namespace Monica.Profiling.Services;
+namespace Monica.Profiling.RuntimeMetrics.Providers.EventCounters;
 
 /// <summary>
-/// Performance Metrics Collector
-/// Use System.Runtime EventCounters to collect runtime performance indicators (memory, CPU, GC, thread pool, etc.) in real time,
-/// And maintain historical data for trend analysis and real-time monitoring
+/// Collects runtime EventCounters and periodically snapshots them into a bounded in-memory history.
 /// </summary>
-public class ProfilingMetricsCollector : EventListener, IDisposable
+internal sealed class RuntimeMetricsCollector : EventListener, IDisposable
 {
     private readonly ConcurrentDictionary<string, double> _counters = new();
-    private readonly ConcurrentQueue<MemoryDataPoint> _history = new();
+    private readonly ConcurrentQueue<RuntimeMetricsPoint> _history = new();
     private readonly int _maxHistoryPoints;
     private readonly Timer _snapshotTimer;
     private volatile bool _isDisposed;
-    private volatile MemoryDataPoint? _latestDataPoint;
+    private volatile RuntimeMetricsPoint? _latestPoint;
 
     /// <summary>
     /// Initialize the performance indicator collector
     /// </summary>
     /// <param name="maxHistoryPoints">Maximum number of historical data points (default 300 = 5 minutes)</param>
     /// <param name="sampleIntervalMs">Sampling interval in milliseconds (default 1000ms)</param>
-    public ProfilingMetricsCollector(int maxHistoryPoints = 300, int sampleIntervalMs = 1000)
+    public RuntimeMetricsCollector(int maxHistoryPoints = 300, int sampleIntervalMs = 1000)
     {
         _maxHistoryPoints = maxHistoryPoints;
         SampleIntervalMs = sampleIntervalMs;
@@ -53,7 +51,7 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     /// <summary>
     /// Fires when the indicator is updated
     /// </summary>
-    public event Action<MemoryDataPoint>? OnMetricsUpdated;
+    public event Action<RuntimeMetricsPoint>? MetricsUpdated;
 
     /// <summary>
     /// Called when the EventSource is created
@@ -108,7 +106,7 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
         if (_isDisposed)
             return;
 
-        var dataPoint = new MemoryDataPoint
+        var dataPoint = new RuntimeMetricsPoint
         {
             Timestamp = DateTime.UtcNow,
             GcHeapSizeMB = GetCounter("gc-heap-size"),
@@ -128,13 +126,13 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
             ThreadCount = (int)GetCounter("threadpool-thread-count")
         };
 
-        _latestDataPoint = dataPoint;
+        _latestPoint = dataPoint;
         _history.Enqueue(dataPoint);
 
         // Maintain maximum historical points
         while (_history.Count > _maxHistoryPoints) _history.TryDequeue(out _);
 
-        OnMetricsUpdated?.Invoke(dataPoint);
+        MetricsUpdated?.Invoke(dataPoint);
     }
 
     /// <summary>
@@ -148,14 +146,14 @@ public class ProfilingMetricsCollector : EventListener, IDisposable
     /// <summary>
     /// Get the latest data point
     /// </summary>
-    public MemoryDataPoint? GetCurrentDataPoint() => _latestDataPoint;
+    public RuntimeMetricsPoint? GetCurrentPoint() => _latestPoint;
 
     /// <summary>
     /// Get historical data
     /// </summary>
-    public MemoryTrendData GetTrendData()
+    public RuntimeMetricsTrend GetTrend()
     {
-        return new MemoryTrendData
+        return new RuntimeMetricsTrend
         {
             DataPoints = _history.ToList(),
             MaxHistoryPoints = _maxHistoryPoints,

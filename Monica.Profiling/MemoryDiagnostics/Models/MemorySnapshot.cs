@@ -1,6 +1,6 @@
 using System.Runtime;
 
-namespace Monica.Profiling.Models;
+namespace Monica.Profiling.MemoryDiagnostics.Models;
 
 /// <summary>
 /// Memory snapshot - memory state at a certain moment

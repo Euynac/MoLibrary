@@ -1,10 +1,10 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Modules
 @using Monica.Profiling.UIProfiling.Components
-@implements IAsyncDisposable
-@inject IMemoryAnalysisService MemoryService
+@inject ProfilingDashboardPageState PageState
 @inject IOptions<ModuleProfilingUIOption> Options
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>内存分析</PageTitle>
 
@@ -12,39 +12,43 @@
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h4">内存分析</MudText>
         <div class="d-flex gap-2 align-center">
-            <MudSwitch T="bool" @bind-Value="autoRefresh" Color="Color.Primary" Label="自动刷新"/>
+            <MudSwitch T="bool"
+                       Value="@PageState.AutoRefresh"
+                       ValueChanged="SetAutoRefresh"
+                       Color="Color.Primary"
+                       Label="自动刷新"/>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                            Color="Color.Primary"
                            OnClick="RefreshDataAsync"
-                           Disabled="isLoading"/>
+                           Disabled="PageState.IsLoading"/>
         </div>
     </div>
 
     <MudTabs Elevation="4" Rounded="true" Color="Color.Primary"
-             @bind-ActivePanelIndex="activeTabIndex">
+             @bind-ActivePanelIndex="PageState.ActiveTabIndex">
         <MudTabPanel Text="内存概览" Icon="@Icons.Material.Filled.Memory">
             <div class="pa-4">
-                <MemoryOverviewCard Snapshot="currentSnapshot" IsLoading="isLoading"/>
+                <MemoryOverviewCard Snapshot="PageState.CurrentSnapshot" IsLoading="PageState.IsLoading"/>
             </div>
         </MudTabPanel>
 
         <MudTabPanel Text="GC 统计" Icon="@Icons.Material.Filled.Analytics">
             <div class="pa-4">
-                <GCStatisticsCard GCInfo="gcInfo" IsLoading="isLoading"/>
+                <GCStatisticsCard GCInfo="PageState.CurrentGcDetails" IsLoading="PageState.IsLoading"/>
             </div>
         </MudTabPanel>
 
         <MudTabPanel Text="内存趋势" Icon="@Icons.Material.Filled.Timeline">
             <div class="pa-4">
-                <MemoryTrendChart TrendData="trendData" IsLoading="isLoading"/>
+                <MemoryTrendChart TrendData="PageState.TrendData" IsLoading="PageState.IsLoading"/>
             </div>
         </MudTabPanel>
 
-        @if (Options.Value.EnableTypeAllocationTracking)
+        @if (PageState.IsTypeAllocationTrackingEnabled)
         {
             <MudTabPanel Text="类型分配" Icon="@Icons.Material.Filled.Category">
                 <div class="pa-4">
-                    <TypeAllocationCard IsLoading="isLoading"/>
+                    <TypeAllocationCard IsLoading="PageState.IsLoading"/>
                 </div>
             </MudTabPanel>
         }
@@ -52,127 +56,80 @@
         <MudTabPanel Text="诊断操作" Icon="@Icons.Material.Filled.Build">
             <div class="pa-4">
                 <DiagnosticActionsCard Options="Options.Value"
-                                       OnForceGC="HandleForceGCAsync"
+                                       OnForceGC="HandleForceGcAsync"
                                        OnCreateDump="HandleCreateDumpAsync"
-                                       IsLoading="isLoading"/>
+                                       IsLoading="PageState.IsLoading"/>
             </div>
         </MudTabPanel>
     </MudTabs>
 </MudContainer>
 
 @code {
-public const string PAGE_URL = "/profiling-dashboard";
+    public const string PAGE_URL = "/profiling-dashboard";
 
-private MemorySnapshot? currentSnapshot;
-private DetailedGCInfo? gcInfo;
-private MemoryTrendData? trendData;
-private bool isLoading;
-private bool autoRefresh = true;
-private int activeTabIndex;
-private Timer? refreshTimer;
-private CancellationTokenSource? cts;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
 
-protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-if (firstRender)
-{
-cts = new CancellationTokenSource();
-await RefreshDataAsync();
-StartAutoRefresh();
-}
-}
+        PageState.StateChanged += HandleStateChanged;
+        var result = await PageState.InitializeAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+        }
+    }
 
-private void StartAutoRefresh()
-{
-var interval = Options.Value.AutoRefreshIntervalMs;
-if (interval > 0)
-{
-refreshTimer = new Timer(async _ =>
-{
-if (autoRefresh && !isLoading)
-{
-await InvokeAsync(async () =>
-{
-await RefreshDataAsync();
-});
-}
-}, null, interval, interval);
-}
-}
+    private async Task RefreshDataAsync()
+    {
+        var result = await PageState.RefreshAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+        }
+    }
 
-private async Task RefreshDataAsync()
-{
-if (isLoading) return;
+    private Task SetAutoRefresh(bool value)
+    {
+        PageState.SetAutoRefresh(value);
+        return Task.CompletedTask;
+    }
 
-isLoading = true;
-StateHasChanged();
+    private async Task HandleForceGcAsync(int generation)
+    {
+        var result = await PageState.ForceGarbageCollectionAsync(generation);
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "GC 执行失败", Severity.Error);
+            return;
+        }
 
-await Task.Yield();
+        Snackbar.Add(
+            $"GC 已完成 (Generation: {(generation < 0 ? "Full" : generation.ToString())})",
+            Severity.Success);
+    }
 
-try
-{
-currentSnapshot = MemoryService.GetCurrentSnapshot();
-gcInfo = MemoryService.GetDetailedGCInfo();
-trendData = MemoryService.GetMemoryTrend();
-}
-catch (Exception ex)
-{
-Snackbar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
-}
+    private async Task HandleCreateDumpAsync()
+    {
+        Snackbar.Add("正在创建 GC Dump，请稍候...", Severity.Info);
 
-isLoading = false;
-StateHasChanged();
-}
+        var result = await PageState.CreateGcDumpAsync();
+        if (result.IsFailed(out var error, out var dumpPath))
+        {
+            Snackbar.Add(error.Message ?? "操作失败", Severity.Error);
+            return;
+        }
 
-private async Task HandleForceGCAsync(int generation)
-{
-isLoading = true;
-StateHasChanged();
+        Snackbar.Add($"GC Dump 已创建: {dumpPath}", Severity.Success);
+    }
 
-var result = MemoryService.ForceGarbageCollection(generation);
-if (result.IsFailed(out var error))
-{
-Snackbar.Add($"GC 执行失败: {error.Message}", Severity.Error);
-}
-else
-{
-Snackbar.Add($"GC 已完成 (Generation: {(generation < 0 ? "Full" : generation.ToString())})", Severity.Success);
-await RefreshDataAsync();
-}
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
-isLoading = false;
-StateHasChanged();
-}
-
-private async Task HandleCreateDumpAsync()
-{
-isLoading = true;
-StateHasChanged();
-
-Snackbar.Add("正在创建 GC Dump，请稍候...", Severity.Info);
-
-var result = await MemoryService.TriggerGcDumpAsync();
-if (result.IsFailed(out var error))
-{
-Snackbar.Add(error.Message ?? "操作失败", Severity.Error);
-}
-else
-{
-Snackbar.Add($"GC Dump 已创建: {result.Data}", Severity.Success);
-}
-
-isLoading = false;
-StateHasChanged();
-}
-
-public async ValueTask DisposeAsync()
-{
-cts?.Cancel();
-cts?.Dispose();
-
-if (refreshTimer != null)
-{
-await refreshTimer.DisposeAsync();
-}
-}
+    public void Dispose()
+    {
+        PageState.StateChanged -= HandleStateChanged;
+        PageState.Dispose();
+    }
 }

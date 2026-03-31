@@ -1,9 +1,9 @@
-namespace Monica.Profiling.Models;
+namespace Monica.Profiling.RuntimeMetrics.Models;
 
 /// <summary>
 /// In-memory data points - for real-time monitoring and trending
 /// </summary>
-public class MemoryDataPoint
+public class RuntimeMetricsPoint
 {
     /// <summary>
     /// Timestamp
@@ -89,12 +89,12 @@ public class MemoryDataPoint
 /// <summary>
 /// Memory trend data
 /// </summary>
-public class MemoryTrendData
+public class RuntimeMetricsTrend
 {
     /// <summary>
     /// List of data points
     /// </summary>
-    public List<MemoryDataPoint> DataPoints { get; init; } = [];
+    public List<RuntimeMetricsPoint> DataPoints { get; init; } = [];
 
     /// <summary>
     /// Maximum historical points

@@ -1,4 +1,4 @@
-namespace Monica.Profiling.Models;
+namespace Monica.Profiling.TypeAllocation.Models;
 
 /// <summary>
 /// Type allocation snapshot - type allocation data at a certain point in time

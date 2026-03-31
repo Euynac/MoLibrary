@@ -1,10 +1,9 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Modules
 @using Monica.Profiling.UIProfiling.Components
-@implements IAsyncDisposable
-@inject ProfilingMetricsCollector MetricsCollector
-@inject IOptions<ModuleProfilingUIOption> Options
+@inject ProfilingMonitorPageState PageState
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>快速监控</PageTitle>
 
@@ -15,98 +14,68 @@
             <MudText Typo="Typo.h4">快速监控</MudText>
         </div>
         <div class="d-flex gap-2 align-center">
-            <MudChip T="string" Size="Size.Small" Color="@(autoRefresh ? Color.Success : Color.Default)">
-                @(autoRefresh ? "实时" : "已暂停")
+            <MudChip T="string" Size="Size.Small" Color="@(PageState.AutoRefresh ? Color.Success : Color.Default)">
+                @(PageState.AutoRefresh ? "实时" : "已暂停")
             </MudChip>
-            <MudSwitch T="bool" @bind-Value="autoRefresh" Color="Color.Primary" Label="自动刷新"/>
+            <MudSwitch T="bool"
+                       Value="@PageState.AutoRefresh"
+                       ValueChanged="SetAutoRefresh"
+                       Color="Color.Primary"
+                       Label="自动刷新"/>
             <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                            Color="Color.Primary"
-                           OnClick="RefreshData"
-                           Disabled="isLoading"/>
+                           OnClick="RefreshDataAsync"
+                           Disabled="PageState.IsLoading"/>
         </div>
     </div>
 
-    @* indicator card *@
     <div class="mb-4">
-        <QuickMonitorCard DataPoint="currentDataPoint"
-                          PreviousDataPoint="previousDataPoint"
-                          IsLoading="isLoading"/>
+        <QuickMonitorCard DataPoint="PageState.CurrentDataPoint"
+                          PreviousDataPoint="PageState.PreviousDataPoint"
+                          IsLoading="PageState.IsLoading"/>
     </div>
 
-    @* Trend chart *@
-    <QuickMonitorTrendChart TrendData="trendData" IsLoading="isLoading"/>
+    <QuickMonitorTrendChart TrendData="PageState.TrendData" IsLoading="PageState.IsLoading"/>
 </MudContainer>
 
 @code {
     public const string PAGE_URL = "/quick-monitor";
 
-    private MemoryDataPoint? currentDataPoint;
-    private MemoryDataPoint? previousDataPoint;
-    private MemoryTrendData? trendData;
-    private bool isLoading;
-    private bool autoRefresh = true;
-    private Timer? refreshTimer;
-    private CancellationTokenSource? cts;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            cts = new CancellationTokenSource();
-            RefreshData();
-            StartAutoRefresh();
-            await Task.CompletedTask;
+            return;
+        }
+
+        PageState.StateChanged += HandleStateChanged;
+        var result = await PageState.InitializeAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
         }
     }
 
-    private void StartAutoRefresh()
+    private async Task RefreshDataAsync()
     {
-        var interval = Options.Value.AutoRefreshIntervalMs;
-        if (interval > 0)
+        var result = await PageState.RefreshAsync();
+        if (result.IsFailed(out var error))
         {
-            refreshTimer = new Timer(_ =>
-            {
-                if (autoRefresh && !isLoading)
-                {
-                    InvokeAsync(RefreshData);
-                }
-            }, null, interval, interval);
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
         }
     }
 
-    private void RefreshData()
+    private Task SetAutoRefresh(bool value)
     {
-        if (isLoading) return;
-
-        isLoading = true;
-        StateHasChanged();
-
-        try
-        {
-            // Save the last data point for trend display
-            previousDataPoint = currentDataPoint;
-
-            // Get current data
-            currentDataPoint = MetricsCollector.GetCurrentDataPoint();
-            trendData = MetricsCollector.GetTrendData();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"刷新数据失败: {ex.Message}", Severity.Error);
-        }
-
-        isLoading = false;
-        StateHasChanged();
+        PageState.SetAutoRefresh(value);
+        return Task.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        cts?.Cancel();
-        cts?.Dispose();
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
-        if (refreshTimer != null)
-        {
-            await refreshTimer.DisposeAsync();
-        }
+    public void Dispose()
+    {
+        PageState.StateChanged -= HandleStateChanged;
+        PageState.Dispose();
     }
 }

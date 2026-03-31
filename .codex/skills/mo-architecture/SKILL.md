@@ -1,7 +1,7 @@
 ---
 name: mo-architecture
 description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.1.0
+version: 1.1.1
 ---
 
 # Monica Unified Module Architecture
@@ -21,6 +21,7 @@ Other skills reference this skill:
 **Page file getting large?** → Check the Page Decomposition Rules.
 **Unsure where a file goes?** → Check the Standard Layer Names table.
 **Unsure if something is public or internal?** → Check the Visibility Rules table.
+**Working in `Modules/`?** → See `Modules/ Is Registration Only`.
 **Grouping related files?** → Use prefix naming. Only create sub-folders for 6+ files. See Folder Depth & Grouping Rules.
 **Folder depth reaching 4 levels?** → Stop. Use prefix naming instead. Max depth is 3.
 
@@ -92,6 +93,19 @@ Providers do NOT orchestrate business workflows, manage page state, or return `R
 ### 6. Modules/ Is Registration Only
 
 `Modules/` contains only Module, Option, Guide, BuilderExtensions, dependency declarations, and DI registrations. No business logic.
+
+For Monica, these registration artifacts are typically **co-located in one file per module**:
+- Infrastructure module: `Modules/Module{Name}.cs`
+- UI module: `Modules/Module{Name}UI.cs`
+
+Keep `Module{Name}`, `Module{Name}Option`, `Module{Name}Guide`, and related builder extension methods together in that single file by default.
+
+Do NOT proactively split them into separate files such as:
+- `Module{Name}Option.cs`
+- `Module{Name}Guide.cs`
+- `Module{Name}BuilderExtensions.cs`
+
+Only split a module registration file when the user explicitly asks for that refactor.
 
 ### 7. Utils Is the Unified Utility Folder
 
@@ -178,7 +192,7 @@ Those are separate tasks requiring explicit user approval.
 | `Services/` | Implementation logic | Private |
 | `Services/Support/` | Registry, Resolver, Coordinator, Policy, Factory — use prefix naming to group | Private |
 | `Providers/` | Pluggable strategy implementations | Private |
-| `Modules/` | Module registration classes | Public |
+| `Modules/` | Module registration units | Public |
 | `Extensions/` | Extension methods | Depends on usage |
 | `Events/` | Domain/integration events | Public |
 | `Exceptions/` | Module-specific exception types | Public |
@@ -191,7 +205,7 @@ Group files within a layer using **prefix naming**. Only create sub-folders when
 ```
 Monica.{Name}/
 ├── Modules/
-│   └── Module{Name}.cs
+│   └── Module{Name}.cs                  # Consolidated module registration file
 ├── Abstractions/
 │   ├── I{Feature}.cs
 │   └── Internal/                        # (visibility boundary — sub-folder allowed)
@@ -250,8 +264,8 @@ Use **prefix naming** to group related support files (e.g., `PolicyRequirement.c
 ```
 Monica.{Name}/
 ├── Modules/
-│   ├── Module{Name}.cs
-│   └── Module{SubFeature}.cs
+│   ├── Module{Name}.cs                  # Consolidated root module registration file
+│   └── Module{SubFeature}.cs            # Consolidated sub-feature registration file
 ├── {FeatureA}/                          # OR under Features/
 │   ├── Abstractions/
 │   ├── Models/
@@ -291,7 +305,7 @@ UI modules are pure presentation layers:
 ```
 Monica.{Name}.UI/
 ├── Modules/
-│   └── Module{Name}UI.cs
+│   └── Module{Name}UI.cs                # Consolidated UI module registration file
 ├── Pages/
 │   ├── UI{Name}Page.razor
 │   └── UI{Name}Page.razor.css
@@ -312,9 +326,9 @@ When one UI project hosts multiple sub-modules:
 ```
 Monica.{Family}.UI/
 ├── Modules/
-│   ├── Module{FeatureA}UI.cs
-│   ├── Module{FeatureB}UI.cs
-│   └── Module{Family}UI.cs             # (optional, aggregator)
+│   ├── Module{FeatureA}UI.cs            # Consolidated registration file for FeatureA UI
+│   ├── Module{FeatureB}UI.cs            # Consolidated registration file for FeatureB UI
+│   └── Module{Family}UI.cs              # (optional, aggregator) consolidated registration file
 ├── Pages/
 │   ├── UI{FeatureA}Page.razor
 │   └── UI{FeatureB}Page.razor
@@ -362,8 +376,8 @@ Mixed modules contain both infrastructure and UI in one project.
 ```
 Monica.{Name}/
 ├── Modules/
-│   ├── Module{Name}.cs
-│   └── Module{Name}UI.cs
+│   ├── Module{Name}.cs                  # Consolidated infrastructure registration file
+│   └── Module{Name}UI.cs                # Consolidated UI registration file
 ├── Abstractions/
 │   └── Internal/
 ├── Models/

@@ -1,4 +1,4 @@
-namespace Monica.Profiling.Models;
+namespace Monica.Profiling.TypeAllocation.Models;
 
 /// <summary>
 /// Type Allocation Information - memory allocation statistics for a specific type

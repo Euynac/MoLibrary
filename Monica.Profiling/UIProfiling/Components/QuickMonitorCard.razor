@@ -1,3 +1,4 @@
+@using Monica.Profiling.RuntimeMetrics.Models
 @* Quick monitoring indicator card - displays 6 key indicators *@
 <MudGrid Spacing="3">
     @* CPU usage *@
@@ -6,13 +7,13 @@
             <div class="d-flex justify-space-between align-center">
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">CPU 使用率</MudText>
-                    <MudText Typo="Typo.h5" Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
+                    <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)">
                         @(IsLoading ? "..." : $"{DataPoint?.CpuUsagePercent ?? 0:F1}%")
                     </MudText>
                 </div>
-                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)" Size="Size.Large"/>
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)" Size="Size.Large"/>
             </div>
-            <MudProgressLinear Color="@GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)"
+            <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetCpuColor(DataPoint?.CpuUsagePercent ?? 0)"
                                Value="@(DataPoint?.CpuUsagePercent ?? 0)"
                                Class="mt-2"
                                Rounded="true"/>
@@ -67,13 +68,13 @@
             <div class="d-flex justify-space-between align-center">
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">GC 时间 %</MudText>
-                    <MudText Typo="Typo.h5" Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
+                    <MudText Typo="Typo.h5" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)">
                         @(IsLoading ? "..." : $"{DataPoint?.TimeInGcPercent ?? 0:F1}%")
                     </MudText>
                 </div>
-                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)" Size="Size.Large"/>
+                <MudIcon Icon="@Icons.Material.Filled.CleaningServices" Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)" Size="Size.Large"/>
             </div>
-            <MudProgressLinear Color="@GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)"
+            <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetGcTimeColor(DataPoint?.TimeInGcPercent ?? 0)"
                                Value="@Math.Min(DataPoint?.TimeInGcPercent ?? 0, 100)"
                                Class="mt-2"
                                Rounded="true"/>
@@ -87,7 +88,7 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">分配速率</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Warning">
-                        @(IsLoading ? "..." : FormatBytesPerSec(DataPoint?.AllocationRateBps ?? 0))
+                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytesPerSecond(DataPoint?.AllocationRateBps ?? 0))
                     </MudText>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Warning" Size="Size.Large"/>
@@ -124,28 +125,8 @@
 </MudGrid>
 
 @code {
-    [Parameter] public MemoryDataPoint? DataPoint { get; set; }
-    [Parameter] public MemoryDataPoint? PreviousDataPoint { get; set; }
+    [Parameter] public RuntimeMetricsPoint? DataPoint { get; set; }
+    [Parameter] public RuntimeMetricsPoint? PreviousDataPoint { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
-    private static Color GetCpuColor(double cpuPercent)
-    {
-        if (cpuPercent < 50) return Color.Success;
-        if (cpuPercent < 80) return Color.Warning;
-        return Color.Error;
-    }
-
-    private static Color GetGcTimeColor(double gcTimePercent)
-    {
-        if (gcTimePercent < 5) return Color.Success;
-        if (gcTimePercent < 15) return Color.Warning;
-        return Color.Error;
-    }
-
-    private static string FormatBytesPerSec(double bytesPerSec)
-    {
-        if (bytesPerSec < 1024) return $"{bytesPerSec:F0} B/s";
-        if (bytesPerSec < 1024 * 1024) return $"{bytesPerSec / 1024:F1} KB/s";
-        return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
-    }
 }

@@ -3,9 +3,8 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Profiling.Models;
 using Monica.Profiling.Pages;
-using Monica.Profiling.Services;
+using Monica.Profiling.UIProfiling.State;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -35,12 +34,10 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableProfilingPage)
+        if (!Option.DisableProfilingPages)
         {
-            // Depends on Profiling module
             DependsOnModule<ModuleProfilingGuide>().Register();
 
-            // Depend on the UI core module and register UI components
             DependsOnModule<ModuleUICoreGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
@@ -65,30 +62,9 @@ public class ModuleProfilingUI(ModuleProfilingUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // ProfilingMetricsCollector is registered in ModuleProfiling
-
-        // Register the memory analysis service as Scoped
-        services.AddScoped<IMemoryAnalysisService, MemoryAnalysisService>();
-
-        // Register type allocation tracking service (if enabled)
-        if (Option.EnableTypeAllocationTracking)
-        {
-            services.AddSingleton(sp =>
-            {
-                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TypeAllocationCollector>>();
-                return new TypeAllocationCollector(
-                    logger,
-                    maxTrackedTypes: Option.MaxTrackedTypes,
-                    autoStopAfter: Option.AutoStopAfter);
-            });
-            services.AddScoped<ITypeAllocationService, TypeAllocationService>();
-
-            // Register the autostart service (if enabled)
-            if (Option.AutoStartCollection)
-            {
-                services.AddHostedService<TypeAllocationAutoStartService>();
-            }
-        }
+        services.AddScoped<ProfilingMonitorPageState>();
+        services.AddScoped<ProfilingDashboardPageState>();
+        services.AddScoped<TypeAllocationPanelState>();
     }
 }
 
@@ -106,52 +82,25 @@ public class ModuleProfilingUIGuide
 public class ModuleProfilingUIOption : MoModuleOption<ModuleProfilingUI>
 {
     /// <summary>
-    /// Disable Profiling management page
+    /// Disables registration of the profiling UI pages and removes them from the navigation registry.
     /// </summary>
-    public bool DisableProfilingPage { get; set; } = false;
+    public bool DisableProfilingPages { get; set; }
 
     /// <summary>
-    /// Auto-refresh interval (milliseconds), 0 means auto-refresh is disabled
+    /// Controls the dashboard and quick-monitor refresh interval in milliseconds.
+    /// Set this to 0 to disable timer-based refresh and require manual refresh only.
     /// </summary>
     public int AutoRefreshIntervalMs { get; set; } = 2000;
 
     /// <summary>
-    /// Maximum number of historical data points
-    /// </summary>
-    public int MaxHistoryPoints { get; set; } = 300;
-
-    /// <summary>
-    /// Allow manual triggering of GC
+    /// Enables the manual GC action button in the diagnostics UI.
+    /// Disable this when operators should observe memory behavior without forcing collections.
     /// </summary>
     public bool AllowManualGC { get; set; } = true;
 
     /// <summary>
-    /// Allow GC Dump generation
+    /// Enables GC dump creation from the diagnostics UI.
+    /// Disable this if operators must not generate diagnostic dump files from the browser.
     /// </summary>
     public bool AllowGcDump { get; set; } = true;
-
-    /// <summary>
-    /// Enable type assignment tracking
-    /// </summary>
-    public bool EnableTypeAllocationTracking { get; set; } = true;
-
-    /// <summary>
-    /// Automatically start collecting distribution events when the application starts
-    /// </summary>
-    public bool AutoStartCollection { get; set; } = false;
-
-    /// <summary>
-    /// Default sampling mode (for automatic startup)
-    /// </summary>
-    public AllocationSamplingMode DefaultSamplingMode { get; set; } = AllocationSamplingMode.High;
-
-    /// <summary>
-    /// Maximum number of tracking types
-    /// </summary>
-    public int MaxTrackedTypes { get; set; } = 500;
-
-    /// <summary>
-    /// Automatically stop collection time, null means not to stop automatically
-    /// </summary>
-    public TimeSpan? AutoStopAfter { get; set; } = TimeSpan.FromMinutes(10);
 }

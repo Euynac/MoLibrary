@@ -1,3 +1,4 @@
+@using Monica.Profiling.RuntimeMetrics.Models
 @* Quick Monitoring Trend Graph - Shows CPU and Memory Trends *@
 <MudGrid Spacing="3">
     @* Trend chart *@
@@ -54,9 +55,9 @@
                     @foreach (var point in TrendData.DataPoints.TakeLast(10).Reverse())
                     {
                         <tr>
-                            <td>@point.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                            <td>@ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp)</td>
                             <td>
-                                <span class="@GetCpuClass(point.CpuUsagePercent)">
+                                <span class="@ProfilingSeverityColorResolver.GetCpuClass(point.CpuUsagePercent)">
                                     @point.CpuUsagePercent.ToString("F1")%
                                 </span>
                             </td>
@@ -64,11 +65,11 @@
                             <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
                             <td>@point.ThreadCount</td>
                             <td>
-                                <span class="@GetGcTimeClass(point.TimeInGcPercent)">
+                                <span class="@ProfilingSeverityColorResolver.GetGcTimeClass(point.TimeInGcPercent)">
                                     @point.TimeInGcPercent.ToString("F1")%
                                 </span>
                             </td>
-                            <td>@FormatBytesPerSec(point.AllocationRateBps)</td>
+                            <td>@ProfilingDisplayFormatter.FormatBytesPerSecond(point.AllocationRateBps)</td>
                         </tr>
                     }
                     </tbody>
@@ -83,7 +84,7 @@
 </MudGrid>
 
 @code {
-    [Parameter] public MemoryTrendData? TrendData { get; set; }
+    [Parameter] public RuntimeMetricsTrend? TrendData { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
     private List<ChartSeries<double>> chartSeries = [];
@@ -117,7 +118,7 @@
             .ToList();
 
         timeLabels = sampledData
-            .Select(p => p.Timestamp.ToLocalTime().ToString("HH:mm:ss"))
+            .Select(p => ProfilingDisplayFormatter.FormatLocalTime(p.Timestamp))
             .ToArray();
 
         chartSeries = [];
@@ -141,24 +142,4 @@
         }
     }
 
-    private static string FormatBytesPerSec(double bytesPerSec)
-    {
-        if (bytesPerSec < 1024) return $"{bytesPerSec:F0} B/s";
-        if (bytesPerSec < 1024 * 1024) return $"{bytesPerSec / 1024:F1} KB/s";
-        return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
-    }
-
-    private static string GetCpuClass(double percent)
-    {
-        if (percent < 50) return "";
-        if (percent < 80) return "mud-warning-text";
-        return "mud-error-text";
-    }
-
-    private static string GetGcTimeClass(double percent)
-    {
-        if (percent < 5) return "";
-        if (percent < 15) return "mud-warning-text";
-        return "mud-error-text";
-    }
 }

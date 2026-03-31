@@ -1,3 +1,4 @@
+@using Monica.Profiling.MemoryDiagnostics.Models
 <MudGrid Spacing="3">
     @* Last GC information *@
     <MudItem xs="12" lg="6">
@@ -14,7 +15,7 @@
                 <tr>
                     <td><strong>触发代数</strong></td>
                     <td>
-                        <MudChip T="string" Size="Size.Small" Color="@GetGenerationColor(GCInfo.Generation)">
+                        <MudChip T="string" Size="Size.Small" Color="@ProfilingSeverityColorResolver.GetGenerationColor(GCInfo.Generation)">
                             Gen @GCInfo.Generation
                         </MudChip>
                     </td>
@@ -43,7 +44,7 @@
                 <tr>
                     <td><strong>GC 时间占比</strong></td>
                     <td>
-                        <MudProgressLinear Color="@GetPauseColor(GCInfo.PauseTimePercentage)"
+                        <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetGcTimeColor(GCInfo.PauseTimePercentage)"
                                            Value="@GCInfo.PauseTimePercentage"
                                            Max="100"
                                            Class="my-1"/>
@@ -70,25 +71,25 @@
                 <tbody>
                 <tr>
                     <td><strong>堆大小</strong></td>
-                    <td>@FormatBytes(GCInfo.HeapSizeBytes)</td>
+                    <td>@ProfilingDisplayFormatter.FormatBytes(GCInfo.HeapSizeBytes)</td>
                 </tr>
                 <tr>
                     <td><strong>碎片化</strong></td>
                     <td>
-                        @FormatBytes(GCInfo.FragmentedBytes)
+                        @ProfilingDisplayFormatter.FormatBytes(GCInfo.FragmentedBytes)
                         <MudChip T="string" Size="Size.Small"
-                                 Color="@GetFragmentationColor(GCInfo.FragmentationPercent)">
+                                 Color="@ProfilingSeverityColorResolver.GetFragmentationColor(GCInfo.FragmentationPercent)">
                             @GCInfo.FragmentationPercent.ToString("F1")%
                         </MudChip>
                     </td>
                 </tr>
                 <tr>
                     <td><strong>已提交</strong></td>
-                    <td>@FormatBytes(GCInfo.CommittedBytes)</td>
+                    <td>@ProfilingDisplayFormatter.FormatBytes(GCInfo.CommittedBytes)</td>
                 </tr>
                 <tr>
                     <td><strong>提升字节</strong></td>
-                    <td>@FormatBytes(GCInfo.PromotedBytes)</td>
+                    <td>@ProfilingDisplayFormatter.FormatBytes(GCInfo.PromotedBytes)</td>
                 </tr>
                 <tr>
                     <td><strong>固定对象</strong></td>
@@ -118,18 +119,18 @@
             <MudStack Spacing="2">
                 <div class="d-flex justify-space-between">
                     <MudText>总可用内存</MudText>
-                    <MudText>@FormatBytes(GCInfo.TotalAvailableMemoryBytes)</MudText>
+                    <MudText>@ProfilingDisplayFormatter.FormatBytes(GCInfo.TotalAvailableMemoryBytes)</MudText>
                 </div>
                 <div class="d-flex justify-space-between">
                     <MudText>当前内存负载</MudText>
-                    <MudText>@FormatBytes(GCInfo.MemoryLoadBytes)</MudText>
+                    <MudText>@ProfilingDisplayFormatter.FormatBytes(GCInfo.MemoryLoadBytes)</MudText>
                 </div>
-                <MudProgressLinear Color="@GetMemoryLoadColor(memoryUsagePercent)"
+                <MudProgressLinear Color="@ProfilingSeverityColorResolver.GetMemoryLoadColor(memoryUsagePercent)"
                                    Value="@memoryUsagePercent"
                                    Max="100"/>
                 <div class="d-flex justify-space-between">
                     <MudText>高内存阈值</MudText>
-                    <MudText>@FormatBytes(GCInfo.HighMemoryLoadThresholdBytes)</MudText>
+                    <MudText>@ProfilingDisplayFormatter.FormatBytes(GCInfo.HighMemoryLoadThresholdBytes)</MudText>
                 </div>
             </MudStack>
             }
@@ -160,16 +161,16 @@
                 {
                 <tr>
                     <td>
-                        <MudChip T="string" Size="Size.Small" Color="@GetGenerationColor(gen.Generation)">
+                        <MudChip T="string" Size="Size.Small" Color="@ProfilingSeverityColorResolver.GetGenerationColor(gen.Generation)">
                             @gen.GenerationName
                         </MudChip>
                     </td>
-                    <td>@FormatBytes(gen.SizeBeforeBytes)</td>
-                    <td>@FormatBytes(gen.SizeAfterBytes)</td>
+                    <td>@ProfilingDisplayFormatter.FormatBytes(gen.SizeBeforeBytes)</td>
+                    <td>@ProfilingDisplayFormatter.FormatBytes(gen.SizeAfterBytes)</td>
                     <td>
                         @if (gen.CollectedBytes > 0)
                         {
-                        <span class="mud-success-text">@FormatBytes(gen.CollectedBytes)</span>
+                        <span class="mud-success-text">@ProfilingDisplayFormatter.FormatBytes(gen.CollectedBytes)</span>
                         }
                         else
                         {
@@ -190,50 +191,6 @@
 </MudGrid>
 
 @code {
-[Parameter] public DetailedGCInfo? GCInfo { get; set; }
+[Parameter] public GcDetails? GCInfo { get; set; }
 [Parameter] public bool IsLoading { get; set; }
-
-private static string FormatBytes(long bytes)
-{
-string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
-int counter = 0;
-decimal number = bytes;
-while (Math.Round(number / 1024) >= 1 && counter < suffixes.Length - 1)
-{
-number /= 1024;
-counter++;
-}
-return $"{number:N1} {suffixes[counter]}";
-}
-
-private static Color GetGenerationColor(int generation) => generation switch
-{
-0 => Color.Primary,
-1 => Color.Info,
-2 => Color.Warning,
-3 => Color.Error, // LOH
-4 => Color.Dark,  // POH
-_ => Color.Default
-};
-
-private static Color GetPauseColor(double percent)
-{
-if (percent < 5) return Color.Success;
-if (percent < 15) return Color.Warning;
-return Color.Error;
-}
-
-private static Color GetFragmentationColor(double percent)
-{
-if (percent < 10) return Color.Success;
-if (percent < 25) return Color.Warning;
-return Color.Error;
-}
-
-private static Color GetMemoryLoadColor(double percent)
-{
-if (percent < 70) return Color.Success;
-if (percent < 85) return Color.Warning;
-return Color.Error;
-}
 }

@@ -5,10 +5,10 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Diagnostics.Tracing.Session;
 using Microsoft.Extensions.Logging;
-using Monica.Profiling.Models;
+using Monica.Profiling.TypeAllocation.Models;
 using Monica.Tool.Extensions;
 
-namespace Monica.Profiling.Services;
+namespace Monica.Profiling.TypeAllocation.Providers.TraceEvent;
 
 /// <summary>
 /// Type Allocation Collector - Collect type-level allocation information using the GCAllocationTick event of TraceEvent/ETW
@@ -20,9 +20,9 @@ namespace Monica.Profiling.Services;
 /// But in the self-monitoring scenario, TypeBulkType.TypeName may be empty (timing issue)
 /// 3. GCAllocationTick triggers every ~100KB allocation, providing reliable sampling
 /// </remarks>
-public class TypeAllocationCollector : IDisposable
+internal sealed class TraceEventTypeAllocationProvider : IDisposable
 {
-    private readonly ILogger<TypeAllocationCollector> _logger;
+    private readonly ILogger<TraceEventTypeAllocationProvider> _logger;
 
     /// <summary>
     /// TypeName -> AllocationInfo allocation statistics
@@ -78,8 +78,8 @@ public class TypeAllocationCollector : IDisposable
     /// </summary>
     public AllocationSamplingMode CurrentMode => _currentMode;
 
-    public TypeAllocationCollector(
-        ILogger<TypeAllocationCollector> logger,
+    public TraceEventTypeAllocationProvider(
+        ILogger<TraceEventTypeAllocationProvider> logger,
         int maxTrackedTypes = 500,
         TimeSpan? snapshotInterval = null,
         int maxHistorySnapshots = 60,

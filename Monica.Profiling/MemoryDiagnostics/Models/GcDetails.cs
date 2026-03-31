@@ -1,9 +1,9 @@
-namespace Monica.Profiling.Models;
+namespace Monica.Profiling.MemoryDiagnostics.Models;
 
 /// <summary>
 /// Detailed GC information - based on GCMemoryInfo
 /// </summary>
-public class DetailedGCInfo
+public class GcDetails
 {
     /// <summary>
     /// GC index (starting from 1)
@@ -90,13 +90,13 @@ public class DetailedGCInfo
     /// <summary>
     /// Detailed information for each generation
     /// </summary>
-    public GenerationDetailInfo[] GenerationDetails { get; init; } = [];
+    public GcGenerationDetails[] GenerationDetails { get; init; } = [];
 }
 
 /// <summary>
 /// Details of a single generation
 /// </summary>
-public class GenerationDetailInfo
+public class GcGenerationDetails
 {
     /// <summary>
     /// Algebra (0, 1, 2, 3=LOH, 4=POH)

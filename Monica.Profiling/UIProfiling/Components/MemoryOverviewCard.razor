@@ -1,3 +1,4 @@
+@using Monica.Profiling.MemoryDiagnostics.Models
 <MudGrid Spacing="3">
     @* Main memory indicators *@
     <MudItem xs="12" md="6" lg="3">
@@ -6,7 +7,7 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">工作集</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Primary">
-                        @(IsLoading ? "..." : FormatBytes(Snapshot?.WorkingSetBytes ?? 0))
+                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.WorkingSetBytes ?? 0))
                     </MudText>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Large"/>
@@ -20,7 +21,7 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">托管堆</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Info">
-                        @(IsLoading ? "..." : FormatBytes(Snapshot?.GcHeapSizeBytes ?? 0))
+                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.GcHeapSizeBytes ?? 0))
                     </MudText>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.Memory" Color="Color.Info" Size="Size.Large"/>
@@ -34,7 +35,7 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">已提交</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Success">
-                        @(IsLoading ? "..." : FormatBytes(Snapshot?.CommittedBytes ?? 0))
+                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.CommittedBytes ?? 0))
                     </MudText>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.Commit" Color="Color.Success" Size="Size.Large"/>
@@ -48,7 +49,7 @@
                 <div>
                     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">托管内存</MudText>
                     <MudText Typo="Typo.h5" Color="Color.Warning">
-                        @(IsLoading ? "..." : FormatBytes(Snapshot?.TotalManagedMemory ?? 0))
+                        @(IsLoading ? "..." : ProfilingDisplayFormatter.FormatBytes(Snapshot?.TotalManagedMemory ?? 0))
                     </MudText>
                 </div>
                 <MudIcon Icon="@Icons.Material.Filled.DataUsage" Color="Color.Warning" Size="Size.Large"/>
@@ -113,7 +114,7 @@
                 <div class="d-flex justify-space-between">
                     <MudText>采集时间</MudText>
                     <MudText Color="Color.Secondary">
-                        @(Snapshot?.Timestamp.ToLocalTime().ToString("HH:mm:ss") ?? "N/A")
+                        @(Snapshot is null ? "N/A" : ProfilingDisplayFormatter.FormatLocalTime(Snapshot.Timestamp))
                     </MudText>
                 </div>
                 <div class="d-flex justify-space-between">
@@ -128,17 +129,4 @@
 @code {
 [Parameter] public MemorySnapshot? Snapshot { get; set; }
 [Parameter] public bool IsLoading { get; set; }
-
-private static string FormatBytes(long bytes)
-{
-string[] suffixes = ["B", "KB", "MB", "GB", "TB"];
-int counter = 0;
-decimal number = bytes;
-while (Math.Round(number / 1024) >= 1 && counter < suffixes.Length - 1)
-{
-number /= 1024;
-counter++;
-}
-return $"{number:N1} {suffixes[counter]}";
-}
 }

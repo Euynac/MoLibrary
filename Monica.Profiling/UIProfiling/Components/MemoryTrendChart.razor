@@ -1,3 +1,4 @@
+@using Monica.Profiling.RuntimeMetrics.Models
 <MudGrid Spacing="3">
     @* Trend statistical summary *@
     <MudItem xs="12">
@@ -20,7 +21,7 @@
                     </MudItem>
                     <MudItem xs="6" md="3">
                         <div class="text-center">
-                            <MudText Typo="Typo.h5" Color="Color.Info">@FormatBytesPerSec(TrendData.AverageAllocationRate)</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Info">@ProfilingDisplayFormatter.FormatBytesPerSecond(TrendData.AverageAllocationRate)</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">平均分配速率</MudText>
                         </div>
                     </MudItem>
@@ -133,11 +134,11 @@
                         @foreach (var point in TrendData.DataPoints.TakeLast(20).Reverse())
                         {
                             <tr>
-                                <td>@point.Timestamp.ToLocalTime().ToString("HH:mm:ss")</td>
+                                <td>@ProfilingDisplayFormatter.FormatLocalTime(point.Timestamp)</td>
                                 <td>@point.GcHeapSizeMB.ToString("F1") MB</td>
-                                <td>@FormatBytesPerSec(point.AllocationRateBps)</td>
+                                <td>@ProfilingDisplayFormatter.FormatBytesPerSecond(point.AllocationRateBps)</td>
                                 <td>
-                                    <span class="@GetTimeInGcClass(point.TimeInGcPercent)">
+                                    <span class="@ProfilingSeverityColorResolver.GetGcTimeClass(point.TimeInGcPercent)">
                                         @point.TimeInGcPercent.ToString("F1")%
                                     </span>
                                 </td>
@@ -156,7 +157,7 @@
 </MudGrid>
 
 @code {
-    [Parameter] public MemoryTrendData? TrendData { get; set; }
+    [Parameter] public RuntimeMetricsTrend? TrendData { get; set; }
 
     [Parameter] public bool IsLoading { get; set; }
 
@@ -209,33 +210,4 @@
         ];
     }
 
-    private static string FormatBytesPerSec(double bytesPerSec)
-    {
-        if (bytesPerSec < 1024)
-        {
-            return $"{bytesPerSec:F0} B/s";
-        }
-
-        if (bytesPerSec < 1024 * 1024)
-        {
-            return $"{bytesPerSec / 1024:F1} KB/s";
-        }
-
-        return $"{bytesPerSec / 1024 / 1024:F1} MB/s";
-    }
-
-    private static string GetTimeInGcClass(double percent)
-    {
-        if (percent < 5)
-        {
-            return string.Empty;
-        }
-
-        if (percent < 15)
-        {
-            return "mud-warning-text";
-        }
-
-        return "mud-error-text";
-    }
 }
