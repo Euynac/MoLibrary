@@ -1,7 +1,7 @@
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 
-namespace Monica.Validation.Attributes;
+namespace Monica.DomainDrivenDesign.Validation;
 
 /// <summary>
 /// Represents a nested validation result.

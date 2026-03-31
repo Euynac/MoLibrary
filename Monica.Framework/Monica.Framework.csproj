@@ -46,11 +46,6 @@
 	  <ProjectReference Include="..\Monica.SignalR\Monica.SignalR.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>
 	  </ProjectReference>
-	  <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj">
-	    <TreatAsUsed>true</TreatAsUsed>
-	  </ProjectReference>
-	  <ProjectReference Include="..\Monica.Validation\Monica.Validation.csproj">
-	    <TreatAsUsed>true</TreatAsUsed>
-	  </ProjectReference>
+	  <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj"/>
 	</ItemGroup>
 </Project>

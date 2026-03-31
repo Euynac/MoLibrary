@@ -18,7 +18,6 @@ This project contains examples for using the various Monica modules. Each direct
 - `Generators.AutoController/` - Examples for using the Monica.Generators.AutoController module
 - `Logging/` - Examples for using the Monica.Logging module
 - `StateStore/` - Examples for using the Monica.StateStore module
-- `Validation/` - Examples for using the Monica.Validation module
 - `Configuration.Dashboard/` - Examples for using the Monica.Configuration.UI module
 - `Configuration/` - Examples for using the Monica.Configuration module
 - `DependencyInjection/` - Examples for using the Monica.DependencyInjection module

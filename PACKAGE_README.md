@@ -65,8 +65,6 @@ using Monica.Core;
 - **Monica.Profiling** - Performance profiling
 - **Monica.ServiceDiscovery** - Service discovery
 - **Monica.Resilience** - Resilience patterns
-- **Monica.Validation** - Validation infrastructure
-
 ### Code Generation
 - **Monica.Framework.Generators** - Framework source generators
 - **Monica.Generators.AutoController** - RPC controller generation
