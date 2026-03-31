@@ -16,6 +16,7 @@ using Monica.Repository.Interfaces;
 using Monica.Repository.Transaction;
 using Monica.Tool.Extensions;
 using Monica.Core.Results;
+using Monica.Repository.DtoInterfaces;
 
 namespace Monica.DomainDrivenDesign.AutoCrud;
 
@@ -125,10 +126,8 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
             };
         }
 
-        var entities = await finalEntityQuery.ToListAsync();
-        var cursor = entities is { Count: > 0 } ? entities.Last()?.Id?.ToString() : null;
-
-        var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(entities);
+        var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(finalEntityQuery);
+        var cursor = entityDtos is { Count: > 0 } && entityDtos.Last() is IMoEntityDto<TKey> dto ? dto.Id?.ToString() : null;
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
@@ -639,15 +638,9 @@ public abstract class MoAbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetLi
     {
         // Important: if the DTO defines child-table fields, ProjectToType will query them automatically, so explicit Include is unnecessary.
         // As of 2024-04-22, Mapster does not support ProjectToType for complex types.
-        //return await ObjectMapper.ProjectToType<TCustomDto>(query).ToListAsync();
-        return Mapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
+        return await Mapper.ProjectToType<TCustomDto>(query).ToListAsync();
+        //return Mapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
     }
-
-    protected virtual async Task<List<TCustomDto>> MapToGetListOutputDtosAsync<TCustomDto>(List<TEntity> query)
-    {
-        return Mapper.Map<List<TEntity>, List<TCustomDto>>(query);
-    }
-
 
     #endregion
     protected class ListResult(IReadOnlyList<dynamic> results)
