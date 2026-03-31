@@ -1,8 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <Import Project="..\common.xml" />
 
   <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <PackageDescription>SignalR integration for Monica framework with Swagger documentation support, enabling real-time bidirectional communication between server and clients.</PackageDescription>
   </PropertyGroup>
 
@@ -12,5 +14,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
   </ItemGroup>
 </Project>

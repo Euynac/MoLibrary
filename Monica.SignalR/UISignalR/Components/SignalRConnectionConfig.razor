@@ -1,0 +1,139 @@
+@using Monica.SignalR.Models
+@inject IStringLocalizer<SignalRResource> L
+
+<!-- Connection configuration -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:ConnectionConfig:Title"]</MudText>
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="AccessToken" 
+                        Label="@L["UISignalR:ConnectionConfig:AccessTokenLabel"]" 
+                        Variant="Variant.Outlined"
+                        HelperText="@L["UISignalR:ConnectionConfig:AccessTokenHelper"]" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudSelect @bind-Value="SelectedHubRoute" 
+                     Label="@L["UISignalR:ConnectionConfig:HubUrlLabel"]" 
+                     Variant="Variant.Outlined"
+                     HelperText="@L["UISignalR:ConnectionConfig:HubUrlHelper"]"
+                     T="string">
+                @foreach (var hub in AvailableHubs)
+                {
+                    <MudSelectItem Value="@hub.Route">@hub.HubName (@hub.Route)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" 
+                     Color="Color.Primary" 
+                     OnClick="ConnectAsync"
+                     Disabled="IsConnecting || string.IsNullOrEmpty(SelectedHubRoute)">
+                @if (IsConnecting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:Connecting"]</MudText>
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cable" />
+                    <MudText Class="ms-2">
+                        @(IsConnected
+                            ? L["UISignalR:ConnectionConfig:Reconnect"]
+                            : L["UISignalR:ConnectionConfig:Connect"])
+                    </MudText>
+                }
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Secondary" 
+                     OnClick="DisconnectAsync"
+                     Disabled="!IsConnected"
+                     Class="ms-2">
+                <MudIcon Icon="@Icons.Material.Filled.PowerOff" />
+                <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:Disconnect"]</MudText>
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Info" 
+                     OnClick="RefreshHubsAsync"
+                     Class="ms-2">
+                <MudIcon Icon="@Icons.Material.Filled.Refresh" />
+                <MudText Class="ms-2">@L["UISignalR:ConnectionConfig:RefreshHubInfo"]</MudText>
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// access token
+    /// </summary>
+    [Parameter] public string AccessToken { get; set; } = "";
+
+    /// <summary>
+    /// Access token change callback
+    /// </summary>
+    [Parameter] public EventCallback<string> AccessTokenChanged { get; set; }
+
+    /// <summary>
+    /// Selected Hub route
+    /// </summary>
+    [Parameter] public string SelectedHubRoute { get; set; } = "";
+
+    /// <summary>
+    /// Selected Hub routing change callback
+    /// </summary>
+    [Parameter] public EventCallback<string> SelectedHubRouteChanged { get; set; }
+
+    /// <summary>
+    /// Available Hub List
+    /// </summary>
+    [Parameter] public List<SignalRHubInfo> AvailableHubs { get; set; } = [];
+
+    /// <summary>
+    /// Is connecting
+    /// </summary>
+    [Parameter] public bool IsConnecting { get; set; }
+
+    /// <summary>
+    /// Is it connected?
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// Connection callback
+    /// </summary>
+    [Parameter] public EventCallback OnConnect { get; set; }
+
+    /// <summary>
+    /// Disconnect callback
+    /// </summary>
+    [Parameter] public EventCallback OnDisconnect { get; set; }
+
+    /// <summary>
+    /// Refresh Hub information callback
+    /// </summary>
+    [Parameter] public EventCallback OnRefreshHubs { get; set; }
+
+    /// <summary>
+    /// Connection asynchronous
+    /// </summary>
+    private async Task ConnectAsync()
+    {
+        await OnConnect.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Disconnect async
+    /// </summary>
+    private async Task DisconnectAsync()
+    {
+        await OnDisconnect.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Refresh Hub information asynchronously
+    /// </summary>
+    private async Task RefreshHubsAsync()
+    {
+        await OnRefreshHubs.InvokeAsync();
+    }
+} 

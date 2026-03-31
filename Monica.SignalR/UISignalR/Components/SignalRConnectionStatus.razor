@@ -1,0 +1,68 @@
+@using Monica.SignalR.UISignalR.Models
+@inject IStringLocalizer<SignalRResource> L
+
+<!-- connection status -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:ConnectionStatus:Title"]</MudText>
+    <MudChip Color="@GetConnectionStatusColor()" 
+            Label="true" 
+            Size="Size.Medium"
+            T="string">
+        @GetConnectionStatusText()
+    </MudChip>
+    @if (!string.IsNullOrEmpty(ConnectionState.ConnectionId))
+    {
+        <MudText Typo="Typo.body2" Class="mt-2">
+            @L["UISignalR:ConnectionStatus:ConnectionId", ConnectionState.ConnectionId]
+        </MudText>
+    }
+    @if (!string.IsNullOrEmpty(SelectedHubRoute))
+    {
+        <MudText Typo="Typo.body2" Class="mt-1">
+            @L["UISignalR:ConnectionStatus:CurrentHub", SelectedHubRoute]
+        </MudText>
+    }
+    <MudText Typo="Typo.body2" Class="mt-1">
+        @L["UISignalR:ConnectionStatus:TotalReceivedMessages", ConnectionState.TotalReceivedMessages]
+    </MudText>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// connection status
+    /// </summary>
+    [Parameter] public SignalRConnectionState ConnectionState { get; set; } = new();
+
+    /// <summary>
+    /// Selected Hub route
+    /// </summary>
+    [Parameter] public string SelectedHubRoute { get; set; } = "";
+
+    /// <summary>
+    /// Get connection status color
+    /// </summary>
+    /// <returns>Color</returns>
+    private Color GetConnectionStatusColor()
+    {
+        return ConnectionState.Status switch
+        {
+            "Connected" => Color.Success,
+            "Connecting" => Color.Warning,
+            "Reconnecting" => Color.Warning,
+            _ => Color.Error
+        };
+    }
+
+    private string GetConnectionStatusText()
+    {
+        return ConnectionState.Status switch
+        {
+            "Connected" => L["UISignalR:Common:Status:Connected"].Value,
+            "Connecting" => L["UISignalR:Common:Status:Connecting"].Value,
+            "Reconnecting" => L["UISignalR:Common:Status:Reconnecting"].Value,
+            "Disconnected" => L["UISignalR:Common:Status:Disconnected"].Value,
+            "Disconnecting" => L["UISignalR:Common:Status:Disconnecting"].Value,
+            _ => L["UISignalR:Common:Status:Unknown"].Value
+        };
+    }
+} 

@@ -157,7 +157,6 @@
       "Title": "知识库",
       "DocumentCount": "文档数",
       "ChunkCount": "块数",
-      "Create": "创建知识库",
       "SelectPrompt": "选择一个知识库以查看详情",
       "NewPlaceholder": "新知识库名称...",
       "EmptyHint": "暂无知识库。请在上方创建一个。",
@@ -241,15 +240,10 @@
       "SourceKnowledgeBase": "来自知识库 {0}",
       "PendingIndexing": "待索引",
       "NoContent": "无原始文本或分块",
-      "ChunkBadge": "分块 {0}：{1}",
       "ChunkNumber": "分块 #{0}",
       "ChunkNumbers": "分块 #{0}",
       "Section": "章节：{0}",
-      "Matched": "（匹配）",
-      "MatchedBadge": "匹配结果",
-      "MatchedLabel": "匹配命中",
-      "TargetChunk": "定位分块",
-      "ChunkOption": "分块 #{0}"
+      "MatchedBadge": "匹配结果"
     },
     "Debug": {
       "KBSidebar": {

@@ -1,0 +1,167 @@
+{
+  "Pages": {
+    "SignalRDebug": {
+      "Title": "SignalR 调试",
+      "Heading": "SignalR 调试",
+      "Settings": {
+        "Title": "调试设置",
+        "VerboseLogging": "启用详细调试日志",
+        "VerboseLoggingHelper": "显示参数转换和方法调用的详细信息，用于排查参数类型相关问题。"
+      },
+      "Notifications": {
+        "LoadHubsFailed": "加载 Hub 元数据失败。",
+        "LoadConnectedUsersSuccess": "已成功加载已连接用户信息。",
+        "LoadConnectedUsersFailed": "加载已连接用户信息失败。",
+        "ConnectSuccess": "SignalR 连接成功。",
+        "ConnectFailed": "SignalR 连接失败。",
+        "DisconnectSuccess": "SignalR 连接已断开。",
+        "DisconnectFailed": "断开 SignalR 连接失败。",
+        "SendMessageFailed": "发送消息失败。",
+        "InvokeMethodSuccess": "方法 {0} 调用成功。",
+        "InvokeMethodFailed": "方法 {0} 调用失败。",
+        "ToggleListenerFailed": "更新监听器状态失败。",
+        "EnableListenersSuccess": "已启用 {0} 个监听器。",
+        "DisableListenersSuccess": "已禁用 {0} 个监听器。"
+      }
+    }
+  },
+  "UISignalR": {
+    "Common": {
+      "None": "无",
+      "NoArguments": "无参数",
+      "Authenticated": "已认证",
+      "Unauthenticated": "未认证",
+      "Status": {
+        "Connected": "已连接",
+        "Connecting": "连接中",
+        "Reconnecting": "重连中",
+        "Disconnected": "已断开",
+        "Disconnecting": "断开中",
+        "Unknown": "未知"
+      }
+    },
+    "ConnectionConfig": {
+      "Title": "连接配置",
+      "AccessTokenLabel": "访问令牌",
+      "AccessTokenHelper": "输入用于 SignalR 连接的访问令牌。",
+      "HubUrlLabel": "Hub 地址",
+      "HubUrlHelper": "选择要连接的 SignalR Hub。",
+      "Connecting": "连接中...",
+      "Connect": "连接",
+      "Reconnect": "重新连接",
+      "Disconnect": "断开连接",
+      "RefreshHubInfo": "刷新 Hub 信息"
+    },
+    "ConnectionStatus": {
+      "Title": "连接状态",
+      "ConnectionId": "连接 ID：{0}",
+      "CurrentHub": "当前 Hub：{0}",
+      "TotalReceivedMessages": "接收到的消息总数：{0}"
+    },
+    "ConnectedUsers": {
+      "Title": "已连接用户（{0}）",
+      "Refresh": "刷新",
+      "Empty": "当前没有已连接的用户。",
+      "Columns": {
+        "ConnectionId": "连接 ID",
+        "UserName": "用户名",
+        "UserId": "用户 ID",
+        "AuthenticationStatus": "认证状态",
+        "ConnectionTime": "连接时间",
+        "Actions": "操作"
+      },
+      "ViewDetails": "查看详细信息",
+      "DetailsTitle": "用户详细信息",
+      "BasicInfoTitle": "基本信息",
+      "ClaimsTitle": "用户 Claims（{0}）",
+      "ClaimsEmpty": "该用户没有 Claims 信息。",
+      "ClaimType": "Claim 类型",
+      "ClaimValue": "Claim 值",
+      "Close": "关闭"
+    },
+    "MethodListener": {
+      "Title": "Hub 方法监听",
+      "EnableAll": "全部启用",
+      "DisableAll": "全部禁用",
+      "Parameters": "参数：{0}",
+      "ReceivedCount": "接收次数：{0}",
+      "Empty": "请先连接到 Hub 以加载可用的方法。"
+    },
+    "MethodInvoker": {
+      "Title": "方法调用",
+      "MethodLabel": "选择方法",
+      "ParametersTitle": "参数设置",
+      "NoParameters": "该方法无需参数。",
+      "Invoke": "调用方法",
+      "ClearParameters": "清空参数",
+      "ParameterLabel": "{0}（{1}）",
+      "HelperText": {
+        "String": "字符串类型，直接输入文本内容。",
+        "Int": "整数类型，例如：123",
+        "Long": "长整数类型，例如：123456789",
+        "Double": "双精度浮点数类型，例如：123.45",
+        "Float": "单精度浮点数类型，例如：123.45",
+        "Bool": "布尔类型，输入 true 或 false。",
+        "DateTime": "日期时间类型，例如：2023-12-01 12:00:00",
+        "Guid": "GUID 类型，例如：12345678-1234-1234-1234-123456789abc",
+        "Array": "数组类型，请输入 JSON，例如：[\"item1\",\"item2\"]",
+        "List": "列表类型，请输入 JSON，例如：[\"item1\",\"item2\"]",
+        "Complex": "复杂类型（{0}），请输入 JSON。"
+      },
+      "ErrorText": {
+        "Int": "请输入有效的整数。",
+        "Long": "请输入有效的长整数。",
+        "Double": "请输入有效的双精度数字。",
+        "Float": "请输入有效的单精度数字。",
+        "Bool": "请输入 true 或 false。",
+        "DateTime": "请输入有效的日期时间格式。",
+        "Guid": "请输入有效的 GUID 格式。",
+        "Invalid": "参数格式无效。"
+      }
+    },
+    "MessageSender": {
+      "Title": "快速消息发送",
+      "UserNameLabel": "用户名",
+      "MessageLabel": "消息内容",
+      "Send": "发送消息",
+      "Clear": "清空"
+    },
+    "MessageLog": {
+      "Title": "消息日志",
+      "Clear": "清空日志"
+    },
+    "JavaScript": {
+      "NoArguments": "无参数",
+      "NotConnected": "当前未连接",
+      "ConnectionClosedWithError": "连接因错误关闭：{0}",
+      "ConnectionClosed": "连接已关闭",
+      "Reconnecting": "正在重连...",
+      "ReconnectedSuccessfully": "重连成功",
+      "ConnectedSuccessfully": "连接成功",
+      "ConnectionFailed": "连接失败：{0}",
+      "Disconnected": "已断开连接",
+      "RegisteredListener": "已注册监听器：{0}",
+      "UnregisteredListener": "已取消监听器：{0}",
+      "AllListenersCleared": "已清除全部监听器"
+    },
+    "DebugClient": {
+      "ConnectedToHub": "已连接到 SignalR Hub：{0}",
+      "ConnectionFailed": "连接失败：{0}",
+      "Disconnected": "SignalR 连接已断开。",
+      "DisconnectFailed": "断开连接失败：{0}",
+      "SendFailed": "发送失败：{0}",
+      "MethodNotFound": "未找到方法：{0}",
+      "InvokingMethod": "正在调用方法：{0}",
+      "ArgumentValue": "参数 {0}（{1}）：'{2}'",
+      "ArgumentConverted": "已将 {0} 转换为 {1} = {2}",
+      "MethodInvocationFailed": "方法调用失败：{0}",
+      "RegisterListenerFailed": "注册监听器失败：{0}",
+      "UnregisterListenerFailed": "取消监听器失败：{0}",
+      "ListenerToggleFailed": "更新监听器状态失败：{0}",
+      "ConnectionStatusChanged": "连接状态已变更：{0}",
+      "JavaScriptLoadTimeout": "等待 SignalR 调试 JavaScript 加载时超时。",
+      "SetLocalizationFailed": "设置 JavaScript 本地化失败：{0}",
+      "SetCallbacksFailed": "设置 JavaScript 回调失败：{0}"
+    }
+  }
+}

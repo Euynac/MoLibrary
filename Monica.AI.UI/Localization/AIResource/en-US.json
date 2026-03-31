@@ -157,7 +157,6 @@
       "Title": "Knowledge Bases",
       "DocumentCount": "Documents",
       "ChunkCount": "Chunks",
-      "Create": "Create Knowledge Base",
       "SelectPrompt": "Select a knowledge base to view details",
       "NewPlaceholder": "New KB name...",
       "EmptyHint": "No knowledge bases yet. Create one above.",
@@ -241,15 +240,10 @@
       "SourceKnowledgeBase": "From knowledge base {0}",
       "PendingIndexing": "Pending indexing",
       "NoContent": "No original text or chunks available",
-      "ChunkBadge": "Chunk {0}: {1}",
       "ChunkNumber": "Chunk #{0}",
       "ChunkNumbers": "Chunks #{0}",
       "Section": "Section: {0}",
-      "Matched": "(Matched)",
-      "MatchedBadge": "Matched result",
-      "MatchedLabel": "Matched",
-      "TargetChunk": "Focus Chunk",
-      "ChunkOption": "Chunk #{0}"
+      "MatchedBadge": "Matched result"
     },
     "Debug": {
       "KBSidebar": {

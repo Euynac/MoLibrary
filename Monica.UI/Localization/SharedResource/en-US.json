@@ -31,7 +31,6 @@
       "Tabs": {
         "SystemOverview": "System Overview",
         "PerformanceMonitoring": "Performance Monitoring",
-        "HealthCheck": "Health Check",
         "ModuleManagement": "Module Management",
         "Dependencies": "Dependencies",
         "AssemblyAnalysis": "Assembly Analysis"
@@ -103,11 +102,9 @@
     },
     "HealthCheck": {
       "Labels": {
-        "HealthOverview": "Health Overview",
         "PerformanceMetrics": "Performance Metrics",
         "CheckItems": "Check Items",
         "DiscoveredIssues": "Discovered Issues",
-        "CheckTime": "Check Time:",
         "AverageInitTime": "Average Init Time",
         "SlowestModuleTime": "Slowest Module Time",
         "EfficiencyScore": "Efficiency Score",
@@ -130,12 +127,6 @@
         "Medium": "Medium",
         "High": "High",
         "Critical": "Critical"
-      },
-      "Loading": {
-        "HealthOverview": "Loading health overview...",
-        "PerformanceMetrics": "Loading performance metrics...",
-        "CheckItems": "Loading check items...",
-        "IssueList": "Loading issue list..."
       }
     },
     "PerformanceMonitoring": {
@@ -217,7 +208,6 @@
         "Circular": "Circular Layout"
       },
       "Types": {
-        "All": "All Types",
         "BuiltIn": "Built-in Module",
         "UI": "UI Module",
         "ThirdParty": "Third-party Module",

@@ -20,12 +20,12 @@ alwaysApply: false
 
 ### 1.1 创建UI模块类文件
 - 文件位置：`Monica.Framework.UI/Modules/$ModuleUIName$.cs`
-- 文件命名：以模块名+UI的格式命名，如 `SignalrUI.cs`
+- 文件命名：以模块名+UI的格式命名，如 `SignalRUI.cs`
 - 类命名：`Module$ModuleUIName$`
 
 ### 1.2 创建UI模块文件夹
 - 文件夹位置：`Monica.Framework.UI/$UIFolderName$/`
-- 文件夹命名：UI+模块名，如 `UISignalr`
+- 文件夹命名：UI+模块名，如 `UISignalR`
 - 子文件夹结构：
   ```
   UI$ModuleName$/
@@ -340,11 +340,11 @@ public override void ConfigureServices(IServiceCollection services)
 ## 6. 示例参考
 
 以UISignalR模块为例：
-- 模块文件：`Modules/SignalrUI.cs`
-- UI文件夹：`UISignalr/`
+- 模块文件：`Modules/SignalRUI.cs`
+- UI文件夹：`UISignalR/`
 - 页面文件：`Pages/UISignalRPage.razor`
-- 组件：`UISignalr/Components/SignalRConnectionConfig.razor`等
-- 服务：`UISignalr/Services/SignalRService.cs`
+- 组件：`UISignalR/Components/SignalRConnectionConfig.razor`等
+- 服务：`UISignalR/Services/SignalRService.cs`
 
 以UISystemInfo模块为例（带Controller集成）：
 - 模块文件：`Modules/SystemInfoUI.cs`

@@ -1,0 +1,167 @@
+{
+  "Pages": {
+    "SignalRDebug": {
+      "Title": "SignalR Debug",
+      "Heading": "SignalR Debug",
+      "Settings": {
+        "Title": "Debug Settings",
+        "VerboseLogging": "Enable verbose debug logs",
+        "VerboseLoggingHelper": "Show detailed argument conversion and method invocation information to troubleshoot parameter type issues."
+      },
+      "Notifications": {
+        "LoadHubsFailed": "Failed to load hub metadata.",
+        "LoadConnectedUsersSuccess": "Connected user information loaded successfully.",
+        "LoadConnectedUsersFailed": "Failed to load connected user information.",
+        "ConnectSuccess": "SignalR connection established successfully.",
+        "ConnectFailed": "Failed to connect to SignalR.",
+        "DisconnectSuccess": "SignalR connection closed.",
+        "DisconnectFailed": "Failed to disconnect the SignalR connection.",
+        "SendMessageFailed": "Failed to send the message.",
+        "InvokeMethodSuccess": "Method {0} invoked successfully.",
+        "InvokeMethodFailed": "Failed to invoke method {0}.",
+        "ToggleListenerFailed": "Failed to update the listener state.",
+        "EnableListenersSuccess": "Enabled {0} listeners.",
+        "DisableListenersSuccess": "Disabled {0} listeners."
+      }
+    }
+  },
+  "UISignalR": {
+    "Common": {
+      "None": "None",
+      "NoArguments": "No arguments",
+      "Authenticated": "Authenticated",
+      "Unauthenticated": "Unauthenticated",
+      "Status": {
+        "Connected": "Connected",
+        "Connecting": "Connecting",
+        "Reconnecting": "Reconnecting",
+        "Disconnected": "Disconnected",
+        "Disconnecting": "Disconnecting",
+        "Unknown": "Unknown"
+      }
+    },
+    "ConnectionConfig": {
+      "Title": "Connection Configuration",
+      "AccessTokenLabel": "Access Token",
+      "AccessTokenHelper": "Enter the access token used for the SignalR connection.",
+      "HubUrlLabel": "Hub URL",
+      "HubUrlHelper": "Select the SignalR hub to connect to.",
+      "Connecting": "Connecting...",
+      "Connect": "Connect",
+      "Reconnect": "Reconnect",
+      "Disconnect": "Disconnect",
+      "RefreshHubInfo": "Refresh hub metadata"
+    },
+    "ConnectionStatus": {
+      "Title": "Connection Status",
+      "ConnectionId": "Connection ID: {0}",
+      "CurrentHub": "Current hub: {0}",
+      "TotalReceivedMessages": "Total received messages: {0}"
+    },
+    "ConnectedUsers": {
+      "Title": "Connected Users ({0})",
+      "Refresh": "Refresh",
+      "Empty": "There are currently no connected users.",
+      "Columns": {
+        "ConnectionId": "Connection ID",
+        "UserName": "User Name",
+        "UserId": "User ID",
+        "AuthenticationStatus": "Authentication Status",
+        "ConnectionTime": "Connection Time",
+        "Actions": "Actions"
+      },
+      "ViewDetails": "View details",
+      "DetailsTitle": "User Details",
+      "BasicInfoTitle": "Basic Information",
+      "ClaimsTitle": "User Claims ({0})",
+      "ClaimsEmpty": "This user does not have any claims.",
+      "ClaimType": "Claim Type",
+      "ClaimValue": "Claim Value",
+      "Close": "Close"
+    },
+    "MethodListener": {
+      "Title": "Hub Method Listeners",
+      "EnableAll": "Enable all",
+      "DisableAll": "Disable all",
+      "Parameters": "Parameters: {0}",
+      "ReceivedCount": "Received count: {0}",
+      "Empty": "Connect to a hub first to load the available methods."
+    },
+    "MethodInvoker": {
+      "Title": "Method Invocation",
+      "MethodLabel": "Select method",
+      "ParametersTitle": "Parameter Configuration",
+      "NoParameters": "This method does not require any parameters.",
+      "Invoke": "Invoke method",
+      "ClearParameters": "Clear parameters",
+      "ParameterLabel": "{0} ({1})",
+      "HelperText": {
+        "String": "String value. Enter plain text directly.",
+        "Int": "Integer value. Example: 123",
+        "Long": "Long integer value. Example: 123456789",
+        "Double": "Double-precision floating-point value. Example: 123.45",
+        "Float": "Single-precision floating-point value. Example: 123.45",
+        "Bool": "Boolean value. Enter true or false.",
+        "DateTime": "Date and time value. Example: 2023-12-01 12:00:00",
+        "Guid": "GUID value. Example: 12345678-1234-1234-1234-123456789abc",
+        "Array": "Array value. Enter JSON, for example: [\"item1\",\"item2\"]",
+        "List": "List value. Enter JSON, for example: [\"item1\",\"item2\"]",
+        "Complex": "Complex type ({0}). Enter JSON."
+      },
+      "ErrorText": {
+        "Int": "Enter a valid integer.",
+        "Long": "Enter a valid long integer.",
+        "Double": "Enter a valid double-precision number.",
+        "Float": "Enter a valid single-precision number.",
+        "Bool": "Enter true or false.",
+        "DateTime": "Enter a valid date and time.",
+        "Guid": "Enter a valid GUID.",
+        "Invalid": "The parameter format is invalid."
+      }
+    },
+    "MessageSender": {
+      "Title": "Quick Message Sender",
+      "UserNameLabel": "User Name",
+      "MessageLabel": "Message",
+      "Send": "Send message",
+      "Clear": "Clear"
+    },
+    "MessageLog": {
+      "Title": "Message Log",
+      "Clear": "Clear log"
+    },
+    "JavaScript": {
+      "NoArguments": "No arguments",
+      "NotConnected": "Not connected",
+      "ConnectionClosedWithError": "Connection closed with error: {0}",
+      "ConnectionClosed": "Connection closed",
+      "Reconnecting": "Reconnecting...",
+      "ReconnectedSuccessfully": "Reconnected successfully",
+      "ConnectedSuccessfully": "Connected successfully",
+      "ConnectionFailed": "Connection failed: {0}",
+      "Disconnected": "Disconnected",
+      "RegisteredListener": "Registered listener for: {0}",
+      "UnregisteredListener": "Unregistered listener for: {0}",
+      "AllListenersCleared": "All listeners cleared"
+    },
+    "DebugClient": {
+      "ConnectedToHub": "Connected to SignalR hub: {0}",
+      "ConnectionFailed": "Connection failed: {0}",
+      "Disconnected": "SignalR connection disconnected.",
+      "DisconnectFailed": "Disconnect failed: {0}",
+      "SendFailed": "Send failed: {0}",
+      "MethodNotFound": "Method not found: {0}",
+      "InvokingMethod": "Invoking method: {0}",
+      "ArgumentValue": "Argument {0} ({1}): '{2}'",
+      "ArgumentConverted": "Converted {0} to {1} = {2}",
+      "MethodInvocationFailed": "Method invocation failed: {0}",
+      "RegisterListenerFailed": "Failed to register the listener: {0}",
+      "UnregisterListenerFailed": "Failed to unregister the listener: {0}",
+      "ListenerToggleFailed": "Failed to update the listener state: {0}",
+      "ConnectionStatusChanged": "Connection status changed: {0}",
+      "JavaScriptLoadTimeout": "Timed out while waiting for SignalR debug JavaScript to load.",
+      "SetLocalizationFailed": "Failed to set JavaScript localization: {0}",
+      "SetCallbacksFailed": "Failed to set JavaScript callbacks: {0}"
+    }
+  }
+}

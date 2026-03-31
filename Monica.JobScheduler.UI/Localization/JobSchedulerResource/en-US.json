@@ -503,6 +503,7 @@
       "GeneratedExpressionInvalid": "Generated expression is invalid: {0}",
       "BuildExpressionFailed": "Failed to build expression: {0}",
       "SourceExpressionInvalid": "Source expression is invalid: {0}",
+      "QuartzFormatMustHave6Parts": "Quartz format must contain exactly 6 parts.",
       "FormatConversionFailed": "Format conversion failed: {0}",
       "BuildDashboardFailed": "Failed to build dashboard data: {0}",
       "BuildRecentActivitiesFailed": "Failed to build recent activities: {0}",

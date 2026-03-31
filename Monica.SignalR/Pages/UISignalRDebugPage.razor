@@ -1,0 +1,229 @@
+@attribute [Route(PAGE_URL)]
+@using Microsoft.Extensions.Localization
+@using Monica.SignalR.Localization
+@using Monica.SignalR.UISignalR.Components
+@using Monica.SignalR.UISignalR.Models
+@using Monica.SignalR.UISignalR.State
+@using Monica.Modules
+@using Monica.SignalR.Models
+@inject ISnackbar SnackBar
+@inject NavigationManager NavigationManager
+@inject SignalRDebugPageState PageState
+@inject IStringLocalizer<SignalRResource> L
+@implements IAsyncDisposable
+
+<PageTitle>@L["Pages:SignalRDebug:Title"]</PageTitle>
+
+<script src="_content/Monica.SignalR/UISignalR/signalr.js"></script>
+<script src="_content/Monica.SignalR/UISignalR/signalr-debug.js"></script>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+        @L["Pages:SignalRDebug:Heading"]
+    </MudText>
+
+    <SignalRConnectionConfig AccessToken="@PageState.AccessToken"
+                             AccessTokenChanged="@((string value) => PageState.AccessToken = value)"
+                             SelectedHubRoute="@PageState.SelectedHubRoute"
+                             SelectedHubRouteChanged="@((string value) => PageState.SelectedHubRoute = value)"
+                             AvailableHubs="@PageState.AvailableHubs"
+                             IsConnecting="@PageState.ConnectionState.IsConnecting"
+                             IsConnected="@PageState.ConnectionState.IsConnected"
+                             OnConnect="ConnectAsync"
+                             OnDisconnect="DisconnectAsync"
+                             OnRefreshHubs="LoadHubsAsync" />
+
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-2">@L["Pages:SignalRDebug:Settings:Title"]</MudText>
+        <MudSwitch T="bool"
+                   @bind-Value="PageState.VerboseLogging"
+                   Label="@L["Pages:SignalRDebug:Settings:VerboseLogging"]"
+                   Color="Color.Primary" />
+        <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">
+            @L["Pages:SignalRDebug:Settings:VerboseLoggingHelper"]
+        </MudText>
+    </MudPaper>
+
+    <SignalRConnectionStatus ConnectionState="@PageState.ConnectionState"
+                             SelectedHubRoute="@PageState.SelectedHubRoute" />
+
+    <SignalRConnectedUsers ConnectedUsers="@PageState.ConnectedUsers"
+                           OnRefreshClicked="LoadConnectedUsersAsync" />
+
+    <SignalRMethodListener HubMethods="@PageState.HubMethods"
+                           IsConnected="@PageState.ConnectionState.IsConnected"
+                           OnToggleMethodListener="ToggleMethodListenerAsync"
+                           OnEnableAllListeners="EnableAllListenersAsync"
+                           OnDisableAllListeners="DisableAllListenersAsync" />
+
+    <SignalRMethodInvoker HubMethods="@PageState.HubMethods"
+                          IsConnected="@PageState.ConnectionState.IsConnected"
+                          SelectedMethodName="@PageState.SelectedMethodName"
+                          SelectedMethodNameChanged="PageState.SelectMethod"
+                          MethodParameters="@PageState.MethodParameters"
+                          OnInvokeMethod="InvokeMethodAsync" />
+
+    <SignalRMessageSender UserName="@PageState.UserName"
+                          UserNameChanged="@((string value) => PageState.UserName = value)"
+                          Message="@PageState.Message"
+                          MessageChanged="@((string value) => PageState.Message = value)"
+                          IsConnected="@PageState.ConnectionState.IsConnected"
+                          OnSendMessage="SendMessageAsync" />
+
+    <SignalRMessageLog Messages="@PageState.Messages"
+                       OnClearMessages="ClearMessages" />
+</MudContainer>
+
+@code {
+    /// <summary>
+    /// The route used by the SignalR debug page.
+    /// </summary>
+    public const string PAGE_URL = "/signalr-debug";
+
+    /// <summary>
+    /// Initializes the page state after the first render.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        PageState.StateChanged += OnStateChanged;
+        await PageState.InitializeAsync();
+    }
+
+    /// <summary>
+    /// Loads hub metadata for the debug page.
+    /// </summary>
+    private async Task LoadHubsAsync()
+    {
+        var success = await PageState.LoadHubsAsync();
+        if (!success)
+        {
+            SnackBar.Add(L["Pages:SignalRDebug:Notifications:LoadHubsFailed"].Value, Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Loads connected user information for the debug page.
+    /// </summary>
+    private async Task LoadConnectedUsersAsync()
+    {
+        var success = await PageState.LoadConnectedUsersAsync();
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:LoadConnectedUsersSuccess"].Value
+                : L["Pages:SignalRDebug:Notifications:LoadConnectedUsersFailed"].Value,
+            success ? Severity.Success : Severity.Error);
+    }
+
+    /// <summary>
+    /// Connects the browser debug client to the selected hub.
+    /// </summary>
+    private async Task ConnectAsync()
+    {
+        var success = await PageState.ConnectAsync(NavigationManager.BaseUri);
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:ConnectSuccess"].Value
+                : L["Pages:SignalRDebug:Notifications:ConnectFailed"].Value,
+            success ? Severity.Success : Severity.Error);
+    }
+
+    /// <summary>
+    /// Disconnects the browser debug client.
+    /// </summary>
+    private async Task DisconnectAsync()
+    {
+        var success = await PageState.DisconnectAsync();
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:DisconnectSuccess"].Value
+                : L["Pages:SignalRDebug:Notifications:DisconnectFailed"].Value,
+            success ? Severity.Info : Severity.Error);
+    }
+
+    /// <summary>
+    /// Sends the quick message entered on the page.
+    /// </summary>
+    private async Task SendMessageAsync((string userName, string message) _)
+    {
+        var success = await PageState.SendMessageAsync();
+        if (!success)
+        {
+            SnackBar.Add(L["Pages:SignalRDebug:Notifications:SendMessageFailed"].Value, Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Invokes the currently selected hub method.
+    /// </summary>
+    private async Task InvokeMethodAsync((string methodName, List<MethodCallParameter> parameters) _)
+    {
+        var success = await PageState.InvokeSelectedMethodAsync();
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:InvokeMethodSuccess", PageState.SelectedMethodName].Value
+                : L["Pages:SignalRDebug:Notifications:InvokeMethodFailed", PageState.SelectedMethodName].Value,
+            success ? Severity.Success : Severity.Error);
+    }
+
+    /// <summary>
+    /// Toggles a method listener.
+    /// </summary>
+    private async Task ToggleMethodListenerAsync((HubMethodInfo method, bool isListening) data)
+    {
+        var success = await PageState.ToggleMethodListenerAsync(data.method, data.isListening);
+        if (!success)
+        {
+            data.method.IsListening = !data.isListening;
+            SnackBar.Add(L["Pages:SignalRDebug:Notifications:ToggleListenerFailed"].Value, Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Enables all method listeners.
+    /// </summary>
+    private async Task EnableAllListenersAsync()
+    {
+        var successCount = await PageState.EnableAllListenersAsync();
+        SnackBar.Add(L["Pages:SignalRDebug:Notifications:EnableListenersSuccess", successCount].Value, Severity.Success);
+    }
+
+    /// <summary>
+    /// Disables all method listeners.
+    /// </summary>
+    private async Task DisableAllListenersAsync()
+    {
+        var successCount = await PageState.DisableAllListenersAsync();
+        SnackBar.Add(L["Pages:SignalRDebug:Notifications:DisableListenersSuccess", successCount].Value, Severity.Success);
+    }
+
+    /// <summary>
+    /// Clears the page log.
+    /// </summary>
+    private void ClearMessages()
+    {
+        PageState.ClearMessages();
+    }
+
+    /// <summary>
+    /// Re-renders the page when the state object changes.
+    /// </summary>
+    private void OnStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Releases page subscriptions and browser interop resources.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        PageState.StateChanged -= OnStateChanged;
+        await PageState.DisposeAsync();
+    }
+}

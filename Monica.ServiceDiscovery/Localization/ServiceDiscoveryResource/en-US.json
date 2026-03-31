@@ -449,7 +449,6 @@
       "DomainNotFound": "Domain not found: {0}",
       "ForceDeleteLeaderFailed": "Failed to force delete leader: {0}",
       "GetDomainDetailFailed": "Failed to get domain details: {0}",
-      "GetDomainRelatedServicesFailed": "Failed to get related domain services: {0}",
       "GetDomainsFailed": "Failed to get domains: {0}",
       "GetLeaderStateFailed": "Failed to get leader state: {0}",
       "GetMergedServicesStatusFailed": "Failed to get merged service status: {0}",

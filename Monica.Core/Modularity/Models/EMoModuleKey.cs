@@ -77,7 +77,7 @@ public enum EMoModuleKey
     /// </summary>
     UICore,
     FrameworkUI,
-    SignalrUI,
+    SignalRUI,
     SystemInfoUI,
     ExecutionTimingUI,
     DataChannelUI,

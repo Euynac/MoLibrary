@@ -1,0 +1,111 @@
+@using Monica.SignalR.UISignalR.Models
+@inject IStringLocalizer<SignalRResource> L
+
+<!-- Hub method listening -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h5" Class="mb-3">@L["UISignalR:MethodListener:Title"]</MudText>
+    <MudGrid Class="mb-3">
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Primary" 
+                     OnClick="EnableAllListenersAsync"
+                     Disabled="!IsConnected">
+                @L["UISignalR:MethodListener:EnableAll"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                     Color="Color.Secondary" 
+                     OnClick="DisableAllListenersAsync"
+                     Disabled="!IsConnected"
+                     Class="ms-2">
+                @L["UISignalR:MethodListener:DisableAll"]
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    @if (HubMethods.Any())
+    {
+        <MudGrid>
+            @foreach (var method in HubMethods)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Class="pa-2">
+                        <MudCheckBox Value="@method.IsListening" 
+                                   Label="@method.DisplayName"
+                                   Color="Color.Primary"
+                                   T="bool"
+                                   ValueChanged="@((bool isChecked) => ToggleMethodListenerAsync(method, isChecked))" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @L["UISignalR:MethodListener:Parameters", GetParameterSummary(method)]
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @L["UISignalR:MethodListener:ReceivedCount", method.ReceivedCount]
+                        </MudText>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info">@L["UISignalR:MethodListener:Empty"]</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Hub method list
+    /// </summary>
+    [Parameter] public List<HubMethodInfo> HubMethods { get; set; } = [];
+
+    /// <summary>
+    /// Is it connected?
+    /// </summary>
+    [Parameter] public bool IsConnected { get; set; }
+
+    /// <summary>
+    /// Switch method listening callback
+    /// </summary>
+    [Parameter] public EventCallback<(HubMethodInfo method, bool isListening)> OnToggleMethodListener { get; set; }
+
+    /// <summary>
+    /// Enable all listener callbacks
+    /// </summary>
+    [Parameter] public EventCallback OnEnableAllListeners { get; set; }
+
+    /// <summary>
+    /// Disable all listener callbacks
+    /// </summary>
+    [Parameter] public EventCallback OnDisableAllListeners { get; set; }
+
+    /// <summary>
+    /// Switch method listener
+    /// </summary>
+    /// <param name="method">Method information</param>
+    /// <param name="isListening">Whether to listen</param>
+    private async Task ToggleMethodListenerAsync(HubMethodInfo method, bool isListening)
+    {
+        await OnToggleMethodListener.InvokeAsync((method, isListening));
+    }
+
+    /// <summary>
+    /// Enable all listeners
+    /// </summary>
+    private async Task EnableAllListenersAsync()
+    {
+        await OnEnableAllListeners.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Disable all listeners
+    /// </summary>
+    private async Task DisableAllListenersAsync()
+    {
+        await OnDisableAllListeners.InvokeAsync();
+    }
+
+    private string GetParameterSummary(HubMethodInfo method)
+    {
+        return method.Args.Any()
+            ? string.Join(", ", method.Args.Select(argument => $"{argument.TypeName} {argument.Name}"))
+            : L["UISignalR:Common:NoArguments"].Value;
+    }
+} 

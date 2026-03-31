@@ -10,10 +10,6 @@
       "PatternProviders": "可浏览 {0} 个",
       "ExactOnlyProviders": "仅精确查询 {0} 个"
     },
-    "Tabs": {
-      "ProviderOverview": "Provider 概览",
-      "KeyBrowser": "Key 浏览器"
-    },
     "Messages": {
       "NoProviders": "未注册任何 StateStore Provider",
       "NoProvidersDescription": "请先注册至少一个 StateStore Provider，才能使用浏览工作台。",
@@ -46,7 +42,6 @@
   },
   "ProviderDetail": {
     "Tabs": {
-      "ProviderInfo": "Provider 信息",
       "ConfigOptions": "配置选项"
     },
     "Labels": {
@@ -62,12 +57,10 @@
     "Capabilities": {
       "KeyScanning": "Key 扫描",
       "NoScanning": "不支持扫描",
-      "RawStringRetrieval": "原始字符串检索",
       "QueryState": "查询状态",
       "BulkOperations": "批量操作"
     },
     "Messages": {
-      "NoConfiguration": "暂无可展示的配置项",
       "NoConfigurationDescription": "当前 Provider 有配置快照，但没有适合在工作台中直接展示的简单字段。",
       "ConfigurationShared": "当前 Provider 使用共享实现，没有独立配置快照。"
     },
@@ -79,9 +72,7 @@
     "Rail": {
       "Eyebrow": "数据源",
       "Title": "Providers",
-      "Subtitle": "当前可用 {0} 个 Provider",
-      "SelectedProvider": "当前数据源",
-      "SelectedProviderSummary": "{0}，底层类型 {1}"
+      "Subtitle": "当前可用 {0} 个 Provider"
     },
     "Workspace": {
       "Eyebrow": "浏览器",
@@ -93,9 +84,6 @@
     },
     "Detail": {
       "Eyebrow": "记录详情",
-      "Tabs": {
-        "Record": "记录详情"
-      },
       "EmptyTitle": "选择一个 Provider",
       "EmptySubtitle": "从左侧选择 Provider 后，即可在中间浏览 Key 并在这里查看记录详情。",
       "SelectKeyTitle": "选择一条记录",
@@ -115,16 +103,13 @@
         "Key": "Key",
         "Status": "状态",
         "ETag": "ETag",
-        "TTL": "TTL",
-        "ConfigurationCount": "{0} 个配置项"
+        "TTL": "TTL"
       }
     },
     "Labels": {
       "KeyPattern": "Key 模式 (例如: user:*, session:*)",
       "KeyName": "Key 名称 (完整名称)",
-      "KeyNameColumn": "Key 名称",
       "ValuePreview": "值预览",
-      "Actions": "操作",
       "SearchMode": "搜索模式",
       "ExactLookupMode": "精确查询",
       "PatternSearchMode": "模式扫描",
@@ -232,8 +217,7 @@
     "Messages": {
       "FormatFailed": "JSON 格式化失败: {0}",
       "MinifyFailed": "JSON 压缩失败: {0}",
-      "KeyNameRequired": "请输入 Key 名称",
-      "KeyExists": "Key 已存在，请使用其他名称或编辑现有 Key"
+      "KeyNameRequired": "请输入 Key 名称"
     }
   },
   "KeyValuePreview": {

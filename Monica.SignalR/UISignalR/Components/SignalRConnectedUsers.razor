@@ -1,0 +1,183 @@
+@using Monica.SignalR.Models
+@inject IStringLocalizer<SignalRResource> L
+
+<!-- Connected user -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h5">@L["UISignalR:ConnectedUsers:Title", ConnectedUsers.Count]</MudText>
+        <MudButton OnClick="OnRefreshClicked"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   Color="Color.Primary"
+                   Size="Size.Small"
+                   Variant="Variant.Outlined">
+            @L["UISignalR:ConnectedUsers:Refresh"]
+        </MudButton>
+    </div>
+
+    @if (ConnectedUsers.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@L["UISignalR:ConnectedUsers:Empty"]</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="@ConnectedUsers"
+                  Dense="true"
+                  Hover="true"
+                  Breakpoint="Breakpoint.Sm"
+                  T="SignalRConnectedUserInfo">
+            <HeaderContent>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</MudTh>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:UserName"]</MudTh>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:UserId"]</MudTh>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]</MudTh>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]</MudTh>
+                <MudTh>@L["UISignalR:ConnectedUsers:Columns:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @context.ConnectionId.Substring(0, Math.Min(8, context.ConnectionId.Length))...
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:UserName"]">
+                    <MudText Typo="Typo.body2">
+                        @(string.IsNullOrEmpty(context.UserName) ? L["UISignalR:Common:None"].Value : context.UserName)
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:UserId"]">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @(string.IsNullOrEmpty(context.UserId) ? L["UISignalR:Common:None"].Value : context.UserId)
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]">
+                    <MudChip Size="Size.Small"
+                             Color="@(context.IsAuthenticated ? Color.Success : Color.Default)"
+                             T="string">
+                        @(context.IsAuthenticated
+                            ? L["UISignalR:Common:Authenticated"].Value
+                            : L["UISignalR:Common:Unauthenticated"].Value)
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]">
+                    <MudText Typo="Typo.body2">
+                        @context.ConnectionTime.ToString("HH:mm:ss")
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="@L["UISignalR:ConnectedUsers:Columns:Actions"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => ShowUserDetails(context))"
+                                   title="@L["UISignalR:ConnectedUsers:ViewDetails"]"
+                                   aria-label="@L["UISignalR:ConnectedUsers:ViewDetails"]" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+<!-- User details dialog -->
+<MudDialog @bind-Visible="@_dialogVisible" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@L["UISignalR:ConnectedUsers:DetailsTitle"]</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedUser != null)
+        {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@L["UISignalR:ConnectedUsers:BasicInfoTitle"]</MudText>
+                    <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
+                        <tbody>
+                            <tr>
+                                <td><strong>@L["UISignalR:ConnectedUsers:Columns:ConnectionId"]</strong></td>
+                                <td style="font-family: monospace;">@_selectedUser.ConnectionId</td>
+                            </tr>
+                            <tr>
+                                <td><strong>@L["UISignalR:ConnectedUsers:Columns:UserName"]</strong></td>
+                                <td>@(string.IsNullOrEmpty(_selectedUser.UserName) ? L["UISignalR:Common:None"].Value : _selectedUser.UserName)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>@L["UISignalR:ConnectedUsers:Columns:UserId"]</strong></td>
+                                <td style="font-family: monospace;">@(string.IsNullOrEmpty(_selectedUser.UserId) ? L["UISignalR:Common:None"].Value : _selectedUser.UserId)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>@L["UISignalR:ConnectedUsers:Columns:AuthenticationStatus"]</strong></td>
+                                <td>
+                                    <MudChip Size="Size.Small"
+                                             Color="@(_selectedUser.IsAuthenticated ? Color.Success : Color.Default)"
+                                             T="string">
+                                        @(_selectedUser.IsAuthenticated
+                                            ? L["UISignalR:Common:Authenticated"].Value
+                                            : L["UISignalR:Common:Unauthenticated"].Value)
+                                    </MudChip>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>@L["UISignalR:ConnectedUsers:Columns:ConnectionTime"]</strong></td>
+                                <td>@_selectedUser.ConnectionTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@L["UISignalR:ConnectedUsers:ClaimsTitle", _selectedUser.Claims.Count]</MudText>
+                    @if (_selectedUser.Claims.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info">@L["UISignalR:ConnectedUsers:ClaimsEmpty"]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudSimpleTable Dense="true" Hover="true" Style="max-height: 400px; overflow-y: auto;">
+                            <thead>
+                                <tr>
+                                    <th>@L["UISignalR:ConnectedUsers:ClaimType"]</th>
+                                    <th>@L["UISignalR:ConnectedUsers:ClaimValue"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var claim in _selectedUser.Claims)
+                                {
+                                    <tr>
+                                        <td style="font-family: monospace; word-break: break-all;">@claim.Key</td>
+                                        <td style="word-break: break-all;">@claim.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _dialogVisible = false)" Color="Color.Primary">@L["UISignalR:ConnectedUsers:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>
+    /// List of connected users
+    /// </summary>
+    [Parameter] public IReadOnlyList<SignalRConnectedUserInfo> ConnectedUsers { get; set; } = new List<SignalRConnectedUserInfo>();
+
+    /// <summary>
+    /// Refresh button click event
+    /// </summary>
+    [Parameter] public EventCallback OnRefreshClicked { get; set; }
+
+    private bool _dialogVisible = false;
+    private SignalRConnectedUserInfo? _selectedUser = null;
+    private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    /// <summary>
+    /// Show user details
+    /// </summary>
+    /// <param name="user">User information</param>
+    private void ShowUserDetails(SignalRConnectedUserInfo user)
+    {
+        _selectedUser = user;
+        _dialogVisible = true;
+    }
+}

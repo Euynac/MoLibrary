@@ -503,6 +503,7 @@
       "GeneratedExpressionInvalid": "生成的表达式无效: {0}",
       "BuildExpressionFailed": "构建表达式失败: {0}",
       "SourceExpressionInvalid": "源表达式无效: {0}",
+      "QuartzFormatMustHave6Parts": "Quartz 格式必须严格包含 6 段。",
       "FormatConversionFailed": "格式转换失败: {0}",
       "BuildDashboardFailed": "构建仪表盘数据失败: {0}",
       "BuildRecentActivitiesFailed": "构建最近活动失败: {0}",

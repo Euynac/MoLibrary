@@ -31,7 +31,6 @@
       "Tabs": {
         "SystemOverview": "系统概览",
         "PerformanceMonitoring": "性能监控",
-        "HealthCheck": "健康检查",
         "ModuleManagement": "模块管理",
         "Dependencies": "依赖关系",
         "AssemblyAnalysis": "程序集分析"
@@ -103,11 +102,9 @@
     },
     "HealthCheck": {
       "Labels": {
-        "HealthOverview": "健康概览",
         "PerformanceMetrics": "性能指标",
         "CheckItems": "检查项目",
         "DiscoveredIssues": "发现的问题",
-        "CheckTime": "检查时间:",
         "AverageInitTime": "平均初始化时间",
         "SlowestModuleTime": "最慢模块时间",
         "EfficiencyScore": "效率评分",
@@ -130,12 +127,6 @@
         "Medium": "中",
         "High": "高",
         "Critical": "严重"
-      },
-      "Loading": {
-        "HealthOverview": "加载健康概览...",
-        "PerformanceMetrics": "加载性能指标...",
-        "CheckItems": "加载检查项目...",
-        "IssueList": "加载问题列表..."
       }
     },
     "PerformanceMonitoring": {
@@ -217,7 +208,6 @@
         "Circular": "环形布局"
       },
       "Types": {
-        "All": "全部类型",
         "BuiltIn": "内置模块",
         "UI": "UI模块",
         "ThirdParty": "第三方模块",

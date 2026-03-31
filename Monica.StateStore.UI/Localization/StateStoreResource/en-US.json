@@ -10,10 +10,6 @@
       "PatternProviders": "{0} browse-enabled",
       "ExactOnlyProviders": "{0} exact-only"
     },
-    "Tabs": {
-      "ProviderOverview": "Provider Overview",
-      "KeyBrowser": "Key Browser"
-    },
     "Messages": {
       "NoProviders": "No StateStore Provider registered",
       "NoProvidersDescription": "Register at least one StateStore provider to unlock the browser workspace.",
@@ -46,7 +42,6 @@
   },
   "ProviderDetail": {
     "Tabs": {
-      "ProviderInfo": "Provider Info",
       "ConfigOptions": "Configuration Options"
     },
     "Labels": {
@@ -62,12 +57,10 @@
     "Capabilities": {
       "KeyScanning": "Key Scanning",
       "NoScanning": "No Scanning Support",
-      "RawStringRetrieval": "Raw String Retrieval",
       "QueryState": "Query State",
       "BulkOperations": "Bulk Operations"
     },
     "Messages": {
-      "NoConfiguration": "No displayable configuration",
       "NoConfigurationDescription": "This provider has an option snapshot, but it does not expose simple fields that fit the dashboard property grid.",
       "ConfigurationShared": "This provider uses a shared implementation without a dedicated option snapshot."
     },
@@ -79,9 +72,7 @@
     "Rail": {
       "Eyebrow": "Sources",
       "Title": "Providers",
-      "Subtitle": "{0} providers available",
-      "SelectedProvider": "Current source",
-      "SelectedProviderSummary": "{0} powered by {1}"
+      "Subtitle": "{0} providers available"
     },
     "Workspace": {
       "Eyebrow": "Browser",
@@ -93,9 +84,6 @@
     },
     "Detail": {
       "Eyebrow": "Record Detail",
-      "Tabs": {
-        "Record": "Record"
-      },
       "EmptyTitle": "Select a provider",
       "EmptySubtitle": "Choose a provider on the left to browse keys in the center and inspect a record here.",
       "SelectKeyTitle": "Select a record",
@@ -115,16 +103,13 @@
         "Key": "Key",
         "Status": "Status",
         "ETag": "ETag",
-        "TTL": "TTL",
-        "ConfigurationCount": "{0} entries"
+        "TTL": "TTL"
       }
     },
     "Labels": {
       "KeyPattern": "Key Pattern (e.g., user:*, session:*)",
       "KeyName": "Key Name (Full Name)",
-      "KeyNameColumn": "Key Name",
       "ValuePreview": "Value Preview",
-      "Actions": "Actions",
       "SearchMode": "Search Mode",
       "ExactLookupMode": "Exact Lookup",
       "PatternSearchMode": "Pattern Scan",
@@ -232,8 +217,7 @@
     "Messages": {
       "FormatFailed": "JSON formatting failed: {0}",
       "MinifyFailed": "JSON minification failed: {0}",
-      "KeyNameRequired": "Please enter Key name",
-      "KeyExists": "Key already exists, please use a different name or edit the existing Key"
+      "KeyNameRequired": "Please enter Key name"
     }
   },
   "KeyValuePreview": {

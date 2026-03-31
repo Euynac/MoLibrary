@@ -449,7 +449,6 @@
       "DomainNotFound": "未找到域: {0}",
       "ForceDeleteLeaderFailed": "强制删除 Leader 失败: {0}",
       "GetDomainDetailFailed": "获取域详细信息失败: {0}",
-      "GetDomainRelatedServicesFailed": "获取域相关服务失败: {0}",
       "GetDomainsFailed": "获取域信息失败: {0}",
       "GetLeaderStateFailed": "获取 Leader 状态失败: {0}",
       "GetMergedServicesStatusFailed": "获取合并服务状态失败: {0}",
