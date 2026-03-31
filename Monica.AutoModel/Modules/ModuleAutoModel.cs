@@ -2,13 +2,16 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.AutoModel.Abstractions;
 using Monica.AutoModel.Implements;
-using Monica.AutoModel.Interfaces;
+using Monica.AutoModel.Providers;
+using Monica.AutoModel.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
+using TokenExpressionGenDynamicLinqProvider = Monica.AutoModel.Providers.TokenExpressionGenDynamicLinqProvider;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -32,15 +35,15 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IAutoModelSnapshotFactory, AutoModelSnapshotFactoryMemoryProvider>();
-        services.AddSingleton(typeof(IAutoModelSnapshot<>), typeof(AutoModelSnapshotMemoryProvider<>));
-        services.AddTransient(typeof(IAutoModelExpressionNormalizer<>), typeof(AutoModelExpressionNormalizerDynamicLinqProvider<>));
-        services.AddTransient(typeof(IAutoModelDbOperator<>), typeof(AutoModelDbOperatorDynamicLinqProvider<>));
-        services.AddTransient(typeof(IAutoModelMemoryOperator<>), typeof(AutoModelMemoryOperatorDynamicLinqProvider<>));
+        services.AddSingleton<IAutoModelSnapshotFactory, SnapshotFactoryMemoryProvider>();
+        services.AddSingleton(typeof(IAutoModelSnapshot<>), typeof(SnapshotMemoryProvider<>));
+        services.AddTransient(typeof(IAutoModelExpressionNormalizer<>), typeof(ExpressionNormalizerDynamicLinqProvider<>));
+        services.AddTransient(typeof(IAutoModelDbOperator<>), typeof(DbOperatorDynamicLinqProvider<>));
+        services.AddTransient(typeof(IAutoModelMemoryOperator<>), typeof(MemoryOperatorDynamicLinqProvider<>));
         services.AddTransient(typeof(IAutoModelExpressionTokenizer<>),
-            typeof(AutoModelExpressionTokenizer<>));
-        services.AddTransient<IAutoModelTokenExpressionGen, AutoModelTokenExpressionGenDynamicLinqProvider>();
-        services.AddTransient<IAutoModelTypeConverter, AutoModelTypeConverter>();
+            typeof(AutoModel.Services.ExpressionTokenizer<>));
+        services.AddTransient<IAutoModelTokenExpressionGen, TokenExpressionGenDynamicLinqProvider>();
+        services.AddTransient<IAutoModelTypeConverter, TypeConverter>();
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)

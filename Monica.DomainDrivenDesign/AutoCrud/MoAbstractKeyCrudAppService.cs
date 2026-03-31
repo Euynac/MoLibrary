@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.AutoModel.Interfaces;
+using Monica.AutoModel.Abstractions;
 using Monica.Core.Features.MoMapper;
 using Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 using Monica.Repository;

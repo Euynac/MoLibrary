@@ -1,4 +1,4 @@
-using Monica.AutoModel.Interfaces;
+using Monica.AutoModel.Abstractions;
 
 namespace Monica.DomainDrivenDesign.AutoCrud.Interfaces;
 
