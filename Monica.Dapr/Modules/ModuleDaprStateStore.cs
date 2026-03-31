@@ -5,8 +5,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.StateStore;
-using Monica.StateStore;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

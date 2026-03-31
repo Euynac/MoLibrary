@@ -4,8 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Models;
-using Monica.StateStore;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 
 namespace Monica.ServiceDiscovery.Services.Support;
 

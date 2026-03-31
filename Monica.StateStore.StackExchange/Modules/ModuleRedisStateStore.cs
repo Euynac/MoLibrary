@@ -6,7 +6,7 @@ using Monica.Core.Modularity.Models;
 using Monica.StateStore;
 using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 using StackExchange.Redis;
 
 // ReSharper disable once CheckNamespace

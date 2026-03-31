@@ -9,8 +9,7 @@ using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
-using Monica.StateStore;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 
 namespace Monica.JobScheduler.Cache;
 

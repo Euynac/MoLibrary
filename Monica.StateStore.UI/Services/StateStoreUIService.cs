@@ -11,7 +11,7 @@ using Monica.Modules;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
 using Monica.Core.Results;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 
 namespace Monica.StateStore.UI.Services;
 

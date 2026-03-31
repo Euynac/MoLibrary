@@ -1,6 +1,6 @@
 using System.Text.Json;
-using Monica.StateStore.StateStore.Abstractions;
-using Monica.StateStore.StateStore.Models;
+using Monica.StateStore.Abstractions;
+using Monica.StateStore.Models;
 using Monica.StateStore.UI.Models;
 
 namespace Monica.StateStore.UI.Services.Browser;

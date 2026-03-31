@@ -17,8 +17,7 @@ using Monica.ServiceDiscovery.Models;
 using Monica.ServiceDiscovery.Providers;
 using Monica.ServiceDiscovery.Services;
 using Monica.ServiceDiscovery.Services.Support;
-using Monica.StateStore;
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 using Polly;
 using Polly.Retry;
 

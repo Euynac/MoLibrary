@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
 using Monica.Modules;
-using Monica.StateStore.Cancellation.Abstractions;
+using Monica.StateStore.TaskProgress.Cancellation.Abstractions;
 
 namespace Monica.JobScheduler.ControlPlane;
 

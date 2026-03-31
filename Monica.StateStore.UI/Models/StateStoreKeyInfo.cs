@@ -1,4 +1,4 @@
-using Monica.StateStore.StateStore.Models;
+using Monica.StateStore.Models;
 
 namespace Monica.StateStore.UI.Models;
 

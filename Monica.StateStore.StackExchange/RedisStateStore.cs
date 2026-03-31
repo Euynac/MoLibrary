@@ -5,9 +5,9 @@ using Monica.Core.Extensions;
 using Monica.StateStore.StackExchange.Connection;
 using Monica.Modules;
 using Monica.StateStore.StackExchange.Scripts;
-using Monica.StateStore.StateStore.Abstractions;
-using Monica.StateStore.StateStore.Models;
-using Monica.StateStore.StateStore.Queries;
+using Monica.StateStore.Abstractions;
+using Monica.StateStore.Models;
+using Monica.StateStore.Queries;
 using StackExchange.Redis;
 
 namespace Monica.StateStore.StackExchange;

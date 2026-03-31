@@ -1,4 +1,4 @@
-using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.Abstractions;
 
 namespace Monica.StateStore.UI.Services.Browser;
 
