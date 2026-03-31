@@ -6,7 +6,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.StateStore;
 using Monica.StateStore;
-using Monica.StateStore.Providers;
+using Monica.StateStore.StateStore.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -41,7 +41,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
             services.Configure(serviceKey, configureOptions);
 
             // Register keyed DaprStateStore
-            services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
+            services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
             {
                 var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleDaprStateStoreOption>>();
                 var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));

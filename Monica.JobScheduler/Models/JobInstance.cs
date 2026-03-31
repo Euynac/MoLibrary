@@ -22,7 +22,7 @@ public class JobInstance
     /// <summary>
     /// Gets or sets the unique identifier for this job instance.
     /// Generated as a GUID when the instance is created.
-    /// Used as the cancellation token key in IMoCancellationManager for distributed cancellation.
+    /// Used as the cancellation token key in ICancellationManager for distributed cancellation.
     /// </summary>
     public string InstanceId { get; set; } = string.Empty;
 

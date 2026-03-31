@@ -5,7 +5,8 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore;
-using Monica.StateStore.MemoryProvider;
+using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.StateStore.Providers.Memory;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -36,12 +37,12 @@ public class ModuleStateStore(ModuleStateStoreOption option)
         if (Option.UseDistributedProviderAsDefault)
         {
             CheckRequiredMethod(nameof(ModuleStateStoreGuide.SetCommonDistributedStateStoreProvider), "未配置分布式状态存储Provider");
-            services.AddSingleton<IMoStateStore>(serviceProvider =>
+            services.AddSingleton<IStateStore>(serviceProvider =>
                 serviceProvider.GetRequiredService<IDistributedStateStore>());
         }
         else
         {
-            services.AddSingleton<IMoStateStore>(serviceProvider => serviceProvider.GetRequiredService<IMemoryStateStore>());
+            services.AddSingleton<IStateStore>(serviceProvider => serviceProvider.GetRequiredService<IMemoryStateStore>());
         }
     }
 }
@@ -73,12 +74,12 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
             if (useDistributed)
             {
                 CheckRequiredMethod(nameof(SetCommonDistributedStateStoreProvider));
-                context.Services.TryAddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
+                context.Services.TryAddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
                     serviceProvider.GetRequiredService<IDistributedStateStore>());
             }
             else
             {
-                context.Services.TryAddKeyedSingleton<IMoStateStore>(key, (serviceProvider, _) =>
+                context.Services.TryAddKeyedSingleton<IStateStore>(key, (serviceProvider, _) =>
                     serviceProvider.GetRequiredService<IMemoryStateStore>());
             }
         }, secondKey: key);
@@ -93,9 +94,9 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     /// <typeparam name="TProvider">State store provider type</typeparam>
     /// <param name="key">Service key</param>
     /// <returns>Current module guide instance for chaining</returns>
-    public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IMoStateStore
+    public ModuleStateStoreGuide AddKeyedStateStore<TProvider>(string key) where TProvider : class, IStateStore
     {
-        ConfigureServices(services => { services.Services.AddKeyedSingleton<IMoStateStore, TProvider>(key); }, secondKey: key);
+        ConfigureServices(services => { services.Services.AddKeyedSingleton<IStateStore, TProvider>(key); }, secondKey: key);
         RecordKeyedServiceKey(key);
         return this;
     }
@@ -119,7 +120,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
 public class ModuleStateStoreOption : MoModuleOption<ModuleStateStore>
 {
     /// <summary>
-    /// Use distributed state storage as the default (non-Keyed service) <see cref="IMoStateStore"/> implementation
+    /// Use distributed state storage as the default (non-Keyed service) <see cref="IStateStore"/> implementation
     /// </summary>
     public bool UseDistributedProviderAsDefault { get; set; }
 }

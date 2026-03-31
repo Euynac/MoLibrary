@@ -356,13 +356,13 @@ File.WriteAllBytes("D:\\export.xlsx", bytes); // 保存Excel文件
 本模块集成了Monica.StateStore中的进度条功能，可以实时跟踪Excel导出进度：
 
 ```csharp
-using Monica.StateStore.ProgressBar;
+using Monica.StateStore.TaskProgress;
 
 // 创建进度条服务实例
-var progressBarService = serviceProvider.GetService<IMoProgressBarService>();
+var taskProgressService = serviceProvider.GetService<ITaskProgressService>();
 
 // 创建一个进度条任务
-var progressBar = await progressBarService.CreateProgressBarAsync(id: "excel-export-task", settingAction: setting =>
+var taskProgress = await taskProgressService.CreateTaskProgressAsync(id: "excel-export-task", settingAction: setting =>
 {
     setting.TotalSteps = 100; // 总步数，默认为100
     setting.TimeToLive = TimeSpan.FromMinutes(15); // 进度条存活时间
@@ -371,20 +371,20 @@ var progressBar = await progressBarService.CreateProgressBarAsync(id: "excel-exp
 });
 
 // 订阅进度条事件
-progressBar.StatusUpdated += (sender, e) =>
+taskProgress.StatusUpdated += (sender, e) =>
 {
-    var currentProgress = e.ProgressBar.Status;
+    var currentProgress = e.TaskProgress.Status;
     Console.WriteLine($"当前进度: {currentProgress.CurrentStep}/{currentProgress.TotalSteps}, 状态: {currentProgress.CurrentStatus}");
 };
 
-progressBar.Completed += (sender, e) => 
+taskProgress.Completed += (sender, e) => 
 {
     Console.WriteLine("Excel导出完成!");
 };
 
-progressBar.Cancelled += (sender, e) =>
+taskProgress.Cancelled += (sender, e) =>
 {
-    Console.WriteLine($"Excel导出已取消，原因: {e.CancelReason}");
+    Console.WriteLine($"Excel导出已取消，原因: {e.Reason}");
 };
 
 // 使用带进度条的导出方法
@@ -397,7 +397,7 @@ var bytes = manager.Export(data,
     {
         option.SheetName = "Sheet1"; // 工作表名
     }, 
-    progressBar: progressBar
+    taskProgress: taskProgress
 );
 
 // 方法2：异步导出 
@@ -406,13 +406,13 @@ var bytes = await manager.ExportAsync(data,
     {
         option.SheetName = "Sheet1"; // 工作表名
     }, 
-    progressBar: progressBar
+    taskProgress: taskProgress
 );
 
 File.WriteAllBytes("D:\\export.xlsx", bytes); // 保存Excel文件
 
-// 您也可以在其他地方通过任务ID获取进度条状态
-var progressStatus = await progressBarService.GetProgressBarStatus("excel-export-task");
+// 您也可以在其他地方通过任务ID获取任务进度状态
+var progressStatus = await taskProgressService.GetTaskProgressStatusAsync("excel-export-task");
 Console.WriteLine($"当前进度: {progressStatus.CurrentStep}/{progressStatus.TotalSteps}");
 ```
 

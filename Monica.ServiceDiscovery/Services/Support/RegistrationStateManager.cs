@@ -5,6 +5,7 @@ using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Models;
 using Monica.StateStore;
+using Monica.StateStore.StateStore.Abstractions;
 
 namespace Monica.ServiceDiscovery.Services.Support;
 
@@ -12,7 +13,7 @@ namespace Monica.ServiceDiscovery.Services.Support;
 /// Registration state manager based on StateStore
 /// </summary>
 public class RegistrationStateManager(
-    [FromKeyedServices(nameof(ModuleServiceDiscovery))] IMoStateStore stateStore,
+    [FromKeyedServices(nameof(ModuleServiceDiscovery))] IStateStore stateStore,
     IServiceDiscoveryClientInfo clientInfo,
     ILeaderElectionService leaderElectionService,
     IOptions<ModuleServiceDiscoveryOption> options,

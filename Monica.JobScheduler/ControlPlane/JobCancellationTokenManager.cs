@@ -1,17 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.StateStore.CancellationManager;
 using Monica.JobScheduler.Abstractions;
 using Monica.Modules;
+using Monica.StateStore.Cancellation.Abstractions;
 
 namespace Monica.JobScheduler.ControlPlane;
 
 /// <summary>
-/// Implementation of <see cref="IJobCancellationTokenManager"/> that wraps <see cref="IMoCancellationManager"/>
+/// Implementation of <see cref="IJobCancellationTokenManager"/> that wraps <see cref="ICancellationManager"/>
 /// and automatically prefixes all job instance token keys with "JobScheduler:" for namespace isolation.
 /// </summary>
 public class JobCancellationTokenManager(
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoCancellationManager cancellationManager,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] ICancellationManager cancellationManager,
     ILogger<JobCancellationTokenManager> logger) : IJobCancellationTokenManager
 {
     private const string JobTokenPrefix = "JobScheduler:";

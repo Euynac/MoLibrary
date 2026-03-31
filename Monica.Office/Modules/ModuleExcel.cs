@@ -31,7 +31,7 @@ public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, Modul
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleProgressBarGuide>().Register();
+        DependsOnModule<ModuleTaskProgressGuide>().Register();
     }
 }
 

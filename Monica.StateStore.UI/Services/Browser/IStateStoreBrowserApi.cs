@@ -1,23 +1,23 @@
-using Monica.StateStore.Providers;
+using Monica.StateStore.StateStore.Abstractions;
 using Monica.StateStore.UI.Models;
 
 namespace Monica.StateStore.UI.Services.Browser;
 
 public interface IStateStoreBrowserApi
 {
-    bool CanHandle(EStateStoreProviderType providerType, IMoStateStore provider);
+    bool CanHandle(EStateStoreProviderType providerType, IStateStore provider);
 
-    EStateStoreBrowserFeatures GetFeatures(IMoStateStore provider);
+    EStateStoreBrowserFeatures GetFeatures(IStateStore provider);
 
-    EStateStoreKeySearchMode GetDefaultSearchMode(IMoStateStore provider);
+    EStateStoreKeySearchMode GetDefaultSearchMode(IStateStore provider);
 
     Task<StateStoreKeyBrowseResult> BrowseAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         StateStoreKeyBrowseRequest request,
         CancellationToken cancellationToken = default);
 
     Task<StateStoreKeyInfo> LoadKeyAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken = default);
 }

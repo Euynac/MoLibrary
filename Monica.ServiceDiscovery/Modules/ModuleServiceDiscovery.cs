@@ -18,6 +18,7 @@ using Monica.ServiceDiscovery.Providers;
 using Monica.ServiceDiscovery.Services;
 using Monica.ServiceDiscovery.Services.Support;
 using Monica.StateStore;
+using Monica.StateStore.StateStore.Abstractions;
 using Polly;
 using Polly.Retry;
 
@@ -70,7 +71,7 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : MoMod
         {
             if (option.CustomStateStoreServiceKey != nameof(ModuleServiceDiscovery))
             {
-                services.AddKeyedSingleton<IMoStateStore>(nameof(ModuleServiceDiscovery), (sp, _) => sp.GetRequiredKeyedService<IMoStateStore>(option.CustomStateStoreServiceKey));
+                services.AddKeyedSingleton<IStateStore>(nameof(ModuleServiceDiscovery), (sp, _) => sp.GetRequiredKeyedService<IStateStore>(option.CustomStateStoreServiceKey));
             }
         }
 

@@ -300,7 +300,7 @@
     background: var(--mo-fresh-gradient) !important;
 }
 
-/* circular progress bar */
+/* circular progress indicator */
 .mo-theme-fresh-light .mud-progress-circular circle,
 .mo-theme-fresh-dark .mud-progress-circular circle {
     stroke-linecap: round !important;

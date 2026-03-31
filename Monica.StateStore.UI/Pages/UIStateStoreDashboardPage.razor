@@ -80,7 +80,7 @@
     private List<StateStoreProviderInfo> providers = [];
     private bool isLoading;
 
-    private StateStoreProviderInfo? DefaultProvider => providers.FirstOrDefault(provider => provider.IsDefaultIMoStateStore);
+    private StateStoreProviderInfo? DefaultProvider => providers.FirstOrDefault(provider => provider.IsDefaultStateStore);
 
     private int ExactOnlyProviderCount => providers.Count(provider => provider.SupportsExactLookup && !provider.SupportsKeyScanning);
 

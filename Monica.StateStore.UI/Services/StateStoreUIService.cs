@@ -8,10 +8,10 @@ using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
 using Monica.Modules;
-using Monica.StateStore.Providers;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
 using Monica.Core.Results;
+using Monica.StateStore.StateStore.Abstractions;
 
 namespace Monica.StateStore.UI.Services;
 
@@ -56,7 +56,7 @@ public class StateStoreUIService(
             var providers = new List<StateStoreProviderInfo>();
             var keyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(typeof(ModuleStateStore));
 
-            var defaultProvider = serviceProvider.GetService<IMoStateStore>();
+            var defaultProvider = serviceProvider.GetService<IStateStore>();
             if (defaultProvider != null)
             {
                 providers.Add(CreateProviderInfo(null, defaultProvider));
@@ -66,7 +66,7 @@ public class StateStoreUIService(
             {
                 try
                 {
-                    var keyedProvider = serviceProvider.GetKeyedService<IMoStateStore>(key);
+                    var keyedProvider = serviceProvider.GetKeyedService<IStateStore>(key);
                     if (keyedProvider != null)
                     {
                         providers.Add(CreateProviderInfo(key, keyedProvider));
@@ -79,7 +79,7 @@ public class StateStoreUIService(
             }
 
             return Res.Ok(providers
-                .OrderByDescending(provider => provider.IsDefaultIMoStateStore)
+                .OrderByDescending(provider => provider.IsDefaultStateStore)
                 .ThenBy(provider => provider.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToList());
         }
@@ -90,13 +90,13 @@ public class StateStoreUIService(
         }
     }
 
-    public Res<IMoStateStore> GetProvider(string? serviceKey)
+    public Res<IStateStore> GetProvider(string? serviceKey)
     {
         try
         {
-            IMoStateStore? provider = serviceKey == null
-                ? serviceProvider.GetService<IMoStateStore>()
-                : serviceProvider.GetKeyedService<IMoStateStore>(serviceKey);
+            IStateStore? provider = serviceKey == null
+                ? serviceProvider.GetService<IStateStore>()
+                : serviceProvider.GetKeyedService<IStateStore>(serviceKey);
 
             if (provider == null)
             {
@@ -112,7 +112,7 @@ public class StateStoreUIService(
         }
     }
 
-    private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IMoStateStore provider)
+    private StateStoreProviderInfo CreateProviderInfo(string? serviceKey, IStateStore provider)
     {
         var (providerType, capabilities, providerDisplayName) = GetProviderMetadata(provider);
         var browserApi = GetBrowserApi(providerType, provider);
@@ -121,12 +121,12 @@ public class StateStoreUIService(
         var (optionType, optionInstance) = GetProviderOptionInfo(serviceKey, provider);
         var configurationEntries = CreateConfigurationEntries(optionType, optionInstance);
 
-        var isDefaultIMoStateStore = false;
+        var isDefaultStateStore = false;
         if (serviceKey == null)
         {
             var useDistributed = stateStoreOption.Value.UseDistributedProviderAsDefault;
             var isDistributed = provider is IDistributedStateStore;
-            isDefaultIMoStateStore = useDistributed == isDistributed;
+            isDefaultStateStore = useDistributed == isDistributed;
         }
 
         return new StateStoreProviderInfo
@@ -138,7 +138,7 @@ public class StateStoreUIService(
             BrowserFeatures = browserFeatures,
             DefaultSearchMode = defaultSearchMode,
             IsDistributed = provider is IDistributedStateStore,
-            IsDefaultIMoStateStore = isDefaultIMoStateStore,
+            IsDefaultStateStore = isDefaultStateStore,
             OptionType = optionType,
             OptionInstance = optionInstance,
             ConfigurationEntries = configurationEntries,
@@ -146,7 +146,7 @@ public class StateStoreUIService(
         };
     }
 
-    private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IMoStateStore provider)
+    private (EStateStoreProviderType providerType, EStateStoreCapabilities capabilities, string displayName) GetProviderMetadata(IStateStore provider)
     {
         var providerTypeName = provider.GetType().FullName ?? string.Empty;
 
@@ -173,7 +173,7 @@ public class StateStoreUIService(
         return (EStateStoreProviderType.Unknown, EStateStoreCapabilities.BulkOperations, "Unknown");
     }
 
-    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, IMoStateStore provider)
+    private (Type? optionType, object? optionInstance) GetProviderOptionInfo(string? serviceKey, IStateStore provider)
     {
         try
         {
@@ -201,7 +201,7 @@ public class StateStoreUIService(
         }
     }
 
-    private IStateStoreBrowserApi GetBrowserApi(EStateStoreProviderType providerType, IMoStateStore provider)
+    private IStateStoreBrowserApi GetBrowserApi(EStateStoreProviderType providerType, IStateStore provider)
     {
         return _browserApis.First(api => api.CanHandle(providerType, provider));
     }

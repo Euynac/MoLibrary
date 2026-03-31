@@ -1,4 +1,4 @@
-using Monica.StateStore.Providers;
+using Monica.StateStore.StateStore.Abstractions;
 using Monica.StateStore.UI.Models;
 
 namespace Monica.StateStore.UI.Services.Browser;
@@ -7,7 +7,7 @@ public sealed class RedisStateStoreBrowserApi : StateStoreBrowserApiBase
 {
     public override EStateStoreProviderType ProviderType => EStateStoreProviderType.Redis;
 
-    public override EStateStoreBrowserFeatures GetFeatures(IMoStateStore provider)
+    public override EStateStoreBrowserFeatures GetFeatures(IStateStore provider)
     {
         return base.GetFeatures(provider) |
                EStateStoreBrowserFeatures.PatternSearch |
@@ -15,7 +15,7 @@ public sealed class RedisStateStoreBrowserApi : StateStoreBrowserApiBase
     }
 
     protected override async Task<StateStoreKeyBrowseResult> BrowsePatternAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string pattern,
         int limit,
         CancellationToken cancellationToken)

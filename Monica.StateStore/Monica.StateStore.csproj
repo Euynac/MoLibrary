@@ -6,13 +6,8 @@
     <PackageDescription>State management and persistence abstractions for Monica framework, providing unified interfaces for distributed state storage.</PackageDescription>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
-  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="MemoryProvider\" />
   </ItemGroup>
 </Project>

@@ -6,8 +6,8 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Modules;
 using Monica.StateStore;
-using Monica.StateStore.QueryBuilder;
-using Monica.StateStore.QueryBuilder.Interfaces;
+using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.StateStore.Queries;
 
 namespace Monica.Dapr.StateStore;
 

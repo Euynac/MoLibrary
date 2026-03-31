@@ -53,7 +53,7 @@ public enum EMoModuleKey
     ExecutionTiming,
     Excel,
     CancellationManager,
-    ProgressBar,
+    TaskProgress,
     /// <summary>
     /// Job scheduling module.
     /// </summary>

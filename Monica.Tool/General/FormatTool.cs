@@ -64,7 +64,7 @@ public static class FormatTool
     /// <param name="len">the whole bar's str length. (At least 3)</param>
     /// <param name="percentage">the progress percentage of whole bar</param>
     /// <returns></returns>
-    public static string? FormatProgressBar(int len, double percentage)
+    public static string? FormatTaskProgress(int len, double percentage)
     {
         if (len <= 2) return null;
         var progressCount = (int)((len - 2) * percentage.LimitInRange(0, 1));

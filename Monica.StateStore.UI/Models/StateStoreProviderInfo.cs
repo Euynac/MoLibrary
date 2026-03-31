@@ -1,4 +1,4 @@
-using Monica.StateStore.Providers;
+using Monica.StateStore.StateStore.Abstractions;
 
 namespace Monica.StateStore.UI.Models;
 
@@ -48,9 +48,9 @@ public class StateStoreProviderInfo
     public bool IsDistributed { get; init; }
 
     /// <summary>
-    /// Whether this provider is the default IMoStateStore implementation resolved from DI.
+    /// Whether this provider is the default IStateStore implementation resolved from DI.
     /// </summary>
-    public bool IsDefaultIMoStateStore { get; init; }
+    public bool IsDefaultStateStore { get; init; }
 
     /// <summary>
     /// Provider option type.

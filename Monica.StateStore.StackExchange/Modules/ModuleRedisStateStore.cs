@@ -4,9 +4,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore;
-using Monica.StateStore.Providers;
 using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
+using Monica.StateStore.StateStore.Abstractions;
 using StackExchange.Redis;
 
 // ReSharper disable once CheckNamespace
@@ -70,7 +70,7 @@ public static class ModuleRedisStateStoreBuilderExtensions
             });
 
             // Register keyed RedisStateStore
-            services.AddKeyedSingleton<IMoStateStore>(serviceKey, (sp, _) =>
+            services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
             {
                 var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleRedisStateStoreOption>>();
                 var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));

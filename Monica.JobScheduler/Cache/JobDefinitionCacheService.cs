@@ -10,6 +10,7 @@ using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
 using Monica.StateStore;
+using Monica.StateStore.StateStore.Abstractions;
 
 namespace Monica.JobScheduler.Cache;
 
@@ -21,7 +22,7 @@ namespace Monica.JobScheduler.Cache;
 /// </summary>
 public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisposable, IAsyncDisposable
 {
-    private readonly IMoStateStore _staleStore;
+    private readonly IStateStore _staleStore;
     private readonly string _stalePrefix;
 
     private readonly ConcurrentDictionary<string, JobDefinition> _cache = new();
@@ -34,7 +35,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
 
     public JobDefinitionCacheService(
         IMoJobMetadataRepository metadataRepository,
-        [FromKeyedServices(nameof(ModuleJobScheduler))] IMoStateStore stateStore,
+        [FromKeyedServices(nameof(ModuleJobScheduler))] IStateStore stateStore,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
         IOptions<ModuleJobSchedulerOption> options,
         ILogger<JobDefinitionCacheService> logger)

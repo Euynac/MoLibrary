@@ -1,5 +1,5 @@
 using Monica.Office.Excel.Models;
-using Monica.StateStore.ProgressBar;
+using Monica.StateStore.TaskProgress.Models;
 
 namespace Monica.Office.Excel.Abstractions
 {
@@ -31,9 +31,9 @@ namespace Monica.Office.Excel.Abstractions
         /// <param name="data">The data to export</param>
         /// <param name="requests"></param>
         /// <param name="optionAction">Configures export options</param>
-        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
-        byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, ProgressBar? progressBar = null)
+        byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, TaskProgress? taskProgress = null)
             where TExportDto : class;
 
         /// <summary>
@@ -43,9 +43,9 @@ namespace Monica.Office.Excel.Abstractions
         /// <param name="data">The data to export</param>
         /// <param name="requests"></param>
         /// <param name="optionAction">Configures export options</param>
-        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
-        Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, ProgressBar? progressBar = null)
+        Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data, ExcelHeaderRequest[] requests, Action<ExcelExportOptions>? optionAction = null, TaskProgress? taskProgress = null)
             where TExportDto : class;
         /// <summary>
         /// Exports data
@@ -57,10 +57,10 @@ namespace Monica.Office.Excel.Abstractions
         ///     <para>1. If not specified, all columns are exported in <typeparamref name="TExportDto"/> property order. If specified, columns are exported in array order.</para>
         ///     <para>2. Use <see cref="GetExportHeader{TExportDto}"/> to get available header names.</para>
         /// </param>
-        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
         byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, Action<ExcelExportOptions>? optionAction = null,
-            string[]? onlyExportHeaderName = null, ProgressBar? progressBar = null)
+            string[]? onlyExportHeaderName = null, TaskProgress? taskProgress = null)
             where TExportDto : class;
 
         /// <summary>
@@ -73,10 +73,10 @@ namespace Monica.Office.Excel.Abstractions
         ///     <para>1. If not specified, all columns are exported in <typeparamref name="TExportDto"/> property order. If specified, columns are exported in array order.</para>
         ///     <para>2. Use <see cref="GetExportHeader{TExportDto}"/> to get available header names.</para>
         /// </param>
-        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
         Task<byte[]> ExportAsync<TExportDto>(IReadOnlyList<TExportDto> data,
             Action<ExcelExportOptions>? optionAction = null, string[]? onlyExportHeaderName = null,
-            ProgressBar? progressBar = null) where TExportDto : class;
+            TaskProgress? taskProgress = null) where TExportDto : class;
     }
 }

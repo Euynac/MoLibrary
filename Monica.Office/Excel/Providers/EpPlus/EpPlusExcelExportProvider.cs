@@ -1,6 +1,6 @@
 using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Services;
-using Monica.StateStore.ProgressBar;
+using Monica.StateStore.TaskProgress.Models;
 
 namespace Monica.Office.Excel.Providers.EpPlus
 {
@@ -14,11 +14,11 @@ namespace Monica.Office.Excel.Providers.EpPlus
     {
         protected override byte[] ImplementExport<TExportDto>(IReadOnlyList<TExportDto> data,
             ExcelHeaderRequest[] requests,
-            Action<ExcelExportOptions>? optionAction, ProgressBar? progressBar = null)
+            Action<ExcelExportOptions>? optionAction, TaskProgress? taskProgress = null)
         {
             var export = new EpPlusExcelExportBase(epPlusCellStyleSupport, epPlusWorkbookSupport);
 
-            return export.Export(data, optionAction, requests, progressBar);
+            return export.Export(data, optionAction, requests, taskProgress);
         }
     }
 }

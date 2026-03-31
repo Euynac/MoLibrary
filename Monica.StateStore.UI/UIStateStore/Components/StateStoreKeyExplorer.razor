@@ -1,9 +1,10 @@
 @using Monica.Modules
 @using Monica.StateStore
-@using Monica.StateStore.Providers
 @using Monica.StateStore.UI.Models
 @using Monica.StateStore.UI.Services
 @using Monica.Core.Results;
+@using Monica.StateStore.StateStore.Abstractions
+@using Monica.StateStore.StateStore.Models
 @inject StateStoreUIService StateStoreService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -1279,7 +1280,7 @@
     {
         var parts = new List<string>();
 
-        if (provider.IsDefaultIMoStateStore)
+        if (provider.IsDefaultStateStore)
         {
             parts.Add(L["KeyExplorer:Labels:DefaultProvider"]);
         }

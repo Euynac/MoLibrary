@@ -4,7 +4,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore;
-using Monica.StateStore.CancellationManager;
+using Monica.StateStore.Cancellation.Abstractions;
+using Monica.StateStore.Cancellation.Services;
+using Monica.StateStore.StateStore.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -42,14 +44,14 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
         if (!Option.UseDistributed)
         {
             // Register the memory version to cancel the token manager service
-            services.AddSingleton<IMoCancellationManager, InMemoryCancellationManager>();
+            services.AddSingleton<ICancellationManager, InMemoryCancellationManager>();
         }
         else
         {
             // Register the distributed cancellation token manager service
-            services.AddSingleton<IMoCancellationManager>((serviceProvider) =>
+            services.AddSingleton<ICancellationManager>((serviceProvider) =>
             {
-                var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(nameof(ModuleCancellationManager));
+                var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(nameof(ModuleCancellationManager));
                 return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
             });
         }
@@ -86,7 +88,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
 
         ConfigureServices(context =>
         {
-            context.Services.AddKeyedSingleton<IMoCancellationManager>(key, (serviceProvider, _) =>
+            context.Services.AddKeyedSingleton<ICancellationManager>(key, (serviceProvider, _) =>
             {
                 if (!useDistributed)
                 {
@@ -96,7 +98,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
                 else
                 {
                     // Use distributed implementation
-                    var stateStore = serviceProvider.GetRequiredKeyedService<IMoStateStore>(key);
+                    var stateStore = serviceProvider.GetRequiredKeyedService<IStateStore>(key);
                     return ActivatorUtilities.CreateInstance<DistributedCancellationManager>(serviceProvider, stateStore);
                 }
             });

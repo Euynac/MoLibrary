@@ -1,5 +1,6 @@
 using System.Text.Json;
-using Monica.StateStore.Providers;
+using Monica.StateStore.StateStore.Abstractions;
+using Monica.StateStore.StateStore.Models;
 using Monica.StateStore.UI.Models;
 
 namespace Monica.StateStore.UI.Services.Browser;
@@ -13,12 +14,12 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
 
     public abstract EStateStoreProviderType ProviderType { get; }
 
-    public virtual bool CanHandle(EStateStoreProviderType providerType, IMoStateStore provider)
+    public virtual bool CanHandle(EStateStoreProviderType providerType, IStateStore provider)
     {
         return providerType == ProviderType;
     }
 
-    public virtual EStateStoreBrowserFeatures GetFeatures(IMoStateStore provider)
+    public virtual EStateStoreBrowserFeatures GetFeatures(IStateStore provider)
     {
         var features = EStateStoreBrowserFeatures.ExactLookup |
                        EStateStoreBrowserFeatures.ValuePreview |
@@ -34,7 +35,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
         return features;
     }
 
-    public virtual EStateStoreKeySearchMode GetDefaultSearchMode(IMoStateStore provider)
+    public virtual EStateStoreKeySearchMode GetDefaultSearchMode(IStateStore provider)
     {
         return GetFeatures(provider).HasFlag(EStateStoreBrowserFeatures.PatternSearch)
             ? EStateStoreKeySearchMode.PatternScan
@@ -42,7 +43,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     public async Task<StateStoreKeyBrowseResult> BrowseAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         StateStoreKeyBrowseRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -71,7 +72,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     public virtual async Task<StateStoreKeyInfo> LoadKeyAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken = default)
     {
@@ -102,7 +103,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual EStateStoreKeySearchMode ResolveSearchMode(
-        IMoStateStore provider,
+        IStateStore provider,
         StateStoreKeyBrowseRequest request)
     {
         if (request.SearchMode != EStateStoreKeySearchMode.Auto)
@@ -116,7 +117,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual async Task<StateStoreKeyBrowseResult> BrowseExactKeyAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken)
     {
@@ -141,7 +142,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual Task<StateStoreKeyBrowseResult> BrowsePatternAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string pattern,
         int limit,
         CancellationToken cancellationToken)
@@ -158,7 +159,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual async Task<string?> LoadRawValueAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken)
     {
@@ -172,7 +173,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual async Task<string?> LoadETagAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken)
     {
@@ -187,7 +188,7 @@ public abstract class StateStoreBrowserApiBase : IStateStoreBrowserApi
     }
 
     protected virtual Task<StateStoreKeyTtlSnapshot> LoadTtlSnapshotAsync(
-        IMoStateStore provider,
+        IStateStore provider,
         string key,
         CancellationToken cancellationToken)
     {

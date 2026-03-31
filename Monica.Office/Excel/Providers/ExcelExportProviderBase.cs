@@ -5,7 +5,7 @@ using Monica.Office.Excel.Annotations;
 using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Models.Internal;
 using Monica.Office.Excel.Services.Support;
-using Monica.StateStore.ProgressBar;
+using Monica.StateStore.TaskProgress.Models;
 
 namespace Monica.Office.Excel.Providers
 {
@@ -28,35 +28,35 @@ namespace Monica.Office.Excel.Providers
         /// <param name="data">The data to export</param>
         /// <param name="optionAction">Configures export options</param>
         /// <param name="requests">The header names to export. If not specified, all headers are exported in <typeparamref name="TExportDto"/> property order. If specified, headers are exported in request order.</param>
-        /// <param name="progressBar">Optional progress bar instance. No progress is reported when <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance. No progress is reported when <see langword="null"/>.</param>
         /// <returns></returns>
         public byte[] Export<TExportDto>(IReadOnlyList<TExportDto> data, Action<ExcelExportOptions>? optionAction,
-            ExcelHeaderRequest[] requests, ProgressBar? progressBar = null)
+            ExcelHeaderRequest[] requests, TaskProgress? taskProgress = null)
             where TExportDto : class
         {
             try
             {
-                progressBar?.ThrowIfCancellationRequested();
+                taskProgress?.ThrowIfCancellationRequested();
                 var options = new ExcelExportOptions();
                 optionAction?.Invoke(options);
                 options.CheckError();
 
 
-                progressBar?.IncrementAsync(1, "初始化Excel导出", "导出Excel").Wait();
+                taskProgress?.IncrementAsync(1, "初始化Excel导出", "导出Excel").Wait();
 
                 // Get the workbook
                 var workbook = GetWorkbook(options);
-                progressBar?.IncrementAsync(4, "创建工作册").Wait();
+                taskProgress?.IncrementAsync(4, "创建工作册").Wait();
 
                 // Create the worksheet
                 var worksheet = CreateSheet(workbook, options);
 
-                progressBar?.IncrementAsync(5, "创建工作表").Wait();
+                taskProgress?.IncrementAsync(5, "创建工作表").Wait();
 
                 // Validate the headers and get the export header metadata
                 var headers = CheckHeader<TExportDto>(requests, options);
 
-                progressBar?.IncrementAsync(5, "验证表头").Wait();
+                taskProgress?.IncrementAsync(5, "验证表头").Wait();
 
                 // Header row index
                 var headerRowIndex = options.HeaderRowIndex - 1;
@@ -64,40 +64,40 @@ namespace Monica.Office.Excel.Providers
                 // Create the styles and fonts for the selected header columns first
                 var infoBundle = GetHeaderColumnStyleAndFont<TExportDto>(workbook, worksheet, headers);
 
-                progressBar?.IncrementAsync(10, "创建表头及数据样式").Wait();
+                taskProgress?.IncrementAsync(10, "创建表头及数据样式").Wait();
 
                 // Process header cells
                 ProcessHeaderCell<TExportDto>(workbook, worksheet, headerRowIndex, infoBundle);
-                progressBar?.IncrementAsync(10, "处理表头").Wait();
+                taskProgress?.IncrementAsync(10, "处理表头").Wait();
 
                 // Data row start index
                 var dataRowIndex = options.DataRowStartIndex - 1;
 
-                progressBar?.IncrementAsync(5, "创建数据样式").Wait();
+                taskProgress?.IncrementAsync(5, "创建数据样式").Wait();
 
                 // Process data cells
-                ProcessDataCell(workbook, worksheet, data, dataRowIndex, infoBundle, out var footerRowIndex, progressBar, 50);
+                ProcessDataCell(workbook, worksheet, data, dataRowIndex, infoBundle, out var footerRowIndex, taskProgress, 50);
 
                 // Process footer statistics
-                progressBar?.IncrementAsync(5, "处理数据统计").Wait();
+                taskProgress?.IncrementAsync(5, "处理数据统计").Wait();
                 ProcessFooterStatistics<TExportDto>(workbook, worksheet, dataRowIndex, footerRowIndex, infoBundle);
 
 
                 // Process column widths. Auto-fit requires data, so this must run last.
-                progressBar?.IncrementAsync(5, "处理列宽").Wait();
+                taskProgress?.IncrementAsync(5, "处理列宽").Wait();
                 ProcessColumnWidth<TExportDto>(workbook, worksheet, headers);
 
 
                 // Convert the workbook to bytes
-                progressBar?.IncrementAsync(5, "生成Excel文件").Wait();
+                taskProgress?.IncrementAsync(5, "生成Excel文件").Wait();
                 var result = GetAsByteArray(workbook, worksheet);
-                progressBar?.IncrementAsync(0, "Excel导出完成").Wait();
+                taskProgress?.IncrementAsync(0, "Excel导出完成").Wait();
 
                 return result;
             }
             catch (Exception e)
             {
-                progressBar?.CancelTaskAsync($"导出失败: {e.Message}").Wait();
+                taskProgress?.CancelTaskAsync($"导出失败: {e.Message}").Wait();
                 throw new Exception(e.Message, e);
             }
         }
@@ -157,14 +157,14 @@ namespace Monica.Office.Excel.Providers
         /// <param name="rowIndex">The next row index (zero-based)</param>
         /// <param name="infoBundle">The data style collection</param>
         /// <param name="nextRowIndex">The next row index (zero-based)</param>
-        /// <param name="progressBar">Optional progress bar instance</param>
-        /// <param name="progressWeight">The weight of data processing in the overall progress. Only applies when <paramref name="progressBar"/> is not <see langword="null"/>.</param>
+        /// <param name="taskProgress">Optional task progress instance.</param>
+        /// <param name="progressWeight">The weight of data processing in the overall progress. Only applies when <paramref name="taskProgress"/> is not <see langword="null"/>.</param>
         /// <returns>The next row index (zero-based)</returns>
         private void ProcessDataCell<TExportDto>(TWorkbook workbook, TSheet worksheet,
             IReadOnlyList<TExportDto> data, int rowIndex,
             List<ExcelExportHeaderInfoBundle<TCellStyle, HeaderStyleAttribute, HeaderFontAttribute, DataStyleAttribute,
                 DataFontAttribute>> infoBundle,
-            out int nextRowIndex, ProgressBar? progressBar = null, int progressWeight = 0)
+            out int nextRowIndex, TaskProgress? taskProgress = null, int progressWeight = 0)
             where TExportDto : class
         {
             // Mergeable row regions
@@ -180,16 +180,16 @@ namespace Monica.Office.Excel.Providers
 
             // Progress-related variables
             var dataCount = data.Count;
-            var initialStep = progressBar?.Status.CurrentStep;
-            var progressIncrement = dataCount > 0 && progressBar != null ? progressWeight / (double) dataCount : 0;
+            var initialStep = taskProgress?.Status.CurrentStep;
+            var progressIncrement = dataCount > 0 && taskProgress != null ? progressWeight / (double) dataCount : 0;
 
-            progressBar?.UpdatePhaseAsync("处理数据", $"开始处理数据，共 {dataCount} 条").Wait();
+            taskProgress?.UpdatePhaseAsync("处理数据", $"开始处理数据，共 {dataCount} 条").Wait();
 
             // Process cell values, styles, fonts, and merged regions.
             var processedCount = 0;
             foreach (var d in data)
             {
-                progressBar?.ThrowIfCancellationRequested();
+                taskProgress?.ThrowIfCancellationRequested();
 
                 for (var columnIndex = 0; columnIndex < infoBundle.Count; columnIndex++)
                 {
@@ -220,13 +220,13 @@ namespace Monica.Office.Excel.Providers
                 // Next row index
                 rowIndex++;
 
-                // Update progress when a progress bar is available.
-                if (progressBar != null)
+                // Update progress when a task progress instance is available.
+                if (taskProgress != null)
                 {
                     processedCount++;
                     if (processedCount % 50 == 0 || processedCount == dataCount) // Update after every 50 rows or when all rows are processed.
                     {
-                        progressBar.UpdateStatusAsync(initialStep!.Value + (int) (progressIncrement * processedCount), $"已处理 {processedCount}/{dataCount} 条数据").Wait();
+                        taskProgress.UpdateStatusAsync(initialStep!.Value + (int) (progressIncrement * processedCount), $"已处理 {processedCount}/{dataCount} 条数据").Wait();
                     }
                 }
             }
@@ -242,7 +242,7 @@ namespace Monica.Office.Excel.Providers
             rowMergedList.RemoveAll(m => columnMergedList.Any(a => a.PropertyNames.Intersect(m.PropertyNames).Any()));
 
             // Merge the cell regions
-            progressBar?.IncrementAsync(0, "合并单元格").Wait();
+            taskProgress?.IncrementAsync(0, "合并单元格").Wait();
 
             // All merged region metadata
             var mergedRegion = rowMergedList.Concat(columnMergedList).ToList();
@@ -253,7 +253,7 @@ namespace Monica.Office.Excel.Providers
                 SetMergedRegion(workbook, worksheet, m.FromRowIndex, m.ToRowIndex, m.FromColumnIndex, m.ToColumnIndex);
             }
 
-            progressBar?.IncrementAsync(0, "数据处理完成").Wait();
+            taskProgress?.IncrementAsync(0, "数据处理完成").Wait();
         }
 
         /// <summary>

@@ -83,7 +83,7 @@ public class JobConfigAttribute : Attribute
     /// Gets or sets the maximum execution timeout in seconds.
     /// Use this property in attribute declarations.
     /// If not specified, defaults to 3600 seconds (1 hour).
-    /// Jobs exceeding this duration will be cancelled via IMoCancellationManager.
+    /// Jobs exceeding this duration will be cancelled via ICancellationManager.
     /// Example: [JobConfig(MaxExecutionTimeoutSeconds = 300)] // 5 minutes
     /// </summary>
     public int MaxExecutionTimeoutSeconds

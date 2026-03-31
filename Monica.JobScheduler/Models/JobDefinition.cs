@@ -64,7 +64,7 @@ public class JobDefinition
 
     /// <summary>
     /// Gets or sets the maximum execution timeout for this job.
-    /// Default is 1 hour. Jobs exceeding this duration will be cancelled via IMoCancellationManager.
+    /// Default is 1 hour. Jobs exceeding this duration will be cancelled via ICancellationManager.
     /// </summary>
     public TimeSpan MaxExecutionTimeout { get; set; } = TimeSpan.FromHours(1);
 
