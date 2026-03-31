@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 
 namespace Monica.Profiling.ExecutionTiming.Services;
 
@@ -11,8 +12,8 @@ public sealed class ExecutionTimingScope : ExecutionTimingRecorder
         string name,
         string? description,
         ILogger logger,
-        ExecutionTimingCollector collector)
-        : base(name, description, logger, collector, stopOnDispose: true)
+        IExecutionTimingCoordinator coordinator)
+        : base(name, description, logger, coordinator, stopOnDispose: true)
     {
         Start();
     }

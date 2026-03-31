@@ -1,10 +1,9 @@
 using System.Collections.Concurrent;
-using Monica.Profiling.ExecutionTiming.Abstractions;
 using Monica.Profiling.ExecutionTiming.Models;
 
 namespace Monica.Profiling.ExecutionTiming.Services;
 
-internal sealed class ExecutionTimingCollector : IExecutionTimingQuery
+internal sealed class ExecutionTimingCollector
 {
     private readonly ConcurrentDictionary<string, ExecutionTimingStatistics> _statistics = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, RunningExecutionTimingInfo> _runningOperations = new(StringComparer.Ordinal);
@@ -37,36 +36,38 @@ internal sealed class ExecutionTimingCollector : IExecutionTimingQuery
             (_, _) => new RunningExecutionTimingInfo(name, startedAt, description));
     }
 
-    internal void Record(string name, long durationMs, string? description, long? memoryBytes)
+    internal void CompleteRunning(string name)
     {
-        var recordedAt = DateTimeOffset.UtcNow;
         _runningOperations.TryRemove(name, out _);
+    }
 
+    internal void ApplyRecord(ExecutionTimingCompletedSample sample)
+    {
         _statistics.AddOrUpdate(
-            name,
-            _ => new ExecutionTimingStatistics(name, 1, durationMs, recordedAt)
+            sample.Name,
+            _ => new ExecutionTimingStatistics(sample.Name, 1, sample.DurationMs, sample.RecordedAt)
             {
-                AverageMemoryBytes = memoryBytes,
-                LastMemoryBytes = memoryBytes,
-                LastDurationMs = durationMs,
-                LastRecordedAt = recordedAt
+                AverageMemoryBytes = sample.MemoryBytes,
+                LastMemoryBytes = sample.MemoryBytes,
+                LastDurationMs = sample.DurationMs,
+                LastRecordedAt = sample.RecordedAt
             },
             (_, current) =>
             {
                 var nextCount = current.ExecutionCount + 1;
-                var averageDuration = ((current.AverageDurationMs * current.ExecutionCount) + durationMs) / nextCount;
-                long? averageMemory = memoryBytes is null
+                var averageDuration = ((current.AverageDurationMs * current.ExecutionCount) + sample.DurationMs) / nextCount;
+                long? averageMemory = sample.MemoryBytes is null
                     ? current.AverageMemoryBytes
-                    : (long?)Math.Round((((current.AverageMemoryBytes ?? 0L) * current.ExecutionCount) + memoryBytes.Value) / (double)nextCount);
+                    : (long?)Math.Round((((current.AverageMemoryBytes ?? 0L) * current.ExecutionCount) + sample.MemoryBytes.Value) / (double)nextCount);
 
                 return current with
                 {
                     ExecutionCount = nextCount,
                     AverageDurationMs = averageDuration,
                     AverageMemoryBytes = averageMemory,
-                    LastMemoryBytes = memoryBytes,
-                    LastDurationMs = durationMs,
-                    LastRecordedAt = recordedAt
+                    LastMemoryBytes = sample.MemoryBytes,
+                    LastDurationMs = sample.DurationMs,
+                    LastRecordedAt = sample.RecordedAt
                 };
             });
     }

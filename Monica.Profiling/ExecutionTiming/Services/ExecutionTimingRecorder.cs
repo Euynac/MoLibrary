@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.ExecutionTiming.Abstractions;
+using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 
 namespace Monica.Profiling.ExecutionTiming.Services;
 
@@ -9,7 +10,7 @@ namespace Monica.Profiling.ExecutionTiming.Services;
 /// </summary>
 public class ExecutionTimingRecorder : IExecutionTimingRecorder
 {
-    private readonly ExecutionTimingCollector _collector;
+    private readonly IExecutionTimingCoordinator _coordinator;
     private readonly ILogger _logger;
     private readonly bool _stopOnDispose;
     private readonly Stopwatch _stopwatch = new();
@@ -22,7 +23,7 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
         string name,
         string? description,
         ILogger logger,
-        ExecutionTimingCollector collector,
+        IExecutionTimingCoordinator coordinator,
         bool stopOnDispose = false)
     {
         _name = string.IsNullOrWhiteSpace(name)
@@ -30,7 +31,7 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
             : name;
         Description = description;
         _logger = logger;
-        _collector = collector;
+        _coordinator = coordinator;
         _stopOnDispose = stopOnDispose;
     }
 
@@ -54,7 +55,7 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
         }
 
         _stopwatch.Start();
-        _collector.RegisterStart(_name, DateTimeOffset.UtcNow, Description);
+        _coordinator.RegisterStart(_name, DateTimeOffset.UtcNow, Description);
 
 #pragma warning disable CS0618
         if (EnableMemoryTracking)
@@ -76,7 +77,7 @@ public class ExecutionTimingRecorder : IExecutionTimingRecorder
         var elapsedMilliseconds = _stopwatch.ElapsedMilliseconds;
         var memoryBytes = CaptureMemoryUsage();
 
-        _collector.Record(_name, elapsedMilliseconds, Description, memoryBytes);
+        _coordinator.CompleteSample(_name, elapsedMilliseconds, Description, memoryBytes);
 
         if (EnableLogging)
         {

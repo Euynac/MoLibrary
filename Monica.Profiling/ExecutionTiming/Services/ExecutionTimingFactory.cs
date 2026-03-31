@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Monica.Profiling.ExecutionTiming.Abstractions;
+using Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 
 namespace Monica.Profiling.ExecutionTiming.Services;
 
@@ -7,16 +8,16 @@ namespace Monica.Profiling.ExecutionTiming.Services;
 /// Creates execution-timing recorders backed by the shared in-memory collector.
 /// </summary>
 internal sealed class ExecutionTimingFactory(
-    ExecutionTimingCollector collector,
+    IExecutionTimingCoordinator coordinator,
     ILogger<ExecutionTimingFactory> logger) : IExecutionTimingFactory
 {
     public IExecutionTimingRecorder CreateRecorder(string name, string? description = null)
     {
-        return new ExecutionTimingRecorder(name, description, logger, collector);
+        return new ExecutionTimingRecorder(name, description, logger, coordinator);
     }
 
     public IExecutionTimingRecorder BeginScope(string name, string? description = null)
     {
-        return new ExecutionTimingScope(name, description, logger, collector);
+        return new ExecutionTimingScope(name, description, logger, coordinator);
     }
 }
