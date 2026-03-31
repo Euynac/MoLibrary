@@ -41,6 +41,7 @@
 	  <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
 	  <ProjectReference Include="..\Monica.Locker\Monica.Locker.csproj" />
 	  <ProjectReference Include="..\Monica.Logging\Monica.Logging.csproj" />
+	  <ProjectReference Include="..\Monica.Profiling\Monica.Profiling.csproj" />
 	  <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
 	  <ProjectReference Include="..\Monica.SignalR\Monica.SignalR.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>

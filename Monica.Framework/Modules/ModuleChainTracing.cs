@@ -91,7 +91,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
     public ModuleChainTracingGuide UseInvocationTracing(
         Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool>? shouldIntercept = null)
     {
-        DependsOnModule<ModuleTimekeeperGuide>().Register();
+        DependsOnModule<ModuleExecutionTimingGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register()
             .AddInterceptor<ChainTracingInvocationInterceptor>(shouldIntercept ?? ShouldTraceInvocation);
 

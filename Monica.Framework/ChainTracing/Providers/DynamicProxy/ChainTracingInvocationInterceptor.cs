@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Monica.Core.ExceptionHandling.Exceptions;
-using Monica.Core.Features.MoTimekeeper;
 using Monica.Core.Results;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
@@ -10,6 +9,7 @@ using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Extensions;
 using Monica.Framework.ChainTracing.Models;
 using Monica.Framework.ChainTracing.Services.Support;
+using Monica.Profiling.ExecutionTiming.Abstractions;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.ChainTracing.Providers.DynamicProxy;
@@ -40,13 +40,13 @@ public record ChainTracingInvocationDescriptor(MethodInfo MethodInfo)
 /// Records chain data automatically for methods that return <see cref="IResultEnvelope" />.
 /// </summary>
 /// <param name="chainTracing">Call chain tracking service</param>
-/// <param name="timekeeperFactory">timer factory</param>
+/// <param name="executionTimingFactory">Execution timing factory.</param>
 /// https://kozmic.net/dynamic-proxy-tutorial/
 /// https://github.com/moframework/mo/issues/14378
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
 public class ChainTracingInvocationInterceptor(
     IChainTracing chainTracing,
-    IMoTimekeeperFactory timekeeperFactory) : MoInterceptor
+    IExecutionTimingFactory executionTimingFactory) : MoInterceptor
 {
     /// <summary>
     /// Determine whether the call chain should be recorded
@@ -111,13 +111,11 @@ public class ChainTracingInvocationInterceptor(
             chainTracing.BeginScope(info.OperationName, info.HandlerName, type: info.GetInvocationType());
 
         // Create timer
-        using var timer = timekeeperFactory.CreateNormalTimer(info.HandlerName);
-        timer.Start();
+        using var timer = executionTimingFactory.BeginScope(info.HandlerName);
         
         try
         {
             await invocation.ProceedAsync();
-            timer.Finish();
 
             // Handle successful response
             var responseTypeName = ChainTracingResultHelper.GetResponseTypeName(invocation.Method.ReturnType);
@@ -145,8 +143,6 @@ public class ChainTracingInvocationInterceptor(
         }
         catch (Exception ex)
         {
-            timer.Finish();
-
             // Log exceptions to the call chain
             scope.EndWithException(ex, $"执行方法 {invocation.Method.DeclaringType?.Name}.{invocation.Method.Name} 异常");
 

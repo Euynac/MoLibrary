@@ -43,8 +43,8 @@
     "ServiceDiscovery": {
       "Title": "Service Discovery"
     },
-    "TimekeeperDebug": {
-      "Title": "Timekeeper Debug"
+    "ExecutionTiming": {
+      "Title": "Execution Timing"
     },
     "LoggingMonitor": {
       "Title": "Logging Monitor"

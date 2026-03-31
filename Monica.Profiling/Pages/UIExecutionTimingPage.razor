@@ -1,0 +1,233 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.Profiling.ExecutionTiming.Models
+@using Monica.Profiling.UIExecutionTiming.State
+@using Monica.Profiling.UIExecutionTiming.Support
+@inject ExecutionTimingPageState PageState
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>执行耗时</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #FF6F00 30%, #FF9800 90%); color: white;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">执行耗时</MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudSwitch T="bool"
+                           Value="@PageState.AutoRefresh"
+                           ValueChanged="SetAutoRefresh"
+                           Color="Color.Inherit"
+                           Label="自动刷新" />
+                <MudButton StartIcon="@Icons.Material.Filled.Refresh"
+                           Color="Color.Inherit"
+                           Variant="Variant.Outlined"
+                           OnClick="RefreshDataAsync"
+                           Disabled="PageState.IsLoading"
+                           Size="Size.Medium"
+                           Style="border-color: white; color: white;">
+                    刷新数据
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (PageState.IsLoading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载数据...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <MudGrid Spacing="3">
+            <MudItem xs="12" lg="6">
+                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                    <MudCardHeader Class="pb-2">
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Success" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">正在运行的操作</MudText>
+                                <MudBadge Content="@PageState.RunningOperations.Count" Color="Color.Primary" Overlap="false" />
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        @if (PageState.RunningOperations.Any())
+                        {
+                            <MudTable Items="@PageState.RunningOperations" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>说明</MudTh>
+                                    <MudTh>开始时间</MudTh>
+                                    <MudTh>当前耗时</MudTh>
+                                    <MudTh>运行时长</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    @{
+                                        var operation = (RunningExecutionTimingInfo)context;
+                                    }
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@operation.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@(operation.Description ?? "无")</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(operation.StartedAt)</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-success);">
+                                        @ExecutionTimingDisplayFormatter.FormatDuration(operation.GetCurrentElapsedMs())
+                                    </MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRunningDuration(operation)</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                <MudText>当前没有正在运行的操作</MudText>
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" lg="6">
+                <MudCard Style="height: 100%; display: flex; flex-direction: column;" Elevation="2">
+                    <MudCardHeader Class="pb-2">
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 500;">统计信息</MudText>
+                                <MudBadge Content="@PageState.Statistics.Count" Color="Color.Secondary" Overlap="false" />
+                            </MudStack>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        @if (PageState.Statistics.Any())
+                        {
+                            <MudTable Items="@PageState.Statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>次数</MudTh>
+                                    <MudTh>平均耗时</MudTh>
+                                    <MudTh>最后耗时</MudTh>
+                                    <MudTh>频率/分钟</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    @{
+                                        var statistics = (ExecutionTimingStatistics)context;
+                                    }
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
+                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)
+                                    </MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">
+                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)
+                                    </MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-4">
+                                <MudText>暂无统计信息</MudText>
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            @if (PageState.Statistics.Any())
+            {
+                <MudItem xs="12">
+                    <MudCard Elevation="2">
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.TableChart" Color="Color.Info" />
+                                    <MudText Typo="Typo.h6" Style="font-weight: 500;">详细统计信息</MudText>
+                                </MudStack>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudTable Items="@PageState.Statistics" Hover="true" Striped="true" Dense="true" FixedHeader="true">
+                                <HeaderContent>
+                                    <MudTh>名称</MudTh>
+                                    <MudTh>执行次数</MudTh>
+                                    <MudTh>平均耗时</MudTh>
+                                    <MudTh>最后耗时</MudTh>
+                                    <MudTh>首次记录</MudTh>
+                                    <MudTh>频率/分钟</MudTh>
+                                    <MudTh>平均内存</MudTh>
+                                    <MudTh>最后内存</MudTh>
+                                    <MudTh>最后执行时间</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    @{
+                                        var statistics = (ExecutionTimingStatistics)context;
+                                    }
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">@statistics.Name</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@statistics.ExecutionCount</MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem; color: var(--mud-palette-warning);">
+                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.AverageDurationMs)
+                                    </MudTd>
+                                    <MudTd Style="font-family: monospace; font-size: 0.875rem;">
+                                        @ExecutionTimingDisplayFormatter.FormatDuration(statistics.LastDurationMs)
+                                    </MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.FirstRecordedAt)</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatRatePerMinute(statistics)</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.AverageMemoryBytes)</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatMemory(statistics.LastMemoryBytes)</MudTd>
+                                    <MudTd Style="font-size: 0.875rem;">@ExecutionTimingDisplayFormatter.FormatDateTime(statistics.LastRecordedAt)</MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/execution-timing";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        PageState.StateChanged += HandleStateChanged;
+        var result = await PageState.InitializeAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        var result = await PageState.RefreshAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? "刷新数据失败", Severity.Error);
+        }
+    }
+
+    private Task SetAutoRefresh(bool value)
+    {
+        PageState.SetAutoRefresh(value);
+        return Task.CompletedTask;
+    }
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        PageState.StateChanged -= HandleStateChanged;
+        PageState.Dispose();
+    }
+}

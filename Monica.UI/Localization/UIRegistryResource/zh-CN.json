@@ -43,8 +43,8 @@
     "ServiceDiscovery": {
       "Title": "服务发现"
     },
-    "TimekeeperDebug": {
-      "Title": "性能监控"
+    "ExecutionTiming": {
+      "Title": "执行耗时"
     },
     "LoggingMonitor": {
       "Title": "日志监控"
