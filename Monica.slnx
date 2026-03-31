@@ -36,7 +36,6 @@
   <Project Path="Monica.Repository/Monica.Repository.csproj" />
   <Project Path="Monica.SignalR/Monica.SignalR.csproj" />
   <Project Path="Monica.StateStore.StackExchange/Monica.StateStore.StackExchange.csproj" />
-  <Project Path="Monica.StateStore.TaskProgress/Monica.StateStore.TaskProgress.csproj" />
   <Project Path="Monica.StateStore.UI/Monica.StateStore.UI.csproj" />
   <Project Path="Monica.StateStore/Monica.StateStore.csproj" />
   <Project Path="Monica.Tool/Monica.Tool.csproj" />

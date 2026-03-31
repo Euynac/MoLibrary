@@ -3,13 +3,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Modules;
-using Monica.StateStore.TaskProgress.Cancellation.Abstractions;
 using Monica.StateStore.Abstractions;
+using Monica.StateStore.Cancellation.Abstractions;
 using Monica.Tool.Extensions;
 
 // ReSharper disable PossiblyMistakenUseOfCancellationToken
 
-namespace Monica.StateStore.TaskProgress.Cancellation.Services;
+namespace Monica.StateStore.Cancellation.Services;
 
 //Should TODO use distributed locks?
 //TODO Use EventBus instead of polling
@@ -30,7 +30,7 @@ public class DistributedCancellationManager(
     ILogger<DistributedCancellationManager> logger,
     IOptions<ModuleCancellationManagerOption> options) : ICancellationManager
 {
-    private const string StateKeyPrefix = "DistributedCancellation:";
+    private const string STATE_KEY_PREFIX = "DistributedCancellation:";
 
     private readonly ModuleCancellationManagerOption _options = options.Value;
 
@@ -47,7 +47,7 @@ public class DistributedCancellationManager(
     /// <summary>
     /// Get prefixed key for storage
     /// </summary>
-    private static string GetPrefixedKey(string key) => StateKeyPrefix + key;
+    private static string GetPrefixedKey(string key) => STATE_KEY_PREFIX + key;
 
     /// <summary>
     /// Create or obtain a distributed cancellation token for the specified key

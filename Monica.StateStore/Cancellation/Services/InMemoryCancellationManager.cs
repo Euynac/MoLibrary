@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
-using Monica.StateStore.TaskProgress.Cancellation.Abstractions;
+using Monica.StateStore.Cancellation.Abstractions;
 using Monica.Tool.Extensions;
 
-namespace Monica.StateStore.TaskProgress.Cancellation.Services;
+namespace Monica.StateStore.Cancellation.Services;
 
 /// <summary>
 /// Implementation of memory version cancellation token manager

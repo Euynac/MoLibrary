@@ -1,4 +1,4 @@
-namespace Monica.StateStore.TaskProgress.Cancellation.Abstractions;
+namespace Monica.StateStore.Cancellation.Abstractions;
 
 /// <summary>
 /// (Singleton) Distributed cancellation token manager interface

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Abstractions;
-using Monica.AutoModel.Implements;
 using Monica.AutoModel.Providers;
 using Monica.AutoModel.Services;
 using Monica.Core;

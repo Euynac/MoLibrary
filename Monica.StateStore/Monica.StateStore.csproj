@@ -3,7 +3,7 @@
   <Import Project="..\common.xml" />
 
   <PropertyGroup>
-    <PackageDescription>State management and persistence abstractions for Monica framework, providing unified interfaces for distributed state storage.</PackageDescription>
+    <PackageDescription>State management, distributed persistence, task progress tracking, and cancellation coordination for Monica framework.</PackageDescription>
   </PropertyGroup>
 
 
