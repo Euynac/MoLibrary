@@ -6,6 +6,7 @@ using Monica.Core.Mediator;
 using Monica.DependencyInjection.AppInterfaces;
 using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Core.Results;
+using Monica.DependencyInjection.DependencyInjection.Abstractions;
 
 namespace Monica.DomainDrivenDesign;
 

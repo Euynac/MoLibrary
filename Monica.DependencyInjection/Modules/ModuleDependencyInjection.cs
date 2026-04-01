@@ -4,8 +4,8 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.CoreInterfaces;
-using Monica.DependencyInjection.Implements;
+using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.DependencyInjection.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -15,7 +15,7 @@ public static class ModuleDependencyInjectionBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configures the DependencyInjection module.
+        /// Enables Monica conventional dependency registration and cached service-provider access.
         /// </summary>
         public static ModuleDependencyInjectionGuide AddDependencyInjection(Action<ModuleDependencyInjectionOption>? action = null)
         {
@@ -33,7 +33,7 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        _registrar = new DefaultConventionalRegistrar(Option);
+        _registrar = new ConventionalRegistrar(Option);
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
         _services = services;
     }
@@ -62,13 +62,25 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
     }
 }
 
+/// <summary>
+/// Configures the Monica dependency-injection module.
+/// </summary>
 public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
     ModuleDependencyInjectionGuide>
 {
-  
 }
 
+/// <summary>
+/// Configures Monica conventional dependency registration behavior.
+/// </summary>
 public class ModuleDependencyInjectionOption : MoModuleOption<ModuleDependencyInjection>
 {
-    public bool EnableDebug { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether the module should emit diagnostic logs for automatic service registration.
+    /// </summary>
+    /// <remarks>
+    /// Enable this when you want to inspect how Monica discovers service lifetimes and exposed service types.
+    /// The default is <c>false</c> to keep startup logging quiet.
+    /// </remarks>
+    public bool EnableAutoRegistrationLogging { get; set; }
 }

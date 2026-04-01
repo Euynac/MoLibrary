@@ -8,6 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy;
+using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Framework.ChainTracing.Abstractions;
@@ -89,7 +90,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
     /// </summary>
     /// <param name="shouldIntercept">Optional predicate that controls which services should be proxied.</param>
     public ModuleChainTracingGuide UseInvocationTracing(
-        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool>? shouldIntercept = null)
+        Func<ProxyBuildContext, bool>? shouldIntercept = null)
     {
         DependsOnModule<ModuleExecutionTimingGuide>().Register();
         DependsOnModule<ModuleDynamicProxyGuide>().Register()
@@ -125,7 +126,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
     }
 
     private static bool ShouldTraceInvocation(
-        MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext context)
+        ProxyBuildContext context)
     {
         var type = context.ImplementationType;
         if (!type.IsAssignableTo<IMoApplicationService>() &&

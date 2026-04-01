@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Features.MoMapper;
 using Monica.Core.Logging;
 using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.DependencyInjection.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 
 namespace Monica.DomainDrivenDesign;

@@ -1,13 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.DependencyInjection.DynamicProxy;
-using Monica.DependencyInjection.DynamicProxy.Abstract;
+using Monica.DependencyInjection.DynamicProxy.Abstractions;
 
 namespace Monica.Repository.Transaction.Interceptors;
 
-public class MoUnitOfWorkInterceptor(IServiceScopeFactory serviceScopeFactory) : MoInterceptor
+public class MoUnitOfWorkInterceptor(IServiceScopeFactory serviceScopeFactory) : InvocationInterceptor
 {
 
-    public override async Task InterceptAsync(IMoMethodInvocation invocation)
+    public override async Task InterceptAsync(IMethodInvocation invocation)
     {
         //if (!UnitOfWorkHelper.IsUnitOfWorkMethod(invocation.Method, out var unitOfWorkAttribute))
         //{

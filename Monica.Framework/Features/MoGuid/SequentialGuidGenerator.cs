@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.DependencyInjection.Abstractions;
 
 namespace Monica.Framework.Features.MoGuid;
 

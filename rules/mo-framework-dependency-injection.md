@@ -9,12 +9,13 @@ MoFramework使用自动依赖注入机制，无需手动注册应用服务、领
 
 ## 自动注册原理
 
-- 自动注册基于`IMoDependency`接口，位于`Monica.DependencyInjection.AppInterfaces`命名空间
+- 自动注册基于生命周期标记接口，位于`Monica.DependencyInjection.AppInterfaces`命名空间
+- 可用标记接口包括`ITransientDependency`、`IScopedDependency`和`ISingletonDependency`
 - 以下类型将被自动注册：
   - 实现`IMoRepository<TEntity, TKey>`接口的仓储类
   - 继承自`MoDomainService`的领域服务
   - 继承自`MoApplicationService<TRequest, TResponse>`的应用服务
-  - 实现`IMoDependency`接口的其他类型
+  - 实现生命周期标记接口的其他类型
 
 ## 注册规则
 

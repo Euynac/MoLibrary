@@ -4,7 +4,7 @@ using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
 using Monica.DependencyInjection.DynamicProxy;
-using Monica.DependencyInjection.DynamicProxy.Abstract;
+using Monica.DependencyInjection.DynamicProxy.Abstractions;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Extensions;
@@ -47,7 +47,7 @@ public record ChainTracingInvocationDescriptor(MethodInfo MethodInfo)
 /// https://docs.mo.io/en/mo/7.4/Dependency-Injection#advanced-features
 public class ChainTracingInvocationInterceptor(
     IChainTracing chainTracing,
-    IExecutionTimingFactory executionTimingFactory) : MoInterceptor
+    IExecutionTimingFactory executionTimingFactory) : InvocationInterceptor
 {
     /// <summary>
     /// Determine whether the call chain should be recorded
@@ -55,7 +55,7 @@ public class ChainTracingInvocationInterceptor(
     /// <param name="invocation">Method call information</param>
     /// <param name="info"></param>
     /// <returns>Whether the call chain should be logged</returns>
-    private static bool ShouldRecordChain(IMoMethodInvocation invocation, [NotNullWhen(true)] out ChainTracingInvocationDescriptor? info)
+    private static bool ShouldRecordChain(IMethodInvocation invocation, [NotNullWhen(true)] out ChainTracingInvocationDescriptor? info)
     {
         var returnType = invocation.Method.ReturnType;
         info = null;
@@ -83,7 +83,7 @@ public class ChainTracingInvocationInterceptor(
     /// Intercepting method calls
     /// </summary>
     /// <param name="invocation">Method call information</param>
-    public override async Task InterceptAsync(IMoMethodInvocation invocation)
+    public override async Task InterceptAsync(IMethodInvocation invocation)
     {
         if (!ShouldRecordChain(invocation, out var info))
         {

@@ -5,7 +5,11 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy;
-using Monica.DependencyInjection.DynamicProxy.Abstract;
+using Monica.DependencyInjection.DynamicProxy.Abstractions;
+using Monica.DependencyInjection.DynamicProxy.Models;
+using Monica.DependencyInjection.DynamicProxy.Models.Internal;
+using Monica.DependencyInjection.DynamicProxy.Providers.Castle;
+using Monica.DependencyInjection.DynamicProxy.Services.Support;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -39,9 +43,9 @@ public class
     {
         PostConfigureServices(context =>
         {
-            context.Services.AddSingleton(new ProxyGeneratorWithDI());
-            context.Services.AddTransient(typeof(MoAsyncDeterminationInterceptor<>));
-            MicrosoftDependencyInjectionDynamicProxyExtensions.ApplyInterceptors(context.Services,
+            context.Services.AddSingleton(new ServiceProviderProxyGenerator());
+            context.Services.AddTransient(typeof(AsyncDeterminationInterceptorAdapter<>));
+            DynamicProxyServiceRegistrar.ApplyInterceptors(context.Services,
                 context.ModuleOption);
         }, EMoModuleOrder.PostConfig, key: CONFIG_CORE_SERVICES);
         return this;
@@ -54,9 +58,9 @@ public class
     /// <param name="shouldIntercept">Predicate that decides whether the interceptor applies to a service.</param>
     /// <param name="secondKey">Optional stable secondary key used when repeated calls should collapse into a single configuration.</param>
     public ModuleDynamicProxyGuide AddInterceptor<TInterceptor>(
-        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool> shouldIntercept,
+        Func<ProxyBuildContext, bool> shouldIntercept,
         string? secondKey = null)
-        where TInterceptor : MoInterceptor
+        where TInterceptor : InvocationInterceptor
     {
         EnsureCoreServices();
 
@@ -103,8 +107,8 @@ public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
     }
 
     internal void AddInterceptor<TInterceptor>(
-        Func<MicrosoftDependencyInjectionDynamicProxyExtensions.ProxyBuildContext, bool> shouldIntercept)
-        where TInterceptor : MoInterceptor
+        Func<ProxyBuildContext, bool> shouldIntercept)
+        where TInterceptor : InvocationInterceptor
     {
         InterceptorRegistrations.Add(new DynamicProxyInterceptorRegistration(typeof(TInterceptor), shouldIntercept));
     }

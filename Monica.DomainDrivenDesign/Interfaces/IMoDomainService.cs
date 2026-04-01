@@ -1,4 +1,5 @@
 using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.DependencyInjection.Abstractions;
 
 namespace Monica.DomainDrivenDesign.Interfaces;
 
