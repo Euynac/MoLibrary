@@ -2,8 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Features.MoMapper;
 using Monica.Core.Logging;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Abstractions;
 using Monica.DomainDrivenDesign.Interfaces;
 
 namespace Monica.DomainDrivenDesign;

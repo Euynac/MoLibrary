@@ -1,9 +1,9 @@
-using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
-using Monica.DependencyInjection.DependencyInjection.Annotations;
-using Monica.DependencyInjection.DependencyInjection.Models.Internal;
+using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Annotations;
+using Monica.DependencyInjection.Models.Internal;
 using Monica.Tool.Extensions;
 
-namespace Monica.DependencyInjection.DependencyInjection.Services.Support;
+namespace Monica.DependencyInjection.Services.Support;
 
 internal static class ExposedServiceExplorer
 {

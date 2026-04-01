@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.Abstractions;
 using Monica.Tool.Utils;
 
 namespace Monica.Repository.Transaction;

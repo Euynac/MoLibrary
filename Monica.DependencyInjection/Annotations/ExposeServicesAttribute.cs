@@ -1,8 +1,8 @@
 using System.Reflection;
-using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Abstractions.Internal;
 using Monica.Tool.Extensions;
 
-namespace Monica.DependencyInjection.DependencyInjection.Annotations;
+namespace Monica.DependencyInjection.Annotations;
 
 /// <summary>
 /// Declares which service types should be exposed when Monica conventionally registers the annotated implementation.

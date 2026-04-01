@@ -1,4 +1,4 @@
-namespace Monica.DependencyInjection.DependencyInjection.Abstractions;
+namespace Monica.DependencyInjection.Abstractions;
 
 /// <summary>
 /// Marks a type for Monica conventional scoped registration.

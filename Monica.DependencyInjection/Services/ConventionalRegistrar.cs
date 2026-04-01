@@ -2,16 +2,15 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Abstractions;
-using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
-using Monica.DependencyInjection.DependencyInjection.Annotations;
-using Monica.DependencyInjection.DependencyInjection.Models.Internal;
-using Monica.DependencyInjection.DependencyInjection.Services.Support;
+using Monica.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Annotations;
+using Monica.DependencyInjection.Models.Internal;
+using Monica.DependencyInjection.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 
-namespace Monica.DependencyInjection.DependencyInjection.Services;
+namespace Monica.DependencyInjection.Services;
 /// <summary>
 /// Registers discovered Monica services using lifetime markers and exposure attributes.
 /// </summary>

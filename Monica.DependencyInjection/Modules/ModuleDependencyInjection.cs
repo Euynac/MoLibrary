@@ -3,9 +3,9 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
-using Monica.DependencyInjection.DependencyInjection.Services;
+using Monica.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

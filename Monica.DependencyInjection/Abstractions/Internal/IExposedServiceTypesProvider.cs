@@ -1,4 +1,4 @@
-namespace Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
+namespace Monica.DependencyInjection.Abstractions.Internal;
 
 internal interface IExposedServiceTypesProvider
 {

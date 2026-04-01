@@ -1,8 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.EntityInterfaces;
 
 namespace Monica.Repository.Interfaces;

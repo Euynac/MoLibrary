@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Monica.DependencyInjection.AppInterfaces;
+namespace Monica.DependencyInjection.Abstractions;
 
 /// <summary>
 /// Provides service resolution with per-instance caching.

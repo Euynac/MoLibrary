@@ -1,4 +1,4 @@
-using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.Abstractions;
 
 namespace Monica.DomainDrivenDesign.AutoController.MoRpc;
 

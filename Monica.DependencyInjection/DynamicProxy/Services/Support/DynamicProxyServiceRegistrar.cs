@@ -1,8 +1,7 @@
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.DependencyInjection.DynamicProxy.Providers.Castle;
 using Monica.Modules;

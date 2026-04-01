@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Monica.DependencyInjection.DependencyInjection.Annotations;
+namespace Monica.DependencyInjection.Annotations;
 /// <summary>
 /// Represents an attribute used to define dependency injection settings for a service.
 /// </summary>

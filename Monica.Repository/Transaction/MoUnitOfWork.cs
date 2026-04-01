@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
-using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.Transaction.EntityEvent;
 
 namespace Monica.Repository.Transaction;

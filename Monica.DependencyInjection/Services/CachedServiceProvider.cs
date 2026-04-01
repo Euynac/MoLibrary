@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Models.Internal;
+using Monica.DependencyInjection.Abstractions;
+using Monica.DependencyInjection.Models.Internal;
 
-namespace Monica.DependencyInjection.DependencyInjection.Services;
+namespace Monica.DependencyInjection.Services;
 
 /// <summary>
 /// Wraps an underlying service provider and caches resolution results for the lifetime of the wrapper instance.

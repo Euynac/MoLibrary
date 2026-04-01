@@ -166,7 +166,7 @@ internal static class RpcClientCodeGenerator
             sb.AppendLine($"using {baseTypeNamespace};");
         }
 
-        sb.AppendLine("using Monica.DependencyInjection.AppInterfaces;");
+        sb.AppendLine("using Monica.DependencyInjection.Abstractions;");
         sb.AppendLine("using Monica.Core.Results;");
         sb.AppendLine("using Monica.Framework.Extensions;");
         sb.AppendLine();

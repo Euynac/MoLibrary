@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Monica.DependencyInjection.AppInterfaces;
+using Monica.DependencyInjection.Abstractions;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.Repository;
 

@@ -1,7 +1,7 @@
-using Monica.DependencyInjection.DependencyInjection.Abstractions.Internal;
-using Monica.DependencyInjection.DependencyInjection.Models.Internal;
+using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Models.Internal;
 
-namespace Monica.DependencyInjection.DependencyInjection.Annotations;
+namespace Monica.DependencyInjection.Annotations;
 
 /// <summary>
 /// Declares a keyed service exposure for the annotated implementation type.

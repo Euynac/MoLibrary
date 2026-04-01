@@ -1,8 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.DependencyInjection.AppInterfaces;
-using Monica.DependencyInjection.DependencyInjection.Annotations;
+using Monica.DependencyInjection.Annotations;
 
-namespace Monica.DependencyInjection.DependencyInjection.Abstractions;
+namespace Monica.DependencyInjection.Abstractions;
 
 /// <summary>
 /// Exposes a cached service provider for services activated by Monica DI.

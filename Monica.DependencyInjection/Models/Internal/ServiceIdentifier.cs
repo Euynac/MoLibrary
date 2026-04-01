@@ -1,4 +1,4 @@
-namespace Monica.DependencyInjection.DependencyInjection.Models.Internal;
+namespace Monica.DependencyInjection.Models.Internal;
 
 /// <summary>
 /// Identifies a service registration by service type and optional service key.
