@@ -103,11 +103,23 @@ class ModuleDependencyGraph {
             .append('path')
             .attr('class', 'link')
             .attr('fill', 'none')
-            .attr('stroke', link => this.getEdgeColorByType(link.dependencyType))
-            .attr('stroke-width', link => link.isPartOfCycle ? 3 : 2)
-            .attr('stroke-dasharray', link => link.dependencyType === 'Transitive' ? '5,5' : null)
-            .attr('marker-end', linkStyle.markerEnd)
-            .style('opacity', 0.82);
+            .attr('data-base-stroke', linkStyle.stroke)
+            .attr('data-base-stroke-width', link => (link.isPartOfCycle ? 3 : 2).toString())
+            .attr('data-base-stroke-dasharray', link => link.dependencyType === 'Transitive' ? '5,5' : '')
+            .attr('data-base-marker-end', linkStyle.markerEnd)
+            .attr('data-base-opacity', String(linkStyle.strokeOpacity))
+            .attr('data-base-filter', '')
+            .attr('stroke', function() { return this.getAttribute('data-base-stroke'); })
+            .attr('stroke-width', function() { return this.getAttribute('data-base-stroke-width'); })
+            .attr('stroke-dasharray', function() {
+                const value = this.getAttribute('data-base-stroke-dasharray');
+                return value || null;
+            })
+            .attr('stroke-linecap', linkStyle.strokeLinecap)
+            .attr('stroke-linejoin', linkStyle.strokeLinejoin)
+            .attr('marker-end', function() { return this.getAttribute('data-base-marker-end'); })
+            .style('opacity', function() { return this.getAttribute('data-base-opacity'); })
+            .style('filter', null);
 
         this.nodeSelection = nodeGroup.selectAll('g.node-item')
             .data(this.nodes)
@@ -336,7 +348,7 @@ class ModuleDependencyGraph {
 
         const normX = dx / distance;
         const normY = dy / distance;
-        const arrowOffset = 30;
+        const arrowOffset = 25.5;
         const endX = target.x - normX * arrowOffset;
         const endY = target.y - normY * arrowOffset;
         return `M${source.x},${source.y} L${endX},${endY}`;

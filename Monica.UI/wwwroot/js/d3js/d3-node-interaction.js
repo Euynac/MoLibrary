@@ -117,7 +117,7 @@ export class NodeHighlightManager {
                 
                 link.transition()
                     .duration(200)
-                    .attr('opacity', style.strokeOpacity)
+                    .style('opacity', style.strokeOpacity)
                     .attr('stroke-width', style.strokeWidth)
                     .attr('stroke', strokeColor)
                     .attr('marker-end', isOutgoing ? 
@@ -127,11 +127,11 @@ export class NodeHighlightManager {
             } else {
                 link.transition()
                     .duration(200)
-                    .attr('opacity', self.fadeOpacity)
-                    .attr('stroke-width', self.normalLinkStyle.strokeWidth)
-                    .attr('stroke', self.normalLinkStyle.stroke)
-                    .attr('marker-end', self.normalLinkStyle.markerEnd)
-                    .style('filter', self.normalLinkStyle.filter);
+                    .style('opacity', self.fadeOpacity)
+                    .attr('stroke-width', function() { return self.getLinkBaseAttribute(this, 'data-base-stroke-width', self.normalLinkStyle.strokeWidth); })
+                    .attr('stroke', function() { return self.getLinkBaseAttribute(this, 'data-base-stroke', self.normalLinkStyle.stroke); })
+                    .attr('marker-end', function() { return self.getLinkBaseAttribute(this, 'data-base-marker-end', self.normalLinkStyle.markerEnd); })
+                    .style('filter', function() { return self.getLinkBaseAttribute(this, 'data-base-filter', self.normalLinkStyle.filter) || null; });
             }
         });
         
@@ -180,11 +180,11 @@ export class NodeHighlightManager {
         linkSelection
             .transition()
             .duration(200)
-            .attr('opacity', self.normalLinkStyle.strokeOpacity)
-            .attr('stroke-width', self.normalLinkStyle.strokeWidth)
-            .attr('stroke', self.normalLinkStyle.stroke)
-            .attr('marker-end', self.normalLinkStyle.markerEnd)
-            .style('filter', self.normalLinkStyle.filter);
+            .style('opacity', function() { return self.getLinkBaseAttribute(this, 'data-base-opacity', self.normalLinkStyle.strokeOpacity); })
+            .attr('stroke-width', function() { return self.getLinkBaseAttribute(this, 'data-base-stroke-width', self.normalLinkStyle.strokeWidth); })
+            .attr('stroke', function() { return self.getLinkBaseAttribute(this, 'data-base-stroke', self.normalLinkStyle.stroke); })
+            .attr('marker-end', function() { return self.getLinkBaseAttribute(this, 'data-base-marker-end', self.normalLinkStyle.markerEnd); })
+            .style('filter', function() { return self.getLinkBaseAttribute(this, 'data-base-filter', self.normalLinkStyle.filter) || null; });
         
         this.highlightedNodes.clear();
         this.highlightedLinks.clear();
@@ -199,6 +199,11 @@ export class NodeHighlightManager {
     getPrimaryShapeSelection(nodeSelection) {
         const preferredShape = nodeSelection.select('.node-core, rect.card-background, circle, rect');
         return preferredShape.empty() ? nodeSelection : preferredShape;
+    }
+
+    getLinkBaseAttribute(linkElement, attributeName, fallbackValue) {
+        const value = linkElement.getAttribute(attributeName);
+        return value === null || value === '' ? fallbackValue : value;
     }
 }
 

@@ -88,96 +88,81 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     // Remove existing tags (only removes the current instance)
     defs.selectAll(`#${uniqueId}, #${uniqueId}-highlight, #${outgoingId}, #${incomingId}`).remove();
     
-    // Modern arrow design parameters
-    const arrowSize = options.size || 12;
-    const viewBoxSize = arrowSize + 2; // 稍微大一点的viewBox以容纳圆润效果
-    
+    // Use a compact, standard triangle marker that inherits the link stroke color.
+    const markerSize = options.size || 9;
+    const viewBoxWidth = 10;
+    const viewBoxHeight = 10;
+    const refX = options.refX || 9.25;
+    const refY = viewBoxHeight / 2;
+    const arrowPath = 'M0,0 L10,5 L0,10 Z';
+
     // Create a normal state arrow
     const marker = defs.append('marker')
         .attr('id', uniqueId)
-        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
-        .attr('refX', options.refX || (arrowSize * 0.8))
-        .attr('refY', viewBoxSize / 2)
+        .attr('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`)
+        .attr('refX', refX)
+        .attr('refY', refY)
         .attr('orient', 'auto')
-        .attr('markerWidth', arrowSize)
-        .attr('markerHeight', arrowSize)
-        .attr('markerUnits', 'strokeWidth');
-    
-    // Modern rounded arrow paths - smoother curved design
-    const arrowPath = `M1,${viewBoxSize/2-4} 
-                      C1,${viewBoxSize/2-4} 3,${viewBoxSize/2-5} 5,${viewBoxSize/2-3}
-                      L${arrowSize-2},${viewBoxSize/2-1}
-                      C${arrowSize-1},${viewBoxSize/2-0.5} ${arrowSize-1},${viewBoxSize/2+0.5} ${arrowSize-2},${viewBoxSize/2+1}
-                      L5,${viewBoxSize/2+3}
-                      C3,${viewBoxSize/2+5} 1,${viewBoxSize/2+4} 1,${viewBoxSize/2+4} Z`;
+        .attr('markerWidth', markerSize)
+        .attr('markerHeight', markerSize)
+        .attr('markerUnits', 'userSpaceOnUse');
     
     marker.append('path')
         .attr('d', arrowPath)
-        .attr('fill', getArrowColor(options.isDarkMode, false))
-        .attr('class', 'arrow-marker modern-arrow')
-        .style('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'); // 轻微阴影增加立体感
+        .attr('fill', 'context-stroke')
+        .attr('stroke', 'none')
+        .attr('class', 'arrow-marker');
     
     // Creates a highlighted state arrow (keeping the same size and position)
     const highlightMarker = defs.append('marker')
         .attr('id', `${uniqueId}-highlight`)
-        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
-        .attr('refX', options.refX || (arrowSize * 0.8))
-        .attr('refY', viewBoxSize / 2)
+        .attr('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`)
+        .attr('refX', refX)
+        .attr('refY', refY)
         .attr('orient', 'auto')
-        .attr('markerWidth', arrowSize)  // 保持相同大小
-        .attr('markerHeight', arrowSize)
-        .attr('markerUnits', 'strokeWidth');
+        .attr('markerWidth', markerSize)
+        .attr('markerHeight', markerSize)
+        .attr('markerUnits', 'userSpaceOnUse');
     
     highlightMarker.append('path')
         .attr('d', arrowPath)
-        .attr('fill', getArrowColor(options.isDarkMode, true))
-        .attr('class', 'arrow-marker-highlight modern-arrow')
-        .style('filter', 'drop-shadow(0 2px 4px rgba(33,150,243,0.3))'); // 高亮时的蓝色阴影
+        .attr('fill', 'context-stroke')
+        .attr('stroke', 'none')
+        .attr('class', 'arrow-marker-highlight');
     
     // Create an out-edge highlighted arrow (Info color system)
     const outgoingMarker = defs.append('marker')
         .attr('id', outgoingId)
-        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
-        .attr('refX', options.refX || (arrowSize * 0.8))
-        .attr('refY', viewBoxSize / 2)
+        .attr('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`)
+        .attr('refX', refX)
+        .attr('refY', refY)
         .attr('orient', 'auto')
-        .attr('markerWidth', arrowSize)
-        .attr('markerHeight', arrowSize)
-        .attr('markerUnits', 'strokeWidth');
+        .attr('markerWidth', markerSize)
+        .attr('markerHeight', markerSize)
+        .attr('markerUnits', 'userSpaceOnUse');
     
-    // Create a container group to apply CSS variables
-    const outgoingPath = outgoingMarker.append('path')
+    outgoingMarker.append('path')
         .attr('d', arrowPath)
-        .attr('class', 'arrow-marker-outgoing modern-arrow')
-        .style('filter', 'drop-shadow(0 2px 4px rgba(25,118,210,0.3))');
-    
-    // Get calculated CSS variable values ​​using JavaScript (trim to remove spaces)
-    const outgoingColor = options.isDarkMode ? 
-        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info-lighten').trim() || '#29B6F6') :
-        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-info').trim() || '#1976D2');
-    outgoingPath.attr('fill', outgoingColor);
+        .attr('fill', 'context-stroke')
+        .attr('stroke', 'none')
+        .attr('class', 'arrow-marker-outgoing');
     
     // Create an in-edge highlighted arrow (Success color system)
     const incomingMarker = defs.append('marker')
         .attr('id', incomingId)
-        .attr('viewBox', `0 0 ${viewBoxSize} ${viewBoxSize}`)
-        .attr('refX', options.refX || (arrowSize * 0.8))
-        .attr('refY', viewBoxSize / 2)
+        .attr('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`)
+        .attr('refX', refX)
+        .attr('refY', refY)
         .attr('orient', 'auto')
-        .attr('markerWidth', arrowSize)
-        .attr('markerHeight', arrowSize)
-        .attr('markerUnits', 'strokeWidth');
+        .attr('markerWidth', markerSize)
+        .attr('markerHeight', markerSize)
+        .attr('markerUnits', 'userSpaceOnUse');
     
-    const incomingPath = incomingMarker.append('path')
+    incomingMarker.append('path')
         .attr('d', arrowPath)
-        .attr('class', 'arrow-marker-incoming modern-arrow')
-        .style('filter', 'drop-shadow(0 2px 4px rgba(56,142,60,0.3))');
-    
-    // Get calculated CSS variable values ​​using JavaScript (trim to remove spaces)
-    const incomingColor = options.isDarkMode ? 
-        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success-lighten').trim() || '#66BB6A') :
-        (getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-success').trim() || '#43A047');
-    incomingPath.attr('fill', incomingColor);
+        .attr('fill', 'context-stroke')
+        .attr('stroke', 'none')
+        .attr('class', 'arrow-marker-incoming');
     
     return { 
         marker, 
@@ -190,24 +175,6 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
         outgoingMarkerId: outgoingId,
         incomingMarkerId: incomingId
     };
-}
-
-/**
- * Get arrow color - based on MudBlazor color system
- * @param {boolean} isDarkMode - whether it is dark mode
- * @param {boolean} isHighlight - whether it is highlighted
- * @returns {string} color value
- */
-function getArrowColor(isDarkMode, isHighlight) {
-    if (isHighlight) {
-        // Use MudBlazor’s Primary color when highlighting
-        return isDarkMode ? 'var(--mud-palette-primary-lighten, #9d7df7)' : 'var(--mud-palette-primary, #594ae2)';
-    } else {
-        // Normally use neutral colors
-        return isDarkMode 
-            ? 'var(--mud-palette-text-secondary, rgba(255,255,255,0.5))' 
-            : 'var(--mud-palette-text-secondary, rgba(0,0,0,0.54))';
-    }
 }
 
 /**
@@ -226,7 +193,7 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
             stroke: isDarkMode ? 'var(--mud-palette-primary-lighten, #9d7df7)' : 'var(--mud-palette-primary, #594ae2)',
             strokeWidth: 3,
             strokeOpacity: 0.9,
-            filter: 'drop-shadow(0 2px 6px rgba(33,150,243,0.25))',
+            filter: null,
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
             markerEnd: `url(#${highlightMarkerId})`
@@ -238,7 +205,7 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
                 : 'var(--mud-palette-divider, rgba(224,224,224,1))',
             strokeWidth: 2,
             strokeOpacity: isDarkMode ? 0.7 : 0.8,
-            filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.1))',
+            filter: null,
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
             markerEnd: `url(#${normalMarkerId})`
