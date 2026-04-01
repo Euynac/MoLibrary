@@ -43,6 +43,8 @@ const LAYOUT_TYPES = {
     MULTI_CIRCULAR: 'multi_circular'
 };
 
+const DEFAULT_ARROW_SIZE = 12;
+
 // ==================== Main class ====================
 
 /**
@@ -61,6 +63,7 @@ class ProjectUnitGraph {
         this.graphBase = new GraphBase(containerId, {
             isDarkMode,
             showArrows: true,
+            arrowSize: DEFAULT_ARROW_SIZE,
             onBackgroundClick: () => this.handleBackgroundClick()
         });
         
@@ -343,6 +346,69 @@ class ProjectUnitGraph {
         
         animate();
     }
+
+    buildLinkPath(source, target) {
+        if (!source || !target) {
+            return '';
+        }
+
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            return '';
+        }
+
+        const normX = dx / distance;
+        const normY = dy / distance;
+        const arrowOffset = this.getTargetArrowOffset(target, dx, dy);
+        const endX = target.x - normX * arrowOffset;
+        const endY = target.y - normY * arrowOffset;
+
+        return `M${source.x},${source.y} L${endX},${endY}`;
+    }
+
+    getTargetArrowOffset(targetNode, dx, dy) {
+        if (!targetNode?.isComplex || !targetNode._cardSize) {
+            return NODE_SIZE.circle.radius + this.graphBase.arrowSize;
+        }
+
+        const halfWidth = targetNode._cardSize.width / 2;
+        const halfHeight = targetNode._cardSize.height / 2;
+        const angle = Math.atan2(dy, dx);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        let t = Infinity;
+
+        if (Math.abs(cos) > 0.001) {
+            const signX = cos > 0 ? 1 : -1;
+            const tVertical = (signX * halfWidth) / cos;
+            if (Math.abs(tVertical * sin) <= halfHeight) {
+                t = Math.min(t, Math.abs(tVertical));
+            }
+        }
+
+        if (Math.abs(sin) > 0.001) {
+            const signY = sin > 0 ? 1 : -1;
+            const tHorizontal = (signY * halfHeight) / sin;
+            if (Math.abs(tHorizontal * cos) <= halfWidth) {
+                t = Math.min(t, Math.abs(tHorizontal));
+            }
+        }
+
+        const arrowOffset = t + this.graphBase.arrowSize;
+        if (!isFinite(arrowOffset) || arrowOffset > 200) {
+            return halfWidth + halfHeight + this.graphBase.arrowSize;
+        }
+
+        return arrowOffset;
+    }
+
+    findNodeByLinkRef(linkNode) {
+        const nodeId = linkNode?.id || linkNode;
+        return this.nodes.find(node => node.id === nodeId);
+    }
     
     /**
      * Apply layout
@@ -385,63 +451,7 @@ class ProjectUnitGraph {
         // Start simulation
         this.forceManager.start(() => {
             this.linkSelection
-                .attr('d', d => {
-                    // Calculate the path from source to destination, adjusting the end point based on the destination node type
-                    const dx = d.target.x - d.source.x;
-                    const dy = d.target.y - d.source.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    const normX = dx / distance;
-                    const normY = dy / distance;
-                    
-                    // Calculate arrow end point based on target node type
-                    const targetNode = this.nodes.find(n => n.id === d.target.id);
-                    let arrowOffset = 35; // 默认圆形节点的偏移量
-                    
-                    if (targetNode && targetNode.isComplex && targetNode._cardSize) {
-                        // Complex nodes: Calculate distance to rectangular bounds
-                        const halfWidth = targetNode._cardSize.width / 2;
-                        const halfHeight = targetNode._cardSize.height / 2;
-                        
-                        // Compute rectangular boundary intersection points using a more stable algorithm
-                        const angle = Math.atan2(dy, dx);
-                        const cos = Math.cos(angle);
-                        const sin = Math.sin(angle);
-                        
-                        // Calculate the intersection points of the ray and the four sides of the rectangle and select the closest
-                        let t = Infinity;
-                        
-                        // Check intersections with vertical edges
-                        if (Math.abs(cos) > 0.001) {
-                            const signX = cos > 0 ? 1 : -1;
-                            const tVertical = (signX * halfWidth) / cos;
-                            if (Math.abs(tVertical * sin) <= halfHeight) {
-                                t = Math.min(t, Math.abs(tVertical));
-                            }
-                        }
-                        
-                        // Check intersection with horizontal edge
-                        if (Math.abs(sin) > 0.001) {
-                            const signY = sin > 0 ? 1 : -1;
-                            const tHorizontal = (signY * halfHeight) / sin;
-                            if (Math.abs(tHorizontal * cos) <= halfWidth) {
-                                t = Math.min(t, Math.abs(tHorizontal));
-                            }
-                        }
-                        
-                        // Add extra spacing
-                        arrowOffset = t + 10;
-                        
-                        // Prevent infinite values
-                        if (!isFinite(arrowOffset) || arrowOffset > 200) {
-                            arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
-                        }
-                    }
-                    
-                    // Shorten path ends to make room for arrows
-                    const endX = d.target.x - normX * arrowOffset;
-                    const endY = d.target.y - normY * arrowOffset;
-                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
-                });
+                .attr('d', d => this.buildLinkPath(d.source, d.target));
             
             this.nodeSelection
                 .attr('transform', d => `translate(${d.x},${d.y})`);
@@ -538,64 +548,11 @@ class ProjectUnitGraph {
                         const targetId = d.target.id || d.target;
                         
                         const source = sourceId === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === sourceId);
+                                       self.findNodeByLinkRef(sourceId);
                         const target = targetId === draggedNode.id ? draggedNode : 
-                                       self.nodes.find(n => n.id === targetId);
-                        
-                        if (!source || !target) return '';
-                        
-                        // Calculate the path from source to destination
-                        const dx = target.x - source.x;
-                        const dy = target.y - source.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        
-                        if (distance === 0) return '';
-                        
-                        const normX = dx / distance;
-                        const normY = dy / distance;
-                        
-                        // Calculate arrow end point based on target node type
-                        let arrowOffset = 35; // 默认圆形节点的偏移量
-                        
-                        if (target.isComplex && target._cardSize) {
-                            // Complex nodes: Calculate distance to rectangular bounds
-                            const halfWidth = target._cardSize.width / 2;
-                            const halfHeight = target._cardSize.height / 2;
-                            
-                            const angle = Math.atan2(dy, dx);
-                            const cos = Math.cos(angle);
-                            const sin = Math.sin(angle);
-                            
-                            let t = Infinity;
-                            
-                            // Check intersections with vertical edges
-                            if (Math.abs(cos) > 0.001) {
-                                const signX = cos > 0 ? 1 : -1;
-                                const tVertical = (signX * halfWidth) / cos;
-                                if (Math.abs(tVertical * sin) <= halfHeight) {
-                                    t = Math.min(t, Math.abs(tVertical));
-                                }
-                            }
-                            
-                            // Check intersection with horizontal edge
-                            if (Math.abs(sin) > 0.001) {
-                                const signY = sin > 0 ? 1 : -1;
-                                const tHorizontal = (signY * halfHeight) / sin;
-                                if (Math.abs(tHorizontal * cos) <= halfWidth) {
-                                    t = Math.min(t, Math.abs(tHorizontal));
-                                }
-                            }
-                            
-                            arrowOffset = t + 10;
-                            
-                            if (!isFinite(arrowOffset) || arrowOffset > 200) {
-                                arrowOffset = halfWidth + halfHeight + 10;
-                            }
-                        }
-                        
-                        const endX = target.x - normX * arrowOffset;
-                        const endY = target.y - normY * arrowOffset;
-                        return `M${source.x},${source.y} L${endX},${endY}`;
+                                       self.findNodeByLinkRef(targetId);
+
+                        return self.buildLinkPath(source, target);
                     });
             }
         });
@@ -616,68 +573,10 @@ class ProjectUnitGraph {
             .transition()
             .duration(750)
             .attr('d', d => {
-                const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                
-                if (!source || !target) return '';
-                
-                // Calculate the path from source to destination, adjusting the end point based on the destination node type
-                const dx = target.x - source.x;
-                const dy = target.y - source.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance === 0) return '';
-                
-                const normX = dx / distance;
-                const normY = dy / distance;
-                
-                // Calculate arrow end point based on target node type
-                let arrowOffset = 35; // 默认圆形节点的偏移量
-                
-                if (target.isComplex && target._cardSize) {
-                    // Complex nodes: Calculate distance to rectangular bounds
-                    const halfWidth = target._cardSize.width / 2;
-                    const halfHeight = target._cardSize.height / 2;
-                    
-                    // Compute rectangular boundary intersection points using a more stable algorithm
-                    const angle = Math.atan2(dy, dx);
-                    const cos = Math.cos(angle);
-                    const sin = Math.sin(angle);
-                    
-                    // Calculate the intersection points of the ray and the four sides of the rectangle and select the closest
-                    let t = Infinity;
-                    
-                    // Check intersections with vertical edges
-                    if (Math.abs(cos) > 0.001) {
-                        const signX = cos > 0 ? 1 : -1;
-                        const tVertical = (signX * halfWidth) / cos;
-                        if (Math.abs(tVertical * sin) <= halfHeight) {
-                            t = Math.min(t, Math.abs(tVertical));
-                        }
-                    }
-                    
-                    // Check intersection with horizontal edge
-                    if (Math.abs(sin) > 0.001) {
-                        const signY = sin > 0 ? 1 : -1;
-                        const tHorizontal = (signY * halfHeight) / sin;
-                        if (Math.abs(tHorizontal * cos) <= halfWidth) {
-                            t = Math.min(t, Math.abs(tHorizontal));
-                        }
-                    }
-                    
-                    // Add extra spacing
-                    arrowOffset = t + 10;
-                    
-                    // Prevent infinite values
-                    if (!isFinite(arrowOffset) || arrowOffset > 200) {
-                        arrowOffset = halfWidth + halfHeight + 10; // 使用合理的默认值
-                    }
-                }
-                
-                // Shorten path ends to make room for arrows
-                const endX = target.x - normX * arrowOffset;
-                const endY = target.y - normY * arrowOffset;
-                return `M${source.x},${source.y} L${endX},${endY}`;
+                const source = this.findNodeByLinkRef(d.source);
+                const target = this.findNodeByLinkRef(d.target);
+
+                return this.buildLinkPath(source, target);
             });
     }
     

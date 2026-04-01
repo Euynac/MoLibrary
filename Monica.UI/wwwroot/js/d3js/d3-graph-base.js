@@ -352,6 +352,7 @@ export class GraphBase {
         this.height = height;
         this.container = container;
         this.isDarkMode = options.isDarkMode || false;
+        this.arrowSize = options.arrowSize ?? 12;
         
         // Add zoom behavior
         this.zoom = addZoomBehavior(svg, mainGroup, {
@@ -366,7 +367,7 @@ export class GraphBase {
             const instanceId = `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             this.arrowMarkers = createArrowMarker(svg, 'arrowhead', {
                 isDarkMode: this.isDarkMode,
-                size: options.arrowSize || 12,
+                size: this.arrowSize,
                 uniqueId: instanceId
             });
             // Save marker IDs for use by other modules

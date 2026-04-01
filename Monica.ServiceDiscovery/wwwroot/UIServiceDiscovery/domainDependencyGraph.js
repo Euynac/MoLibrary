@@ -11,6 +11,7 @@ import { createLayoutAlgorithms } from '../../Monica.UI/js/d3js/d3-layout-algori
 import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-interaction.js';
 
 let graphInstance = null;
+const DOMAIN_NODE_RADIUS = 30;
 
 /**
  * Initialize domain dependency graph
@@ -316,7 +317,7 @@ class DomainDependencyGraph extends GraphBase {
         this.nodeElements.select('.node-circle')
             .transition()
             .duration(500)
-            .attr('r', 30)
+            .attr('r', DOMAIN_NODE_RADIUS)
             .attr('fill', d => d.color)
             .attr('stroke', getModernNodeStyle(this.isDarkMode).strokeColor)
             .attr('stroke-width', 2)
@@ -346,6 +347,33 @@ class DomainDependencyGraph extends GraphBase {
         this.nodeElements.style('cursor', 'pointer');
     }
 
+    buildLinkPath(source, target) {
+        if (!source || !target) {
+            return '';
+        }
+
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            return '';
+        }
+
+        const normX = dx / distance;
+        const normY = dy / distance;
+        const arrowOffset = DOMAIN_NODE_RADIUS + this.arrowSize;
+        const endX = target.x - normX * arrowOffset;
+        const endY = target.y - normY * arrowOffset;
+
+        return `M${source.x},${source.y} L${endX},${endY}`;
+    }
+
+    findNodeByLinkRef(linkNode) {
+        const nodeId = linkNode?.id || linkNode;
+        return this.nodes.find(node => node.id === nodeId);
+    }
+
     updatePositions() {
         if (this.nodeElements) {
             this.nodeElements
@@ -354,26 +382,7 @@ class DomainDependencyGraph extends GraphBase {
 
         if (this.linkElements) {
             this.linkElements
-                .attr('d', d => {
-                    // Calculate the path from source to destination, adjusting the end point according to the destination node to avoid arrows covering the node
-                    const dx = d.target.x - d.source.x;
-                    const dy = d.target.y - d.source.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance === 0) return '';
-                    
-                    const normX = dx / distance;
-                    const normY = dy / distance;
-                    
-                    // Leave space for arrows, circle node radius 30 + some spacing
-                    const arrowOffset = 35;
-                    
-                    // Shorten path ends to make room for arrows
-                    const endX = d.target.x - normX * arrowOffset;
-                    const endY = d.target.y - normY * arrowOffset;
-                    
-                    return `M${d.source.x},${d.source.y} L${endX},${endY}`;
-                });
+                .attr('d', d => this.buildLinkPath(d.source, d.target));
         }
     }
 
@@ -696,30 +705,14 @@ class DomainDependencyGraph extends GraphBase {
                         .attr('d', d => {
                             const sourceId = d.source.id || d.source;
                             const targetId = d.target.id || d.target;
-                            
-                            const source = sourceId === draggedNode.id ? draggedNode : 
-                                           self.nodes.find(n => n.id === sourceId);
-                            const target = targetId === draggedNode.id ? draggedNode : 
-                                           self.nodes.find(n => n.id === targetId);
-                            
-                            if (!source || !target) return '';
-                            
-                            // Calculate the path from source to destination
-                            const dx = target.x - source.x;
-                            const dy = target.y - source.y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            
-                            if (distance === 0) return '';
-                            
-                            const normX = dx / distance;
-                            const normY = dy / distance;
-                            
-                            // Leave space for arrows, circle node radius 30 + some spacing
-                            const arrowOffset = 35;
-                            
-                            const endX = target.x - normX * arrowOffset;
-                            const endY = target.y - normY * arrowOffset;
-                            return `M${source.x},${source.y} L${endX},${endY}`;
+                            const source = sourceId === draggedNode.id
+                                ? draggedNode
+                                : self.findNodeByLinkRef(sourceId);
+                            const target = targetId === draggedNode.id
+                                ? draggedNode
+                                : self.findNodeByLinkRef(targetId);
+
+                            return self.buildLinkPath(source, target);
                         });
                 }
             }
@@ -756,29 +749,10 @@ class DomainDependencyGraph extends GraphBase {
                 .transition()
                 .duration(750)
                 .attr('d', d => {
-                    const source = this.nodes.find(n => n.id === (d.source.id || d.source));
-                    const target = this.nodes.find(n => n.id === (d.target.id || d.target));
-                    
-                    if (!source || !target) return '';
-                    
-                    // Calculate the path from source to destination, adjusting the end point according to the destination node to avoid arrows covering the node
-                    const dx = target.x - source.x;
-                    const dy = target.y - source.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance === 0) return '';
-                    
-                    const normX = dx / distance;
-                    const normY = dy / distance;
-                    
-                    // Leave space for arrows, circle node radius 30 + some spacing
-                    const arrowOffset = 35;
-                    
-                    // Shorten path ends to make room for arrows
-                    const endX = target.x - normX * arrowOffset;
-                    const endY = target.y - normY * arrowOffset;
-                    
-                    return `M${source.x},${source.y} L${endX},${endY}`;
+                    const source = this.findNodeByLinkRef(d.source);
+                    const target = this.findNodeByLinkRef(d.target);
+
+                    return this.buildLinkPath(source, target);
                 });
         }
     }
