@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Services.Support;
 using Monica.Tool.Extensions;

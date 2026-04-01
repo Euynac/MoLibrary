@@ -1,4 +1,4 @@
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal static class ResultEnvelopeMetadataKeys
 {

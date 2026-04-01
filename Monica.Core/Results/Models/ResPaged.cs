@@ -1,7 +1,8 @@
 using System.Dynamic;
 using System.Text.Json.Serialization;
+using Monica.Core.Results.Abstractions;
 using Monica.Tool.Extensions;
-
+// ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
 
 /// <summary>

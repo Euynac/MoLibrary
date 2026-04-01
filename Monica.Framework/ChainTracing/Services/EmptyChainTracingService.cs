@@ -1,4 +1,5 @@
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Models;
 

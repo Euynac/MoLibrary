@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeJsonTypeInfoResolver(
     ResultEnvelopeFieldNames fieldNames,

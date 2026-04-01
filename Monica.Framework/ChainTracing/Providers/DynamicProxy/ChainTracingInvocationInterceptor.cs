@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstract;
 using Monica.DomainDrivenDesign.AutoController.MoRpc;

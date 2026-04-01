@@ -1,6 +1,7 @@
 using System.Text.Json;
+using Monica.Core.Results.Abstractions;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeHttpExchangeInfo
 {

@@ -7,6 +7,7 @@ using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.ExceptionHandling.Models.Internal;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 
 namespace Monica.Core.ExceptionHandling.Services;
 

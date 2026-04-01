@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 
 namespace Monica.DomainDrivenDesign.AutoController.Components;
 

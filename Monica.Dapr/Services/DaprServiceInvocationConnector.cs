@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.Results;
+using Monica.Core.Results.Abstractions;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 
 namespace Monica.Dapr.Services;

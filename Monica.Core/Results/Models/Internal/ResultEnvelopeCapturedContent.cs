@@ -1,7 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeCapturedContent(string content, bool isTruncated)
 {

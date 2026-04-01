@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Monica.Core.JsonSerialization.Services.Support;
-using Monica.Core.Results.Internal;
-
+using Monica.Core.Results.Models.Internal;
+// ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
 
 /// <summary>

@@ -2,9 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Net;
 using System.Text;
-using Monica.Core.Results.Internal;
+using Monica.Core.Results.Abstractions;
+using Monica.Core.Results.Models.Internal;
 using Monica.Tool.Extensions;
-
+// ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
 
 public static class ResultExtensions

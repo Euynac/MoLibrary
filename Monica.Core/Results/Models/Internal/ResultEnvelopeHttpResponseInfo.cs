@@ -1,8 +1,9 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Monica.Core.Results.Abstractions;
 using Monica.Tool.Extensions;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeHttpResponseInfo
 {

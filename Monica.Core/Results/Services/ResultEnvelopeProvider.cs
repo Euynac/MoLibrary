@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
-using Monica.Core.Results.Internal;
+using Monica.Core.Results.Abstractions;
+using Monica.Core.Results.Models.Internal;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 

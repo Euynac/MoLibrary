@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Monica.Tool.Extensions;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeDeserializationErrorInfo
 {

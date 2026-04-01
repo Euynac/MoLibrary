@@ -1,3 +1,4 @@
+// ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
 
 /// <summary>

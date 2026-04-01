@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 
-namespace Monica.Core.Results.Internal;
+namespace Monica.Core.Results.Models.Internal;
 
 internal sealed class ResultEnvelopeHttpRequestInfo
 {

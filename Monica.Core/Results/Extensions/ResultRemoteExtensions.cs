@@ -1,5 +1,6 @@
+using Monica.Core.Results.Abstractions;
 using Monica.Core.Results.Services;
-
+// ReSharper disable once CheckNamespace
 namespace Monica.Core.Results;
 
 /// <summary>

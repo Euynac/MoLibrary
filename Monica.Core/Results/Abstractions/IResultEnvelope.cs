@@ -1,6 +1,6 @@
 using System.Dynamic;
 
-namespace Monica.Core.Results;
+namespace Monica.Core.Results.Abstractions;
 
 /// <summary>
 /// Represents the shared envelope contract for Monica result models.
