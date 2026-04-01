@@ -1,6 +1,7 @@
 @using Monica.JobScheduler.UI.Localization
 @using Microsoft.JSInterop
-@inject CronExpressionService CronService
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+@inject CronExpressionSupport CronService
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<JobSchedulerResource> L
 @implements IAsyncDisposable

@@ -1,6 +1,6 @@
-namespace Monica.JobScheduler.UI.Models;
-
 using Monica.JobScheduler.Models;
+
+namespace Monica.JobScheduler.UI.UIJobScheduler.Instances.Models;
 
 /// <summary>
 /// Job instance filter request

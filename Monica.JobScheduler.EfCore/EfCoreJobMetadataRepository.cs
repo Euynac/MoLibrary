@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.EfCore.Mappers;
+using Monica.JobScheduler.EfCore.Support;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
 using Monica.Repository.Interfaces;

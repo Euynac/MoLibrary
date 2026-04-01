@@ -1,6 +1,7 @@
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
 
-@inject JobStateColorService StateColorService
+@inject JobStateColorResolver StateColorService
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <div class="state-distribution-wrapper">

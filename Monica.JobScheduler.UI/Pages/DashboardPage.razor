@@ -4,8 +4,8 @@
 @using Monica.JobScheduler.UI.Components.Dashboard
 @using Monica.JobScheduler.UI.Localization
 
-@inject DashboardDataLoader DataLoader
-@inject JobDashboardService DashboardService
+@inject JobSchedulerDashboardFacade DashboardFacade
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<JobSchedulerResource> L
 
@@ -117,31 +117,20 @@
 
             var token = _cts?.Token ?? CancellationToken.None;
 
-            // Single coordinated load - only ~3 database queries
-            var context = await DataLoader.LoadAsync(token);
+            var snapshotResult = await DashboardFacade.GetDashboardAsync(
+                UiOptions.Value.HealthMetricsWindow,
+                15,
+                token);
 
-            // All processing is now in-memory
-            var summaryResult = await DashboardService.BuildDashboardSummaryAsync(context, token);
-            var activitiesResult = DashboardService.BuildRecentActivities(context, 15);
-            var problemsResult = DashboardService.FindProblemJobs(context);
-
-            if (summaryResult.IsFailed(out var error, out _))
+            if (snapshotResult.IsFailed(out var error, out var snapshot))
             {
                 _loadError = error.Message;
             }
             else
             {
-                _summary = summaryResult.Data;
-            }
-
-            if (activitiesResult.IsOk(out var activities))
-            {
-                _recentActivities = activities;
-            }
-
-            if (problemsResult.IsOk(out var problems))
-            {
-                _problemJobs = problems;
+                _summary = snapshot!.Summary;
+                _recentActivities = snapshot.RecentActivities.ToList();
+                _problemJobs = snapshot.Problems;
             }
         }
         catch (OperationCanceledException)

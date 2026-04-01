@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
 
-namespace Monica.JobScheduler.EfCore;
+namespace Monica.JobScheduler.EfCore.Support;
 
 /// <summary>
 /// Extension methods for applying JobInstanceQuery filters to IQueryable{JobInstanceEntity}.

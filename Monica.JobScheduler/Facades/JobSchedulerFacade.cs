@@ -110,6 +110,23 @@ public class JobSchedulerFacade(
         }
     }
 
+    /// <summary>
+    /// Compatibility wrapper for manual job execution used by existing UI callers.
+    /// </summary>
+    public Task<Res<string>> ExecuteJobAsync(
+        string jobKey,
+        object? jobArgs = null,
+        CancellationToken cancellationToken = default)
+        => CreateJobInstanceAsync(jobKey, jobArgs, cancellationToken);
+
+    /// <summary>
+    /// Compatibility wrapper for existing callers that pass only the updated definition.
+    /// </summary>
+    public Task<Res> UpdateJobConfigAsync(
+        JobDefinition updatedDefinition,
+        CancellationToken cancellationToken = default)
+        => UpdateJobConfigAsync(updatedDefinition.JobKey, updatedDefinition, cancellationToken);
+
     private async Task<Res<string>> CreateJobInstanceViaRegistryAsync(
         JobDefinition definition,
         object? jobArgs,
@@ -306,6 +323,12 @@ public class JobSchedulerFacade(
     }
 
     /// <summary>
+    /// Compatibility wrapper for job instance cancellation used by existing UI callers.
+    /// </summary>
+    public Task<Res> CancelInstanceAsync(string instanceId, CancellationToken cancellationToken = default)
+        => CancelJobInstanceAsync(instanceId, cancellationToken);
+
+    /// <summary>
     /// Pauses a recurring job.
     /// </summary>
     public async Task<Res> PauseRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
@@ -338,6 +361,12 @@ public class JobSchedulerFacade(
     }
 
     /// <summary>
+    /// Compatibility wrapper for pausing recurring jobs used by existing UI callers.
+    /// </summary>
+    public Task<Res> PauseJobAsync(string jobKey, CancellationToken cancellationToken = default)
+        => PauseRecurringJobAsync(jobKey, cancellationToken);
+
+    /// <summary>
     /// Resumes a paused recurring job.
     /// </summary>
     public async Task<Res> ResumeRecurringJobAsync(string jobKey, CancellationToken cancellationToken = default)
@@ -368,6 +397,12 @@ public class JobSchedulerFacade(
             return Res.Fail($"Failed to resume recurring job: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Compatibility wrapper for resuming recurring jobs used by existing UI callers.
+    /// </summary>
+    public Task<Res> ResumeJobAsync(string jobKey, CancellationToken cancellationToken = default)
+        => ResumeRecurringJobAsync(jobKey, cancellationToken);
 
     /// <summary>
     /// Batch update job state (pause/resume multiple jobs).
@@ -470,6 +505,22 @@ public class JobSchedulerFacade(
             return Res.Fail($"Batch operation failed: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Compatibility wrapper for batch pause operations used by existing UI callers.
+    /// </summary>
+    public Task<Res<BatchJobOperationResult>> BatchPauseJobsAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default)
+        => BatchUpdateJobStateAsync(jobKeys, isDisabled: true, cancellationToken);
+
+    /// <summary>
+    /// Compatibility wrapper for batch resume operations used by existing UI callers.
+    /// </summary>
+    public Task<Res<BatchJobOperationResult>> BatchResumeJobsAsync(
+        IReadOnlyList<string> jobKeys,
+        CancellationToken cancellationToken = default)
+        => BatchUpdateJobStateAsync(jobKeys, isDisabled: false, cancellationToken);
 
     /// <summary>
     /// Updates job configuration.

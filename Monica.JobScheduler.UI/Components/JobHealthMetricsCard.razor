@@ -1,5 +1,6 @@
 @using Monica.JobScheduler.UI.Localization
-@inject JobSchedulerUIService UIService
+@inject JobSchedulerQueryFacade QueryService
+@inject IOptions<ModuleJobSchedulerUIOption> UiOptions
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject IStringLocalizer<JobSchedulerResource> L
@@ -205,7 +206,10 @@
 
         try
         {
-            var result = await UIService.GetHealthMetricsAsync(JobKey);
+            var result = await QueryService.GetJobHealthMetricsAsync(
+                JobKey,
+                UiOptions.Value.HealthMetricsWindow,
+                UiOptions.Value.HealthMetricsFailedInstancesLimit);
             if (result.IsFailed(out var error, out var data))
             {
                 _error = $"{L["Common:Messages:LoadFailed"]}: {error.Message}";

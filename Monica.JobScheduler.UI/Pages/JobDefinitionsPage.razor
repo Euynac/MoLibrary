@@ -1,12 +1,16 @@
 @attribute [Route(PAGE_URL)]
-@inject JobSchedulerUIService UIService
-@inject JobStateColorService ColorService
+@inject JobSchedulerFacade UIService
+@inject JobSchedulerQueryFacade QueryService
+@inject JobStateColorResolver ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IMoBrowserStorage BrowserStorage
 @inject IStringLocalizer<JobSchedulerResource> L
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+
+@using Monica.JobScheduler.UI.UIJobScheduler.Definitions.Models
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
@@ -382,7 +386,16 @@
             SortDescending = sortDescending
         };
 
-        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+        var result = await QueryService.GetJobDefinitionsWithLastExecutionAsync(
+            fromProject: filter.FromProject,
+            jobKey: filter.JobKey,
+            jobName: filter.JobName,
+            jobType: filter.JobType,
+            pageNumber: filter.PageNumber,
+            pageSize: filter.PageSize,
+            sortBy: filter.SortBy,
+            sortDescending: filter.SortDescending,
+            cancellationToken: cancellationToken);
 
         if (result.IsFailed(out var error, out var data))
         {
@@ -439,7 +452,16 @@
             SortDescending = sortDescending
         };
 
-        var result = await UIService.GetJobDefinitionsWithLastExecutionAsync(filter, cancellationToken);
+        var result = await QueryService.GetJobDefinitionsWithLastExecutionAsync(
+            fromProject: filter.FromProject,
+            jobKey: filter.JobKey,
+            jobName: filter.JobName,
+            jobType: filter.JobType,
+            pageNumber: filter.PageNumber,
+            pageSize: filter.PageSize,
+            sortBy: filter.SortBy,
+            sortDescending: filter.SortDescending,
+            cancellationToken: cancellationToken);
 
         if (result.IsFailed(out var error, out var data))
         {
@@ -536,7 +558,7 @@
     private async Task ExecuteJobAsync(string jobKey)
     {
         // Get JobDefinition
-        var defResult = await UIService.GetJobDefinitionAsync(jobKey);
+        var defResult = await QueryService.GetJobDefinitionAsync(jobKey);
         if (defResult.IsFailed(out var error, out var definition))
         {
             Snackbar.Add($"{L["JobDetail:Messages:GetDefinitionFailed"]}: {error.Message}", Severity.Error);

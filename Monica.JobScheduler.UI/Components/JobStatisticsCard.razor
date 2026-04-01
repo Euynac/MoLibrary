@@ -1,6 +1,7 @@
 @using Monica.JobScheduler.UI.Localization
-@inject JobSchedulerUIService UIService
-@inject JobStateColorService ColorService
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+@inject JobSchedulerQueryFacade QueryService
+@inject JobStateColorResolver ColorService
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject IStringLocalizer<JobSchedulerResource> L
@@ -127,7 +128,7 @@
 
         try
         {
-            var result = await UIService.GetStatisticsAsync(JobKey);
+            var result = await QueryService.GetJobStatisticsAsync(JobKey);
             if (result.IsFailed(out var error, out var data))
             {
                 _error = $"{L["Common:Messages:LoadFailed"]}: {error.Message}";

@@ -1,11 +1,13 @@
 @attribute [Route(PAGE_URL)]
-@inject JobSchedulerUIService UIService
-@inject JobStateColorService ColorService
+@inject JobSchedulerFacade UIService
+@inject JobSchedulerQueryFacade QueryService
+@inject JobStateColorResolver ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IStringLocalizer<JobSchedulerResource> L
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     @if (_isLoading)
@@ -340,7 +342,7 @@
 
         try
         {
-            var result = await UIService.GetJobDefinitionAsync(JobKey);
+            var result = await QueryService.GetJobDefinitionAsync(JobKey);
             if (result.IsFailed(out var error, out var data))
             {
                 _error = $"{L["JobDetail:Messages:LoadFailed"]}: {error.Message}";
@@ -366,7 +368,7 @@
 
         try
         {
-            var result = await UIService.GetRunningInstancesAsync(JobKey);
+            var result = await QueryService.GetRunningInstancesAsync(JobKey);
             if (result.IsFailed(out var error, out var data))
             {
                 Snackbar.Add($"{L["JobDetail:Messages:LoadRunningInstancesFailed"]}: {error.Message}", Severity.Error);

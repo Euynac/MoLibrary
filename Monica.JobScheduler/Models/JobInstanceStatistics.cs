@@ -1,6 +1,4 @@
-using Monica.JobScheduler.Models;
-
-namespace Monica.JobScheduler.UI.Models;
+namespace Monica.JobScheduler.Models;
 
 /// <summary>
 /// Lightweight Job instance projection, containing only the fields required for statistical analysis

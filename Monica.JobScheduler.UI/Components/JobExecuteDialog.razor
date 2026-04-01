@@ -1,7 +1,8 @@
 @using Monica.JobScheduler.Services
 @using Monica.JobScheduler.UI.Localization
-@inject JobSchedulerUIService UIService
-@inject JobArgsSchemaService SchemaService
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+@inject JobSchedulerFacade UIService
+@inject JobArgsJsonSchemaSupport SchemaService
 @inject JobRegistry JobRegistry
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<JobSchedulerResource> L
@@ -131,7 +132,7 @@
         }
 
         _hasArgsType = _argsClrType != null;
-        _argsTypeName = _argsClrType?.Name ?? "无";
+            _argsTypeName = _argsClrType?.Name ?? "None";
 
         if (_hasArgsType)
         {

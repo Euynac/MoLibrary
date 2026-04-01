@@ -1,11 +1,10 @@
 @page "/job-scheduler/statistics"
 
-@using Monica.JobScheduler.Abstractions
 @using Monica.JobScheduler.UI.Components.Statistics
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Statistics.Models
 
-@inject JobAnalyticsService AnalyticsService
-@inject IJobDefinitionCacheService CacheService
+@inject JobSchedulerAnalyticsFacade AnalyticsFacade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<JobSchedulerResource> L
 
@@ -113,87 +112,19 @@
             var (startTime, endTime) = GetEffectiveTimeRange();
             var granularity = GetGranularity();
 
-            // Step 1: Single query with projection (no StateHistory/JobArgs loaded)
-            if ((await AnalyticsService.GetInstanceStatisticsAsync(startTime, endTime, token)).IsFailed(out var error, out var instances))
+            var result = await AnalyticsFacade.GetAnalyticsAsync(startTime, endTime, granularity, 10, token);
+            if (result.IsFailed(out var error, out var snapshot))
             {
                 _loadError = error.Message;
                 return;
             }
 
-            // Step 2: Get job names for display
-            var definitions = await CacheService.GetAllDefinitionsAsync(token);
-            var jobNameMap = definitions.ToDictionary(d => d.JobKey, d => d.JobName);
-
-            // Step 3: Pure in-memory calculations (synchronous, no additional DB queries)
-            // Use IsFailed pattern consistently for all Res responses
-            var errors = new List<string>();
-
-            if (AnalyticsService.CalculateExecutionTrend(instances, startTime, endTime, granularity)
-                .IsFailed(out var trendError, out var trend))
-            {
-                errors.Add($"{L["Statistics:ExecutionTrend:Title"]}: {trendError.Message}");
-            }
-            else
-            {
-                _trendData = trend;
-            }
-
-            if (AnalyticsService.CalculateDurationPercentiles(instances)
-                .IsFailed(out var percentilesError, out var percentiles))
-            {
-                errors.Add($"{L["Statistics:DurationPercentiles:Title"]}: {percentilesError.Message}");
-            }
-            else
-            {
-                _percentiles = percentiles;
-            }
-
-            if (AnalyticsService.CalculateSlowestInstances(instances, jobNameMap, 10)
-                .IsFailed(out var slowestError, out var slowestInstances))
-            {
-                errors.Add($"{L["Statistics:DurationPercentiles:Slowest"]}: {slowestError.Message}");
-            }
-            else
-            {
-                _slowestInstances = slowestInstances;
-            }
-
-            if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.ExecutionCount)
-                .IsFailed(out var topExecutionError, out var topExecution))
-            {
-                errors.Add($"{L["Statistics:TopJobs:ExecutionCount"]}: {topExecutionError.Message}");
-            }
-            else
-            {
-                _topByExecution = topExecution;
-            }
-
-            if (AnalyticsService.CalculateTopJobs(instances, jobNameMap, 10, RankingType.FailureCount)
-                .IsFailed(out var topFailureError, out var topFailure))
-            {
-                errors.Add($"{L["Statistics:TopJobs:FailureCount"]}: {topFailureError.Message}");
-            }
-            else
-            {
-                _topByFailure = topFailure;
-            }
-
-            if (AnalyticsService.CalculateFailureAnalysis(instances, jobNameMap, startTime, endTime)
-                .IsFailed(out var failureError, out var failure))
-            {
-                errors.Add($"{L["Statistics:FailureAnalysis:Title"]}: {failureError.Message}");
-            }
-            else
-            {
-                _failureAnalysis = failure;
-            }
-
-            // Display partial errors as warnings if any calculation failed
-            if (errors.Count > 0)
-            {
-                var message = $"{L["Statistics:Messages:PartialFailed"]}:\n{string.Join("\n", errors)}";
-                Snackbar.Add(message, Severity.Warning);
-            }
+            _trendData = snapshot!.TrendData;
+            _percentiles = snapshot.Percentiles;
+            _slowestInstances = snapshot.SlowestInstances;
+            _topByExecution = snapshot.TopByExecution;
+            _topByFailure = snapshot.TopByFailure;
+            _failureAnalysis = snapshot.FailureAnalysis;
         }
         catch (OperationCanceledException)
         {

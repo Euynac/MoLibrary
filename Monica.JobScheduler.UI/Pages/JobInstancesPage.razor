@@ -1,12 +1,16 @@
 @attribute [Route(PAGE_URL)]
-@inject JobSchedulerUIService UIService
-@inject JobStateColorService ColorService
+@inject JobSchedulerFacade UIService
+@inject JobSchedulerQueryFacade QueryService
+@inject JobStateColorResolver ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IMoBrowserStorage BrowserStorage
 @inject IStringLocalizer<JobSchedulerResource> L
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+
+@using Monica.JobScheduler.UI.UIJobScheduler.Instances.Models
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobInstances:Title"]</MudText>
@@ -285,7 +289,17 @@
             SortDescending = sortDescending
         };
 
-        var result = await UIService.GetJobInstancesAsync(filter, cancellationToken);
+        var result = await QueryService.GetJobInstancesAsync(
+            jobKey: filter.JobKey,
+            instanceId: filter.InstanceId,
+            state: filter.State,
+            startTime: filter.StartTime,
+            endTime: filter.EndTime,
+            pageNumber: filter.PageNumber,
+            pageSize: filter.PageSize,
+            sortBy: filter.SortBy,
+            sortDescending: filter.SortDescending,
+            cancellationToken: cancellationToken);
 
         if (result.IsFailed(out var error, out var data))
         {

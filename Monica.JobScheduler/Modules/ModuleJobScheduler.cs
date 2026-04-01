@@ -88,6 +88,10 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         }
         
         services.AddSingleton<JobSchedulerFacade>();
+        services.AddSingleton<JobSchedulerAnalyticsFacade>();
+        services.AddSingleton<JobSchedulerDashboardFacade>();
+        services.AddSingleton<JobSchedulerMonitorFacade>();
+        services.AddSingleton<JobSchedulerQueryFacade>();
         services.AddSingleton<JobExecutor>();
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();

@@ -1,8 +1,10 @@
 @using System.Text.Encodings.Web
 @using System.Text.Json
 @using Monica.JobScheduler.UI.Localization
-@inject JobSchedulerUIService UIService
-@inject JobStateColorService ColorService
+@using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
+@inject JobSchedulerFacade UIService
+@inject JobSchedulerQueryFacade QueryService
+@inject JobStateColorResolver ColorService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -169,7 +171,7 @@
 
         try
         {
-            var result = await UIService.GetJobInstanceAsync(InstanceId);
+            var result = await QueryService.GetJobInstanceAsync(InstanceId);
             if (result.IsFailed(out var error, out var data))
             {
                 _error = $"{L["Dialogs:JobInstanceDetail:LoadFailed"]}: {error.Message}";

@@ -3,7 +3,7 @@ using System.Reflection;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.JobScheduler.Models;
 
-namespace Monica.JobScheduler.EfCore;
+namespace Monica.JobScheduler.EfCore.Support;
 
 /// <summary>
 /// Converts Expression&lt;Func&lt;JobInstance, TResult&gt;&gt; to Expression&lt;Func&lt;JobInstanceEntity, TResult&gt;&gt;.

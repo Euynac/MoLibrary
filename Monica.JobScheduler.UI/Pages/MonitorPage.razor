@@ -3,9 +3,10 @@
 @using Monica.JobScheduler.Abstractions
 @using Monica.JobScheduler.UI.Components.Monitor
 @using Monica.JobScheduler.UI.Localization
+@using Monica.JobScheduler.UI.UIJobScheduler.Monitor.Models
 
-@inject JobMonitorService MonitorService
-@inject JobSchedulerUIService UIService
+@inject JobSchedulerMonitorFacade MonitorFacade
+@inject JobSchedulerFacade UIService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<JobSchedulerResource> L
 
@@ -104,8 +105,8 @@
             var token = _cts?.Token ?? CancellationToken.None;
 
             // Load both monitor state and concurrency state in parallel
-            var monitorTask = MonitorService.GetMonitorStateAsync(token);
-            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
+            var monitorTask = MonitorFacade.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorFacade.GetConcurrencyMonitorStateAsync(token);
 
             await Task.WhenAll(monitorTask, concurrencyTask);
 
@@ -154,8 +155,8 @@
             var token = _cts?.Token ?? CancellationToken.None;
 
             // Refresh both in parallel
-            var monitorTask = MonitorService.GetMonitorStateAsync(token);
-            var concurrencyTask = MonitorService.GetConcurrencyMonitorStateAsync(token);
+            var monitorTask = MonitorFacade.GetMonitorStateAsync(token);
+            var concurrencyTask = MonitorFacade.GetConcurrencyMonitorStateAsync(token);
 
             await Task.WhenAll(monitorTask, concurrencyTask);
 
@@ -198,7 +199,7 @@
             _isReconciling = true;
             StateHasChanged();
 
-            var result = await MonitorService.ReconcileAsync(_cts?.Token ?? CancellationToken.None);
+            var result = await MonitorFacade.ReconcileAsync(_cts?.Token ?? CancellationToken.None);
 
             if (result.IsOk(out var reconcileResult))
             {

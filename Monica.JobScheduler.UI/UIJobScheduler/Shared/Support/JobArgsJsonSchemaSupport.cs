@@ -4,12 +4,12 @@ using System.Text;
 using System.Text.Json;
 using Monica.Core.Results;
 
-namespace Monica.JobScheduler.UI.Services;
+namespace Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 
 /// <summary>
 /// Service for generating default JSON values and validating JSON against CLR types.
 /// </summary>
-public class JobArgsSchemaService
+public class JobArgsJsonSchemaSupport
 {
     private const int MaxRecursionDepth = 3;
 

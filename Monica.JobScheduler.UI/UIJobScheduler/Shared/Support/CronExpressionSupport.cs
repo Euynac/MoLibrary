@@ -1,12 +1,12 @@
 using Cronos;
-using Monica.Core.Results;
-using Microsoft.JSInterop;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using Monica.Modules;
+using Microsoft.JSInterop;
+using Monica.Core.Results;
 using Monica.JobScheduler.UI.Localization;
+using Monica.Modules;
 
-namespace Monica.JobScheduler.UI.Services;
+namespace Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 
 /// <summary>
 /// Cron expression format type
@@ -28,7 +28,7 @@ public enum CronFormat
 /// Cron expression service, providing expression parsing, validation and execution time calculation
 /// Note: The parsing description function requires the component to provide a JS module reference
 /// </summary>
-public class CronExpressionService(
+public class CronExpressionSupport(
     IStringLocalizer<JobSchedulerResource> localizer,
     IOptions<ModuleClockOption> clockOptions)
 {

@@ -6,7 +6,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
-using Monica.JobScheduler.UI.Services;
+using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -37,23 +37,10 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register Singleton service (performance optimization)
-        services.AddSingleton<JobDefinitionQueryService>();
-        services.AddSingleton<JobInstanceQueryService>();
-        services.AddSingleton<JobStatisticsService>();
-        services.AddSingleton<JobHealthMetricsService>();
-        services.AddSingleton<JobStateColorService>();
-        services.AddSingleton<CronExpressionService>();
-        services.AddSingleton<JobArgsSchemaService>();
-
-        // Register for dashboard, monitoring, and analysis services
-        services.AddSingleton<DashboardDataLoader>();
-        services.AddSingleton<JobDashboardService>();
-        services.AddSingleton<JobMonitorService>();
-        services.AddSingleton<JobAnalyticsService>();
-
-        // Register Scoped facade service (Blazor Circuit)
-        services.AddScoped<JobSchedulerUIService>();
+        // Register UI-only support helpers.
+        services.AddSingleton<JobStateColorResolver>();
+        services.AddSingleton<JobArgsJsonSchemaSupport>();
+        services.AddSingleton<CronExpressionSupport>();
         // StackTraceParserService is now registered by ModuleUIStackTrace module
     }
 

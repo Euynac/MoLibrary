@@ -2,13 +2,13 @@ using Monica.JobScheduler.Models;
 using Monica.UI.Services;
 using MudBlazor;
 
-namespace Monica.JobScheduler.UI.Services;
+namespace Monica.JobScheduler.UI.UIJobScheduler.Shared.Support;
 
 /// <summary>
 /// Job status color service
 /// Provides a unified mapping of job status to MudBlazor colors
 /// </summary>
-public class JobStateColorService(IMoThemeService themeService)
+public class JobStateColorResolver(IMoThemeService themeService)
 {
     /// <summary>
     /// Get the MudBlazor color corresponding to the job status

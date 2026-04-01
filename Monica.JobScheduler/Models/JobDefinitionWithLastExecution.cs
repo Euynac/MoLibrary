@@ -1,6 +1,6 @@
 using Monica.JobScheduler.Models;
 
-namespace Monica.JobScheduler.UI.Models;
+namespace Monica.JobScheduler.Models;
 
 /// <summary>
 /// Job definition with last execution information
