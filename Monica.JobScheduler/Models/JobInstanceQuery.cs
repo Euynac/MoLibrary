@@ -46,11 +46,6 @@ public record JobInstanceQuery
     public DateTime? CreatedBefore { get; init; }
 
     /// <summary>
-    /// Sort directions by creation time
-    /// </summary>
-    public SortDirection SortByCreatedAt { get; init; } = SortDirection.Descending;
-
-    /// <summary>
     /// Sorting field name (supported: InstanceId, JobKey, State, CreatedAt, StartedAt, CompletedAt, Duration)
     /// </summary>
     public string? SortBy { get; init; }

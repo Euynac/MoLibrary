@@ -260,9 +260,10 @@ public class JobSchedulerFacade(
                 State = state,
                 CreatedAfter = startTime,
                 CreatedBefore = endTime,
+                SortBy = "CreatedAt",
+                SortDescending = true,
                 PageNumber = pageNumber,
-                PageSize = pageSize,
-                SortByCreatedAt = SortDirection.Descending
+                PageSize = pageSize
             };
 
             var result = await metadataRepository.QueryInstancesAsync(query, cancellationToken);
