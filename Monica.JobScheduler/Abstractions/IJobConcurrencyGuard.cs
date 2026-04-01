@@ -1,135 +1,6 @@
+using Monica.JobScheduler.Models;
+
 namespace Monica.JobScheduler.Abstractions;
-
-/// <summary>
-/// Result of execution slot reservation attempt.
-/// </summary>
-public sealed class ReservationResult
-{
-    public bool Reserved { get; private init; }
-    public string? Reason { get; private init; }
-
-    public static ReservationResult Success() => new() { Reserved = true };
-    public static ReservationResult Failure(string reason) => new() { Reserved = false, Reason = reason };
-}
-
-#region Consistency Check Types
-
-/// <summary>
-/// Result of consistency check between in-memory state and database state.
-/// </summary>
-public class ConsistencyCheckResult
-{
-    /// <summary>
-    /// Whether in-memory state is consistent with database state.
-    /// </summary>
-    public bool IsConsistent => TotalDeviation == 0;
-
-    /// <summary>
-    /// Total deviation count (sum of absolute deviations across all jobs).
-    /// </summary>
-    public int TotalDeviation { get; init; }
-
-    /// <summary>
-    /// Per-job deviation details.
-    /// </summary>
-    public required IReadOnlyList<JobConsistencyDeviation> Deviations { get; init; }
-
-    /// <summary>
-    /// Timestamp when the check was performed.
-    /// </summary>
-    public DateTime CheckedAt { get; init; } = DateTime.UtcNow;
-}
-
-/// <summary>
-/// Consistency deviation details for a single job.
-/// </summary>
-public class JobConsistencyDeviation
-{
-    /// <summary>
-    /// The job key.
-    /// </summary>
-    public required string JobKey { get; init; }
-
-    /// <summary>
-    /// In-memory running count.
-    /// </summary>
-    public int MemoryRunningCount { get; init; }
-
-    /// <summary>
-    /// Database Processing state count.
-    /// </summary>
-    public int DatabaseProcessingCount { get; init; }
-
-    /// <summary>
-    /// In-memory pending reservation count.
-    /// </summary>
-    public int MemoryPendingCount { get; init; }
-
-    /// <summary>
-    /// Database Enqueued state count.
-    /// </summary>
-    public int DatabaseEnqueuedCount { get; init; }
-
-    /// <summary>
-    /// Running state deviation (Memory - Database).
-    /// Positive means memory has more, negative means database has more.
-    /// </summary>
-    public int RunningDeviation => MemoryRunningCount - DatabaseProcessingCount;
-
-    /// <summary>
-    /// Pending state deviation (Memory - Database).
-    /// </summary>
-    public int PendingDeviation => MemoryPendingCount - DatabaseEnqueuedCount;
-
-    /// <summary>
-    /// Whether this job has any deviation.
-    /// </summary>
-    public bool HasDeviation => RunningDeviation != 0 || PendingDeviation != 0;
-}
-
-/// <summary>
-/// Result of reconciliation operation.
-/// </summary>
-public class ReconcileResult
-{
-    /// <summary>
-    /// Whether the reconciliation was successful.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
-    /// Error message if reconciliation failed.
-    /// </summary>
-    public string? ErrorMessage { get; init; }
-
-    /// <summary>
-    /// State before reconciliation.
-    /// </summary>
-    public ConsistencyCheckResult? StateBefore { get; init; }
-
-    /// <summary>
-    /// State after reconciliation.
-    /// </summary>
-    public ConsistencyCheckResult? StateAfter { get; init; }
-
-    /// <summary>
-    /// Timestamp when reconciliation was performed.
-    /// </summary>
-    public DateTime ReconciledAt { get; init; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Duration of the reconciliation operation.
-    /// </summary>
-    public TimeSpan Duration { get; init; }
-
-    public static ReconcileResult Ok(ConsistencyCheckResult before, ConsistencyCheckResult after, TimeSpan duration)
-        => new() { Success = true, StateBefore = before, StateAfter = after, Duration = duration };
-
-    public static ReconcileResult Fail(string error)
-        => new() { Success = false, ErrorMessage = error };
-}
-
-#endregion
 
 /// <summary>
 /// Manages job concurrency limits and tracks running job instances
@@ -192,7 +63,7 @@ public interface IJobConcurrencyGuard
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Dictionary of job key to execution statistic (includes RunningInstances and PendingReservations)</returns>
-    Task<IReadOnlyDictionary<string, ControlPlane.JobExecutionStatistic>> GetDetailedExecutionStatisticsAsync(
+    Task<IReadOnlyDictionary<string, JobExecutionStatistic>> GetDetailedExecutionStatisticsAsync(
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -209,40 +80,4 @@ public interface IJobConcurrencyGuard
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Reconciliation result including before/after state</returns>
     Task<ReconcileResult> ReconcileAsync(CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Snapshot of job execution statistics for monitoring purposes
-/// </summary>
-public class JobExecutionStatisticSnapshot
-{
-    /// <summary>
-    /// The job definition key
-    /// </summary>
-    public required string JobKey { get; init; }
-
-    /// <summary>
-    /// Maximum concurrent executions allowed
-    /// </summary>
-    public int MaxConcurrency { get; init; }
-
-    /// <summary>
-    /// Number of currently running instances
-    /// </summary>
-    public int RunningCount { get; init; }
-
-    /// <summary>
-    /// Number of pending reservations (passed concurrency check but not yet started)
-    /// </summary>
-    public int PendingCount { get; init; }
-
-    /// <summary>
-    /// Total executing count (running + pending)
-    /// </summary>
-    public int CurrentExecutingCount => RunningCount + PendingCount;
-
-    /// <summary>
-    /// Whether the job can accept new executions
-    /// </summary>
-    public bool CanExecute => CurrentExecutingCount < MaxConcurrency;
 }

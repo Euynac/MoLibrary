@@ -1,7 +1,7 @@
 namespace Monica.JobScheduler.Events;
 
 /// <summary>
-/// Event published when IMoTriggeredJobManager.EnqueueAsync is called.
+/// Event published when ITriggeredJobManager.EnqueueAsync is called.
 /// Notifies JobSchedulerHostedService to create and schedule a job instance.
 /// </summary>
 public class JobTriggeredEvent

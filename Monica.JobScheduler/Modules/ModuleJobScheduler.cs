@@ -8,16 +8,14 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.JobScheduler.Helpers;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Api;
-using Monica.JobScheduler.Attributes;
-using Monica.JobScheduler.Cache;
-using Monica.JobScheduler.ControlPlane;
-using Monica.JobScheduler.HealthChecks;
-using Monica.JobScheduler.Metadata;
+using Monica.JobScheduler.Annotations;
+using Monica.JobScheduler.Facades;
 using Monica.JobScheduler.Models;
-using Monica.JobScheduler.WorkerPlane;
+using Monica.JobScheduler.Providers;
+using Monica.JobScheduler.Services;
+using Monica.JobScheduler.Services.Support;
+using Monica.JobScheduler.Utils;
 using Monica.Tool.Extensions;
 
 // ReSharper disable once CheckNamespace
@@ -58,12 +56,12 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
         {
             if (type is { IsClass: true, IsAbstract: false })
             {
-                if (type.IsAssignableTo(typeof(IMoRecurringJob)))
+                if (type.IsAssignableTo(typeof(IRecurringJob)))
                 {
                     var jobDefinition = ExtractJobDefinition(type, JobType.Recurring);
                     _jobDefinitions.Add(jobDefinition);
                 }
-                else if (type.IsImplementInterfaceGeneric(typeof(IMoTriggeredJob<>), out var genericTypeDefinition))
+                else if (type.IsImplementInterfaceGeneric(typeof(ITriggeredJob<>), out var genericTypeDefinition))
                 {
                     var argsType = genericTypeDefinition.GenericTypeArguments[0];
                     var jobDefinition = ExtractJobDefinition(type, JobType.Triggered);
@@ -89,14 +87,14 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             Logger.LogDebug("Discovered {JobType}Job: {JobKey} ({TypeName})", job.JobType, job.JobKey, job.JobName);
         }
         
-        services.AddSingleton<JobSchedulerApiService>();
+        services.AddSingleton<JobSchedulerFacade>();
         services.AddSingleton<JobExecutor>();
         services.AddSingleton<JobRegistry>();
         services.AddSingleton<JobInstanceManager>();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<IJobDefinitionCacheService, JobDefinitionCacheServiceDefault>();
         services.AddSingleton<JobOrchestrator>();
-        services.AddSingleton<IMoTriggeredJobManager, TriggeredJobManager>();
+        services.AddSingleton<ITriggeredJobManager, TriggeredJobManager>();
         services.AddSingleton<IJobCancellationTokenManager, JobCancellationTokenManager>();
         services.AddSingleton<JobHistoryCleanupExecutor>();
 
@@ -246,16 +244,16 @@ public class ModuleJobSchedulerGuide
     /// <summary>
     /// Configures a custom metadata repository implementation for job persistence.
     /// </summary>
-    /// <typeparam name="TRepository">The metadata repository type implementing <see cref="IMoJobMetadataRepository"/>.</typeparam>
+    /// <typeparam name="TRepository">The metadata repository type implementing <see cref="IJobMetadataRepository"/>.</typeparam>
     /// <remarks>
     /// Custom repositories must be thread-safe and provide atomic state transitions.
     /// </remarks>
     public ModuleJobSchedulerGuide UseCustomMetadataRepository<TRepository>()
-        where TRepository : class, IMoJobMetadataRepository
+        where TRepository : class, IJobMetadataRepository
     {
         PostConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IMoJobMetadataRepository, TRepository>();
+            context.Services.TryAddSingleton<IJobMetadataRepository, TRepository>();
         }, key: CONFIG_METADATA_STORE);
         return this;
     }
@@ -267,7 +265,7 @@ public class ModuleJobSchedulerGuide
     {
         PostConfigureServices(context =>
         {
-            context.Services.TryAddSingleton<IMoJobMetadataRepository, InMemoryJobMetadataRepository>();
+            context.Services.TryAddSingleton<IJobMetadataRepository, InMemoryJobMetadataRepository>();
         }, key: CONFIG_METADATA_STORE);
         return this;
     }

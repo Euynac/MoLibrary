@@ -72,7 +72,7 @@ public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IMoJobMetadataRepository, EfCoreJobMetadataRepository>();
+        services.AddSingleton<IJobMetadataRepository, EfCoreJobMetadataRepository>();
     }
 
     public override void ClaimDependencies()

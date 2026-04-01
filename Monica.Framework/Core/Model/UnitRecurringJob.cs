@@ -1,6 +1,6 @@
 using Monica.Framework.Core.Interfaces;
+using Monica.JobScheduler.Abstractions;
 using Monica.Modules;
-using Monica.JobScheduler.Jobs;
 
 namespace Monica.Framework.Core.Model;
 
@@ -16,7 +16,7 @@ public class UnitRecurringJob(Type type) : ProjectUnit(type, EProjectUnitType.Re
     }
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOf(typeof(MoRecurringJob));
+        return Type.IsClass && Type.IsSubclassOf(typeof(RecurringJob));
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()

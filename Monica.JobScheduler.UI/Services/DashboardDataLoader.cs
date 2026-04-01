@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Metadata;
+using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Modules;
 
@@ -11,7 +11,7 @@ namespace Monica.JobScheduler.UI.Services;
 /// Minimizes database queries by batch-fetching all needed data.
 /// </summary>
 public class DashboardDataLoader(
-    IMoJobMetadataRepository metadataRepository,
+    IJobMetadataRepository metadataRepository,
     IJobDefinitionCacheService cacheService,
     IOptions<ModuleJobSchedulerUIOption> uiOptions)
 {

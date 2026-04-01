@@ -40,7 +40,7 @@ public class JobExecutionEvent
 
     /// <summary>
     /// Gets the JSON-serialized parameters for triggered jobs.
-    /// For recurring jobs, this is null. For triggered jobs <see cref="IMoTriggeredJob{TArgs}"/>,
+    /// For recurring jobs, this is null. For triggered jobs <see cref="ITriggeredJob{TArgs}"/>,
     /// this contains the serialized TArgs object that will be passed to ExecuteAsync.
     /// </summary>
     public string? JobArgs { get; init; }

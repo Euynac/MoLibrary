@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.EfCore.Mappers;
-using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
 using Monica.Repository.Interfaces;
@@ -12,13 +11,13 @@ using Monica.Repository.Interfaces;
 namespace Monica.JobScheduler.EfCore;
 
 /// <summary>
-/// EF Core implementation of IMoJobMetadataRepository.
+/// EF Core implementation of IJobMetadataRepository.
 /// Thread-safe through scoped DbContext pattern using IDbContextProvider.
 /// </summary>
 public class EfCoreJobMetadataRepository(
     IDbContextProvider<JobSchedulerDbContext> dbContextProvider,
     IOptions<ModuleJobSchedulerOption> options,
-    ILogger<EfCoreJobMetadataRepository> logger) : IMoJobMetadataRepository
+    ILogger<EfCoreJobMetadataRepository> logger) : IJobMetadataRepository
 {
     private readonly string _schedulerScopeKey = options.Value.SchedulerScopeKey;
 

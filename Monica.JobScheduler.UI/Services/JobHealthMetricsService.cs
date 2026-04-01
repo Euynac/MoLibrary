@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Modules;
@@ -13,7 +12,7 @@ namespace Monica.JobScheduler.UI.Services;
 /// Job health indicator service (based on configurable time window)
 /// </summary>
 public class JobHealthMetricsService(
-    IMoJobMetadataRepository metadataRepository,
+    IJobMetadataRepository metadataRepository,
     IOptions<ModuleJobSchedulerUIOption> uiOptions,
     ILogger<JobHealthMetricsService> logger)
 {

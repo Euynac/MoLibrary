@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Metadata;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Core.Results;
@@ -11,7 +10,7 @@ namespace Monica.JobScheduler.UI.Services;
 /// Statistical analysis services
 /// </summary>
 public class JobAnalyticsService(
-    IMoJobMetadataRepository metadataRepository,
+    IJobMetadataRepository metadataRepository,
     ILogger<JobAnalyticsService> logger)
 {
     private static DateTime GetTimeBucket(DateTime timestamp, TimeGranularity granularity)

@@ -1,5 +1,5 @@
 using System.Text;
-using Monica.JobScheduler.Jobs;
+using Monica.JobScheduler.Abstractions;
 
 namespace Monica.JobScheduler.Models;
 
@@ -40,7 +40,7 @@ public class JobInstance
 
     /// <summary>
     /// Gets or sets the JSON-serialized parameters for triggered jobs.
-    /// Only applicable for <see cref="MoTriggeredJob{TParam}"/>. Null for recurring jobs.
+    /// Only applicable for <see cref="TriggeredJob{TArgs}"/>. Null for recurring jobs.
     /// Deserialized and passed to the job's ExecuteAsync method.
     /// </summary>
     public string? JobArgs { get; set; }
@@ -65,7 +65,7 @@ public class JobInstance
 
     /// <summary>
     /// Gets or sets the scheduled execution time for delayed jobs.
-    /// Set when a job is created with a delay via IMoTriggeredJobManager.EnqueueAsync.
+    /// Set when a job is created with a delay via ITriggeredJobManager.EnqueueAsync.
     /// Null for immediate execution or recurring jobs.
     /// Used during service restart to calculate remaining delay and reschedule.
     /// </summary>

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.JobScheduler.EfCore.Entities;
-using Monica.JobScheduler.Metadata;
+using Monica.JobScheduler.Models;
 
 namespace Monica.JobScheduler.EfCore;
 

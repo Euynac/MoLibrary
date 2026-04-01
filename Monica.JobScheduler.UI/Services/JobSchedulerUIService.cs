@@ -1,7 +1,7 @@
-using Monica.JobScheduler.Api;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Core.Results;
+using Monica.JobScheduler.Facades;
 
 namespace Monica.JobScheduler.UI.Services;
 
@@ -10,7 +10,7 @@ namespace Monica.JobScheduler.UI.Services;
 /// Provide a unified interface for UI component calls
 /// </summary>
 public class JobSchedulerUIService(
-    JobSchedulerApiService apiService,
+    JobSchedulerFacade apiService,
     JobDefinitionQueryService definitionQuery,
     JobInstanceQueryService instanceQuery,
     JobStatisticsService statisticsService,

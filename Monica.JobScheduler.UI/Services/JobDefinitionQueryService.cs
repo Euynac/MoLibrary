@@ -3,10 +3,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Monica.Modules;
 using Monica.JobScheduler.Abstractions;
-using Monica.JobScheduler.Api;
 using Monica.JobScheduler.Models;
 using Monica.JobScheduler.UI.Models;
 using Monica.Core.Results;
+using Monica.JobScheduler.Facades;
 
 namespace Monica.JobScheduler.UI.Services;
 
@@ -14,8 +14,8 @@ namespace Monica.JobScheduler.UI.Services;
 /// Job definition query service
 /// </summary>
 public class JobDefinitionQueryService(
-    JobSchedulerApiService apiService,
-    IMoJobMetadataRepository metadataRepository,
+    JobSchedulerFacade apiService,
+    IJobMetadataRepository metadataRepository,
     IOptions<ModuleClockOption> clockOptions,
     ILogger<JobDefinitionQueryService> logger)
 {
