@@ -1,7 +1,7 @@
 ---
 name: mo-architecture
 description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.1.2
+version: 1.1.1
 ---
 
 # Monica Unified Module Architecture
@@ -32,30 +32,6 @@ Other skills reference this skill:
 Split by feature at the project level first, then use standard layer folders inside each feature.
 
 This is **Feature-First + Layer-Inside-Feature** — it prevents any single folder from becoming a dumping ground.
-
-### 1.1 Feature Name Must Match Module / Domain Name
-
-Top-level feature folder names must use the same business or module vocabulary as the public module they represent.
-Do **not** introduce generic process or implementation labels that hide the module identity.
-
-Valid:
-```
-Monica.DependencyInjection/
-├── DependencyInjection/
-└── DynamicProxy/
-```
-
-Invalid:
-```
-Monica.DependencyInjection/
-├── Activation/
-└── Registration/
-```
-
-Rules:
-- If a project exposes multiple public modules, each top-level feature folder should align to one module name or one stable domain name used by that module API.
-- Prefer `DependencyInjection/`, `Authorization/`, `Identity/`, `RAG/` over abstract labels such as `Core/`, `Runtime/`, `Workflow/`, `Activation/`, `Registration/`.
-- Layer names belong **inside** the feature folder; they should not replace the feature name at the project root.
 
 ### Localization Placement Exception
 
