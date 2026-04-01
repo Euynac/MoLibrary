@@ -348,7 +348,7 @@ class ModuleDependencyGraph {
 
         const normX = dx / distance;
         const normY = dy / distance;
-        const arrowOffset = 25.5;
+        const arrowOffset = 37;
         const endX = target.x - normX * arrowOffset;
         const endY = target.y - normY * arrowOffset;
         return `M${source.x},${source.y} L${endX},${endY}`;

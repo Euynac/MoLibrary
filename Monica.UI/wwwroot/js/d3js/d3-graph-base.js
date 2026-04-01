@@ -92,7 +92,7 @@ export function createArrowMarker(svg, id = 'arrowhead', options = {}) {
     const markerSize = options.size || 9;
     const viewBoxWidth = 10;
     const viewBoxHeight = 10;
-    const refX = options.refX || 9.25;
+    const refX = options.refX ?? 0;
     const refY = viewBoxHeight / 2;
     const arrowPath = 'M0,0 L10,5 L0,10 Z';
 
