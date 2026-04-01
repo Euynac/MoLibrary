@@ -25,9 +25,8 @@ public class LongIntervalSchedulerService(
     IMoJobMetadataRepository metadataRepository,
     IOptions<ModuleJobSchedulerOption> options,
     IObservableInstanceRegistry observableManager,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger<LongIntervalSchedulerService> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger)
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
+    : MoBackgroundService(observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 

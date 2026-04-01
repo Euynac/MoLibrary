@@ -26,7 +26,6 @@ namespace Monica.JobScheduler.WorkerPlane;
 public class JobRegistrationHostedService(
     JobRegistry jobRegistry,
     IReadOnlyList<JobDefinition> jobDefinitions,
-    ILogger<JobRegistrationHostedService> logger,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
@@ -34,7 +33,7 @@ public class JobRegistrationHostedService(
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = option.Value;
 

@@ -30,11 +30,10 @@ public class JobSchedulerHostedService(
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
-    ILogger<JobSchedulerHostedService> logger,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
+    IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _options = options.Value;
 

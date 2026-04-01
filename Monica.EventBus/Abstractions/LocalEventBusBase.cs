@@ -14,9 +14,8 @@ public abstract class LocalEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ISubscriptionManager subscriptionManager,
-    ILogger logger,
     string? serviceKey = null)
-    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey), IMoLocalEventBus
+    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey), IMoLocalEventBus
 {
     /// <summary>
     /// For the local event bus, publishing means triggering handlers directly.

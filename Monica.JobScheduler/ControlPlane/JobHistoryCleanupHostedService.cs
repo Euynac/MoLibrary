@@ -16,14 +16,13 @@ namespace Monica.JobScheduler.ControlPlane;
 /// </summary>
 public class JobHistoryCleanupHostedService(
     JobHistoryCleanupExecutor executor,
-    ILogger<JobHistoryCleanupHostedService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 

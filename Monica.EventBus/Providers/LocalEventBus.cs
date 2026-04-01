@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Abstractions.Subscriptions;
@@ -14,6 +13,5 @@ public class LocalEventBus(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ISubscriptionManager subscriptionManager,
-    ILogger<LocalEventBus> logger,
     string? serviceKey = null)
-    : LocalEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey);
+    : LocalEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey);

@@ -20,12 +20,11 @@ public class ServiceDiscoveryClientHostedService(
     IRegistrationStateManager stateManager,
     ILeaderElectionService leaderService,
     IServiceDiscoveryClientInfo clientInfo,
-    ILogger<ServiceDiscoveryClientHostedService> logger,
     IOptions<ModuleServiceDiscoveryOption> option,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     ResiliencePipelineProvider<string> pipelineProvider)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IServiceRegistrationCoordinator
+    : MoBackgroundService(observableManager, hostedServiceOptions), IServiceRegistrationCoordinator
 {
     private readonly ModuleServiceDiscoveryOption _option = option.Value;
     private readonly TaskCompletionSource<bool> _registrationCompletionSource = new();

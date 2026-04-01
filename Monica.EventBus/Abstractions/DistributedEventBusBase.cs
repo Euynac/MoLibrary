@@ -14,9 +14,8 @@ public abstract class DistributedEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ISubscriptionManager subscriptionManager,
-    ILogger logger,
     string? serviceKey = null)
-    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey),
+    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey),
         IMoDistributedEventBus
 {
     // Abstract methods - derived classes (DaprEventBus, RabbitMqEventBus, etc.) implement these

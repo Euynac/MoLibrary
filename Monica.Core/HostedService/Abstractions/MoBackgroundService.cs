@@ -1,9 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-
 using Monica.Core.HostedService.Models;
+using Monica.Core.Logging;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Models;
 using Monica.Modules;
@@ -18,24 +17,24 @@ namespace Monica.Core.HostedService.Abstractions;
 /// </summary>
 public abstract class MoBackgroundService : BackgroundService, IMoHostedService
 {
-    protected readonly ILogger Logger;
+    private readonly Lazy<ILogger> _loggerLazy;
     private readonly ModuleHostedServiceOption _options;
     private readonly IObservableInstanceRegistry _observableManager;
-    private HostedServiceRuntimeInfo? _runtimeInfo;
 
     // Heartbeat mechanism
     private CancellationTokenSource? _heartbeatCts;
     private Task? _heartbeatTask;
 
-    public MoBackgroundService(
+    protected MoBackgroundService(
         IObservableInstanceRegistry observableManager,
-        IOptions<ModuleHostedServiceOption> options,
-        ILogger? logger = null)
+        IOptions<ModuleHostedServiceOption> options)
     {
         _observableManager = observableManager;
-        Logger = logger ?? NullLogger.Instance;
         _options = options.Value;
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
     }
+
+    protected ILogger Logger => _loggerLazy.Value;
 
     // IMoHostedService implementation
 
@@ -57,7 +56,7 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     /// <summary>
     /// Gets the runtime information for this service.
     /// </summary>
-    public HostedServiceRuntimeInfo RuntimeInfo => _runtimeInfo ??= CreateRuntimeInfo();
+    public HostedServiceRuntimeInfo RuntimeInfo => field ??= CreateRuntimeInfo();
 
     /// <summary>
     /// Creates runtime information lazily after the derived hosted service has finished construction.

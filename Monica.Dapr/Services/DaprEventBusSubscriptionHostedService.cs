@@ -31,7 +31,6 @@ internal class DaprEventBusSubscriptionHostedService(
     IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger<DaprEventBusSubscriptionHostedService> logger,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     string? serviceKey = null)
     : EventBusSubscriptionHostedServiceBase(
@@ -39,7 +38,6 @@ internal class DaprEventBusSubscriptionHostedService(
         eventBus,
         observableManager,
         hostedServiceOptions,
-        logger,
         serviceKey)
 {
     private readonly ModuleDaprEventBusOption _options = options.Value;

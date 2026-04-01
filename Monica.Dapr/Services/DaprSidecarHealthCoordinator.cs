@@ -22,15 +22,13 @@ public class DaprSidecarHealthCoordinator(
     IObservableInstanceRegistry observableManager,
     IHostApplicationLifetime applicationLifetime,
     IOptions<ModuleDaprClientOption> clientOptions,
-    IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger<DaprSidecarHealthCoordinator> logger)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IDaprSidecarHealthCoordinator
+    IOptions<ModuleHostedServiceOption> hostedServiceOptions)
+    : MoBackgroundService(observableManager, hostedServiceOptions), IDaprSidecarHealthCoordinator
 {
     private readonly ModuleDaprClientOption _options = clientOptions.Value;
 
     // State management
-    private DaprHealthStatus _status = DaprHealthStatus.NotStarted;
-    private readonly object _statusLock = new();
+    private readonly Lock _statusLock = new();
     private readonly TaskCompletionSource<bool> _initialHealthCompletionSource = new();
     private DateTime? _lastHealthyAt;
     private int _consecutiveFailures;
@@ -40,9 +38,9 @@ public class DaprSidecarHealthCoordinator(
     /// </summary>
     public DaprHealthStatus Status
     {
-        get { lock (_statusLock) { return _status; } }
-        private set { lock (_statusLock) { _status = value; } }
-    }
+        get { lock (_statusLock) { return field; } }
+        private set { lock (_statusLock) { field = value; } }
+    } = DaprHealthStatus.NotStarted;
 
     /// <summary>
     /// Gets whether the Dapr sidecar is healthy and ready for use

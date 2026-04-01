@@ -29,7 +29,6 @@ public class JobConcurrencyGuardHostedService(
     IJobDefinitionCacheService cacheService,
     IMoJobMetadataRepository metadataRepository,
     [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
-    ILogger<JobConcurrencyGuardHostedService> logger,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
     IServiceRegistrationCoordinator coordinator,
@@ -37,7 +36,7 @@ public class JobConcurrencyGuardHostedService(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IOptions<ModuleJobSchedulerOption> jobSchedulerOptions
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions), IJobConcurrencyGuard
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = jobSchedulerOptions.Value;
     private ConcurrentDictionary<string, JobExecutionStatistic> _statistics = new();

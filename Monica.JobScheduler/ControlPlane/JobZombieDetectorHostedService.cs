@@ -24,7 +24,6 @@ public class JobZombieDetectorHostedService(
     IJobDefinitionCacheService cacheService,
     JobInstanceManager instanceManager,
     IJobConcurrencyGuard concurrencyGuard,
-    ILogger<JobZombieDetectorHostedService> logger,
     ILeaderElectionService leaderService,
     IOptions<ModuleJobSchedulerOption> options,
     IServiceRegistrationCoordinator coordinator,
@@ -32,7 +31,7 @@ public class JobZombieDetectorHostedService(
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
     IRegistrationStateManager? registrationStateManager = null
-) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, logger, coordinator, observableManager, hostedServiceOptions)
+) : CoordinatedLeaderService(leaderService, serviceDiscoveryOptions, coordinator, observableManager, hostedServiceOptions)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 

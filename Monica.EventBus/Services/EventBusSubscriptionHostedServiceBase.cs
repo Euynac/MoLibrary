@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
 using Monica.Core.ObservableInstance.Abstractions;
@@ -24,9 +23,8 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     IMoEventBus eventBus,
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
-    ILogger logger,
     string? serviceKey)
-    : MoBackgroundService(observableManager, hostedServiceOptions, logger), IObserver<SubscriptionChange>
+    : MoBackgroundService(observableManager, hostedServiceOptions), IObserver<SubscriptionChange>
 {
     protected readonly ISubscriptionManager SubscriptionManager = subscriptionManager;
     protected readonly IMoEventBus EventBus = eventBus;

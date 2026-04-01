@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Logging;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Attributes;
@@ -12,19 +13,28 @@ namespace Monica.EventBus.Abstractions;
 /// Base class for all EventBus implementations.
 /// Provides common subscription management and handler triggering functionality.
 /// </summary>
-public abstract class EventBusBase(
-    IServiceScopeFactory serviceScopeFactory,
-    IEventHandlerInvoker eventHandlerInvoker,
-    ISubscriptionManager subscriptionManager,
-    ILogger logger,
-    string? serviceKey = null)
-    : IMoEventBus
+public abstract class EventBusBase : IMoEventBus
 {
-    protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
-    protected readonly IEventHandlerInvoker EventHandlerInvoker = eventHandlerInvoker;
-    protected readonly ISubscriptionManager SubscriptionManager = subscriptionManager;
-    protected readonly ILogger Logger = logger;
-    protected readonly string? ServiceKey = serviceKey;
+    private readonly Lazy<ILogger> _loggerLazy;
+
+    protected EventBusBase(
+        IServiceScopeFactory serviceScopeFactory,
+        IEventHandlerInvoker eventHandlerInvoker,
+        ISubscriptionManager subscriptionManager,
+        string? serviceKey = null)
+    {
+        ServiceScopeFactory = serviceScopeFactory;
+        EventHandlerInvoker = eventHandlerInvoker;
+        SubscriptionManager = subscriptionManager;
+        ServiceKey = serviceKey;
+        _loggerLazy = new Lazy<ILogger>(() => LogManager.For(GetType()));
+    }
+
+    protected IServiceScopeFactory ServiceScopeFactory { get; }
+    protected IEventHandlerInvoker EventHandlerInvoker { get; }
+    protected ISubscriptionManager SubscriptionManager { get; }
+    protected ILogger Logger => _loggerLazy.Value;
+    protected string? ServiceKey { get; }
 
     public ISubscriptionManager Subscriptions => SubscriptionManager;
 

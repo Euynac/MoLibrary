@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Abstractions.Subscriptions;
@@ -17,7 +16,6 @@ public sealed class NullDistributedEventBus(
     : DistributedEventBusBase(serviceScopeFactory,
         eventHandlerInvoker,
         subscriptionManager,
-        NullLogger<NullDistributedEventBus>.Instance,
         serviceKey: null)
 {
     /// <summary>

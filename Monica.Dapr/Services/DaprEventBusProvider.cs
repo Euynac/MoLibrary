@@ -20,9 +20,8 @@ public class DaprEventBusProvider(
     ISubscriptionManager subscriptionManager,
     DaprClient daprClient,
     IOptions<ModuleDaprEventBusOption> daprOptions,
-    ILogger<DaprEventBusProvider> logger,
     string? serviceKey = null)
-    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey)
+    : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey)
 {
     private readonly DaprClient _daprClient = daprClient ?? throw new ArgumentNullException(nameof(daprClient));
     private readonly ModuleDaprEventBusOption _daprOptions = daprOptions.Value ?? throw new ArgumentNullException(nameof(daprOptions));
