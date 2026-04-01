@@ -8,19 +8,19 @@ using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.Tool.Extensions;
 
-namespace Monica.Dapr.EventBus;
+namespace Monica.Dapr.Services;
 
 /// <summary>
 /// Dapr-based distributed event bus implementation.
 /// Publishes events using Dapr PubSub component.
 /// </summary>
-public class DistributedEventBusDaprEventBus(
+public class DaprEventBusProvider(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
     ISubscriptionManager subscriptionManager,
     DaprClient daprClient,
     IOptions<ModuleDaprEventBusOption> daprOptions,
-    ILogger<DistributedEventBusDaprEventBus> logger,
+    ILogger<DaprEventBusProvider> logger,
     string? serviceKey = null)
     : DistributedEventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, logger, serviceKey)
 {

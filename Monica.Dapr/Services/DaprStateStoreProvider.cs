@@ -8,12 +8,12 @@ using Monica.Modules;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Queries;
 
-namespace Monica.Dapr.StateStore;
+namespace Monica.Dapr.Services;
 
 /// <summary>
 /// Dapr state store implementation
 /// </summary>
-public class DaprStateStore(DaprClient dapr, ILogger<DaprStateStore> logger, IOptions<ModuleDaprStateStoreOption> options) : DistributedStateStoreBase(logger)
+public class DaprStateStoreProvider(DaprClient dapr, ILogger<DaprStateStoreProvider> logger, IOptions<ModuleDaprStateStoreOption> options) : DistributedStateStoreBase(logger)
 {
     /// <summary>
     /// Configuration options

@@ -1,7 +1,7 @@
 using Dapr.DistributedLock.Models;
 using Monica.Locker.Abstractions;
 
-namespace Monica.Dapr.Locker;
+namespace Monica.Dapr.Services;
 
 #pragma warning disable DAPR_DISTRIBUTEDLOCK // DaprDistributedLockClient is evaluation API
 /// <summary>

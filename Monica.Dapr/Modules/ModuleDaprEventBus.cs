@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Dapr.EventBus;
+using Monica.Dapr.Services;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Providers;
 
@@ -21,7 +21,7 @@ public static class ModuleDaprEventBusBuilderExtensions
     public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
     {
-        guide.SetDistributedEventBusProvider<DistributedEventBusDaprEventBus>();
+        guide.SetDistributedEventBusProvider<DaprEventBusProvider>();
         return new ModuleDaprEventBusGuide().Register(action);
     }
 }
@@ -88,7 +88,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
             context.Services.AddKeyedSingleton<IMoDistributedEventBus>(key, (sp, _) =>
             {
                 var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
-                return ActivatorUtilities.CreateInstance<DistributedEventBusDaprEventBus>(sp, options, key);
+                return ActivatorUtilities.CreateInstance<DaprEventBusProvider>(sp, options, key);
             });
 
             // Register HostedService for this keyed EventBus

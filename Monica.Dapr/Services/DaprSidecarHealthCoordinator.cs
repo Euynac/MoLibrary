@@ -6,10 +6,11 @@ using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
 using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Dapr.Abstractions;
+using Monica.Dapr.Models;
 using Monica.Modules;
-using Monica.Dapr.Interfaces;
 
-namespace Monica.Dapr.HealthCheck;
+namespace Monica.Dapr.Services;
 
 /// <summary>
 /// Dapr sidecar health check coordinator.

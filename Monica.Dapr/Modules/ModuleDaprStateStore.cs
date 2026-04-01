@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Dapr.StateStore;
+using Monica.Dapr.Services;
 using Monica.StateStore.Abstractions;
 
 // ReSharper disable once CheckNamespace
@@ -15,7 +15,7 @@ public static class ModuleDaprStateStoreBuilderExtensions
     public static ModuleDaprStateStoreGuide UseDaprStateStoreProvider(this ModuleStateStoreGuide guide,
         Action<ModuleDaprStateStoreOption>? action = null)
     {
-        guide.SetCommonDistributedStateStoreProvider<DaprStateStore>();
+        guide.SetCommonDistributedStateStoreProvider<DaprStateStoreProvider>();
         return new ModuleDaprStateStoreGuide().Register(action);
     }
     
@@ -39,12 +39,12 @@ public static class ModuleDaprStateStoreBuilderExtensions
             // Register keyed options
             services.Configure(serviceKey, configureOptions);
 
-            // Register keyed DaprStateStore
+            // Register keyed DaprStateStoreProvider
             services.AddKeyedSingleton<IStateStore>(serviceKey, (sp, _) =>
             {
                 var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ModuleDaprStateStoreOption>>();
                 var keyedOptions = Options.Create(optionsMonitor.Get(serviceKey));
-                return ActivatorUtilities.CreateInstance<DaprStateStore>(sp, keyedOptions);
+                return ActivatorUtilities.CreateInstance<DaprStateStoreProvider>(sp, keyedOptions);
             });
         }, serviceKey);
 

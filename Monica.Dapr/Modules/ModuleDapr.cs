@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -26,7 +25,7 @@ public static class ModuleDaprBuilderExtensions
 }
 
 [ModuleKey(EMoModuleKey.Dapr)]
-public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
+public class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -54,10 +53,6 @@ public partial class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, 
             .WithDescription("Returns metadata reported by the Dapr sidecar.");
         });
     }
-
-   
-    [GeneratedRegex(@"/v1\.0/invoke/(.+)/method/(.+)")]
-    private static partial Regex DaprInvocationRegex();
 }
 
 public class ModuleDaprGuide : MoModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>

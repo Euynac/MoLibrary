@@ -7,8 +7,8 @@ using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Dapr.HealthCheck;
-using Monica.Dapr.Interfaces;
+using Monica.Dapr.Abstractions;
+using Monica.Dapr.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

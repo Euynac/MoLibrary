@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Dapr.Locker;
+using Monica.Dapr.Services;
 using Monica.Locker.Models;
 
 // ReSharper disable once CheckNamespace

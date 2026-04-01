@@ -94,8 +94,8 @@ public enum EMoModuleKey
     /// </summary>
     UIStackTrace,
     RpcClient,
-    DaprProviderRpcClient,
-    DaprProviderClientConnector,
+    DaprRpcClient,
+    DaprServiceInvocation,
     JobScheduler,
     /// <summary>
     /// Job scheduling UI module.

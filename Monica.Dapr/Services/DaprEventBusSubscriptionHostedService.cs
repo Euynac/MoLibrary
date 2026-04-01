@@ -8,13 +8,13 @@ using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Models;
 using Monica.Core.JsonSerialization.Abstractions;
 using Monica.Core.ObservableInstance.Abstractions;
+using Monica.Dapr.Abstractions;
 using Monica.Modules;
-using Monica.Dapr.Interfaces;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Services;
 
-namespace Monica.Dapr.EventBus;
+namespace Monica.Dapr.Services;
 
 /// <summary>
 /// Dapr-specific implementation of subscription hosted service.
