@@ -88,6 +88,15 @@ public class MoUnitOfWork(
         catch (Exception ex)
         {
             _exception = ex;
+            try
+            {
+                await RollbackAllAsync(cancellationToken);
+            }
+            catch (Exception rollbackException)
+            {
+                logger.LogError(rollbackException, "An error occurred while rolling back the unit of work after a completion failure.");
+            }
+
             ex.ReThrow();
         }
     }

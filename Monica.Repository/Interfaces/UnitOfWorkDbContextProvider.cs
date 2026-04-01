@@ -5,13 +5,26 @@ using Monica.Repository.Transaction;
 
 namespace Monica.Repository.Interfaces;
 
+/// <summary>
+/// Provides DbContext instances that are bound to the current unit of work.
+/// When the current unit of work is transactional, this provider must ensure the DbContext
+/// actually enters a database transaction. It must never silently downgrade to a non-transactional
+/// DbContext, otherwise repository methods using <c>autoSave: true</c> may commit data before
+/// <see cref="IMoUnitOfWork.CompleteAsync(CancellationToken)"/> is reached.
+/// </summary>
 public class UnitOfWorkDbContextProvider<TDbContext>(
     IMoUnitOfWorkManager unitOfWorkManager,
     ILogger<UnitOfWorkDbContextProvider<TDbContext>> logger)
     : IDbContextProvider<TDbContext>
     where TDbContext : DbContext
 {
-    private const string TransactionsNotSupportedWarningMessage = "Current database does not support transactions. Your database may remain in an inconsistent state in an error case.";
+    private static string BuildTransactionRequiredMessage(IMoUnitOfWork unitOfWork)
+    {
+        return
+            $"Unit of work '{unitOfWork.Id}' requested a database transaction for DbContext '{typeof(TDbContext).FullName}', " +
+            "but no active transaction could be started. Continuing without a transaction would allow repository autoSave " +
+            "operations to commit data before UnitOfWork.CompleteAsync succeeds.";
+    }
 
     public virtual async Task<TDbContext> GetDbContextAsync()
     {
@@ -66,9 +79,16 @@ public class UnitOfWorkDbContextProvider<TDbContext>(
         }
         catch (Exception e) when (e is InvalidOperationException or NotSupportedException)
         {
-            logger.LogWarning(TransactionsNotSupportedWarningMessage);
+            var message = BuildTransactionRequiredMessage(unitOfWork);
+            logger.LogError(e, "{Message}", message);
+            throw new InvalidOperationException(message, e);
+        }
 
-            return dbContext;
+        if (dbContext.Database.CurrentTransaction == null)
+        {
+            var message = BuildTransactionRequiredMessage(unitOfWork);
+            logger.LogError("{Message}", message);
+            throw new InvalidOperationException(message);
         }
 
         return dbContext;
