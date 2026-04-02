@@ -11,7 +11,7 @@ public static class InterceptionRegistrar
     public static bool ShouldIntercept(Type type)
     {
         return type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type);
-        //return type.IsAssignableTo<IMoApplicationService>(); //type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type) || 
+        //return type.IsAssignableTo<IApplicationService>(); //type.IsDefined(typeof(AuthorizeAttribute), true) || AnyMethodHasAuthorizeAttribute(type) || 
     }
 
     private static bool AnyMethodHasAuthorizeAttribute(Type implementationType)

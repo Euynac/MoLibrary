@@ -12,7 +12,7 @@ public enum EMoModuleKey
     Logging,
     DependencyInjection,
     AutoModel,
-    DomainDrivenDesign,
+    WebApi,
     Configuration,
     Authentication,
     ConfigurationDashboard,

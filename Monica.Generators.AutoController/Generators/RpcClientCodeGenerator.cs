@@ -74,7 +74,7 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine("using System.ServiceModel;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using JetBrains.Annotations;");
-        sb.AppendLine("using Monica.DomainDrivenDesign.AutoController.MoRpc;");
+        sb.AppendLine("using Monica.WebApi.RpcClient.Abstractions;");
         sb.AppendLine();
 
         // Use RelatedNamespaces from metadata (already sorted and distinct)
@@ -93,8 +93,8 @@ internal static class RpcClientCodeGenerator
         // Interface declaration with ServiceContract attribute
         sb.AppendLine("[ServiceContract]");
 
-        // Add IMoRpcApi extend
-        sb.AppendLine($"public interface {interfaceName} : IMoRpcApi");
+        // Add IRpcApi extend
+        sb.AppendLine($"public interface {interfaceName} : IRpcApi");
 
         sb.AppendLine("{");
 
@@ -142,7 +142,7 @@ internal static class RpcClientCodeGenerator
     {
         var sb = new StringBuilder();
 
-        // Extract base type name and namespace from httpImplType (e.g., "Monica.DomainDrivenDesign.AutoController.MoRpc.MoHttpApi")
+        // Extract base type name and namespace from httpImplType (e.g., "Monica.WebApi.RpcClient.Abstractions.HttpRpcApi")
         var baseTypeName = httpImplType.Contains(".")
             ? httpImplType.Substring(httpImplType.LastIndexOf('.') + 1)
             : httpImplType;

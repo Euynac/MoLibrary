@@ -36,7 +36,7 @@
 	  <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
 	  <ProjectReference Include="..\Monica.Dapr\Monica.Dapr.csproj" />
 	  <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
-	  <ProjectReference Include="..\Monica.DomainDrivenDesign\Monica.DomainDrivenDesign.csproj" />
+	  <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
 	  <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
 	  <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
 	  <ProjectReference Include="..\Monica.Locker\Monica.Locker.csproj" />

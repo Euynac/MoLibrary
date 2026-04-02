@@ -8,7 +8,7 @@ namespace Monica.Dapr.Services;
 
 public class DaprRpcClientProvider(
     IOptions<ModuleDaprRpcClientOption> rpcClientOptionAccessor,
-    IOptions<ModuleDaprClientOption> daprClientOptionAccessor) : IMoRpcHttpClientRegisterProvider
+    IOptions<ModuleDaprClientOption> daprClientOptionAccessor) : IRpcHttpClientRegisterProvider
 {
     public void ConfigureHttpClientFactoryOptions(HttpClientFactoryOptions options, string appid)
     {

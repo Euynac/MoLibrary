@@ -5,13 +5,13 @@ using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstractions;
-using Monica.DomainDrivenDesign.AutoController.MoRpc;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Extensions;
 using Monica.Framework.ChainTracing.Models;
 using Monica.Framework.ChainTracing.Services.Support;
 using Monica.Profiling.ExecutionTiming.Abstractions;
 using Monica.Tool.Extensions;
+using Monica.WebApi.RpcClient.Abstractions;
 
 namespace Monica.Framework.ChainTracing.Providers.DynamicProxy;
 
@@ -26,7 +26,7 @@ public record ChainTracingInvocationDescriptor(MethodInfo MethodInfo)
     /// <summary>
     /// Whether it is a remote call, the call chain needs to be merged
     /// </summary>
-    public bool IsRemoteCall => MethodInfo.DeclaringType?.IsImplementInterface<IMoRpcApi>() is true;
+    public bool IsRemoteCall => MethodInfo.DeclaringType?.IsImplementInterface<IRpcApi>() is true;
 
     public EChainTracingType GetInvocationType()
     {

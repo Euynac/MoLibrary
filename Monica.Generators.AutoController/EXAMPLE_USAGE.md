@@ -2,17 +2,17 @@
 
 ## Configuration Setup
 
-In your project that references both `Monica.DomainDrivenDesign` and `Monica.Generators.AutoController`, add this configuration:
+In your project that references both `Monica.WebApi` and `Monica.Generators.AutoController`, add this configuration:
 
 ### Program.cs or AssemblyInfo.cs
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
 // Example 1: Simple route prefix only
-[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")]
+[assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1")]
 
 // Example 2: Route prefix with domain name
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1",
     DomainName = "Flight"
 )]
@@ -123,10 +123,10 @@ The AutoController generator includes comprehensive error detection that will ca
 
 ```csharp
 // ❌ AC0001: Missing configuration when using default routing
-// No [AutoControllerGeneratorConfig] attribute and RequireExplicitRoutes = false
+// No [AutoControllerConfig] attribute and RequireExplicitRoutes = false
 
 // ❌ AC0002: Invalid route prefix format
-[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "/api/v1/")]  // Leading/trailing slashes
+[assembly: AutoControllerConfig(DefaultRoutePrefix = "/api/v1/")]  // Leading/trailing slashes
 
 // ❌ AC0003: Invalid inheritance
 public class BadHandler : ApplicationService  // Missing generic arguments
@@ -153,8 +153,8 @@ public class FindUserHandler : ApplicationService<FindUserQuery, FindUserRespons
 When errors occur, you'll see detailed build failures:
 
 ```console
-error AC0001: Missing [AutoControllerGeneratorConfig] attribute when default routing is required
-  Add [assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
+error AC0001: Missing [AutoControllerConfig] attribute when default routing is required
+  Add [assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
 
 error AC0003: Class 'BadHandler' does not properly inherit from ApplicationService<TRequest, TResponse>
   Ensure the base class has exactly 2 generic type arguments
@@ -177,7 +177,7 @@ Make sure your target project references:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="Monica.DomainDrivenDesign" Version="..." />
+  <PackageReference Include="Monica.WebApi" Version="..." />
   <Analyzer Include="Monica.Generators.AutoController" Version="..." />
 </ItemGroup>
 ```
@@ -186,7 +186,7 @@ Make sure your target project references:
 
 If builds fail with AutoController errors:
 
-1. **Check configuration**: Verify your `[AutoControllerGeneratorConfig]` attribute syntax
+1. **Check configuration**: Verify your `[AutoControllerConfig]` attribute syntax
 2. **Review class structure**: Ensure proper inheritance from `ApplicationService<TRequest, TResponse>`
 3. **Validate routes**: Look for duplicate route/HTTP method combinations
 4. **Check naming**: Follow CQRS conventions for automatic HTTP method detection

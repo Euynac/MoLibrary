@@ -72,7 +72,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             {
                 ReportDiagnostic(spc, DiagnosticSeverity.Info, "RPC_CLIENT_002",
                     "No Client Config",
-                    "AutoControllerGeneratorClientConfigAttribute not found. Skipping RPC client generation.",
+                    "RpcClientConfigAttribute not found. Skipping RPC client generation.",
                     Location.None);
                 return;
             }
@@ -80,7 +80,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             // Log configuration
             ReportDiagnostic(spc, DiagnosticSeverity.Info, "RPC_CLIENT_003",
                 "Client Config Found",
-                $"Found AutoControllerGeneratorClientConfigAttribute. AddHttp={addHttp}, AddGrpc={addGrpc}, HttpImplType={httpImplType ?? "default"}",
+                $"Found RpcClientConfigAttribute. AddHttp={addHttp}, AddGrpc={addGrpc}, HttpImplType={httpImplType ?? "default"}",
                 Location.None);
 
             // Process metadata files
@@ -126,7 +126,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             // Generate client code for each domain
             if (addHttp)
             {
-                GenerateHttpClients(spc, validMetadata, httpImplType ?? "Monica.DomainDrivenDesign.AutoController.MoRpc.MoHttpApi");
+                GenerateHttpClients(spc, validMetadata, httpImplType ?? "Monica.WebApi.RpcClient.Abstractions.HttpRpcApi");
             }
 
             if (addGrpc)
@@ -362,10 +362,10 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             var assemblyAttributes = compilation.Assembly.GetAttributes();
             AttributeData? clientConfigAttribute = null;
 
-            // Find the AutoControllerGeneratorClientConfigAttribute
+            // Find the RpcClientConfigAttribute
             foreach (var attribute in assemblyAttributes)
             {
-                if (attribute.AttributeClass?.Name == "AutoControllerGeneratorClientConfigAttribute")
+                if (attribute.AttributeClass?.Name == "RpcClientConfigAttribute")
                 {
                     clientConfigAttribute = attribute;
                     break;

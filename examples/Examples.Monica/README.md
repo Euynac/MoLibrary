@@ -12,7 +12,7 @@ This project contains examples for using the various Monica modules. Each direct
 - `Authority/` - Examples for using the Monica.Authority module
 - `SignalR/` - Examples for using the Monica.SignalR module
 - `ServiceDiscovery/` - Examples for using the Monica.ServiceDiscovery module
-- `DomainDrivenDesign/` - Examples for using the Monica.DomainDrivenDesign module
+- `WebApi/` - Examples for using the Monica.WebApi module
 - `AutoModel/` - Examples for using the Monica.AutoModel module
 - `Framework/` - Examples for using the Monica.Framework module
 - `Generators.AutoController/` - Examples for using the Monica.Generators.AutoController module

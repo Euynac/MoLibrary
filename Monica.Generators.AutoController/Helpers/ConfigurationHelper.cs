@@ -22,7 +22,7 @@ internal static class ConfigurationHelper
 
             foreach (var attribute in assemblyAttributes)
             {
-                if (attribute.AttributeClass?.Name == "AutoControllerGeneratorConfigAttribute")
+                if (attribute.AttributeClass?.Name == "AutoControllerConfigAttribute")
                 {
                     configAttribute = attribute;
                     break;

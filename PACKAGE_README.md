@@ -58,7 +58,7 @@ using Monica.Core;
 - **Monica.Authority** - Authentication and authorization
 - **Monica.AutoModel** - Automatic model generation
 - **Monica.Configuration** - Configuration management
-- **Monica.DomainDrivenDesign** - DDD patterns
+- **Monica.WebApi** - Web API infrastructure
 - **Monica.Locker** - Distributed locking
 - **Monica.Logging** - Structured logging with Serilog
 - **Monica.Office** - Excel operations

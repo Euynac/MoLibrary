@@ -1,6 +1,6 @@
-using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Framework.Core.Interfaces;
 using Monica.Tool.Extensions;
+using Monica.WebApi.Abstractions;
 
 namespace Monica.Framework.Core.Model;
 

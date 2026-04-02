@@ -9,8 +9,6 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Models;
-using Monica.DomainDrivenDesign.AutoController.MoRpc;
-using Monica.DomainDrivenDesign.Interfaces;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
 using Monica.Framework.ChainTracing.Providers.DynamicProxy;
@@ -18,6 +16,8 @@ using Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
 using Monica.Framework.ChainTracing.Providers.MoRpc;
 using Monica.Framework.ChainTracing.Services;
 using Monica.Tool.Extensions;
+using Monica.WebApi.Abstractions;
+using Monica.WebApi.RpcClient.Abstractions;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -109,17 +109,17 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
     }
 
     /// <summary>
-    /// Enables MoRpc response tracing middleware.
+    /// Enables RPC response tracing middleware.
     /// </summary>
-    public ModuleChainTracingGuide UseMoRpcTracing()
+    public ModuleChainTracingGuide UseRpcTracing()
     {
         DependsOnModule<ModuleJsonSerializationGuide>().Register();
         DependsOnModule<ModuleResultEnvelopeGuide>().Register();
         DependsOnModule<ModuleExceptionHandlingGuide>().Register();
 
-        ConfigureServices(context => { context.Services.TryAddTransient<MoRpcChainTracingMiddleware>(); });
+        ConfigureServices(context => { context.Services.TryAddTransient<RpcChainTracingMiddleware>(); });
         ConfigureApplicationBuilder(
-            context => { context.ApplicationBuilder.UseMiddleware<MoRpcChainTracingMiddleware>(); },
+            context => { context.ApplicationBuilder.UseMiddleware<RpcChainTracingMiddleware>(); },
             EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
 
         return this;
@@ -129,9 +129,9 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
         ProxyBuildContext context)
     {
         var type = context.ImplementationType;
-        if (!type.IsAssignableTo<IMoApplicationService>() &&
+        if (!type.IsAssignableTo<IApplicationService>() &&
             !type.IsAssignableTo<IDomainService>() &&
-            !type.IsSubclassOf(typeof(MoRpcApi)))
+            !type.IsSubclassOf(typeof(RpcApi)))
         {
             return false;
         }

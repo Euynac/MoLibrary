@@ -11,21 +11,21 @@ The AutoController source generator supports configuration through assembly-leve
 Add the following to your `Program.cs` or `AssemblyInfo.cs`:
 
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
 // Example 1: Simple route prefix only
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1"
 )]
 
 // Example 2: Route prefix with domain name
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1",
     DomainName = "Flight"
 )]
 
 // Example 3: Strict mode requiring explicit routes
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     RequireExplicitRoutes = true
 )]
 ```
@@ -48,9 +48,9 @@ The generator follows this pattern:
 
 With configuration:
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
-[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")]
+[assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1")]
 ```
 
 Your ApplicationService:
@@ -72,9 +72,9 @@ Generated route: `api/v1`
 
 With configuration:
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1",
     DomainName = "Flight"
 )]
@@ -96,9 +96,9 @@ public class GetFlightQueryHandler : ApplicationService<GetFlightQuery, GetFligh
 ### Scenario 4: Mixed Approach
 
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1",
     DomainName = "Flight",
     RequireExplicitRoutes = false
@@ -148,9 +148,9 @@ The generator now supports CQRS-based method routing with automatic HTTP method 
 ### Example
 
 ```csharp
-using Monica.DomainDrivenDesign.AutoController.Attributes;
+using Monica.WebApi.AutoControllers.Annotations;
 
-[assembly: AutoControllerGeneratorConfig(
+[assembly: AutoControllerConfig(
     DefaultRoutePrefix = "api/v1",
     DomainName = "User"
 )]
@@ -207,7 +207,7 @@ The AutoController source generator includes comprehensive error handling that w
 
 | Error Code | Description | Example Message |
 |------------|-------------|-----------------|
-| AC0001 | Missing configuration | Missing [AutoControllerGeneratorConfig] attribute when default routing is required |
+| AC0001 | Missing configuration | Missing [AutoControllerConfig] attribute when default routing is required |
 | AC0002 | Invalid route prefix | DefaultRoutePrefix '/api/v1/' is invalid. Remove leading/trailing slashes |
 | AC0003 | Invalid inheritance | Class 'MyHandler' does not properly inherit from ApplicationService<TRequest, TResponse> |
 | AC0004 | Missing Handle method | Class 'MyHandler' does not contain a public Handle method |
@@ -225,8 +225,8 @@ The AutoController source generator includes comprehensive error handling that w
 When errors occur, the build will fail with clear messages:
 
 ```console
-error AC0001: Missing [AutoControllerGeneratorConfig] attribute when default routing is required
-  Add [assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
+error AC0001: Missing [AutoControllerConfig] attribute when default routing is required
+  Add [assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1")] to Program.cs
 
 error AC0003: Class 'GetUserHandler' does not properly inherit from ApplicationService<TRequest, TResponse>
   Ensure the base class has exactly 2 generic type arguments
@@ -241,10 +241,10 @@ The generator validates configuration at build time:
 
 ```csharp
 // ❌ This will cause build failure (leading slash)
-[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "/api/v1")]
+[assembly: AutoControllerConfig(DefaultRoutePrefix = "/api/v1")]
 
 // ✅ Correct format
-[assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = "api/v1")]
+[assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1")]
 ```
 
 ### Handler Validation

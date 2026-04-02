@@ -8,12 +8,12 @@ internal static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor MissingConfigurationAttribute = new DiagnosticDescriptor(
         id: "AC0001",
-        title: "Missing AutoControllerGeneratorConfig attribute",
-        messageFormat: "AutoController generator requires [assembly: AutoControllerGeneratorConfig] attribute when RequireExplicitRoutes is not set. Add it to Program.cs or AssemblyInfo.cs with DefaultRoutePrefix configuration.",
+        title: "Missing AutoControllerConfig attribute",
+        messageFormat: "AutoController generator requires [assembly: AutoControllerConfig] attribute when RequireExplicitRoutes is not set. Add it to Program.cs or AssemblyInfo.cs with DefaultRoutePrefix configuration.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "The AutoController generator needs configuration to generate default routes. Add [assembly: AutoControllerGeneratorConfig(DefaultRoutePrefix = \"api/v1\")] to your Program.cs or AssemblyInfo.cs file.");
+        description: "The AutoController generator needs configuration to generate default routes. Add [assembly: AutoControllerConfig(DefaultRoutePrefix = \"api/v1\")] to your Program.cs or AssemblyInfo.cs file.");
 
     public static readonly DiagnosticDescriptor InvalidDefaultRoutePrefix = new DiagnosticDescriptor(
         id: "AC0002",
@@ -76,7 +76,7 @@ internal static class DiagnosticDescriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "The generator failed to read the AutoControllerGeneratorConfig attribute. Check the attribute syntax and values.");
+        description: "The generator failed to read the AutoControllerConfig attribute. Check the attribute syntax and values.");
 
     public static readonly DiagnosticDescriptor HandlerExtractionFailed = new DiagnosticDescriptor(
         id: "AC0009",
