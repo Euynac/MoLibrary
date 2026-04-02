@@ -125,15 +125,26 @@ public sealed partial class RAGService(
             },
             ct);
 
+        var hasPersistedIndexedContent = await HasPersistedIndexedContentAsync(kb, ct);
         var changed = !string.Equals(kb.EmbeddingProviderId, normalizedProviderId, StringComparison.OrdinalIgnoreCase)
                       || !string.Equals(kb.EmbeddingModelName, normalizedModelName, StringComparison.OrdinalIgnoreCase);
+        var shouldClearExistingIndex = changed && clearIndex && hasPersistedIndexedContent;
 
-        if (changed && clearIndex)
+        if (shouldClearExistingIndex)
         {
-            await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
-            await indexStateCoordinator.ResetKnowledgeBaseDocumentStatesForReindexAsync(knowledgeBaseId, ct);
-            kb.DocumentCount = 0;
-            kb.ChunkCount = 0;
+            try
+            {
+                await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+                await indexStateCoordinator.ResetKnowledgeBaseDocumentStatesForReindexAsync(knowledgeBaseId, ct);
+                kb.DocumentCount = 0;
+                kb.ChunkCount = 0;
+            }
+            catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
+            {
+                throw new InvalidOperationException(
+                    RAGFailureTranslator.DescribeEmbeddingModelSwitch(ex),
+                    ex);
+            }
         }
 
         kb.EmbeddingProviderId = normalizedProviderId;
@@ -145,7 +156,29 @@ public sealed partial class RAGService(
             knowledgeBaseId,
             normalizedProviderId,
             normalizedModelName,
-            changed && clearIndex);
+            shouldClearExistingIndex);
+    }
+
+    /// <summary>
+    /// Validates that indexing can reach the configured embedding model and vector store.
+    /// </summary>
+    public async Task EnsureKnowledgeBaseIndexingReadyAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        var binding = await embeddingBindingResolver.ResolveAsync(kb, ct);
+
+        try
+        {
+            _ = await vectorCollectionCoordinator.GetOrCreateCollectionAsync(kb, binding, ct);
+        }
+        catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
+        {
+            throw new InvalidOperationException(
+                RAGFailureTranslator.DescribeIndexingStart(ex),
+                ex);
+        }
     }
 
     public async Task DeleteKnowledgeBaseAsync(string knowledgeBaseId, CancellationToken ct = default)
@@ -486,7 +519,14 @@ public sealed partial class RAGService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await TryMarkDocumentFailedAsync(knowledgeBaseId, documentPath, ex.Message, ct);
+            var translatedMessage = RAGFailureTranslator.DescribeDocumentIndexing(ex);
+            await TryMarkDocumentFailedAsync(knowledgeBaseId, documentPath, translatedMessage, ct);
+
+            if (!string.Equals(translatedMessage, ex.Message, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(translatedMessage, ex);
+            }
+
             throw;
         }
         finally
@@ -1088,6 +1128,17 @@ public sealed partial class RAGService(
     private static bool HasEmbeddingBinding(KnowledgeBase kb)
         => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
            && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
+
+    private async Task<bool> HasPersistedIndexedContentAsync(KnowledgeBase kb, CancellationToken ct)
+    {
+        if (kb.DocumentCount > 0 || kb.ChunkCount > 0)
+        {
+            return true;
+        }
+
+        return (await indexStateStore.GetDocumentStatesAsync(kb.Id, ct))
+            .Any(state => state.Status == DocumentStatus.Done && state.ChunkCount > 0);
+    }
 
     private bool IsDocumentIndexingActiveAtRuntime(string knowledgeBaseId, string documentPath)
         => _activeIndexingDocuments.ContainsKey(BuildActiveIndexingDocumentKey(knowledgeBaseId, documentPath));

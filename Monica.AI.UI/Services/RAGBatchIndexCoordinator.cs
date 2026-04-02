@@ -120,6 +120,8 @@ public sealed class RAGBatchIndexCoordinator(
                 return RAGBatchIndexExecutionResult.Failed("No pending documents to index.");
             }
 
+            await ragService.EnsureKnowledgeBaseIndexingReadyAsync(kbId, effectiveToken);
+
             MarkBatchIndexingStarted(kbId);
             markedActive = true;
 
@@ -177,7 +179,9 @@ public sealed class RAGBatchIndexCoordinator(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start batch indexing for KB '{KbId}'", kbId);
-            return RAGBatchIndexExecutionResult.Failed($"Failed to start batch indexing: {ex.Message}");
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? RAGBatchIndexExecutionResult.Failed(ex.Message)
+                : RAGBatchIndexExecutionResult.Failed($"Failed to start batch indexing: {ex.Message}");
         }
         finally
         {
@@ -234,6 +238,7 @@ public sealed class RAGBatchIndexCoordinator(
             throw new InvalidOperationException($"Document '{documentId}' is already indexing.");
         }
 
+        await ragService.EnsureKnowledgeBaseIndexingReadyAsync(kbId, cancellationToken);
         await IndexQueuedDocumentAsync(kbId, queueItem, progress, cancellationToken);
     }
 

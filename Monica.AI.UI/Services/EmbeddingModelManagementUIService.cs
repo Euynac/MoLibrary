@@ -147,7 +147,9 @@ public class EmbeddingModelManagementUIService(
                 ex,
                 "Failed to set embedding binding for KB '{KbId}' to provider '{ProviderId}' model '{ModelName}'",
                 kbId, providerId, modelName);
-            return Res.Fail($"Failed to set embedding model: {ex.Message}");
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? Res.Fail(ex.Message)
+                : Res.Fail($"Failed to set embedding model: {ex.Message}");
         }
     }
 

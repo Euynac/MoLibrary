@@ -320,6 +320,11 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
             ? ResolveDocumentName(state.DocumentPath, state.DocumentPath)
             : state.DocumentName;
 
+        // Normalize legacy low-level vector-store failures before they reach queue consumers.
+        var errorMessage = state.Status == DocumentStatus.Error
+            ? RAGFailureTranslator.NormalizeDocumentErrorMessage(state.ErrorMessage)
+            : state.ErrorMessage;
+
         return new DocumentQueueItem
         {
             Id = state.DocumentPath,
@@ -329,7 +334,7 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
             ChunkCount = state.ChunkCount,
             Progress = state.Progress,
             IndexedAt = state.IndexedAt,
-            ErrorMessage = state.ErrorMessage
+            ErrorMessage = errorMessage
         };
     }
 }

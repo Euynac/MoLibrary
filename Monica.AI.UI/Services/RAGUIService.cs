@@ -348,7 +348,9 @@ public class RAGUIService(
                 "Failed to start indexing for document '{DocumentId}' in KB '{KbId}'",
                 documentId,
                 kbId);
-            return Res.Fail($"Failed to start document indexing: {ex.Message}");
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? Res.Fail(ex.Message)
+                : Res.Fail($"Failed to start document indexing: {ex.Message}");
         }
     }
 
