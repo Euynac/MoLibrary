@@ -76,7 +76,7 @@ public class TypeConverter(IOptions<AutoModelExpressionOptions> options) : IAuto
 
     public dynamic ConvertBoolean(string value, AutoFieldTypeSetting typeSetting, EFieldConditionFeatures features)
     {
-        if (KouStringTool.TryToBool(value.ToLower(), out var boolResult))
+        if (TextValueParser.TryToBool(value.ToLower(), out var boolResult))
         {
             return boolResult;
         }
@@ -234,7 +234,7 @@ public class TypeConverter(IOptions<AutoModelExpressionOptions> options) : IAuto
     {
         if ((features & EFieldConditionFeatures.Fuzzy) != 0)
         {
-            KouEnumTool.TryToKouEnum(typeSetting.OriginUnderlyingType, value, out var enumResultList, true);
+            EnumAliasParser.TryParseAlias(typeSetting.OriginUnderlyingType, value, out var enumResultList, true);
             return enumResultList is IList { Count: 0 }
                 ? FieldResult.JumpThisField()
                 : ((List<Enum>)enumResultList)

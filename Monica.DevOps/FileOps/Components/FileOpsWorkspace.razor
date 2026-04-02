@@ -272,7 +272,7 @@
 
                                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="preview-editor__meta">
                                     <MudChip T="string" Value="@_selectedFileContent.EncodingName" Variant="Variant.Outlined">@L["Labels:Encoding"]: @_selectedFileContent.EncodingName</MudChip>
-                                    <MudChip T="string" Value="@_selectedFileContent.SizeBytes.ToString()" Variant="Variant.Outlined">@L["Labels:Size"]: @_selectedFileContent.SizeBytes.FormatBytes()</MudChip>
+                                    <MudChip T="string" Value="@_selectedFileContent.SizeBytes.ToString()" Variant="Variant.Outlined">@L["Labels:Size"]: @_selectedFileContent.SizeBytes.FormatByteSize()</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.LineCount.ToString()" Variant="Variant.Outlined">@L["Labels:LineCount"]: @_selectedFileContent.LineCount</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.LastModifiedAt.ToString("O")" Variant="Variant.Outlined">@L["Labels:LastModified"]: @FormatTime(_selectedFileContent.LastModifiedAt)</MudChip>
                                     <MudChip T="string" Value="@_selectedFileContent.CanSave.ToString()" Variant="Variant.Outlined" Color="@(_selectedFileContent.CanSave ? Color.Success : Color.Default)">

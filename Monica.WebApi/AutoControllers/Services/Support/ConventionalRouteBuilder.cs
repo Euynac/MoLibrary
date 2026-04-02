@@ -26,7 +26,7 @@ public class ConventionalRouteBuilder
         var idParameterModel = action.Parameters.FirstOrDefault(p => p.ParameterName == "id");
         if (idParameterModel != null)
         {
-            if (TypeHelper.IsPrimitiveExtended(idParameterModel.ParameterType, includeEnums: true))
+            if (TypeClassifier.IsPrimitiveExtended(idParameterModel.ParameterType, includeEnums: true))
             {
                 url += "/{id}";
             }

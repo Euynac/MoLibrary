@@ -308,14 +308,13 @@ Monica.{Name}.UI/
 ├── Modules/
 │   └── Module{Name}UI.cs                # Consolidated UI module registration file
 ├── Pages/
-│   ├── UI{Name}Page.razor
-│   └── UI{Name}Page.razor.css
-├── UI{Name}/
-│   ├── Components/
-│   ├── Dialogs/                         # (optional)
-│   ├── Models/                          # View-only (minimize — reuse Facade Models)
-│   ├── State/                           # Browser/page/session state
-│   └── Support/                         # Resolvers, formatters, coordinators
+│   ├── {Name}Page.razor
+│   └── {Name}Page.razor.css
+├── Components/
+├── Dialogs/                         # (optional)
+├── Models/                          # View-only (minimize — reuse Facade Models)
+├── State/                           # Browser/page/session state
+└── Support/                         # Resolvers, formatters, coordinators
 ├── Localization/
 └── wwwroot/                             # (optional)
 ```

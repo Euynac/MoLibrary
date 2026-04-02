@@ -160,7 +160,7 @@
 
             foreach (var provider in group.Providers)
             {
-                // Check if provider name or type matches
+                // ArgumentGuard if provider name or type matches
                 bool providerMatches =
                     provider.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                     provider.Type.Contains(keyword, StringComparison.OrdinalIgnoreCase);

@@ -37,7 +37,7 @@ public class DbOperatorDynamicLinqProvider<TModel>(IAutoModelExpressionNormalize
 
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, Expression<Func<TModel, object>> selector, EFieldConditions condition, string value)
     {
-        return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetKouEnumName()} \"{value}\""); // TODO: escape values?
+        return ApplyFilter(queryable, $"{selector.GetPropertyInfo().Name} {condition.GetEnumAlias()} \"{value}\""); // TODO: escape values?
     }
     public virtual IQueryable<TModel> ApplyFilter(IQueryable<TModel> queryable, string filter)
     {

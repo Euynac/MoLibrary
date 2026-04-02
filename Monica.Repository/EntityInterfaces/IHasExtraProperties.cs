@@ -95,7 +95,7 @@ public static class HasExtraPropertiesExtensions
             return defaultValue;
         }
 
-        if (TypeHelper.IsPrimitiveExtended(typeof(TProperty), includeEnums: true))
+        if (TypeClassifier.IsPrimitiveExtended(typeof(TProperty), includeEnums: true))
         {
             var conversionType = typeof(TProperty);
             if (conversionType.IsNullableValueType())

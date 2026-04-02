@@ -17,7 +17,7 @@ internal static class ExecutionTimingDisplayFormatter
 
     public static string FormatMemory(long? bytes)
     {
-        return bytes.HasValue ? bytes.Value.FormatBytes() : "无";
+        return bytes.HasValue ? bytes.Value.FormatByteSize() : "无";
     }
 
     public static string FormatRatePerMinute(ExecutionTimingStatistics statistics)

@@ -26,7 +26,7 @@ public class FileOpsTransferService(
         var runtimeConfig = runtimeConfigStore.GetCurrent();
         if (contentLength > runtimeConfig.MaxUploadFileSizeBytes)
         {
-            throw FileOpsOperationException.UploadTooLarge(fileName, runtimeConfig.MaxUploadFileSizeBytes.FormatBytes());
+            throw FileOpsOperationException.UploadTooLarge(fileName, runtimeConfig.MaxUploadFileSizeBytes.FormatByteSize());
         }
 
         var targetPath = pathPolicy.ResolveChildPath(runtimeConfig, directoryPath, fileName);
@@ -67,7 +67,7 @@ public class FileOpsTransferService(
         var fileInfo = new FileInfo(file.FullPath);
         if (fileInfo.Length > runtimeConfig.MaxDownloadFileSizeBytes)
         {
-            throw FileOpsOperationException.DownloadTooLarge(file.FullPath, runtimeConfig.MaxDownloadFileSizeBytes.FormatBytes());
+            throw FileOpsOperationException.DownloadTooLarge(file.FullPath, runtimeConfig.MaxDownloadFileSizeBytes.FormatByteSize());
         }
 
         if (!ContentTypeProvider.TryGetContentType(fileInfo.Name, out var contentType))

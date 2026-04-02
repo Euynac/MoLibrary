@@ -69,7 +69,7 @@ public static class EntityHelper
                 return false;
             }
 
-            if (TypeHelper.IsDefaultValue(entity1Key) && TypeHelper.IsDefaultValue(entity2Key))
+            if (TypeClassifier.IsDefaultValue(entity1Key) && TypeClassifier.IsDefaultValue(entity2Key))
             {
                 return false;
             }
@@ -166,7 +166,7 @@ public static class EntityHelper
             return Convert.ToInt64(value) <= 0;
         }
 
-        return TypeHelper.IsDefaultValue(value);
+        return TypeClassifier.IsDefaultValue(value);
     }
 
     public static bool HasDefaultKeys(IMoEntity entity)

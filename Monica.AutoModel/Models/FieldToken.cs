@@ -1,3 +1,4 @@
+using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
 using Monica.Tool.General;
 
@@ -137,56 +138,56 @@ public enum EFieldConditions
     /// <summary>
     /// Equal to.
     /// </summary>
-    [KouEnumName("=")]
+    [EnumAlias("=")]
     Equal,
     /// <summary>
     /// String pattern match, such as <c>xx%</c>.
     /// </summary>
-    [KouEnumName("like")]
+    [EnumAlias("like")]
     Like,
     /// <summary>
     /// Included in a value list.
     /// </summary>
-    [KouEnumName("in")]
+    [EnumAlias("in")]
     In,
     /// <summary>
     /// Greater than.
     /// </summary>
-    [KouEnumName(">")]
+    [EnumAlias(">")]
     GreaterThan,
     /// <summary>
     /// Less than.
     /// </summary>
-    [KouEnumName("<")]
+    [EnumAlias("<")]
     LessThan,
     /// <summary>
     /// Greater than or equal to.
     /// </summary>
-    [KouEnumName(">=")]
+    [EnumAlias(">=")]
     GreaterThanOrEqual,
     /// <summary>
     /// Less than or equal to.
     /// </summary>
-    [KouEnumName("<=")]
+    [EnumAlias("<=")]
     LessThanOrEqual,
     /// <summary>
     /// Not equal to.
     /// </summary>
-    [KouEnumName("!=")]
+    [EnumAlias("!=")]
     Unequal,
     /// <summary>
     /// Expression-based pattern match.
     /// </summary>
-    [KouEnumName("explike")]
+    [EnumAlias("explike")]
     ExpLike,
     /// <summary>
     /// Negated pattern match.
     /// </summary>
-    [KouEnumName("notlike")]
+    [EnumAlias("notlike")]
     NotLike,
     /// <summary>
     /// Identity check, primarily used for null and non-null checks.
     /// </summary>
-    [KouEnumName("is")]
+    [EnumAlias("is")]
     Is,
 }

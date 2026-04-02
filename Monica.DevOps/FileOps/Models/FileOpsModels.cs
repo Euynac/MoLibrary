@@ -43,7 +43,7 @@ public class FileOpsEntrySummary
 
     public bool IsDirectory => Kind == FileOpsEntryKind.Directory;
 
-    public string SizeDisplay => SizeBytes.HasValue ? SizeBytes.Value.FormatBytes() : "-";
+    public string SizeDisplay => SizeBytes.HasValue ? SizeBytes.Value.FormatByteSize() : "-";
 }
 
 public class FileOpsBrowseResult

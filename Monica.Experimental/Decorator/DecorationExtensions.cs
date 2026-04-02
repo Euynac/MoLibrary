@@ -20,7 +20,7 @@ public static partial class DecorationExtensions
     public static IServiceCollection Decorate<TService, TDecorator>(this IServiceCollection services)
         where TDecorator : TService
     {
-        Check.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(services, nameof(services));
 
         return services.Decorate(typeof(TService), typeof(TDecorator));
     }
@@ -34,7 +34,7 @@ public static partial class DecorationExtensions
     public static bool TryDecorate<TService, TDecorator>(this IServiceCollection services)
         where TDecorator : TService
     {
-        Check.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(services, nameof(services));
 
         return services.TryDecorate(typeof(TService), typeof(TDecorator));
     }
@@ -51,9 +51,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decoratorType"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection Decorate(this IServiceCollection services, Type serviceType, Type decoratorType)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decoratorType, nameof(decoratorType));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decoratorType, nameof(decoratorType));
 
         return services.Decorate(DecorationStrategy.WithType(serviceType, serviceKey: null, decoratorType));
     }
@@ -69,9 +69,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decoratorType"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorate(this IServiceCollection services, Type serviceType, Type decoratorType)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decoratorType, nameof(decoratorType));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decoratorType, nameof(decoratorType));
 
         return services.TryDecorate(DecorationStrategy.WithType(serviceType, serviceKey: null, decoratorType));
     }
@@ -88,8 +88,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection Decorate<TService>(this IServiceCollection services, Func<TService, TService> decorator) where TService : notnull
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.Decorate<TService>((service, _) => decorator(service));
     }
@@ -105,8 +105,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorate<TService>(this IServiceCollection services, Func<TService, TService> decorator) where TService : notnull
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.TryDecorate<TService>((service, _) => decorator(service));
     }
@@ -123,8 +123,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection Decorate<TService>(this IServiceCollection services, Func<TService, IServiceProvider, TService> decorator) where TService : notnull
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.Decorate(typeof(TService), (service, provider) => decorator((TService)service, provider));
     }
@@ -140,8 +140,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorate<TService>(this IServiceCollection services, Func<TService, IServiceProvider, TService> decorator) where TService : notnull
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.TryDecorate(typeof(TService), (service, provider) => decorator((TService)service, provider));
     }
@@ -158,9 +158,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection Decorate(this IServiceCollection services, Type serviceType, Func<object, object> decorator)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.Decorate(serviceType, (decorated, _) => decorator(decorated));
     }
@@ -176,9 +176,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorate(this IServiceCollection services, Type serviceType, Func<object, object> decorator)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.TryDecorate(serviceType, (decorated, _) => decorator(decorated));
     }
@@ -195,9 +195,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection Decorate(this IServiceCollection services, Type serviceType, Func<object, IServiceProvider, object> decorator)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.Decorate(DecorationStrategy.WithFactory(serviceType, serviceKey: null, decorator));
     }
@@ -213,9 +213,9 @@ public static partial class DecorationExtensions
     /// <paramref name="serviceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorate(this IServiceCollection services, Type serviceType, Func<object, IServiceProvider, object> decorator)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(serviceType, nameof(serviceType));
-        Check.NotNull(decorator, nameof(decorator));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(serviceType, nameof(serviceType));
+        ArgumentGuard.NotNull(decorator, nameof(decorator));
 
         return services.TryDecorate(DecorationStrategy.WithFactory(serviceType, serviceKey: null, decorator));
     }
@@ -244,8 +244,8 @@ public static partial class DecorationExtensions
     /// <param name="strategy">The strategy for decorating services.</param>
     public static bool TryDecorate(this IServiceCollection services, DecorationStrategy strategy)
     {
-        Check.NotNull(services, nameof(services));
-        Check.NotNull(strategy, nameof(strategy));
+        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentGuard.NotNull(strategy, nameof(strategy));
 
         var decorated = false;
 

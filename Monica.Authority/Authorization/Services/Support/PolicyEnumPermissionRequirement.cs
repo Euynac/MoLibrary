@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
-using Check = Monica.Tool.Utils.Check;
+using Monica.Tool.Utils;
 
 namespace Monica.Authority.Authorization.Services.Support;
 

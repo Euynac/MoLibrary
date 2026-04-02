@@ -76,7 +76,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
         
         if (!File.Exists(path))
         {
-            var directory = FileTool.GetDirectoryPath(path)!;
+            var directory = FileSystem.GetDirectoryPath(path)!;
             Directory.CreateDirectory(directory);
             var contents = GetDefaultFileContents();    
             File.WriteAllText(path, contents, Encoding.UTF8);

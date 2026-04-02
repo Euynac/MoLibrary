@@ -149,7 +149,7 @@ public class CrudControllerServiceConvention(
                 {
                     continue;
                 }
-                if (!TypeHelper.IsPrimitiveExtended(prm.ParameterInfo.ParameterType, includeEnums: true))
+                if (!TypeClassifier.IsPrimitiveExtended(prm.ParameterInfo.ParameterType, includeEnums: true))
                 {
                     if (CanUseFormBodyBinding(action, prm))
                     {

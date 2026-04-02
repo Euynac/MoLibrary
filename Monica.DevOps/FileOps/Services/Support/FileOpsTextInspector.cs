@@ -22,7 +22,7 @@ public class FileOpsTextInspector
         var fileInfo = new FileInfo(fullPath);
         if (fileInfo.Length > maxBytes)
         {
-            throw FileOpsOperationException.TextFileTooLarge(fullPath, maxBytes.FormatBytes());
+            throw FileOpsOperationException.TextFileTooLarge(fullPath, maxBytes.FormatByteSize());
         }
 
         var buffer = new byte[fileInfo.Length];

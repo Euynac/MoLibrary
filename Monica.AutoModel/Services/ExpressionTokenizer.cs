@@ -100,7 +100,7 @@ public partial class ExpressionTokenizer<TModel>(
 
     public bool NormalizeCondition(FieldToken token)
     {
-        if (!token.ConditionStr.TryToKouEnum(out EFieldConditions conditions)) return false;
+        if (!token.ConditionStr.TryParseAlias(out EFieldConditions conditions)) return false;
         token.Conditions = conditions;
         return true;
     }
@@ -174,7 +174,7 @@ public partial class ExpressionTokenizer<TModel>(
     private static string GetEnumRange(Type type)
     {
         return Enum.GetValues(type).Cast<Enum>()
-            .Select(p => p.GetKouEnumName()).Where(p => p.IsNotNullOrEmpty())
+            .Select(p => p.GetEnumAlias()).Where(p => p.IsNotNullOrEmpty())
             .StringJoin(',');
     }
 

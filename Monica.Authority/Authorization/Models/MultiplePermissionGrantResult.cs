@@ -1,4 +1,4 @@
-using Check = Monica.Tool.Utils.Check;
+using Monica.Tool.Utils;
 
 namespace Monica.Authority.Authorization.Models;
 

@@ -2,12 +2,9 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using JetBrains.Annotations;
+using Monica.Tool.Annotations;
 
 namespace Monica.Tool.Extensions;
-
-public class NoDisplayAttribute : Attribute
-{
-}
 
 public static class IEnumerableExtensions
 {
@@ -188,7 +185,7 @@ public static class IEnumerableExtensions
             Dictionary<string, string> pair = new();
             foreach (var propertyInfo in item.GetType().GetProperties())
             {
-                if (propertyInfo.GetCustomAttribute(typeof(NoDisplayAttribute)) == null)
+                if (propertyInfo.GetCustomAttribute(typeof(IgnoreFieldExportAttribute)) == null)
                 {
                     var value = propertyInfo.GetValue(item);
                     if (value == null)

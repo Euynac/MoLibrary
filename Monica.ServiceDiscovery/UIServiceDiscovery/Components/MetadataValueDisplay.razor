@@ -91,7 +91,7 @@ else
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToList();
 
-        // Check whether all items are URLs.
+        // ArgumentGuard whether all items are URLs.
         var urlItems = items.Where(IsUrl).ToList();
 
         // If all items are URLs, return the URL list; otherwise return an empty list (handled as plain text).
@@ -103,7 +103,7 @@ else
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        // Check whether the value is a valid URL format.
+        // ArgumentGuard whether the value is a valid URL format.
         return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }

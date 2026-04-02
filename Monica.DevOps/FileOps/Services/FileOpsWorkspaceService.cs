@@ -158,7 +158,7 @@ public class FileOpsWorkspaceService(
         var bytes = encoding.GetBytes(request.Content ?? string.Empty);
         if (bytes.LongLength > runtimeConfig.MaxTextFileSizeBytes)
         {
-            throw FileOpsOperationException.TextFileTooLarge(file.FullPath, runtimeConfig.MaxTextFileSizeBytes.FormatBytes());
+            throw FileOpsOperationException.TextFileTooLarge(file.FullPath, runtimeConfig.MaxTextFileSizeBytes.FormatByteSize());
         }
 
         await File.WriteAllTextAsync(file.FullPath, request.Content ?? string.Empty, encoding, cancellationToken);

@@ -72,7 +72,7 @@ public static class ActionResultHelper
 
     public static bool IsObjectResult(Type returnType, params Type[] excludeTypes)
     {
-        returnType = AsyncHelper.UnwrapTask(returnType);
+        returnType = TaskTypeInspector.UnwrapTask(returnType);
 
         if (!excludeTypes.IsNullOrEmptySet() && excludeTypes.Any(t => t.IsAssignableFrom(returnType)))
         {

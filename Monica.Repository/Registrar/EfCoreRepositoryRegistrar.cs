@@ -30,7 +30,7 @@ public class EfCoreRepositoryRegistrar(MoEfCoreRegistrationOptions options)
         return
             from property in dbContextType.GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance)
             where
-                ReflectionHelper.IsAssignableToGenericType(property.PropertyType, typeof(DbSet<>)) &&
+                ReflectionInspector.IsAssignableToGenericType(property.PropertyType, typeof(DbSet<>)) &&
                 typeof(IMoEntity).IsAssignableFrom(property.PropertyType.GenericTypeArguments[0])
             select property.PropertyType.GenericTypeArguments[0];
     }
