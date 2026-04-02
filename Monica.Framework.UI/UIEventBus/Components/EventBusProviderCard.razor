@@ -1,4 +1,4 @@
-@using Monica.EventBus.Providers
+@using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
 
 <MudCard Elevation="2">
@@ -89,15 +89,15 @@
 
     private string GetProviderIcon() => Provider.ProviderType switch
     {
-        EEventBusProviderType.Local => Icons.Material.Filled.Memory,
-        EEventBusProviderType.Dapr => Icons.Material.Filled.Cloud,
+        EventBusProviderKind.Local => Icons.Material.Filled.Memory,
+        EventBusProviderKind.Dapr => Icons.Material.Filled.Cloud,
         _ => Icons.Material.Filled.Help
     };
 
     private Color GetProviderColor() => Provider.ProviderType switch
     {
-        EEventBusProviderType.Local => Color.Success,
-        EEventBusProviderType.Dapr => Color.Info,
+        EventBusProviderKind.Local => Color.Success,
+        EventBusProviderKind.Dapr => Color.Info,
         _ => Color.Default
     };
 

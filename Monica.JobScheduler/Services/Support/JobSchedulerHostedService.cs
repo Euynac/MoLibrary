@@ -25,7 +25,7 @@ public class JobSchedulerHostedService(
     IOptions<ModuleJobSchedulerOption> options,
     RecurringJobScheduler recurringJobScheduler,
     TriggeredJobScheduler triggeredJobScheduler,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
     IServiceRegistrationCoordinator coordinator,

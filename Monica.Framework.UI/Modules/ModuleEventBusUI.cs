@@ -90,7 +90,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                 async ([FromRoute] Guid id,
                        [FromServices] EventBusMonitorService service) =>
                 {
-                    var subscriptionId = new EventBus.Models.SubscriptionId(id);
+                    var subscriptionId = new EventBus.Models.EventSubscriptionId(id);
                     var result = await service.GetSubscriptionByIdAsync(subscriptionId);
                     return result.GetResponse();
                 })
@@ -116,7 +116,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                 async ([FromRoute] Guid id,
                        [FromServices] EventBusMonitorService service) =>
                 {
-                    var subscriptionId = new EventBus.Models.SubscriptionId(id);
+                    var subscriptionId = new EventBus.Models.EventSubscriptionId(id);
                     var result = await service.ActivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
@@ -130,7 +130,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                 async ([FromRoute] Guid id,
                        [FromServices] EventBusMonitorService service) =>
                 {
-                    var subscriptionId = new EventBus.Models.SubscriptionId(id);
+                    var subscriptionId = new EventBus.Models.EventSubscriptionId(id);
                     var result = await service.DeactivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
@@ -144,7 +144,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                 async ([FromRoute] Guid id,
                        [FromServices] EventBusMonitorService service) =>
                 {
-                    var subscriptionId = new EventBus.Models.SubscriptionId(id);
+                    var subscriptionId = new EventBus.Models.EventSubscriptionId(id);
                     var result = await service.UnsubscribeAsync(subscriptionId);
                     return result.GetResponse();
                 })

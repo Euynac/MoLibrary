@@ -1,3 +1,5 @@
+using Monica.EventBus.Services.Support;
+
 namespace Monica.EventBus.Abstractions.Handlers;
 
 /// <summary>

@@ -21,7 +21,7 @@ public class JobWorkerManagerHostedService(
     IObservableInstanceRegistry observableManager,
     IOptions<ModuleHostedServiceOption> hostedServiceOptions,
     IOptions<ModuleJobSchedulerOption> jobSchedulerOptions,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     JobOrchestrator jobOrchestrator,
     IJobMetadataRepository metadataRepository,
     IReadOnlyList<JobDefinition> jobDefinitions)

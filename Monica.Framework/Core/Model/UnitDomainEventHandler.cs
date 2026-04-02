@@ -36,7 +36,7 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
         var type = context.Type;
         var unit = new UnitDomainEventHandler(type);
         if (!type.IsClass ||
-            !type.IsImplementInterfaceGeneric(typeof(IMoDistributedEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
+            !type.IsImplementInterfaceGeneric(typeof(IDistributedEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.EventType = genericType.GetGenericArguments().First();
         return unit;
@@ -46,7 +46,7 @@ public class UnitDomainEventHandler(Type type) : ProjectUnit(type, EProjectUnitT
     {
         if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EventType.FullName!, out var eventUnit))
         {
-            var alertMessage = $"{this}无法关联其领域事件基类{EventType.GetCleanFullName()}，可能未继承{nameof(MoDomainEvent)}";
+            var alertMessage = $"{this}无法关联其领域事件基类{EventType.GetCleanFullName()}，可能未继承{nameof(DomainEvent)}";
             // Add warning level alert
             Alerts.Add(new ProjectUnitAlert
             {

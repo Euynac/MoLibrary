@@ -299,7 +299,7 @@ public class ModuleJobSchedulerGuide
     {
         ConfigureEmpty(CONFIG_PROVIDER);
         DependsOnModule<ModuleEventBusGuide>().Register()
-            .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: true);
+            .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: true);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: true);
         DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
@@ -314,7 +314,7 @@ public class ModuleJobSchedulerGuide
     {
         ConfigureEmpty(CONFIG_PROVIDER);
         DependsOnModule<ModuleEventBusGuide>().Register()
-            .AddKeyedCommonEventBus(nameof(ModuleJobScheduler), useDistributed: false);
+            .AddKeyedEventBus(nameof(ModuleJobScheduler), useDistributed: false);
         DependsOnModule<ModuleCancellationManagerGuide>().Register()
             .AddKeyedCancellationManager(nameof(ModuleJobScheduler), useDistributed: false);
         DependsOnModule<ModuleServiceDiscoveryGuide>().Register().UseInMemoryStateStore();

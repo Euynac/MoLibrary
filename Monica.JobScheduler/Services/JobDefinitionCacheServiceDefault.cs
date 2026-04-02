@@ -18,13 +18,13 @@ namespace Monica.JobScheduler.Services;
 /// </summary>
 public class JobDefinitionCacheServiceDefault(
     IJobMetadataRepository metadataRepository,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobDefinitionCacheServiceDefault> logger) : IJobDefinitionCacheService
 {
     protected readonly ModuleJobSchedulerOption JobSchedulerOptions = options.Value;
     protected readonly IJobMetadataRepository MetadataRepository = metadataRepository;
-    protected readonly IMoEventBus EventBus = eventBus;
+    protected readonly IEventBus EventBus = eventBus;
     protected readonly ILogger Logger = logger;
 
     public virtual async Task<JobDefinition?> GetDefinitionAsync(string jobKey,

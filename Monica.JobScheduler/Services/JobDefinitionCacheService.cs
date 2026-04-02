@@ -34,7 +34,7 @@ public class JobDefinitionCacheService : JobDefinitionCacheServiceDefault, IDisp
     public JobDefinitionCacheService(
         IJobMetadataRepository metadataRepository,
         [FromKeyedServices(nameof(ModuleJobScheduler))] IStateStore stateStore,
-        [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+        [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
         IOptions<ModuleJobSchedulerOption> options,
         ILogger<JobDefinitionCacheService> logger)
         : base(metadataRepository, eventBus, options, logger)

@@ -26,7 +26,7 @@ public class JobRegistrationHostedService(
     IReadOnlyList<JobDefinition> jobDefinitions,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IOptions<ModuleJobSchedulerOption> option,
     IServiceRegistrationCoordinator coordinator,
     IObservableInstanceRegistry observableManager,

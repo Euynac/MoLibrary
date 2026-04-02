@@ -25,7 +25,7 @@ namespace Monica.JobScheduler.Services.Support;
 public class JobConcurrencyGuardHostedService(
     IJobDefinitionCacheService cacheService,
     IJobMetadataRepository metadataRepository,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IMoHostedServiceCheckpointCoordinator hostedServiceCheckpointCoordinator,
     ILeaderElectionService leaderService,
     IServiceRegistrationCoordinator coordinator,

@@ -14,14 +14,14 @@ public class MarkdownGitBindingRefreshEventHandler(
     IOptions<ModuleMarkdownOption> options,
     IMoMarkdownService markdownService,
     ILogger<MarkdownGitBindingRefreshEventHandler> logger)
-    : IMoLocalEventHandler<GitRepositoryUpdatedEvent>, IMoLocalEventHandler<GitRepositoryDeletedEvent>
+    : ILocalEventHandler<GitRepositoryUpdatedEvent>, ILocalEventHandler<GitRepositoryDeletedEvent>
 {
-    Task IMoLocalEventHandler<GitRepositoryUpdatedEvent>.HandleEventAsync(GitRepositoryUpdatedEvent eventData)
+    Task ILocalEventHandler<GitRepositoryUpdatedEvent>.HandleEventAsync(GitRepositoryUpdatedEvent eventData)
     {
         return RefreshBoundGroupsAsync(eventData.RepositoryId, $"sync ({eventData.Trigger})");
     }
 
-    Task IMoLocalEventHandler<GitRepositoryDeletedEvent>.HandleEventAsync(GitRepositoryDeletedEvent eventData)
+    Task ILocalEventHandler<GitRepositoryDeletedEvent>.HandleEventAsync(GitRepositoryDeletedEvent eventData)
     {
         return RefreshBoundGroupsAsync(eventData.RepositoryId, "delete");
     }

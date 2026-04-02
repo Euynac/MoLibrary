@@ -16,7 +16,7 @@ public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.D
     }
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOf(typeof(MoDomainService));
+        return Type.IsClass && Type.IsSubclassOf(typeof(DomainService));
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()
@@ -33,7 +33,7 @@ public class UnitDomainService(Type type) : ProjectUnit(type, EProjectUnitType.D
         if (!unit.VerifyType()) return null;
         
         // Initialization method metadata
-        unit.InitializeMethods<MoDomainService>();
+        unit.InitializeMethods<DomainService>();
         return unit;
     }
 }

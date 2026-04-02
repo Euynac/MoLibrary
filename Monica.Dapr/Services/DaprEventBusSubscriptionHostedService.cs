@@ -11,8 +11,8 @@ using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Services;
+using Monica.EventBus.Services.Support;
 
 namespace Monica.Dapr.Services;
 
@@ -24,9 +24,9 @@ namespace Monica.Dapr.Services;
 /// </summary>
 internal class DaprEventBusSubscriptionHostedService(
     DaprPublishSubscribeClient daprClient,
-    ISubscriptionManager subscriptionManager, 
+    IEventSubscriptionRegistry subscriptionManager, 
     IHostApplicationLifetime applicationLifetime,
-    IMoDistributedEventBus eventBus,
+    IDistributedEventBus eventBus,
     IObservableInstanceRegistry observableManager,
     IDaprSidecarHealthCoordinator healthCoordinator,
     IOptions<ModuleDaprEventBusOption> options,
@@ -231,6 +231,31 @@ internal class DaprEventBusSubscriptionHostedService(
             Logger.LogWarning(
                 "Attempted to remove Dapr subscription for topic {Topic}, but it was not found",
                 topicName);
+        }
+    }
+
+    protected override async Task DisposeExternalSubscriptionsAsync(CancellationToken cancellationToken)
+    {
+        var subscriptions = _daprSubscriptionsByTopic.ToArray();
+        _daprSubscriptionsByTopic.Clear();
+
+        foreach (var (topicName, subscription) in subscriptions)
+        {
+            try
+            {
+                Logger.LogInformation(
+                    "Disposing Dapr subscription for topic {Topic} during shutdown (ServiceKey: {ServiceKey})",
+                    topicName,
+                    ServiceKey ?? "default");
+
+                await subscription.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex,
+                    "Error disposing Dapr subscription for topic {Topic} during shutdown",
+                    topicName);
+            }
         }
     }
 }

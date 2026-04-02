@@ -3,12 +3,11 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Models;
 using Monica.Modules;
-using Monica.EventBus.Providers;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Core.Results;
+using Monica.EventBus.Providers.NoOp;
 
 namespace Monica.Framework.UI.UIEventBus.Services;
 
@@ -17,7 +16,7 @@ namespace Monica.Framework.UI.UIEventBus.Services;
 /// </summary>
 public class EventBusProviderDiscoveryService(
     IServiceProvider serviceProvider,
-    ISubscriptionManager subscriptionManager,
+    IEventSubscriptionRegistry subscriptionManager,
     ILogger<EventBusProviderDiscoveryService> logger)
 {
     /// <summary>
@@ -43,15 +42,15 @@ public class EventBusProviderDiscoveryService(
             var providers = new List<EventBusProviderInfo>();
 
             // 1. Get the default Local EventBus
-            var defaultLocalEventBus = serviceProvider.GetService<IMoLocalEventBus>();
+            var defaultLocalEventBus = serviceProvider.GetService<ILocalEventBus>();
             if (defaultLocalEventBus != null)
             {
                 providers.Add(CreateLocalProviderInfo(null, defaultLocalEventBus));
             }
 
-            // 2. Get the default Distributed EventBus (exclude NullDistributedEventBus)
-            var defaultDistributedEventBus = serviceProvider.GetService<IMoDistributedEventBus>();
-            if (defaultDistributedEventBus != null && defaultDistributedEventBus is not NullDistributedEventBus)
+            // 2. Get the default Distributed EventBus (exclude NoOpDistributedEventBus)
+            var defaultDistributedEventBus = serviceProvider.GetService<IDistributedEventBus>();
+            if (defaultDistributedEventBus != null && defaultDistributedEventBus is not NoOpDistributedEventBus)
             {
                 providers.Add(CreateDistributedProviderInfo(null, defaultDistributedEventBus));
             }
@@ -65,15 +64,15 @@ public class EventBusProviderDiscoveryService(
                 try
                 {
                     // Try to get Keyed Local EventBus
-                    var keyedLocalEventBus = serviceProvider.GetKeyedService<IMoLocalEventBus>(key);
+                    var keyedLocalEventBus = serviceProvider.GetKeyedService<ILocalEventBus>(key);
                     if (keyedLocalEventBus != null)
                     {
                         providers.Add(CreateLocalProviderInfo(key, keyedLocalEventBus));
                     }
 
                     // Try to get Keyed Distributed EventBus
-                    var keyedDistributedEventBus = serviceProvider.GetKeyedService<IMoDistributedEventBus>(key);
-                    if (keyedDistributedEventBus != null && keyedDistributedEventBus is not NullDistributedEventBus)
+                    var keyedDistributedEventBus = serviceProvider.GetKeyedService<IDistributedEventBus>(key);
+                    if (keyedDistributedEventBus != null && keyedDistributedEventBus is not NoOpDistributedEventBus)
                     {
                         providers.Add(CreateDistributedProviderInfo(key, keyedDistributedEventBus));
                     }
@@ -86,7 +85,7 @@ public class EventBusProviderDiscoveryService(
 
             // 5. Get the Keyed service key of DaprEventBus
             var daprModuleType = ProviderSnapshots
-                .FirstOrDefault(s => s.ModuleInstance is IEventBusModuleProvider { ProviderType: EEventBusProviderType.Dapr })
+                .FirstOrDefault(s => s.ModuleInstance is IEventBusProviderModule { ProviderType: EventBusProviderKind.Dapr })
                 ?.ModuleType;
 
             if (daprModuleType != null)
@@ -96,8 +95,8 @@ public class EventBusProviderDiscoveryService(
                 {
                     try
                     {
-                        var keyedDaprEventBus = serviceProvider.GetKeyedService<IMoDistributedEventBus>(key);
-                        if (keyedDaprEventBus != null && keyedDaprEventBus is not NullDistributedEventBus)
+                        var keyedDaprEventBus = serviceProvider.GetKeyedService<IDistributedEventBus>(key);
+                        if (keyedDaprEventBus != null && keyedDaprEventBus is not NoOpDistributedEventBus)
                         {
                             // Check if the Provider already exists
                             if (providers.Any(p => p.ServiceKey == key && p.IsDistributed))
@@ -128,13 +127,13 @@ public class EventBusProviderDiscoveryService(
     /// <summary>
     /// Get Local Provider based on service key
     /// </summary>
-    public Res<IMoLocalEventBus> GetLocalProvider(string? serviceKey)
+    public Res<ILocalEventBus> GetLocalProvider(string? serviceKey)
     {
         try
         {
-            IMoLocalEventBus? provider = serviceKey == null
-                ? serviceProvider.GetService<IMoLocalEventBus>()
-                : serviceProvider.GetKeyedService<IMoLocalEventBus>(serviceKey);
+            ILocalEventBus? provider = serviceKey == null
+                ? serviceProvider.GetService<ILocalEventBus>()
+                : serviceProvider.GetKeyedService<ILocalEventBus>(serviceKey);
 
             if (provider == null)
             {
@@ -153,15 +152,15 @@ public class EventBusProviderDiscoveryService(
     /// <summary>
     /// Get Distributed Provider based on service key
     /// </summary>
-    public Res<IMoDistributedEventBus> GetDistributedProvider(string? serviceKey)
+    public Res<IDistributedEventBus> GetDistributedProvider(string? serviceKey)
     {
         try
         {
-            IMoDistributedEventBus? provider = serviceKey == null
-                ? serviceProvider.GetService<IMoDistributedEventBus>()
-                : serviceProvider.GetKeyedService<IMoDistributedEventBus>(serviceKey);
+            IDistributedEventBus? provider = serviceKey == null
+                ? serviceProvider.GetService<IDistributedEventBus>()
+                : serviceProvider.GetKeyedService<IDistributedEventBus>(serviceKey);
 
-            if (provider == null || provider is NullDistributedEventBus)
+            if (provider == null || provider is NoOpDistributedEventBus)
             {
                 return Res.Fail($"未找到 Distributed Provider: {serviceKey ?? "默认"}");
             }
@@ -179,13 +178,13 @@ public class EventBusProviderDiscoveryService(
 
     #region Private Methods
 
-    private EventBusProviderInfo CreateLocalProviderInfo(string? serviceKey, IMoLocalEventBus provider)
+    private EventBusProviderInfo CreateLocalProviderInfo(string? serviceKey, ILocalEventBus provider)
     {
         return new EventBusProviderInfo
         {
             ServiceKey = serviceKey,
-            ProviderType = EEventBusProviderType.Local,
-            Capabilities = EEventBusCapabilities.None,
+            ProviderType = EventBusProviderKind.Local,
+            Capabilities = EventBusProviderCapabilities.None,
             IsDistributed = false,
             OptionType = typeof(ModuleEventBusOption),
             OptionInstance = GetLocalProviderOptionInfo(serviceKey),
@@ -193,7 +192,7 @@ public class EventBusProviderDiscoveryService(
         };
     }
 
-    private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IMoDistributedEventBus provider)
+    private EventBusProviderInfo CreateDistributedProviderInfo(string? serviceKey, IDistributedEventBus provider)
     {
         var (providerType, capabilities, displayName) = GetDistributedProviderMetadata(provider);
         var (optionType, optionInstance) = GetDistributedProviderOptionInfo(serviceKey, provider);
@@ -211,15 +210,15 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// Gets provider metadata from the registered IEventBusModuleProvider
+    /// Gets provider metadata from the registered IEventBusProviderModule
     /// </summary>
-    private (EEventBusProviderType providerType, EEventBusCapabilities capabilities, string displayName) GetDistributedProviderMetadata(IMoDistributedEventBus provider)
+    private (EventBusProviderKind providerType, EventBusProviderCapabilities capabilities, string displayName) GetDistributedProviderMetadata(IDistributedEventBus provider)
     {
         var providerTypeName = provider.GetType().FullName ?? "";
 
         foreach (var snapshot in ProviderSnapshots)
         {
-            if (snapshot.ModuleInstance is not IEventBusModuleProvider moduleProvider) continue;
+            if (snapshot.ModuleInstance is not IEventBusProviderModule moduleProvider) continue;
 
             // Match by checking if the provider type name contains the module's display name
             if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -228,7 +227,7 @@ public class EventBusProviderDiscoveryService(
             }
         }
 
-        return (EEventBusProviderType.Unknown, EEventBusCapabilities.None, "Unknown");
+        return (EventBusProviderKind.Unknown, EventBusProviderCapabilities.None, "Unknown");
     }
 
     /// <summary>
@@ -257,7 +256,7 @@ public class EventBusProviderDiscoveryService(
     /// <summary>
     /// Gets distributed provider option information using ModuleSnapshot's generic option retrieval
     /// </summary>
-    private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IMoDistributedEventBus provider)
+    private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IDistributedEventBus provider)
     {
         try
         {
@@ -266,7 +265,7 @@ public class EventBusProviderDiscoveryService(
             // Find the matching provider module snapshot
             foreach (var snapshot in ProviderSnapshots)
             {
-                if (snapshot.ModuleInstance is not IEventBusModuleProvider moduleProvider) continue;
+                if (snapshot.ModuleInstance is not IEventBusProviderModule moduleProvider) continue;
 
                 // Match by checking if the provider type name contains the module's display name
                 if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -302,14 +301,14 @@ public class EventBusProviderDiscoveryService(
 
                 // Match Scope
                 var scopeMatches = provider.IsDistributed
-                    ? s.Scope == SubscriptionScope.Distributed
-                    : s.Scope == SubscriptionScope.Local;
+                    ? s.Scope == EventSubscriptionScope.Distributed
+                    : s.Scope == EventSubscriptionScope.Local;
 
                 return keyMatches && scopeMatches;
             }).ToList();
 
             provider.SubscriptionCount = matchingSubscriptions.Count;
-            provider.ActiveSubscriptionCount = matchingSubscriptions.Count(s => s.State == SubscriptionState.Active);
+            provider.ActiveSubscriptionCount = matchingSubscriptions.Count(s => s.State == EventSubscriptionState.Active);
         }
     }
 

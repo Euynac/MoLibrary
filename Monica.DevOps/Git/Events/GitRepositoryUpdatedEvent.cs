@@ -1,5 +1,5 @@
-using Monica.EventBus.Attributes;
 using Monica.DevOps.Git.Models;
+using Monica.EventBus.Annotations;
 
 namespace Monica.DevOps.Git.Events;
 

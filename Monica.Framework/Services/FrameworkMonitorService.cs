@@ -17,7 +17,7 @@ namespace Monica.Framework.Services;
 /// </summary>
 public class FrameworkMonitorService(
     ILogger<FrameworkMonitorService> logger,
-    IMoDistributedEventBus eventBus,
+    IDistributedEventBus eventBus,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IMapper mapper,
     IRequestFilter? requestFilter = null) : IFrameworkMonitorService

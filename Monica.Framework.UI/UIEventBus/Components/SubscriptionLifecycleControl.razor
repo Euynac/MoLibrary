@@ -1,10 +1,10 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.EventBus.Models
 
-@if (Subscription != null && Subscription.State != SubscriptionState.Disposed)
+@if (Subscription != null && Subscription.State != EventSubscriptionState.Disposed)
 {
     <MudStack Row="true" Spacing="1">
-        @if (Subscription.State == SubscriptionState.Active)
+        @if (Subscription.State == EventSubscriptionState.Active)
         {
             <!-- Active state: Show deactivate and remove buttons -->
             <MudTooltip Text="停用订阅">
@@ -20,7 +20,7 @@
                              OnClick="() => OnUnsubscribe.InvokeAsync()" />
             </MudTooltip>
         }
-        else if (Subscription.State == SubscriptionState.Inactive || Subscription.State == SubscriptionState.Pending)
+        else if (Subscription.State == EventSubscriptionState.Inactive || Subscription.State == EventSubscriptionState.Pending)
         {
             <!-- Inactive/pending activation status: Show activation and removal buttons -->
             <MudTooltip Text="激活订阅">
@@ -38,7 +38,7 @@
         }
     </MudStack>
 }
-else if (Subscription?.State == SubscriptionState.Disposed)
+else if (Subscription?.State == EventSubscriptionState.Disposed)
 {
     <!-- Released state: no buttons are displayed -->
     <MudChip T="string" Color="Color.Default" Size="Size.Small">已释放</MudChip>

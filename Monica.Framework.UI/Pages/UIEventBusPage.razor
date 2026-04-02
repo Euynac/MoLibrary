@@ -230,8 +230,8 @@
                 {
                     var keyMatches = s.ServiceKey == _filter.SelectedProvider.ServiceKey;
                     var scopeMatches = _filter.SelectedProvider.IsDistributed
-                        ? s.Scope == SubscriptionScope.Distributed
-                        : s.Scope == SubscriptionScope.Local;
+                        ? s.Scope == EventSubscriptionScope.Distributed
+                        : s.Scope == EventSubscriptionScope.Local;
                     if (!keyMatches || !scopeMatches)
                         return false;
                 }
@@ -381,7 +381,7 @@
 
     private async Task ActivateSubscriptionAsync(SubscriptionViewModel subscription)
     {
-        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.ActivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
         {
             Snackbar.Add("激活失败: " + error.Message, Severity.Error);
@@ -394,7 +394,7 @@
 
     private async Task DeactivateSubscriptionAsync(SubscriptionViewModel subscription)
     {
-        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.DeactivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
         {
             Snackbar.Add("停用失败: " + error.Message, Severity.Error);
@@ -409,7 +409,7 @@
     {
         // Simplified processing: perform removal directly without displaying a confirmation dialog box
         // In a production environment, you can use MudBlazor's IDialogService to display a confirmation dialog
-        var subscriptionId = new SubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.UnsubscribeAsync(subscriptionId)).IsFailed(out var error))
         {
             Snackbar.Add("移除失败: " + error.Message, Severity.Error);

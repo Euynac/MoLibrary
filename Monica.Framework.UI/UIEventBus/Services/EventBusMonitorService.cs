@@ -1,7 +1,6 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.EventBus.Constants;
 using Monica.EventBus.Models;
 using Monica.Framework.UI.UIEventBus.Models;
@@ -14,12 +13,12 @@ namespace Monica.Framework.UI.UIEventBus.Services;
 /// EventBus monitoring service - encapsulates subscription management and real-time update functions
 /// </summary>
 public sealed class EventBusMonitorService(
-    ISubscriptionManager subscriptionManager,
-    IMoLocalEventBus localEventBus,
-    IMoDistributedEventBus distributedEventBus,
+    IEventSubscriptionRegistry subscriptionManager,
+    ILocalEventBus localEventBus,
+    IDistributedEventBus distributedEventBus,
     ILogger<EventBusMonitorService> logger) : IAsyncDisposable
 {
-    private readonly ISubscriptionManager _subscriptionManager = subscriptionManager;
+    private readonly IEventSubscriptionRegistry _subscriptionManager = subscriptionManager;
 
     // Change channels in real time
     private readonly Channel<SubscriptionChangeViewModel> _changesChannel =
@@ -81,9 +80,9 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Observable observer implementation
     /// </summary>
-    private class SubscriptionChangeObserver(Action<SubscriptionChange> onNext) : IObserver<SubscriptionChange>
+    private class SubscriptionChangeObserver(Action<EventSubscriptionChange> onNext) : IObserver<EventSubscriptionChange>
     {
-        public void OnNext(SubscriptionChange value) => onNext(value);
+        public void OnNext(EventSubscriptionChange value) => onNext(value);
         public void OnError(Exception error) { }
         public void OnCompleted() { }
     }
@@ -106,8 +105,8 @@ public sealed class EventBusMonitorService(
                 .OrderByDescending(s => s.CreatedAt)
                 .ToList();
 
-            var localCount = allSubscriptions.Count(s => s.Scope == SubscriptionScope.Local);
-            var distCount = allSubscriptions.Count(s => s.Scope == SubscriptionScope.Distributed);
+            var localCount = allSubscriptions.Count(s => s.Scope == EventSubscriptionScope.Local);
+            var distCount = allSubscriptions.Count(s => s.Scope == EventSubscriptionScope.Distributed);
 
             logger.LogDebug("Retrieved {Count} subscriptions (Local: {LocalCount}, Distributed: {DistCount})",
                 allSubs.Count, localCount, distCount);
@@ -124,7 +123,7 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Get subscription based on ID
     /// </summary>
-    public async Task<Res<SubscriptionViewModel?>> GetSubscriptionByIdAsync(SubscriptionId subscriptionId)
+    public async Task<Res<SubscriptionViewModel?>> GetSubscriptionByIdAsync(EventSubscriptionId subscriptionId)
     {
         try
         {
@@ -140,7 +139,7 @@ public sealed class EventBusMonitorService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get subscription by ID: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to get subscription by ID: {EventSubscriptionId}", subscriptionId);
             return Res.Fail($"获取订阅详情失败: {ex.Message}", ResStatus.InternalError);
         }
     }
@@ -211,12 +210,12 @@ public sealed class EventBusMonitorService(
             var stats = new SubscriptionStatistics
             {
                 TotalSubscriptions = allSubs.Count,
-                ActiveSubscriptions = allSubs.Count(s => s.State == SubscriptionState.Active),
-                InactiveSubscriptions = allSubs.Count(s => s.State == SubscriptionState.Inactive),
-                PendingSubscriptions = allSubs.Count(s => s.State == SubscriptionState.Pending),
-                DisposedSubscriptions = allSubs.Count(s => s.State == SubscriptionState.Disposed),
-                LocalSubscriptions = allSubs.Count(s => s.Scope == SubscriptionScope.Local),
-                DistributedSubscriptions = allSubs.Count(s => s.Scope == SubscriptionScope.Distributed),
+                ActiveSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Active),
+                InactiveSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Inactive),
+                PendingSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Pending),
+                DisposedSubscriptions = allSubs.Count(s => s.State == EventSubscriptionState.Disposed),
+                LocalSubscriptions = allSubs.Count(s => s.Scope == EventSubscriptionScope.Local),
+                DistributedSubscriptions = allSubs.Count(s => s.Scope == EventSubscriptionScope.Distributed),
                 AutoDiscoveredCount = allSubs.Count(s => s.IsAutoDiscovered),
                 ManualSubscriptionCount = allSubs.Count(s => !s.IsAutoDiscovered),
                 ActionHandlerCount = allSubs.Count(s => s.HandlerType == null),
@@ -263,7 +262,7 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Activate subscription
     /// </summary>
-    public async Task<Res> ActivateSubscriptionAsync(SubscriptionId subscriptionId)
+    public async Task<Res> ActivateSubscriptionAsync(EventSubscriptionId subscriptionId)
     {
         try
         {
@@ -274,22 +273,22 @@ public sealed class EventBusMonitorService(
                 return Res.Fail("订阅不存在");
             }
 
-            if (subscription.State == SubscriptionState.Active)
+            if (subscription.State == EventSubscriptionState.Active)
             {
                 return Res.Fail("订阅已经是活跃状态");
             }
 
-            if (subscription.State == SubscriptionState.Disposed)
+            if (subscription.State == EventSubscriptionState.Disposed)
             {
                 return Res.Fail("无法激活已释放的订阅");
             }
 
             // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == SubscriptionScope.Local
+            var manager = subscription.Scope == EventSubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
 
-            if (subscription.State == SubscriptionState.Inactive)
+            if (subscription.State == EventSubscriptionState.Inactive)
             {
                 await manager.ReactivateAsync(subscriptionId);
             }
@@ -298,12 +297,12 @@ public sealed class EventBusMonitorService(
                 await manager.ActivateAsync(subscriptionId);
             }
 
-            logger.LogInformation("Activated subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Activated subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Ok("订阅已激活");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to activate subscription: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to activate subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Fail($"激活订阅失败: {ex.Message}");
         }
     }
@@ -311,7 +310,7 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Deactivate subscription
     /// </summary>
-    public async Task<Res> DeactivateSubscriptionAsync(SubscriptionId subscriptionId)
+    public async Task<Res> DeactivateSubscriptionAsync(EventSubscriptionId subscriptionId)
     {
         try
         {
@@ -322,24 +321,24 @@ public sealed class EventBusMonitorService(
                 return Res.Fail("订阅不存在");
             }
 
-            if (subscription.State != SubscriptionState.Active)
+            if (subscription.State != EventSubscriptionState.Active)
             {
                 return Res.Fail($"只能停用活跃订阅，当前状态: {subscription.State}");
             }
 
             // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == SubscriptionScope.Local
+            var manager = subscription.Scope == EventSubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
 
             await manager.DeactivateAsync(subscriptionId);
 
-            logger.LogInformation("Deactivated subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Deactivated subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Ok("订阅已停用");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to deactivate subscription: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to deactivate subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Fail($"停用订阅失败: {ex.Message}");
         }
     }
@@ -347,7 +346,7 @@ public sealed class EventBusMonitorService(
     /// <summary>
     /// Remove subscription
     /// </summary>
-    public async Task<Res> UnsubscribeAsync(SubscriptionId subscriptionId)
+    public async Task<Res> UnsubscribeAsync(EventSubscriptionId subscriptionId)
     {
         try
         {
@@ -358,24 +357,24 @@ public sealed class EventBusMonitorService(
                 return Res.Fail("订阅不存在");
             }
 
-            if (subscription.State == SubscriptionState.Disposed)
+            if (subscription.State == EventSubscriptionState.Disposed)
             {
                 return Res.Fail("订阅已经被移除");
             }
 
             // Select the corresponding manager based on the scope
-            var manager = subscription.Scope == SubscriptionScope.Local
+            var manager = subscription.Scope == EventSubscriptionScope.Local
                 ? localEventBus.Subscriptions
                 : distributedEventBus.Subscriptions;
 
             await manager.UnsubscribeAsync(subscriptionId);
 
-            logger.LogInformation("Removed subscription: {SubscriptionId}", subscriptionId);
+            logger.LogInformation("Removed subscription: {EventSubscriptionId}", subscriptionId);
             return Res.Ok("订阅已移除");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to unsubscribe: {SubscriptionId}", subscriptionId);
+            logger.LogError(ex, "Failed to unsubscribe: {EventSubscriptionId}", subscriptionId);
             return Res.Fail($"移除订阅失败: {ex.Message}");
         }
     }
@@ -398,9 +397,9 @@ public sealed class EventBusMonitorService(
     #region Mapping Methods
 
     /// <summary>
-    /// Map ISubscription to ViewModel
+    /// Map IEventSubscription to ViewModel
     /// </summary>
-    private SubscriptionViewModel MapToViewModel(ISubscription subscription)
+    private SubscriptionViewModel MapToViewModel(IEventSubscription subscription)
     {
         var vm = new SubscriptionViewModel
         {
@@ -435,9 +434,9 @@ public sealed class EventBusMonitorService(
     }
 
     /// <summary>
-    /// Map SubscriptionChange to ViewModel
+    /// Map EventSubscriptionChange to ViewModel
     /// </summary>
-    private SubscriptionChangeViewModel MapToChangeViewModel(SubscriptionChange change)
+    private SubscriptionChangeViewModel MapToChangeViewModel(EventSubscriptionChange change)
     {
         return new SubscriptionChangeViewModel
         {

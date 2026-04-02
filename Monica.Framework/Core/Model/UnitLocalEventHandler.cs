@@ -34,7 +34,7 @@ public class UnitLocalEventHandler(Type type) : ProjectUnit(type, EProjectUnitTy
         var type = context.Type;
         var unit = new UnitLocalEventHandler(type);
         if (!type.IsClass ||
-            !type.IsImplementInterfaceGeneric(typeof(IMoLocalEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
+            !type.IsImplementInterfaceGeneric(typeof(ILocalEventHandler<>), out var genericType) || genericType?.FullName is null) return null;
         unit.CheckNameConventionMode();
         unit.EventType = genericType.GetGenericArguments().First();
         return unit;

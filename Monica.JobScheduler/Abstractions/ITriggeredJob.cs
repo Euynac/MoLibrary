@@ -11,7 +11,7 @@ public interface ITriggeredJob<in TArgs> : IJobDefinition
     /// </summary>
     /// <param name="parameters">
     /// The strongly-typed parameter object containing data needed for job execution.
-    /// This object is deserialized from JSON after being distributed via IMoEventBus.
+    /// This object is deserialized from JSON after being distributed via IEventBus.
     /// Ensure the parameter type is JSON-serializable and contains all necessary data.
     /// </param>
     /// <param name="cancellationToken">

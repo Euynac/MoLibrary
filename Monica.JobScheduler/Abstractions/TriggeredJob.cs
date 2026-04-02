@@ -34,7 +34,7 @@ namespace Monica.JobScheduler.Abstractions;
 /// </para>
 /// <para>
 /// <b>Parameter Serialization:</b> Job parameters are serialized to JSON for persistence and
-/// distribution across workers via IMoEventBus. Ensure your parameter type is JSON-serializable
+/// distribution across workers via IEventBus. Ensure your parameter type is JSON-serializable
 /// and does not contain complex object graphs or circular references.
 /// </para>
 /// <para>

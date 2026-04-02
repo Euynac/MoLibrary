@@ -40,7 +40,7 @@ public class TriggeredJobScheduler(
     /// </summary>
     /// <param name="eventBus">Event bus for job events</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task InitializeAsync(IMoEventBus eventBus, CancellationToken cancellationToken = default)
+    public async Task InitializeAsync(IEventBus eventBus, CancellationToken cancellationToken = default)
     {
         // Subscribe to job triggered event
         _triggeredJobSubscription = await eventBus.SubscribeAsync<JobTriggeredEvent>(

@@ -1,4 +1,4 @@
-using Monica.EventBus.Providers;
+using Monica.EventBus.Abstractions;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
 
@@ -20,12 +20,12 @@ public class EventBusProviderInfo
     /// <summary>
     /// Provider type
     /// </summary>
-    public EEventBusProviderType ProviderType { get; init; }
+    public EventBusProviderKind ProviderType { get; init; }
 
     /// <summary>
     /// Provider capabilities
     /// </summary>
-    public EEventBusCapabilities Capabilities { get; init; }
+    public EventBusProviderCapabilities Capabilities { get; init; }
 
     /// <summary>
     /// Whether it is distributed EventBus
@@ -60,25 +60,25 @@ public class EventBusProviderInfo
     /// <summary>
     /// Check if the Provider supports batch publishing
     /// </summary>
-    public bool SupportsBulkPublish => Capabilities.HasFlag(EEventBusCapabilities.BulkPublish);
+    public bool SupportsBulkPublish => Capabilities.HasFlag(EventBusProviderCapabilities.BulkPublish);
 
     /// <summary>
     /// Check if the Provider supports streaming subscriptions
     /// </summary>
-    public bool SupportsStreaming => Capabilities.HasFlag(EEventBusCapabilities.Streaming);
+    public bool SupportsStreaming => Capabilities.HasFlag(EventBusProviderCapabilities.Streaming);
 
     /// <summary>
     /// Check if the Provider supports dead letter queues
     /// </summary>
-    public bool SupportsDeadLetterQueue => Capabilities.HasFlag(EEventBusCapabilities.DeadLetterQueue);
+    public bool SupportsDeadLetterQueue => Capabilities.HasFlag(EventBusProviderCapabilities.DeadLetterQueue);
 
     /// <summary>
     /// Get the display name of the Provider type
     /// </summary>
     public string ProviderTypeName => ProviderType switch
     {
-        EEventBusProviderType.Local => "本地",
-        EEventBusProviderType.Dapr => "Dapr",
+        EventBusProviderKind.Local => "本地",
+        EventBusProviderKind.Dapr => "Dapr",
         _ => "未知"
     };
 

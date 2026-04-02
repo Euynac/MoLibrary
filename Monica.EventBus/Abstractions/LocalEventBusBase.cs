@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.EventBus.Abstractions.Subscriptions;
+using Monica.EventBus.Services.Support;
 
 namespace Monica.EventBus.Abstractions;
 
@@ -13,9 +13,9 @@ namespace Monica.EventBus.Abstractions;
 public abstract class LocalEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
-    ISubscriptionManager subscriptionManager,
+    IEventSubscriptionRegistry subscriptionManager,
     string? serviceKey = null)
-    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey), IMoLocalEventBus
+    : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey), ILocalEventBus
 {
     /// <summary>
     /// For the local event bus, publishing means triggering handlers directly.

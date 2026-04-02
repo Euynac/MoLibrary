@@ -125,27 +125,27 @@ public class SubscriptionViewModel
     /// <summary>
     /// Subscription scope
     /// </summary>
-    public SubscriptionScope Scope { get; set; }
+    public EventSubscriptionScope Scope { get; set; }
 
     /// <summary>
     /// Subscription range display text
     /// </summary>
-    public string ScopeDisplay => Scope == SubscriptionScope.Local ? "本地" : "分布式";
+    public string ScopeDisplay => Scope == EventSubscriptionScope.Local ? "本地" : "分布式";
 
     /// <summary>
     /// Subscription status
     /// </summary>
-    public SubscriptionState State { get; set; }
+    public EventSubscriptionState State { get; set; }
 
     /// <summary>
     /// Subscription status display text
     /// </summary>
     public string StateDisplay => State switch
     {
-        SubscriptionState.Pending => "待激活",
-        SubscriptionState.Active => "活跃",
-        SubscriptionState.Inactive => "未激活",
-        SubscriptionState.Disposed => "已释放",
+        EventSubscriptionState.Pending => "待激活",
+        EventSubscriptionState.Active => "活跃",
+        EventSubscriptionState.Inactive => "未激活",
+        EventSubscriptionState.Disposed => "已释放",
         _ => "未知"
     };
 
@@ -154,17 +154,17 @@ public class SubscriptionViewModel
     /// </summary>
     public Color StateColor => State switch
     {
-        SubscriptionState.Active => Color.Success,
-        SubscriptionState.Pending => Color.Warning,
-        SubscriptionState.Inactive => Color.Default,
-        SubscriptionState.Disposed => Color.Error,
+        EventSubscriptionState.Active => Color.Success,
+        EventSubscriptionState.Pending => Color.Warning,
+        EventSubscriptionState.Inactive => Color.Default,
+        EventSubscriptionState.Disposed => Color.Error,
         _ => Color.Default
     };
 
     /// <summary>
     /// The color corresponding to the subscription range
     /// </summary>
-    public Color ScopeColor => Scope == SubscriptionScope.Local ? Color.Info : Color.Secondary;
+    public Color ScopeColor => Scope == EventSubscriptionScope.Local ? Color.Info : Color.Secondary;
 
     #endregion
 
@@ -225,17 +225,17 @@ public class SubscriptionViewModel
     {
         get
         {
-            if (State == SubscriptionState.Active && ActivatedAt.HasValue)
+            if (State == EventSubscriptionState.Active && ActivatedAt.HasValue)
             {
                 var duration = DateTime.UtcNow - ActivatedAt.Value;
                 return FormatDuration(duration);
             }
-            else if (State == SubscriptionState.Inactive && DeactivatedAt.HasValue && ActivatedAt.HasValue)
+            else if (State == EventSubscriptionState.Inactive && DeactivatedAt.HasValue && ActivatedAt.HasValue)
             {
                 var duration = DeactivatedAt.Value - ActivatedAt.Value;
                 return FormatDuration(duration);
             }
-            else if (State == SubscriptionState.Disposed && CreatedAt != default)
+            else if (State == EventSubscriptionState.Disposed && CreatedAt != default)
             {
                 var endTime = DeactivatedAt ?? ActivatedAt ?? DateTime.UtcNow;
                 var duration = endTime - CreatedAt;

@@ -13,7 +13,7 @@ namespace Monica.JobScheduler.Services;
 /// Job dispatcher is responsible for publishing job execution events to the event bus.
 /// </summary>
 public class JobDispatcher(
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     ILogger<JobDispatcher> logger,
     JobInstanceManager jobInstanceManager,
     IJobConcurrencyGuard concurrencyGuard)

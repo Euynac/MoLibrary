@@ -11,17 +11,17 @@ public class SubscriptionChangeViewModel
     /// <summary>
     /// Change type
     /// </summary>
-    public SubscriptionChangeType ChangeType { get; set; }
+    public EventSubscriptionChangeType ChangeType { get; set; }
 
     /// <summary>
     /// Change type display text
     /// </summary>
     public string ChangeTypeDisplay => ChangeType switch
     {
-        SubscriptionChangeType.Added => "添加",
-        SubscriptionChangeType.Activated => "激活",
-        SubscriptionChangeType.Deactivated => "停用",
-        SubscriptionChangeType.Removed => "移除",
+        EventSubscriptionChangeType.Added => "添加",
+        EventSubscriptionChangeType.Activated => "激活",
+        EventSubscriptionChangeType.Deactivated => "停用",
+        EventSubscriptionChangeType.Removed => "移除",
         _ => "未知"
     };
 
@@ -30,10 +30,10 @@ public class SubscriptionChangeViewModel
     /// </summary>
     public Color ChangeTypeColor => ChangeType switch
     {
-        SubscriptionChangeType.Added => Color.Success,
-        SubscriptionChangeType.Activated => Color.Info,
-        SubscriptionChangeType.Deactivated => Color.Warning,
-        SubscriptionChangeType.Removed => Color.Error,
+        EventSubscriptionChangeType.Added => Color.Success,
+        EventSubscriptionChangeType.Activated => Color.Info,
+        EventSubscriptionChangeType.Deactivated => Color.Warning,
+        EventSubscriptionChangeType.Removed => Color.Error,
         _ => Color.Default
     };
 
@@ -42,10 +42,10 @@ public class SubscriptionChangeViewModel
     /// </summary>
     public string ChangeTypeIcon => ChangeType switch
     {
-        SubscriptionChangeType.Added => Icons.Material.Filled.AddCircle,
-        SubscriptionChangeType.Activated => Icons.Material.Filled.PlayCircle,
-        SubscriptionChangeType.Deactivated => Icons.Material.Filled.PauseCircle,
-        SubscriptionChangeType.Removed => Icons.Material.Filled.RemoveCircle,
+        EventSubscriptionChangeType.Added => Icons.Material.Filled.AddCircle,
+        EventSubscriptionChangeType.Activated => Icons.Material.Filled.PlayCircle,
+        EventSubscriptionChangeType.Deactivated => Icons.Material.Filled.PauseCircle,
+        EventSubscriptionChangeType.Removed => Icons.Material.Filled.RemoveCircle,
         _ => Icons.Material.Filled.Circle
     };
 

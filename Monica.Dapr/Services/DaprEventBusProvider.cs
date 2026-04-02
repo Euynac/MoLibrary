@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.EventBus.Abstractions.Subscriptions;
+using Monica.EventBus.Services.Support;
 using Monica.Tool.Extensions;
 
 namespace Monica.Dapr.Services;
@@ -17,7 +17,7 @@ namespace Monica.Dapr.Services;
 public class DaprEventBusProvider(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
-    ISubscriptionManager subscriptionManager,
+    IEventSubscriptionRegistry subscriptionManager,
     DaprClient daprClient,
     IOptions<ModuleDaprEventBusOption> daprOptions,
     string? serviceKey = null)

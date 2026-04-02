@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.EventBus.Abstractions.Subscriptions;
-using Monica.EventBus.Attributes;
-using Monica.EventBus.Helpers;
+using Monica.EventBus.Annotations;
 using Monica.EventBus.Models;
+using Monica.EventBus.Services.Support;
+using Monica.EventBus.Utils;
 
 namespace Monica.EventBus.Abstractions;
 
@@ -13,14 +13,14 @@ namespace Monica.EventBus.Abstractions;
 /// Base class for all EventBus implementations.
 /// Provides common subscription management and handler triggering functionality.
 /// </summary>
-public abstract class EventBusBase : IMoEventBus
+public abstract class EventBusBase : IEventBus
 {
     private readonly Lazy<ILogger> _loggerLazy;
 
     protected EventBusBase(
         IServiceScopeFactory serviceScopeFactory,
         IEventHandlerInvoker eventHandlerInvoker,
-        ISubscriptionManager subscriptionManager,
+        IEventSubscriptionRegistry subscriptionManager,
         string? serviceKey = null)
     {
         ServiceScopeFactory = serviceScopeFactory;
@@ -32,32 +32,32 @@ public abstract class EventBusBase : IMoEventBus
 
     protected IServiceScopeFactory ServiceScopeFactory { get; }
     protected IEventHandlerInvoker EventHandlerInvoker { get; }
-    protected ISubscriptionManager SubscriptionManager { get; }
+    protected IEventSubscriptionRegistry SubscriptionManager { get; }
     protected ILogger Logger => _loggerLazy.Value;
     protected string? ServiceKey { get; }
 
-    public ISubscriptionManager Subscriptions => SubscriptionManager;
+    public IEventSubscriptionRegistry Subscriptions => SubscriptionManager;
 
     #region Subscribe Methods
 
-    public virtual async Task<ISubscription> SubscribeAsync<TEvent, THandler>(string? topicName = null)
+    public virtual async Task<IEventSubscription> SubscribeAsync<TEvent, THandler>(string? topicName = null)
         where TEvent : class
-        where THandler : IMoEventHandler
+        where THandler : IEventHandler
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
-        var descriptor = new SubscriptionDescriptor
+        var descriptor = new EventSubscriptionDescriptor
         {
             ServiceKey = ServiceKey,
             EventType = typeof(TEvent),
             TopicName = finalTopicName,
             HandlerFactory = new IocEventHandlerFactory(ServiceScopeFactory, typeof(THandler)),
-            Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
+            Scope = this is ILocalEventBus ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed,
             IsAutoDiscovered = false
         };
         return await SubscriptionManager.SubscribeAsync(descriptor);
     }
 
-    public virtual async Task<ISubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
+    public virtual async Task<IEventSubscription> SubscribeAsync<TEvent>(Func<TEvent, Task> handler, string? topicName = null)
         where TEvent : class
     {
         var finalTopicName = topicName ?? EventNameAttribute.GetNameOrDefault(typeof(TEvent));
@@ -65,13 +65,13 @@ public abstract class EventBusBase : IMoEventBus
         // Extract metadata for the action-based handler.
         var metadata = DelegateMetadataExtractor.ExtractMetadata(handler);
 
-        var descriptor = new SubscriptionDescriptor
+        var descriptor = new EventSubscriptionDescriptor
         {
             ServiceKey = ServiceKey,
             EventType = typeof(TEvent),
             TopicName = finalTopicName,
             HandlerFactory = new ActionEventHandlerFactory<TEvent>(handler),
-            Scope = this is IMoLocalEventBus ? SubscriptionScope.Local : SubscriptionScope.Distributed,
+            Scope = this is ILocalEventBus ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed,
             IsAutoDiscovered = false,
             Metadata = metadata
         };
@@ -104,13 +104,13 @@ public abstract class EventBusBase : IMoEventBus
 
     public virtual async Task TriggerHandlersAsync(Type eventType, object eventData, string topicName, CancellationToken cancellationToken = default)
     {
-        var isLocal = this is IMoLocalEventBus;
+        var isLocal = this is ILocalEventBus;
         // Query active subscriptions for this event type and topic
         var subscriptions = SubscriptionManager.GetAll()
             .Where(s => s.EventType == eventType &&
                         s.TopicName == topicName &&
-                        s.State == SubscriptionState.Active &&
-                        s.ServiceKey == ServiceKey && s.Scope == (isLocal ? SubscriptionScope.Local : SubscriptionScope.Distributed))
+                        s.State == EventSubscriptionState.Active &&
+                        s.ServiceKey == ServiceKey && s.Scope == (isLocal ? EventSubscriptionScope.Local : EventSubscriptionScope.Distributed))
             .ToList();
 
         if (subscriptions.Count == 0)

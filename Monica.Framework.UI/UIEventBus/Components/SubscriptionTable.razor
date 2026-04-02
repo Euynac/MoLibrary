@@ -95,7 +95,7 @@
             <MudTd DataLabel="创建时间">
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.body2">@context.CreatedAtDisplay</MudText>
-                    @if (context.State == EventBus.Models.SubscriptionState.Active)
+                    @if (context.State == EventBus.Models.EventSubscriptionState.Active)
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             已运行 @context.DurationDisplay

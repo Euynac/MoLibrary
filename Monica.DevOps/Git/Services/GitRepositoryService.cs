@@ -15,7 +15,7 @@ namespace Monica.DevOps.Git.Services;
 public sealed class GitRepositoryService(
     IOptions<ModuleGitOption> options,
     GitCredentialManager credentialManager,
-    IMoLocalEventBus localEventBus,
+    ILocalEventBus localEventBus,
     ILogger<GitRepositoryService> logger) : IGitRepositoryService
 {
     private readonly ModuleGitOption _option = options.Value;

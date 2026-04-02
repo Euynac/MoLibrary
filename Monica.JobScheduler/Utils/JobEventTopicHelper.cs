@@ -1,4 +1,4 @@
-using Monica.EventBus.Attributes;
+using Monica.EventBus.Annotations;
 
 namespace Monica.JobScheduler.Utils;
 

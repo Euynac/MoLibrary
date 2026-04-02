@@ -73,8 +73,8 @@
         {
             var keyMatches = s.ServiceKey == provider.ServiceKey;
             var scopeMatches = provider.IsDistributed
-                ? s.Scope == EventBus.Models.SubscriptionScope.Distributed
-                : s.Scope == EventBus.Models.SubscriptionScope.Local;
+                ? s.Scope == EventBus.Models.EventSubscriptionScope.Distributed
+                : s.Scope == EventBus.Models.EventSubscriptionScope.Local;
             return keyMatches && scopeMatches;
         }).ToList();
 

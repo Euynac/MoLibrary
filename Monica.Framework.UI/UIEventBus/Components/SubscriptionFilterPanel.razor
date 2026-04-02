@@ -47,10 +47,10 @@
                           @bind-Value="SelectedState"
                           OpenChanged="ApplyFilterOnSelectClosedAsync">
                     <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Active)">活跃</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Pending)">待激活</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Inactive)">未激活</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionState.Disposed)">已释放</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Active)">活跃</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Pending)">待激活</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Inactive)">未激活</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Disposed)">已释放</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
@@ -61,8 +61,8 @@
                           @bind-Value="SelectedScope"
                           OpenChanged="ApplyFilterOnSelectClosedAsync">
                     <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionScope.Local)">本地</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(SubscriptionScope.Distributed)">分布式</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Local)">本地</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Distributed)">分布式</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
@@ -145,7 +145,7 @@
                 return;
             }
 
-            Filter.State = Enum.TryParse<SubscriptionState>(value, out var state)
+            Filter.State = Enum.TryParse<EventSubscriptionState>(value, out var state)
                 ? state
                 : null;
         }
@@ -161,7 +161,7 @@
                 return;
             }
 
-            Filter.Scope = Enum.TryParse<SubscriptionScope>(value, out var scope)
+            Filter.Scope = Enum.TryParse<EventSubscriptionScope>(value, out var scope)
                 ? scope
                 : null;
         }

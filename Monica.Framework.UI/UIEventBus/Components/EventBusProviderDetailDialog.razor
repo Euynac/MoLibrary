@@ -1,4 +1,4 @@
-@using Monica.EventBus.Providers
+@using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.UI.UIModuleSystem.Components
 
@@ -98,7 +98,7 @@
                                                 死信队列
                                             </MudChip>
                                         }
-                                        @if (Provider.Capabilities == EEventBusCapabilities.None)
+                                        @if (Provider.Capabilities == EventBusProviderCapabilities.None)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
@@ -216,15 +216,15 @@
 
     private string GetProviderIcon() => Provider?.ProviderType switch
     {
-        EEventBusProviderType.Local => Icons.Material.Filled.Memory,
-        EEventBusProviderType.Dapr => Icons.Material.Filled.Cloud,
+        EventBusProviderKind.Local => Icons.Material.Filled.Memory,
+        EventBusProviderKind.Dapr => Icons.Material.Filled.Cloud,
         _ => Icons.Material.Filled.Help
     };
 
     private Color GetProviderColor() => Provider?.ProviderType switch
     {
-        EEventBusProviderType.Local => Color.Success,
-        EEventBusProviderType.Dapr => Color.Info,
+        EventBusProviderKind.Local => Color.Success,
+        EventBusProviderKind.Dapr => Color.Info,
         _ => Color.Default
     };
 }

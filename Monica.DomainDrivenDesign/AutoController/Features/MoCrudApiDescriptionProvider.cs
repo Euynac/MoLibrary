@@ -95,7 +95,7 @@ public class MoCrudApiDescriptionProvider(IModelMetadataProvider modelMetadataPr
             var finalBaseType = type.BaseType;
             while (finalBaseType is not null)
             {
-                if (finalBaseType.IsDerivedFromGenericType(typeof(MoCrudAppService<,,,,,,,,>)))
+                if (finalBaseType.IsDerivedFromGenericType(typeof(CrudAppService<,,,,,,,,>)))
                 {
                     break;
                 }

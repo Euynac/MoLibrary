@@ -8,7 +8,6 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Providers;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -21,7 +20,7 @@ public static class ModuleDaprEventBusBuilderExtensions
     public static ModuleDaprEventBusGuide UseDaprProvider(this ModuleEventBusGuide guide,
         Action<ModuleDaprEventBusOption>? action = null)
     {
-        guide.SetDistributedEventBusProvider<DaprEventBusProvider>();
+        guide.UseDistributedEventBus<DaprEventBusProvider>();
         return new ModuleDaprEventBusGuide().Register(action);
     }
 }
@@ -29,22 +28,22 @@ public static class ModuleDaprEventBusBuilderExtensions
 [ModuleKey(EMoModuleKey.DaprEventBus)]
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     : MoModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
-      IEventBusModuleProvider
+      IEventBusProviderModule
 {
 
-    #region IEventBusModuleProvider
+    #region IEventBusProviderModule
 
     /// <inheritdoc />
     public ModuleKey ProvidesFor => EMoModuleKey.EventBus;
 
     /// <inheritdoc />
-    public EEventBusProviderType ProviderType => EEventBusProviderType.Dapr;
+    public EventBusProviderKind ProviderType => EventBusProviderKind.Dapr;
 
     /// <inheritdoc />
-    public EEventBusCapabilities Capabilities =>
-        EEventBusCapabilities.BulkPublish |
-        EEventBusCapabilities.Streaming |
-        EEventBusCapabilities.DeadLetterQueue;
+    public EventBusProviderCapabilities Capabilities =>
+        EventBusProviderCapabilities.BulkPublish |
+        EventBusProviderCapabilities.Streaming |
+        EventBusProviderCapabilities.DeadLetterQueue;
 
     /// <inheritdoc />
     public string DisplayName => "Dapr";
@@ -85,7 +84,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
             // Configure options for this keyed instance
             context.Services.Configure(key, configureOptions);
             // Register keyed DaprEventBus with the specified serviceKey
-            context.Services.AddKeyedSingleton<IMoDistributedEventBus>(key, (sp, _) =>
+            context.Services.AddKeyedSingleton<IDistributedEventBus>(key, (sp, _) =>
             {
                 var options = Options.Create(sp.GetRequiredService<IOptionsMonitor<ModuleDaprEventBusOption>>().Get(key));
                 return ActivatorUtilities.CreateInstance<DaprEventBusProvider>(sp, options, key);

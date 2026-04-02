@@ -10,12 +10,12 @@ public class SubscriptionFilter
     /// <summary>
     /// Filter by status
     /// </summary>
-    public SubscriptionState? State { get; set; }
+    public EventSubscriptionState? State { get; set; }
 
     /// <summary>
     /// Filter by range
     /// </summary>
-    public SubscriptionScope? Scope { get; set; }
+    public EventSubscriptionScope? Scope { get; set; }
 
     /// <summary>
     /// Filter by service key

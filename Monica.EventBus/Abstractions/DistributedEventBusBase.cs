@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.EventBus.Abstractions.Subscriptions;
+using Monica.EventBus.Services.Support;
 
 namespace Monica.EventBus.Abstractions;
 
@@ -13,10 +13,10 @@ namespace Monica.EventBus.Abstractions;
 public abstract class DistributedEventBusBase(
     IServiceScopeFactory serviceScopeFactory,
     IEventHandlerInvoker eventHandlerInvoker,
-    ISubscriptionManager subscriptionManager,
+    IEventSubscriptionRegistry subscriptionManager,
     string? serviceKey = null)
     : EventBusBase(serviceScopeFactory, eventHandlerInvoker, subscriptionManager, serviceKey),
-        IMoDistributedEventBus
+        IDistributedEventBus
 {
     // Abstract methods - derived classes (DaprEventBus, RabbitMqEventBus, etc.) implement these
 }

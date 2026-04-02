@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Abstractions.Subscriptions;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Core.Results;
 
@@ -11,14 +10,14 @@ namespace Monica.Framework.UI.UIEventBus.Services;
 /// Event bus test service for managing test subscriptions and message collection
 /// </summary>
 public sealed class EventBusTestService(
-    IMoDistributedEventBus distributedEventBus,
+    IDistributedEventBus distributedEventBus,
     ILogger<EventBusTestService> logger) : IAsyncDisposable
 {
     private const int MaxMessageCount = 100;
 
     private readonly ConcurrentQueue<ReceivedTestMessage> _receivedMessages = new();
     private readonly object _subscriptionLock = new();
-    private ISubscription? _activeSubscription;
+    private IEventSubscription? _activeSubscription;
 
     /// <summary>
     /// Have you subscribed
@@ -79,7 +78,7 @@ public sealed class EventBusTestService(
     /// <summary>
     /// Subscribe to test topic
     /// </summary>
-    public async Task<Res<ISubscription>> SubscribeToTestTopicAsync(string topicName)
+    public async Task<Res<IEventSubscription>> SubscribeToTestTopicAsync(string topicName)
     {
         try
         {
@@ -143,7 +142,7 @@ public sealed class EventBusTestService(
     {
         try
         {
-            ISubscription? subscription;
+            IEventSubscription? subscription;
 
             lock (_subscriptionLock)
             {

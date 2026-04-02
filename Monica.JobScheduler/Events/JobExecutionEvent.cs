@@ -4,7 +4,7 @@ using Monica.JobScheduler.Models;
 namespace Monica.JobScheduler.Events;
 
 /// <summary>
-/// Event model for publishing job execution requests via IMoEventBus.
+/// Event model for publishing job execution requests via IEventBus.
 /// This event is published when a job needs to be executed, either from
 /// recurring job scheduling or manual triggered job invocation.
 /// </summary>

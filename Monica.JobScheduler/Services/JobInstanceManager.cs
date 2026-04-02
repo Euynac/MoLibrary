@@ -19,7 +19,7 @@ namespace Monica.JobScheduler.Services;
 /// </summary>
 public class JobInstanceManager(
     IJobMetadataRepository metadataRepository,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IServiceDiscoveryClientInfo clientInfo,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<JobInstanceManager> logger)

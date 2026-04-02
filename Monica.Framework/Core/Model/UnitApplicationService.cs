@@ -39,7 +39,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
 
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsSubclassOf(typeof(MoApplicationService));
+        return Type.IsClass && Type.IsSubclassOf(typeof(ApplicationService));
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()
@@ -60,7 +60,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         unit = unit.VerifyType() ? unit : null;
         if (unit != null)
         {
-            if (context.Type.IsSubclassOfRawGeneric(typeof(MoApplicationService<,>), out var exactGenericType))
+            if (context.Type.IsSubclassOfRawGeneric(typeof(ApplicationService<,>), out var exactGenericType))
             {
                 var args = exactGenericType.GetGenericArguments();
                 unit.RequestType = args[0];

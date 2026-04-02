@@ -14,7 +14,7 @@ namespace Monica.JobScheduler.Services;
 
 public class TriggeredJobManager(
     IJobDefinitionCacheService cacheService,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     IJobMetadataRepository metadataRepository,
     JobRegistry registry,
     IJobCancellationTokenManager jobCancellationManager,

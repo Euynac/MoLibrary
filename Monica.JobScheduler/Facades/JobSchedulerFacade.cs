@@ -31,7 +31,7 @@ public class JobSchedulerFacade(
     JobHistoryCleanupExecutor cleanupExecutor,
     IOptions<ModuleJobSchedulerOption> options,
     IOptions<ModuleServiceDiscoveryOption> serviceDiscoveryOptions,
-    [FromKeyedServices(nameof(ModuleJobScheduler))] IMoEventBus eventBus,
+    [FromKeyedServices(nameof(ModuleJobScheduler))] IEventBus eventBus,
     ILogger<JobSchedulerFacade> logger)
 {
     /// <summary>

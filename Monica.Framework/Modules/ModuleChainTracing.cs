@@ -130,7 +130,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
     {
         var type = context.ImplementationType;
         if (!type.IsAssignableTo<IMoApplicationService>() &&
-            !type.IsAssignableTo<IMoDomainService>() &&
+            !type.IsAssignableTo<IDomainService>() &&
             !type.IsSubclassOf(typeof(MoRpcApi)))
         {
             return false;
