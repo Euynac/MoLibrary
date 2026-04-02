@@ -7,7 +7,6 @@ using Monica.Core.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;

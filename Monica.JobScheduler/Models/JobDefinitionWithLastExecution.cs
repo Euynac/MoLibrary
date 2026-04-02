@@ -1,5 +1,3 @@
-using Monica.JobScheduler.Models;
-
 namespace Monica.JobScheduler.Models;
 
 /// <summary>

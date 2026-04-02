@@ -15,7 +15,7 @@ public record RpcRequest : IValidatableObject, IHasRpcHttpInfo
     public Dictionary<string, string?>? Headers { get; set; }
 }
 
-public record RpcRequest<TResponse> : RpcRequest, IMoRequest<TResponse>
+public record RpcRequest<TResponse> : RpcRequest, IResultRequest<TResponse>
 {
     
 }

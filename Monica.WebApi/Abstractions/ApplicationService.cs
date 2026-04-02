@@ -8,7 +8,13 @@ using Monica.DependencyInjection.Abstractions;
 
 namespace Monica.WebApi.Abstractions;
 
+/// <summary>
+/// Mark as application service
+/// </summary>
+public interface IApplicationService 
+{
 
+}
 /// <summary>
 /// Base class for application services, providing common properties and methods.
 /// </summary>
@@ -66,7 +72,7 @@ public abstract class CustomApplicationService<TRequest, TResponse> :
 /// <typeparam name="TResponse">The type of the response.</typeparam>
 public abstract class ApplicationService<TRequest, TResponse> :
     CustomApplicationService<TRequest, Res<TResponse>>
-    where TRequest : IMoRequest<TResponse>
+    where TRequest : IResultRequest<TResponse>
 {
 }
 
@@ -76,6 +82,6 @@ public abstract class ApplicationService<TRequest, TResponse> :
 /// <typeparam name="TRequest">The type of the request.</typeparam>
 public abstract class ApplicationService<TRequest> :
     CustomApplicationService<TRequest, Res>
-    where TRequest : IMoRequest
+    where TRequest : IResultRequest
 {
 }

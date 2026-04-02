@@ -19,7 +19,7 @@ public class UnitRequestDto(Type type) : ProjectUnit(type, EProjectUnitType.Requ
     {
         var type = context.Type;
         var unit = new UnitRequestDto(type);
-        if (!type.IsImplementInterface(typeof(IMoRequestBase))) return null;
+        if (!type.IsImplementInterface(typeof(IResultRequestBase))) return null;
         unit.CheckNameConventionMode();
         return unit;
     }

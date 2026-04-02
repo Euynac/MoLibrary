@@ -11,7 +11,6 @@ using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Dapr.Abstractions;
 using Monica.Modules;
 using Monica.EventBus.Abstractions;
-using Monica.EventBus.Services;
 using Monica.EventBus.Services.Support;
 
 namespace Monica.Dapr.Services;

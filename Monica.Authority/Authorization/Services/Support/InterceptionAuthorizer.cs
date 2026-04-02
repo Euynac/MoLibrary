@@ -1,7 +1,6 @@
 using Monica.Authority.Authorization.Abstractions;
 using Monica.Authority.Authorization.Models;
 using Monica.Authority.Identity.Abstractions;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstractions;
 
 namespace Monica.Authority.Authorization.Services.Support;

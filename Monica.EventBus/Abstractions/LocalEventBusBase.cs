@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Monica.EventBus.Abstractions.Handlers;
 using Monica.EventBus.Services.Support;
 
 namespace Monica.EventBus.Abstractions;

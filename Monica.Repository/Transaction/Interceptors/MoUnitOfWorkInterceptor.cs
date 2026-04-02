@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstractions;
 
 namespace Monica.Repository.Transaction.Interceptors;

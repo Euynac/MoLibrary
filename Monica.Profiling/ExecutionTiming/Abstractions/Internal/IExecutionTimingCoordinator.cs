@@ -1,5 +1,3 @@
-using Monica.Profiling.ExecutionTiming.Abstractions;
-
 namespace Monica.Profiling.ExecutionTiming.Abstractions.Internal;
 
 /// <summary>

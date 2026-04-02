@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.StateStore;
 using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
 using Monica.StateStore.Abstractions;

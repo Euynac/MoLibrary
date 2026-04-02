@@ -7,7 +7,6 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.EventBus.Models;
 using Monica.EventBus.Providers.Local;
 using Monica.EventBus.Providers.NoOp;
 using Monica.EventBus.Services;

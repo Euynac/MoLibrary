@@ -3,7 +3,6 @@ using System.Reflection;
 using Monica.Core.ExceptionHandling.Exceptions;
 using Monica.Core.Results;
 using Monica.Core.Results.Abstractions;
-using Monica.DependencyInjection.DynamicProxy;
 using Monica.DependencyInjection.DynamicProxy.Abstractions;
 using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Extensions;

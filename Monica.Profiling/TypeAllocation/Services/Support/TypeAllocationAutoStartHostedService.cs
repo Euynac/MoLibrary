@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.Profiling.TypeAllocation.Models;
-using Monica.Profiling.TypeAllocation.Services;
 
 namespace Monica.Profiling.TypeAllocation.Services.Support;
 

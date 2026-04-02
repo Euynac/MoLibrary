@@ -78,7 +78,7 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
         {
             if (!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(RequestType.FullName!, out var requestUnit))
             {
-                var alertMessage = $"{this}无法关联其请求{RequestType.GetCleanFullName()},可能未继承{nameof(IMoRequest)}相关接口";
+                var alertMessage = $"{this}无法关联其请求{RequestType.GetCleanFullName()},可能未继承{nameof(IResultRequest)}相关接口";
                 // Add warning level alert
                 Alerts.Add(new ProjectUnitAlert
                 {

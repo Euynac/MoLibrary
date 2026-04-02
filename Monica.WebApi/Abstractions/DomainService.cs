@@ -5,6 +5,13 @@ using Monica.Core.Logging;
 using Monica.DependencyInjection.Abstractions;
 
 namespace Monica.WebApi.Abstractions;
+/// <summary>
+/// This interface can be implemented by all domain services to identify them by convention.
+/// </summary>
+public interface IDomainService : ITransientDependency
+{
+
+}
 
 public abstract class DomainService : IDomainService, ICachedServiceProviderAccessor
 {

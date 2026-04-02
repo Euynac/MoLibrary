@@ -1,7 +1,6 @@
 using Dapr.Client;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
-using Monica.Core.Modularity.Interfaces;
 using Monica.Modules;
 
 namespace Monica.Dapr.Services;
