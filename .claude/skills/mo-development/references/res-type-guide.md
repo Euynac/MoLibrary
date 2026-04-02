@@ -16,12 +16,12 @@ This guide documents Monica's lightweight result-envelope model built around `Re
 
 The `Res` and `Res<T>` types provide a consistent way to return result envelopes from service methods, supporting:
 - Success/failure status
-- Error messages and codes
+- Error messages and statuses
 - Data payload (for `Res<T>`)
-- Optional metadata in `ExtraInfo`
+- Optional metadata in `Metadata`
 - Implicit conversions for cleaner code
 
-The serialized contract remains compatible with Monica's existing API shape, including fields such as `code` and `message`.
+The CLR model and the serialized contract now align. With the repository's camelCase JSON policy, envelopes are serialized as `message`, `status`, `metadata`, and `data`.
 
 ## Res<T> Generic Type
 
@@ -36,17 +36,17 @@ public async Task<Res<UserData>> GetUserAsync(int id)
 {
     var user = await repo.GetUserById(id);
 
-    // Return error - string converts to Res<T> with Code 400
+    // Return error - string converts to Res<T> with Status 400
     if (user == null)
     {
-        return "User not found";  // string => Res<T>, Data = null, Code = 400
+        return "User not found";  // string => Res<T>, Data = null, Status = 400
     }
 
     // Equivalent explicit form:
     // return Res.Fail("User not found");
 
-    // Return success - T instance converts to Res<T> with Code 200
-    return user;  // T => Res<T>, Code = 200
+    // Return success - T instance converts to Res<T> with Status 200
+    return user;  // T => Res<T>, Status = 200
 }
 ```
 
@@ -57,7 +57,7 @@ public async Task<Res> DeleteUserAsync(int id)
 {
     if (!(await repo.Exists(id)))
     {
-        return "User does not exist";  // string => Res, Code = 400
+        return "User does not exist";  // string => Res, Status = 400
         // Equivalent: return Res.Fail("User does not exist");
     }
 
@@ -224,7 +224,7 @@ public class UserUIService(
 3. **Catch exceptions** - Return `Res.Fail()` with meaningful error messages
 4. **Use implicit conversions** - Makes code cleaner and more readable
 5. **Include using statement** - `using Monica.Tool.Results;`
-6. **Attach structured error payloads** - use `AppendExtraInfo("error", payload)` when extra error detail is needed
+6. **Attach structured error payloads** - use `AppendMetadata("error", payload)` when extra error detail is needed
 
 ## API Response Integration
 
@@ -240,6 +240,36 @@ endpoints.MapGet("/users/{id}", async (int id, IUserService userService) =>
 
 // With message appending
 return Res.Ok(data).AppendMessage("Operation completed successfully").GetResponse();
+```
+
+Use `GetResponse()` when you want Monica's standard wire contract (`message`, `status`, `data`, `metadata`).
+
+For external APIs that should expose a custom response shape without changing `Res` itself, implement a projector and opt into `GetProjectedResponse(...)`:
+
+```csharp
+public sealed record PublicApiRes(string Msg, ResStatus Status, object? Payload, object? Extra);
+
+public sealed class PublicApiResProjector : IResultProjector<PublicApiRes>
+{
+    public PublicApiRes Project(IResultEnvelope response)
+    {
+        var payload = response.GetType().GetProperty(nameof(Res<object>.Data))?.GetValue(response);
+
+        return new PublicApiRes(
+            response.Message ?? string.Empty,
+            response.Status,
+            payload,
+            response.Metadata);
+    }
+}
+
+Mo.Options.ResultProjector = new PublicApiResProjector();
+
+// Controller
+return result.GetProjectedResponse(this);
+
+// Minimal API
+return result.GetProjectedResponse(httpContext);
 ```
 
 ## Summary Table

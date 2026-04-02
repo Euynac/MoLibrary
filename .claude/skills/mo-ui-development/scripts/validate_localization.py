@@ -26,6 +26,21 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
+COMMENT_PATTERNS = (
+    re.compile(r'@\*.*?\*@', re.DOTALL),
+    re.compile(r'<!--.*?-->', re.DOTALL),
+    re.compile(r'/\*.*?\*/', re.DOTALL),
+    re.compile(r'(?m)^[ \t]*//.*$'),
+)
+DIRECT_KEY_PATTERN = re.compile(
+    r'["\'](?P<key>[A-Z][A-Za-z0-9]*(?::[A-Z][A-Za-z0-9]*)+)["\']',
+)
+INTERPOLATED_KEY_PATTERN = re.compile(
+    r'(?P<prefix>\$@|@\$|@|\$)"(?P<template>[^"]*\{[^"]+\}[^"]*)"',
+    re.DOTALL,
+)
+INTERPOLATION_PATTERN = re.compile(r'\{[^{}]+\}')
+
 
 class Colors:
     """ANSI color codes for terminal output."""
@@ -49,6 +64,7 @@ class LocalizationValidator:
 
         self.used_keys: DefaultDict[str, List[Tuple[str, int]]] = defaultdict(list)
         self.defined_keys: Dict[str, Set[str]] = {}
+        self.all_defined_keys: Set[str] = set()
         self.missing_keys: DefaultDict[str, List[Tuple[str, int]]] = defaultdict(list)
         self.unused_keys: Set[str] = set()
         self.sync_issues: Dict[str, Dict[str, bool]] = {}
@@ -97,54 +113,102 @@ class LocalizationValidator:
         return resources
 
     def scan_razor_files(self) -> None:
-        """Extract @L["..."] and L["..."] patterns from Razor files."""
-        pattern = re.compile(r'@?L\["([^"]+)"(?:\s*,\s*[^\]]+)?\]')
-
-        for project in self.ui_projects:
-            project_path = self.root_path / project
-            if not project_path.exists():
-                continue
-
-            for razor_file in project_path.rglob('*.razor'):
-                try:
-                    lines = razor_file.read_text(encoding='utf-8').splitlines()
-                except Exception as exc:
-                    print(f"Warning: Could not read {razor_file}: {exc}", file=sys.stderr)
-                    continue
-
-                for line_num, line in enumerate(lines, 1):
-                    if '@*' in line or '*@' in line:
-                        continue
-
-                    for key in pattern.findall(line):
-                        relative_path = razor_file.relative_to(self.root_path)
-                        self.used_keys[key].append((str(relative_path), line_num))
+        """Extract localization keys from Razor files."""
+        self._scan_source_files('*.razor')
 
     def scan_cs_files(self) -> None:
-        """Extract colon-separated localization keys from C# files."""
-        pattern = re.compile(r'["\']([A-Z][A-Za-z]+:[A-Za-z:]+)["\']')
+        """Extract localization keys from C# files."""
+        self._scan_source_files('*.cs')
 
+    def _scan_source_files(self, glob_pattern: str) -> None:
+        """Extract localization keys from source files by scanning string literals."""
         for project in self.ui_projects:
             project_path = self.root_path / project
             if not project_path.exists():
                 continue
 
-            for cs_file in project_path.rglob('*.cs'):
-                try:
-                    lines = cs_file.read_text(encoding='utf-8').splitlines()
-                except Exception as exc:
-                    print(f"Warning: Could not read {cs_file}: {exc}", file=sys.stderr)
-                    continue
+            for source_file in project_path.rglob(glob_pattern):
+                self._scan_source_file(source_file)
 
-                for line_num, line in enumerate(lines, 1):
-                    if line.strip().startswith('//'):
-                        continue
+    def _scan_source_file(self, source_file: Path) -> None:
+        """Scan a single source file for explicit or interpolated localization keys."""
+        try:
+            content = source_file.read_text(encoding='utf-8')
+        except Exception as exc:
+            print(f"Warning: Could not read {source_file}: {exc}", file=sys.stderr)
+            return
 
-                    for key in pattern.findall(line):
-                        parts = key.split(':')
-                        if len(parts) >= 2 and len(key) < 100:
-                            relative_path = cs_file.relative_to(self.root_path)
-                            self.used_keys[key].append((str(relative_path), line_num))
+        masked_content = self._mask_comments(content)
+        relative_path = str(source_file.relative_to(self.root_path))
+
+        for match in DIRECT_KEY_PATTERN.finditer(masked_content):
+            line_num = masked_content.count('\n', 0, match.start()) + 1
+            self.used_keys[match.group('key')].append((relative_path, line_num))
+
+        for match in INTERPOLATED_KEY_PATTERN.finditer(masked_content):
+            template = match.group('template').strip()
+            if not template:
+                continue
+
+            line_num = masked_content.count('\n', 0, match.start()) + 1
+            for key in self._extract_interpolated_keys(template):
+                self.used_keys[key].append((relative_path, line_num))
+
+    @staticmethod
+    def _mask_comments(content: str) -> str:
+        """Mask comments while preserving line numbers for diagnostics."""
+        masked_content = content
+        for pattern in COMMENT_PATTERNS:
+            masked_content = pattern.sub(
+                lambda match: re.sub(r'[^\n]', ' ', match.group(0)),
+                masked_content,
+            )
+        return masked_content
+
+    def _extract_interpolated_keys(self, template: str) -> Set[str]:
+        """Resolve a simple interpolated template to matching defined localization keys."""
+        if not self.all_defined_keys or '{' not in template or '}' not in template:
+            return set()
+
+        pattern = self._build_interpolated_key_pattern(template)
+        if pattern is None:
+            return set()
+
+        keys: Set[str] = set()
+        for defined_key in self.all_defined_keys:
+            if pattern.fullmatch(defined_key):
+                keys.add(defined_key)
+
+        return keys
+
+    @staticmethod
+    def _build_interpolated_key_pattern(template: str) -> Optional[re.Pattern[str]]:
+        """Build a regex that maps a simple interpolated key template to defined keys."""
+        if ':' not in template or not template[:1].isupper():
+            return None
+
+        parts: List[str] = []
+        last_index = 0
+        placeholder_count = 0
+
+        for match in INTERPOLATION_PATTERN.finditer(template):
+            parts.append(re.escape(template[last_index:match.start()]))
+            parts.append(r'[A-Za-z0-9]+')
+            last_index = match.end()
+            placeholder_count += 1
+
+        if placeholder_count == 0:
+            return None
+
+        parts.append(re.escape(template[last_index:]))
+        pattern = ''.join(parts)
+        if ':' not in pattern:
+            return None
+
+        try:
+            return re.compile(f'^{pattern}$')
+        except re.error:
+            return None
 
     def scan_ui_registry_keys(self) -> None:
         """Validate RegisterLocalizedComponent keys against UIRegistryResource."""
@@ -369,6 +433,8 @@ class LocalizationValidator:
 
     def load_json_keys(self) -> None:
         """Load and flatten JSON keys from all discovered localization resources."""
+        self.all_defined_keys = set()
+
         for lang in self.languages:
             all_keys: Set[str] = set()
 
@@ -389,6 +455,7 @@ class LocalizationValidator:
                 all_keys.update(self._flatten_json(data))
 
             self.defined_keys[lang] = all_keys
+            self.all_defined_keys.update(all_keys)
 
     def load_ui_registry_keys(self) -> None:
         """Load and flatten UIRegistryResource keys for targeted validation."""
@@ -592,14 +659,14 @@ def main() -> None:
             validator.generate_report(output_format, args.summary)
             sys.exit(1)
 
+        validator.load_json_keys()
+        validator.load_ui_registry_keys()
         print('Scanning Razor files...')
         validator.scan_razor_files()
         print('Scanning C# files...')
         validator.scan_cs_files()
         print('Scanning UI registry keys...')
         validator.scan_ui_registry_keys()
-        validator.load_json_keys()
-        validator.load_ui_registry_keys()
         validator.validate_bidirectional()
         validator.validate_language_sync()
         validator.validate_ui_registry_usage()
