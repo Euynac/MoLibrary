@@ -8,7 +8,7 @@ using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Models;
 using Monica.Modules;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.AutoModel.Services;
 

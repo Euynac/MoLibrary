@@ -3,9 +3,9 @@ using System.ComponentModel;
 using System.Reflection;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Helpers;
 
-public static class TypeClassifier
+public static class TypeHelper
 {
     private static readonly HashSet<Type> FloatingTypes =
     [
@@ -97,7 +97,7 @@ public static class TypeClassifier
             return false;
         }
 
-        var enumerableTypes = ReflectionInspector.GetImplementedGenericTypes(type, typeof(IEnumerable<>));
+        var enumerableTypes = ReflectionHelper.GetImplementedGenericTypes(type, typeof(IEnumerable<>));
         if (enumerableTypes.Count == 1)
         {
             itemType = enumerableTypes[0].GenericTypeArguments[0];
@@ -116,7 +116,7 @@ public static class TypeClassifier
 
     public static bool IsDictionary(Type type, out Type? keyType, out Type? valueType)
     {
-        var dictionaryTypes = ReflectionInspector
+        var dictionaryTypes = ReflectionHelper
             .GetImplementedGenericTypes(
                 type,
                 typeof(IDictionary<,>)

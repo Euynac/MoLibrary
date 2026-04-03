@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
 using Monica.Core.Results.Abstractions;
 using Monica.Core.Results.Models.Internal;
+using Monica.Tool.Diagnostics;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
 
 namespace Monica.Core.Results.Services;
 

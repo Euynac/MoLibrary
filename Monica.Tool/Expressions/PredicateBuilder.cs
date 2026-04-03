@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Expressions;
 
 // Codes below are taken from https://github.com/scottksmith95/LINQKit project.
 

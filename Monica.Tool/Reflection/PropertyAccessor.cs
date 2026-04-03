@@ -2,7 +2,7 @@
 using System.Reflection;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Reflection;
 
 /// <summary>
 /// https://stackoverflow.com/questions/1402803/passing-properties-by-reference-in-c-sharp

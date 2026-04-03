@@ -6,7 +6,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Model;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
+using Monica.Tool.IO;
+using Monica.Tool.Runtime;
 
 namespace Monica.Configuration.Providers;
 
@@ -72,7 +73,7 @@ public class LocalJsonFileProvider(MoConfigurationCard card)
             filename = Path.Combine(parent, filename);
         }
 
-        var path = GeneralExtensions.GetRelativePathInRunningPath(filename);
+        var path = RuntimePathHelper.GetRelativePathInRunningPath(filename);
         
         if (!File.Exists(path))
         {

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Reflection;
 
 /// <summary>
 /// Provides object-cloning and property-inspection helpers built on reflection.
@@ -20,11 +20,11 @@ public static class ObjectReflection
     }
 
     /// <summary>
-    /// Clone all writable attribute values ​​in an object to the object (the reference type is still the same reference, and the value type is copied) (EFCore will track modifications because it is an Action operation)
+    /// Clone all writable attribute values in an object to the object (the reference type is still the same reference, and the value type is copied) (EFCore will track modifications because it is an Action operation)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="obj"></param>
-    /// <param name="copyFromObj">Objects whose values ​​need to be copied are used for cloning</param>
+    /// <param name="copyFromObj">Objects whose values need to be copied are used for cloning</param>
     /// <param name="ignoreParameterNames">Set attribute names to ignore clones</param>
     /// <returns>Return given cloned object for convenient.</returns>
     public static T CloneParameters<T>(this T obj, T copyFromObj, params string[] ignoreParameterNames)

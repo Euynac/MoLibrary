@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Reflection;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Reflection;
 
 /// <summary>
 /// A shortcut for <see cref="ITypeList{TBaseType}"/> to use object as base type.

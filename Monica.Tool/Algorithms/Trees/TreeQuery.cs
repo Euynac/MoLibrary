@@ -1,4 +1,4 @@
-namespace Monica.Tool.Algorithm.Tree;
+namespace Monica.Tool.Algorithms.Trees;
 
 /// <summary>
 /// Extension methods for querying tree structures.

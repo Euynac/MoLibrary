@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.EntityInterfaces;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
 
 namespace Monica.Repository.Registrar;
 public class MoEfCoreRegistrationOptions(Type dbContextType, IServiceCollection services)
@@ -30,7 +30,7 @@ public class EfCoreRepositoryRegistrar(MoEfCoreRegistrationOptions options)
         return
             from property in dbContextType.GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance)
             where
-                ReflectionInspector.IsAssignableToGenericType(property.PropertyType, typeof(DbSet<>)) &&
+                ReflectionHelper.IsAssignableToGenericType(property.PropertyType, typeof(DbSet<>)) &&
                 typeof(IMoEntity).IsAssignableFrom(property.PropertyType.GenericTypeArguments[0])
             select property.PropertyType.GenericTypeArguments[0];
     }

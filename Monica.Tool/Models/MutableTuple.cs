@@ -1,4 +1,4 @@
-﻿namespace Monica.Tool.General;
+﻿namespace Monica.Tool.Models;
 
 /// <summary>
 /// Mutable tuple class for convenient in some scenarios.

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 
 /// <summary>
 /// Provides text escaping helpers for regex and serialized text processing.

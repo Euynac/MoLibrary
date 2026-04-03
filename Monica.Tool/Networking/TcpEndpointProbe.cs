@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace Monica.Tool.Web;
+namespace Monica.Tool.Networking;
 
 public class TcpEndpointProbe
 {

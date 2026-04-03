@@ -1,4 +1,4 @@
-namespace Monica.Tool.Annotations;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Includes the annotated property only when signature generation is configured

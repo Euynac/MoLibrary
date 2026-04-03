@@ -2,8 +2,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.Models;
-using Monica.Tool.Algorithm.Tree;
 using Monica.Core.Results;
+using Monica.Tool.Algorithms.Trees;
 
 namespace Monica.Markdown.UIMarkdown.Services;
 

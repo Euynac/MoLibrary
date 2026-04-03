@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
-using Monica.Tool.Utils;
+using Monica.Tool.Validation;
 
 namespace Monica.Repository.Transaction;
 

@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Text.Unicode;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Diagnostics;
 
 public static class DebugJson
 {

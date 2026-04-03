@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using System.Globalization;
 using Monica.Tool.Extensions;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
+using Monica.Tool.Validation;
 
 namespace Monica.Repository.EntityInterfaces;
 
@@ -95,7 +96,7 @@ public static class HasExtraPropertiesExtensions
             return defaultValue;
         }
 
-        if (TypeClassifier.IsPrimitiveExtended(typeof(TProperty), includeEnums: true))
+        if (TypeHelper.IsPrimitiveExtended(typeof(TProperty), includeEnums: true))
         {
             var conversionType = typeof(TProperty);
             if (conversionType.IsNullableValueType())

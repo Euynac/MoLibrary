@@ -1,5 +1,5 @@
 using Monica.Profiling.ExecutionTiming.Models;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.Profiling.UIExecutionTiming.Support;
 

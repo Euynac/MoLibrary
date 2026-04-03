@@ -1,4 +1,4 @@
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Threading;
 
 public sealed class NullDisposable : IDisposable
 {

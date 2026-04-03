@@ -5,6 +5,7 @@ using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.Tool.Extensions;
+using Monica.Tool.Runtime;
 
 namespace Monica.AI.RAG.Services;
 
@@ -21,7 +22,7 @@ public sealed class FileChunkerRoutingStore(
     };
 
     private readonly string _filePath =
-        GeneralExtensions.GetRelativePathInRunningPath(options.Value.ChunkerRoutingStoreFilePath);
+        RuntimePathHelper.GetRelativePathInRunningPath(options.Value.ChunkerRoutingStoreFilePath);
 
     private readonly SemaphoreSlim _lock = new(1, 1);
 

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Monica.Tool.Extensions;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
 
 namespace Monica.WebApi.AutoControllers.Extensions;
 
@@ -72,7 +72,7 @@ public static class ActionResultHelper
 
     public static bool IsObjectResult(Type returnType, params Type[] excludeTypes)
     {
-        returnType = TaskTypeInspector.UnwrapTask(returnType);
+        returnType = AsyncHelper.UnwrapTask(returnType);
 
         if (!excludeTypes.IsNullOrEmptySet() && excludeTypes.Any(t => t.IsAssignableFrom(returnType)))
         {

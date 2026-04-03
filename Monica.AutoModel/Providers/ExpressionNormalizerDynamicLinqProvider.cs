@@ -5,8 +5,8 @@ using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Models;
 using Monica.AutoModel.Services;
 using Monica.Modules;
+using Monica.Tool.Diagnostics;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
 
 namespace Monica.AutoModel.Providers;
 

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Monica.Tool.Web;
+namespace Monica.Tool.Networking;
 
 /// <summary>
 /// Common ContentType

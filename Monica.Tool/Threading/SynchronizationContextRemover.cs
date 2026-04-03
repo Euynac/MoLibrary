@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Threading;
 
 /// <summary>
 /// An alternative to ConfigureAwait(false) everywhere.

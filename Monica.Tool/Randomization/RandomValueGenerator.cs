@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Randomization;
 
 /// <summary>
 /// Generates random values for bytes, numbers, strings, dates, and enum members.

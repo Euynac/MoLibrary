@@ -1,8 +1,9 @@
 using System.Reflection;
 using System.Text;
 using Monica.Tool.Extensions;
+using Monica.Tool.Randomization;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.IO;
 
 /// <summary>
 /// Provides lightweight file-system helpers used across Monica modules.

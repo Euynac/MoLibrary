@@ -1,9 +1,9 @@
-﻿namespace Monica.Tool.General;
+﻿namespace Monica.Tool.Helpers;
 
 /// <summary>
 /// Provides helpers for inspecting and adapting generic type contracts.
 /// </summary>
-public static class GenericTypeSupport
+public static class GenericTypeHelper
 {
     /// <summary>
     /// Determine whether the current type implements the given generic type (such as IList&lt;&gt;, etc.)

@@ -2,7 +2,7 @@
 using System.Text.RegularExpressions;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General.UnitConvert;
+namespace Monica.Tool.Units;
 
 public abstract class UnitConverterBase
 {

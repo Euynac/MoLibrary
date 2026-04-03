@@ -7,7 +7,7 @@ using Monica.AutoModel.Models;
 using Monica.AutoModel.Services;
 using Monica.AutoModel.Utils;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.AutoModel.Providers;
 

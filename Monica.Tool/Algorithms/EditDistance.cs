@@ -1,4 +1,4 @@
-﻿namespace Monica.Tool.Algorithm;
+﻿namespace Monica.Tool.Algorithms;
 
 public class EditDistance
 {

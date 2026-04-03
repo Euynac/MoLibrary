@@ -1,4 +1,4 @@
-﻿namespace Monica.Tool.General;
+﻿namespace Monica.Tool.Text;
 
 /// <summary>
 /// Shared text dictionaries used by parsing and normalization helpers.

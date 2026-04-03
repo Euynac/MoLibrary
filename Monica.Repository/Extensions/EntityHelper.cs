@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Monica.Repository.EntityInterfaces;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
+using Monica.Tool.Validation;
 
 namespace Monica.Repository.Extensions;
 
@@ -69,7 +70,7 @@ public static class EntityHelper
                 return false;
             }
 
-            if (TypeClassifier.IsDefaultValue(entity1Key) && TypeClassifier.IsDefaultValue(entity2Key))
+            if (TypeHelper.IsDefaultValue(entity1Key) && TypeHelper.IsDefaultValue(entity2Key))
             {
                 return false;
             }
@@ -166,7 +167,7 @@ public static class EntityHelper
             return Convert.ToInt64(value) <= 0;
         }
 
-        return TypeClassifier.IsDefaultValue(value);
+        return TypeHelper.IsDefaultValue(value);
     }
 
     public static bool HasDefaultKeys(IMoEntity entity)

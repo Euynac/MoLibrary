@@ -1,4 +1,4 @@
-namespace Monica.Tool.Algorithm.Tree;
+namespace Monica.Tool.Algorithms.Trees;
 
 /// <summary>
 /// Factory methods for building tree structures from various data sources.

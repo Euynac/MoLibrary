@@ -1,7 +1,7 @@
 using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Modules;
-using Monica.Tool.Algorithm.Tree;
+using Monica.Tool.Algorithms.Trees;
 
 namespace Monica.Markdown.Scanner;
 

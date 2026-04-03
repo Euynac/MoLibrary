@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Tool.Extensions;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
 using Monica.WebApi.Annotations;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
@@ -149,7 +149,7 @@ public class CrudControllerServiceConvention(
                 {
                     continue;
                 }
-                if (!TypeClassifier.IsPrimitiveExtended(prm.ParameterInfo.ParameterType, includeEnums: true))
+                if (!TypeHelper.IsPrimitiveExtended(prm.ParameterInfo.ParameterType, includeEnums: true))
                 {
                     if (CanUseFormBodyBinding(action, prm))
                     {

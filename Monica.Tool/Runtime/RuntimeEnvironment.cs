@@ -1,4 +1,4 @@
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Runtime;
 
 /// <summary>
 /// Exposes process-level environment flags used by Monica infrastructure components.

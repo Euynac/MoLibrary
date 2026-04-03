@@ -67,10 +67,10 @@ Option Pattern是框架已经注册了如下三种形式的配置接口：
      setting.SetOtherSourceAction = manager =>
      {
          manager.AddJsonFile(
-             GeneralExtensions.GetRelativePathInRunningPath($"{configDirectory}/global-appsettings.json"), false,
+             RuntimePathHelper.GetRelativePathInRunningPath($"{configDirectory}/global-appsettings.json"), false,
              true);
          manager.AddJsonFile(
-             GeneralExtensions.GetRelativePathInRunningPath("appsettings.json"), true,
+             RuntimePathHelper.GetRelativePathInRunningPath("appsettings.json"), true,
              true);
      };
  });

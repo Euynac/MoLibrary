@@ -1,4 +1,4 @@
-using Monica.Tool.Utils;
+using Monica.Tool.Validation;
 
 namespace Monica.Authority.Authorization.Models;
 

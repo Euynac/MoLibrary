@@ -4,7 +4,7 @@ using Monica.DevOps.FileOps.Abstractions;
 using Monica.DevOps.FileOps.Exceptions;
 using Monica.DevOps.FileOps.Models;
 using Monica.DevOps.FileOps.Services.Support;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.DevOps.FileOps.Services;
 

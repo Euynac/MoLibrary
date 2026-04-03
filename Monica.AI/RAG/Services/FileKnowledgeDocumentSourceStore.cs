@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.Tool.Extensions;
+using Monica.Tool.Runtime;
 
 namespace Monica.AI.RAG.Services;
 
@@ -12,7 +13,7 @@ public sealed class FileKnowledgeDocumentSourceStore(IOptions<ModuleRAGOption> o
     : IKnowledgeDocumentSourceStore
 {
     private readonly string _rootPath =
-        GeneralExtensions.GetRelativePathInRunningPath(options.Value.UploadedDocumentSourceRootPath);
+        RuntimePathHelper.GetRelativePathInRunningPath(options.Value.UploadedDocumentSourceRootPath);
 
     private readonly SemaphoreSlim _lock = new(1, 1);
 

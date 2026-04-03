@@ -1,4 +1,4 @@
-namespace Monica.Tool.Models;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Configures how signature payloads are built from an object graph.

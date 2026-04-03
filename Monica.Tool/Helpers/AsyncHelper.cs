@@ -1,11 +1,12 @@
 using System.Reflection;
+using Monica.Tool.Validation;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Helpers;
 
 /// <summary>
 /// Provides some helper methods to work with async methods.
 /// </summary>
-public static class TaskTypeInspector
+public static class AsyncHelper
 {
     /// <summary>
     /// Checks if given method is an async method.

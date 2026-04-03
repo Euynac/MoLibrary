@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Monica.Tool.Algorithm;
+using Monica.Tool.Algorithms;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 
 /// <summary>
 /// Provides common text conversion, encoding, and similarity helpers.

@@ -1,25 +1,13 @@
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
 namespace Monica.Tool.Extensions;
 
-public static class GeneralExtensions
+/// <summary>
+/// Provides helpers for extracting readable context from <see cref="JsonException"/> instances.
+/// </summary>
+public static class JsonExceptionExtensions
 {
-    public static string GetRelativePathInRunningPath(string relativePath)
-    {
-        return Path.Combine(GetRunningPath(), relativePath);
-    }
-
-    /// <summary>
-    /// Get the running path of the current application.
-    /// </summary>
-    /// <returns></returns>
-    public static string GetRunningPath()
-    {
-        return Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!;
-    }
-
     /// <summary>
     /// Only support line and bytes number in int range.
     /// </summary>
@@ -35,9 +23,8 @@ public static class GeneralExtensions
         var lineNumber = (int)(jsonException.LineNumber ?? 0);
         var bytePositionInLine = (int)(jsonException.BytePositionInLine ?? 0);
 
-        var lines = originJson.Split(["\r\n", "\n" ], StringSplitOptions.None);
+        var lines = originJson.Split(["\r\n", "\n"], StringSplitOptions.None);
 
-        
         var errorDetails = new StringBuilder();
         errorDetails.AppendLine($"Error at Line {lineNumber}, Byte Position {bytePositionInLine}: {jsonException.Message}");
         errorDetails.AppendLine("Context Preview:");
@@ -49,14 +36,13 @@ public static class GeneralExtensions
         }
 
         var lineWithError = lines[lineNumber];
-
         var preview = GetPreviewAroundBytesPosition(lineWithError, bytePositionInLine);
 
- 
         errorDetails.AppendLine(preview);
 
         return errorDetails.ToString();
     }
+
     public static string GetPreviewAroundBytesPosition(string line, int bytePosition, int contextWindow = 20)
     {
         var position = NormalizeCount(line, bytePosition);

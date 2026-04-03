@@ -1,4 +1,4 @@
-namespace Monica.Tool.Models;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Controls how signature fields are serialized before hashing.

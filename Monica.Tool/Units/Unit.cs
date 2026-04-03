@@ -1,4 +1,4 @@
-﻿namespace Monica.Tool.General.UnitConvert;
+﻿namespace Monica.Tool.Units;
 
 public class UnitValue
 {

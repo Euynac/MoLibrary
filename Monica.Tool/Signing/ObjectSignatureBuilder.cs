@@ -2,11 +2,10 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
-using Monica.Tool.Models;
+using Monica.Tool.Security;
 
-namespace Monica.Tool.Security;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Builds deterministic signature payloads and hashes from public object properties.

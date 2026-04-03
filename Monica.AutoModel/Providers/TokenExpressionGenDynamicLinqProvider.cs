@@ -7,7 +7,7 @@ using Monica.AutoModel.Abstractions;
 using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Models;
 using Monica.AutoModel.Utils;
-using Monica.Tool.General;
+using Monica.Tool.Diagnostics;
 
 namespace Monica.AutoModel.Providers;
 

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Diagnostics;
 
 /// <summary>
 /// Measures synchronous execution time for benchmarking and diagnostics.

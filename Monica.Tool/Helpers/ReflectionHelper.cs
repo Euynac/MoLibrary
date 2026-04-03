@@ -1,10 +1,10 @@
 using System.Reflection;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Helpers;
 
 //TODO: Consider to make internal
-public static class ReflectionInspector
+public static class ReflectionHelper
 {
     //TODO: Ehhance summary
     /// <summary>

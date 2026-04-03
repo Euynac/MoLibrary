@@ -1,4 +1,4 @@
-using Monica.Tool.Algorithm.Tree;
+using Monica.Tool.Algorithms.Trees;
 
 namespace Monica.Markdown.Models;
 

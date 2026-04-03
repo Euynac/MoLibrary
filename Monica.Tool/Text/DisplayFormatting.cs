@@ -1,7 +1,7 @@
 using System.Text;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 
 /// <summary>
 /// Provides text-oriented formatting helpers for display scenarios.

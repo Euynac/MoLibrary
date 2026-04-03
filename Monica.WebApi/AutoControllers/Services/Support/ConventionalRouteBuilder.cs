@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Monica.Tool.Extensions;
-using Monica.Tool.Utils;
+using Monica.Tool.Helpers;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
 using Monica.WebApi.AutoControllers.Models;
 using Monica.WebApi.AutoControllers.Utils;
@@ -26,7 +26,7 @@ public class ConventionalRouteBuilder
         var idParameterModel = action.Parameters.FirstOrDefault(p => p.ParameterName == "id");
         if (idParameterModel != null)
         {
-            if (TypeClassifier.IsPrimitiveExtended(idParameterModel.ParameterType, includeEnums: true))
+            if (TypeHelper.IsPrimitiveExtended(idParameterModel.ParameterType, includeEnums: true))
             {
                 url += "/{id}";
             }

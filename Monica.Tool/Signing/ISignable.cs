@@ -1,4 +1,4 @@
-namespace Monica.Tool.Abstractions;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Marks a type whose public properties can participate in signature generation.

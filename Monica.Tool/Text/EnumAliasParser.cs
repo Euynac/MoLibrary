@@ -4,7 +4,7 @@ using System.Reflection;
 using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 
 /// <summary>
 /// Parses enum values from their declared aliases.

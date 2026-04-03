@@ -2,7 +2,7 @@ using System.Text;
 using JetBrains.Annotations;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Diagnostics;
 
 /// <summary>
 /// For easily debug

@@ -12,7 +12,7 @@ using Monica.Framework.ChainTracing.Abstractions;
 using Monica.Framework.ChainTracing.Providers.AspNetCore;
 using Monica.Framework.ChainTracing.Providers.DynamicProxy;
 using Monica.Framework.ChainTracing.Providers.EntityFrameworkCore;
-using Monica.Framework.ChainTracing.Providers.MoRpc;
+using Monica.Framework.ChainTracing.Providers.Rpc;
 using Monica.Framework.ChainTracing.Services;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;

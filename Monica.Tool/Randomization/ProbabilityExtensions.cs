@@ -1,6 +1,6 @@
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Randomization;
 
 /// <summary>
 /// Provides probability-based helpers for conditional value selection.

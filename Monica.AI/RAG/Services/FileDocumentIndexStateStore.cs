@@ -5,6 +5,7 @@ using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.Tool.Extensions;
+using Monica.Tool.Runtime;
 
 namespace Monica.AI.RAG.Services;
 
@@ -21,7 +22,7 @@ public sealed class FileDocumentIndexStateStore(
     };
 
     private readonly string _filePath =
-        GeneralExtensions.GetRelativePathInRunningPath(options.Value.DocumentIndexStateStoreFilePath);
+        RuntimePathHelper.GetRelativePathInRunningPath(options.Value.DocumentIndexStateStoreFilePath);
 
     private readonly SemaphoreSlim _lock = new(1, 1);
 

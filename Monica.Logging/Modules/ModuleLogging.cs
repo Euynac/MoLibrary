@@ -11,7 +11,7 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Logging.Providers.Serilog;
 using Monica.Logging.Services;
-using Monica.Tool.General;
+using Monica.Tool.Diagnostics;
 using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;

@@ -1,4 +1,4 @@
-using Monica.Tool.General;
+using Monica.Tool.Diagnostics;
 
 namespace Monica.AutoModel.Models;
 

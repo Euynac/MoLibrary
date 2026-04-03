@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.Tool.Extensions;
 

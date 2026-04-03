@@ -10,7 +10,7 @@ using Monica.Framework.ChainTracing.Models;
 using Monica.Modules;
 using Monica.WebApi.RpcClient.Models;
 
-namespace Monica.Framework.ChainTracing.Providers.MoRpc;
+namespace Monica.Framework.ChainTracing.Providers.Rpc;
 
 /// <summary>
 /// Captures RPC actor responses and attaches chain-tracing metadata.

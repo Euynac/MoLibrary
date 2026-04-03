@@ -1,4 +1,4 @@
-namespace Monica.Tool.Annotations;
+namespace Monica.Tool.Signing;
 
 /// <summary>
 /// Excludes the annotated property from generated signature payloads.

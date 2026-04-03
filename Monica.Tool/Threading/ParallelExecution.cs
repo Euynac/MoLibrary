@@ -1,4 +1,4 @@
-﻿namespace Monica.Tool.General;
+﻿namespace Monica.Tool.Threading;
 
 public static class ParallelExecution
 {

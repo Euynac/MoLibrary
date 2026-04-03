@@ -1,6 +1,6 @@
 using System.Text;
 using Monica.DevOps.FileOps.Exceptions;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.DevOps.FileOps.Services.Support;
 

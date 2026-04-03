@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Collections;
 
 /// <summary>
 /// Provides comparison helpers for chained sorting and null-aware ordering.

@@ -1,4 +1,4 @@
-namespace Monica.Tool.General;
+namespace Monica.Tool.Randomization;
 
 /// <summary>
 /// Provides helpers for random selection and shuffling over in-memory collections.

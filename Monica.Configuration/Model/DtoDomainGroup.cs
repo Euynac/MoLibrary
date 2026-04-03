@@ -1,7 +1,7 @@
 using Monica.Configuration.Providers;
-using Monica.Tool.General;
 using System.Text.Json.Serialization;
 using Monica.Core.JsonSerialization.Converters;
+using Monica.Tool.Diagnostics;
 
 namespace Monica.Configuration.Model;
 

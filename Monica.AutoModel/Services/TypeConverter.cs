@@ -5,7 +5,7 @@ using Monica.AutoModel.Exceptions;
 using Monica.AutoModel.Models;
 using Monica.AutoModel.Utils;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
+using Monica.Tool.Text;
 
 namespace Monica.AutoModel.Services;
 

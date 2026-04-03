@@ -1,6 +1,6 @@
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Threading;
 
 /// <summary>
 /// Mouth timer, delayer

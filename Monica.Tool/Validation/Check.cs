@@ -2,7 +2,7 @@ using System.Diagnostics;
 using JetBrains.Annotations;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.Utils;
+namespace Monica.Tool.Validation;
 
 /// <summary>
 /// Provides guard clauses for common argument validation scenarios.

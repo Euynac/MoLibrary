@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 
 /// <summary>
 /// Parses common text values used by Monica modules.

@@ -2,7 +2,7 @@
 using System.Text.RegularExpressions;
 using Monica.Tool.Extensions;
 
-namespace Monica.Tool.General;
+namespace Monica.Tool.Text;
 /// <summary>
 /// Programming language detector
 /// </summary>

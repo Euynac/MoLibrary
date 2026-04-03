@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Monica.Tool.Algorithm.Tree;
+namespace Monica.Tool.Algorithms.Trees;
 
 /// <summary>
 /// A binary tree node with left and right children.

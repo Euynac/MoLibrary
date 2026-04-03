@@ -1,6 +1,5 @@
 using Monica.Tool.Annotations;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
 
 namespace Monica.AutoModel.Models;
 

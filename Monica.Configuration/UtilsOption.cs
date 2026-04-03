@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Model;
+using Monica.Tool.Diagnostics;
 using Monica.Tool.Extensions;
-using Monica.Tool.General;
 
 namespace Monica.Configuration;
 

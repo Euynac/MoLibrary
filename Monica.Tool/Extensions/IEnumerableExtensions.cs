@@ -2,7 +2,6 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using JetBrains.Annotations;
-using Monica.Tool.Annotations;
 
 namespace Monica.Tool.Extensions;
 
@@ -168,43 +167,6 @@ public static class IEnumerableExtensions
             typedList.Add(item);
         }
         return typedList;
-    }
-
-    /// <summary>
-    /// Use the reflection mechanism to convert each field in type T into a key-value pair
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="list"></param>
-    /// <returns></returns>
-    public static List<Dictionary<string, string>> FieldsToKeyValues<T>(this IList<T> list)
-    {
-        List<Dictionary<string, string>> result = new();
-        foreach (var item in list)
-        {
-            ArgumentNullException.ThrowIfNull(item);
-            Dictionary<string, string> pair = new();
-            foreach (var propertyInfo in item.GetType().GetProperties())
-            {
-                if (propertyInfo.GetCustomAttribute(typeof(IgnoreFieldExportAttribute)) == null)
-                {
-                    var value = propertyInfo.GetValue(item);
-                    if (value == null)
-                    {
-                        pair.Add(propertyInfo.Name, "");
-                    }
-                    else if (value is DateOnly dateValue)
-                    {
-                        pair.Add(propertyInfo.Name, dateValue.ToString("yyyy-MM-dd"));
-                    }
-                    else
-                    {
-                        pair.Add(propertyInfo.Name, value.ToString() ?? "");
-                    }
-                }
-            }
-            result.Add(pair);
-        }
-        return result;
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Diagnostics;
 
-namespace Monica.Tool.Algorithm.Tree;
+namespace Monica.Tool.Algorithms.Trees;
 
 /// <summary>
 /// A generic tree node that serves as both node and subtree root.

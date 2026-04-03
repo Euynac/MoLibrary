@@ -1,4 +1,4 @@
-namespace Monica.Tool.General;
+namespace Monica.Tool.Randomization;
 
 /// <summary>
 /// Adds random-selection helpers for <see cref="IQueryable{T}"/>.
