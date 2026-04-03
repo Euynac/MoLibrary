@@ -1,17 +1,17 @@
 using Microsoft.Extensions.Options;
+using Monica.Core.Results;
 using Monica.Modules;
 using Monica.Profiling.RuntimeMetrics.Facades;
-using Monica.Core.Results;
 using Monica.Profiling.RuntimeMetrics.Models;
 
-namespace Monica.Profiling.UIProfiling.State;
+namespace Monica.Profiling.UIRuntimeMetrics.State;
 
-public sealed class ProfilingMonitorPageState(
+public sealed class RuntimeMetricsPageState(
     RuntimeMetricsFacade runtimeMetricsFacade,
-    IOptions<ModuleProfilingUIOption> options)
+    IOptions<ModuleRuntimeMetricsUIOption> options)
     : IDisposable
 {
-    private readonly ModuleProfilingUIOption _option = options.Value;
+    private readonly ModuleRuntimeMetricsUIOption _option = options.Value;
     private Timer? _refreshTimer;
 
     public event Action? StateChanged;

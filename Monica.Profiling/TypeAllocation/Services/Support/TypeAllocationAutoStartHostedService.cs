@@ -11,7 +11,7 @@ namespace Monica.Profiling.TypeAllocation.Services.Support;
 /// </summary>
 internal sealed class TypeAllocationAutoStartHostedService(
     TypeAllocationTrackingService typeAllocationTrackingService,
-    IOptions<ModuleProfilingOption> options,
+    IOptions<ModuleTypeAllocationOption> options,
     ILogger<TypeAllocationAutoStartHostedService> logger) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)

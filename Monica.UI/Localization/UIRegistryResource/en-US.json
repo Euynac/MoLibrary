@@ -34,11 +34,11 @@
     "ConfigurationDashboard": {
       "Title": "Configuration Dashboard"
     },
-    "QuickMonitor": {
-      "Title": "Quick Monitor"
+    "RuntimeMetrics": {
+      "Title": "Runtime Metrics"
     },
-    "ProfilingDashboard": {
-      "Title": "Memory Profiling"
+    "MemoryAnalysis": {
+      "Title": "Memory Analysis"
     },
     "ServiceDiscovery": {
       "Title": "Service Discovery"

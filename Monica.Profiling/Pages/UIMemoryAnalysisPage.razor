@@ -1,8 +1,8 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Modules
-@using Monica.Profiling.UIProfiling.Components
-@inject ProfilingDashboardPageState PageState
-@inject IOptions<ModuleProfilingUIOption> Options
+@using Monica.Profiling.UIMemoryAnalysis.Components
+@inject MemoryAnalysisPageState PageState
+@inject IOptions<ModuleMemoryAnalysisUIOption> Options
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -44,7 +44,7 @@
             </div>
         </MudTabPanel>
 
-        @if (PageState.IsTypeAllocationTrackingEnabled)
+        @if (PageState.IsTypeAllocationTabEnabled)
         {
             <MudTabPanel Text="类型分配" Icon="@Icons.Material.Filled.Category">
                 <div class="pa-4">
@@ -65,7 +65,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/profiling-dashboard";
+    public const string PAGE_URL = "/memory-analysis";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

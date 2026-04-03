@@ -58,7 +58,18 @@ public enum EMoModuleKey
     /// Job scheduling module.
     /// </summary>
     MoScheduler,
-    Profiling,
+    /// <summary>
+    /// Runtime metrics collection module.
+    /// </summary>
+    RuntimeMetrics,
+    /// <summary>
+    /// Memory diagnostics module.
+    /// </summary>
+    MemoryDiagnostics,
+    /// <summary>
+    /// Type allocation tracking module.
+    /// </summary>
+    TypeAllocation,
     /// <summary>
     /// XML documentation service module.
     /// </summary>
@@ -80,6 +91,14 @@ public enum EMoModuleKey
     SignalRUI,
     SystemInfoUI,
     ExecutionTimingUI,
+    /// <summary>
+    /// Runtime metrics UI module.
+    /// </summary>
+    RuntimeMetricsUI,
+    /// <summary>
+    /// Memory analysis UI module.
+    /// </summary>
+    MemoryAnalysisUI,
     DataChannelUI,
     ConfigurationUI,
     MapperUI,
@@ -127,10 +146,6 @@ public enum EMoModuleKey
     /// State store UI management module.
     /// </summary>
     StateStoreUI,
-    /// <summary>
-    /// Profiling UI module.
-    /// </summary>
-    ProfilingUI,
     /// <summary>
     /// Resilience policy module (Polly).
     /// </summary>

@@ -1,8 +1,8 @@
-using Monica.Profiling.TypeAllocation.Facades;
 using Monica.Core.Results;
+using Monica.Profiling.TypeAllocation.Facades;
 using Monica.Profiling.TypeAllocation.Models;
 
-namespace Monica.Profiling.UIProfiling.State;
+namespace Monica.Profiling.UIMemoryAnalysis.State;
 
 public sealed class TypeAllocationPanelState(TypeAllocationFacade typeAllocationFacade)
     : IDisposable

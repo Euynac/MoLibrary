@@ -1,16 +1,16 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Profiling.UIProfiling.Components
-@inject ProfilingMonitorPageState PageState
+@using Monica.Profiling.UIRuntimeMetrics.Components
+@inject RuntimeMetricsPageState PageState
 @inject ISnackbar Snackbar
 @implements IDisposable
 
-<PageTitle>快速监控</PageTitle>
+<PageTitle>运行时指标</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <div class="d-flex justify-space-between align-center mb-4">
         <div class="d-flex align-center gap-2">
             <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Primary"/>
-            <MudText Typo="Typo.h4">快速监控</MudText>
+            <MudText Typo="Typo.h4">运行时指标</MudText>
         </div>
         <div class="d-flex gap-2 align-center">
             <MudChip T="string" Size="Size.Small" Color="@(PageState.AutoRefresh ? Color.Success : Color.Default)">
@@ -38,7 +38,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/quick-monitor";
+    public const string PAGE_URL = "/runtime-metrics";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

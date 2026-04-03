@@ -1,22 +1,20 @@
 using Microsoft.Extensions.Options;
+using Monica.Core.Results;
 using Monica.Modules;
 using Monica.Profiling.MemoryDiagnostics.Facades;
-using Monica.Profiling.RuntimeMetrics.Facades;
-using Monica.Core.Results;
 using Monica.Profiling.MemoryDiagnostics.Models;
+using Monica.Profiling.RuntimeMetrics.Facades;
 using Monica.Profiling.RuntimeMetrics.Models;
 
-namespace Monica.Profiling.UIProfiling.State;
+namespace Monica.Profiling.UIMemoryAnalysis.State;
 
-public sealed class ProfilingDashboardPageState(
+public sealed class MemoryAnalysisPageState(
     MemoryDiagnosticsFacade memoryDiagnosticsFacade,
     RuntimeMetricsFacade runtimeMetricsFacade,
-    IOptions<ModuleProfilingUIOption> uiOptions,
-    IOptions<ModuleProfilingOption> profilingOptions)
+    IOptions<ModuleMemoryAnalysisUIOption> options)
     : IDisposable
 {
-    private readonly ModuleProfilingUIOption _uiOption = uiOptions.Value;
-    private readonly ModuleProfilingOption _profilingOption = profilingOptions.Value;
+    private readonly ModuleMemoryAnalysisUIOption _option = options.Value;
     private Timer? _refreshTimer;
 
     public event Action? StateChanged;
@@ -33,7 +31,7 @@ public sealed class ProfilingDashboardPageState(
 
     public int ActiveTabIndex { get; set; }
 
-    public bool IsTypeAllocationTrackingEnabled => _profilingOption.EnableTypeAllocationTracking;
+    public bool IsTypeAllocationTabEnabled => _option.EnableTypeAllocationTab;
 
     public async Task<Res> InitializeAsync()
     {
@@ -113,7 +111,7 @@ public sealed class ProfilingDashboardPageState(
     {
         if (IsLoading)
         {
-            return Res.Fail("The profiling dashboard is already busy.");
+            return Res.Fail("The memory analysis page is already busy.");
         }
 
         IsLoading = true;
@@ -134,7 +132,7 @@ public sealed class ProfilingDashboardPageState(
     {
         if (IsLoading)
         {
-            return Res.Fail("The profiling dashboard is already busy.");
+            return Res.Fail("The memory analysis page is already busy.");
         }
 
         IsLoading = true;
@@ -156,7 +154,7 @@ public sealed class ProfilingDashboardPageState(
         _refreshTimer?.Dispose();
         _refreshTimer = null;
 
-        if (!AutoRefresh || _uiOption.AutoRefreshIntervalMs <= 0)
+        if (!AutoRefresh || _option.AutoRefreshIntervalMs <= 0)
         {
             return;
         }
@@ -164,8 +162,8 @@ public sealed class ProfilingDashboardPageState(
         _refreshTimer = new Timer(
             async _ => await RefreshAsync(),
             null,
-            _uiOption.AutoRefreshIntervalMs,
-            _uiOption.AutoRefreshIntervalMs);
+            _option.AutoRefreshIntervalMs,
+            _option.AutoRefreshIntervalMs);
     }
 
     private void NotifyStateChanged() => StateChanged?.Invoke();

@@ -34,10 +34,10 @@
     "ConfigurationDashboard": {
       "Title": "配置面板"
     },
-    "QuickMonitor": {
-      "Title": "快速监控"
+    "RuntimeMetrics": {
+      "Title": "运行时指标"
     },
-    "ProfilingDashboard": {
+    "MemoryAnalysis": {
       "Title": "内存分析"
     },
     "ServiceDiscovery": {

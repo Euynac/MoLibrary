@@ -1,6 +1,6 @@
 using MudBlazor;
 
-namespace Monica.Profiling.UIProfiling.Support;
+namespace Monica.Profiling.Utils;
 
 internal static class ProfilingSeverityColorResolver
 {

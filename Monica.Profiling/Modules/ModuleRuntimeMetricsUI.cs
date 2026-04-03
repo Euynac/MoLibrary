@@ -1,0 +1,86 @@
+using Microsoft.Extensions.DependencyInjection;
+using Monica.Core;
+using Monica.Core.Modularity;
+using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Models;
+using Monica.Profiling.Pages;
+using Monica.Profiling.UIRuntimeMetrics.State;
+using MudBlazor;
+
+// ReSharper disable once CheckNamespace
+namespace Monica.Modules;
+
+/// <summary>
+/// Builder extensions for the runtime metrics UI module.
+/// </summary>
+public static class ModuleRuntimeMetricsUIBuilderExtensions
+{
+    extension(Mo)
+    {
+        /// <summary>
+        /// Configures the runtime metrics UI module.
+        /// </summary>
+        public static ModuleRuntimeMetricsUIGuide AddRuntimeMetricsUI(Action<ModuleRuntimeMetricsUIOption>? action = null)
+        {
+            return new ModuleRuntimeMetricsUIGuide().Register(action);
+        }
+    }
+}
+
+/// <summary>
+/// Runtime metrics UI module.
+/// </summary>
+[ModuleKey(EMoModuleKey.RuntimeMetricsUI)]
+public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
+    : MoModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(option)
+{
+    /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        if (Option.DisableRuntimeMetricsPage)
+        {
+            return;
+        }
+
+        DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
+        DependsOnModule<ModuleUICoreGuide>().Register()
+            .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIRuntimeMetricsPage>(
+                UIRuntimeMetricsPage.PAGE_URL,
+                "Pages:RuntimeMetrics:Title",
+                Icons.Material.Filled.Speed,
+                "Categories:Monitor",
+                addToNav: true,
+                navOrder: 10));
+    }
+
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<RuntimeMetricsPageState>();
+    }
+}
+
+/// <summary>
+/// Fluent guide for the runtime metrics UI module.
+/// </summary>
+public class ModuleRuntimeMetricsUIGuide
+    : MoModuleGuide<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>
+{
+}
+
+/// <summary>
+/// Configuration options for the runtime metrics UI module.
+/// </summary>
+public class ModuleRuntimeMetricsUIOption : MoModuleOption<ModuleRuntimeMetricsUI>
+{
+    /// <summary>
+    /// Disables registration of the runtime metrics page and removes it from the navigation registry.
+    /// </summary>
+    public bool DisableRuntimeMetricsPage { get; set; }
+
+    /// <summary>
+    /// Controls the automatic refresh interval of the runtime metrics page in milliseconds.
+    /// Set this to 0 to disable timer-based refresh and require manual refresh only.
+    /// </summary>
+    public int AutoRefreshIntervalMs { get; set; } = 2000;
+}
