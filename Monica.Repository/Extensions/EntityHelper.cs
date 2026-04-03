@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Monica.Repository.EntityInterfaces;
 using Monica.Tool.Helpers;
-using Monica.Tool.Validation;
 
 namespace Monica.Repository.Extensions;
 
@@ -86,7 +85,7 @@ public static class EntityHelper
 
     public static bool IsEntity(Type type)
     {
-        Check.NotNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
         return typeof(IMoEntity).IsAssignableFrom(type);
     }
 
@@ -94,7 +93,7 @@ public static class EntityHelper
 
     //public static bool IsValueObject(Type type)
     //{
-    //    Check.NotNull(type, nameof(type));
+    //    ArgumentNullException.ThrowIfNull(type);
     //    return IsValueObjectPredicate(type);
     //}
 
@@ -105,7 +104,7 @@ public static class EntityHelper
 
     public static void CheckEntity(Type type)
     {
-        Check.NotNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
         if (!IsEntity(type))
         {
             throw new Exception($"Given {nameof(type)} is not an entity: {type.AssemblyQualifiedName}. It must implement {typeof(IMoEntity).AssemblyQualifiedName}.");
@@ -172,7 +171,7 @@ public static class EntityHelper
 
     public static bool HasDefaultKeys(IMoEntity entity)
     {
-        Check.NotNull(entity, nameof(entity));
+        ArgumentNullException.ThrowIfNull(entity);
 
         foreach (var key in entity.GetKeys())
         {

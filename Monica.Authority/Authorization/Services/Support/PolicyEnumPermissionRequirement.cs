@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using Monica.Tool.Validation;
 
 namespace Monica.Authority.Authorization.Services.Support;
 
@@ -9,7 +8,7 @@ public class PolicyEnumPermissionRequirement : IAuthorizationRequirement
 
     public PolicyEnumPermissionRequirement(string permissionName)
     {
-        Check.NotNull(permissionName, nameof(permissionName));
+        ArgumentNullException.ThrowIfNull(permissionName);
 
         PermissionName = permissionName;
     }

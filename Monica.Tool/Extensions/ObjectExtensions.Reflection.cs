@@ -1,5 +1,4 @@
 using System.Reflection;
-using Monica.Tool.Validation;
 
 namespace Monica.Tool.Extensions;
 
@@ -118,8 +117,8 @@ public static partial class ObjectExtensions
       string name,
       BindingFlags bindingFlags)
     {
-        Check.NotNull<Type>(type, nameof(type));
-        Check.NotNull<string>(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(name);
         if ((bindingFlags & BindingFlags.DeclaredOnly) != BindingFlags.Default)
             return type.GetProperty(name, bindingFlags);
         if ((bindingFlags & (BindingFlags.Public | BindingFlags.NonPublic)) == (BindingFlags.Public | BindingFlags.NonPublic))

@@ -1,5 +1,4 @@
 using System.Reflection;
-using Monica.Tool.Validation;
 
 namespace Monica.Tool.Helpers;
 
@@ -14,7 +13,7 @@ public static class AsyncHelper
     /// <param name="method">A method to check</param>
     public static bool IsAsync(this MethodInfo method)
     {
-        Check.NotNull(method, nameof(method));
+        ArgumentNullException.ThrowIfNull(method);
 
         return method.ReturnType.IsTaskOrTaskOfT();
     }
@@ -36,7 +35,7 @@ public static class AsyncHelper
     /// </summary>
     public static Type UnwrapTask(Type type)
     {
-        Check.NotNull(type, nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
 
         if (type == typeof(Task))
         {

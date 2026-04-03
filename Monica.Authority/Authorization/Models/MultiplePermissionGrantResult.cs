@@ -1,5 +1,3 @@
-using Monica.Tool.Validation;
-
 namespace Monica.Authority.Authorization.Models;
 
 public class MultiplePermissionGrantResult
@@ -29,7 +27,7 @@ public class MultiplePermissionGrantResult
 
     public MultiplePermissionGrantResult(string[] names, EPermissionGrantResult grantResult = EPermissionGrantResult.Undefined)
     {
-        Check.NotNull(names, nameof(names));
+        ArgumentNullException.ThrowIfNull(names);
 
         Result = [];
 

@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Globalization;
 using Monica.Tool.Extensions;
 using Monica.Tool.Helpers;
-using Monica.Tool.Validation;
 
 namespace Monica.Repository.EntityInterfaces;
 
@@ -179,8 +178,8 @@ public static class HasExtraPropertiesExtensions
          this IHasExtraProperties source,
          IHasExtraProperties other)
     {
-        Check.NotNull(source, nameof(source));
-        Check.NotNull(other, nameof(other));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(other);
 
         return source.ExtraProperties.HasSameItems(other.ExtraProperties);
     }

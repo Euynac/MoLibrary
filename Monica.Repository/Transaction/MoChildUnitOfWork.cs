@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
-using Monica.Tool.Validation;
 
 namespace Monica.Repository.Transaction;
 
@@ -37,7 +36,7 @@ internal class MoChildUnitOfWork : IMoUnitOfWork
 
     public MoChildUnitOfWork(IMoUnitOfWork parent)
     {
-        Check.NotNull(parent, nameof(parent));
+        ArgumentNullException.ThrowIfNull(parent);
         _parent = parent;
     }
 

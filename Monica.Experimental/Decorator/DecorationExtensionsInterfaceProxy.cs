@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Experimental.Decorator.Strategies;
-using Monica.Tool.Utils;
 
 namespace Monica.Experimental.Decorator;
 
@@ -18,7 +17,7 @@ public static partial class DecorationExtensions
     public static IServiceCollection DecorateInterfaceProxy<TInterface, TDecorator>(this IServiceCollection services)
         where TDecorator : TInterface
     {
-        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         return services.DecorateInterfaceProxy(typeof(TInterface), typeof(TDecorator));
     }
@@ -34,7 +33,7 @@ public static partial class DecorationExtensions
     public static bool TryDecorateInterfaceProxy<TInterface, TDecorator>(this IServiceCollection services)
         where TDecorator : TInterface
     {
-        ArgumentGuard.NotNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         return services.TryDecorateInterfaceProxy(typeof(TInterface), typeof(TDecorator));
     }
@@ -51,9 +50,9 @@ public static partial class DecorationExtensions
     /// <paramref name="interfaceType"/> or <paramref name="decoratorType"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection DecorateInterfaceProxy(this IServiceCollection services, Type interfaceType, Type decoratorType)
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(interfaceType, nameof(interfaceType));
-        ArgumentGuard.NotNull(decoratorType, nameof(decoratorType));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(interfaceType);
+        ArgumentNullException.ThrowIfNull(decoratorType);
 
         return services.Decorate(DecorationStrategy.WithInterfaceProxy(interfaceType, serviceKey: null, decoratorType));
     }
@@ -69,9 +68,9 @@ public static partial class DecorationExtensions
     /// <paramref name="interfaceType"/> or <paramref name="decoratorType"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorateInterfaceProxy(this IServiceCollection services, Type interfaceType, Type decoratorType)
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(interfaceType, nameof(interfaceType));
-        ArgumentGuard.NotNull(decoratorType, nameof(decoratorType));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(interfaceType);
+        ArgumentNullException.ThrowIfNull(decoratorType);
 
         return services.TryDecorate(DecorationStrategy.WithInterfaceProxy(interfaceType, serviceKey: null, decoratorType));
     }
@@ -88,8 +87,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection DecorateInterfaceProxy<TInterface>(this IServiceCollection services, Func<TInterface, TInterface> decorator) where TInterface : notnull
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.DecorateInterfaceProxy<TInterface>((service, _) => decorator(service));
     }
@@ -105,8 +104,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorateInterfaceProxy<TInterface>(this IServiceCollection services, Func<TInterface, TInterface> decorator) where TInterface : notnull
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.TryDecorateInterfaceProxy<TInterface>((service, _) => decorator(service));
     }
@@ -123,8 +122,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection DecorateInterfaceProxy<TInterface>(this IServiceCollection services, Func<TInterface, IServiceProvider, TInterface> decorator) where TInterface : notnull
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.DecorateInterfaceProxy(typeof(TInterface), (service, provider) => decorator((TInterface) service, provider));
     }
@@ -140,8 +139,8 @@ public static partial class DecorationExtensions
     /// or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorateInterfaceProxy<TInterface>(this IServiceCollection services, Func<TInterface, IServiceProvider, TInterface> decorator) where TInterface : notnull
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.TryDecorateInterfaceProxy(typeof(TInterface), (service, provider) => decorator((TInterface) service, provider));
     }
@@ -158,9 +157,9 @@ public static partial class DecorationExtensions
     /// <paramref name="interfaceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static IServiceCollection DecorateInterfaceProxy(this IServiceCollection services, Type interfaceType, Func<object, IServiceProvider, object> decorator)
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(interfaceType, nameof(interfaceType));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(interfaceType);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.Decorate(DecorationStrategy.WithInterfaceProxy(interfaceType, serviceKey: null, decorator));
     }
@@ -176,9 +175,9 @@ public static partial class DecorationExtensions
     /// <paramref name="interfaceType"/> or <paramref name="decorator"/> arguments are <c>null</c>.</exception>
     public static bool TryDecorateInterfaceProxy(this IServiceCollection services, Type interfaceType, Func<object, IServiceProvider, object> decorator)
     {
-        ArgumentGuard.NotNull(services, nameof(services));
-        ArgumentGuard.NotNull(interfaceType, nameof(interfaceType));
-        ArgumentGuard.NotNull(decorator, nameof(decorator));
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(interfaceType);
+        ArgumentNullException.ThrowIfNull(decorator);
 
         return services.TryDecorate(DecorationStrategy.WithInterfaceProxy(interfaceType, serviceKey: null, decorator));
     }

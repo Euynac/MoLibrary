@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Extensions;
-using Monica.Tool.Validation;
 
 namespace Monica.Repository.Transaction;
 
@@ -31,7 +30,7 @@ public class MoUnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
 
     public IMoUnitOfWork Begin(MoUnitOfWorkOptions options, bool requiresNew = false)
     {
-        Check.NotNull(options, nameof(options));
+        ArgumentNullException.ThrowIfNull(options);
 
         var currentUow = Current;
         if (currentUow != null && !requiresNew)
