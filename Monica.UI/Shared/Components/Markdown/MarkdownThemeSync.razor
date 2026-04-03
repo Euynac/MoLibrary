@@ -1,0 +1,40 @@
+@using Monica.UI.Shell.State
+@using Monica.UI.Theming
+@implements IDisposable
+@inject ThemeState ThemeService
+@inject IMudMarkdownThemeService MarkdownThemeService
+
+@code {
+	protected override void OnInitialized()
+	{
+		// Subscribe to theme change events.
+		ThemeService.OnThemeChanged += OnThemeChanged;
+	}
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (firstRender)
+		{
+            // Initialize the markdown theme on first render.
+            UpdateMarkdownTheme();
+		}
+	}
+
+    private void OnThemeChanged()
+    {
+        UpdateMarkdownTheme();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateMarkdownTheme()
+    {
+        var themeProvider = ThemeCatalog.GetTheme(ThemeService.CurrentThemeName);
+        var codeBlockTheme = ThemeService.IsDarkMode ? themeProvider.DarkCodeBlockTheme : themeProvider.LightCodeBlockTheme;
+        MarkdownThemeService.SetCodeBlockTheme(codeBlockTheme);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+    }
+}

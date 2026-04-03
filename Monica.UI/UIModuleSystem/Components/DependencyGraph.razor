@@ -1,10 +1,11 @@
 @using MudBlazor
 @using Microsoft.JSInterop
 @using Monica.UI.Localization
-@using Monica.UI.Components.ContextMenu
+@using Monica.UI.Shared.Components.ContextMenu
 @using Microsoft.Extensions.Localization
 @using Monica.Core.Modularity.Dashboard.Models
 @using Monica.Core.Modularity.Models
+@using Monica.UI.UIModuleSystem.State
 @implements IAsyncDisposable
 @inject IStringLocalizer<SharedResource> L
 @inject ISnackbar Snackbar
@@ -12,372 +13,31 @@
 <div class="dependency-graph-container">
     @if (DependencyGraphData != null)
     {
-        @if (!string.IsNullOrEmpty(relatedNodeId))
-        {
-            var relatedNode = FindNode(relatedNodeId);
-            <MudAlert Severity="Severity.Info" Class="mb-3" CloseIconClicked="ClearRelatedFilterClick">
-                @L["ModuleSystem:DependencyGraph:Messages:ShowingRelatedNodes", relatedNode?.ModuleName ?? relatedNodeId]
-            </MudAlert>
-        }
-
         <MudGrid Spacing="4" Class="mb-4">
-            <!-- Dependencies overview -->            <MudItem xs="12" md="4">
-                <MudCard Class="modern-card">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:DependencyOverview"]</MudText>
-                            </div>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-4">
-                        <MudStack Spacing="3">
-                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:DependencyGraph:Labels:TotalNodes"]</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
-                                    </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Large" />
-                                </div>
-                            </MudPaper>
-                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:DependencyGraph:Labels:TotalDependencies"]</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
-                                    </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Large" />
-                                </div>
-                            </MudPaper>
-                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencies"]</MudText>
-                                        <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? L["ModuleSystem:DependencyGraph:States:Exists"] : L["ModuleSystem:DependencyGraph:States:None"])</MudText>
-                                    </div>
-                                    @if (DependencyGraphData.HasCircularDependencies)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
-                                    }
-                                    else
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
-                                    }
-                                </div>
-                            </MudPaper>
-                            <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                                <div class="d-flex justify-space-between align-center">
-                                    <div>
-                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:DependencyGraph:Labels:DependencyLayers"]</MudText>
-                                        <MudText Typo="Typo.h5" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
-                                    </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Large" />
-                                </div>
-                            </MudPaper>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <DependencyGraphOverview DependencyGraphData="DependencyGraphData"
+                                     RelatedNodeId="@_state.RelatedNodeId"
+                                     RelatedNode="FindNode(_state.RelatedNodeId)"
+                                     OnClearRelatedFilter="ClearRelatedFilterClick" />
 
-            <!-- Chart control -->            <MudItem xs="12" md="8">
-                <MudCard Class="modern-card">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:GraphControls"]</MudText>
-                            </div>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-4">
-                        <MudGrid Spacing="4">
-                            <MudItem xs="12" md="4">
-                                <MudSelect T="string" Value="selectedLayout" Label="@L["ModuleSystem:DependencyGraph:Labels:LayoutAlgorithm"]"
-                                         ValueChanged="OnLayoutChanged" Variant="Variant.Outlined"
-                                         AnchorOrigin="Origin.BottomCenter">
-                                    <MudSelectItem Value="@("force")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.ScatterPlot" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Layouts:Force"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("hierarchical")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.AccountTree" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Layouts:Hierarchical"]
-                                        </div>
-                                    </MudSelectItem>
-                                    <MudSelectItem Value="@("circular")">
-                                        <div class="d-flex align-center">
-                                            <MudIcon Icon="@Icons.Material.Filled.Circle" Class="mr-2" />
-                                            @L["ModuleSystem:DependencyGraph:Layouts:Circular"]
-                                        </div>
-                                    </MudSelectItem>
-                                </MudSelect>
-                            </MudItem>
-                            <MudItem xs="12" md="8">
-                                <MudTextField T="string"
-                                              Value="searchText"
-                                              ValueChanged="OnSearchTextChanged"
-                                              Label="@L["ModuleSystem:DependencyGraph:Labels:Search"]"
-                                              Placeholder="@L["ModuleSystem:DependencyGraph:Labels:SearchPlaceholder"]"
-                                              Variant="Variant.Outlined"
-                                              Immediate="true"
-                                              Clearable="true"
-                                              Adornment="Adornment.Start"
-                                              AdornmentIcon="@Icons.Material.Filled.Search" />
-                            </MudItem>
-                            <MudItem xs="12">
-                                <div class="graph-filter-group">
-                                    <MudText Typo="Typo.subtitle2" Class="mb-2">
-                                        @L["ModuleSystem:DependencyGraph:Labels:Filter"]
-                                    </MudText>
-                                    <MudChipSet T="string"
-                                                SelectedValue="selectedEdgeFilter"
-                                                SelectedValueChanged="OnEdgeFilterChipChanged"
-                                                SelectionMode="SelectionMode.SingleSelection"
-                                                CheckMark="true"
-                                                Class="dependency-filter-chipset">
-                                        <MudChip T="string"
-                                                 Value="@("all")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "all")"
-                                                 Color="@GetEdgeFilterColor("all")"
-                                                 Icon="@Icons.Material.Filled.Visibility">
-                                            @L["ModuleSystem:DependencyGraph:Filters:ShowAll"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("direct")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "direct")"
-                                                 Color="@GetEdgeFilterColor("direct")"
-                                                 Icon="@Icons.Material.Filled.DirectionsRun">
-                                            @L["ModuleSystem:DependencyGraph:Filters:DirectOnly"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("cycle")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedEdgeFilter, "cycle")"
-                                                 Color="@GetEdgeFilterColor("cycle")"
-                                                 Icon="@Icons.Material.Filled.Warning">
-                                            @L["ModuleSystem:DependencyGraph:Filters:CycleOnly"]
-                                        </MudChip>
-                                    </MudChipSet>
-                                </div>
-                            </MudItem>
-                            <MudItem xs="12">
-                                <div class="graph-filter-group">
-                                    <MudText Typo="Typo.subtitle2" Class="mb-2">
-                                        @L["ModuleSystem:DependencyGraph:Labels:TypeFilter"]
-                                    </MudText>
-                                    <div class="graph-filter-actions">
-                                        <MudButton Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   Color="Color.Primary"
-                                                   OnClick="SelectAllTypeFilters">
-                                            @L["ModuleSystem:DependencyGraph:Actions:SelectAll"]
-                                        </MudButton>
-                                        <MudButton Size="Size.Small"
-                                                   Variant="Variant.Text"
-                                                   Color="Color.Secondary"
-                                                   OnClick="ClearTypeFilters">
-                                            @L["ModuleSystem:DependencyGraph:Actions:Clear"]
-                                        </MudButton>
-                                    </div>
-                                    <MudChipSet T="string"
-                                                SelectedValues="selectedTypeFilters"
-                                                SelectedValuesChanged="OnSelectedTypeFiltersChanged"
-                                                SelectionMode="SelectionMode.MultiSelection"
-                                                CheckMark="true"
-                                                Class="dependency-filter-chipset">
-                                        <MudChip T="string"
-                                                 Value="@("built-in")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "built-in")"
-                                                 Color="@GetTypeFilterColor("built-in")"
-                                                 Icon="@Icons.Material.Filled.SettingsInputComponent">
-                                            @L["ModuleSystem:DependencyGraph:Types:BuiltIn"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("ui")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "ui")"
-                                                 Color="@GetTypeFilterColor("ui")"
-                                                 Icon="@Icons.Material.Filled.Web">
-                                            @L["ModuleSystem:DependencyGraph:Types:UI"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("third-party")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "third-party")"
-                                                 Color="@GetTypeFilterColor("third-party")"
-                                                 Icon="@Icons.Material.Filled.Extension">
-                                            @L["ModuleSystem:DependencyGraph:Types:ThirdParty"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("disabled")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "disabled")"
-                                                 Color="@GetTypeFilterColor("disabled")"
-                                                 Icon="@Icons.Material.Filled.Block">
-                                            @L["ModuleSystem:DependencyGraph:Types:Disabled"]
-                                        </MudChip>
-                                        <MudChip T="string"
-                                                 Value="@("cycle")"
-                                                 Size="Size.Small"
-                                                 Variant="@GetFilterChipVariant(selectedTypeFilters, "cycle")"
-                                                 Color="@GetTypeFilterColor("cycle")"
-                                                 Icon="@Icons.Material.Filled.SyncProblem">
-                                            @L["ModuleSystem:DependencyGraph:Types:Circular"]
-                                        </MudChip>
-                                    </MudChipSet>
-                                </div>
-                            </MudItem>
-                        </MudGrid>
-                        <MudDivider Class="my-4" />
-                        <MudStack Row="true" Spacing="2" Justify="Justify.Center">
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                     Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.ZoomIn"
-                                     OnClick="ZoomIn">
-                                @L["ModuleSystem:DependencyGraph:Labels:ZoomIn"]
-                            </MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                     Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.ZoomOut"
-                                     OnClick="ZoomOut">
-                                @L["ModuleSystem:DependencyGraph:Labels:ZoomOut"]
-                            </MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                     Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.CenterFocusStrong"
-                                     OnClick="ResetZoom">
-                                @L["ModuleSystem:DependencyGraph:Labels:ResetView"]
-                            </MudButton>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <DependencyGraphFilters SelectedLayout="@_state.SelectedLayout"
+                                    SelectedLayoutChanged="OnLayoutChanged"
+                                    SearchText="@_state.SearchText"
+                                    SearchTextChanged="OnSearchTextChanged"
+                                    SelectedEdgeFilter="@_state.SelectedEdgeFilter"
+                                    SelectedEdgeFilterChanged="OnEdgeFilterChanged"
+                                    SelectedTypeFilters="@_state.SelectedTypeFilters"
+                                    SelectedTypeFiltersChanged="OnSelectedTypeFiltersChanged"
+                                    SelectAllTypeFilters="SelectAllTypeFilters"
+                                    ClearTypeFilters="ClearTypeFilters"
+                                    ZoomIn="ZoomIn"
+                                    ZoomOut="ZoomOut"
+                                    ResetZoom="ResetZoom" />
 
-            <!-- Dependency graph -->            <MudItem xs="12">
-                <MudCard Class="modern-card">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Color="Color.Primary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:DependencyGraph"]</MudText>
-                            </div>
-                        </CardHeaderContent>
-                        <CardHeaderActions>
-                            <MudButton Variant="Variant.Filled"
-                                     Color="Color.Primary"
-                                     Size="Size.Small"
-                                     StartIcon="@Icons.Material.Filled.Download"
-                                     OnClick="ExportGraph">
-                                @L["ModuleSystem:DependencyGraph:Labels:ExportImage"]
-                            </MudButton>
-                        </CardHeaderActions>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-0">
-                        <div class="dependency-graph-host"
-                             @onclick="OnBackgroundClick"
-                             @oncontextmenu:preventDefault="true">
-                            <MudPaper id="dependency-graph-container"
-                                      Class="dependency-graph-canvas"
-                                      Style="height: 600px; width: 100%;"
-                                      Elevation="2">
-                                <!-- The chart will be rendered here -->                            </MudPaper>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <DependencyGraphCanvas OnBackgroundClick="OnBackgroundClick"
+                                   OnExportGraph="ExportGraph" />
 
-            <!-- legend -->            <MudItem xs="12" md="6">
-                <MudCard Class="modern-card">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Image" Color="Color.Info" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:Legend"]</MudText>
-                            </div>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-4">
-                        <MudStack Spacing="4">
-                            <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:NodeTypes"]</MudText>
-                                <MudStack Spacing="2">
-                                    <div class="legend-item">
-                                        <div class="legend-circle legend-circle-built-in"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:BuiltInModule"]</MudText>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-circle legend-circle-ui"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:UIModule"]</MudText>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-circle legend-circle-third-party"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:ThirdPartyModule"]</MudText>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-circle legend-circle-disabled"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DisabledModule"]</MudText>
-                                    </div>
-                                    <div class="legend-item">
-                                        <div class="legend-circle legend-circle-cycle"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencyModule"]</MudText>
-                                    </div>
-                                </MudStack>
-                            </div>
-                            <MudDivider />
-                            <div>
-                                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:EdgeTypes"]</MudText>
-                                <MudStack Spacing="2">
-                                    <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #81C784; width: 30px; height: 3px; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DirectDependency"]</MudText>
-                                    </div>
-                                    <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #BA68C8; width: 30px; height: 3px; margin-right: 12px; border-top: 2px dashed #BA68C8; background: none;"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:TransitiveDependency"]</MudText>
-                                    </div>
-                                    <div class="d-flex align-center">
-                                        <div class="legend-line" style="background-color: #FF8A65; width: 30px; height: 3px; margin-right: 12px;"></div>
-                                        <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependency"]</MudText>
-                                    </div>
-                                </MudStack>
-                            </div>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-
-            <!-- Node details -->            <MudItem xs="12" md="6">
-                <MudCard Class="modern-card">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Class="mr-2" />
-                                <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:NodeDetails"]</MudText>
-                            </div>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent Class="pa-4">
-                        <div class="node-detail-content" style="min-height: 200px;">
-                            <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
-                                <div class="text-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @L["ModuleSystem:DependencyGraph:Messages:HoverToViewDetails"]
-                                    </MudText>
-                                </div>
-                            </div>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
+            <DependencyGraphLegend />
+            <DependencyGraphNodeDetails />
         </MudGrid>
     }
     else
@@ -400,30 +60,19 @@
     }
 </div>
 
-<MoContextMenu TItem="ModuleDependencyNode"
-               Items="@contextMenuItems"
-               Visible="@contextMenuOpen"
-               InitialX="@contextMenuX"
-               InitialY="@contextMenuY"
-               ContextItem="@contextMenuNode"
-               OnItemClick="@OnContextMenuItemClick"
-               OnClose="@CloseContextMenu" />
+<DependencyGraphContextMenu Items="@_state.ContextMenuItems"
+                            Visible="@_state.ContextMenuOpen"
+                            InitialX="@_state.ContextMenuX"
+                            InitialY="@_state.ContextMenuY"
+                            ContextItem="@_state.ContextMenuNode"
+                            OnItemClick="@OnContextMenuItemClick"
+                            OnClose="@CloseContextMenu" />
 
 @code {
     private IJSObjectReference? jsModule;
     private DotNetObjectReference<DependencyGraph>? dotNetRef;
     private ModuleDependencyGraph? renderedGraphData;
-    private static readonly string[] AvailableTypeFilters = ["built-in", "ui", "third-party", "disabled", "cycle"];
-    private string selectedLayout = "force";
-    private string selectedEdgeFilter = "all";
-    private IReadOnlyCollection<string> selectedTypeFilters = CreateAllTypeFilters();
-    private string searchText = string.Empty;
-    private string? relatedNodeId;
-    private bool contextMenuOpen;
-    private double contextMenuX;
-    private double contextMenuY;
-    private ModuleDependencyNode? contextMenuNode;
-    private List<ContextMenuItem<ModuleDependencyNode>> contextMenuItems = [];
+    private readonly DependencyGraphState _state = new();
 
     /// <summary>
     /// Dependency graph data
@@ -524,7 +173,7 @@
         };
 
         await jsModule.InvokeVoidAsync("initializeDependencyGraph", "dependency-graph-container", nodes, edges, texts, dotNetRef);
-        await jsModule.InvokeVoidAsync("changeLayout", selectedLayout);
+        await jsModule.InvokeVoidAsync("changeLayout", _state.SelectedLayout);
         await ApplyCurrentGraphFilters();
     }
 
@@ -535,7 +184,7 @@
     /// <returns></returns>
     private async Task OnLayoutChanged(string layout)
     {
-        selectedLayout = layout;
+        _state.SetLayout(layout);
         if (jsModule != null)
         {
             await jsModule.InvokeVoidAsync("changeLayout", layout);
@@ -550,33 +199,25 @@
     /// <returns></returns>
     private async Task OnEdgeFilterChanged(string filter)
     {
-        selectedEdgeFilter = filter;
+        _state.SetEdgeFilter(filter);
         await ApplyCurrentGraphFilters();
-    }
-
-    private Task OnEdgeFilterChipChanged(string? filter)
-    {
-        return OnEdgeFilterChanged(filter ?? "all");
     }
 
     private async Task OnSelectedTypeFiltersChanged(IReadOnlyCollection<string>? filters)
     {
-        selectedTypeFilters = filters == null
-            ? []
-            : filters.Where(IsSupportedTypeFilter).Distinct(StringComparer.Ordinal).ToArray();
-
+        _state.SetTypeFilters(filters);
         await ApplyCurrentGraphFilters();
     }
 
     private Task SelectAllTypeFilters()
     {
-        selectedTypeFilters = CreateAllTypeFilters();
+        _state.SelectAllTypeFilters();
         return ApplyCurrentGraphFilters();
     }
 
     private Task ClearTypeFilters()
     {
-        selectedTypeFilters = [];
+        _state.ClearTypeFilters();
         return ApplyCurrentGraphFilters();
     }
 
@@ -585,7 +226,7 @@
     /// </summary>
     private async Task OnSearchTextChanged(string value)
     {
-        searchText = value;
+        _state.SetSearchText(value);
         await ApplyCurrentGraphFilters();
     }
 
@@ -647,13 +288,7 @@
             return;
         }
 
-        await jsModule.InvokeVoidAsync("applyFilter", new
-        {
-            edgeFilter = selectedEdgeFilter,
-            typeFilters = selectedTypeFilters,
-            searchText,
-            relatedNodeId
-        });
+        await jsModule.InvokeVoidAsync("applyFilter", _state.CreateFilterPayload());
     }
 
     /// <summary>
@@ -709,38 +344,6 @@
         return "built-in";
     }
 
-    private static Variant GetFilterChipVariant(string? selectedValue, string chipValue)
-    {
-        return string.Equals(selectedValue, chipValue, StringComparison.Ordinal)
-            ? Variant.Filled
-            : Variant.Outlined;
-    }
-
-    private static Variant GetFilterChipVariant(IReadOnlyCollection<string>? selectedValues, string chipValue)
-    {
-        return selectedValues?.Contains(chipValue) == true
-            ? Variant.Filled
-            : Variant.Outlined;
-    }
-
-    private static Color GetEdgeFilterColor(string filter) => filter switch
-    {
-        "all" => Color.Primary,
-        "direct" => Color.Success,
-        "cycle" => Color.Error,
-        _ => Color.Default
-    };
-
-    private static Color GetTypeFilterColor(string filter) => filter switch
-    {
-        "built-in" => Color.Primary,
-        "ui" => Color.Info,
-        "third-party" => Color.Success,
-        "disabled" => Color.Default,
-        "cycle" => Color.Error,
-        _ => Color.Default
-    };
-
     /// <summary>
     /// Handles node click events coming from the graph.
     /// </summary>
@@ -768,11 +371,7 @@
             return;
         }
 
-        contextMenuNode = node;
-        contextMenuX = x;
-        contextMenuY = y;
-        contextMenuItems = BuildContextMenuItems(node);
-        contextMenuOpen = true;
+        _state.OpenContextMenu(node, x, y, BuildContextMenuItems(node));
         StateHasChanged();
     }
 
@@ -782,12 +381,12 @@
     [JSInvokable]
     public void OnSvgBackgroundClick()
     {
-        if (!contextMenuOpen)
+        if (!_state.ContextMenuOpen)
         {
             return;
         }
 
-        contextMenuOpen = false;
+        _state.CloseContextMenu();
         StateHasChanged();
     }
 
@@ -796,12 +395,12 @@
     /// </summary>
     private void OnBackgroundClick()
     {
-        if (!contextMenuOpen)
+        if (!_state.ContextMenuOpen)
         {
             return;
         }
 
-        contextMenuOpen = false;
+        _state.CloseContextMenu();
         StateHasChanged();
     }
 
@@ -810,7 +409,7 @@
     /// </summary>
     private void CloseContextMenu()
     {
-        contextMenuOpen = false;
+        _state.CloseContextMenu();
     }
 
     /// <summary>
@@ -818,7 +417,7 @@
     /// </summary>
     private Task ClearRelatedFilterClick()
     {
-        relatedNodeId = null;
+        _state.SetRelatedNode(null);
         return ApplyCurrentGraphFilters();
     }
 
@@ -827,7 +426,7 @@
     /// </summary>
     private Task OnContextMenuItemClick(ContextMenuItem<ModuleDependencyNode> item)
     {
-        contextMenuOpen = false;
+        _state.CloseContextMenu();
         StateHasChanged();
         return Task.CompletedTask;
     }
@@ -842,9 +441,9 @@
             .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:FocusNode"].Value, Icons.Material.Filled.CenterFocusStrong, FocusOnNodeAsync)
             .AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:FilterByType"].Value, Icons.Material.Filled.FilterAlt, FilterByTypeAsync);
 
-        if (!string.IsNullOrEmpty(relatedNodeId))
+        if (!string.IsNullOrEmpty(_state.RelatedNodeId))
         {
-            if (relatedNodeId == node.Module.ToString())
+            if (_state.RelatedNodeId == node.Module.ToString())
             {
                 builder.AddItem(L["ModuleSystem:DependencyGraph:ContextMenu:ClearRelatedFilter"].Value, Icons.Material.Filled.Clear, ClearRelatedFilterAsync);
             }
@@ -871,7 +470,7 @@
     /// </summary>
     private async Task ShowContextDetailsAsync(ModuleDependencyNode? node)
     {
-        var targetNode = node ?? contextMenuNode;
+        var targetNode = node ?? _state.ContextMenuNode;
         if (targetNode is null || !OnModuleDetailClicked.HasDelegate)
         {
             return;
@@ -885,7 +484,7 @@
     /// </summary>
     private async Task FocusOnNodeAsync(ModuleDependencyNode? node)
     {
-        var targetNode = node ?? contextMenuNode;
+        var targetNode = node ?? _state.ContextMenuNode;
         if (targetNode is null || jsModule == null)
         {
             return;
@@ -899,13 +498,13 @@
     /// </summary>
     private async Task FilterByTypeAsync(ModuleDependencyNode? node)
     {
-        var targetNode = node ?? contextMenuNode;
+        var targetNode = node ?? _state.ContextMenuNode;
         if (targetNode is null)
         {
             return;
         }
 
-        selectedTypeFilters = [GetModuleCategoryKey(targetNode)];
+        _state.SetTypeFilters([GetModuleCategoryKey(targetNode)]);
         await ApplyCurrentGraphFilters();
     }
 
@@ -914,10 +513,7 @@
     /// </summary>
     private async Task ClearAllFiltersAsync(ModuleDependencyNode? node)
     {
-        searchText = string.Empty;
-        selectedTypeFilters = CreateAllTypeFilters();
-        selectedEdgeFilter = "all";
-        relatedNodeId = null;
+        _state.ClearAllFilters();
         await ApplyCurrentGraphFilters();
     }
 
@@ -926,13 +522,13 @@
     /// </summary>
     private async Task ShowRelatedNodesAsync(ModuleDependencyNode? node)
     {
-        var targetNode = node ?? contextMenuNode;
+        var targetNode = node ?? _state.ContextMenuNode;
         if (targetNode is null)
         {
             return;
         }
 
-        relatedNodeId = targetNode.Module.ToString();
+        _state.SetRelatedNode(targetNode.Module.ToString());
         await ApplyCurrentGraphFilters();
 
         if (jsModule != null)
@@ -948,18 +544,8 @@
     /// </summary>
     private Task ClearRelatedFilterAsync(ModuleDependencyNode? node)
     {
-        relatedNodeId = null;
+        _state.SetRelatedNode(null);
         return ApplyCurrentGraphFilters();
-    }
-
-    private static IReadOnlyCollection<string> CreateAllTypeFilters()
-    {
-        return [.. AvailableTypeFilters];
-    }
-
-    private static bool IsSupportedTypeFilter(string filter)
-    {
-        return AvailableTypeFilters.Contains(filter, StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -967,7 +553,7 @@
     /// </summary>
     private async Task CopyModuleNameAsync(ModuleDependencyNode? node)
     {
-        var targetNode = node ?? contextMenuNode;
+        var targetNode = node ?? _state.ContextMenuNode;
         if (targetNode is null)
         {
             return;

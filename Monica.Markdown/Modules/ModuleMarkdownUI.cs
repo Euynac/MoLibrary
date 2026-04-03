@@ -13,7 +13,7 @@ using Monica.Markdown.Localization;
 using Monica.Markdown.Services;
 using Monica.Markdown.UIMarkdown.Models;
 using Monica.Markdown.UIMarkdown.Services;
-using Monica.UI.Components.Markdown;
+using Monica.UI.Shared.Components.Markdown;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -45,7 +45,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     {
         DependsOnModule<ModuleMarkdownGuide>().Register();
 
-        var uiCoreGuide = DependsOnModule<ModuleUICoreGuide>().Register();
+        var uiCoreGuide = DependsOnModule<ModuleShellUIGuide>().Register();
         if (!Option.DisableMarkdownPage)
         {
             DependsOnModule<ModuleLocalizationGuide>().Register()

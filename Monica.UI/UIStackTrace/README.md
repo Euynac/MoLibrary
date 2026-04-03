@@ -225,7 +225,7 @@ To override component styles in your application, use CSS isolation in your pare
 
 ```razor
 @using Monica.UI.UIStackTrace.Components
-@using Monica.UI.UIStackTrace.Services
+
 @inject StackTraceParserService ParserService
 
 @if (ParserService.IsLikelyStackTrace(message))

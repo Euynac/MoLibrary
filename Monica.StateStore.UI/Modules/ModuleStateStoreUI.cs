@@ -45,7 +45,7 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
             DependsOnModule<ModuleStateStoreGuide>().Register();
 
             // Depend on the UI core module and register UI components
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
                     registry.RegisterLocalizedComponent<UIStateStoreDashboardPage>(

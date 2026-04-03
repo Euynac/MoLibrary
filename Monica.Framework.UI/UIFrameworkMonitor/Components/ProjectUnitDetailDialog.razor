@@ -1,6 +1,6 @@
 @using Monica.Framework.Core.Model
 @using Monica.Framework.Core.Attributes
-@using Monica.UI.Components
+@using Monica.UI.Shared.Components.Markdown
 @using System.Linq
 @using System.Reflection
 @using Monica.Framework.Services
@@ -416,7 +416,7 @@
                                             </div>
                                         </TitleContent>
                                         <ChildContent>
-                                            <MoMarkdownThemeManager />
+                                            <MarkdownThemeSync />
                                             <div style="max-height: 400px; overflow-y: auto;">
                                                 <MudMarkdown Value="@unitInfoAttribute.MarkdownDocs" />
                                             </div>

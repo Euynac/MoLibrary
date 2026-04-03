@@ -45,7 +45,7 @@ public class ModuleFrameworkMonitorUI(ModuleFrameworkMonitorUIOption option)
                 .AddResource<FrameworkMonitorResource>();
 
             DependsOnModule<ModuleFrameworkMonitorGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIFrameworkMonitorPage>(
                     UIFrameworkMonitorPage.FRAMEWORK_MONITOR_DEBUG_URL,
                     "Pages:FrameworkMonitor:Title",

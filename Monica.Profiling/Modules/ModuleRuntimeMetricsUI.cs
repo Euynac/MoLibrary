@@ -43,7 +43,7 @@ public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
         }
 
         DependsOnModule<ModuleRuntimeMetricsGuide>().Register();
-        DependsOnModule<ModuleUICoreGuide>().Register()
+        DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIRuntimeMetricsPage>(
                 UIRuntimeMetricsPage.PAGE_URL,
                 "Pages:RuntimeMetrics:Title",

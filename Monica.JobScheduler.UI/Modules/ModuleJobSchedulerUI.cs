@@ -41,7 +41,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         services.AddSingleton<JobStateColorResolver>();
         services.AddSingleton<JobArgsJsonSchemaSupport>();
         services.AddSingleton<CronExpressionSupport>();
-        // StackTraceParserService is now registered by ModuleUIStackTrace module
+        // StackTraceParser is now registered by ModuleStackTraceUI.
     }
 
     public override void ClaimDependencies()
@@ -53,12 +53,12 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
         DependsOnModule<ModuleJobSchedulerGuide>().Register();
 
         // Depends on UIStackTrace module (for stack trace visualization)
-        DependsOnModule<ModuleUIStackTraceGuide>().Register();
+        DependsOnModule<ModuleStackTraceUIGuide>().Register();
 
         // Depend on the UI core module and register the page
         if (!Option.DisableJobSchedulerPages)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
                     // Overview dashboard

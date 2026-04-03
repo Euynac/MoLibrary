@@ -1,6 +1,6 @@
 @using Monica.Modules
 @using Monica.Core.Results;
-@using Monica.UI.Components
+@using Monica.UI.Shared.Components.Markdown
 @inject MapperService MapperService
 @inject ISnackbar Snackbar
 
@@ -102,7 +102,7 @@
     </TitleContent>
     <DialogContent>
    
-        <MoMarkdownThemeManager />
+        <MarkdownThemeSync />
         @if (_selectedMapper is not null)
         {
             <MudStack Spacing="3">

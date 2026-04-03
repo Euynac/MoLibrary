@@ -1,0 +1,57 @@
+@using Microsoft.Extensions.Options
+@using Microsoft.Extensions.Localization
+@using Monica.Modules
+@using Monica.UI.Localization
+@using Monica.UI.Shell.State
+@inject UserContextState UserContext
+@inject IOptions<ModuleShellUIOption> Options
+@inject IStringLocalizer<SharedResource> L
+
+<div class="navbar-actions">
+    @if (Options.Value.EnableNavBarSearch)
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                       Color="Color.Default"
+                       Size="Size.Medium"
+                       Class="action-button"
+                       OnClick="OpenSearch"
+                       title="@L["Layout:SearchTooltip"]" />
+    }
+
+    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                   Color="Color.Default"
+                   Size="Size.Medium"
+                   Class="action-button"
+                   title="@L["Layout:NotificationsTooltip"]" />
+
+    <ThemeSelector />
+
+    @if (Options.Value.ShowLanguageSwitcher)
+    {
+        <CultureSelector />
+    }
+    <MudMenu AnchorOrigin="Origin.BottomRight"
+             TransformOrigin="Origin.TopRight"
+             Class="user-menu">
+        <ActivatorContent>
+            <MudButton Variant="Variant.Text"
+                      Class="user-button"
+                      StartIcon="@Icons.Material.Filled.AccountCircle">
+                <span class="user-name">@UserContext.UserName</span>
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            <MudMenuItem Icon="@Icons.Material.Filled.Person">@L["Layout:UserMenu:Profile"]</MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Settings">@L["Layout:UserMenu:Settings"]</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.Logout">@L["Layout:UserMenu:Logout"]</MudMenuItem>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    private void OpenSearch()
+    {
+        // TODO: Implement global search dialog
+    }
+}

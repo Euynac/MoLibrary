@@ -51,7 +51,7 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 
         if (!Option.DisableUILoggingPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UILoggingPage>(
                     UILoggingPage.LOGGING_MONITOR_URL,
                     "Pages:LoggingMonitor:Title",

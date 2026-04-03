@@ -39,10 +39,10 @@ public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
             DependsOnModule<ModuleDataChannelGuide>().Register();
 
             // Depend on the UIStackTrace module for exception stack visualization.
-            DependsOnModule<ModuleUIStackTraceGuide>().Register();
+            DependsOnModule<ModuleStackTraceUIGuide>().Register();
 
             // Depend on the UI core module and register the DataChannel page.
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIDataChannelPage>(
                     UIDataChannelPage.PAGE_URL,
                     "Pages:DataChannelManage:Title",

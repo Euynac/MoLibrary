@@ -50,7 +50,7 @@ public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
             DependsOnModule<ModuleTypeAllocationGuide>().Register();
         }
 
-        DependsOnModule<ModuleUICoreGuide>().Register()
+        DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIMemoryAnalysisPage>(
                 UIMemoryAnalysisPage.PAGE_URL,
                 "Pages:MemoryAnalysis:Title",

@@ -50,7 +50,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 
         if (!Option.DisableUISystemInfoPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UISystemInfoPage>(
                     UISystemInfoPage.PAGE_URL,
                     "Pages:SystemInfo:Title",

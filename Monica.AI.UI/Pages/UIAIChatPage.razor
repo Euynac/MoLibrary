@@ -5,8 +5,8 @@
 @using Monica.AI.UI.Models
 @using Monica.AI.UI.Helpers
 @using Monica.Core.Results;
-@using Monica.UI.Services
 @using Microsoft.Extensions.Localization
+@using Monica.UI.Shell.Support
 @using Monica.Modules
 @implements IDisposable
 @inject AIChatUIService ChatUIService
@@ -17,7 +17,7 @@
 @inject IDialogService DialogService
 @inject IServiceProvider ServiceProvider
 @inject IStringLocalizer<AIResource> L
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 
 <HeadContent>
     <link href="_content/Monica.AI.UI/css/ai-chat-page.css" rel="stylesheet" />

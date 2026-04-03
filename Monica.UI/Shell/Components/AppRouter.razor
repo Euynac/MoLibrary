@@ -1,0 +1,13 @@
+@using Monica.UI.Pages
+@using Monica.UI.Shell.Components.Layout
+@using Monica.UI.Shell.Support
+@inject IPageRegistry UIRegistry
+
+<Router AppAssembly="@typeof(AppRouter).Assembly" 
+        AdditionalAssemblies="@UIRegistry.GetAdditionalAssemblies()"
+        NotFoundPage="@typeof(NotFoundPage)">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

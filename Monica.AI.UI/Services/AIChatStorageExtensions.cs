@@ -1,4 +1,4 @@
-using Monica.UI.Services;
+using Monica.UI.Shell.Support;
 
 namespace Monica.AI.UI.Services;
 
@@ -12,7 +12,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Get the default provider ID from storage
     /// </summary>
-    public static Task<string?> GetDefaultProviderAsync(this IMoBrowserStorage storage)
+    public static Task<string?> GetDefaultProviderAsync(this IBrowserStorage storage)
     {
         return storage.GetAsync<string?>($"{AIChatCategory}:default-provider", null);
     }
@@ -20,7 +20,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Save the default provider ID to storage
     /// </summary>
-    public static Task SaveDefaultProviderAsync(this IMoBrowserStorage storage, string providerId)
+    public static Task SaveDefaultProviderAsync(this IBrowserStorage storage, string providerId)
     {
         return storage.SetAsync($"{AIChatCategory}:default-provider", providerId);
     }
@@ -28,7 +28,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Get the default model name from storage
     /// </summary>
-    public static Task<string?> GetDefaultModelAsync(this IMoBrowserStorage storage)
+    public static Task<string?> GetDefaultModelAsync(this IBrowserStorage storage)
     {
         return storage.GetAsync<string?>($"{AIChatCategory}:default-model", null);
     }
@@ -36,7 +36,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Save the default model name to storage
     /// </summary>
-    public static Task SaveDefaultModelAsync(this IMoBrowserStorage storage, string modelName)
+    public static Task SaveDefaultModelAsync(this IBrowserStorage storage, string modelName)
     {
         return storage.SetAsync($"{AIChatCategory}:default-model", modelName);
     }
@@ -44,7 +44,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Get the tool debug flag from storage.
     /// </summary>
-    public static Task<bool> GetToolDebugEnabledAsync(this IMoBrowserStorage storage)
+    public static Task<bool> GetToolDebugEnabledAsync(this IBrowserStorage storage)
     {
         return storage.GetAsync($"{AIChatCategory}:tool-debug-enabled", false);
     }
@@ -52,7 +52,7 @@ public static class AIChatStorageExtensions
     /// <summary>
     /// Persist the tool debug flag.
     /// </summary>
-    public static Task SaveToolDebugEnabledAsync(this IMoBrowserStorage storage, bool enabled)
+    public static Task SaveToolDebugEnabledAsync(this IBrowserStorage storage, bool enabled)
     {
         return storage.SetAsync($"{AIChatCategory}:tool-debug-enabled", enabled);
     }

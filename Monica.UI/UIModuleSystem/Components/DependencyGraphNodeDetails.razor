@@ -1,0 +1,28 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@inject IStringLocalizer<SharedResource> L
+
+<MudItem xs="12" md="6">
+    <MudCard Class="modern-card">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Secondary" Class="mr-2" />
+                    <MudText Typo="Typo.h6">@L["ModuleSystem:DependencyGraph:Labels:NodeDetails"]</MudText>
+                </div>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent Class="pa-4">
+            <div class="node-detail-content" style="min-height: 200px;">
+                <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
+                    <div class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            @L["ModuleSystem:DependencyGraph:Messages:HoverToViewDetails"]
+                        </MudText>
+                    </div>
+                </div>
+            </div>
+        </MudCardContent>
+    </MudCard>
+</MudItem>

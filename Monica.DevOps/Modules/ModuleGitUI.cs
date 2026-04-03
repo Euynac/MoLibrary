@@ -43,7 +43,7 @@ public class ModuleGitUI(ModuleGitUIOption option)
             DependsOnModule<ModuleLocalizationGuide>().Register()
                 .AddResource<GitResource>();
 
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
                     registry.RegisterLocalizedComponent<UIGitRepositoriesPage>(

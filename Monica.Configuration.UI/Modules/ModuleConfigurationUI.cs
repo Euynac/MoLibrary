@@ -54,7 +54,7 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
             DependsOnModule<ModuleDiffHighlightGuide>().Register();
 
             // Depend on UI core module and register UI components
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry =>
                 {
                     // Registration panel configuration page

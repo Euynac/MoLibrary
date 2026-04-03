@@ -60,7 +60,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
         // Depend on the UI core module and register the page
         if (!Option.DisableAIChatPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register(o => o.EnableMarkdown = true)
+            DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p =>
                 {
                     p.RegisterLocalizedComponent<UIAIChatPage>(
@@ -75,7 +75,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
 
         if (!Option.DisableAIProviderPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
                     p.RegisterLocalizedComponent<UIAIProviderManagePage>(

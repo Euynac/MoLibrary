@@ -1,10 +1,10 @@
-@using Monica.Core.Features.MoDiffHighlight
-@using Monica.Core.Features.MoDiffHighlight.Models
+@using Monica.UI.UIDiffHighlight.Facades
+@using Monica.UI.UIDiffHighlight.Models
 @using Monica.Core.Results;
 @using MudBlazor
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
-@inject DiffHighlightService DiffHighlightService
+@inject DiffHighlightFacade DiffHighlightFacade
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> L
 
@@ -166,7 +166,7 @@
 
             ErrorMessage = string.Empty;
 
-            var result = await DiffHighlightService.HighlightAsync(OriginText, NewText, Options);
+            var result = await DiffHighlightFacade.HighlightAsync(OriginText, NewText, Options);
             
             if (result.IsFailed(out var error, out var data))
             {

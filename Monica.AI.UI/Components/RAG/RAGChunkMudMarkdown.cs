@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.Localization;
 using Monica.AI.RAG.Models;
 using Monica.AI.UI.Localization;
-using Monica.UI.Components.Markdown;
+using Monica.UI.Shared.Components.Markdown;
 using MudBlazor;
 using MarkdownBlock = Markdig.Syntax.Block;
 

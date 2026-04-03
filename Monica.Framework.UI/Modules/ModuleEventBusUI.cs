@@ -56,7 +56,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         // Registration UI page
         if (!Option.DisableUIEventBusPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIEventBusPage>(
                     UIEventBusPage.PAGE_URL,
                     "Pages:EventBusMonitor:Title",

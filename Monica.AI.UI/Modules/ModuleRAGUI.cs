@@ -61,7 +61,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
         // Depends on UI core module and register RAG pages
         if (!Option.DisableRAGManagePage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
                     p.RegisterLocalizedComponent<UIAIRAGManagePage>(
@@ -76,7 +76,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
 
         if (!Option.DisableRAGDebugPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
                     p.RegisterLocalizedComponent<UIAIRAGDebugPage>(
@@ -91,7 +91,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
 
         if (!Option.DisableRAGChunkersPage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
                     p.RegisterLocalizedComponent<UIAIRAGChunkersPage>(

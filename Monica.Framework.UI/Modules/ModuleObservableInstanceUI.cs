@@ -50,7 +50,7 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
         // Register UI page
         if (!Option.DisableUIObservableInstancePage)
         {
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstancePage>(
                     UIObservableInstancePage.PAGE_URL,
                     "Pages:ObservableInstance:Title",

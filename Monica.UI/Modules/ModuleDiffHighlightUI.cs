@@ -3,7 +3,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.UI.Components.Pages;
+using Monica.UI.Pages;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -33,8 +33,7 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // No extra services are required here.
-        // This module directly reuses DiffHighlightService from the source module.
+        // The mixed module already registers the diff facade and infrastructure services.
     }
 
     public override void ClaimDependencies()
@@ -42,9 +41,9 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
         if (!Option.DisableDiffHighlightPage)
         {
             DependsOnModule<ModuleDiffHighlightGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIDiffHighlightPage>(
-                    UIDiffHighlightPage.DIFF_HIGHLIGHT_URL,
+            DependsOnModule<ModuleShellUIGuide>().Register()
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<DiffHighlightPage>(
+                    DiffHighlightPage.DIFF_HIGHLIGHT_URL,
                     "Pages:DiffHighlight:Title",
                     Icons.Material.Filled.Compare,
                     "Categories:Debug",

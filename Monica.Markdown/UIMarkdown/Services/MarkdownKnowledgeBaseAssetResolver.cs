@@ -1,4 +1,4 @@
-using Monica.UI.Components.Markdown;
+using Monica.UI.Shared.Components.Markdown;
 
 namespace Monica.Markdown.UIMarkdown.Services;
 

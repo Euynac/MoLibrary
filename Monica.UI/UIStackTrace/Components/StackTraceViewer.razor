@@ -1,10 +1,8 @@
-@using Monica.UI.UIStackTrace.Models
-@using Monica.UI.UIStackTrace.Services
-@using Microsoft.JSInterop
-@using MudBlazor
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
-@inject StackTraceParserService ParserService
+@using Monica.UI.UIStackTrace.Models
+@using StackTraceParser = Monica.UI.UIStackTrace.Support.StackTraceParser
+@inject StackTraceParser ParserService
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResource> L
 

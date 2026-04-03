@@ -20,7 +20,7 @@ public class ModuleK8SUI(ModuleK8SUIOption option)
         }
 
         DependsOnModule<ModuleK8SGuide>().Register();
-        DependsOnModule<ModuleUICoreGuide>().Register()
+        DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIK8SPage>(
                 UIK8SPage.PAGE_URL,
                 "Pages:K8S:Title",

@@ -42,7 +42,7 @@ public class ModuleExecutionTimingUI(ModuleExecutionTimingUIOption option)
         {
             DependsOnModule<ModuleExecutionTimingGuide>().Register();
 
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIExecutionTimingPage>(
                     UIExecutionTimingPage.PAGE_URL,
                     "Pages:ExecutionTiming:Title",

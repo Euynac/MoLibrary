@@ -1,0 +1,98 @@
+@inject ThemeState ThemeService
+@inject IBrowserStorage BrowserStorage
+@inject IJSRuntime JSRuntime
+@using Monica.UI.Shell.State
+@using Monica.UI.Shell.Support
+@implements IAsyncDisposable
+
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
+
+<div class="@ThemeService.GetThemeCssClass()" data-theme="@ThemeService.GetThemeDataAttribute()">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private IJSObjectReference? _themeHelperModule;
+    private Task _themeChangeTask = Task.CompletedTask;
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += OnThemeChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _themeHelperModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Monica.UI/js/theme-helper.js");
+
+            var themeData = await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
+
+            await InvokeAsync(() =>
+            {
+                if (themeData != null)
+                {
+                    ThemeService.CurrentThemeName = themeData.ThemeName;
+                    ThemeService.IsDarkMode = themeData.IsDarkMode;
+                }
+            });
+
+            await _themeHelperModule.InvokeVoidAsync(
+                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
+        }
+    }
+
+    private void OnThemeChanged()
+    {
+        _themeChangeTask = InvokeAsync(ApplyThemeChangeAsync);
+    }
+
+    private async Task ApplyThemeChangeAsync()
+    {
+        await BrowserStorage.SetAsync("theme:data", new ThemeData(
+            ThemeService.CurrentThemeName, ThemeService.IsDarkMode));
+
+        if (_themeHelperModule != null)
+        {
+            await _themeHelperModule.InvokeVoidAsync(
+                "setDocumentTheme", ThemeService.GetThemeDataAttribute());
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        ThemeService.OnThemeChanged -= OnThemeChanged;
+        await AwaitPendingThemeChangeAsync();
+
+        if (_themeHelperModule != null)
+        {
+            try
+            {
+                await _themeHelperModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already disconnected
+            }
+        }
+    }
+
+    private async Task AwaitPendingThemeChangeAsync()
+    {
+        try
+        {
+            await _themeChangeTask;
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already disconnected.
+        }
+    }
+
+    private record ThemeData(string ThemeName, bool IsDarkMode);
+}

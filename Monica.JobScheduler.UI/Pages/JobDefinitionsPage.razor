@@ -5,12 +5,15 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 @inject IStringLocalizer<JobSchedulerResource> L
 @using Monica.JobScheduler.UI.Localization
 @using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
 
 @using Monica.JobScheduler.UI.UIJobScheduler.Definitions.Models
+@using Monica.UI.Shell.Support
+
+@using Monica.UI.Shell.State
 
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>

@@ -54,7 +54,7 @@ public class ModuleSignalRUI(ModuleSignalRUIOption option)
         if (!Option.DisableDebugPage)
         {
             DependsOnModule<ModuleSignalRGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UISignalRDebugPage>(
                     UISignalRDebugPage.PAGE_URL,
                     "Pages:SignalRDebug:Title",

@@ -29,7 +29,7 @@ public class ModuleServiceDiscoveryUI(ModuleServiceDiscoveryUIOption option)
         if (!Option.DisableServiceDiscoveryPage)
         {
             DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIServiceDiscoveryPage>(
                     UIServiceDiscoveryPage.SERVICE_DISCOVERY_DEBUG_URL,
                     "Pages:ServiceDiscovery:Title",

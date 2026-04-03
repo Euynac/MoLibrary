@@ -28,7 +28,7 @@ public class ModuleFrameworkUI(ModuleFrameworkUIOption option)
     public override void ClaimDependencies()
     {
         // Depends on UIStackTrace module (for stack trace visualization)
-        DependsOnModule<ModuleUIStackTraceGuide>().Register();
+        DependsOnModule<ModuleStackTraceUIGuide>().Register();
     }
 }
 

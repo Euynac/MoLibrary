@@ -1,0 +1,51 @@
+@using Microsoft.Extensions.Options
+@using Monica.Modules
+@using Monica.UI.Shell.State
+@using Monica.UI.Shell.Support
+@inherits LayoutComponentBase
+@inject IPageRegistry UIRegistry
+@inject IOptions<ModuleShellUIOption> Options
+@inject ThemeState ThemeService
+@implements IDisposable
+
+<ThemeProviderHost>
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+
+    <div class="mo-layout" data-theme="@ThemeService.GetThemeDataAttribute()">
+        <!-- top navigation bar -->        <NavBar />
+
+        <!-- Main content area (full width) -->        <div class="mo-main-content">
+            <main class="mo-body-content">
+                @Body
+            </main>
+        </div>
+    </div>
+</ThemeProviderHost>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        ThemeService.OnThemeChanged += HandleThemeChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= HandleThemeChanged;
+    }
+
+    private void HandleThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+}
+
+

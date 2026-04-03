@@ -1,0 +1,159 @@
+@attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
+@using Microsoft.Extensions.Localization
+@using Monica.Core.Modularity.Dashboard.Facades
+@using Monica.Core.Modularity.Dashboard.Models
+@using Monica.Core.Modularity.Models
+@using Monica.Core.Results
+@using Monica.UI.Localization
+@using Monica.UI.UIModuleSystem.State
+@inject ModuleSystemQueryFacade ModuleSystemQueryFacade
+@inject ISnackbar SnackBar
+@inject IStringLocalizer<SharedResource> L
+
+<PageTitle>@L["ModuleSystem:Dashboard:Title"]</PageTitle>
+
+<div class="dashboard-page-shell">
+    <MudContainer MaxWidth="MaxWidth.False">
+        <MudPaper Class="pa-6 mb-6" Elevation="2">
+            <MudText Typo="Typo.h3" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-3" />
+                @L["ModuleSystem:Dashboard:Title"]
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                @L["ModuleSystem:Dashboard:Description"]
+            </MudText>
+        </MudPaper>
+
+        <MudTabs ActivePanelIndex="@_state.ActiveTabIndex"
+                 ActivePanelIndexChanged="@OnActivePanelIndexChanged"
+                 Elevation="4"
+                 Rounded="true"
+                 ApplyEffectsToContainer="true"
+                 MinimumTabWidth="180px"
+                 TabButtonsClass="dashboard-tab-button"
+                 Class="mb-6 dashboard-tabs">
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:SystemOverview"]" Icon="@Icons.Material.Filled.Assessment">
+                <div class="tab-content-panel">
+                    <SystemOverview SystemStatus="_state.SystemStatus" HealthCheckData="_state.HealthCheck" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:PerformanceMonitoring"]" Icon="@Icons.Material.Filled.Speed">
+                <div class="tab-content-panel">
+                    <PerformanceMonitoring SystemPerformance="_state.SystemPerformance" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:ModuleManagement"]" Icon="@Icons.Material.Filled.ViewModule">
+                <div class="tab-content-panel">
+                    <ModuleManagement RegistrationInfo="_state.RegistrationInfo"
+                                      OnRefresh="RefreshDataAsync"
+                                      OnModuleDetailClicked="ViewModuleDetail" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:AssemblyAnalysis"]" Icon="@Icons.Material.Filled.Hub">
+                <div class="tab-content-panel">
+                    <AssemblyAnalysis AssemblyAnalysisData="_state.AssemblyAnalysis" />
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["ModuleSystem:Dashboard:Tabs:Dependencies"]" Icon="@Icons.Material.Filled.AccountTree">
+                <div class="tab-content-panel">
+                    <DependencyGraph DependencyGraphData="_state.DependencyGraph"
+                                     OnModuleDetailClicked="ViewModuleDetail" />
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+</div>
+
+<!-- Module Details Dialog --><ModuleDetailDialog IsVisible="_state.ShowModuleDetail"
+                   IsVisibleChanged="OnModuleDetailVisibilityChanged"
+                   SelectedModuleDetail="_state.SelectedModuleDetail" />
+
+
+@code {
+    public const string MODULE_SYSTEM_DASHBOARD_URL = "/module-system-dashboard";
+    private readonly ModuleSystemPageState _state = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RefreshDataAsync();
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        var result = await ModuleSystemQueryFacade.GetDashboardSnapshotAsync();
+        if (result.IsFailed(out var error, out var snapshot))
+        {
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
+            return;
+        }
+
+        _state.ApplyDashboardSnapshot(snapshot);
+        SnackBar.Add(L["ModuleSystem:Dashboard:Messages:DataRefreshed"], Severity.Success);
+
+        if (_state.ShouldLoadAssemblyAnalysis)
+        {
+            await LoadAssemblyAnalysisAsync();
+        }
+    }
+
+    private Task OnActivePanelIndexChanged(int tabIndex)
+    {
+        _state.SetActiveTab(tabIndex);
+        return _state.ShouldLoadAssemblyAnalysis
+            ? LoadAssemblyAnalysisAsync()
+            : Task.CompletedTask;
+    }
+
+    private async Task LoadAssemblyAnalysisAsync()
+    {
+        if (!_state.ShouldLoadAssemblyAnalysis)
+        {
+            return;
+        }
+
+        var result = await ModuleSystemQueryFacade.GetAssemblyAnalysisAsync();
+        if (result.IsFailed(out var error, out var analysis))
+        {
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
+            return;
+        }
+
+        _state.SetAssemblyAnalysis(analysis);
+    }
+
+    /// <summary>
+    /// View module details
+    /// </summary>
+    /// <param name="moduleKey">Module key</param>
+    /// <returns></returns>
+    private async Task ViewModuleDetail(ModuleKey moduleKey)
+    {
+        var result = await ModuleSystemQueryFacade.GetModuleDetailAsync(moduleKey);
+        if (result.IsFailed(out var error, out var moduleDetail))
+        {
+            SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {error}", Severity.Error);
+            return;
+        }
+
+        if (moduleDetail == null)
+        {
+            SnackBar.Add(L["ModuleSystem:Dashboard:Messages:ModuleDetailNotFound"], Severity.Warning);
+            return;
+        }
+
+        _state.ShowModuleDetailDialog(moduleDetail);
+    }
+
+    private Task OnModuleDetailVisibilityChanged(bool isVisible)
+    {
+        _state.SetModuleDetailVisibility(isVisible);
+        return Task.CompletedTask;
+    }
+} 

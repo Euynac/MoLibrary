@@ -20,7 +20,7 @@ public class ModuleFileOpsUI(ModuleFileOpsUIOption option)
         }
 
         DependsOnModule<ModuleFileOpsGuide>().Register();
-        DependsOnModule<ModuleUICoreGuide>().Register()
+        DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<UIFileOpsPage>(
                 UIFileOpsPage.PAGE_URL,
                 "Pages:FileOps:Title",

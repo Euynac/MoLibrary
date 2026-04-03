@@ -87,6 +87,10 @@ public enum EMoModuleKey
     /// Core UI module used as the foundation for UI features.
     /// </summary>
     UICore,
+    /// <summary>
+    /// Module system UI module.
+    /// </summary>
+    ModuleSystemUI,
     FrameworkUI,
     SignalRUI,
     SystemInfoUI,
