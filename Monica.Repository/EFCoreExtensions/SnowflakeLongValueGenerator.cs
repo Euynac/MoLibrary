@@ -9,8 +9,8 @@ public class SnowflakeLongValueGenerator : ValueGenerator<long>
 {
     public override long Next(EntityEntry entry)
     {
-        var snowflake = entry.Context.GetService<ISnowflakeGenerator>();
-        return snowflake.GenerateSnowflakeId();
+        var snowflake = entry.Context.GetService<ISnowflakeIdGenerator>();
+        return snowflake.GenerateId();
     }
 
     public override bool GeneratesTemporaryValues => false;

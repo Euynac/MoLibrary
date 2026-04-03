@@ -81,7 +81,7 @@ public class ModuleClockGuide : MoModuleGuide<ModuleClock, ModuleClockOption, Mo
     /// <param name="commonTimeZone">The common timezone enum value</param>
     /// <returns>The guide instance for method chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when the timezone is not available on the system</exception>
-    public ModuleClockGuide SetTimeZone(ECommonTimeZones commonTimeZone)
+    public ModuleClockGuide SetTimeZone(CommonTimeZone commonTimeZone)
     {
         ConfigureModuleOption(option =>
         {

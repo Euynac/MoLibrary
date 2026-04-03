@@ -30,7 +30,7 @@ public abstract class DomainService : IDomainService, ICachedServiceProviderAcce
 
     protected ILogger Logger => _loggerLazy.Value;
 
-    protected IMoMapper Mapper => CachedServiceProvider.GetRequiredService<IMoMapper>();
+    protected IObjectMapper Mapper => CachedServiceProvider.GetRequiredService<IObjectMapper>();
 
     private InvalidOperationException CreateNotInitializedException()
     {

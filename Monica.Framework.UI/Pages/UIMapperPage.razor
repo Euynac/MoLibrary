@@ -1,7 +1,8 @@
 @using Monica.Modules
+@using Monica.Core.Features.MoMapper
 @using Monica.Core.Results;
 @using Monica.UI.Shared.Components.Markdown
-@inject MapperService MapperService
+@inject ObjectMappingStatusService StatusService
 @inject ISnackbar Snackbar
 
 @attribute [Route(MAPPER_DEBUG_URL)]
@@ -51,12 +52,12 @@
             </MudCardContent>
         </MudCard>
 
-        @if (_mapperData?.MapperInfos is not null && _mapperData.MapperInfos.Any())
+        @if (_mapperData?.Mappings is not null && _mapperData.Mappings.Any())
         {
             <MudCard>
                 <MudCardContent>
                     <div class="mapper-table-wrapper">
-                        <MudTable T="MapperInfo" Items="@_mapperData.MapperInfos" Hover="true" Striped="true" Dense="true">
+                        <MudTable T="ObjectMapperInfo" Items="@_mapperData.Mappings" Hover="true" Striped="true" Dense="true">
                             <HeaderContent>
                                 <MudTh>源类型</MudTh>
                                 <MudTh>目标类型</MudTh>
@@ -143,9 +144,9 @@
     public const string MAPPER_DEBUG_URL = "/mapper-debug";
     
     private bool _loading = false;
-    private MapperStatusResponse? _mapperData;
+    private ObjectMapperStatusResponse? _mapperData;
     private bool _showCodeDialog = false;
-    private MapperInfo? _selectedMapper;
+    private ObjectMapperInfo? _selectedMapper;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -162,7 +163,7 @@
 
         try
         {
-            if ((await MapperService.GetMapperStatusAsync()).IsFailed(out var error, out var data))
+            if ((await StatusService.GetStatusAsync()).IsFailed(out var error, out var data))
             {
                 Snackbar.Add($"加载Mapper数据失败: {error}", Severity.Error);
                 return;
@@ -182,7 +183,7 @@
         }
     }
     
-    private void ShowMapperCode(MapperInfo mapper)
+    private void ShowMapperCode(ObjectMapperInfo mapper)
     {
         _selectedMapper = mapper;
         _showCodeDialog = true;

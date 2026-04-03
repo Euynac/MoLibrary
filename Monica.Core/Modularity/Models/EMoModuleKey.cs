@@ -25,7 +25,7 @@ public enum EMoModuleKey
     FrameworkMonitor,
     Locker,
     UnitOfWork,
-    Mapper,
+    ObjectMapping,
     SignalR,
     StateStore,
     /// <summary>
@@ -49,7 +49,7 @@ public enum EMoModuleKey
     SwaggerUI,
     Seeder,
     DynamicProxy,
-    SnowflakeId,
+    Snowflake,
     ExecutionTiming,
     Excel,
     CancellationManager,

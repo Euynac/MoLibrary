@@ -17,7 +17,7 @@ public static class ModuleXmlDocumentationBuilderExtensions
     extension(Mo)
     {
         /// <summary>
-        /// Configures the XmlDocumentation module.
+        /// Registers the XML documentation module.
         /// </summary>
         public static ModuleXmlDocumentationGuide AddXmlDocumentation(Action<ModuleXmlDocumentationOption>? action = null)
         {
@@ -26,6 +26,9 @@ public static class ModuleXmlDocumentationBuilderExtensions
     }
 }
 
+/// <summary>
+/// Provides XML documentation lookup and cache inspection endpoints.
+/// </summary>
 [ModuleKey(EMoModuleKey.XmlDocumentation)]
 public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     : MoModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
@@ -38,10 +41,9 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     /// <param name="services">The service collection.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
-        Singleton = new XmlDocumentationService();
-        // Register the XML documentation service as a singleton.
-        services.AddSingleton<IXmlDocumentationService, XmlDocumentationService>(_ =>
-            (XmlDocumentationService) Singleton);
+        var xmlDocumentationService = new XmlDocumentationService();
+        Singleton = xmlDocumentationService;
+        services.AddSingleton<IXmlDocumentationService>(xmlDocumentationService);
     }
 
     /// <summary>
@@ -50,6 +52,11 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     /// <param name="app">The application builder.</param>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
+        if (!option.EnableEndpoints)
+        {
+            return;
+        }
+
         UseEndpoints(app, endpoints =>
         {
             var tagName = Option.GetApiGroupName();
@@ -106,7 +113,8 @@ public class ModuleXmlDocumentationGuide : MoModuleGuide<ModuleXmlDocumentation,
 public class ModuleXmlDocumentationOption : MoModuleOptionWithMinimalApi<ModuleXmlDocumentation>
 {
     /// <summary>
-    /// Enables endpoints. Enabled by default.
+    /// Enables the XML documentation cache endpoints exposed by this module.
+    /// Leave this enabled when you need runtime inspection, or disable it to avoid exposing diagnostic endpoints.
     /// </summary>
     public bool EnableEndpoints { get; set; } = true;
 }

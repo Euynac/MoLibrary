@@ -19,7 +19,7 @@ public class ModuleWebApi(ModuleWebApiOption option) : MoModule<ModuleWebApi, Mo
         //DependsOnModule<ModuleAuthorizationGuide>().Register().AddDefaultPermissionBit<>();
         DependsOnModule<ModuleAuthenticationGuide>().Register().ConfigDefaultSystemUser();
         DependsOnModule<ModuleMediatorGuide>().Register();
-        DependsOnModule<ModuleMapperGuide>().Register();
+        DependsOnModule<ModuleObjectMappingGuide>().Register();
         DependsOnModule<ModuleRepositoryGuide>().Register();
         if (!Option.DisableExceptionHandling)
         {

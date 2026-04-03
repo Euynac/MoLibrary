@@ -2,8 +2,14 @@ using Mapster;
 
 namespace Monica.Core.Features.MoMapper;
 
-public interface IMoMapper
+/// <summary>
+/// Defines object-to-object mapping operations backed by the configured mapping provider.
+/// </summary>
+public interface IObjectMapper
 {
+    /// <summary>
+    /// Gets the underlying Mapster configuration used by the mapper.
+    /// </summary>
     TypeAdapterConfig Config { get; }
 
     /// <summary>
@@ -12,6 +18,7 @@ public interface IMoMapper
     /// <typeparam name="TDestination">Type of the destination object</typeparam>
     /// <param name="source">Source object</param>
     TDestination Map<TDestination>(object source);
+
     /// <summary>
     /// Converts an object to another. Creates a new object of <typeparamref name="TDestination"/>.
     /// </summary>
@@ -48,5 +55,11 @@ public interface IMoMapper
     /// <param name="destinationType"></param>
     object Map(object source, Type sourceType, Type destinationType);
 
+    /// <summary>
+    /// Projects a queryable source to the destination type using the configured mapping rules.
+    /// </summary>
+    /// <typeparam name="TDestination">The destination element type.</typeparam>
+    /// <param name="source">The source query.</param>
+    /// <returns>The projected query.</returns>
     IQueryable<TDestination> ProjectToType<TDestination>(IQueryable source);
 }

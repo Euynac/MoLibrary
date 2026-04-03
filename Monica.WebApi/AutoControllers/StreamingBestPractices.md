@@ -17,7 +17,7 @@ The streaming CRUD functionality provides memory-efficient data processing for l
 
 1. **`IStreamingCrudAppService<T>`**: Interface for streaming CRUD operations
 2. **`MoAbstractKeyCrudAppService`**: Enhanced with streaming methods
-3. **`IMoMapper.ProjectToTypeStreamAsync()`**: Streaming mapper support
+3. **`IObjectMapper.ProjectToTypeStreamAsync()`**: Streaming mapper support
 4. **`StreamingCrudController`**: Example controller with streaming endpoints
 
 ### New Methods Added

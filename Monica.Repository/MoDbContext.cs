@@ -70,7 +70,7 @@ public abstract class MoDbContext<TDbContext>(DbContextOptions<TDbContext> optio
         {
             foreach (var property in entityType.GetProperties())
             {
-                //Set up automatic generation of Snowflake ID
+                //Set up automatic generation of SnowflakeIdGenerator ID
                 if (property.Name.Equals("Id") && property.ValueGenerated != ValueGenerated.Never &&
                     property.ClrType == typeof(long))
                 {

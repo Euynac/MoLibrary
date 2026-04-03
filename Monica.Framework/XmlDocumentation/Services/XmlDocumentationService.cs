@@ -10,7 +10,7 @@ namespace Monica.Core.Features.MoXmlDocumentation;
 /// <summary>
 /// Default implementation of <see cref="IXmlDocumentationService" />.
 /// </summary>
-public class XmlDocumentationService : IXmlDocumentationService
+internal sealed class XmlDocumentationService : IXmlDocumentationService
 {
     private readonly ConcurrentDictionary<string, XmlDocumentCacheInfo> _documentCache = new();
     private readonly ConcurrentDictionary<string, XPathNavigator?> _navigatorCache = new();

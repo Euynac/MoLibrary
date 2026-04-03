@@ -83,7 +83,7 @@ public interface IAsyncLocalEventStore
 /// Used to trigger entity change events.
 /// </summary>
 public class AsyncLocalEventPublisher(
-    IMoMapper entityToEtoMapper,
+    IObjectMapper entityToEtoMapper,
     IOptions<DistributedEntityEventOptions> distributedEntityEventOptions,
     ILocalEventBus localEventBus,
     IDistributedEventBus distributedEventBus,
@@ -103,7 +103,7 @@ public class AsyncLocalEventPublisher(
     /// <summary>
     /// Gets the entity to ETO mapper
     /// </summary>
-    protected IMoMapper EntityToEtoMapper { get; } = entityToEtoMapper;
+    protected IObjectMapper EntityToEtoMapper { get; } = entityToEtoMapper;
     
     /// <summary>
     /// Gets the distributed entity event options

@@ -34,7 +34,7 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
     {
         if (!Option.DisableUIMapperPage)
         {
-            DependsOnModule<ModuleMapperGuide>().Register();
+            DependsOnModule<ModuleObjectMappingGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .ConfigureModuleOption(o=>o.EnableMarkdown = true)
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMapperPage>(

@@ -4,8 +4,7 @@ namespace Monica.Core.Features.MoSnowflake;
 
 /// <summary>
 /// Distributed identifier generator based on the Snowflake algorithm.
-/// Twitter_Snowflake
-/// Snowflake layout, separated here with hyphens for readability:
+/// Layout, separated with hyphens for readability:
 /// 0 - 0000000000 0000000000 0000000000 0000000000 0 - 00000 - 00000 - 000000000000
 /// The highest bit remains zero for positive <see cref="long" /> values.
 /// The next 41 bits store the timestamp offset in milliseconds from the configured epoch, which covers about 69 years.
@@ -13,9 +12,8 @@ namespace Monica.Core.Features.MoSnowflake;
 /// The final 12 bits store the per-millisecond sequence, allowing up to 4096 identifiers per node per millisecond.
 /// This yields a 64-bit, time-ordered identifier with low collision risk across distributed nodes.
 /// </summary>
-public class Snowflake
+internal sealed class SnowflakeIdGenerator : ISnowflakeIdGenerator
 {
-
     // Custom epoch in milliseconds (2015-01-01).
     private readonly long _twepoch;
 
@@ -54,8 +52,8 @@ public class Snowflake
 
     private readonly object _sync = new();
 
-    public Snowflake(
-        ModuleSnowflakeIdOption configuration)
+    public SnowflakeIdGenerator(
+        ModuleSnowflakeOption configuration)
     {
         _twepoch = configuration.Twepoch;
         _workerIdBits = configuration.WorkerIdBits;
@@ -75,20 +73,25 @@ public class Snowflake
 
         if (_workerId > maxWorkerId || _workerId < 0)
         {
-            throw new ArgumentException(string.Format("worker Id can't be greater than %d or less than 0", maxWorkerId));
+            throw new ArgumentOutOfRangeException(
+                nameof(configuration.WorkerId),
+                configuration.WorkerId,
+                $"Worker id must be between 0 and {maxWorkerId}.");
         }
+
         if (_datacenterId > maxDatacenterId || _datacenterId < 0)
         {
-            throw new ArgumentException(string.Format("datacenter Id can't be greater than %d or less than 0", maxDatacenterId));
+            throw new ArgumentOutOfRangeException(
+                nameof(configuration.DatacenterId),
+                configuration.DatacenterId,
+                $"Datacenter id must be between 0 and {maxDatacenterId}.");
         }
     }
-
-
 
     /// <summary>
     /// Generates the next identifier.
     /// </summary>
-    public long NextId()
+    public long GenerateId()
     {
         lock (_sync)
         {
@@ -97,8 +100,8 @@ public class Snowflake
             // Reject clock rollback to preserve monotonic ids.
             if (timestamp < lastTimestamp)
             {
-                throw new InvalidTimeZoneException(
-                    string.Format("Clock moved backwards.  Refusing to generate id for %d milliseconds", lastTimestamp - timestamp));
+                throw new InvalidOperationException(
+                    $"Clock moved backwards. Refusing to generate an id for {lastTimestamp - timestamp} milliseconds.");
             }
 
             // Same millisecond: advance the in-memory sequence.
@@ -129,9 +132,6 @@ public class Snowflake
         }
     }
 
-
-
-
     /// <summary>
     /// Blocks until the clock reaches the next millisecond.
     /// </summary>
@@ -148,10 +148,8 @@ public class Snowflake
     /// <summary>
     /// Returns the current UTC time in milliseconds.
     /// </summary>
-    protected long TimeGen()
+    private static long TimeGen()
     {
         return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
     }
-
-
 }

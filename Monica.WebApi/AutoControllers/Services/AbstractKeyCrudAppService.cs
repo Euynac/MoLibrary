@@ -588,7 +588,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
 
     /// <summary>
     /// Maps <typeparamref name="TEntity"/> to <typeparamref name="TGetOutputDto"/>.
-    /// It uses <see cref="IMoMapper"/> by default.
+    /// It uses <see cref="IObjectMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual Task<TGetOutputDto> MapToGetOutputDtoAsync(TEntity entity)
@@ -612,7 +612,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
 
     /// <summary>
     /// Maps <typeparamref name="TCreateInput"/> to <typeparamref name="TEntity"/> to create a new entity.
-    /// It uses <see cref="IMoMapper"/> by default.
+    /// It uses <see cref="IObjectMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual TEntity MapToEntity(TCreateInput createInput)
@@ -624,7 +624,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
 
     /// <summary>
     /// Maps <typeparamref name="TUpdateInput"/> to <typeparamref name="TEntity"/> to update the entity.
-    /// It uses <see cref="IMoMapper"/> by default.
+    /// It uses <see cref="IObjectMapper"/> by default.
     /// It can be overriden for custom mapping.
     /// </summary>
     protected virtual void MapToEntity(TUpdateInput updateInput, TEntity entity)
