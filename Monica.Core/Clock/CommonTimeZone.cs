@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoClock;
+namespace Monica.Core.Clock;
 
 /// <summary>
 /// Common timezone identifiers for major countries and regions.

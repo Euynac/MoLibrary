@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoMapper;
 using Monica.Core.Logging;
 using Monica.Core.Mediator;
+using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
 using Monica.DependencyInjection.Abstractions;
 

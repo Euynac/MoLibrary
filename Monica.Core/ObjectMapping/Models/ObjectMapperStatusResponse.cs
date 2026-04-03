@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Models;
 
 /// <summary>
 /// Summarizes the object mappings currently registered in the application.

@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoXmlDocumentation;
+namespace Monica.Framework.XmlDocumentation.Models;
 
 /// <summary>
 /// XML documentation extracted for a method.

@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Models;
 
 /// <summary>
 /// Describes a single registered object mapping.

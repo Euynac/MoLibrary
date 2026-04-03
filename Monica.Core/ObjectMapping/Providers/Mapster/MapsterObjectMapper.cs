@@ -1,7 +1,8 @@
 using Mapster;
 using MapsterMapper;
+using Monica.Core.ObjectMapping.Abstractions;
 
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Providers.Mapster;
 
 /// <summary>
 /// Mapster-based implementation of <see cref="IObjectMapper" />.

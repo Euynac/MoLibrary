@@ -1,6 +1,7 @@
 using Monica.Modules;
+using Monica.Repository.Snowflake.Abstractions;
 
-namespace Monica.Core.Features.MoSnowflake;
+namespace Monica.Repository.Snowflake.Services;
 
 /// <summary>
 /// Distributed identifier generator based on the Snowflake algorithm.

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
-using Monica.Core.Features.MoMapper;
+using Monica.Core.ObjectMapping.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.Repository.EntityInterfaces;
 using Monica.Repository.Extensions;

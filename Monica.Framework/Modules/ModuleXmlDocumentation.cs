@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Features.MoXmlDocumentation;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
+using Monica.Framework.XmlDocumentation.Abstractions;
+using Monica.Framework.XmlDocumentation.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

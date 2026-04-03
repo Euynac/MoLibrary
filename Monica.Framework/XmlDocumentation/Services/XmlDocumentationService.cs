@@ -4,8 +4,10 @@ using System.Text.RegularExpressions;
 using System.Xml.XPath;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
+using Monica.Framework.XmlDocumentation.Abstractions;
+using Monica.Framework.XmlDocumentation.Models;
 
-namespace Monica.Core.Features.MoXmlDocumentation;
+namespace Monica.Framework.XmlDocumentation.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IXmlDocumentationService" />.

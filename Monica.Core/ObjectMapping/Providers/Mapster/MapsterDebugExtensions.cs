@@ -3,7 +3,7 @@ using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.Logging;
 
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Providers.Mapster;
 
 /// <summary>
 /// Debug helpers for inspecting Mapster-generated mapping expressions.

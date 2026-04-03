@@ -1,6 +1,6 @@
 using Mapster;
 
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Abstractions;
 
 /// <summary>
 /// Defines object-to-object mapping operations backed by the configured mapping provider.

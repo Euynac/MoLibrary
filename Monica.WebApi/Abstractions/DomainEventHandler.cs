@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.Core.Features.MoMapper;
 using Monica.Core.Logging;
+using Monica.Core.ObjectMapping.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
 

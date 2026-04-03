@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
+using Monica.Core.ObjectMapping.Models;
+using Monica.Core.ObjectMapping.Providers.Mapster;
 using Monica.Core.Results;
 
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Services;
 
 /// <summary>
 /// Provides object mapping inspection data for debug endpoints and UI pages.

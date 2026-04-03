@@ -7,10 +7,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Features.MoMapper;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Core.ObjectMapping.Abstractions;
+using Monica.Core.ObjectMapping.Providers.Mapster;
+using Monica.Core.ObjectMapping.Services;
 using Monica.Core.Results;
 
 // ReSharper disable once CheckNamespace

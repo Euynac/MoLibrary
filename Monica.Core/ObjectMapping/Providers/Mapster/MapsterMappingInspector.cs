@@ -2,9 +2,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using ExpressionDebugger;
 using Mapster;
+using Monica.Core.ObjectMapping.Models;
 using Monica.Tool.Extensions;
 
-namespace Monica.Core.Features.MoMapper;
+namespace Monica.Core.ObjectMapping.Providers.Mapster;
 
 internal static class MapsterMappingInspector
 {

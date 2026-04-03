@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
-using Monica.Core.Features.MoSnowflake;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Repository.Snowflake.Abstractions;
+using Monica.Repository.Snowflake.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

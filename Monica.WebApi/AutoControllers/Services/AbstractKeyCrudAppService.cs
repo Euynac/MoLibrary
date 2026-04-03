@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.DynamicLinq;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AutoModel.Abstractions;
-using Monica.Core.Features.MoMapper;
+using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
 using Monica.Repository;
 using Monica.Repository.DtoInterfaces;

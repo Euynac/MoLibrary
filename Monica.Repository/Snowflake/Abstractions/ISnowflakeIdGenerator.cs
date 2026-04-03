@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoSnowflake;
+namespace Monica.Repository.Snowflake.Abstractions;
 
 /// <summary>
 /// Generates distributed identifiers using the Snowflake algorithm.

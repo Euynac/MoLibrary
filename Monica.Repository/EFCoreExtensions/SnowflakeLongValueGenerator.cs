@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
-using Monica.Core.Features.MoSnowflake;
+using Monica.Repository.Snowflake.Abstractions;
 
 namespace Monica.Repository.EFCoreExtensions;
 

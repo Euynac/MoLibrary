@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoSnowflake;
+namespace Monica.Repository.Snowflake.Abstractions;
 
 /// <summary>
 /// Temporary compatibility bridge for legacy code paths that still resolve Snowflake generation through a static entry point.

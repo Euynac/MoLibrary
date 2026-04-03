@@ -1,6 +1,6 @@
 using System.Xml.XPath;
 
-namespace Monica.Core.Features.MoXmlDocumentation;
+namespace Monica.Framework.XmlDocumentation.Models;
 
 /// <summary>
 /// Metadata about a cached XML document.

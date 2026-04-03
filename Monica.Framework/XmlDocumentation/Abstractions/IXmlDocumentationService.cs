@@ -1,6 +1,7 @@
 using System.Reflection;
+using Monica.Framework.XmlDocumentation.Models;
 
-namespace Monica.Core.Features.MoXmlDocumentation;
+namespace Monica.Framework.XmlDocumentation.Abstractions;
 
 /// <summary>
 /// Provides access to XML documentation generated for assemblies.

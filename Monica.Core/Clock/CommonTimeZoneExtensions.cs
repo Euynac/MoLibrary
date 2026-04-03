@@ -1,4 +1,4 @@
-namespace Monica.Core.Features.MoClock;
+namespace Monica.Core.Clock;
 
 /// <summary>
 /// Extension methods for <see cref="CommonTimeZone" />.
