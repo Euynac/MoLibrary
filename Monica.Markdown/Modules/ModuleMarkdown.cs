@@ -4,10 +4,13 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
+using Monica.Markdown.Abstractions;
 using Monica.Markdown.Events;
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Facades;
 using Monica.Markdown.Models;
+using Monica.Markdown.Providers.FileSystem;
 using Monica.Markdown.Services;
+using Monica.Markdown.UIMarkdown.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -34,11 +37,13 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddSingleton<IDocumentTitleProvider,
-            FileNameDocumentTitleProvider>();
+        services.TryAddSingleton<IMarkdownDocumentTitleResolver,
+            FileNameMarkdownDocumentTitleResolver>();
         services.TryAddSingleton<IMarkdownDocumentProvider,
-            FileMarkdownDocumentProvider>();
-        services.AddSingleton<IMoMarkdownService, MoMarkdownService>();
+            FileSystemMarkdownDocumentProvider>();
+        services.TryAddSingleton<IMarkdownDocumentSearcher, MarkdownDocumentSearchService>();
+        services.AddSingleton<IMarkdownDocumentCatalog, MarkdownDocumentCatalogService>();
+        services.AddSingleton<MarkdownFacade>();
         services.AddTransient<MarkdownGitBindingRefreshEventHandler>();
     }
 }
@@ -63,7 +68,7 @@ public class ModuleMarkdownGuide
     {
         ConfigureModuleOption(option =>
         {
-            option.DocumentGroupRegistrations.Add(new DocumentGroupRegistration
+            option.DocumentGroupRegistrations.Add(new MarkdownDocumentGroupRegistration
             {
                 Key = key,
                 Title = title,
@@ -136,12 +141,12 @@ public class ModuleMarkdownGuide
     /// </summary>
     /// <typeparam name="TProvider">Custom title provider type.</typeparam>
     public ModuleMarkdownGuide UseDocumentTitleProvider<TProvider>()
-        where TProvider : class, IDocumentTitleProvider
+        where TProvider : class, IMarkdownDocumentTitleResolver
     {
         ConfigureServices(ctx =>
         {
-            ctx.Services.RemoveAll<IDocumentTitleProvider>();
-            ctx.Services.AddSingleton<IDocumentTitleProvider, TProvider>();
+            ctx.Services.RemoveAll<IMarkdownDocumentTitleResolver>();
+            ctx.Services.AddSingleton<IMarkdownDocumentTitleResolver, TProvider>();
         }, order: 0);
 
         return this;
@@ -169,7 +174,7 @@ public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
     /// <summary>
     /// Registered document group descriptors, populated by Guide.
     /// </summary>
-    public List<DocumentGroupRegistration> DocumentGroupRegistrations { get; set; } = [];
+    public List<MarkdownDocumentGroupRegistration> DocumentGroupRegistrations { get; set; } = [];
 
     /// <summary>
     /// Git to Markdown refresh bindings configured by the guide.
@@ -185,6 +190,31 @@ public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
     /// Whether to parse YAML front matter from markdown files.
     /// </summary>
     public bool ParseFrontMatter { get; set; } = true;
+
+    /// <summary>
+    /// Selects the matching strategy used by markdown document search.
+    /// This applies to both host integrations and the built-in UI dialog.
+    /// </summary>
+    public MarkdownSearchAlgorithm DocumentSearchAlgorithm { get; set; } =
+        MarkdownSearchAlgorithm.KeywordFuzzy;
+
+    /// <summary>
+    /// Minimum normalized query length required before a search executes.
+    /// Increase this to reduce low-signal broad matches.
+    /// </summary>
+    public int DocumentSearchMinQueryLength { get; set; } = 2;
+
+    /// <summary>
+    /// Maximum number of document results returned by each search request.
+    /// Higher values improve recall but increase ranking and payload cost.
+    /// </summary>
+    public int DocumentSearchMaxResults { get; set; } = 50;
+
+    /// <summary>
+    /// Maximum number of preview characters returned for each search result.
+    /// Longer previews provide more context but produce larger response payloads.
+    /// </summary>
+    public int DocumentSearchPreviewLength { get; set; } = 180;
 
     /// <summary>
     /// Global folder names to exclude from scanning across all document groups.

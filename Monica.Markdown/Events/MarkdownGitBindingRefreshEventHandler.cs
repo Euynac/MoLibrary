@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.DevOps.Git.Events;
 using Monica.EventBus.Abstractions.Handlers;
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Abstractions;
 using Monica.Modules;
 
 namespace Monica.Markdown.Events;
@@ -12,7 +12,7 @@ namespace Monica.Markdown.Events;
 /// </summary>
 public class MarkdownGitBindingRefreshEventHandler(
     IOptions<ModuleMarkdownOption> options,
-    IMoMarkdownService markdownService,
+    IMarkdownDocumentCatalog markdownService,
     ILogger<MarkdownGitBindingRefreshEventHandler> logger)
     : ILocalEventHandler<GitRepositoryUpdatedEvent>, ILocalEventHandler<GitRepositoryDeletedEvent>
 {

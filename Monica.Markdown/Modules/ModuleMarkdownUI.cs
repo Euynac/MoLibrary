@@ -8,11 +8,10 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Pages;
-using Monica.Markdown.Interfaces;
 using Monica.Markdown.Localization;
-using Monica.Markdown.Services;
 using Monica.Markdown.UIMarkdown.Models;
-using Monica.Markdown.UIMarkdown.Services;
+using Monica.Markdown.UIMarkdown.State;
+using Monica.Markdown.UIMarkdown.Support;
 using Monica.UI.Shared.Components.Markdown;
 using MudBlazor;
 
@@ -32,10 +31,10 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     /// </summary>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<MarkdownUIService>();
-        services.AddScoped<MarkdownLocalImageAssetService>();
-        services.TryAddSingleton<IMarkdownDocumentSearchService, MarkdownDocumentSearchService>();
-        services.Replace(ServiceDescriptor.Scoped<IMoMarkdownAssetResolver, MarkdownKnowledgeBaseAssetResolver>());
+        services.AddTransient<MarkdownViewerPageState>();
+        services.AddTransient<MarkdownDocumentSearchState>();
+        services.AddTransient<MarkdownLocalAssetService>();
+        services.Replace(ServiceDescriptor.Scoped<IMoMarkdownAssetResolver, MarkdownAssetUrlResolver>());
     }
 
     /// <summary>
@@ -80,7 +79,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
                     async ([FromRoute] string groupKey,
                            [FromQuery] string documentRelativePath,
                            [FromQuery] string assetPath,
-                           [FromServices] MarkdownLocalImageAssetService assetService) =>
+                           [FromServices] MarkdownLocalAssetService assetService) =>
                     {
                         try
                         {
@@ -177,30 +176,9 @@ public class ModuleMarkdownUIOption : MoModuleOptionWithMinimalApi<ModuleMarkdow
     public string AssetEndpointBasePath { get; set; } = "/markdown-ui/assets";
 
     /// <summary>
-    /// Selects the matching strategy used by document search.
-    /// </summary>
-    public EMarkdownDocumentSearchAlgorithm DocumentSearchAlgorithm { get; set; } =
-        EMarkdownDocumentSearchAlgorithm.KeywordFuzzy;
-
-    /// <summary>
-    /// Minimum query length required before a search executes.
-    /// </summary>
-    public int DocumentSearchMinQueryLength { get; set; } = 2;
-
-    /// <summary>
     /// Client-side debounce delay for search input, in milliseconds.
     /// </summary>
     public int DocumentSearchDebounceMilliseconds { get; set; } = 250;
-
-    /// <summary>
-    /// Maximum number of document results returned by each search request.
-    /// </summary>
-    public int DocumentSearchMaxResults { get; set; } = 50;
-
-    /// <summary>
-    /// Maximum number of preview characters displayed per result card.
-    /// </summary>
-    public int DocumentSearchPreviewLength { get; set; } = 180;
 
     /// <summary>
     /// Image extensions allowed to be served by the local markdown asset endpoint.

@@ -1,0 +1,201 @@
+@using Microsoft.Extensions.Localization
+@using Monica.Markdown.Localization
+@using Monica.Markdown.Models
+@using Monica.Markdown.UIMarkdown.Models
+@using Monica.Markdown.UIMarkdown.State
+@using Monica.Markdown.UIMarkdown.Support
+@implements IDisposable
+
+@inject MarkdownDocumentSearchState SearchState
+@inject IStringLocalizer<MarkdownResource> L
+
+<MudDialog>
+    <TitleContent>
+        <span class="document-search-chrome-spacer" aria-hidden="true"></span>
+    </TitleContent>
+
+    <DialogContent>
+        <div class="document-search-dialog">
+            <div class="document-search-header">
+                <div class="document-search-heading">
+                    <h2 class="document-search-title">@L["MarkdownViewer:Dialogs:Search:Title"]</h2>
+                    <p class="document-search-current-group">@GetCurrentGroupTitle()</p>
+                </div>
+
+                <div class="document-search-scope-card">
+                    <MudSwitch T="bool"
+                               Value="SearchState.IncludeAllKnowledgeBases"
+                               ValueChanged="SearchState.OnIncludeAllKnowledgeBasesChangedAsync"
+                               Color="Color.Primary" />
+                    <span class="document-search-scope-copy">
+                        @L["MarkdownViewer:Dialogs:Search:IncludeAllKnowledgeBases"]
+                    </span>
+                </div>
+            </div>
+
+            <MudTextField T="string"
+                          Value="SearchState.Query"
+                          ValueChanged="SearchState.OnQueryChanged"
+                          Placeholder="@L["MarkdownViewer:Dialogs:Search:InputPlaceholder"]"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          AutoFocus="true"
+                          DebounceInterval="@SearchState.SearchDebounceMilliseconds"
+                          OnDebounceIntervalElapsed="SearchState.OnQueryDebouncedAsync"
+                          Class="document-search-input" />
+
+            <div class="document-search-status-row">
+                @if (SearchState.IsSearching)
+                {
+                    <span class="document-search-status-inline">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                        <span>@L["MarkdownViewer:Dialogs:Search:Searching"]</span>
+                    </span>
+                }
+                else if (SearchState.HasEnoughQueryLength && string.IsNullOrWhiteSpace(SearchState.ErrorMessage))
+                {
+                    <span>@L["MarkdownViewer:Dialogs:Search:ResultCount", SearchState.Results.Count]</span>
+                }
+                else if (SearchState.HasSearchQuery)
+                {
+                    <span>@L["MarkdownViewer:Dialogs:Search:MinimumQueryLength", SearchState.MinimumQueryLength]</span>
+                }
+                else
+                {
+                    <span>@L["MarkdownViewer:Dialogs:Search:Hint"]</span>
+                }
+            </div>
+
+            <div class="document-search-results">
+                @if (!string.IsNullOrWhiteSpace(SearchState.ErrorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @L["MarkdownViewer:Dialogs:Search:SearchFailed", SearchState.ErrorMessage]
+                    </MudAlert>
+                }
+                else if (SearchState.IsSearching && SearchState.Results.Count == 0)
+                {
+                    <div class="document-search-state">
+                        <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:Searching"]</MudText>
+                    </div>
+                }
+                else if (!SearchState.HasSearchQuery)
+                {
+                    <div class="document-search-state">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.TravelExplore"
+                                     Size="Size.Large"
+                                     Color="Color.Default"
+                                     Style="opacity: 0.35;" />
+                            <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:Hint"]</MudText>
+                        </MudStack>
+                    </div>
+                }
+                else if (!SearchState.HasEnoughQueryLength)
+                {
+                    <div class="document-search-state">
+                        <MudText Typo="Typo.body1">
+                            @L["MarkdownViewer:Dialogs:Search:MinimumQueryLength", SearchState.MinimumQueryLength]
+                        </MudText>
+                    </div>
+                }
+                else if (SearchState.Results.Count == 0)
+                {
+                    <div class="document-search-state">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.SearchOff"
+                                     Size="Size.Large"
+                                     Color="Color.Default"
+                                     Style="opacity: 0.35;" />
+                            <MudText Typo="Typo.body1">@L["MarkdownViewer:Dialogs:Search:NoResults"]</MudText>
+                        </MudStack>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var result in SearchState.Results)
+                    {
+                        var locationText = GetResultLocationText(result);
+
+                        <button type="button"
+                                class="document-search-result"
+                                @onclick="@(() => SelectResult(result))">
+                            <div class="document-search-result-meta">
+                                <span class="document-search-result-group">@result.GroupTitle</span>
+
+                                @if (!string.IsNullOrWhiteSpace(locationText))
+                                {
+                                    <div class="document-search-result-location">@locationText</div>
+                                }
+                            </div>
+                            <div class="document-search-result-title">@result.DocumentTitle</div>
+                            <div class="document-search-result-preview">
+                                @foreach (var part in MarkdownSearchPreviewFormatter.BuildParts(result))
+                                {
+                                    if (part.IsMatch)
+                                    {
+                                        <mark class="document-search-hit">@part.Text</mark>
+                                    }
+                                    else
+                                    {
+                                        <span>@part.Text</span>
+                                    }
+                                }
+                            </div>
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public MarkdownDocumentGroup? CurrentGroup { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        SearchState.Attach(CurrentGroup, () => InvokeAsync(StateHasChanged));
+    }
+
+    private void SelectResult(MarkdownDocumentSearchResult result)
+    {
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+
+    private string GetCurrentGroupTitle()
+    {
+        return string.IsNullOrWhiteSpace(CurrentGroup?.Title)
+            ? L["MarkdownViewer:Navbar:UnknownKnowledgeBase"]
+            : CurrentGroup.Title;
+    }
+
+    private static string? GetResultLocationText(MarkdownDocumentSearchResult result)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(result.DocumentPathTrail))
+        {
+            parts.Add(result.DocumentPathTrail);
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.SectionTitle))
+        {
+            parts.Add(result.SectionTitle);
+        }
+
+        return parts.Count == 0 ? null : string.Join(" / ", parts);
+    }
+
+    public void Dispose()
+    {
+        SearchState.Dispose();
+    }
+}

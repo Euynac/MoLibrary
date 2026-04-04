@@ -4,7 +4,8 @@ using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Abstractions;
+using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.Models;
 
 namespace Monica.AI.RAG.Services;
@@ -578,7 +579,7 @@ public sealed class KnowledgeToolService(
         string query,
         CancellationToken ct)
     {
-        var markdownSearchService = serviceProvider.GetService<IMarkdownDocumentSearchService>();
+        var markdownSearchService = serviceProvider.GetService<IMarkdownDocumentSearcher>();
         if (markdownSearchService is null)
         {
             return [];
@@ -660,7 +661,7 @@ public sealed class KnowledgeToolService(
             return null;
         }
 
-        var markdownService = serviceProvider.GetService<IMoMarkdownService>();
+        var markdownService = serviceProvider.GetService<IMarkdownDocumentCatalog>();
         if (markdownService is null)
         {
             return null;

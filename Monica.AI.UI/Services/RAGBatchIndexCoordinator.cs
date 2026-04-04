@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Abstractions;
 
 namespace Monica.AI.UI.Services;
 
@@ -11,7 +11,7 @@ namespace Monica.AI.UI.Services;
 /// </summary>
 public sealed class RAGBatchIndexCoordinator(
     RAGService ragService,
-    IMoMarkdownService markdownService,
+    IMarkdownDocumentCatalog markdownService,
     RAGMarkdownDocumentResolver markdownDocumentResolver,
     ILogger<RAGBatchIndexCoordinator> logger)
 {

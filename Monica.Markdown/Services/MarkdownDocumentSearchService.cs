@@ -1,9 +1,8 @@
 using System.Text;
 using Microsoft.Extensions.Options;
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
-using Monica.Markdown.Search;
-using Monica.Markdown.UIMarkdown.Models;
+using Monica.Markdown.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Algorithms.Trees;
 
@@ -13,10 +12,10 @@ namespace Monica.Markdown.Services;
 /// Builds and caches searchable markdown projections, then resolves document-level search hits.
 /// </summary>
 public class MarkdownDocumentSearchService(
-    IMoMarkdownService markdownService,
-    IOptions<ModuleMarkdownUIOption> options) : IMarkdownDocumentSearchService
+    IMarkdownDocumentCatalog markdownService,
+    IOptions<ModuleMarkdownOption> options) : IMarkdownDocumentSearcher
 {
-    private readonly ModuleMarkdownUIOption _option = options.Value;
+    private readonly ModuleMarkdownOption _option = options.Value;
     private readonly SemaphoreSlim _indexLock = new(1, 1);
     private readonly Dictionary<string, MarkdownDocumentSearchGroupIndex> _groupIndexes = new(
         StringComparer.OrdinalIgnoreCase);

@@ -2,9 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
-using Monica.Markdown.Interfaces;
 using Monica.Markdown.Models;
 using Monica.Core.Results;
+using Monica.Markdown.Abstractions;
 
 namespace Monica.AI.UI.Services;
 
@@ -14,7 +14,7 @@ namespace Monica.AI.UI.Services;
 /// </summary>
 public class RAGUIService(
     IServiceProvider serviceProvider,
-    IMoMarkdownService markdownService,
+    IMarkdownDocumentCatalog markdownService,
     ILogger<RAGUIService> logger)
 {
     public async Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()

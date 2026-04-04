@@ -1,4 +1,4 @@
-using Monica.Markdown.Interfaces;
+using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
 
 namespace Monica.AI.UI.Services;
@@ -6,7 +6,7 @@ namespace Monica.AI.UI.Services;
 /// <summary>
 /// Resolves markdown documents by relative path.
 /// </summary>
-public sealed class RAGMarkdownDocumentResolver(IMoMarkdownService markdownService)
+public sealed class RAGMarkdownDocumentResolver(IMarkdownDocumentCatalog markdownService)
 {
     public async Task<MarkdownDocument?> FindByPathAsync(string documentPath, CancellationToken ct = default)
     {

@@ -1,6 +1,6 @@
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.Markdown.Interfaces
+@using Monica.Markdown.Abstractions
 @using Monica.Markdown.Models
 @using Monica.UI.Shared.Components.Markdown
 @inject IServiceProvider ServiceProvider
@@ -78,7 +78,7 @@
         _document = null;
         _content = string.Empty;
 
-        var markdownService = ServiceProvider.GetService(typeof(IMoMarkdownService)) as IMoMarkdownService;
+        var markdownService = ServiceProvider.GetService(typeof(IMarkdownDocumentCatalog)) as IMarkdownDocumentCatalog;
         if (markdownService is null)
         {
             _errorMessage = L["Chat:SourcePreview:Unavailable"];
@@ -115,7 +115,7 @@
             : L["Chat:SourcePreview:FallbackTitle"];
 
     private static async Task<MarkdownDocument?> FindDocumentByPathAsync(
-        IMoMarkdownService markdownService,
+        IMarkdownDocumentCatalog markdownService,
         string documentPath)
     {
         var groups = await markdownService.GetAllDocumentGroupsAsync();
