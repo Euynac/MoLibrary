@@ -3,7 +3,6 @@
   <Import Project="..\common.xml" />
 
   <PropertyGroup>
-    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <PackageDescription>DevOps and infrastructure operation modules for Monica framework, including Git, K8S, and file operation APIs and UI components.</PackageDescription>
   </PropertyGroup>
