@@ -75,7 +75,7 @@ public class MarkdownFacade(
         try
         {
             var content = await markdownCatalog.GetDocumentContentAsync(document);
-            return Res.Ok(content);
+            return Res.Ok<string>(content);
         }
         catch (Exception ex)
         {

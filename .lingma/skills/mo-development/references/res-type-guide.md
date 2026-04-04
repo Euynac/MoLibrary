@@ -68,7 +68,7 @@ public async Task<Res> DeleteUserAsync(int id)
 
 ### Special Case: Res<string>
 
-When the return type is `Res<string>`, you **cannot** use implicit string conversion for success (it would be ambiguous). Use explicit methods:
+When the return type is `Res<string>`, you **CANNOT** use implicit string conversion for success (it would be ambiguous). Use explicit methods:
 
 ```csharp
 public async Task<Res<string>> GetUserNameAsync(int id)

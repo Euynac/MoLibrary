@@ -71,6 +71,7 @@ When handling questions around how to work with native Microsoft technologies, s
 - Facades are defined in the **infrastructure module** (e.g., `Monica.AI/RAG/Facades/RAGFacade.cs`), not in UI modules. UI modules inject Facades directly.
 - **Internal services** (`Services/`) must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `InvalidOperationException`) for error cases.
 - **Other infrastructure modules** do not consume Facades — they depend on `Abstractions/` interfaces instead.
+- **Critical `string` overload trap**: when a facade method returns `Res<string>`, do **not** write `return Res.Ok(content)`. C# will bind to the non-generic `Res.Ok(string hint)` overload, which drops `Res<string>.Data` and can silently break UI behavior. Always use `return Res.Ok<string>(content)` or another explicit generic construction when `T` is `string`.
 - See the `mo-architecture` skill for the full architecture specification.
 
 ## Dependency Injection Guidelines

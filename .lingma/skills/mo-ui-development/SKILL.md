@@ -41,7 +41,7 @@ Required recovery flow for source-dependent work:
 Use this command to persist the path into the project-local temp config and verify it:
 
 ```bash
-python scripts/check_mudblazor_source.py --save-source-root D:\Path\To\MudBlazor
+python scripts/check_mudblazor_source.py --save-source-root <your-local-mudblazor-source-root>
 ```
 
 Do not ask the user to set environment variables for this workflow.

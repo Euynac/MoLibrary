@@ -1,7 +1,7 @@
 ---
 name: mo-architecture
 description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.1.2
+version: 1.1.3
 ---
 
 # Monica Unified Module Architecture
@@ -16,52 +16,57 @@ Other skills reference this skill:
 
 **Creating a new module?** → Use the Infrastructure Module Template below.
 **Adding UI to an existing module?** → Choose Mixed (lightweight UI) or Standalone (complex UI).
-**Module getting large?** → Use the Features Pattern (only if 40+ files or 3+ independent sub-domains).
+**Module getting large?** → Use the Features Pattern when a real sub-domain boundary emerges. File count is only a secondary signal.
 **Need developer-facing attributes?** → Place in `Annotations/` (public layer).
 **Page file getting large?** → Check the Page Decomposition Rules.
 **Unsure where a file goes?** → Check the Standard Layer Names table.
 **Unsure if something is public or internal?** → Check the Visibility Rules table.
 **Working in `Modules/`?** → See `Modules/ Is Registration Only`.
-**Grouping related files?** → Use prefix naming. Only create sub-folders for 6+ files. See Folder Depth & Grouping Rules.
-**Folder depth reaching 4 levels?** → Stop. Use prefix naming instead. Max depth is 3.
+**Grouping related files?** → Prefer prefix naming. Introduce sub-folders only when a folder stops being scannable. See Folder Depth & Grouping Rules.
+**Folder depth reaching 4 levels?** → Treat it as a design smell and justify it explicitly.
 
 ## Core Principles
 
-### 1. Feature-First, Layers Inside Features
+### 1. Prefer Simple Root Layers First
 
-Split by feature at the project level first, then use standard layer folders inside each feature.
+Start with simple root layers first, then switch to feature folders when a real sub-domain boundary emerges.
 
-This is **Feature-First + Layer-Inside-Feature** — it prevents any single folder from becoming a dumping ground.
+When features become the dominant unit, use **Feature Folder + Layer-Inside-Feature** — it prevents any single root layer from becoming a dumping ground.
 Feature folder names should usually stay aligned with the module or sub-module name, following the `Monica.DevOps/` style such as `Git/`, `K8S/`, and `FileOps/`, unless a special requirement suggests a different name.
 
 ### Localization Placement Exception
 
 Localization resources are a project-level concern in Monica. Even when the rest of a module uses feature folders, keep resource marker classes and JSON files under the project root `Localization/` folder, not under feature subfolders. This keeps the resource namespace, embedded resource path, and Monica localization validation workflow consistent.
 
-### 2. Facades Are the Only Public Entry Point for API and UI
+### 2. Facades Are the Host-Facing Entry Point for API and UI
 
-Every module exposes capabilities through `Facades/`:
+Every module exposes host-facing use cases through `Facades/`:
 
 - Return `Res` / `Res<T>` (unified response model)
-- Consumed by Minimal API endpoints and UI components directly
+- Consumed by Minimal API endpoints, UI components, and host integration code directly
 - Delegate to internal `Services/` for implementation
+- Are NOT cross-module contracts; other modules depend on `Abstractions/` + public `Models/`
 - Must NOT contain substantial business logic
 
 Facades live in the **infrastructure module**, not the UI module:
 
 ```
-Minimal API  ──→  Facade (Res<T>)  ──→  Services (internal)
-UI Component ──→  Facade (Res<T>)  ──→  Services (internal)
-Other Module ──→  Abstractions (interfaces)  ←── Services implement
+Minimal API / Host Code ──→ Facade (Res<T>) ──→ Services (internal)
+UI Component             ──→ Facade (Res<T>) ──→ Services (internal)
+Other Module             ──→ Abstractions + Models (public) ←── Services implement
 ```
 
 ### 3. Public vs Internal Boundary
 
-**Public surface** (consumed by external modules, API, UI):
+**Public surface**:
+- `Modules/` — module registration entry points
 - `Abstractions/` — interfaces for cross-module dependency
 - `Annotations/` — developer-facing attributes for declarative configuration
 - `Models/` — shared data contracts
-- `Facades/` — `Res<T>` entry points for API/UI
+- `Facades/` — host-facing `Res<T>` entry points for API/UI/host code
+- `Events/` — public domain or integration events
+- `Exceptions/` — module-specific public exceptions when part of the contract
+- `Extensions/` — only when intentionally exposed as integration helpers
 
 **Internal implementation** (hidden inside the module):
 - `Abstractions/Internal/` — internal-only contracts
@@ -75,11 +80,12 @@ The `Internal/` sub-folder convention makes this boundary visible in the directo
 
 Allowed:
 ```
-UI Page / Minimal API → Facade (Res<T>) → Services → Providers
+UI Page / Minimal API / Host Code → Facade (Res<T>) → Services → Providers
 Other Module → Abstractions (interfaces) + Models (public)
 ```
 
 Forbidden:
+- Other Module → Facade
 - Service → Facade
 - Provider → Facade or UI
 - Model → Service
@@ -116,13 +122,13 @@ Exception: `Tools/` is reserved for AI tool providers in Monica.AI modules.
 
 ## Folder Depth & Grouping Rules
 
-### Maximum Depth: 3 Levels
+### Prefer Shallow Trees
 
-The maximum folder depth from project root is **3 levels**: `Feature/Layer/SubLayer/`. Never create a 4th nesting level.
+Prefer to stay within **3 levels** from project root: `Feature/Layer/SubLayer/`. A 4th level is a design smell and should be introduced only with a clear reason.
 
 ```
 ✅ Authorization/Services/Support/PolicyRequirement.cs        (3 levels)
-❌ Authorization/Services/Support/Policies/PolicyRequirement.cs (4 levels — NEVER)
+❌ Authorization/Services/Support/Policies/PolicyRequirement.cs (4 levels — usually a smell)
 ```
 
 ### Prefix Naming Over Sub-Folders
@@ -131,7 +137,7 @@ The maximum folder depth from project root is **3 levels**: `Feature/Layer/SubLa
 
 This is the standard pattern used by ASP.NET Core, EF Core, and MudBlazor:
 ```
-# ASP.NET Core — Authentication/ has 7+ files, zero sub-folders
+# ASP.NET Core — Authentication/ has many files, zero sub-folders
 AuthenticationHandler.cs
 AuthenticationMiddleware.cs
 AuthenticationScheme.cs
@@ -147,7 +153,7 @@ Authorization/Services/Support/
 ├── InterceptionAuthorizer.cs
 ├── InterceptionRegistrar.cs
 ├── PermissionBitChecker.cs
-├── PermissionBitCheckerManager.cs
+├── PermissionBitCheckerRegistry.cs
 ├── PolicyEnumRequirement.cs
 ├── PolicyEnumRequirementHandler.cs
 ├── PolicyEnumProvider.cs
@@ -162,14 +168,14 @@ Authorization/Services/Support/Responses/MoAuthorizationRes.cs
 
 ### When to Use Sub-Folders vs Prefixes
 
-| Condition | Strategy |
-|-----------|----------|
-| Group has ≤ 5 files | Prefix naming, keep flat |
-| Group has 6–10 files | Consider sub-folder |
-| Group has > 10 files | Use sub-folder |
-| Would create 4th nesting level | **Always** use prefix, never sub-folder |
-| `Internal/` boundary marker | Sub-folder (this is a visibility boundary, not grouping) |
-| `Providers/{ProviderName}/` | Sub-folder (each provider is a replaceable unit) |
+Use these as heuristics, not hard thresholds:
+
+- Prefer flat folders with prefix naming by default.
+- Introduce a sub-folder when a folder stops being scannable in the IDE.
+- Avoid creating a sub-folder that only holds one or two files unless it marks a real boundary such as `Internal/`.
+- Treat a 4th nesting level as a smell; prefer renaming or regrouping before adding depth.
+- Keep `Internal/` as a visibility boundary.
+- Keep `Providers/{ProviderName}/` when a provider is a real replaceable unit.
 
 ### Restructuring Scope Rule
 
@@ -199,7 +205,7 @@ Those are separate tasks requiring explicit user approval.
 | `Exceptions/` | Module-specific exception types | Public |
 | `Utils/` | Pure utility functions | Private |
 
-Group files within a layer using **prefix naming**. Only create sub-folders when a group exceeds 5 files (see Folder Depth & Grouping Rules above).
+Group files within a layer using **prefix naming** by default. Introduce sub-folders only when that improves scanability (see Folder Depth & Grouping Rules above).
 
 ## Infrastructure Module Template
 
@@ -256,11 +262,11 @@ Monica.{Name}/
 
 Suitable types: Registry, Resolver, Coordinator, Policy, Normalizer, Factory.
 
-Use **prefix naming** to group related support files (e.g., `PolicyRequirement.cs`, `PolicyHandler.cs`, `PolicyProvider.cs`). Do NOT create sub-folders within `Support/` unless a single group exceeds 5 files.
+Use **prefix naming** to group related support files (e.g., `PolicyRequirement.cs`, `PolicyHandler.cs`, `PolicyProvider.cs`). Introduce sub-folders within `Support/` only when flat naming stops being scannable.
 
 ## Features Pattern (Bundled Sub-Modules)
 
-**When to use**: Only when a module has **40+ files** or **3+ clearly independent sub-domains with their own Facades**. For smaller modules, standard flat layers are preferred.
+**When to use**: When a real sub-domain boundary emerges, especially if the module is accumulating multiple independent use-case areas. File count is a signal, not the rule.
 
 ```
 Monica.{Name}/
@@ -299,7 +305,7 @@ UI modules are pure presentation layers:
 - Inject Facades from the infrastructure module directly
 - Do NOT have their own service layer for data access
 - Maximize reuse of Models from infrastructure module's public `Models/`
-- Always use `UI{Name}/` feature directories
+- Prefer `UI{Name}/` feature directories for mixed or composite UI modules. Standalone single-feature UI modules may use the root-level equivalent layout.
 
 ### Standalone UI Module
 
@@ -308,17 +314,18 @@ Monica.{Name}.UI/
 ├── Modules/
 │   └── Module{Name}UI.cs                # Consolidated UI module registration file
 ├── Pages/
-│   ├── UI{Name}Page.razor
-│   └── UI{Name}Page.razor.css
-├── UI{Name}/
-│   ├── Components/
-│   ├── Dialogs/                         # (optional)
-│   ├── Models/                          # View-only (minimize — reuse Facade Models)
-│   ├── State/                           # Browser/page/session state
-│   └── Support/                         # Resolvers, formatters, coordinators
+│   ├── UI{Name}{Action}Page.razor       # {Action} optional when there is only one primary page
+│   └── UI{Name}{Action}Page.razor.css
+├── Components/
+├── Dialogs/                         # (optional)
+├── Models/                          # View-only (minimize — reuse Facade Models)
+├── State/                           # Browser/page/session state
+└── Support/                         # Resolvers, formatters, coordinators
 ├── Localization/
 └── wwwroot/                             # (optional)
 ```
+
+In a standalone single-feature UI module, root-level `Components/`, `Dialogs/`, `Models/`, `State/`, and `Support/` are the single-feature equivalents of `UI{Name}/...`.
 
 ### Composite UI Module
 
@@ -331,8 +338,8 @@ Monica.{Family}.UI/
 │   ├── Module{FeatureB}UI.cs            # Consolidated registration file for FeatureB UI
 │   └── Module{Family}UI.cs              # (optional, aggregator) consolidated registration file
 ├── Pages/
-│   ├── UI{FeatureA}Page.razor
-│   └── UI{FeatureB}Page.razor
+│   ├── UI{FeatureA}{Action}Page.razor
+│   └── UI{FeatureB}{Action}Page.razor
 ├── UI{FeatureA}/
 │   ├── Components/
 │   ├── Dialogs/
@@ -389,7 +396,7 @@ Monica.{Name}/
 ├── Providers/
 │   └── {ProviderName}/
 ├── Pages/
-│   └── UI{Name}Page.razor
+│   └── UI{Name}{Action}Page.razor
 ├── UI{Name}/
 │   ├── Components/
 │   ├── Dialogs/
@@ -485,9 +492,9 @@ For a concrete anti-pattern case study, see `references/refactoring-examples.md`
 | Registry | `{Feature}Registry` | `ChunkerRegistry` |
 | Resolver | `{Feature}Resolver` | `RAGEmbeddingBindingResolver` |
 | Coordinator | `{Feature}Coordinator` | `RAGIndexStateCoordinator` |
-| Provider | `{Strategy}{Capability}Provider` | `FileDocumentIndexStateStore` |
+| Infrastructure adapter | `{Strategy}{Capability}{Role}` | `OpenAIProvider`, `FileDocumentIndexStateStore`, `RedisStateStoreClient` |
 
-Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
+Avoid vague catch-all names such as `Manager`, `Helper`, and `Core`. `Handler` is acceptable when it matches a framework or pipeline concept.
 
 ### UI Naming
 
@@ -495,7 +502,7 @@ Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
 |-----------|---------|---------|
 | UI module | `Module{Name}UI` | `ModuleRAGUI` |
 | UI folder | `UI{Name}/` | `UIRAG/` |
-| Page | `UI{Name}Page` | `UIRAGManagePage` |
+| Page | `UI{Name}[Action]Page` | `UIRAGManagePage`, `UIK8SPage` |
 | Route URL | `/{name}-{action}` | `/rag-manage` |
 
 ## Visibility Rules
@@ -507,9 +514,13 @@ Avoid vague names: `Manager`, `Handler`, `Helper`, `Core`.
 | `Annotations/` | `public` | Developer-facing declarative attributes |
 | `Models/` | `public` | Shared data contracts |
 | `Models/Internal/` | `internal` | Module-internal data types |
-| `Facades/` | `public` | API + UI entry points |
+| `Facades/` | `public` | Host-facing API + UI entry points |
 | `Services/` | `internal` | Implementation details |
 | `Providers/` | `internal` | Pluggable but internal |
+| `Modules/` | `public` | Module registration entry points |
+| `Events/` | `public` | Public events when part of the module contract |
+| `Exceptions/` | `public` | Public exceptions when part of the module contract |
+| `Extensions/` | depends | Public only when intentionally exposed |
 | `Utils/` | `internal` | Module-internal utilities |
 
 ## Additional Resources
