@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.JsonSerialization.Services;
 
-namespace Monica.Framework.Features;
+namespace Monica.Experimental.Features;
 
 public class AutoUtcDateTimeModelBinder : IModelBinder
 {

@@ -1,5 +1,5 @@
 
-namespace Monica.Framework.Features.AlterChain;
+namespace Monica.Framework.AlterChain;
 
 /// <summary>
 /// Change record attribute history

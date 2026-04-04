@@ -1,4 +1,4 @@
-namespace Monica.Framework.Features.MoSeeder;
+namespace Monica.Framework.MoSeeder;
 
 public interface IMoSeeder
 {

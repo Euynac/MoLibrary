@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Monica.Framework\Monica.Framework.csproj" />
     <ProjectReference Include="..\Monica.Tool\Monica.Tool.csproj" />
   </ItemGroup>
 
