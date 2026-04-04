@@ -1,9 +1,10 @@
-@using Monica.DataChannel.BuildInMiddlewares
-@using Monica.DataChannel.UIDataChannel.Models
-@using Monica.DataChannel.UIDataChannel.Services
+@using Monica.DataChannel.Facades
+@using Monica.DataChannel.UIDataChannel.Dialogs
 @using Monica.Core.Results;
+@using Monica.DataChannel.Middlewares
+@using Monica.DataChannel.UIDataChannel.Models
 @inject IDialogService DialogService
-@inject DataChannelUIService DataChannelService
+@inject DataChannelFacade DataChannelService
 @inject ISnackbar Snackbar
 
 <MudCard Elevation="2" Class="@GetCardClass()">
@@ -136,7 +137,7 @@
                                             <MudChip T="string" Color="@GetComponentColor(middleware.Type)" Size="Size.Small" Label="true">
                                                 @GetComponentTypeDisplayName(middleware.Type)
                                             </MudChip>
-                                            @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
+                                            @if (middleware.Type == PipelineComponentKind.InfoDisplayMiddleware && middleware.InfoDictionary?.Count > 0)
                                             {
                                                 <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Info">
                                                     @middleware.InfoDictionary.Count 项信息
@@ -153,7 +154,7 @@
                                         </MudStack>
                                     </TitleContent>
                                     <ChildContent>
-                                        @if (middleware.Type == EPipeComponentType.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
+                                        @if (middleware.Type == PipelineComponentKind.InfoDisplayMiddleware && middleware.InfoDictionary?.Any() == true)
                                         {
                                             <!-- Special display for info middleware -->
                                             <MudStack Spacing="3">
@@ -224,7 +225,7 @@
     /// <summary>
     /// Gets or sets the channel status information.
     /// </summary>
-    [Parameter] public ChannelStatusInfo Channel { get; set; } = null!;
+    [Parameter] public DataChannelStatusInfo Channel { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the callback used to reinitialize the channel.
@@ -328,15 +329,15 @@
     /// </summary>
     /// <param name="type">The component type.</param>
     /// <returns>The icon name.</returns>
-    private string GetComponentIcon(EPipeComponentType type)
+    private string GetComponentIcon(PipelineComponentKind type)
     {
         return type switch
         {
-            EPipeComponentType.Endpoint => Icons.Material.Filled.Adjust,
-            EPipeComponentType.TransformMiddleware => Icons.Material.Filled.Transform,
-            EPipeComponentType.MonitorMiddleware => Icons.Material.Filled.Monitor,
-            EPipeComponentType.EndpointMiddleware => Icons.Material.Filled.Router,
-            EPipeComponentType.InfoDisplayMiddleware => Icons.Material.Filled.Dashboard,
+            PipelineComponentKind.Endpoint => Icons.Material.Filled.Adjust,
+            PipelineComponentKind.TransformMiddleware => Icons.Material.Filled.Transform,
+            PipelineComponentKind.MonitorMiddleware => Icons.Material.Filled.Monitor,
+            PipelineComponentKind.EndpointMiddleware => Icons.Material.Filled.Router,
+            PipelineComponentKind.InfoDisplayMiddleware => Icons.Material.Filled.Dashboard,
             _ => Icons.Material.Filled.Extension
         };
     }
@@ -346,15 +347,15 @@
     /// </summary>
     /// <param name="type">The component type.</param>
     /// <returns>The component color.</returns>
-    private Color GetComponentColor(EPipeComponentType type)
+    private Color GetComponentColor(PipelineComponentKind type)
     {
         return type switch
         {
-            EPipeComponentType.Endpoint => Color.Primary,
-            EPipeComponentType.TransformMiddleware => Color.Secondary,
-            EPipeComponentType.MonitorMiddleware => Color.Info,
-            EPipeComponentType.EndpointMiddleware => Color.Warning,
-            EPipeComponentType.InfoDisplayMiddleware => Color.Success,
+            PipelineComponentKind.Endpoint => Color.Primary,
+            PipelineComponentKind.TransformMiddleware => Color.Secondary,
+            PipelineComponentKind.MonitorMiddleware => Color.Info,
+            PipelineComponentKind.EndpointMiddleware => Color.Warning,
+            PipelineComponentKind.InfoDisplayMiddleware => Color.Success,
             _ => Color.Default
         };
     }
@@ -364,16 +365,16 @@
     /// </summary>
     /// <param name="type">The component type.</param>
     /// <returns>The display name.</returns>
-    private string GetComponentTypeDisplayName(EPipeComponentType type)
+    private string GetComponentTypeDisplayName(PipelineComponentKind type)
     {
         return type switch
         {
-            EPipeComponentType.Endpoint => "端点",
-            EPipeComponentType.TransformMiddleware => "转换中间件",
-            EPipeComponentType.MonitorMiddleware => "监控中间件",
-            EPipeComponentType.EndpointMiddleware => "端点中间件",
-            EPipeComponentType.InfoDisplayMiddleware => "信息展示",
-            EPipeComponentType.BaseMiddleware => "基础中间件",
+            PipelineComponentKind.Endpoint => "端点",
+            PipelineComponentKind.TransformMiddleware => "转换中间件",
+            PipelineComponentKind.MonitorMiddleware => "监控中间件",
+            PipelineComponentKind.EndpointMiddleware => "端点中间件",
+            PipelineComponentKind.InfoDisplayMiddleware => "信息展示",
+            PipelineComponentKind.BaseMiddleware => "基础中间件",
             _ => type.ToString()
         };
     }
@@ -438,7 +439,7 @@
     /// <summary>
     /// Opens the message debugger dialog.
     /// </summary>
-    private async Task OpenMessageDebugger(string channelId, ComponentInfo middleware)
+    private async Task OpenMessageDebugger(string channelId, PipelineComponentInfo middleware)
     {
         // Resolve the actual middleware instance.
         var debuggerMiddleware = await GetMessageDebuggerMiddleware(channelId, middleware.Name);

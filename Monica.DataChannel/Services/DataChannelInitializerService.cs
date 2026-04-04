@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.DataChannel.Abstractions;
 using Monica.Modules;
 
 namespace Monica.DataChannel.Services;
@@ -11,9 +12,13 @@ namespace Monica.DataChannel.Services;
 /// <remarks>
 /// Creates a new <see cref="DataChannelInitializerService"/> instance.
 /// </remarks>
+/// <param name="manager">Manager that exposes registered data channels.</param>
 /// <param name="options">Provides the data channel module options.</param>
 /// <param name="logger">Logs initialization lifecycle events.</param>
-public class DataChannelInitializerService(IOptions<ModuleDataChannelOption> options, ILogger<DataChannelInitializerService>? logger = null) : IHostedService
+public class DataChannelInitializerService(
+    IDataChannelManager manager,
+    IOptions<ModuleDataChannelOption> options,
+    ILogger<DataChannelInitializerService>? logger = null) : IHostedService
 {
     private readonly int _initThreadCount = options.Value.InitThreadCount;
 
@@ -21,22 +26,29 @@ public class DataChannelInitializerService(IOptions<ModuleDataChannelOption> opt
     /// Starts the channel initialization process.
     /// </summary>
     /// <param name="cancellationToken">Cancels the initialization loop.</param>
-    /// <returns>A completed task once the background initialization work has been queued.</returns>
-    public Task StartAsync(CancellationToken cancellationToken)
+    /// <returns>A task that completes when channel initialization finishes.</returns>
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = Parallel.ForEachAsync(DataChannelCentral.Channels,new ParallelOptions{MaxDegreeOfParallelism = _initThreadCount,CancellationToken = cancellationToken}, async (channel, token) =>
+        var channels = manager.FetchAll();
+        await Parallel.ForEachAsync(
+            channels,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = _initThreadCount,
+                CancellationToken = cancellationToken
+            },
+            async (channel, token) =>
         {
             try
             {
-                await channel.Value.Pipe.InitAsync(token);
-                logger?.LogInformation("Successfully initialized channel: {ChannelId}", channel.Key);
+                await channel.Pipe.InitAsync(token);
+                logger?.LogInformation("Successfully initialized channel: {ChannelId}", channel.Id);
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Failed to initialize channel: {ChannelId}", channel.Key);
+                logger?.LogError(ex, "Failed to initialize channel: {ChannelId}", channel.Id);
             }
         });
-        return Task.CompletedTask;
     }
 
     /// <summary>

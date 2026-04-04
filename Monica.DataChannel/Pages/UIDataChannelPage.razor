@@ -1,10 +1,10 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Core.Results;
+@using Monica.DataChannel.Facades
 @using Monica.DataChannel.UIDataChannel.Components
-@using Monica.DataChannel.UIDataChannel.Services
-
+@using Monica.DataChannel.UIDataChannel.Dialogs
 @using Monica.DataChannel.UIDataChannel.Models
-@inject DataChannelUIService DataChannelService
+@inject DataChannelFacade DataChannelService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -138,8 +138,8 @@
     public const string PAGE_URL = "/datachannel-manage";
 
     private bool _loading = true;
-    private List<ChannelStatusInfo>? _channels;
-    private ExceptionSummaryInfo? _exceptionSummary;
+    private List<DataChannelStatusInfo>? _channels;
+    private DataChannelExceptionSummaryInfo? _exceptionSummary;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -209,7 +209,7 @@
                 ["ExceptionSummary"] = summary,
                 ["OnViewChannelExceptions"] = new Action<string>(async channelId => await ViewChannelExceptions(channelId)),
                 ["OnClearChannelExceptions"] = new Func<string, Task>(async channelId => await ClearChannelExceptions(channelId)),
-                ["OnGetRefreshData"] = new Func<Task<ExceptionSummaryInfo?>>(async () => 
+                ["OnGetRefreshData"] = new Func<Task<DataChannelExceptionSummaryInfo?>>(async () => 
                 {
                     // Refresh the exception summary data
                     if (!(await DataChannelService.GetExceptionSummaryAsync()).IsFailed(out var error, out var newSummary))

@@ -1,7 +1,7 @@
 namespace Monica.DataChannel.Pipeline;
 
 /// <summary>
-/// Represents the state of a DataPipeline
+/// Represents the state of a ChannelPipeline
 /// </summary>
 public enum PipelineState
 {

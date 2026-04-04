@@ -1,10 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.DataChannel.Pages;
-using Monica.DataChannel.UIDataChannel.Services;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -18,16 +16,6 @@ namespace Monica.Modules;
 public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
     : MoModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
 {
-    /// <summary>
-    /// Configures services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // Register DataChannel services.
-        services.AddScoped<DataChannelUIService>();
-    }
-
     /// <summary>
     /// Declares module dependencies.
     /// </summary>
@@ -86,7 +74,7 @@ public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, Modul
 /// <summary>
 /// Options for the DataChannel UI module.
 /// </summary>
-public class ModuleDataChannelUIOption : MoModuleOptionWithMinimalApi<ModuleDataChannelUI>
+public class ModuleDataChannelUIOption : MoModuleOption<ModuleDataChannelUI>
 {
     /// <summary>
     /// Gets or sets a value indicating whether the DataChannel page is disabled.

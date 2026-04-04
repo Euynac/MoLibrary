@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Monica.DataChannel.CoreCommunication;
-using Monica.DataChannel.Interfaces;
+using Monica.DataChannel.Abstractions;
+using Monica.DataChannel.Abstractions.Communication;
+using Monica.DataChannel.Abstractions.Pipeline;
 
 namespace Monica.DataChannel.Pipeline;
 
@@ -19,7 +20,7 @@ public static class TransientProxy
     /// <param name="entranceType">The endpoint direction.</param>
     /// <param name="metadata">Optional component metadata.</param>
     /// <returns>The endpoint proxy instance.</returns>
-    public static IPipeEndpoint CreateEndpointProxy(IServiceProvider serviceProvider, Type componentType, EDataSource entranceType, object? metadata = null)
+    public static IPipelineEndpoint CreateEndpointProxy(IServiceProvider serviceProvider, Type componentType, ChannelSide entranceType, object? metadata = null)
     {
         // Check whether the component requires a transient lifetime.
         if (IsTransientComponent(componentType))
@@ -30,10 +31,10 @@ public static class TransientProxy
 
         if (metadata != null)
         {
-            return (IPipeEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType, metadata);
+            return (IPipelineEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType, metadata);
         }
 
-        return (IPipeEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+        return (IPipelineEndpoint) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
 
     }
 
@@ -43,11 +44,11 @@ public static class TransientProxy
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="componentType">The component type.</param>
     /// <returns>The transform middleware proxy instance.</returns>
-    private static IPipeTransformMiddleware CreateTransformMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
+    private static IPipelineTransformMiddleware CreateTransformMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
     {
         if (!IsTransientComponent(componentType))
         {
-            return (IPipeTransformMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+            return (IPipelineTransformMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
         }
 
         var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
@@ -60,11 +61,11 @@ public static class TransientProxy
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="componentType">The component type.</param>
     /// <returns>The endpoint middleware proxy instance.</returns>
-    private static IPipeEndpointMiddleware CreateEndpointMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
+    private static IPipelineEndpointMiddleware CreateEndpointMiddlewareProxy(IServiceProvider serviceProvider, Type componentType)
     {
         if (!IsTransientComponent(componentType))
         {
-            return (IPipeEndpointMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
+            return (IPipelineEndpointMiddleware) ActivatorUtilities.CreateInstance(serviceProvider, componentType);
         }
 
         var serviceScopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
@@ -73,22 +74,22 @@ public static class TransientProxy
 
     /// <summary>
     /// Creates a middleware instance or returns its proxy.
-    /// Middleware that implements <see cref="IComponentTransient"/> is wrapped in a proxy.
+    /// Middleware that implements <see cref="ITransientChannelComponent"/> is wrapped in a proxy.
     /// All other middleware types are created directly.
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="componentType">The component type.</param>
     /// <returns>The middleware instance or its proxy.</returns>
-    public static IPipeMiddleware CreateMiddlewareProxy(
+    public static IPipelineMiddleware CreateMiddlewareProxy(
         IServiceProvider serviceProvider,
         Type componentType)
     {
-        if (componentType.IsAssignableTo(typeof(IPipeTransformMiddleware)))
+        if (componentType.IsAssignableTo(typeof(IPipelineTransformMiddleware)))
         {
             return CreateTransformMiddlewareProxy(serviceProvider, componentType);
         }
 
-        if (componentType.IsAssignableTo(typeof(IPipeEndpointMiddleware)))
+        if (componentType.IsAssignableTo(typeof(IPipelineEndpointMiddleware)))
         {
             return CreateEndpointMiddlewareProxy(serviceProvider, componentType);
         }
@@ -103,7 +104,7 @@ public static class TransientProxy
     /// <returns><see langword="true"/> if the component is transient; otherwise, <see langword="false"/>.</returns>
     public static bool IsTransientComponent(Type componentType)
     {
-        return typeof(IComponentTransient).IsAssignableFrom(componentType);
+        return typeof(ITransientChannelComponent).IsAssignableFrom(componentType);
     }
 }
 
@@ -145,30 +146,30 @@ internal abstract class TransientComponentProxyBase(
 /// Proxy for transient endpoints.
 /// Delegates endpoint calls to transient endpoint instances resolved per operation.
 /// </summary>
-internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFactory, Type componentType, EDataSource entranceType, object? metadata)
-    : TransientComponentProxyBase(serviceScopeFactory, componentType, metadata), ICommunicationCore
+internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFactory, Type componentType, ChannelSide entranceType, object? metadata)
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, metadata), ICommunicationEndpoint
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SemaphoreSlim _disposeLock = new(1, 1);
     private bool _isInit;
     private bool _isDisposed;
 
-    public DataPipeline Pipe { get; set; } = null!;
+    public ChannelPipeline Pipe { get; set; } = null!;
     public void CollectException(Exception exception, object? source = null, string? description = null, ILogger? logger = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
         instance.Pipe = Pipe;
         instance.EntranceType = EntranceType;
         instance.CollectException(exception, source, description, logger);
     }
 
-    public EDataSource EntranceType { get; set; } = entranceType;
+    public ChannelSide EntranceType { get; set; } = entranceType;
 
-    public async Task ReceiveDataAsync(DataContext data)
+    public async Task ReceiveDataAsync(ChannelDataContext data)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
         instance.Pipe = Pipe;
         instance.EntranceType = EntranceType;
         await instance.ReceiveDataAsync(data);
@@ -177,7 +178,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     public dynamic GetMetadata()
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 
@@ -195,11 +196,11 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             _isInit = true;
 
             using var scope = ServiceScopeFactory.CreateScope();
-            var instance = CreateInstance<IPipeEndpoint>(scope.ServiceProvider);
+            var instance = CreateInstance<IPipelineEndpoint>(scope.ServiceProvider);
             instance.Pipe = Pipe;
             instance.EntranceType = EntranceType;
 
-            if (instance is ICommunicationCore communicationCore)
+            if (instance is ICommunicationEndpoint communicationCore)
             {
                 await communicationCore.InitAsync(cancellationToken);
             }
@@ -225,7 +226,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
             _isInit = false;
 
             using var scope = ServiceScopeFactory.CreateScope();
-            var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
+            var instance = CreateInstance<ICommunicationEndpoint>(scope.ServiceProvider);
             await instance.DisposeAsync(cancellationToken);
         }
         finally
@@ -238,10 +239,10 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     /// Gets the connection direction supported by the communication core.
     /// </summary>
     /// <returns>The supported connection direction.</returns>
-    public EConnectionDirection SupportedConnectionDirection()
+    public ConnectionDirection SupportedConnectionDirection()
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
+        var instance = CreateInstance<ICommunicationEndpoint>(scope.ServiceProvider);
         return instance.SupportedConnectionDirection();
     }
 
@@ -250,7 +251,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
     /// </summary>
     /// <param name="data">The data context.</param>
     /// <returns>A task that represents the asynchronous send operation.</returns>
-    public async Task SendDataAsync(DataContext data)
+    public async Task SendDataAsync(ChannelDataContext data)
     {
         if (!_isInit)
         {
@@ -258,7 +259,7 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
         }
 
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<ICommunicationCore>(scope.ServiceProvider);
+        var instance = CreateInstance<ICommunicationEndpoint>(scope.ServiceProvider);
         instance.Pipe = Pipe;
         instance.EntranceType = EntranceType;
         await instance.SendDataAsync(data);
@@ -272,14 +273,14 @@ internal class TransientPipeEndpointProxy(IServiceScopeFactory serviceScopeFacto
 internal class TransientPipeTransformMiddlewareProxy(
     IServiceScopeFactory serviceScopeFactory,
     Type componentType)
-    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipeTransformMiddleware
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipelineTransformMiddleware
 {
-    public async Task<DataContext> PassAsync(DataContext context)
+    public async Task<ChannelDataContext> PassAsync(ChannelDataContext context)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeTransformMiddleware>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineTransformMiddleware>(scope.ServiceProvider);
         // Assign the pipeline reference when the middleware requires pipeline access.
-        if (instance is IWantAccessPipeline wantAccess && Pipeline != null)
+        if (instance is IPipelineAware wantAccess && Pipeline != null)
         {
             wantAccess.Pipe = Pipeline;
         }
@@ -290,11 +291,11 @@ internal class TransientPipeTransformMiddlewareProxy(
     public dynamic GetMetadata()
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeTransformMiddleware>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineTransformMiddleware>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 
-    public DataPipeline? Pipeline { get; set; }
+    public ChannelPipeline? Pipeline { get; set; }
 }
 
 /// <summary>
@@ -304,20 +305,20 @@ internal class TransientPipeTransformMiddlewareProxy(
 internal class TransientPipeEndpointMiddlewareProxy(
     IServiceScopeFactory serviceScopeFactory,
     Type componentType)
-    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipeEndpointMiddleware
+    : TransientComponentProxyBase(serviceScopeFactory, componentType, null), IPipelineEndpointMiddleware
 {
     public dynamic GetMetadata()
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeEndpointMiddleware>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineEndpointMiddleware>(scope.ServiceProvider);
         return instance.GetMetadata();
     }
 
-    public DataPipeline Pipe { get; set; } = null!;
+    public ChannelPipeline Pipe { get; set; } = null!;
     public void CollectException(Exception exception, object? source = null, string? description = null, ILogger? logger = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
-        var instance = CreateInstance<IPipeEndpointMiddleware>(scope.ServiceProvider);
+        var instance = CreateInstance<IPipelineEndpointMiddleware>(scope.ServiceProvider);
         instance.CollectException(exception, source, description, logger);
     }
 }

@@ -8,9 +8,9 @@ using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.DataChannel;
-using Monica.DataChannel.Interfaces;
+using Monica.DataChannel.Abstractions;
+using Monica.DataChannel.Facades;
 using Monica.DataChannel.Services;
-using Monica.DataChannel.UIDataChannel.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -24,15 +24,15 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
     {
         DataChannelCentral.Setting = Option;
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
-        services.AddScoped<DataChannelUIService>();
+        services.AddScoped<DataChannelFacade>();
         // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();
     }
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        //use ISetupPipeline
-        if (app.ApplicationServices.GetService(typeof(ISetupPipeline)) is ISetupPipeline setup)
+        // Use the startup hook to register channel builders before the hosted initializer runs.
+        if (app.ApplicationServices.GetService(typeof(IDataChannelSetup)) is IDataChannelSetup setup)
         {
             setup.Setup();
         }
@@ -52,7 +52,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
             endpoints.MapGet("/channel/{id}/re-init",
                 async ([FromRoute] string id,
-                      [FromServices] DataChannelUIService service,
+                      [FromServices] DataChannelFacade service,
                       CancellationToken cancellationToken = default) =>
                 {
                     var result = await service.ReInitializeChannelAsync(id, cancellationToken);
@@ -64,7 +64,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                 .WithDescription("对给定ID的DataChannel进行重新初始化操作");
 
             endpoints.MapGet("/channels",
-                async ([FromServices] DataChannelUIService service) =>
+                async ([FromServices] DataChannelFacade service) =>
                 {
                     var result = await service.GetChannelsStatusAsync();
                     return result.GetResponse();
@@ -77,7 +77,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
             endpoints.MapGet("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
                       [FromQuery] int count,
-                      [FromServices] DataChannelUIService service) =>
+                      [FromServices] DataChannelFacade service) =>
                 {
                     var result = await service.GetChannelExceptionsAsync(id, count);
                     return result.GetResponse();
@@ -88,7 +88,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
                 .WithDescription("获取指定DataChannel的异常信息");
 
             endpoints.MapGet("/channels/exceptions/summary",
-                async ([FromServices] DataChannelUIService service) =>
+                async ([FromServices] DataChannelFacade service) =>
                 {
                     var result = await service.GetExceptionSummaryAsync();
                     return result.GetResponse();
@@ -100,7 +100,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
             endpoints.MapDelete("/channel/{id}/exceptions",
                 async ([FromRoute] string id,
-                      [FromServices] DataChannelUIService service) =>
+                      [FromServices] DataChannelFacade service) =>
                 {
                     var result = await service.ClearChannelExceptionsAsync(id);
                     return result.GetResponse();
@@ -143,7 +143,7 @@ public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDat
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton(typeof(ISetupPipeline), typeof(TBuilderEntrance));
+            context.Services.AddSingleton(typeof(IDataChannelSetup), typeof(TBuilderEntrance));
         });
         return this;
     }

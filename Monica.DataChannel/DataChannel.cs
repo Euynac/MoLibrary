@@ -8,13 +8,13 @@ namespace Monica.DataChannel;
 /// Acts as the managed unit tracked by <see cref="DataChannelCentral"/>.
 /// </summary>
 /// <param name="pipeline">The data pipeline instance.</param>
-public class DataChannel(DataPipeline pipeline)
+public class DataChannel(ChannelPipeline pipeline)
 {
     /// <summary>
     /// Gets the underlying data pipeline.
     /// Contains the core data transfer and processing logic.
     /// </summary>
-    public DataPipeline Pipe { get; } = pipeline;
+    public ChannelPipeline Pipe { get; } = pipeline;
 
     /// <summary>
     /// Gets the unique identifier of the data channel.
@@ -38,7 +38,7 @@ public class DataChannel(DataPipeline pipeline)
     /// <param name="data">The data to send.</param>
     public async Task SendDataFromInnerAsync(object data)
     {
-        await Pipe.SendDataAsync(new DataContext(EDataSource.Inner, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Inner, data));
     }
 
     /// <summary>
@@ -48,6 +48,6 @@ public class DataChannel(DataPipeline pipeline)
     /// <param name="data">The data to send.</param>
     public async Task SendDataFromOuterAsync(object data)
     {
-        await Pipe.SendDataAsync(new DataContext(EDataSource.Outer, data));
+        await Pipe.SendDataAsync(new ChannelDataContext(ChannelSide.Outer, data));
     }
 }

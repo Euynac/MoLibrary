@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
-using Monica.DataChannel.Interfaces;
+using Monica.DataChannel.Abstractions;
 using Monica.Modules;
 using Monica.DataChannel.Pipeline;
 
@@ -38,13 +38,13 @@ public static class DataChannelCentral
     /// <summary>
     /// Gets the collection of registered data pipeline builders.
     /// </summary>
-    internal static List<DataPipelineBuilder> Builders { get; } = [];
+    internal static List<ChannelPipelineBuilder> Builders { get; } = [];
 
     /// <summary>
     /// Registers a configured data pipeline with the central manager.
     /// </summary>
     /// <param name="pipe">The data pipeline to register.</param>
-    public static void RegisterPipeline(DataPipeline pipe)
+    public static void RegisterPipeline(ChannelPipeline pipe)
     {
         Channels.Add(pipe.Id, new DataChannel(pipe));
     }
@@ -53,7 +53,7 @@ public static class DataChannelCentral
     /// Registers a data pipeline builder.
     /// </summary>
     /// <param name="builder">The data pipeline builder to register.</param>
-    internal static void RegisterBuilder(DataPipelineBuilder builder)
+    internal static void RegisterBuilder(ChannelPipelineBuilder builder)
     {
         Builders.Add(builder);
     }
@@ -70,7 +70,7 @@ public static class DataChannelCentral
             var pipe = builder.Build(app.ApplicationServices);
             foreach (var component in pipe.GetComponents())
             {
-                if (component is IDynamicConfigApplicationBuilder config)
+                if (component is IApplicationBuilderConfigurable config)
                     config.ConfigApplicationBuilder(app);
             }
         }
@@ -83,7 +83,7 @@ public static class DataChannelCentral
     {
         foreach (var component in Channels.Values.SelectMany(p => p.Pipe.GetComponents()))
         {
-            if (component is IDynamicConfigApplicationBuilder config)
+            if (component is IApplicationBuilderConfigurable config)
                 config.ConfigEndpoints(app);
         }
     }
