@@ -1,14 +1,12 @@
 
 using System.Net;
 
-namespace Monica.Framework.Features.EfCoreExtensions.ActivityStatus;
+namespace Monica.Repository.Persistence.Models;
 
-//SELECT * FROM pg_stat_statements requires enabling PGSQL analysis
-
-
-
-//pg_stat_activity
-public class PgSqlActivityStatus
+/// <summary>
+/// Represents a row returned from PostgreSQL <c>pg_stat_activity</c>.
+/// </summary>
+public class PostgreSqlActivitySnapshot
 {
     /// <summary>
     /// Execution time current_timestamp - query_start
@@ -106,60 +104,4 @@ public class PgSqlActivityStatus
     /// The latest query of this background. If the state is active, this field displays the currently executing query. All other cases represent the previous query.
     /// </summary>
     public string? Query { get; set; }
-
-    public static string GetQuerySql(bool gaussDb = false)
-    {
-        if (gaussDb)
-        {
-            
-            return """
-                   SELECT
-                       current_timestamp - query_start AS Runtime,
-                       datid AS Datid,
-                       datname AS Datname,
-                       pid AS Pid,
-                       usesysid AS Usesysid,
-                       usename AS Usename,
-                       application_name AS ApplicationName,
-                       client_addr AS ClientAddr,
-                       client_hostname AS ClientHostname,
-                       client_port AS ClientPort,
-                       backend_start AS BackendStart,
-                       xact_start AS XactStart,
-                       query_start AS QueryStart,
-                       state_change AS StateChange,
-                       waiting AS Waiting,
-                       state AS State,
-                       query AS Query
-                   FROM
-                       pg_stat_activity;
-                   """;
-        }
-
-        return """
-               SELECT
-                   current_timestamp - query_start AS Runtime,
-                   datid AS Datid,
-                   datname AS Datname,
-                   pid AS Pid,
-                   usesysid AS Usesysid,
-                   usename AS Usename,
-                   application_name AS ApplicationName,
-                   client_addr AS ClientAddr,
-                   client_hostname AS ClientHostname,
-                   client_port AS ClientPort,
-                   backend_start AS BackendStart,
-                   xact_start AS XactStart,
-                   query_start AS QueryStart,
-                   state_change AS StateChange,
-                   CASE
-                       WHEN wait_event_type = 'Lock' THEN true
-                       ELSE false
-                   END AS Waiting,
-                   state AS State,
-                   query AS Query
-               FROM
-                   pg_stat_activity;
-               """;
-    }
 }

@@ -1,6 +1,9 @@
-namespace Monica.Framework.Features.EfCoreExtensions.ActivityStatus;
-// ReSharper disable IdentifierTypo
-public class OpenGuassActivityStatus
+namespace Monica.Repository.Persistence.Models;
+
+/// <summary>
+/// Represents a row returned from openGauss <c>pg_stat_activity</c>.
+/// </summary>
+public class OpenGaussActivitySnapshot
 {
     /// <summary>
     /// Execution time current_timestamp - query_start

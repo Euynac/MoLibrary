@@ -1,32 +1,34 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Monica.DependencyInjection.Abstractions;
+using Monica.Repository.GuidGeneration.Abstractions;
+using Monica.Repository.GuidGeneration.Models;
 
-namespace Monica.Framework.Features.MoGuid;
+namespace Monica.Repository.GuidGeneration.Services;
 
 /* This code is taken from jhtodd/SequentialGuid https://github.com/jhtodd/SequentialGuid/blob/master/SequentialGuid/Classes/SequentialGuid.cs */
 
 /// <summary>
 /// Implements <see cref="IGuidGenerator"/> by creating sequential Guids.
-/// Use <see cref="MoSequentialGuidGeneratorOptions"/> to configure.
+/// Use <see cref="SequentialGuidGeneratorOptions"/> to configure.
 /// </summary>
 public class SequentialGuidGenerator : IGuidGenerator, ITransientDependency
 {
-    public MoSequentialGuidGeneratorOptions Options { get; }
+    public SequentialGuidGeneratorOptions Options { get; }
 
     private static readonly RandomNumberGenerator RandomNumberGenerator = RandomNumberGenerator.Create();
 
-    public SequentialGuidGenerator(IOptions<MoSequentialGuidGeneratorOptions> options)
+    public SequentialGuidGenerator(IOptions<SequentialGuidGeneratorOptions> options)
     {
         Options = options.Value;
     }
 
     public Guid Create()
     {
-        return Create(Options.GetDefaultSequentialGuidType());
+        return Create(Options.GetDefaultSequentialGuidLayout());
     }
 
-    public Guid Create(SequentialGuidType guidType)
+    public Guid Create(SequentialGuidLayout layout)
     {
         // We start with 16 bytes of cryptographically strong random data.
         var randomBytes = new byte[10];
@@ -65,10 +67,10 @@ public class SequentialGuidGenerator : IGuidGenerator, ITransientDependency
 
         byte[] guidBytes = new byte[16];
 
-        switch (guidType)
+        switch (layout)
         {
-            case SequentialGuidType.SequentialAsString:
-            case SequentialGuidType.SequentialAsBinary:
+            case SequentialGuidLayout.SequentialAsString:
+            case SequentialGuidLayout.SequentialAsBinary:
 
                 // For string and byte-array version, we copy the timestamp first, followed
                 // by the random data.
@@ -79,7 +81,7 @@ public class SequentialGuidGenerator : IGuidGenerator, ITransientDependency
                 // that .NET regards the Data1 and Data2 block as an Int32 and an Int16,
                 // respectively.  That means that it switches the order on little-endian
                 // systems.  So again, we have to reverse.
-                if (guidType == SequentialGuidType.SequentialAsString && BitConverter.IsLittleEndian)
+                if (layout == SequentialGuidLayout.SequentialAsString && BitConverter.IsLittleEndian)
                 {
                     Array.Reverse(guidBytes, 0, 4);
                     Array.Reverse(guidBytes, 4, 2);
@@ -87,7 +89,7 @@ public class SequentialGuidGenerator : IGuidGenerator, ITransientDependency
 
                 break;
 
-            case SequentialGuidType.SequentialAtEnd:
+            case SequentialGuidLayout.SequentialAtEnd:
 
                 // For sequential-at-the-end versions, we copy the random data first,
                 // followed by the timestamp.

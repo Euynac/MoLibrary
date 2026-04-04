@@ -1,4 +1,4 @@
-namespace Monica.Framework.Features.MoGuid;
+namespace Monica.Repository.GuidGeneration.Abstractions;
 
 /// <summary>
 /// Used to generate Ids.

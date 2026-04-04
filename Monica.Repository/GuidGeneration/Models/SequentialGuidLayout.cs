@@ -1,9 +1,9 @@
-namespace Monica.Framework.Features.MoGuid;
+namespace Monica.Repository.GuidGeneration.Models;
 
 /// <summary>
 /// Describes the type of a sequential GUID value.
 /// </summary>
-public enum SequentialGuidType
+public enum SequentialGuidLayout
 {
     /// <summary>
     /// The GUID should be sequential when formatted using the <see cref="Guid.ToString()" /> method.

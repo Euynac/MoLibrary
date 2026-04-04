@@ -9,6 +9,9 @@ using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Entity.Services;
+using Monica.Repository.GuidGeneration.Abstractions;
+using Monica.Repository.GuidGeneration.Models;
+using Monica.Repository.GuidGeneration.Services;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
@@ -34,6 +37,11 @@ public static class ModuleRepositoryBuilderExtensions
 public class ModuleRepository(ModuleRepositoryOption option)
     : MoModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddOptions<SequentialGuidGeneratorOptions>();
+        services.TryAddTransient<IGuidGenerator, SequentialGuidGenerator>();
+    }
 
     public override void ClaimDependencies()
     {
