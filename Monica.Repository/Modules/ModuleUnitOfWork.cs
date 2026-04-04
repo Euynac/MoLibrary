@@ -5,10 +5,12 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
-using Monica.Repository.Interfaces;
-using Monica.Repository.Transaction;
-using Monica.Repository.Transaction.EntityEvent;
-using Monica.Repository.Transaction.Interceptors;
+using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Services;
+using Monica.Repository.Persistence.Services.Support;
+using Monica.Repository.UnitOfWork.Abstractions;
+using Monica.Repository.UnitOfWork.Services;
+using Monica.Repository.UnitOfWork.Services.Support;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -34,8 +36,8 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IMoUnitOfWorkManager, MoUnitOfWorkManager>();
-        services.AddTransient<IMoUnitOfWork, MoUnitOfWork>();
+        services.AddSingleton<IUnitOfWorkManager, UnitOfWorkManager>();
+        services.AddTransient<IUnitOfWork, UnitOfWork>();
 
         if (option.EnableEntityEvent)
         {
@@ -47,17 +49,17 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
             services.AddTransient<IAsyncLocalEventPublisher, NullAsyncLocalEventPublisher>();
         }
 
-        services.AddTransient<MoActionFilterUow>();
+        services.AddTransient<UnitOfWorkActionFilter>();
         services.Configure<MvcOptions>(p =>
         {
-            p.Filters.AddService(typeof(MoActionFilterUow));
+            p.Filters.AddService(typeof(UnitOfWorkActionFilter));
         });
     }
 }
 
 public class ModuleUnitOfWorkGuide : MoModuleGuide<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>
 {
-    public ModuleUnitOfWorkGuide AddDbContextProvider<TDbContext>() where TDbContext : MoDbContext<TDbContext>
+    public ModuleUnitOfWorkGuide AddDbContextProvider<TDbContext>() where TDbContext : RepositoryDbContext<TDbContext>
     {
         ConfigureServices(context =>
         {

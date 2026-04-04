@@ -34,7 +34,7 @@ internal static class MvcOptionsExtensions
         //options.Filters.AddService(typeof(AbpNoContentActionFilter));
         //options.Filters.AddService(typeof(AbpFeatureActionFilter));
         //options.Filters.AddService(typeof(AbpValidationActionFilter));
-        //options.Filters.AddService(typeof(MoActionFilterUow));
+        //options.Filters.AddService(typeof(UnitOfWorkActionFilter));
         options.Filters.AddService(typeof(ResultEnvelopeMvcFilter));
         //options.Filters.AddService(typeof(ExceptionFilter));
     }

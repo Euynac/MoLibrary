@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Monica.JobScheduler.Models;
-using Monica.Repository.EntityInterfaces;
+using Monica.Repository.Entity.Abstractions;
 
 namespace Monica.JobScheduler.EfCore.Entities;
 
 /// <summary>
 /// EF Core entity for persisting job definitions.
 /// </summary>
-public class JobDefinitionEntity : MoEntity<long>, IHasSoftDelete, IHasEntitySelfConfig<JobDefinitionEntity>
+public class JobDefinitionEntity : Entity<long>, IHasSoftDelete, IHasEntitySelfConfig<JobDefinitionEntity>
 {
     /// <summary>
     /// Scheduler scope key used to isolate shared persistence across environments.

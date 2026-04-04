@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Monica.Core.Results;
-using Monica.Repository.DtoInterfaces;
-using Monica.Repository.EntityInterfaces;
-using Monica.Repository.Exceptions;
-using Monica.Repository.Interfaces;
+using Monica.Repository.Entity.Abstractions;
+using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Exceptions;
 using Monica.WebApi.Annotations;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Models;
@@ -21,9 +20,9 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, T
     TRepository repository)
     : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, CrudDisableDto, CrudDisableDto,
         CrudDisableDto, TRepository>(repository)
-    where TEntity : class, IMoEntity<TKey>
-    where TEntityDto : IMoEntityDto<TKey>
-    where TRepository : IMoRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
+    where TEntityDto : IEntityDto<TKey>
+    where TRepository : IRepository<TEntity, TKey>
 {
 }
 
@@ -38,9 +37,9 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TU
     TRepository repository)
     : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, CrudPageRequestDto, TCreateInput, TUpdateInput,
         CrudDisableDto, TRepository>(repository)
-    where TEntity : class, IMoEntity<TKey>
-    where TEntityDto : IMoEntityDto<TKey>
-    where TRepository : IMoRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
+    where TEntityDto : IEntityDto<TKey>
+    where TRepository : IRepository<TEntity, TKey>
 {
 }
 
@@ -55,9 +54,9 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, T
         TRepository repository)
     : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, CrudDisableDto, TRepository>(
         repository)
-    where TEntity : class, IMoEntity<TKey>
-    where TEntityDto : IMoEntityDto<TKey>
-    where TRepository : IMoRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
+    where TEntityDto : IEntityDto<TKey>
+    where TRepository : IRepository<TEntity, TKey>
 {
 }
 
@@ -69,25 +68,25 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, T
 /// The remaining class name prefix is converted into a kebab-case route segment, for example:
 /// <c>UserListAppService</c> becomes <c>user-list</c>.
 /// </summary>
-/// <typeparam name="TEntity">The entity type. Must implement <see cref="IMoEntity{TKey}"/>.</typeparam>
-/// <typeparam name="TGetOutputDto">The DTO type returned by single-entity queries. Must implement <see cref="IMoEntityDto{TKey}"/>.</typeparam>
-/// <typeparam name="TGetListOutputDto">The DTO type returned by list queries. Must implement <see cref="IMoEntityDto{TKey}"/>.</typeparam>
+/// <typeparam name="TEntity">The entity type. Must implement <see cref="IEntity"/>.</typeparam>
+/// <typeparam name="TGetOutputDto">The DTO type returned by single-entity queries. Must implement <see cref="IEntityDto"/>.</typeparam>
+/// <typeparam name="TGetListOutputDto">The DTO type returned by list queries. Must implement <see cref="IEntityDto"/>.</typeparam>
 /// <typeparam name="TKey">The entity primary key type.</typeparam>
 /// <typeparam name="TGetListInput">The input type used for list queries.</typeparam>
 /// <typeparam name="TCreateInput">The input type used for create operations.</typeparam>
 /// <typeparam name="TUpdateInput">The input type used for update operations.</typeparam>
 /// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
-/// <typeparam name="TRepository">The repository type. Must implement <see cref="IMoRepository{TEntity, TKey}"/>.</typeparam>
+/// <typeparam name="TRepository">The repository type. Must implement <see cref="IRepository{TEntity}"/>.</typeparam>
 /// <param name="repository">The repository instance.</param>
 public abstract class CrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(
         TRepository repository) : 
     AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
         repository), ICrudAppService
-    where TEntity : class, IMoEntity<TKey>
-    where TGetOutputDto : IMoEntityDto<TKey>
-    where TGetListOutputDto : IMoEntityDto<TKey>
-    where TRepository : IMoRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
+    where TGetOutputDto : IEntityDto<TKey>
+    where TGetListOutputDto : IEntityDto<TKey>
+    where TRepository : IRepository<TEntity, TKey>
 {
     /// <summary>
     /// Creates an entity.

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using Monica.Repository.EntityInterfaces;
+using Monica.Repository.Entity.Abstractions;
 
 namespace Monica.Framework.Features.AlterChain;
 

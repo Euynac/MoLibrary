@@ -7,9 +7,11 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
-using Monica.Repository.EntityInterfaces;
-using Monica.Repository.Interfaces;
-using Monica.Repository.Registrar;
+using Monica.Repository.Entity.Abstractions;
+using Monica.Repository.Entity.Services;
+using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Services;
+using Monica.Repository.Persistence.Services.Support;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -42,8 +44,8 @@ public class ModuleRepository(ModuleRepositoryOption option)
 public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
 
-    public ModuleRepositoryGuide AddMoDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
-        where TDbContext : MoDbContext<TDbContext>
+    public ModuleRepositoryGuide AddRepositoryDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
+        where TDbContext : RepositoryDbContext<TDbContext>
     {
         if (dbContextProviderType == DbContextProviderType.UnitOfWork)
         {
@@ -66,7 +68,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
                     break;
             }
             
-            context.Services.TryAddTransient<IMoAuditPropertySetter, MoAuditPropertySetter>();
+            context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
 
             // Only register factory separately if not using ContextFactory provider type
             if (context.ModuleOption.UseDbContextFactory && dbContextProviderType != DbContextProviderType.ContextFactory)
@@ -81,7 +83,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             }
 
             //TODO Use Module to optimize automatic registration
-            var options = new MoEfCoreRegistrationOptions(typeof(TDbContext), context.Services);
+            var options = new EfRepositoryRegistrationOptions(typeof(TDbContext), context.Services);
 
             context.Services.AddTransient(serviceProvider =>
             {
@@ -95,7 +97,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
             new EfCoreRepositoryRegistrar(options).AddRepositories();
 
             context.Services
-                .AddTransient<IMoDbContextDatabaseManager<TDbContext>, MoDbContextDatabaseManager<TDbContext>>();
+                .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
         }, secondKey: typeof(TDbContext).Name);
         return this;
     }
@@ -126,7 +128,7 @@ public class ModuleRepositoryOption : MoModuleOption<ModuleRepository>
 
     /// <summary>
     /// Disables automatic discovery of entity-specific configuration via <see cref="IEntityTypeConfiguration{TEntity}"/>.
-    /// You can disable this when automatic registration from <see cref="MoDbContext{TDbContext}"/> is not needed.
+    /// You can disable this when automatic registration from <see cref="RepositoryDbContext{TDbContext}"/> is not needed.
     /// </summary>
     public bool DisableEntitySeparateConfiguration { get; set; }
 

@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Monica.Framework.Core.Interfaces;
 using Monica.Modules;
-using Monica.Repository.EntityInterfaces;
-using Monica.Repository.Interfaces;
+using Monica.Repository.Entity.Abstractions;
+using Monica.Repository.Persistence.Abstractions;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Core.Model;
@@ -33,7 +33,7 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
     {
         var type = context.Type;
         var unit = new UnitRepository(type);
-        if (!type.IsImplementInterfaceGeneric(typeof(IMoRepository<>), out var exactGenericType)) return null;
+        if (!type.IsImplementInterfaceGeneric(typeof(IRepository<>), out var exactGenericType)) return null;
         unit.CheckNameConventionMode();
         var repoInterface = type.GetInterface($"I{type.Name}");
         if (repoInterface == null)
@@ -55,7 +55,7 @@ public class UnitRepository(Type type) : ProjectUnit(type, EProjectUnitType.Repo
     {
         if(!ProjectUnitStores.ProjectUnitsByFullName.TryGetValue(EntityType.FullName!, out var entityUnit))
         {
-            var alertMessage = $"{this}无法关联其实体{EntityType.GetCleanFullName()},可能未继承{nameof(MoEntity)}相关基类";
+            var alertMessage = $"{this}无法关联其实体{EntityType.GetCleanFullName()},可能未继承{nameof(Entity)}相关基类";
             // Add warning level alert
             Alerts.Add(new ProjectUnitAlert
             {

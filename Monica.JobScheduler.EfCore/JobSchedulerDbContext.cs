@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
 using Monica.JobScheduler.EfCore.Entities;
 using Monica.Repository;
+using Monica.Repository.Persistence.Services;
 
 namespace Monica.JobScheduler.EfCore;
 
@@ -11,7 +12,7 @@ namespace Monica.JobScheduler.EfCore;
 public class JobSchedulerDbContext(
     DbContextOptions<JobSchedulerDbContext> options,
     ICachedServiceProvider serviceProvider)
-    : MoDbContext<JobSchedulerDbContext>(options, serviceProvider)
+    : RepositoryDbContext<JobSchedulerDbContext>(options, serviceProvider)
 {
     public DbSet<JobDefinitionEntity> JobDefinitions => Set<JobDefinitionEntity>();
     public DbSet<JobInstanceEntity> JobInstances => Set<JobInstanceEntity>();

@@ -9,12 +9,12 @@ using Monica.AutoModel.Abstractions;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.Results;
 using Monica.Repository;
-using Monica.Repository.DtoInterfaces;
-using Monica.Repository.EntityInterfaces;
-using Monica.Repository.EntityInterfaces.Auditing;
-using Monica.Repository.Exceptions;
-using Monica.Repository.Interfaces;
-using Monica.Repository.Transaction;
+using Monica.Repository.Entity.Abstractions;
+using Monica.Repository.Entity.Abstractions.Auditing;
+using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Exceptions;
+using Monica.Repository.Persistence.Extensions;
+using Monica.Repository.UnitOfWork.Abstractions;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions;
@@ -32,8 +32,8 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
 public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-    IMoRepository<TEntity, TKey> repository) : ApplicationService
-    where TEntity : class, IMoEntity<TKey>
+    IRepository<TEntity, TKey> repository) : ApplicationService
+    where TEntity : class, IEntity<TKey>
 {
     /// <summary>
     /// Gets the auto model database operator for entity operations.
@@ -43,12 +43,12 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
     /// <summary>
     /// Gets the unit of work manager.
     /// </summary>
-    protected IMoUnitOfWorkManager UnitOfWorkManager => CachedServiceProvider.GetRequiredService<IMoUnitOfWorkManager>();
+    protected IUnitOfWorkManager UnitOfWorkManager => CachedServiceProvider.GetRequiredService<IUnitOfWorkManager>();
     
     /// <summary>
     /// Gets the repository for entity operations.
     /// </summary>
-    protected virtual IMoRepository<TEntity, TKey> Repository { get; } = repository;
+    protected virtual IRepository<TEntity, TKey> Repository { get; } = repository;
 
     #region Query
 
@@ -128,7 +128,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
         }
 
         var entityDtos = await MapToGetListOutputDtosAsync<TCustomDto>(finalEntityQuery);
-        var cursor = entityDtos is { Count: > 0 } && entityDtos.Last() is IMoEntityDto<TKey> dto ? dto.Id?.ToString() : null;
+        var cursor = entityDtos is { Count: > 0 } && entityDtos.Last() is IEntityDto<TKey> dto ? dto.Id?.ToString() : null;
         if (curPage != null && pageSize != null && entityDtos.FirstOrDefault() is IHasDtoSequenceNumber)
         {
             // Calculate the starting index for the current page
@@ -495,7 +495,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
     /// <param name="input">The input used for the list query.</param>
     /// <param name="repository">The repository to query, such as a history repository.</param>
     /// <returns>The filtered query.</returns>
-    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IMoRepository<TEntity, TKey>? repository = null)
+    protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IRepository<TEntity, TKey>? repository = null)
     {
         repository ??= Repository;
         var queryable = WithDetail() ? await repository.WithDetailsAsync() : await repository.GetQueryableAsync();

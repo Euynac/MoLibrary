@@ -33,7 +33,6 @@ public class ModuleSnowflake(ModuleSnowflakeOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         var generator = new SnowflakeIdGenerator(option);
-        SnowflakeStatic.Snowflake = generator;
         services.AddSingleton<ISnowflakeIdGenerator>(generator);
     }
 }

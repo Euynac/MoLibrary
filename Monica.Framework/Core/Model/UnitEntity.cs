@@ -1,6 +1,6 @@
 using Monica.Framework.Core.Interfaces;
 using Monica.Modules;
-using Monica.Repository.EntityInterfaces;
+using Monica.Repository.Entity.Abstractions;
 using Monica.Tool.Extensions;
 
 namespace Monica.Framework.Core.Model;
@@ -25,7 +25,7 @@ public class UnitEntity(Type type) : ProjectUnit(type, EProjectUnitType.Entity),
 
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.IsImplementInterface<IMoEntity>();
+        return Type.IsClass && Type.IsImplementInterface<IEntity>();
     }
 
     protected override UnitNameConventionOption? DefaultConventionOption()

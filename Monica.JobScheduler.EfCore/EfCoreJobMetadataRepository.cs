@@ -7,7 +7,7 @@ using Monica.JobScheduler.EfCore.Mappers;
 using Monica.JobScheduler.EfCore.Support;
 using Monica.JobScheduler.Models;
 using Monica.Modules;
-using Monica.Repository.Interfaces;
+using Monica.Repository.Persistence.Abstractions;
 
 namespace Monica.JobScheduler.EfCore;
 

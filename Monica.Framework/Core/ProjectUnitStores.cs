@@ -56,7 +56,7 @@ public static class ProjectUnitStores
         return [.. ProjectUnitsByFullName.Values];
     }
     /// <summary>
-    /// Get the project unit of the specified type (the entity needs to inherit IMoEntity)
+    /// Get the project unit of the specified type (the entity needs to inherit IEntity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
@@ -70,7 +70,7 @@ public static class ProjectUnitStores
         return null;
     }
     /// <summary>
-    /// Get the project unit of the specified type (the entity needs to inherit IMoEntity)
+    /// Get the project unit of the specified type (the entity needs to inherit IEntity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
