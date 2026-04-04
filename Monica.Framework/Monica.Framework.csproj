@@ -48,4 +48,7 @@
 	  </ProjectReference>
 	  <ProjectReference Include="..\Monica.StateStore\Monica.StateStore.csproj"/>
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Features\" />
+	</ItemGroup>
 </Project>

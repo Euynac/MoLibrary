@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
 using Monica.Tool.Extensions;
 
-namespace Monica.Framework.MoSeeder;
+namespace Monica.Framework.Features.MoSeeder;
 
 /// <summary>
 /// Specify that this class is a seed class, which will be automatically executed after starting the service.

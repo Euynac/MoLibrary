@@ -1,4 +1,4 @@
-namespace Monica.Framework.AlterChain.Attributes;
+namespace Monica.Framework.Features.AlterChain.Attributes;
 
 /// <summary>
 /// Used to configure the property behavior when AlterItemData is generated

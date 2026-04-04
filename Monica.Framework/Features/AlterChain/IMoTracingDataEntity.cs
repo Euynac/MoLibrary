@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Monica.Repository.Entity.Abstractions;
 
-namespace Monica.Framework.AlterChain;
+namespace Monica.Framework.Features.AlterChain;
 
 public interface IMoTracingDataEntity
 {

@@ -1,4 +1,4 @@
-﻿namespace Monica.Framework.AlterChain;
+﻿namespace Monica.Framework.Features.AlterChain;
 
 public record AlterRecord
 {

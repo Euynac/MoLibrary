@@ -4,7 +4,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Framework.MoSeeder;
+using Monica.Framework.Features.MoSeeder;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;

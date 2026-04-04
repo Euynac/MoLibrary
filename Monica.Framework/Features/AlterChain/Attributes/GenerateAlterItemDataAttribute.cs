@@ -1,4 +1,4 @@
-namespace Monica.Framework.AlterChain.Attributes;
+namespace Monica.Framework.Features.AlterChain.Attributes;
 
 /// <summary>
 /// Marking entity classes requires generating the corresponding AlterItemData class and Apply method

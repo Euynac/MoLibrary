@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Monica.Tool.Extensions;
 
-namespace Monica.Framework.AlterChain;
+namespace Monica.Framework.Features.AlterChain;
 
 
 public interface IMoAlterItem
