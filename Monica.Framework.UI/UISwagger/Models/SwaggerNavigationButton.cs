@@ -1,4 +1,4 @@
-namespace Monica.Framework.UI.Swagger;
+namespace Monica.Framework.UI.UISwagger.Models;
 
 /// <summary>
 /// Represents a custom navigation button in Swagger UI topbar
@@ -11,7 +11,7 @@ public record SwaggerNavigationButton
     public required string Name { get; init; }
 
     /// <summary>
-    /// Navigation path (e.g., "home" navigates to "~/home")
+    /// Navigation path (for example, "system-info" navigates to "~/system-info").
     /// </summary>
     public required string Path { get; init; }
 

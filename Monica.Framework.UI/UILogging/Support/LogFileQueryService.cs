@@ -1,11 +1,11 @@
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Modules;
-using Monica.Framework.UI.UILogging.Models;
 using Monica.Core.Results;
+using Monica.Framework.UI.UILogging.Models;
+using Monica.Modules;
 
-namespace Monica.Framework.UI.UILogging.Services;
+namespace Monica.Framework.UI.UILogging.Support;
 
 /// <summary>
 /// Log file query and download service

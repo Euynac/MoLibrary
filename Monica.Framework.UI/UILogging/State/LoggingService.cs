@@ -2,12 +2,13 @@ using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Modules;
-using Monica.Framework.UI.UILogging.Models;
-using Monica.Tool.Extensions;
 using Monica.Core.Results;
+using Monica.Framework.UI.UILogging.Models;
+using Monica.Framework.UI.UILogging.Support;
+using Monica.Modules;
+using Monica.Tool.Extensions;
 
-namespace Monica.Framework.UI.UILogging.Services;
+namespace Monica.Framework.UI.UILogging.State;
 
 /// <summary>
 /// Log page core service, responsible for maintaining temporary log pool and real-time subscription

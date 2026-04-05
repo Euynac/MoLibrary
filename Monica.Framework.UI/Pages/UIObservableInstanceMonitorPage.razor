@@ -1,8 +1,8 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Framework.UI.UIObservableInstance.Services
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Framework.UI.UIObservableInstance.Components
 @using Monica.Core.Results;
+@using Monica.Framework.UI.UIObservableInstance.Support
 @inject ObservableInstanceMonitorService MonitorService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -179,7 +179,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/ui/observable-instance";
+    public const string PAGE_URL = "/observable-instance-monitor";
 
     private bool _loading = true;
 

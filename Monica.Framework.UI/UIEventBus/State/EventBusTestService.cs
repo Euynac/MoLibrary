@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.Framework.UI.UIEventBus.Models;
-using Monica.Core.Results;
 
-namespace Monica.Framework.UI.UIEventBus.Services;
+namespace Monica.Framework.UI.UIEventBus.State;
 
 /// <summary>
 /// Event bus test service for managing test subscriptions and message collection

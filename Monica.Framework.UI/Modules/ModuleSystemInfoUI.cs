@@ -9,8 +9,8 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISystemInfo.Models;
-using Monica.Framework.UI.UISystemInfo.Services;
 using Monica.Framework.UI.Pages;
+using Monica.Framework.UI.UISystemInfo.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -48,7 +48,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
         DependsOnModule<ModuleLocalizationGuide>().Register()
             .AddResource<SystemInfoResource>();
 
-        if (!Option.DisableUISystemInfoPage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UISystemInfoPage>(
@@ -138,7 +138,7 @@ public class ModuleSystemInfoUIOption : MoModuleOptionWithMinimalApi<ModuleSyste
     /// <summary>
     /// Gets or sets a value indicating whether the system information page is disabled.
     /// </summary>
-    public bool DisableUISystemInfoPage { get; set; }
+    public bool DisablePage { get; set; }
 
     /// <summary>
     /// Gets the custom shortcut links displayed on the system information page.

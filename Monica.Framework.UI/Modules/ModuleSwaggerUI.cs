@@ -5,7 +5,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Framework.UI.Swagger;
+using Monica.Framework.UI.UISwagger.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -86,7 +86,7 @@ public class ModuleSwaggerUIGuide : MoModuleGuide<ModuleSwaggerUI, ModuleSwagger
     /// Add custom navigation buttons to Swagger UI
     /// </summary>
     /// <param name="name">Button display text</param>
-    /// <param name="path">Navigation path (e.g. "home" will navigate to "~/home")</param>
+    /// <param name="path">Navigation path (for example, "system-info" navigates to "~/system-info").</param>
     /// <param name="description">Tooltip displayed on mouseover</param>
     /// <param name="order">Display order (the smaller the number, the higher it is, the default is 0)</param>
     public ModuleSwaggerUIGuide AddNavigationButton(

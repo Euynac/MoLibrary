@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Localization;
 using Monica.Framework.ProjectUnits.Models;
-using Monica.Framework.UI.UIProjectUnits.Components;
+using Monica.Framework.UI.UIProjectUnits.Models;
 using MudBlazor;
 
 namespace Monica.Framework.UI.Localization;

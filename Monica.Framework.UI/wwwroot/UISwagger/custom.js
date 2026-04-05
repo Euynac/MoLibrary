@@ -120,7 +120,7 @@
 
     /**
      * Resolve relative path to absolute URL
-     * @param {string} path - Relative path (e.g., "home", "/home", "~/home")
+     * @param {string} path - Relative path (e.g., "system-info", "/system-info", "~/system-info")
      * @returns {string} Absolute URL
      */
     function resolveRelativePath(path) {

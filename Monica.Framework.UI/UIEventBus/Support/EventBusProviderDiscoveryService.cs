@@ -2,14 +2,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
-using Monica.Modules;
-using Monica.Framework.UI.UIEventBus.Models;
-using Monica.Core.Results;
 using Monica.EventBus.Providers.NoOp;
+using Monica.Framework.UI.UIEventBus.Models;
+using Monica.Modules;
 
-namespace Monica.Framework.UI.UIEventBus.Services;
+namespace Monica.Framework.UI.UIEventBus.Support;
 
 /// <summary>
 /// EventBus Provider Discovery Service - Provides Provider discovery and information query

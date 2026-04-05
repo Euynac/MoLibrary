@@ -1,10 +1,11 @@
 @attribute [Route(PAGE_URL)]
 @implements IAsyncDisposable
-@using Monica.Framework.UI.UIEventBus.Services
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.Framework.UI.UIEventBus.Components
-@using Monica.Core.Results;
+@using Monica.Core.Results
 @using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Support
+@using Monica.Framework.UI.UIEventBus.State
 @inject EventBusMonitorService MonitorService
 @inject EventBusTestService TestService
 @inject EventBusProviderDiscoveryService ProviderDiscoveryService
@@ -119,7 +120,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/ui/eventbus";
+    public const string PAGE_URL = "/event-bus-monitor";
 
     private bool _loading = true;
     private CancellationTokenSource _cts = new();

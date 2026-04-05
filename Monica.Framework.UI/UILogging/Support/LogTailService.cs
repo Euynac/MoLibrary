@@ -2,10 +2,10 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.Modules;
 using Monica.Core.Results;
+using Monica.Modules;
 
-namespace Monica.Framework.UI.UILogging.Services;
+namespace Monica.Framework.UI.UILogging.Support;
 
 /// <summary>
 /// Log reading results

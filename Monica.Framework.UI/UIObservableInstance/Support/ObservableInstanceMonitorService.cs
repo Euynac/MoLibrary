@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Logging;
-
 using Monica.Core.ObservableInstance.Facades;
 using Monica.Core.ObservableInstance.Models;
+using Monica.Core.Results;
 using Monica.Framework.UI.UIObservableInstance.Models;
 using Monica.Tool.Extensions;
-using Monica.Core.Results;
 
-namespace Monica.Framework.UI.UIObservableInstance.Services;
+namespace Monica.Framework.UI.UIObservableInstance.Support;
 
 /// <summary>
 /// UI support service that maps observable instance facade results to UI view models.

@@ -7,8 +7,9 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
-using Monica.Framework.UI.UIEventBus.Services;
 using Monica.Framework.UI.Pages;
+using Monica.Framework.UI.UIEventBus.State;
+using Monica.Framework.UI.UIEventBus.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -54,11 +55,11 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         DependsOnModule<ModuleEventBusGuide>().Register();
 
         // Registration UI page
-        if (!Option.DisableUIEventBusPage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIEventBusPage>(
-                    UIEventBusPage.PAGE_URL,
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIEventBusMonitorPage>(
+                    UIEventBusMonitorPage.PAGE_URL,
                     "Pages:EventBusMonitor:Title",
                     Icons.Material.Filled.Hub,
                     "Categories:Monitor",
@@ -171,5 +172,5 @@ public class ModuleEventBusUIOption : MoModuleOptionWithMinimalApi<ModuleEventBu
     /// <summary>
     /// Whether to disable the event bus monitoring page
     /// </summary>
-    public bool DisableUIEventBusPage { get; set; }
+    public bool DisablePage { get; set; }
 }

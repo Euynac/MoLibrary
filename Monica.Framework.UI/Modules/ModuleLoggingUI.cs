@@ -7,9 +7,10 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
-using Monica.Framework.UI.UILogging.Services;
 using Monica.Framework.UI.Pages;
 using Monica.Core.Results;
+using Monica.Framework.UI.UILogging.State;
+using Monica.Framework.UI.UILogging.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -49,11 +50,11 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
     {
         DependsOnModule<ModuleLoggingGuide>().Register();
 
-        if (!Option.DisableUILoggingPage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UILoggingPage>(
-                    UILoggingPage.LOGGING_MONITOR_URL,
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UILoggingMonitorPage>(
+                    UILoggingMonitorPage.PAGE_URL,
                     "Pages:LoggingMonitor:Title",
                     Icons.Material.Filled.Article,
                     "Categories:Monitor",
@@ -133,7 +134,7 @@ public class ModuleLoggingUIOption : MoModuleOptionWithMinimalApi<ModuleLoggingU
     /// <summary>
     /// Whether to disable the log monitoring page
     /// </summary>
-    public bool DisableUILoggingPage { get; set; }
+    public bool DisablePage { get; set; }
 
     /// <summary>
     /// Number of log lines obtained during initialization

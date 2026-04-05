@@ -2,10 +2,10 @@
 @using System.Globalization
 @using Monica.Framework.UI.UISystemInfo.Components
 @using Monica.Framework.UI.UISystemInfo.Models
-@using Monica.Framework.UI.UISystemInfo.Services
 @using Monica.Modules
 @using Monica.Core.Results;
 @using Microsoft.Extensions.Options
+@using Monica.Framework.UI.UISystemInfo.Support
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
@@ -267,7 +267,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/home";
+    public const string PAGE_URL = "/system-info";
 
     private bool _loading = true;
     private SystemInfoResponse? _systemInfo;

@@ -1,17 +1,18 @@
-@attribute [Route(LOGGING_MONITOR_URL)]
+@attribute [Route(PAGE_URL)]
 @using System.Diagnostics
 @using System.Threading.Channels
 @using Microsoft.Extensions.Logging
 @using Monica.Framework.UI.UILogging.Components
 @using Monica.Framework.UI.UILogging.Models
-@using Monica.Framework.UI.UILogging.Services
-@using Monica.Core.Results;
+@using Monica.Framework.UI.UILogging.State
+@using Monica.Core.Results
+@using Monica.Framework.UI.UILogging.Support
 
 @inject LoggingService LoggingService
 @inject LogFileQueryService LogFileQueryService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
-@inject ILogger<UILoggingPage> Logger
+@inject ILogger<UILoggingMonitorPage> Logger
 @inject IJSRuntime JSRuntime
 
 @implements IAsyncDisposable
@@ -210,7 +211,7 @@
 </MudDialog>
 
 @code {
-    public const string LOGGING_MONITOR_URL = "/logging-monitor";
+    public const string PAGE_URL = "/logging-monitor";
 
     private ScreenLogSnapshot? _snapshot;
     private bool _isInitializing = true;

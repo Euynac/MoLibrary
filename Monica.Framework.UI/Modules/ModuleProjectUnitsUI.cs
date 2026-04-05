@@ -39,7 +39,7 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableProjectUnitsPage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleLocalizationGuide>().Register()
                 .AddResource<ProjectUnitsResource>();
@@ -47,7 +47,7 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
             DependsOnModule<ModuleProjectUnitsGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIProjectUnitsPage>(
-                    UIProjectUnitsPage.PROJECT_UNITS_PAGE_URL,
+                    UIProjectUnitsPage.PAGE_URL,
                     "Pages:ProjectUnits:Title",
                     Icons.Material.Filled.Monitor,
                     "Categories:Monitor",
@@ -72,5 +72,5 @@ public class ModuleProjectUnitsUIOption : MoModuleOption<ModuleProjectUnitsUI>
     /// <summary>
     /// Whether to disable the project-units page.
     /// </summary>
-    public bool DisableProjectUnitsPage { get; set; }
+    public bool DisablePage { get; set; }
 }

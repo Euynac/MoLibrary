@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UISystemInfo.Models;
-using Monica.Core.Results;
 
-namespace Monica.Framework.UI.UISystemInfo.Services;
+namespace Monica.Framework.UI.UISystemInfo.Support;
 
 /// <summary>
 /// Provides system information for the System Info UI page.

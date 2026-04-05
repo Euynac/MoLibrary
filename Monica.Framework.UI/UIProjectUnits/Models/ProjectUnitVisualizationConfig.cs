@@ -1,7 +1,7 @@
 using Monica.Framework.ProjectUnits.Models;
 using MudBlazor;
 
-namespace Monica.Framework.UI.UIProjectUnits.Components;
+namespace Monica.Framework.UI.UIProjectUnits.Models;
 
 public static class ProjectUnitVisualizationConfig
 {

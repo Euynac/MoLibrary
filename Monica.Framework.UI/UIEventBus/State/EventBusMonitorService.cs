@@ -1,13 +1,13 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Constants;
 using Monica.EventBus.Models;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Tool.Extensions;
-using Monica.Core.Results;
 
-namespace Monica.Framework.UI.UIEventBus.Services;
+namespace Monica.Framework.UI.UIEventBus.State;
 
 /// <summary>
 /// EventBus monitoring service - encapsulates subscription management and real-time update functions

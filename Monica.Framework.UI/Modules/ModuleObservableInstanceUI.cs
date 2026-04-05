@@ -7,8 +7,8 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
-using Monica.Framework.UI.UIObservableInstance.Services;
 using Monica.Framework.UI.Pages;
+using Monica.Framework.UI.UIObservableInstance.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -48,11 +48,11 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
         DependsOnModule<ModuleObservableInstanceGuide>().Register();
 
         // Register UI page
-        if (!Option.DisableUIObservableInstancePage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstancePage>(
-                    UIObservableInstancePage.PAGE_URL,
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstanceMonitorPage>(
+                    UIObservableInstanceMonitorPage.PAGE_URL,
                     "Pages:ObservableInstance:Title",
                     Icons.Material.Filled.Inventory,
                     "Categories:Debug",
@@ -174,5 +174,5 @@ public class ModuleObservableInstanceUIOption : MoModuleOptionWithMinimalApi<Mod
     /// <summary>
     /// Whether to disable Observable Instance monitoring page
     /// </summary>
-    public bool DisableUIObservableInstancePage { get; set; }
+    public bool DisablePage { get; set; }
 }

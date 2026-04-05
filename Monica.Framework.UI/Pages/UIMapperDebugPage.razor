@@ -6,7 +6,7 @@
 @inject ObjectMappingStatusService StatusService
 @inject ISnackbar Snackbar
 
-@attribute [Route(MAPPER_DEBUG_URL)]
+@attribute [Route(PAGE_URL)]
 
 <PageTitle>Mapper调试</PageTitle>
 
@@ -142,7 +142,7 @@
 
 
 @code {
-    public const string MAPPER_DEBUG_URL = "/mapper-debug";
+    public const string PAGE_URL = "/mapper-debug";
     
     private bool _loading = false;
     private ObjectMapperStatusResponse? _mapperData;

@@ -32,13 +32,13 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
 
     public override void ClaimDependencies()
     {
-        if (!Option.DisableUIMapperPage)
+        if (!Option.DisablePage)
         {
             DependsOnModule<ModuleObjectMappingGuide>().Register();
             DependsOnModule<ModuleShellUIGuide>().Register()
-                .ConfigureModuleOption(o=>o.EnableMarkdown = true)
-                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMapperPage>(
-                    UIMapperPage.MAPPER_DEBUG_URL,
+                .ConfigureModuleOption(o => o.EnableMarkdown = true)
+                .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMapperDebugPage>(
+                    UIMapperDebugPage.PAGE_URL,
                     "Pages:MapperDebug:Title",
                     Icons.Material.Filled.Code,
                     "Categories:Debug",
@@ -63,5 +63,5 @@ public class ModuleMapperUIOption : MoModuleOption<ModuleMapperUI>
     /// <summary>
     /// Whether to disable Mapper pages
     /// </summary>
-    public bool DisableUIMapperPage { get; set; }
+    public bool DisablePage { get; set; }
 }
