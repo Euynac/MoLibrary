@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.WebApi.Swagger;
@@ -15,8 +16,8 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.Swagger)]
-public class ModuleSwagger(ModuleSwaggerOption option) : MoModule<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
+[ModuleKey(BuiltInModuleKey.Swagger)]
+public class ModuleSwagger(ModuleSwaggerOption option) : ModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -146,11 +147,11 @@ public static class ModuleSwaggerBuilderExtensions
     }
 }
 
-public class ModuleSwaggerGuide : MoModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
+public class ModuleSwaggerGuide : ModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
 {
 }
 
-public class ModuleSwaggerOption : MoModuleOption<ModuleSwagger>
+public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
 {
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
 

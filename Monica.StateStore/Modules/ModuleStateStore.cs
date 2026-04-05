@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Providers.Memory;
@@ -24,9 +25,9 @@ public static class ModuleStateStoreBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.StateStore)]
+[ModuleKey(BuiltInModuleKey.StateStore)]
 public class ModuleStateStore(ModuleStateStoreOption option)
-    : MoModule<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
+    : ModuleBase<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -46,7 +47,7 @@ public class ModuleStateStore(ModuleStateStoreOption option)
     }
 }
 
-public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>
+public class ModuleStateStoreGuide : ModuleGuide<ModuleStateStore, ModuleStateStoreOption, ModuleStateStoreGuide>
 {
     /// <summary>
     /// Register a common distributed state store provider
@@ -116,7 +117,7 @@ public class ModuleStateStoreGuide : MoModuleGuide<ModuleStateStore, ModuleState
     }
 }
 
-public class ModuleStateStoreOption : MoModuleOption<ModuleStateStore>
+public class ModuleStateStoreOption : ModuleOptions<ModuleStateStore>
 {
     /// <summary>
     /// Use distributed state storage as the default (non-Keyed service) <see cref="IStateStore"/> implementation

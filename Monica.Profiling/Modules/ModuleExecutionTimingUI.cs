@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIExecutionTiming.State;
@@ -27,9 +28,9 @@ public static class ModuleExecutionTimingUIBuilderExtensions
 /// <summary>
 /// Execution-timing UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.ExecutionTimingUI)]
+[ModuleKey(BuiltInModuleKey.ExecutionTimingUI)]
 public class ModuleExecutionTimingUI(ModuleExecutionTimingUIOption option)
-    : MoModule<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption, ModuleExecutionTimingUIGuide>(option)
+    : ModuleBase<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption, ModuleExecutionTimingUIGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -58,14 +59,14 @@ public class ModuleExecutionTimingUI(ModuleExecutionTimingUIOption option)
 /// Configuration guide for the execution-timing UI module.
 /// </summary>
 public class ModuleExecutionTimingUIGuide
-    : MoModuleGuide<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption, ModuleExecutionTimingUIGuide>
+    : ModuleGuide<ModuleExecutionTimingUI, ModuleExecutionTimingUIOption, ModuleExecutionTimingUIGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the execution-timing UI module.
 /// </summary>
-public class ModuleExecutionTimingUIOption : MoModuleOption<ModuleExecutionTimingUI>
+public class ModuleExecutionTimingUIOption : ModuleOptions<ModuleExecutionTimingUI>
 {
     /// <summary>
     /// Disables registration of the execution-timing page and removes it from the UI navigation registry.

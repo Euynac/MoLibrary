@@ -1,6 +1,7 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Pages;
 using MudBlazor;
@@ -8,9 +9,9 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.FileOpsUI)]
+[ModuleKey(BuiltInModuleKey.FileOpsUI)]
 public class ModuleFileOpsUI(ModuleFileOpsUIOption option)
-    : MoModule<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>(option)
+    : ModuleBase<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -42,11 +43,11 @@ public static class ModuleFileOpsUIBuilderExtensions
     }
 }
 
-public class ModuleFileOpsUIGuide : MoModuleGuide<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>
+public class ModuleFileOpsUIGuide : ModuleGuide<ModuleFileOpsUI, ModuleFileOpsUIOption, ModuleFileOpsUIGuide>
 {
 }
 
-public class ModuleFileOpsUIOption : MoModuleOption<ModuleFileOpsUI>
+public class ModuleFileOpsUIOption : ModuleOptions<ModuleFileOpsUI>
 {
     public bool DisableFileOpsPage { get; set; }
 }

@@ -1,7 +1,7 @@
 namespace Monica.Core.Modularity.Models;
 
 /// <summary>
-/// Unique module identifier. Supports creation from the built-in <see cref="EMoModuleKey"/> enum or from a string.
+/// Unique module identifier. Supports creation from the built-in <see cref="BuiltInModuleKey"/> enum or from a string.
 /// </summary>
 public readonly record struct ModuleKey
 {
@@ -36,7 +36,7 @@ public readonly record struct ModuleKey
     /// <summary>
     /// Implicit conversion from the built-in enum for built-in modules.
     /// </summary>
-    public static implicit operator ModuleKey(EMoModuleKey moduleKey) =>
+    public static implicit operator ModuleKey(BuiltInModuleKey moduleKey) =>
         new(moduleKey.ToString(), isBuiltIn: true, isUIModule: moduleKey.ToString().EndsWith("UI"));
 
     /// <summary>

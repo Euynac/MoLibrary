@@ -9,7 +9,8 @@ using Monica.Core;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.SignalR.Abstractions;
@@ -44,9 +45,9 @@ public static class ModuleSignalRBuilderExtensions
 /// Infrastructure module that registers SignalR services, inspection endpoints, and hub metadata tracking.
 /// </summary>
 /// <param name="option">The module configuration options.</param>
-[ModuleKey(EMoModuleKey.SignalR)]
+[ModuleKey(BuiltInModuleKey.SignalR)]
 public class ModuleSignalR(ModuleSignalROption option)
-    : MoModule<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
+    : ModuleBase<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -88,7 +89,7 @@ public class ModuleSignalR(ModuleSignalROption option)
 /// <summary>
 /// Fluent registration guide for the SignalR infrastructure module.
 /// </summary>
-public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
+public class ModuleSignalRGuide : ModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -175,7 +176,7 @@ public class ModuleSignalRGuide : MoModuleGuide<ModuleSignalR, ModuleSignalROpti
 /// <summary>
 /// Configuration options for the SignalR infrastructure module.
 /// </summary>
-public class ModuleSignalROption : MoModuleOptionWithMinimalApi<ModuleSignalR>
+public class ModuleSignalROption : MinimalApiModuleOptions<ModuleSignalR>
 {
     /// <summary>
     /// Gets the mapped hub registrations used by inspection endpoints and the debug UI.

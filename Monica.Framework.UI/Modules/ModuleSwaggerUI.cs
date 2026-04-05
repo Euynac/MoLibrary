@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UISwagger.Models;
 
@@ -27,9 +28,9 @@ public static class ModuleSwaggerUIBuilderExtensions
 /// <summary>
 /// Swagger UI enhancement module - provides UI extension functions such as custom navigation buttons
 /// </summary>
-[ModuleKey(EMoModuleKey.SwaggerUI)]
+[ModuleKey(BuiltInModuleKey.SwaggerUI)]
 public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
-    : MoModule<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
+    : ModuleBase<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -80,7 +81,7 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
 /// <summary>
 /// SwaggerUI module wizard
 /// </summary>
-public class ModuleSwaggerUIGuide : MoModuleGuide<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>
+public class ModuleSwaggerUIGuide : ModuleGuide<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>
 {
     /// <summary>
     /// Add custom navigation buttons to Swagger UI
@@ -113,7 +114,7 @@ public class ModuleSwaggerUIGuide : MoModuleGuide<ModuleSwaggerUI, ModuleSwagger
 /// <summary>
 /// SwaggerUI module options
 /// </summary>
-public class ModuleSwaggerUIOption : MoModuleOption<ModuleSwaggerUI>
+public class ModuleSwaggerUIOption : ModuleOptions<ModuleSwaggerUI>
 {
     /// <summary>
     /// Custom navigation buttons that appear on the right side of the Swagger UI top toolbar.

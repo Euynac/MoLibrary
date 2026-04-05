@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.UILogging.Models;
 using Monica.Framework.UI.Pages;
@@ -33,9 +34,9 @@ public static class ModuleLoggingUIBuilderExtensions
 /// <summary>
 /// Logging UI module implementation
 /// </summary>
-[ModuleKey(EMoModuleKey.LoggingUI)]
+[ModuleKey(BuiltInModuleKey.LoggingUI)]
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
-    : MoModule<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
+    : ModuleBase<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -122,14 +123,14 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 /// <summary>
 /// Logging UI module wizard
 /// </summary>
-public class ModuleLoggingUIGuide : MoModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
+public class ModuleLoggingUIGuide : ModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
 {
 }
 
 /// <summary>
 /// Logging UI module options
 /// </summary>
-public class ModuleLoggingUIOption : MoModuleOptionWithMinimalApi<ModuleLoggingUI>
+public class ModuleLoggingUIOption : MinimalApiModuleOptions<ModuleLoggingUI>
 {
     /// <summary>
     /// Whether to disable the log monitoring page

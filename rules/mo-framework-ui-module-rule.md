@@ -93,7 +93,7 @@ UI$ModuleName$/
 
 ```csharp
 public class Module$ModuleUIName$(Module$ModuleUIName$Option option)
-    : MoModule<Module$ModuleUIName$, Module$ModuleUIName$Option, Module$ModuleUIName$Guide>(option)
+    : ModuleBase<Module$ModuleUIName$, Module$ModuleUIName$Option, Module$ModuleUIName$Guide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {

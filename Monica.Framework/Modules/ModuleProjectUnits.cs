@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.ProjectUnits.Facades;
 using Monica.Framework.ProjectUnits.Models;
@@ -31,9 +32,9 @@ public static class ModuleProjectUnitsBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.ProjectUnits)]
+[ModuleKey(BuiltInModuleKey.ProjectUnits)]
 public class ModuleProjectUnits(ModuleProjectUnitsOption option)
-    : MoModule<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(option), IBusinessTypeIterator
 {
 
     public override void ClaimDependencies()
@@ -159,13 +160,13 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
     }
 }
 
-public class ModuleProjectUnitsGuide : MoModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
+public class ModuleProjectUnitsGuide : ModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
     ModuleProjectUnitsGuide>
 {
 
 }
 
-public class ModuleProjectUnitsOption : MoModuleOptionWithMinimalApi<ModuleProjectUnits>
+public class ModuleProjectUnitsOption : MinimalApiModuleOptions<ModuleProjectUnits>
 {
     /// <summary>
     /// Convention naming settings

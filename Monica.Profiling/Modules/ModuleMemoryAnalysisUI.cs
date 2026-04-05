@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIMemoryAnalysis.State;
@@ -30,9 +31,9 @@ public static class ModuleMemoryAnalysisUIBuilderExtensions
 /// <summary>
 /// Memory analysis UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.MemoryAnalysisUI)]
+[ModuleKey(BuiltInModuleKey.MemoryAnalysisUI)]
 public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
-    : MoModule<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>(option)
+    : ModuleBase<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>(option)
 {
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -72,14 +73,14 @@ public class ModuleMemoryAnalysisUI(ModuleMemoryAnalysisUIOption option)
 /// Fluent guide for the memory analysis UI module.
 /// </summary>
 public class ModuleMemoryAnalysisUIGuide
-    : MoModuleGuide<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>
+    : ModuleGuide<ModuleMemoryAnalysisUI, ModuleMemoryAnalysisUIOption, ModuleMemoryAnalysisUIGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the memory analysis UI module.
 /// </summary>
-public class ModuleMemoryAnalysisUIOption : MoModuleOption<ModuleMemoryAnalysisUI>
+public class ModuleMemoryAnalysisUIOption : ModuleOptions<ModuleMemoryAnalysisUI>
 {
     /// <summary>
     /// Disables registration of the memory analysis page and removes it from the navigation registry.

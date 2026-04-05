@@ -1,9 +1,9 @@
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
 using Monica.Modules;
 
 namespace Monica.WebApi.AutoControllers.Models;
 
-public class CrudControllerOption : IMoModuleExtraOption<ModuleAutoControllers>
+public class CrudControllerOption : IModuleExtraOptions<ModuleAutoControllers>
 {
     /// <summary>
     /// Route prefix used for auto-generated CRUD endpoints.

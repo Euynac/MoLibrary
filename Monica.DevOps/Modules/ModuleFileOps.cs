@@ -6,7 +6,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.FileOps.Abstractions;
 using Monica.DevOps.FileOps.Facades;
@@ -19,9 +20,9 @@ using Monica.Core.Results;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.FileOps)]
+[ModuleKey(BuiltInModuleKey.FileOps)]
 public class ModuleFileOps(ModuleFileOpsOption option)
-    : MoModule<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(option)
+    : ModuleBase<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -210,11 +211,11 @@ public static class ModuleFileOpsBuilderExtensions
     }
 }
 
-public class ModuleFileOpsGuide : MoModuleGuide<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>
+public class ModuleFileOpsGuide : ModuleGuide<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>
 {
 }
 
-public class ModuleFileOpsOption : MoModuleOptionWithMinimalApi<ModuleFileOps>
+public class ModuleFileOpsOption : MinimalApiModuleOptions<ModuleFileOps>
 {
     public FileOpsRuntimeConfig RuntimeConfig { get; set; } = new();
 }

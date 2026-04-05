@@ -1,6 +1,7 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Pages;
 using MudBlazor;
@@ -25,9 +26,9 @@ public static class ModuleMapperUIBuilderExtensions
 /// <summary>
 /// Mapper UI module
 /// </summary>
-[ModuleKey(EMoModuleKey.MapperUI)]
+[ModuleKey(BuiltInModuleKey.MapperUI)]
 public class ModuleMapperUI(ModuleMapperUIOption option)
-    : MoModule<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
+    : ModuleBase<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -51,14 +52,14 @@ public class ModuleMapperUI(ModuleMapperUIOption option)
 /// <summary>
 /// MapperUI module wizard
 /// </summary>
-public class ModuleMapperUIGuide : MoModuleGuide<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>
+public class ModuleMapperUIGuide : ModuleGuide<ModuleMapperUI, ModuleMapperUIOption, ModuleMapperUIGuide>
 {
 }
 
 /// <summary>
 /// MapperUI module options
 /// </summary>
-public class ModuleMapperUIOption : MoModuleOption<ModuleMapperUI>
+public class ModuleMapperUIOption : ModuleOptions<ModuleMapperUI>
 { 
     /// <summary>
     /// Whether to disable Mapper pages

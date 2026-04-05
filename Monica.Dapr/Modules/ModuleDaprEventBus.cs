@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.EventBus.Abstractions;
@@ -25,16 +26,16 @@ public static class ModuleDaprEventBusBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DaprEventBus)]
+[ModuleKey(BuiltInModuleKey.DaprEventBus)]
 public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
-    : MoModule<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
+    : ModuleBase<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>(option),
       IEventBusProviderModule
 {
 
     #region IEventBusProviderModule
 
     /// <inheritdoc />
-    public ModuleKey ProvidesFor => EMoModuleKey.EventBus;
+    public ModuleKey ProvidesFor => BuiltInModuleKey.EventBus;
 
     /// <inheritdoc />
     public EventBusProviderKind ProviderType => EventBusProviderKind.Dapr;
@@ -66,7 +67,7 @@ public class ModuleDaprEventBus(ModuleDaprEventBusOption option)
     }
 }
 
-public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
+public class ModuleDaprEventBusGuide : ModuleGuide<ModuleDaprEventBus, ModuleDaprEventBusOption, ModuleDaprEventBusGuide>
 {
     /// <summary>
     /// Registers a keyed Dapr distributed event bus together with its corresponding hosted
@@ -103,7 +104,7 @@ public class ModuleDaprEventBusGuide : MoModuleGuide<ModuleDaprEventBus, ModuleD
     }
 }
 
-public class ModuleDaprEventBusOption : MoModuleOptionWithMinimalApi<ModuleDaprEventBus>
+public class ModuleDaprEventBusOption : MinimalApiModuleOptions<ModuleDaprEventBus>
 {
     public string PubSubName { get; set; } = "pubsub";
 

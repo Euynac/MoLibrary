@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Pages;
 using Monica.Markdown.Localization;
@@ -22,9 +23,9 @@ namespace Monica.Modules;
 /// Markdown UI module providing a document viewer with group selection,
 /// tree navigation, and markdown rendering.
 /// </summary>
-[ModuleKey(EMoModuleKey.MarkdownUI)]
+[ModuleKey(BuiltInModuleKey.MarkdownUI)]
 public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
-    : MoModule<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
+    : ModuleBase<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
 {
     /// <summary>
     /// Configures services for the Markdown UI module.
@@ -144,7 +145,7 @@ public static class ModuleMarkdownUIBuilderExtensions
 /// <summary>
 /// Guide for the Markdown UI module.
 /// </summary>
-public class ModuleMarkdownUIGuide : MoModuleGuide<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>
+public class ModuleMarkdownUIGuide : ModuleGuide<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>
 {
     /// <summary>
     /// Gets the requested configuration method keys.
@@ -158,7 +159,7 @@ public class ModuleMarkdownUIGuide : MoModuleGuide<ModuleMarkdownUI, ModuleMarkd
 /// <summary>
 /// Options for the Markdown UI module.
 /// </summary>
-public class ModuleMarkdownUIOption : MoModuleOptionWithMinimalApi<ModuleMarkdownUI>
+public class ModuleMarkdownUIOption : MinimalApiModuleOptions<ModuleMarkdownUI>
 {
     /// <summary>
     /// Whether to disable the Markdown documents page.

@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -22,9 +23,9 @@ public static class ModuleControllersBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Controllers)]
+[ModuleKey(BuiltInModuleKey.Controllers)]
 public class ModuleControllers(ModuleControllersOption option)
-    : MoModule<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(option)
+    : ModuleBase<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>(option)
 {
     public override void PostConfigureServices(IServiceCollection services)
     {
@@ -54,7 +55,7 @@ public class ModuleControllers(ModuleControllersOption option)
 
 }
 
-public class ModuleControllersGuide : MoModuleGuide<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>
+public class ModuleControllersGuide : ModuleGuide<ModuleControllers, ModuleControllersOption, ModuleControllersGuide>
 {
     public ModuleControllersGuide ConfigDependentServices(Action<IServiceCollection> action)
     {
@@ -82,7 +83,7 @@ public class ModuleControllersGuide : MoModuleGuide<ModuleControllers, ModuleCon
     }
 }
 
-public class ModuleControllersOption : MoModuleOption<ModuleControllers>
+public class ModuleControllersOption : ModuleOptions<ModuleControllers>
 {
     internal List<Action<IMvcBuilder, IServiceProvider>> MvcBuilderActions { get; set; } = [];
     internal List<Action<MvcOptions, IServiceProvider>> MvcOptionActions { get; set; } = [];

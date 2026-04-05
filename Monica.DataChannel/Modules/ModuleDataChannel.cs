@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.DataChannel;
@@ -15,9 +16,9 @@ using Monica.DataChannel.Services;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.DataChannel)]
+[ModuleKey(BuiltInModuleKey.DataChannel)]
 public class ModuleDataChannel(ModuleDataChannelOption option)
-    : MoModule<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
+    : ModuleBase<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -132,7 +133,7 @@ public static class ModuleDataChannelBuilderExtensions
     }
 }
 
-public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
+public class ModuleDataChannelGuide : ModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
 {
 
     protected override string[] GetRequestedConfigMethodKeys()
@@ -153,7 +154,7 @@ public class ModuleDataChannelGuide : MoModuleGuide<ModuleDataChannel, ModuleDat
 /// Configuration options for the DataChannel module.
 /// Defines global settings and module-level behavior for data channels.
 /// </summary>
-public class ModuleDataChannelOption : MoModuleOptionWithMinimalApi<ModuleDataChannel>
+public class ModuleDataChannelOption : MinimalApiModuleOptions<ModuleDataChannel>
 {
     /// <summary>
     /// Gets or sets how many recent exceptions to retain.

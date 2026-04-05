@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.Seeder.Abstractions;
 using Monica.Framework.Seeder.Services;
@@ -24,8 +25,8 @@ public static class ModuleSeederBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Seeder)]
-public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IWantIterateBusinessTypes
+[ModuleKey(BuiltInModuleKey.Seeder)]
+public class ModuleSeeder(ModuleSeederOption option) : ModuleBase<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IBusinessTypeIterator
 {
     private readonly List<Type> _seedTypes = [];
 
@@ -59,12 +60,12 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
     }
 }
 
-public class ModuleSeederGuide : MoModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>
+public class ModuleSeederGuide : ModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>
 {
 
 }
 
-public class ModuleSeederOption : MoModuleOption<ModuleSeeder>
+public class ModuleSeederOption : ModuleOptions<ModuleSeeder>
 {
 }
 

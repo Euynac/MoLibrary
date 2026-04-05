@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.TaskProgress.Abstractions;
 using Monica.StateStore.TaskProgress.Services;
@@ -23,9 +24,9 @@ public static class ModuleTaskProgressBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.TaskProgress)]
+[ModuleKey(BuiltInModuleKey.TaskProgress)]
 public class ModuleTaskProgress(ModuleTaskProgressOption option)
-    : MoModule<ModuleTaskProgress, ModuleTaskProgressOption, ModuleTaskProgressGuide>(option)
+    : ModuleBase<ModuleTaskProgress, ModuleTaskProgressOption, ModuleTaskProgressGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -46,14 +47,14 @@ public class ModuleTaskProgress(ModuleTaskProgressOption option)
 /// <summary>
 /// Guides configuration for the task progress module.
 /// </summary>
-public class ModuleTaskProgressGuide : MoModuleGuide<ModuleTaskProgress, ModuleTaskProgressOption, ModuleTaskProgressGuide>
+public class ModuleTaskProgressGuide : ModuleGuide<ModuleTaskProgress, ModuleTaskProgressOption, ModuleTaskProgressGuide>
 {
 }
 
 /// <summary>
 /// Configures how the task progress module stores distributed progress state.
 /// </summary>
-public class ModuleTaskProgressOption : MoModuleOption<ModuleTaskProgress>
+public class ModuleTaskProgressOption : ModuleOptions<ModuleTaskProgress>
 {
     /// <summary>
     /// Enables distributed state storage for task progress snapshots instead of process-local storage.

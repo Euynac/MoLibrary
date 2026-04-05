@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.DevOps.K8S.Abstractions;
@@ -18,9 +19,9 @@ using Monica.DevOps.Localization;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.K8S)]
+[ModuleKey(BuiltInModuleKey.K8S)]
 public class ModuleK8S(ModuleK8SOption option)
-    : MoModule<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
+    : ModuleBase<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -206,11 +207,11 @@ public static class ModuleK8SBuilderExtensions
     }
 }
 
-public class ModuleK8SGuide : MoModuleGuide<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>
+public class ModuleK8SGuide : ModuleGuide<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>
 {
 }
 
-public class ModuleK8SOption : MoModuleOptionWithMinimalApi<ModuleK8S>
+public class ModuleK8SOption : MinimalApiModuleOptions<ModuleK8S>
 {
     public K8SRuntimeConfig RuntimeConfig { get; set; } = new();
 

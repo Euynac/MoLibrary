@@ -1,7 +1,7 @@
 @using MudBlazor
 @using Monica.UI.Localization
 @using Microsoft.Extensions.Localization
-@using Monica.Core.Modularity.Dashboard.Models
+@using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Modularity.Models
 @inject IStringLocalizer<SharedResource> L
 
@@ -341,13 +341,13 @@
     /// </summary>
     /// <param name="phase">Phase</param>
     /// <returns></returns>
-    private string GetPhaseIcon(EMoModuleConfigMethods phase) => phase switch
+    private string GetPhaseIcon(ModulePhase phase) => phase switch
     {
-        EMoModuleConfigMethods.ConfigureBuilder => Icons.Material.Filled.AppRegistration,
-        EMoModuleConfigMethods.InitFinalConfigures => Icons.Material.Filled.Settings,
-		EMoModuleConfigMethods.ConfigureServices => Icons.Material.Filled.FirstPage,
-        EMoModuleConfigMethods.PostConfigureServices => Icons.Material.Filled.LastPage,
-        EMoModuleConfigMethods.ClaimDependencies => Icons.Material.Filled.AccountTree,
+        ModulePhase.ConfigureBuilder => Icons.Material.Filled.AppRegistration,
+        ModulePhase.InitFinalConfigures => Icons.Material.Filled.Settings,
+		ModulePhase.ConfigureServices => Icons.Material.Filled.FirstPage,
+        ModulePhase.PostConfigureServices => Icons.Material.Filled.LastPage,
+        ModulePhase.ClaimDependencies => Icons.Material.Filled.AccountTree,
 
         _ => Icons.Material.Filled.PlayArrow
     };
@@ -357,13 +357,13 @@
     /// </summary>
     /// <param name="phase">Phase</param>
     /// <returns></returns>
-    private Color GetPhaseColor(EMoModuleConfigMethods phase) => phase switch
+    private Color GetPhaseColor(ModulePhase phase) => phase switch
     {
-        EMoModuleConfigMethods.ConfigureBuilder => Color.Primary,
-        EMoModuleConfigMethods.InitFinalConfigures => Color.Secondary,
-        EMoModuleConfigMethods.ConfigureServices => Color.Info,
-        EMoModuleConfigMethods.PostConfigureServices => Color.Success,
-        EMoModuleConfigMethods.ClaimDependencies => Color.Warning,
+        ModulePhase.ConfigureBuilder => Color.Primary,
+        ModulePhase.InitFinalConfigures => Color.Secondary,
+        ModulePhase.ConfigureServices => Color.Info,
+        ModulePhase.PostConfigureServices => Color.Success,
+        ModulePhase.ClaimDependencies => Color.Warning,
         _ => Color.Default
     };
 

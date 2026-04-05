@@ -4,7 +4,8 @@ using Monica.AI.UI.Pages;
 using Monica.AI.UI.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using MudBlazor;
 
@@ -32,9 +33,9 @@ public static class ModuleAIUIBuilderExtensions
 /// AI UI module implementation
 /// Provides an AI chat interface based on Blazor
 /// </summary>
-[ModuleKey(EMoModuleKey.AIUI)]
+[ModuleKey(BuiltInModuleKey.AIUI)]
 public class ModuleAIUI(ModuleAIUIOption option)
-    : MoModule<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
+    : ModuleBase<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -94,14 +95,14 @@ public class ModuleAIUI(ModuleAIUIOption option)
 /// AI UI module configuration guide
 /// </summary>
 public class ModuleAIUIGuide
-    : MoModuleGuide<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>
+    : ModuleGuide<ModuleAIUI, ModuleAIUIOption, ModuleAIUIGuide>
 {
 }
 
 /// <summary>
 /// AI UI module configuration options
 /// </summary>
-public class ModuleAIUIOption : MoModuleOption<ModuleAIUI>
+public class ModuleAIUIOption : ModuleOptions<ModuleAIUI>
 {
     /// <summary>
     /// Disable the AI chat page

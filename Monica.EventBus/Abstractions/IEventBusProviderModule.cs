@@ -1,4 +1,4 @@
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
 
 namespace Monica.EventBus.Abstractions;
 
@@ -54,7 +54,7 @@ public enum EventBusProviderCapabilities
 /// Extended provider interface for EventBus modules.
 /// Provides metadata about the provider's capabilities.
 /// </summary>
-public interface IEventBusProviderModule : IMoModuleProvider
+public interface IEventBusProviderModule : IModuleProvider
 {
     /// <summary>
     /// Gets the type of this EventBus provider

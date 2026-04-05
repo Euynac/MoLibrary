@@ -3,7 +3,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Mediator;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -23,9 +24,9 @@ public static class ModuleMediatorBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Mediator)]
+[ModuleKey(BuiltInModuleKey.Mediator)]
 public class ModuleMediator(ModuleMediatorOption option)
-    : MoModule<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>(option), IBusinessTypeIterator
 {
     private IServiceCollection? _services;
 
@@ -110,7 +111,7 @@ public class ModuleMediator(ModuleMediatorOption option)
     }
 }
 
-public class ModuleMediatorGuide : MoModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>
+public class ModuleMediatorGuide : ModuleGuide<ModuleMediator, ModuleMediatorOption, ModuleMediatorGuide>
 {
     public ModuleMediatorGuide AddPipelineBehavior(Type behaviorType)
     {
@@ -128,6 +129,6 @@ public class ModuleMediatorGuide : MoModuleGuide<ModuleMediator, ModuleMediatorO
     }
 }
 
-public class ModuleMediatorOption : MoModuleOption<ModuleMediator>
+public class ModuleMediatorOption : ModuleOptions<ModuleMediator>
 {
 }

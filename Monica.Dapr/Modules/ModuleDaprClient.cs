@@ -5,7 +5,8 @@ using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Abstractions;
 using Monica.Dapr.Services;
@@ -27,9 +28,9 @@ public static class ModuleDaprClientBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DaprClient)]
+[ModuleKey(BuiltInModuleKey.DaprClient)]
 public class ModuleDaprClient(ModuleDaprClientOption option)
-    : MoModule<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
+    : ModuleBase<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>(option)
 {
 
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
@@ -64,12 +65,12 @@ public class ModuleDaprClient(ModuleDaprClientOption option)
     }
 }
 
-public class ModuleDaprClientGuide : MoModuleGuide<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>
+public class ModuleDaprClientGuide : ModuleGuide<ModuleDaprClient, ModuleDaprClientOption, ModuleDaprClientGuide>
 {
 
 }
 
-public class ModuleDaprClientOption : MoModuleOption<ModuleDaprClient>
+public class ModuleDaprClientOption : ModuleOptions<ModuleDaprClient>
 {
 
     /// <summary>

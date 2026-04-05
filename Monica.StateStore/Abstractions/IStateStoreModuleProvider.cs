@@ -1,4 +1,4 @@
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
 
 namespace Monica.StateStore.Abstractions;
 
@@ -64,7 +64,7 @@ public enum EStateStoreCapabilities
 /// Extended provider interface for StateStore modules.
 /// Provides metadata about the provider's capabilities.
 /// </summary>
-public interface IStateStoreModuleProvider : IMoModuleProvider
+public interface IStateStoreModuleProvider : IModuleProvider
 {
     /// <summary>
     /// Gets the type of this StateStore provider

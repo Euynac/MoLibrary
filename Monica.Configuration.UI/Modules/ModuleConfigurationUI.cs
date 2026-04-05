@@ -11,7 +11,8 @@ using Monica.Configuration.UI.Pages;
 using Monica.Configuration.UI.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using MudBlazor;
@@ -36,9 +37,9 @@ public static class ModuleConfigurationUIBuilderExtensions
 /// <summary>
 /// Configuration management UI module
 /// </summary>
-[ModuleKey(EMoModuleKey.ConfigurationUI)]
+[ModuleKey(BuiltInModuleKey.ConfigurationUI)]
 public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
-    : MoModule<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
+    : ModuleBase<ModuleConfigurationUI, ModuleConfigurationUIOption, ModuleConfigurationUIGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -181,7 +182,7 @@ public class RollbackRequest
 /// <summary>
 /// Configuration Management UI Module Configuration Guide
 /// </summary>
-public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
+public class ModuleConfigurationUIGuide : ModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
     ModuleConfigurationUIGuide>
 {
     /// <summary>
@@ -191,7 +192,7 @@ public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, M
         where TStore : class, IMoConfigurationStores
     {
         ConfigureServices(context => { context.Services.AddTransient<IMoConfigurationStores, TStore>(); },
-            EMoModuleOrder.PreConfig);
+            ModuleRegistrationOrder.PreConfig);
         return this;
     }
 }
@@ -199,7 +200,7 @@ public class ModuleConfigurationUIGuide : MoModuleGuide<ModuleConfigurationUI, M
 /// <summary>
 /// Configure management UI module options
 /// </summary>
-public class ModuleConfigurationUIOption : MoModuleOptionWithMinimalApi<ModuleConfigurationUI>
+public class ModuleConfigurationUIOption : MinimalApiModuleOptions<ModuleConfigurationUI>
 {
     /// <summary>
     /// Whether to disable the configuration management page

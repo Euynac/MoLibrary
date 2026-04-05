@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Office.Excel.Abstractions;
 using Monica.Office.Excel.Providers.EpPlus;
@@ -24,8 +25,8 @@ public static class ModuleExcelBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Excel)]
-public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
+[ModuleKey(BuiltInModuleKey.Excel)]
+public class ModuleExcel(ModuleExcelOption option) : ModuleBase<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -37,7 +38,7 @@ public class ModuleExcel(ModuleExcelOption option) : MoModule<ModuleExcel, Modul
 /// <summary>
 /// Excel module configuration guide
 /// </summary>
-public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>
+public class ModuleExcelGuide : ModuleGuide<ModuleExcel, ModuleExcelOption, ModuleExcelGuide>
 {
     private const string SET_EXCEL_PROVIDER = nameof(SET_EXCEL_PROVIDER);
     protected override string[] GetRequestedConfigMethodKeys()
@@ -79,6 +80,6 @@ public class ModuleExcelGuide : MoModuleGuide<ModuleExcel, ModuleExcelOption, Mo
     }
 }
 
-public class ModuleExcelOption : MoModuleOption<ModuleExcel>
+public class ModuleExcelOption : ModuleOptions<ModuleExcel>
 {
 }

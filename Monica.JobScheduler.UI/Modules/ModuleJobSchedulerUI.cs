@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.UI.Localization;
 using Monica.JobScheduler.UI.Pages;
@@ -30,9 +31,9 @@ public static class ModuleJobSchedulerUIBuilderExtensions
 /// JobScheduler UI module implementation
 /// Provides a job scheduling management interface based on Blazor
 /// </summary>
-[ModuleKey(EMoModuleKey.JobSchedulerUI)]
+[ModuleKey(BuiltInModuleKey.JobSchedulerUI)]
 public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
-    : MoModule<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
+    : ModuleBase<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -113,7 +114,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
 /// JobScheduler UI module configuration guide
 /// </summary>
 public class ModuleJobSchedulerUIGuide
-    : MoModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
+    : ModuleGuide<ModuleJobSchedulerUI, ModuleJobSchedulerUIOption, ModuleJobSchedulerUIGuide>
 {
     // Configuration methods can be added later if needed
     // Currently, it can be configured directly through Mo.AddJobSchedulerUI(options => { ... })
@@ -122,7 +123,7 @@ public class ModuleJobSchedulerUIGuide
 /// <summary>
 /// JobScheduler UI module configuration options
 /// </summary>
-public class ModuleJobSchedulerUIOption : MoModuleOption<ModuleJobSchedulerUI>
+public class ModuleJobSchedulerUIOption : ModuleOptions<ModuleJobSchedulerUI>
 {
     /// <summary>
     /// Disable the JobScheduler UI page

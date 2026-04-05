@@ -1,4 +1,4 @@
-using Monica.Core.Modularity.Dashboard.Models;
+using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.UI.Shared.Components.ContextMenu;
 
 namespace Monica.UI.UIModuleSystem.State;

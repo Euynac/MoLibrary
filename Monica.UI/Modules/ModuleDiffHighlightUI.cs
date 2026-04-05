@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Pages;
 using MudBlazor;
@@ -26,9 +27,9 @@ public static class ModuleDiffHighlightUIBuilderExtensions
 /// <summary>
 /// Text difference contrast highlighting UI module
 /// </summary>
-[ModuleKey(EMoModuleKey.DiffHighlightUI)]
+[ModuleKey(BuiltInModuleKey.DiffHighlightUI)]
 public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
-    : MoModule<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
+    : ModuleBase<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -56,14 +57,14 @@ public class ModuleDiffHighlightUI(ModuleDiffHighlightUIOption option)
 /// <summary>
 /// DiffHighlightUI Module Wizard
 /// </summary>
-public class ModuleDiffHighlightUIGuide : MoModuleGuide<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>
+public class ModuleDiffHighlightUIGuide : ModuleGuide<ModuleDiffHighlightUI, ModuleDiffHighlightUIOption, ModuleDiffHighlightUIGuide>
 {
 }
 
 /// <summary>
 /// DiffHighlightUI module options
 /// </summary>
-public class ModuleDiffHighlightUIOption : MoModuleOption<ModuleDiffHighlightUI>
+public class ModuleDiffHighlightUIOption : ModuleOptions<ModuleDiffHighlightUI>
 { 
     /// <summary>
     /// Whether to disable the difference comparison page

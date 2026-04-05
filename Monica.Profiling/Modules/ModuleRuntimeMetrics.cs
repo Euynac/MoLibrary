@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Profiling.RuntimeMetrics.Facades;
@@ -35,9 +36,9 @@ public static class ModuleRuntimeMetricsBuilderExtensions
 /// <summary>
 /// Runtime metrics module.
 /// </summary>
-[ModuleKey(EMoModuleKey.RuntimeMetrics)]
+[ModuleKey(BuiltInModuleKey.RuntimeMetrics)]
 public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
-    : MoModule<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(option)
+    : ModuleBase<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -73,14 +74,14 @@ public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
 /// Fluent guide for the runtime metrics module.
 /// </summary>
 public class ModuleRuntimeMetricsGuide
-    : MoModuleGuide<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>
+    : ModuleGuide<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the runtime metrics module.
 /// </summary>
-public class ModuleRuntimeMetricsOption : MoModuleOptionWithMinimalApi<ModuleRuntimeMetrics>
+public class ModuleRuntimeMetricsOption : MinimalApiModuleOptions<ModuleRuntimeMetrics>
 {
     /// <summary>
     /// Maximum number of runtime metric points retained in memory for trend displays.

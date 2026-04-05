@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.Abstractions;
 using Monica.StateStore.Cancellation.Abstractions;
@@ -28,9 +29,9 @@ public static class ModuleCancellationManagerBuilderExtensions
 /// Distributed cancellation token manager module
 /// Provide cancellation token management capabilities across microservice instances
 /// </summary>
-[ModuleKey(EMoModuleKey.CancellationManager)]
+[ModuleKey(BuiltInModuleKey.CancellationManager)]
 public class ModuleCancellationManager(ModuleCancellationManagerOption option)
-    : MoModule<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
+    : ModuleBase<ModuleCancellationManager, ModuleCancellationManagerOption, ModuleCancellationManagerGuide>(option)
 {
     /// <summary>
     /// Configure service dependency injection
@@ -68,7 +69,7 @@ public class ModuleCancellationManager(ModuleCancellationManagerOption option)
 /// <summary>
 /// Distributed Cancellation Token Manager Module Guide
 /// </summary>
-public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationManager, ModuleCancellationManagerOption,
+public class ModuleCancellationManagerGuide : ModuleGuide<ModuleCancellationManager, ModuleCancellationManagerOption,
     ModuleCancellationManagerGuide>
 {
     /// <summary>
@@ -111,7 +112,7 @@ public class ModuleCancellationManagerGuide : MoModuleGuide<ModuleCancellationMa
 /// <summary>
 /// Distributed cancellation token manager module configuration options
 /// </summary>
-public class ModuleCancellationManagerOption : MoModuleOption<ModuleCancellationManager>
+public class ModuleCancellationManagerOption : ModuleOptions<ModuleCancellationManager>
 {
     /// <summary>
     /// Whether to use memory implementation, the default is false (use distributed implementation)

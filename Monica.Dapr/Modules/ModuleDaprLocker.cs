@@ -2,7 +2,8 @@ using Dapr.DistributedLock.Extensions;
 using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.Locker.Models;
@@ -29,9 +30,9 @@ public static class ModuleDaprLockerBuilderExtensions
 /// <summary>
 /// Registers the Dapr distributed lock client integration used by <see cref="DaprLockProvider"/>.
 /// </summary>
-[ModuleKey(EMoModuleKey.DaprLocker)]
+[ModuleKey(BuiltInModuleKey.DaprLocker)]
 public class ModuleDaprLocker(ModuleDaprLockerOption option)
-    : MoModule<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
+    : ModuleBase<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -64,14 +65,14 @@ public class ModuleDaprLocker(ModuleDaprLockerOption option)
 /// <summary>
 /// Configures the Dapr-backed locker integration.
 /// </summary>
-public class ModuleDaprLockerGuide : MoModuleGuide<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>
+public class ModuleDaprLockerGuide : ModuleGuide<ModuleDaprLocker, ModuleDaprLockerOption, ModuleDaprLockerGuide>
 {
 }
 
 /// <summary>
 /// Configures how Monica talks to Dapr when acquiring distributed locks.
 /// </summary>
-public class ModuleDaprLockerOption : MoModuleOption<ModuleDaprLocker>
+public class ModuleDaprLockerOption : ModuleOptions<ModuleDaprLocker>
 {
     /// <summary>
     /// Name of the Dapr lock store component used by lock requests.

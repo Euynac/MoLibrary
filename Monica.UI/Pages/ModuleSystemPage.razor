@@ -1,12 +1,11 @@
 @attribute [Route(MODULE_SYSTEM_DASHBOARD_URL)]
 @using Microsoft.Extensions.Localization
-@using Monica.Core.Modularity.Dashboard.Facades
-@using Monica.Core.Modularity.Dashboard.Models
+@using Monica.Core.Modularity.Diagnostics.Facades
 @using Monica.Core.Modularity.Models
 @using Monica.Core.Results
 @using Monica.UI.Localization
 @using Monica.UI.UIModuleSystem.State
-@inject ModuleSystemQueryFacade ModuleSystemQueryFacade
+@inject ModuleDiagnosticsFacade ModuleDiagnostics
 @inject ISnackbar SnackBar
 @inject IStringLocalizer<SharedResource> L
 
@@ -87,7 +86,7 @@
 
     private async Task RefreshDataAsync()
     {
-        var result = await ModuleSystemQueryFacade.GetDashboardSnapshotAsync();
+        var result = await ModuleDiagnostics.GetDashboardSnapshotAsync();
         if (result.IsFailed(out var error, out var snapshot))
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
@@ -118,7 +117,7 @@
             return;
         }
 
-        var result = await ModuleSystemQueryFacade.GetAssemblyAnalysisAsync();
+        var result = await ModuleDiagnostics.GetAssemblyAnalysisAsync();
         if (result.IsFailed(out var error, out var analysis))
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:RefreshFailed"]}: {error}", Severity.Error);
@@ -135,7 +134,7 @@
     /// <returns></returns>
     private async Task ViewModuleDetail(ModuleKey moduleKey)
     {
-        var result = await ModuleSystemQueryFacade.GetModuleDetailAsync(moduleKey);
+        var result = await ModuleDiagnostics.GetModuleDetailAsync(moduleKey);
         if (result.IsFailed(out var error, out var moduleDetail))
         {
             SnackBar.Add($"{L["ModuleSystem:Dashboard:Messages:GetModuleDetailFailed"]}: {error}", Severity.Error);

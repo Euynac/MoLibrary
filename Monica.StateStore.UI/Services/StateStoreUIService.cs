@@ -7,6 +7,8 @@ using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Models.Internal;
+using Monica.Core.Modularity.Services;
 using Monica.Modules;
 using Monica.StateStore.UI.Models;
 using Monica.StateStore.UI.Services.Browser;
@@ -42,10 +44,10 @@ public class StateStoreUIService(
     ];
 
     private readonly IReadOnlyList<IStateStoreBrowserApi> _browserApis = browserApis.ToList();
-    private List<ModuleSnapshot>? _providerSnapshots;
+    private List<ModuleRuntimeSnapshot>? _providerSnapshots;
 
-    private List<ModuleSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= MoModuleRegisterCentre.GetModuleProviders(EMoModuleKey.StateStore);
+    private List<ModuleRuntimeSnapshot> ProviderSnapshots =>
+        _providerSnapshots ??= ModuleRegistry.GetModuleProviders(BuiltInModuleKey.StateStore);
 
     #region Provider Discovery
 
@@ -54,7 +56,7 @@ public class StateStoreUIService(
         try
         {
             var providers = new List<StateStoreProviderInfo>();
-            var keyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(typeof(ModuleStateStore));
+            var keyedServiceKeys = ModuleRegistry.GetKeyedServiceKeys(typeof(ModuleStateStore));
 
             var defaultProvider = serviceProvider.GetService<IStateStore>();
             if (defaultProvider != null)

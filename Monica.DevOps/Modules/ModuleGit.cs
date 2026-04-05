@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Git.Abstractions;
 using Monica.DevOps.Git.Facades;
@@ -36,9 +37,9 @@ public static class ModuleGitBuilderExtensions
 /// <summary>
 /// Git synchronization module.
 /// </summary>
-[ModuleKey(EMoModuleKey.Git)]
+[ModuleKey(BuiltInModuleKey.Git)]
 public class ModuleGit(ModuleGitOption option)
-    : MoModule<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
+    : ModuleBase<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
 {
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -88,7 +89,7 @@ public class ModuleGit(ModuleGitOption option)
 /// <summary>
 /// Fluent guide for the Git synchronization module.
 /// </summary>
-public class ModuleGitGuide : MoModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
+public class ModuleGitGuide : ModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
 {
     /// <summary>
     /// Sets which synchronization triggers are enabled.
@@ -231,7 +232,7 @@ public class ModuleGitGuide : MoModuleGuide<ModuleGit, ModuleGitOption, ModuleGi
 /// <summary>
 /// Options for the Git synchronization module.
 /// </summary>
-public class ModuleGitOption : MoModuleOptionWithMinimalApi<ModuleGit>
+public class ModuleGitOption : MinimalApiModuleOptions<ModuleGit>
 {
     /// <summary>
     /// Gets the synchronization triggers that are allowed to execute.

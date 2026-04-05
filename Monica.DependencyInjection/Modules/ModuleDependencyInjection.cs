@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Abstractions.Internal;
@@ -24,9 +25,9 @@ public static class ModuleDependencyInjectionBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DependencyInjection)]
+[ModuleKey(BuiltInModuleKey.DependencyInjection)]
 public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
-    : MoModule<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IBusinessTypeIterator
 {
     private IConventionalRegistrar? _registrar;
     private IServiceCollection? _services;
@@ -65,7 +66,7 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
 /// <summary>
 /// Configures the Monica dependency-injection module.
 /// </summary>
-public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
+public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
     ModuleDependencyInjectionGuide>
 {
 }
@@ -73,7 +74,7 @@ public class ModuleDependencyInjectionGuide : MoModuleGuide<ModuleDependencyInje
 /// <summary>
 /// Configures Monica conventional dependency registration behavior.
 /// </summary>
-public class ModuleDependencyInjectionOption : MoModuleOption<ModuleDependencyInjection>
+public class ModuleDependencyInjectionOption : ModuleOptions<ModuleDependencyInjection>
 {
     /// <summary>
     /// Gets or sets a value indicating whether the module should emit diagnostic logs for automatic service registration.

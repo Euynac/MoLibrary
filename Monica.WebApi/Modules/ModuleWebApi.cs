@@ -1,14 +1,15 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.WebApi.Validation;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.WebApi)]
-public class ModuleWebApi(ModuleWebApiOption option) : MoModule<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>(option)
+[ModuleKey(BuiltInModuleKey.WebApi)]
+public class ModuleWebApi(ModuleWebApiOption option) : ModuleBase<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -42,12 +43,12 @@ public static class ModuleWebApiBuilderExtensions
         }
     }
 }
-public class ModuleWebApiGuide : MoModuleGuide<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>
+public class ModuleWebApiGuide : ModuleGuide<ModuleWebApi, ModuleWebApiOption, ModuleWebApiGuide>
 {
 
 }
 
-public class ModuleWebApiOption : MoModuleOption<ModuleWebApi>
+public class ModuleWebApiOption : ModuleOptions<ModuleWebApi>
 {
     public bool DisableExceptionHandling { get; set; }
 }

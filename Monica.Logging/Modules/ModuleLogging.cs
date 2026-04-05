@@ -7,8 +7,10 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Logging;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Services;
 using Monica.Logging.Providers.Serilog;
 using Monica.Logging.Services;
 using Monica.Tool.Diagnostics;
@@ -33,8 +35,8 @@ public static class ModuleLoggingBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Logging)]
-public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
+[ModuleKey(BuiltInModuleKey.Logging)]
+public class ModuleLogging(ModuleLoggingOption option) : ModuleBase<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
@@ -44,7 +46,7 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
         builder.Services.AddSerilog(Log.Logger, dispose: true);
 
         LogManager.UseFactory(new SerilogLoggerFactory(Log.Logger));
-        MoModuleRegisterCentre.Logger = LogManager.For(typeof(MoModuleRegisterCentre));
+        ModuleRegistry.Logger = LogManager.For(typeof(ModuleRegistry));
 
         var level =
             builder.Configuration.GetSectionRecursively("Serilog:MinimumLevel").Select(p => new { p.Key, p.Value }).ToList().ToJsonString();
@@ -52,7 +54,7 @@ public class ModuleLogging(ModuleLoggingOption option) : MoModule<ModuleLogging,
     }
 }
 
-public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>
+public class ModuleLoggingGuide : ModuleGuide<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>
 {
     public ModuleLoggingGuide AddRequestResponseLoggingMiddleware(bool disableResponse = false, bool disableRequest = false)
     {
@@ -73,12 +75,12 @@ public class ModuleLoggingGuide : MoModuleGuide<ModuleLogging, ModuleLoggingOpti
                 context.ApplicationBuilder.UseMiddleware<HttpResponseLoggingMiddleware>();
             }
 
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
         return this;
     }
 }
 
-public class ModuleLoggingOption : MoModuleOption<ModuleLogging>
+public class ModuleLoggingOption : ModuleOptions<ModuleLogging>
 {
     /// <summary>
     /// Replaces the default Monica Serilog setup with a custom logger factory.

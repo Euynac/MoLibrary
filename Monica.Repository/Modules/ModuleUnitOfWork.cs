@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Persistence.Abstractions;
@@ -29,9 +30,9 @@ public static class ModuleUnitOfWorkBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.UnitOfWork)]
+[ModuleKey(BuiltInModuleKey.UnitOfWork)]
 public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
-    : MoModule<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
+    : ModuleBase<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -57,7 +58,7 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
     }
 }
 
-public class ModuleUnitOfWorkGuide : MoModuleGuide<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>
+public class ModuleUnitOfWorkGuide : ModuleGuide<ModuleUnitOfWork, ModuleUnitOfWorkOption, ModuleUnitOfWorkGuide>
 {
     public ModuleUnitOfWorkGuide AddDbContextProvider<TDbContext>() where TDbContext : RepositoryDbContext<TDbContext>
     {
@@ -71,7 +72,7 @@ public class ModuleUnitOfWorkGuide : MoModuleGuide<ModuleUnitOfWork, ModuleUnitO
 
 }
 
-public class ModuleUnitOfWorkOption : MoModuleOption<ModuleUnitOfWork>
+public class ModuleUnitOfWorkOption : ModuleOptions<ModuleUnitOfWork>
 {
 
     /// <summary>

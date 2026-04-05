@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Profiling.TypeAllocation.Facades;
 using Monica.Profiling.TypeAllocation.Models;
@@ -34,9 +35,9 @@ public static class ModuleTypeAllocationBuilderExtensions
 /// <summary>
 /// Type allocation tracking module.
 /// </summary>
-[ModuleKey(EMoModuleKey.TypeAllocation)]
+[ModuleKey(BuiltInModuleKey.TypeAllocation)]
 public class ModuleTypeAllocation(ModuleTypeAllocationOption option)
-    : MoModule<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(option)
+    : ModuleBase<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -66,14 +67,14 @@ public class ModuleTypeAllocation(ModuleTypeAllocationOption option)
 /// Fluent guide for the type allocation module.
 /// </summary>
 public class ModuleTypeAllocationGuide
-    : MoModuleGuide<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>
+    : ModuleGuide<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the type allocation module.
 /// </summary>
-public class ModuleTypeAllocationOption : MoModuleOption<ModuleTypeAllocation>
+public class ModuleTypeAllocationOption : ModuleOptions<ModuleTypeAllocation>
 {
     /// <summary>
     /// Automatically starts type allocation collection when the module initializes.

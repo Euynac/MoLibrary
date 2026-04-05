@@ -6,7 +6,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
@@ -38,9 +39,9 @@ public static class ModuleShellUIBuilderExtensions
 /// Shell UI module.
 /// Provides the shared Blazor shell infrastructure for Monica UI modules.
 /// </summary>
-[ModuleKey(EMoModuleKey.UICore)]
+[ModuleKey(BuiltInModuleKey.UICore)]
 public class ModuleShellUI(ModuleShellUIOption option)
-    : MoModule<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(option)
+    : ModuleBase<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(option)
 {
     /// <summary>
     /// Declare module dependencies
@@ -116,7 +117,7 @@ public class ModuleShellUI(ModuleShellUIOption option)
 /// <summary>
 /// Shell UI module configuration guide.
 /// </summary>
-public class ModuleShellUIGuide : MoModuleGuide<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>
+public class ModuleShellUIGuide : ModuleGuide<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>
 {
 
     /// <summary>
@@ -131,7 +132,7 @@ public class ModuleShellUIGuide : MoModuleGuide<ModuleShellUI, ModuleShellUIOpti
         {
             var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IPageRegistry>();
             registrationAction(registry);
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting, secondKey: Guid.NewGuid().ToString());
+        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting, secondKey: Guid.NewGuid().ToString());
 
         return this;
     }
@@ -180,7 +181,7 @@ public class ModuleShellUIGuide : MoModuleGuide<ModuleShellUI, ModuleShellUIOpti
             // Call app.UseAntiforgery() after authentication/authorization and within the routing pipeline.
             builder.ApplicationBuilder.UseAntiforgery();
 
-        }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+        }, ModuleApplicationMiddlewareOrder.AfterUseRouting);
 
         ConfigureEndpoints(builder =>
         {
@@ -208,7 +209,7 @@ public class ModuleShellUIGuide : MoModuleGuide<ModuleShellUI, ModuleShellUIOpti
 /// <summary>
 /// Shell UI module options.
 /// </summary>
-public class ModuleShellUIOption : MoModuleOption<ModuleShellUI>
+public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
 {
     /// <summary>
     /// App bar name

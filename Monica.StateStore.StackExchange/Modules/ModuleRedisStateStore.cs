@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.StackExchange;
 using Monica.StateStore.StackExchange.Connection;
@@ -83,9 +84,9 @@ public static class ModuleRedisStateStoreBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.RedisStateStore)]
+[ModuleKey(BuiltInModuleKey.RedisStateStore)]
 public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
-    : MoModule<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
+    : ModuleBase<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
 
@@ -104,7 +105,7 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
 
     #region IStateStoreModuleProvider Implementation
 
-    public ModuleKey ProvidesFor => EMoModuleKey.StateStore;
+    public ModuleKey ProvidesFor => BuiltInModuleKey.StateStore;
 
     public EStateStoreProviderType ProviderType => EStateStoreProviderType.Redis;
 
@@ -118,14 +119,14 @@ public class ModuleRedisStateStore(ModuleRedisStateStoreOption option)
     #endregion
 }
 
-public class ModuleRedisStateStoreGuide : MoModuleGuide<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>
+public class ModuleRedisStateStoreGuide : ModuleGuide<ModuleRedisStateStore, ModuleRedisStateStoreOption, ModuleRedisStateStoreGuide>
 {
 }
 
 /// <summary>
 /// Redis state store module configuration options
 /// </summary>
-public class ModuleRedisStateStoreOption : MoModuleOption<ModuleRedisStateStore>
+public class ModuleRedisStateStoreOption : ModuleOptions<ModuleRedisStateStore>
 {
     /// <summary>
     /// Redis connection type (Normal, Sentinel, Cluster). Default: Normal

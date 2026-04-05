@@ -9,7 +9,8 @@ using Monica.Authority.Authorization.Services.Support;
 using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -30,8 +31,8 @@ public static class ModuleAuthorizationBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Authority)]
-public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
+[ModuleKey(BuiltInModuleKey.Authority)]
+public class ModuleAuthorization(ModuleAuthorizationOption option) : ModuleBase<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -69,7 +70,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : MoModule<Mo
     }
 }
 
-public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>
+public class ModuleAuthorizationGuide : ModuleGuide<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -81,7 +82,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
         ConfigureApplicationBuilder(o =>
         {
             o.ApplicationBuilder.UseAuthorization();
-        }, EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+        }, ModuleApplicationMiddlewareOrder.AfterUseRouting);
         return this;
     }
 
@@ -128,7 +129,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
             context.Services.Replace(ServiceDescriptor
                 .Singleton<IMethodInvocationAuthorizationService, AlwaysAllowMethodInvocationAuthorizationService>());
             context.Services.Replace(ServiceDescriptor.Singleton<IPermissionChecker, AlwaysAllowPermissionChecker>());
-        }, EMoModuleOrder.PostConfig);
+        }, ModuleRegistrationOrder.PostConfig);
         return this;
     }
 
@@ -151,7 +152,7 @@ public class ModuleAuthorizationGuide : MoModuleGuide<ModuleAuthorization, Modul
     }
 }
 
-public class ModuleAuthorizationOption : MoModuleOption<ModuleAuthorization>
+public class ModuleAuthorizationOption : ModuleOptions<ModuleAuthorization>
 {
     public bool DisableExceptionHandling { get; set; }
 }

@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.EfCore;
@@ -37,7 +38,7 @@ public static class ModuleJobSchedulerEfCoreBuilderExtensions
 /// Fluent configuration builder for the Job Scheduler EF Core module.
 /// </summary>
 public class ModuleJobSchedulerEfCoreGuide
-    : MoModuleGuide<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>
+    : ModuleGuide<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -65,9 +66,9 @@ public class ModuleJobSchedulerEfCoreGuide
 /// Module implementation for Job Scheduler EF Core persistence.
 /// Provides EF Core-based storage for job definitions and instances.
 /// </summary>
-[ModuleKey(EMoModuleKey.JobSchedulerEfCore)]
+[ModuleKey(BuiltInModuleKey.JobSchedulerEfCore)]
 public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
-    : MoModule<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(option)
+    : ModuleBase<ModuleJobSchedulerEfCore, ModuleJobSchedulerEfCoreOption, ModuleJobSchedulerEfCoreGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -83,7 +84,7 @@ public class ModuleJobSchedulerEfCore(ModuleJobSchedulerEfCoreOption option)
 /// <summary>
 /// Configuration options for the Job Scheduler EF Core module.
 /// </summary>
-public class ModuleJobSchedulerEfCoreOption : MoModuleOption<ModuleJobSchedulerEfCore>
+public class ModuleJobSchedulerEfCoreOption : ModuleOptions<ModuleJobSchedulerEfCore>
 {
     // Currently no specific options needed
     // Options for database configuration should be passed through AddRepositoryDbContext

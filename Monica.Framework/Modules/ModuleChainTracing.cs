@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Logging;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.Framework.ChainTracing.Abstractions;
@@ -39,9 +40,9 @@ public static class ModuleChainTracingBuilderExtensions
 /// Chain tracing module.
 /// </summary>
 /// <param name="option">The module options.</param>
-[ModuleKey(EMoModuleKey.ChainTracing)]
+[ModuleKey(BuiltInModuleKey.ChainTracing)]
 public class ModuleChainTracing(ModuleChainTracingOption option)
-    : MoModule<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
+    : ModuleBase<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -82,7 +83,7 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
 /// <summary>
 /// Configuration guide for the chain tracing module.
 /// </summary>
-public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
+public class ModuleChainTracingGuide : ModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
 {
     /// <summary>
     /// Enables method-invocation tracing through the DynamicProxy module.
@@ -119,7 +120,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
         ConfigureServices(context => { context.Services.TryAddTransient<RpcChainTracingMiddleware>(); });
         ConfigureApplicationBuilder(
             context => { context.ApplicationBuilder.UseMiddleware<RpcChainTracingMiddleware>(); },
-            EMoModuleApplicationMiddlewaresOrder.AfterUseRouting);
+            ModuleApplicationMiddlewareOrder.AfterUseRouting);
 
         return this;
     }
@@ -145,7 +146,7 @@ public class ModuleChainTracingGuide : MoModuleGuide<ModuleChainTracing, ModuleC
 /// <summary>
 /// Configuration options for the chain tracing module.
 /// </summary>
-public class ModuleChainTracingOption : MoModuleOption<ModuleChainTracing>
+public class ModuleChainTracingOption : ModuleOptions<ModuleChainTracing>
 {
     /// <summary>
     /// Enables chain tracing.

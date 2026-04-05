@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Pages;
@@ -31,9 +32,9 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 /// <summary>
 /// ObservableInstance UI module
 /// </summary>
-[ModuleKey(EMoModuleKey.ObservableInstanceUI)]
+[ModuleKey(BuiltInModuleKey.ObservableInstanceUI)]
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
-    : MoModule<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
+    : ModuleBase<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -162,14 +163,14 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
 /// <summary>
 /// ObservableInstanceUI module guide
 /// </summary>
-public class ModuleObservableInstanceUIGuide : MoModuleGuide<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>
+public class ModuleObservableInstanceUIGuide : ModuleGuide<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>
 {
 }
 
 /// <summary>
 /// ObservableInstanceUI module options
 /// </summary>
-public class ModuleObservableInstanceUIOption : MoModuleOptionWithMinimalApi<ModuleObservableInstanceUI>
+public class ModuleObservableInstanceUIOption : MinimalApiModuleOptions<ModuleObservableInstanceUI>
 {
     /// <summary>
     /// Whether to disable Observable Instance monitoring page

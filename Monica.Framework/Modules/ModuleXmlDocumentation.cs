@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.XmlDocumentation.Abstractions;
@@ -30,9 +31,9 @@ public static class ModuleXmlDocumentationBuilderExtensions
 /// <summary>
 /// Provides XML documentation lookup and cache inspection endpoints.
 /// </summary>
-[ModuleKey(EMoModuleKey.XmlDocumentation)]
+[ModuleKey(BuiltInModuleKey.XmlDocumentation)]
 public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
-    : MoModule<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
+    : ModuleBase<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
 {
     public static IXmlDocumentationService? Singleton { get; private set; }
 
@@ -107,11 +108,11 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     }
 }
 
-public class ModuleXmlDocumentationGuide : MoModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
+public class ModuleXmlDocumentationGuide : ModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
 {
 }
 
-public class ModuleXmlDocumentationOption : MoModuleOptionWithMinimalApi<ModuleXmlDocumentation>
+public class ModuleXmlDocumentationOption : MinimalApiModuleOptions<ModuleXmlDocumentation>
 {
     /// <summary>
     /// Enables the XML documentation cache endpoints exposed by this module.

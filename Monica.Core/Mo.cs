@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.TypeFinder;
+using Monica.Core.Modularity.Services;
+using Monica.Core.TypeDiscovery.Abstractions;
+using Monica.Core.TypeDiscovery.Models;
+using Monica.Core.TypeDiscovery.Services;
 
 namespace Monica.Core;
 
@@ -16,7 +19,7 @@ public static class Mo
     /// <param name="builder">The host application builder used to register module services.</param>
     public static void RegisterInstantly(IHostApplicationBuilder builder)
     {
-        MoModuleRegisterCentre.RegisterServices(builder);
+        ModuleRegistry.RegisterServices(builder);
     }
 
     public static class Options
@@ -53,19 +56,19 @@ public static class Mo
         /// <summary>
         /// Gets the global domain type finder used by the module system.
         /// </summary>
-        public static IDomainTypeFinder GlobalTypeFinder => _globalTypeFinder ??= new MoDomainTypeFinder(new ModuleCoreOptionTypeFinder());
+        public static ITypeFinder GlobalTypeFinder => _globalTypeFinder ??= new DomainTypeFinder(new TypeFinderOptions());
 
-        private static IDomainTypeFinder? _globalTypeFinder;
+        private static ITypeFinder? _globalTypeFinder;
 
         /// <summary>
         /// Rebuilds the global domain type finder with an optional configuration callback.
         /// </summary>
         /// <param name="configure">An optional callback that customizes the type finder options before creation.</param>
-        public static void ConfigTypeFinder(Action<ModuleCoreOptionTypeFinder>? configure = null)
+        public static void ConfigTypeFinder(Action<TypeFinderOptions>? configure = null)
         {
-            var option = new ModuleCoreOptionTypeFinder();
+            var option = new TypeFinderOptions();
             configure?.Invoke(option);
-            _globalTypeFinder = new MoDomainTypeFinder(option);
+            _globalTypeFinder = new DomainTypeFinder(option);
         }
     }
 }

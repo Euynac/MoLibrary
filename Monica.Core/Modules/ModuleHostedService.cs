@@ -6,7 +6,8 @@ using Monica.Core.HostedService.Abstractions.Internal;
 using Monica.Core.HostedService.Services;
 using Monica.Core.HostedService.Services.Support;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -30,9 +31,9 @@ public static class ModuleHostedServiceBuilderExtensions
 /// HostedService observability module.
 /// Provides centralized HostedService state management, heartbeat monitoring, and coordination support.
 /// </summary>
-[ModuleKey(EMoModuleKey.HostedService)]
+[ModuleKey(BuiltInModuleKey.HostedService)]
 public class ModuleHostedService(ModuleHostedServiceOption option)
-    : MoModule<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
+    : ModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -64,14 +65,14 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 /// Fluent configuration guide for the HostedService observability module
 /// </summary>
 public class ModuleHostedServiceGuide
-    : MoModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>
+    : ModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the HostedService observability module
 /// </summary>
-public class ModuleHostedServiceOption : MoModuleOption<ModuleHostedService>
+public class ModuleHostedServiceOption : ModuleOptions<ModuleHostedService>
 {
     /// <summary>
     /// Gets or sets the default maximum history size for all services

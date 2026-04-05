@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.UI.UIDiffHighlight.Abstractions;
@@ -20,8 +21,8 @@ namespace Monica.Modules;
 /// <summary>
 /// Registers the DiffHighlight mixed module.
 /// </summary>
-[ModuleKey(EMoModuleKey.DiffHighlight)]
-public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : MoModule<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
+[ModuleKey(BuiltInModuleKey.DiffHighlight)]
+public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : ModuleBase<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
 {
     /// <summary>
     /// Registers the diff highlighting services, facade, and rendering strategies.
@@ -125,7 +126,7 @@ public class DiffHighlightRequest
 /// <summary>
 /// Configuration guide for the diff highlight module.
 /// </summary>
-public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
+public class ModuleDiffHighlightGuide : ModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
 {
 
 }
@@ -133,7 +134,7 @@ public class ModuleDiffHighlightGuide : MoModuleGuide<ModuleDiffHighlight, Modul
 /// <summary>
 /// Configuration options for the diff highlight module.
 /// </summary>
-public class ModuleDiffHighlightOption : MoModuleOptionWithMinimalApi<ModuleDiffHighlight>
+public class ModuleDiffHighlightOption : MinimalApiModuleOptions<ModuleDiffHighlight>
 {
     /// <summary>
     /// Default diff mode.

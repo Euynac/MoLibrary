@@ -1,5 +1,5 @@
-using Monica.Core.Modularity.Dashboard.Models;
-using Monica.Core.Modularity.TypeFinder;
+using Monica.Core.Modularity.Diagnostics.Models;
+using Monica.Core.TypeDiscovery.Models;
 
 namespace Monica.UI.UIModuleSystem.State;
 
@@ -28,7 +28,7 @@ public sealed class ModuleSystemPageState
     /// <summary>
     /// Gets the current registration snapshot.
     /// </summary>
-    public ModuleRegistrationInfo? RegistrationInfo { get; private set; }
+    public ModuleRegistrationOverview? RegistrationInfo { get; private set; }
 
     /// <summary>
     /// Gets the current dependency graph snapshot.
@@ -63,7 +63,7 @@ public sealed class ModuleSystemPageState
     /// <summary>
     /// Applies a new dashboard snapshot and clears any stale assembly analysis data.
     /// </summary>
-    public void ApplyDashboardSnapshot(ModuleSystemDashboardSnapshot snapshot)
+    public void ApplyDashboardSnapshot(ModuleDiagnosticsSnapshot snapshot)
     {
         SystemStatus = snapshot.SystemStatus;
         SystemPerformance = snapshot.SystemPerformance;

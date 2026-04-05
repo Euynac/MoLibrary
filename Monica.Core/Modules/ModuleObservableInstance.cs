@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Core.ObservableInstance.Facades;
@@ -29,9 +30,9 @@ public static class ModuleObservableInstanceBuilderExtensions
 /// ObservableInstance module provides universal state and exception tracking for all instances.
 /// Replaces ModuleExceptionPool functionality with a unified observable pattern.
 /// </summary>
-[ModuleKey(EMoModuleKey.ObservableInstance)]
+[ModuleKey(BuiltInModuleKey.ObservableInstance)]
 public class ModuleObservableInstance(ModuleObservableInstanceOption option)
-    : MoModule<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>(option)
+    : ModuleBase<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -44,7 +45,7 @@ public class ModuleObservableInstance(ModuleObservableInstanceOption option)
 /// <summary>
 /// Configuration guide for the ObservableInstance module with fluent API
 /// </summary>
-public class ModuleObservableInstanceGuide : MoModuleGuide<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>
+public class ModuleObservableInstanceGuide : ModuleGuide<ModuleObservableInstance, ModuleObservableInstanceOption, ModuleObservableInstanceGuide>
 {
     
 }
@@ -52,7 +53,7 @@ public class ModuleObservableInstanceGuide : MoModuleGuide<ModuleObservableInsta
 /// <summary>
 /// Configuration options for the ObservableInstance module
 /// </summary>
-public class ModuleObservableInstanceOption : MoModuleOption<ModuleObservableInstance>
+public class ModuleObservableInstanceOption : ModuleOptions<ModuleObservableInstance>
 {
     /// <summary>
     /// Default maximum history size

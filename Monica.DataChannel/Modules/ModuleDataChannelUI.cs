@@ -1,6 +1,7 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DataChannel.Pages;
 using MudBlazor;
@@ -12,9 +13,9 @@ namespace Monica.Modules;
 /// UI module for DataChannel.
 /// Provides the management interface for DataChannel.
 /// </summary>
-[ModuleKey(EMoModuleKey.DataChannelUI)]
+[ModuleKey(BuiltInModuleKey.DataChannelUI)]
 public class ModuleDataChannelUI(ModuleDataChannelUIOption option)
-    : MoModule<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
+    : ModuleBase<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>(option)
 {
     /// <summary>
     /// Declares module dependencies.
@@ -59,7 +60,7 @@ public static class ModuleDataChannelUIBuilderExtensions
 /// <summary>
 /// Guide for the DataChannel UI module.
 /// </summary>
-public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>
+public class ModuleDataChannelUIGuide : ModuleGuide<ModuleDataChannelUI, ModuleDataChannelUIOption, ModuleDataChannelUIGuide>
 {
     /// <summary>
     /// Gets the requested configuration method keys.
@@ -74,7 +75,7 @@ public class ModuleDataChannelUIGuide : MoModuleGuide<ModuleDataChannelUI, Modul
 /// <summary>
 /// Options for the DataChannel UI module.
 /// </summary>
-public class ModuleDataChannelUIOption : MoModuleOption<ModuleDataChannelUI>
+public class ModuleDataChannelUIOption : ModuleOptions<ModuleDataChannelUI>
 {
     /// <summary>
     /// Gets or sets a value indicating whether the DataChannel page is disabled.

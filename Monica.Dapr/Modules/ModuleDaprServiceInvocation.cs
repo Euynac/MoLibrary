@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
@@ -24,9 +25,9 @@ public static class ModuleDaprServiceInvocationBuilderExtensions
 /// <summary>
 /// Dapr-based service invocation module.
 /// </summary>
-[ModuleKey(EMoModuleKey.DaprServiceInvocation)]
+[ModuleKey(BuiltInModuleKey.DaprServiceInvocation)]
 public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption option)
-    : MoModule<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
+    : ModuleBase<ModuleDaprServiceInvocation, ModuleDaprServiceInvocationOption,
         ModuleDaprServiceInvocationGuide>(option)
 {
 
@@ -43,11 +44,11 @@ public class ModuleDaprServiceInvocation(ModuleDaprServiceInvocationOption optio
     }
 }
 
-public class ModuleDaprServiceInvocationGuide : MoModuleGuide<ModuleDaprServiceInvocation,
+public class ModuleDaprServiceInvocationGuide : ModuleGuide<ModuleDaprServiceInvocation,
     ModuleDaprServiceInvocationOption, ModuleDaprServiceInvocationGuide>
 {
 }
 
-public class ModuleDaprServiceInvocationOption : MoModuleOption<ModuleDaprServiceInvocation>
+public class ModuleDaprServiceInvocationOption : ModuleOptions<ModuleDaprServiceInvocation>
 {
 }

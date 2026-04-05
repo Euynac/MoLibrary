@@ -1,4 +1,4 @@
-using Monica.Core.Modularity.Features;
+using Monica.Core.Modularity.Diagnostics.Models;
 
 namespace Monica.Core.Modularity.Exceptions;
 

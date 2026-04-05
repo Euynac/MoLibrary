@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Profiling.Pages;
 using Monica.Profiling.UIRuntimeMetrics.State;
@@ -30,9 +31,9 @@ public static class ModuleRuntimeMetricsUIBuilderExtensions
 /// <summary>
 /// Runtime metrics UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.RuntimeMetricsUI)]
+[ModuleKey(BuiltInModuleKey.RuntimeMetricsUI)]
 public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
-    : MoModule<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(option)
+    : ModuleBase<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>(option)
 {
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -64,14 +65,14 @@ public class ModuleRuntimeMetricsUI(ModuleRuntimeMetricsUIOption option)
 /// Fluent guide for the runtime metrics UI module.
 /// </summary>
 public class ModuleRuntimeMetricsUIGuide
-    : MoModuleGuide<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>
+    : ModuleGuide<ModuleRuntimeMetricsUI, ModuleRuntimeMetricsUIOption, ModuleRuntimeMetricsUIGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the runtime metrics UI module.
 /// </summary>
-public class ModuleRuntimeMetricsUIOption : MoModuleOption<ModuleRuntimeMetricsUI>
+public class ModuleRuntimeMetricsUIOption : ModuleOptions<ModuleRuntimeMetricsUI>
 {
     /// <summary>
     /// Disables registration of the runtime metrics page and removes it from the navigation registry.

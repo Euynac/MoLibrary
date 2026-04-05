@@ -1,7 +1,7 @@
 @using MudBlazor
 @using Monica.UI.Localization
 @using Microsoft.Extensions.Localization
-@using Monica.Core.Modularity.Dashboard.Models
+@using Monica.Core.Modularity.Diagnostics.Models
 @using Monica.Core.Modularity.Models
 @inject IStringLocalizer<SharedResource> L
 
@@ -192,7 +192,7 @@
     /// <summary>
     /// Module registration information
     /// </summary>
-    [Parameter] public ModuleRegistrationInfo? RegistrationInfo { get; set; }
+    [Parameter] public ModuleRegistrationOverview? RegistrationInfo { get; set; }
 
     /// <summary>
     /// Refresh data event

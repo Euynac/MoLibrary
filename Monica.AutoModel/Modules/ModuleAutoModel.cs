@@ -7,7 +7,8 @@ using Monica.AutoModel.Providers;
 using Monica.AutoModel.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using TokenExpressionGenDynamicLinqProvider = Monica.AutoModel.Providers.TokenExpressionGenDynamicLinqProvider;
@@ -29,8 +30,8 @@ public static class ModuleAutoModelBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.AutoModel)]
-public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
+[ModuleKey(BuiltInModuleKey.AutoModel)]
+public class ModuleAutoModel(ModuleAutoModelOption option) : ModuleBase<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -84,12 +85,12 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : MoModule<ModuleAuto
     }
 }
 
-public class ModuleAutoModelGuide : MoModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
+public class ModuleAutoModelGuide : ModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
 {
 
 }
 
-public class ModuleAutoModelOption : MoModuleOptionWithMinimalApi<ModuleAutoModel>
+public class ModuleAutoModelOption : MinimalApiModuleOptions<ModuleAutoModel>
 {
     /// <summary>
     /// Enables global active mode. Only fields marked with <c>AutoField</c> participate in AutoModel.

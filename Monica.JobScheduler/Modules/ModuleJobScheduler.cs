@@ -6,7 +6,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
@@ -40,9 +41,9 @@ public static class ModuleJobSchedulerBuilderExtensions
 /// Integrates all components including control plane (scheduling), worker plane (execution),
 /// and metadata persistence layer.
 /// </summary>
-[ModuleKey(EMoModuleKey.JobScheduler)]
+[ModuleKey(BuiltInModuleKey.JobScheduler)]
 public class ModuleJobScheduler(ModuleJobSchedulerOption option)
-    : MoModule<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>(option), IBusinessTypeIterator
 {
     private readonly List<JobDefinition> _jobDefinitions = [];
 
@@ -235,7 +236,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
 /// Fluent configuration builder for the Job Scheduler module.
 /// </summary>
 public class ModuleJobSchedulerGuide
-    : MoModuleGuide<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>
+    : ModuleGuide<ModuleJobScheduler, ModuleJobSchedulerOption, ModuleJobSchedulerGuide>
 {
     private const string CONFIG_METADATA_STORE = nameof(CONFIG_METADATA_STORE);
     private const string CONFIG_PROVIDER = nameof(CONFIG_PROVIDER);
@@ -325,7 +326,7 @@ public class ModuleJobSchedulerGuide
 /// <summary>
 /// Configuration options for the Job Scheduler module.
 /// </summary>
-public class ModuleJobSchedulerOption : MoModuleOption<ModuleJobScheduler>
+public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 {
     /// <summary>
     /// The scheduler scope key used to isolate persistence and events across environments.

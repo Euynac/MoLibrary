@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.UI.UIStackTrace.Support;
 
@@ -26,9 +27,9 @@ public static class ModuleStackTraceUIBuilderExtensions
 /// <summary>
 /// UIStackTrace module - provides stack trace visualization components
 /// </summary>
-[ModuleKey(EMoModuleKey.UIStackTrace)]
+[ModuleKey(BuiltInModuleKey.UIStackTrace)]
 public class ModuleStackTraceUI(ModuleStackTraceUIOption option)
-    : MoModule<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>(option)
+    : ModuleBase<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -42,13 +43,13 @@ public class ModuleStackTraceUI(ModuleStackTraceUIOption option)
 /// UIStackTrace module configuration guide
 /// </summary>
 public class ModuleStackTraceUIGuide
-    : MoModuleGuide<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>
+    : ModuleGuide<ModuleStackTraceUI, ModuleStackTraceUIOption, ModuleStackTraceUIGuide>
 {
 }
 
 /// <summary>
 /// UIStackTrace module options
 /// </summary>
-public class ModuleStackTraceUIOption : MoModuleOption<ModuleStackTraceUI>
+public class ModuleStackTraceUIOption : ModuleOptions<ModuleStackTraceUI>
 {
 }

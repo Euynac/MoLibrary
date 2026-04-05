@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Locker.Abstractions;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Locker.Models;
 using Monica.Locker.Providers.InProcess;
@@ -32,8 +33,8 @@ public static class ModuleLockerBuilderExtensions
 /// <summary>
 /// Registers the shared locker services and exposes <see cref="IDistributedLock"/> to application code.
 /// </summary>
-[ModuleKey(EMoModuleKey.Locker)]
-public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(option)
+[ModuleKey(BuiltInModuleKey.Locker)]
+public class ModuleLocker(ModuleLockerOption option) : ModuleBase<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -45,7 +46,7 @@ public class ModuleLocker(ModuleLockerOption option) : MoModule<ModuleLocker, Mo
 /// <summary>
 /// Configures which lock provider backs the Locker module.
 /// </summary>
-public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>
+public class ModuleLockerGuide : ModuleGuide<ModuleLocker, ModuleLockerOption, ModuleLockerGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -99,7 +100,7 @@ public class ModuleLockerGuide : MoModuleGuide<ModuleLocker, ModuleLockerOption,
 /// <summary>
 /// Configures cross-provider locker defaults.
 /// </summary>
-public class ModuleLockerOption : MoModuleOption<ModuleLocker>
+public class ModuleLockerOption : ModuleOptions<ModuleLocker>
 {
     /// <summary>
     /// Prefix applied to every logical lock name before it reaches the active provider.

@@ -2,7 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 using Monica.StateStore.Abstractions;
@@ -53,9 +54,9 @@ public static class ModuleDaprStateStoreBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DaprStateStore)]
+[ModuleKey(BuiltInModuleKey.DaprStateStore)]
 public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
-    : MoModule<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
+    : ModuleBase<ModuleDaprStateStore, ModuleDaprStateStoreOption, ModuleDaprStateStoreGuide>(option),
       IStateStoreModuleProvider
 {
 
@@ -67,7 +68,7 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
 
     #region IStateStoreModuleProvider Implementation
 
-    public ModuleKey ProvidesFor => EMoModuleKey.StateStore;
+    public ModuleKey ProvidesFor => BuiltInModuleKey.StateStore;
 
     public EStateStoreProviderType ProviderType => EStateStoreProviderType.Dapr;
 
@@ -82,13 +83,13 @@ public class ModuleDaprStateStore(ModuleDaprStateStoreOption option)
 }
 
 public class
-    ModuleDaprStateStoreGuide : MoModuleGuide<ModuleDaprStateStore, ModuleDaprStateStoreOption,
+    ModuleDaprStateStoreGuide : ModuleGuide<ModuleDaprStateStore, ModuleDaprStateStoreOption,
     ModuleDaprStateStoreGuide>
 {
 
 }
 
-public class ModuleDaprStateStoreOption : MoModuleOption<ModuleDaprStateStore>
+public class ModuleDaprStateStoreOption : ModuleOptions<ModuleDaprStateStore>
 {
     /// <summary>
     /// Name of the Dapr state store. Must match the <c>name</c> field in the Dapr state store

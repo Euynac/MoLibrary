@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.ServiceDiscovery.Pages;
 using Monica.ServiceDiscovery.UIServiceDiscovery.State;
@@ -11,9 +12,9 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.ServiceDiscoveryUI)]
+[ModuleKey(BuiltInModuleKey.ServiceDiscoveryUI)]
 public class ModuleServiceDiscoveryUI(ModuleServiceDiscoveryUIOption option)
-    : MoModule<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption, ModuleServiceDiscoveryUIGuide>(option)
+    : ModuleBase<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption, ModuleServiceDiscoveryUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -41,7 +42,7 @@ public class ModuleServiceDiscoveryUI(ModuleServiceDiscoveryUIOption option)
     }
 }
 
-public class ModuleServiceDiscoveryUIGuide : MoModuleGuide<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption, ModuleServiceDiscoveryUIGuide>
+public class ModuleServiceDiscoveryUIGuide : ModuleGuide<ModuleServiceDiscoveryUI, ModuleServiceDiscoveryUIOption, ModuleServiceDiscoveryUIGuide>
 {
 }
 
@@ -59,7 +60,7 @@ public static class ModuleServiceDiscoveryUIBuilderExtensions
     }
 }
 
-public class ModuleServiceDiscoveryUIOption : MoModuleOption<ModuleServiceDiscoveryUI>
+public class ModuleServiceDiscoveryUIOption : ModuleOptions<ModuleServiceDiscoveryUI>
 { 
     public bool DisableServiceDiscoveryPage { get; set; }
     

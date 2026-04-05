@@ -1,6 +1,7 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.K8S.Pages;
 using MudBlazor;
@@ -8,9 +9,9 @@ using MudBlazor;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.K8SUI)]
+[ModuleKey(BuiltInModuleKey.K8SUI)]
 public class ModuleK8SUI(ModuleK8SUIOption option)
-    : MoModule<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>(option)
+    : ModuleBase<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -42,11 +43,11 @@ public static class ModuleK8SUIBuilderExtensions
     }
 }
 
-public class ModuleK8SUIGuide : MoModuleGuide<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>
+public class ModuleK8SUIGuide : ModuleGuide<ModuleK8SUI, ModuleK8SUIOption, ModuleK8SUIGuide>
 {
 }
 
-public class ModuleK8SUIOption : MoModuleOption<ModuleK8SUI>
+public class ModuleK8SUIOption : ModuleOptions<ModuleK8SUI>
 {
     public bool DisableK8SPage { get; set; }
 }

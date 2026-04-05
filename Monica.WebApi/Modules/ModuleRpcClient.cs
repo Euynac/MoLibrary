@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.WebApi.RpcClient.Abstractions;
@@ -27,10 +28,10 @@ public static class ModuleRpcClientBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.RpcClient)]
+[ModuleKey(BuiltInModuleKey.RpcClient)]
 public class ModuleRpcClient(ModuleRpcClientOption option) :
-    MoModule<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
-    IWantIterateBusinessTypes
+    ModuleBase<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>(option),
+    IBusinessTypeIterator
 {
     public List<Type> RelatedTypes { get; set; } = [];
 
@@ -143,7 +144,7 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
     }
 }
 
-public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>
+public class ModuleRpcClientGuide : ModuleGuide<ModuleRpcClient, ModuleRpcClientOption, ModuleRpcClientGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -170,7 +171,7 @@ public class ModuleRpcClientGuide : MoModuleGuide<ModuleRpcClient, ModuleRpcClie
     }
 }
 
-public class ModuleRpcClientOption : MoModuleOption<ModuleRpcClient>
+public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
 {
     /// <summary>
     /// Registers RPC clients through gRPC instead of HttpClient.

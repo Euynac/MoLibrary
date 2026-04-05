@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository.Snowflake.Abstractions;
 using Monica.Repository.Snowflake.Services;
@@ -26,9 +27,9 @@ public static class ModuleSnowflakeBuilderExtensions
 /// <summary>
 /// Provides distributed Snowflake-based identifier generation.
 /// </summary>
-[ModuleKey(EMoModuleKey.Snowflake)]
+[ModuleKey(BuiltInModuleKey.Snowflake)]
 public class ModuleSnowflake(ModuleSnowflakeOption option)
-    : MoModule<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>(option)
+    : ModuleBase<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -37,11 +38,11 @@ public class ModuleSnowflake(ModuleSnowflakeOption option)
     }
 }
 
-public class ModuleSnowflakeGuide : MoModuleGuide<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>
+public class ModuleSnowflakeGuide : ModuleGuide<ModuleSnowflake, ModuleSnowflakeOption, ModuleSnowflakeGuide>
 {
 }
 
-public class ModuleSnowflakeOption : MoModuleOption<ModuleSnowflake>
+public class ModuleSnowflakeOption : ModuleOptions<ModuleSnowflake>
 {
     /// <summary>
     /// Custom epoch start timestamp in milliseconds.

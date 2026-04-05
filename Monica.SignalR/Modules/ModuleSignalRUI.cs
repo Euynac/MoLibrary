@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.SignalR.Localization;
 using Monica.SignalR.Pages;
@@ -35,9 +36,9 @@ public static class ModuleSignalRUIBuilderExtensions
 /// UI module that contributes the SignalR debug page and its supporting client-side state services.
 /// </summary>
 /// <param name="option">The module configuration options.</param>
-[ModuleKey(EMoModuleKey.SignalRUI)]
+[ModuleKey(BuiltInModuleKey.SignalRUI)]
 public class ModuleSignalRUI(ModuleSignalRUIOption option)
-    : MoModule<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>(option)
+    : ModuleBase<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -69,14 +70,14 @@ public class ModuleSignalRUI(ModuleSignalRUIOption option)
 /// <summary>
 /// Fluent registration guide for the SignalR debug UI module.
 /// </summary>
-public class ModuleSignalRUIGuide : MoModuleGuide<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>
+public class ModuleSignalRUIGuide : ModuleGuide<ModuleSignalRUI, ModuleSignalRUIOption, ModuleSignalRUIGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the SignalR debug UI module.
 /// </summary>
-public class ModuleSignalRUIOption : MoModuleOption<ModuleSignalRUI>
+public class ModuleSignalRUIOption : ModuleOptions<ModuleSignalRUI>
 {
     /// <summary>
     /// Gets or sets a value indicating whether the SignalR debug page should be excluded from UI registration.

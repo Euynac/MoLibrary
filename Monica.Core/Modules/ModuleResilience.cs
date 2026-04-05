@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Polly;
 using Polly.DependencyInjection;
@@ -23,9 +24,9 @@ public static class ModuleResilienceBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Resilience)]
+[ModuleKey(BuiltInModuleKey.Resilience)]
 public class ModuleResilience(ModuleResilienceOption option)
-    : MoModule<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(option)
+    : ModuleBase<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -44,7 +45,7 @@ public class ModuleResilience(ModuleResilienceOption option)
     }
 }
 
-public class ModuleResilienceGuide : MoModuleGuide<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>
+public class ModuleResilienceGuide : ModuleGuide<ModuleResilience, ModuleResilienceOption, ModuleResilienceGuide>
 {
     /// <summary>
     /// Configure the default resilience pipeline using Polly's ResiliencePipelineBuilder directly
@@ -87,7 +88,7 @@ public class ModuleResilienceGuide : MoModuleGuide<ModuleResilience, ModuleResil
     }
 }
 
-public class ModuleResilienceOption : MoModuleOption<ModuleResilience>
+public class ModuleResilienceOption : ModuleOptions<ModuleResilience>
 {
     /// <summary>
     /// Pipeline configurations stored as deferred actions (without context)

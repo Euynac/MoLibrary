@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
@@ -27,9 +28,9 @@ public static class ModuleProjectUnitsUIBuilderExtensions
 /// <summary>
     /// Project-units UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.ProjectUnitsUI)]
+[ModuleKey(BuiltInModuleKey.ProjectUnitsUI)]
 public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
-    : MoModule<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(option)
+    : ModuleBase<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -60,14 +61,14 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
 /// <summary>
 /// Project-units UI module guide.
 /// </summary>
-public class ModuleProjectUnitsUIGuide : MoModuleGuide<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>
+public class ModuleProjectUnitsUIGuide : ModuleGuide<ModuleProjectUnitsUI, ModuleProjectUnitsUIOption, ModuleProjectUnitsUIGuide>
 {
 }
 
 /// <summary>
 /// Project-units UI module options.
 /// </summary>
-public class ModuleProjectUnitsUIOption : MoModuleOption<ModuleProjectUnitsUI>
+public class ModuleProjectUnitsUIOption : ModuleOptions<ModuleProjectUnitsUI>
 { 
     /// <summary>
     /// Whether to disable the project-units page.

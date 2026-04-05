@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.StateStore.UI.Pages;
 using Monica.StateStore.UI.Localization;
@@ -29,9 +30,9 @@ public static class ModuleStateStoreUIBuilderExtensions
 /// <summary>
 /// StateStore UI module - provides state storage management interface
 /// </summary>
-[ModuleKey(EMoModuleKey.StateStoreUI)]
+[ModuleKey(BuiltInModuleKey.StateStoreUI)]
 public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
-    : MoModule<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(option)
+    : ModuleBase<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -73,14 +74,14 @@ public class ModuleStateStoreUI(ModuleStateStoreUIOption option)
 /// StateStore UI module configuration guide
 /// </summary>
 public class ModuleStateStoreUIGuide
-    : MoModuleGuide<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>
+    : ModuleGuide<ModuleStateStoreUI, ModuleStateStoreUIOption, ModuleStateStoreUIGuide>
 {
 }
 
 /// <summary>
 /// StateStore UI module options
 /// </summary>
-public class ModuleStateStoreUIOption : MoModuleOption<ModuleStateStoreUI>
+public class ModuleStateStoreUIOption : ModuleOptions<ModuleStateStoreUI>
 {
     /// <summary>
     /// Disable StateStore admin page

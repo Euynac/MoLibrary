@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Profiling.MemoryDiagnostics.Facades;
 using Monica.Profiling.MemoryDiagnostics.Providers.DotNetTools;
@@ -31,9 +32,9 @@ public static class ModuleMemoryDiagnosticsBuilderExtensions
 /// <summary>
 /// Memory diagnostics module.
 /// </summary>
-[ModuleKey(EMoModuleKey.MemoryDiagnostics)]
+[ModuleKey(BuiltInModuleKey.MemoryDiagnostics)]
 public class ModuleMemoryDiagnostics(ModuleMemoryDiagnosticsOption option)
-    : MoModule<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>(option)
+    : ModuleBase<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -50,13 +51,13 @@ public class ModuleMemoryDiagnostics(ModuleMemoryDiagnosticsOption option)
 /// Fluent guide for the memory diagnostics module.
 /// </summary>
 public class ModuleMemoryDiagnosticsGuide
-    : MoModuleGuide<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>
+    : ModuleGuide<ModuleMemoryDiagnostics, ModuleMemoryDiagnosticsOption, ModuleMemoryDiagnosticsGuide>
 {
 }
 
 /// <summary>
 /// Configuration options for the memory diagnostics module.
 /// </summary>
-public class ModuleMemoryDiagnosticsOption : MoModuleOption<ModuleMemoryDiagnostics>
+public class ModuleMemoryDiagnosticsOption : ModuleOptions<ModuleMemoryDiagnostics>
 {
 }

@@ -3,7 +3,8 @@ using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Clock;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 
@@ -24,8 +25,8 @@ public static class ModuleClockBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Clock)]
-public class ModuleClock(ModuleClockOption option) : MoModule<ModuleClock, ModuleClockOption, ModuleClockGuide>(option)
+[ModuleKey(BuiltInModuleKey.Clock)]
+public class ModuleClock(ModuleClockOption option) : ModuleBase<ModuleClock, ModuleClockOption, ModuleClockGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -43,7 +44,7 @@ public class ModuleClock(ModuleClockOption option) : MoModule<ModuleClock, Modul
     }
 }
 
-public class ModuleClockGuide : MoModuleGuide<ModuleClock, ModuleClockOption, ModuleClockGuide>
+public class ModuleClockGuide : ModuleGuide<ModuleClock, ModuleClockOption, ModuleClockGuide>
 {
     /// <summary>
     /// Sets the application timezone using a TimeZoneInfo ID string.
@@ -121,7 +122,7 @@ public class ModuleClockGuide : MoModuleGuide<ModuleClock, ModuleClockOption, Mo
     }
 }
 
-public class ModuleClockOption : MoModuleOption<ModuleClock>
+public class ModuleClockOption : ModuleOptions<ModuleClock>
 {
     /// <summary>
     /// The configured timezone for the application.

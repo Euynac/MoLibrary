@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.ServiceDiscovery.ServiceInvocation.Abstractions;
 using Monica.ServiceDiscovery.ServiceInvocation.Providers;
@@ -12,9 +13,9 @@ namespace Monica.Modules;
 /// <summary>
 /// Service call module
 /// </summary>
-[ModuleKey(EMoModuleKey.ServiceInvocation)]
+[ModuleKey(BuiltInModuleKey.ServiceInvocation)]
 public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
-    : MoModule<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
+    : ModuleBase<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -26,7 +27,7 @@ public class ModuleServiceInvocation(ModuleServiceInvocationOption option)
 /// <summary>
 /// Service call module configuration options
 /// </summary>
-public class ModuleServiceInvocationOption : MoModuleOption<ModuleServiceInvocation>
+public class ModuleServiceInvocationOption : ModuleOptions<ModuleServiceInvocation>
 {
     /// <summary>
     /// Whether to use a distributed call provider
@@ -37,7 +38,7 @@ public class ModuleServiceInvocationOption : MoModuleOption<ModuleServiceInvocat
 /// <summary>
 /// Service Call Module Configuration Guide
 /// </summary>
-public class ModuleServiceInvocationGuide : MoModuleGuide<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>
+public class ModuleServiceInvocationGuide : ModuleGuide<ModuleServiceInvocation, ModuleServiceInvocationOption, ModuleServiceInvocationGuide>
 {
     private const string SET_PROVIDER = nameof(SET_PROVIDER);
 

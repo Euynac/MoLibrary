@@ -14,7 +14,8 @@ using Monica.Authority.Identity.Services;
 using Monica.Authority.Localization;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -34,8 +35,8 @@ public static class ModuleAuthenticationBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Authentication)]
-public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
+[ModuleKey(BuiltInModuleKey.Authentication)]
+public class ModuleAuthentication(ModuleAuthenticationOption option) : ModuleBase<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -144,7 +145,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : MoModule<
     }
 }
 
-public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
+public class ModuleAuthenticationGuide : ModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
@@ -171,7 +172,7 @@ public class ModuleAuthenticationGuide : MoModuleGuide<ModuleAuthentication, Mod
     }
 }
 
-public class ModuleAuthenticationOption : MoModuleOptionWithMinimalApi<ModuleAuthentication>
+public class ModuleAuthenticationOption : MinimalApiModuleOptions<ModuleAuthentication>
 {
     // Dangerous pitfall: the secret must exceed 128 bits, otherwise pad it to that length, and keep the same secret instead of generating it dynamically
     public SymmetricSecurityKey SecurityKey => new(Encoding.ASCII.GetBytes(Secret.PadRight(512 / 8, '\0')));

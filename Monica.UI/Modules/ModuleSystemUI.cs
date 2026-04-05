@@ -1,10 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Dashboard;
-using Monica.Core.Modularity.Dashboard.Facades;
-using Monica.Core.Modularity.Dashboard.Interfaces;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Pages;
 using MudBlazor;
@@ -29,19 +26,10 @@ public static class ModuleSystemUIBuilderExtensions
 /// <summary>
 /// Module system dashboard UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.ModuleSystemUI)]
+[ModuleKey(BuiltInModuleKey.ModuleSystemUI)]
 public class ModuleSystemUI(ModuleSystemUIOption option)
-    : MoModule<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>(option)
+    : ModuleBase<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>(option)
 {
-    /// <summary>
-    /// Registers dashboard query services and operational support services.
-    /// </summary>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddSingleton<IModuleSystemStatusService, ModuleSystemStatusService>();
-        services.AddSingleton<ModuleSystemQueryFacade>();
-    }
-
     /// <summary>
     /// Declares the shell dependency and page registration.
     /// </summary>
@@ -52,6 +40,7 @@ public class ModuleSystemUI(ModuleSystemUIOption option)
             return;
         }
 
+        DependsOnModule<ModuleSystemGuide>().Register();
         DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry => registry.RegisterLocalizedComponent<ModuleSystemPage>(
                 ModuleSystemPage.MODULE_SYSTEM_DASHBOARD_URL,
@@ -67,14 +56,14 @@ public class ModuleSystemUI(ModuleSystemUIOption option)
 /// Fluent guide for the module system dashboard UI module.
 /// </summary>
 public class ModuleSystemUIGuide
-    : MoModuleGuide<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>
+    : ModuleGuide<ModuleSystemUI, ModuleSystemUIOption, ModuleSystemUIGuide>
 {
 }
 
 /// <summary>
 /// Options for the module system dashboard UI module.
 /// </summary>
-public class ModuleSystemUIOption : MoModuleOption<ModuleSystemUI>
+public class ModuleSystemUIOption : ModuleOptions<ModuleSystemUI>
 {
     /// <summary>
     /// Gets or sets whether the dashboard page should be disabled.

@@ -11,7 +11,8 @@ using Monica.Configuration.Model;
 using Monica.Configuration.Providers;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -31,8 +32,8 @@ public static class ModuleConfigurationBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Configuration)]
-public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IWantIterateBusinessTypes
+[ModuleKey(BuiltInModuleKey.Configuration)]
+public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
@@ -129,12 +130,12 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : MoModule<Mo
    
 }
 
-public class ModuleConfigurationGuide : MoModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
+public class ModuleConfigurationGuide : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
 
 }
 
-public class ModuleConfigurationOption : MoModuleOptionWithMinimalApi<ModuleConfiguration>
+public class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfiguration>
 {
 
     /// <summary>

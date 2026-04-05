@@ -14,7 +14,8 @@ using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -40,9 +41,9 @@ public static class ModuleRAGBuilderExtensions
 /// <summary>
 /// RAG (Retrieval-Augmented Generation) module.
 /// </summary>
-[ModuleKey(EMoModuleKey.RAG)]
+[ModuleKey(BuiltInModuleKey.RAG)]
 public class ModuleRAG(ModuleRAGOption option)
-    : MoModule<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(option)
+    : ModuleBase<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -70,7 +71,7 @@ public class ModuleRAG(ModuleRAGOption option)
 /// <summary>
 /// RAG module options.
 /// </summary>
-public class ModuleRAGOption : MoModuleOption<ModuleRAG>
+public class ModuleRAGOption : ModuleOptions<ModuleRAG>
 {
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
     public int DefaultTopK { get; set; } = 5;
@@ -122,7 +123,7 @@ public class ModuleRAGOption : MoModuleOption<ModuleRAG>
 /// <summary>
 /// Qdrant-specific settings for the RAG vector store provider.
 /// </summary>
-public class ModuleRAGQdrantOption : IMoModuleExtraOption<ModuleRAG>
+public class ModuleRAGQdrantOption : IModuleExtraOptions<ModuleRAG>
 {
     /// <summary>
     /// Qdrant host name.
@@ -149,7 +150,7 @@ public class ModuleRAGQdrantOption : IMoModuleExtraOption<ModuleRAG>
 /// RAG module configuration guide.
 /// </summary>
 public class ModuleRAGGuide
-    : MoModuleGuide<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>
+    : ModuleGuide<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>
 {
     private const string CONFIG_INDEX_STATE_STORE = nameof(CONFIG_INDEX_STATE_STORE);
     private const string CONFIG_SOURCE_STORE = nameof(CONFIG_SOURCE_STORE);

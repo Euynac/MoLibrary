@@ -10,7 +10,8 @@ using Monica.Core.Localization;
 using Monica.Core.Localization.Localizers;
 using Monica.Core.Localization.Models;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -30,9 +31,9 @@ public static class ModuleLocalizationBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Localization)]
+[ModuleKey(BuiltInModuleKey.Localization)]
 public class ModuleLocalization(ModuleLocalizationOption option)
-    : MoModule<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IBusinessTypeIterator
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
     private readonly List<Type> _discoveredResourceMarkerTypes = [];
@@ -97,7 +98,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     }
 }
 
-public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
+public class ModuleLocalizationGuide : ModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
 {
     public ModuleLocalizationGuide()
     {
@@ -105,13 +106,13 @@ public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleL
         ConfigureApplicationBuilder(ctx =>
         {
             ctx.ApplicationBuilder.UseRequestLocalization();
-        }, EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
     }
 
     /// <summary>
     /// Manually registers a localization resource marker type for Monica modules and other reusable libraries.
     /// Use this method when a resource type should not depend on the host application's business-type scan.
-    /// Host or business application resource types should continue to rely on automatic discovery through <see cref="IWantIterateBusinessTypes"/>.
+    /// Host or business application resource types should continue to rely on automatic discovery through <see cref="IBusinessTypeIterator"/>.
     /// </summary>
     public ModuleLocalizationGuide AddResource<TResource>() where TResource : class, IMoLocalizationResource
     {
@@ -128,7 +129,7 @@ public class ModuleLocalizationGuide : MoModuleGuide<ModuleLocalization, ModuleL
     }
 }
 
-public class ModuleLocalizationOption : MoModuleOption<ModuleLocalization>
+public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
 {
     /// <summary>
     /// Default culture when no culture is specified. Default: "zh-CN"
@@ -157,7 +158,7 @@ public class ModuleLocalizationOption : MoModuleOption<ModuleLocalization>
     /// <summary>
     /// Manually registered localization resource marker types.
     /// Built-in Monica modules should add their resource types through <see cref="ModuleLocalizationGuide.AddResource{TResource}"/>
-    /// instead of relying on <see cref="IWantIterateBusinessTypes"/>, which is intended for the host application's scanned types.
+    /// instead of relying on <see cref="IBusinessTypeIterator"/>, which is intended for the host application's scanned types.
     /// </summary>
     public List<Type> ResourceMarkerTypes { get; set; } = [];
 }

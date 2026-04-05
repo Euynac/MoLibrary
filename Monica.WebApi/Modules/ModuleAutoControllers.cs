@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.WebApi.AutoControllers.Abstractions;
 using Monica.WebApi.AutoControllers.Abstractions.Internal;
@@ -38,9 +39,9 @@ public static class ModuleAutoControllersBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.AutoControllers)]
+[ModuleKey(BuiltInModuleKey.AutoControllers)]
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
-    : MoModule<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IWantIterateBusinessTypes
+    : ModuleBase<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IBusinessTypeIterator
 {
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
@@ -100,13 +101,13 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
     }
 }
 
-public class ModuleAutoControllersGuide : MoModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
+public class ModuleAutoControllersGuide : ModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
     ModuleAutoControllersGuide>
 {
 
 }
 
-public class ModuleAutoControllersOption : MoModuleOption<ModuleAutoControllers>
+public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>
 {
     internal HashSet<Type> ApplicationPartTypes { get; private set; } = [];
 

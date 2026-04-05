@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.ObjectMapping.Abstractions;
 using Monica.Core.ObjectMapping.Providers.Mapster;
@@ -35,8 +36,8 @@ public static class ModuleObjectMappingBuilderExtensions
 /// <summary>
 /// Provides the Mapster-based object mapping capability.
 /// </summary>
-[ModuleKey(EMoModuleKey.ObjectMapping)]
-public class ModuleObjectMapping(ModuleObjectMappingOption option) : MoModule<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
+[ModuleKey(BuiltInModuleKey.ObjectMapping)]
+public class ModuleObjectMapping(ModuleObjectMappingOption option) : ModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -102,11 +103,11 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : MoModule<Mo
     }
 }
 
-public class ModuleObjectMappingGuide : MoModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
+public class ModuleObjectMappingGuide : ModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
 {
 }
 
-public class ModuleObjectMappingOption : MoModuleOptionWithMinimalApi<ModuleObjectMapping>
+public class ModuleObjectMappingOption : MinimalApiModuleOptions<ModuleObjectMapping>
 {
     /// <summary>
     /// Enables generation of debuggable Mapster mapping assemblies for manual troubleshooting.

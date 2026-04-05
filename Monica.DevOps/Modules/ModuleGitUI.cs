@@ -1,6 +1,7 @@
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DevOps.Git.Pages;
 using Monica.DevOps.Localization;
@@ -29,9 +30,9 @@ public static class ModuleGitUIBuilderExtensions
 /// <summary>
 /// Git dashboard UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.GitUI)]
+[ModuleKey(BuiltInModuleKey.GitUI)]
 public class ModuleGitUI(ModuleGitUIOption option)
-    : MoModule<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
+    : ModuleBase<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>(option)
 {
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -61,14 +62,14 @@ public class ModuleGitUI(ModuleGitUIOption option)
 /// <summary>
 /// Fluent guide for the Git dashboard UI module.
 /// </summary>
-public class ModuleGitUIGuide : MoModuleGuide<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>
+public class ModuleGitUIGuide : ModuleGuide<ModuleGitUI, ModuleGitUIOption, ModuleGitUIGuide>
 {
 }
 
 /// <summary>
 /// Options for the Git dashboard UI module.
 /// </summary>
-public class ModuleGitUIOption : MoModuleOption<ModuleGitUI>
+public class ModuleGitUIOption : ModuleOptions<ModuleGitUI>
 {
     /// <summary>
     /// Gets or sets whether the dashboard page should be disabled.

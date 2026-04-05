@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.DynamicProxy.Abstractions;
 using Monica.DependencyInjection.DynamicProxy.Models;
@@ -27,14 +28,14 @@ public static class ModuleDynamicProxyBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DynamicProxy)]
+[ModuleKey(BuiltInModuleKey.DynamicProxy)]
 public class ModuleDynamicProxy(ModuleDynamicProxyOption option)
-    : MoModule<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>(option)
+    : ModuleBase<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>(option)
 {
 }
 
 public class
-    ModuleDynamicProxyGuide : MoModuleGuide<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>
+    ModuleDynamicProxyGuide : ModuleGuide<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>
 {
     private const string CONFIG_CORE_SERVICES = nameof(CONFIG_CORE_SERVICES);
 
@@ -46,7 +47,7 @@ public class
             context.Services.AddTransient(typeof(AsyncDeterminationInterceptorAdapter<>));
             DynamicProxyServiceRegistrar.ApplyInterceptors(context.Services,
                 context.ModuleOption);
-        }, EMoModuleOrder.PostConfig, key: CONFIG_CORE_SERVICES);
+        }, ModuleRegistrationOrder.PostConfig, key: CONFIG_CORE_SERVICES);
         return this;
     }
 
@@ -85,7 +86,7 @@ public class
     }
 }
 
-public class ModuleDynamicProxyOption : MoModuleOption<ModuleDynamicProxy>
+public class ModuleDynamicProxyOption : ModuleOptions<ModuleDynamicProxy>
 {
     /// <summary>
     /// Configured proxy kinds for specific types.

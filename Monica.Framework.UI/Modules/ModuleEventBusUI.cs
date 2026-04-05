@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Pages;
@@ -32,9 +33,9 @@ public static class ModuleEventBusUIBuilderExtensions
 /// <summary>
 /// Event bus UI module
 /// </summary>
-[ModuleKey(EMoModuleKey.EventBusUI)]
+[ModuleKey(BuiltInModuleKey.EventBusUI)]
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
-    : MoModule<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
+    : ModuleBase<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -160,14 +161,14 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 /// <summary>
 /// EventBusUI Module Wizard
 /// </summary>
-public class ModuleEventBusUIGuide : MoModuleGuide<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>
+public class ModuleEventBusUIGuide : ModuleGuide<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>
 {
 }
 
 /// <summary>
 /// EventBusUI module options
 /// </summary>
-public class ModuleEventBusUIOption : MoModuleOptionWithMinimalApi<ModuleEventBusUI>
+public class ModuleEventBusUIOption : MinimalApiModuleOptions<ModuleEventBusUI>
 {
     /// <summary>
     /// Whether to disable the event bus monitoring page

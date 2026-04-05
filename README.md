@@ -154,7 +154,7 @@ app.Run();
 
 ### Module Pattern
 
-Monica's architecture is built around the `MoModule` concept. Each module consists of four components:
+Monica's architecture is built around the `ModuleBase` pattern. Each module consists of four components:
 
 1. **`Module{Name}Option`** - Configuration options for the module
 2. **`Module{Name}Guide`** - Fluent API guide for additional configuration

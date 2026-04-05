@@ -152,7 +152,7 @@ app.Run();
 
 ### 模块模式
 
-Monica 的架构围绕 `MoModule` 概念构建。每个模块由四个组件组成：
+Monica 的架构围绕 `ModuleBase` 模式构建。每个模块由四个组件组成：
 
 1. **`Module{Name}Option`** - 模块的配置选项
 2. **`Module{Name}Guide`** - 用于额外配置的流式 API 向导

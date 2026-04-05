@@ -7,7 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.ServiceDiscovery.Abstractions;
@@ -24,8 +25,8 @@ using Polly.Retry;
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
-[ModuleKey(EMoModuleKey.ServiceDiscovery)]
-public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : MoModule<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(option)
+[ModuleKey(BuiltInModuleKey.ServiceDiscovery)]
+public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : ModuleBase<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -147,7 +148,7 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : MoMod
     }
 }
 
-public class ModuleServiceDiscoveryGuide : MoModuleGuide<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>
+public class ModuleServiceDiscoveryGuide : ModuleGuide<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>
 {
     private const string SET_STATE_STORE = nameof(SET_STATE_STORE);
 
@@ -281,7 +282,7 @@ public static class ModuleServiceDiscoveryBuilderExtensions
     }
 }
 
-public class ModuleServiceDiscoveryOption : MoModuleOptionWithMinimalApi<ModuleServiceDiscovery>
+public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServiceDiscovery>
 {
     /// <summary>
     /// Indicates whether the current microservice acts as the registry server.

@@ -1,5 +1,6 @@
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Dapr.Services;
 
@@ -15,9 +16,9 @@ public static class ModuleDaprRpcClientBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.DaprRpcClient)]
+[ModuleKey(BuiltInModuleKey.DaprRpcClient)]
 public class ModuleDaprRpcClient(ModuleDaprRpcClientOption option)
-    : MoModule<ModuleDaprRpcClient, ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>(option)
+    : ModuleBase<ModuleDaprRpcClient, ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -29,13 +30,13 @@ public class ModuleDaprRpcClient(ModuleDaprRpcClientOption option)
     }
 }
 
-public class ModuleDaprRpcClientGuide : MoModuleGuide<ModuleDaprRpcClient,
+public class ModuleDaprRpcClientGuide : ModuleGuide<ModuleDaprRpcClient,
     ModuleDaprRpcClientOption, ModuleDaprRpcClientGuide>
 {
 
 }
 
-public class ModuleDaprRpcClientOption : MoModuleOption<ModuleDaprRpcClient>
+public class ModuleDaprRpcClientOption : ModuleOptions<ModuleDaprRpcClient>
 {
     /// <summary>
     /// Timeout applied to RPC calls.

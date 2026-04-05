@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Models.Internal;
+using Monica.Core.Modularity.Services;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
@@ -22,13 +24,13 @@ public class EventBusProviderDiscoveryService(
     /// <summary>
     /// Cached provider snapshots for efficient lookup
     /// </summary>
-    private List<ModuleSnapshot>? _providerSnapshots;
+    private List<ModuleRuntimeSnapshot>? _providerSnapshots;
 
     /// <summary>
     /// Gets or initializes the cached provider snapshots
     /// </summary>
-    private List<ModuleSnapshot> ProviderSnapshots =>
-        _providerSnapshots ??= MoModuleRegisterCentre.GetModuleProviders(EMoModuleKey.EventBus);
+    private List<ModuleRuntimeSnapshot> ProviderSnapshots =>
+        _providerSnapshots ??= ModuleRegistry.GetModuleProviders(BuiltInModuleKey.EventBus);
 
     #region Provider Discovery
 
@@ -56,7 +58,7 @@ public class EventBusProviderDiscoveryService(
             }
 
             // 3. Get the Keyed service key from the module registration
-            var keyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(typeof(ModuleEventBus));
+            var keyedServiceKeys = ModuleRegistry.GetKeyedServiceKeys(typeof(ModuleEventBus));
 
             // 4. Get Keyed Provider
             foreach (var key in keyedServiceKeys)
@@ -90,7 +92,7 @@ public class EventBusProviderDiscoveryService(
 
             if (daprModuleType != null)
             {
-                var daprKeyedServiceKeys = MoModuleRegisterCentre.GetKeyedServiceKeys(daprModuleType);
+                var daprKeyedServiceKeys = ModuleRegistry.GetKeyedServiceKeys(daprModuleType);
                 foreach (var key in daprKeyedServiceKeys)
                 {
                     try
@@ -238,7 +240,7 @@ public class EventBusProviderDiscoveryService(
         try
         {
             // Find a snapshot of ModuleEventBus
-            var eventBusSnapshot = MoModuleRegisterCentre.ModuleSnapshots
+            var eventBusSnapshot = ModuleRegistry.ModuleSnapshots
                 .FirstOrDefault(s => s.ModuleType == typeof(ModuleEventBus));
 
             if (eventBusSnapshot == null) return null;
@@ -254,7 +256,7 @@ public class EventBusProviderDiscoveryService(
     }
 
     /// <summary>
-    /// Gets distributed provider option information using ModuleSnapshot's generic option retrieval
+    /// Gets distributed provider option information using ModuleRuntimeSnapshot's generic option retrieval
     /// </summary>
     private (Type? optionType, object? optionInstance) GetDistributedProviderOptionInfo(string? serviceKey, IDistributedEventBus provider)
     {
@@ -270,7 +272,7 @@ public class EventBusProviderDiscoveryService(
                 // Match by checking if the provider type name contains the module's display name
                 if (providerTypeName.Contains(moduleProvider.DisplayName, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Use ModuleSnapshot's generic GetKeyedOption method
+                    // Use ModuleRuntimeSnapshot's generic GetKeyedOption method
                     var (optionType, optionInstance) = snapshot.GetKeyedOption(serviceProvider, serviceKey);
                     return (optionType, optionInstance);
                 }

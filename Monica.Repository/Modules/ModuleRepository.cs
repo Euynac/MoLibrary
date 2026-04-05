@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Repository;
 using Monica.Repository.Entity.Abstractions;
@@ -33,9 +34,9 @@ public static class ModuleRepositoryBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Repository)]
+[ModuleKey(BuiltInModuleKey.Repository)]
 public class ModuleRepository(ModuleRepositoryOption option)
-    : MoModule<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
+    : ModuleBase<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -49,7 +50,7 @@ public class ModuleRepository(ModuleRepositoryOption option)
     }
 }
 
-public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
+public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
 
     public ModuleRepositoryGuide AddRepositoryDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
@@ -111,7 +112,7 @@ public class ModuleRepositoryGuide : MoModuleGuide<ModuleRepository, ModuleRepos
     }
 }
 
-public class ModuleRepositoryOption : MoModuleOption<ModuleRepository>
+public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
 {
     /// <summary>
     /// Use User-defined function mapping to filter data.

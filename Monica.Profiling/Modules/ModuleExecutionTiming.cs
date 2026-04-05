@@ -5,7 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Profiling.ExecutionTiming.Abstractions;
@@ -34,9 +35,9 @@ public static class ModuleExecutionTimingBuilderExtensions
 /// <summary>
 /// Execution-timing module.
 /// </summary>
-[ModuleKey(EMoModuleKey.ExecutionTiming)]
+[ModuleKey(BuiltInModuleKey.ExecutionTiming)]
 public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
-    : MoModule<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
+    : ModuleBase<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -105,7 +106,7 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
 /// Configuration guide for the execution-timing module.
 /// </summary>
 public class ModuleExecutionTimingGuide
-    : MoModuleGuide<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>
+    : ModuleGuide<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>
 {
     /// <summary>
     /// Aggregates timing samples immediately on the caller thread.
@@ -143,7 +144,7 @@ public class ModuleExecutionTimingGuide
 /// <summary>
 /// Configuration options for the execution-timing module.
 /// </summary>
-public class ModuleExecutionTimingOption : MoModuleOptionWithMinimalApi<ModuleExecutionTiming>
+public class ModuleExecutionTimingOption : MinimalApiModuleOptions<ModuleExecutionTiming>
 {
     /// <summary>
     /// Controls whether execution-timing samples are aggregated inline or by a background batching service.

@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Framework.UI.Localization;
@@ -33,9 +34,9 @@ public static class ModuleSystemInfoUIBuilderExtensions
 /// <summary>
 /// System information UI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.SystemInfoUI)]
+[ModuleKey(BuiltInModuleKey.SystemInfoUI)]
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
-    : MoModule<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
+    : ModuleBase<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -85,7 +86,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 /// <summary>
 /// SystemInfoUI module guide.
 /// </summary>
-public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
+public class ModuleSystemInfoUIGuide : ModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
 {
     /// <summary>
     /// Adds a custom shortcut link to the system information page.
@@ -133,7 +134,7 @@ public class ModuleSystemInfoUIGuide : MoModuleGuide<ModuleSystemInfoUI, ModuleS
 /// <summary>
 /// SystemInfoUI module options.
 /// </summary>
-public class ModuleSystemInfoUIOption : MoModuleOptionWithMinimalApi<ModuleSystemInfoUI>
+public class ModuleSystemInfoUIOption : MinimalApiModuleOptions<ModuleSystemInfoUI>
 {
     /// <summary>
     /// Gets or sets a value indicating whether the system information page is disabled.

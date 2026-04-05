@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -22,12 +23,12 @@ public static class ModuleCorsBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Cors)]
-public class ModuleCors(ModuleCorsOption option) : MoModule<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
+[ModuleKey(BuiltInModuleKey.Cors)]
+public class ModuleCors(ModuleCorsOption option) : ModuleBase<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
 {
 }
 
-public class ModuleCorsGuide : MoModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
+public class ModuleCorsGuide : ModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
 {
     /// <summary>
     /// Configure a permissive CORS policy (intended for development/testing).
@@ -67,4 +68,4 @@ public class ModuleCorsGuide : MoModuleGuide<ModuleCors, ModuleCorsOption, Modul
     }
 }
 
-public class ModuleCorsOption : MoModuleOption<ModuleCors>;
+public class ModuleCorsOption : ModuleOptions<ModuleCors>;

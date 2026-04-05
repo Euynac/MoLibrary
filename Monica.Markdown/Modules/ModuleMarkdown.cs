@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Events;
@@ -30,9 +31,9 @@ public static class ModuleMarkdownBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Markdown)]
+[ModuleKey(BuiltInModuleKey.Markdown)]
 public class ModuleMarkdown(ModuleMarkdownOption option)
-    : MoModule<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(option)
+    : ModuleBase<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -49,7 +50,7 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
 }
 
 public class ModuleMarkdownGuide
-    : MoModuleGuide<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>
+    : ModuleGuide<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>
 {
     /// <summary>
     /// Registers a markdown document group for scanning.
@@ -169,7 +170,7 @@ public class ModuleMarkdownGuide
     }
 }
 
-public class ModuleMarkdownOption : MoModuleOption<ModuleMarkdown>
+public class ModuleMarkdownOption : ModuleOptions<ModuleMarkdown>
 {
     /// <summary>
     /// Registered document group descriptors, populated by Guide.

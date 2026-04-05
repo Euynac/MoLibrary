@@ -4,7 +4,8 @@ using Monica.AI.UI.Pages;
 using Monica.AI.UI.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using MudBlazor;
 
@@ -32,9 +33,9 @@ public static class ModuleRAGUIBuilderExtensions
 /// RAG UI module.
 /// Provides Blazor-based RAG debug and management interface.
 /// </summary>
-[ModuleKey(EMoModuleKey.RAGUI)]
+[ModuleKey(BuiltInModuleKey.RAGUI)]
 public class ModuleRAGUI(ModuleRAGUIOption option)
-    : MoModule<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
+    : ModuleBase<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -110,14 +111,14 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
 /// RAG UI module configuration guide.
 /// </summary>
 public class ModuleRAGUIGuide
-    : MoModuleGuide<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>
+    : ModuleGuide<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>
 {
 }
 
 /// <summary>
 /// RAG UI module configuration options.
 /// </summary>
-public class ModuleRAGUIOption : MoModuleOption<ModuleRAGUI>
+public class ModuleRAGUIOption : ModuleOptions<ModuleRAGUI>
 {
     /// <summary>
     /// Disable the RAG management page.

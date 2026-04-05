@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -24,8 +25,8 @@ public static class ModuleDaprBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.Dapr)]
-public class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
+[ModuleKey(BuiltInModuleKey.Dapr)]
+public class ModuleDapr(ModuleDaprOption option) : ModuleBase<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -55,12 +56,12 @@ public class ModuleDapr(ModuleDaprOption option) : MoModule<ModuleDapr, ModuleDa
     }
 }
 
-public class ModuleDaprGuide : MoModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>
+public class ModuleDaprGuide : ModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>
 {
 
 }
 
-public class ModuleDaprOption : MoModuleOptionWithMinimalApi<ModuleDapr>
+public class ModuleDaprOption : MinimalApiModuleOptions<ModuleDapr>
 {
     
 }

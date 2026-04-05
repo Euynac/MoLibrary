@@ -12,7 +12,8 @@ using Monica.AI.Services;
 using Monica.AI.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -40,9 +41,9 @@ public static class ModuleAIBuilderExtensions
 /// <summary>
 /// AI module.
 /// </summary>
-[ModuleKey(EMoModuleKey.AI)]
+[ModuleKey(BuiltInModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
-    : MoModule<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
+    : ModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -77,7 +78,7 @@ public class ModuleAI(ModuleAIOption option)
 /// <summary>
 /// Builder for AI module configuration.
 /// </summary>
-public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
+public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
     /// <summary>
     /// Adds an OpenAI provider.
@@ -99,7 +100,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new OpenAIProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
     }
@@ -125,7 +126,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
     }
@@ -150,7 +151,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new FakeProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
-        }, secondKey: options.ProviderId, order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
     }
@@ -180,7 +181,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
             var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
             var provider = providerFactory(context.ApplicationBuilder.ApplicationServices);
             manager.RegisterProvider(provider);
-        }, secondKey: $"custom-{typeof(TProvider).Name}", order: EMoModuleApplicationMiddlewaresOrder.BeforeUseRouting);
+        }, secondKey: $"custom-{typeof(TProvider).Name}", order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
     }
@@ -213,7 +214,7 @@ public class ModuleAIGuide : MoModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGui
 /// <summary>
 /// Options for the AI module.
 /// </summary>
-public class ModuleAIOption : MoModuleOption<ModuleAI>
+public class ModuleAIOption : ModuleOptions<ModuleAI>
 {
     internal List<AIModelInfo> ModelRegistrations { get; } = [];
 

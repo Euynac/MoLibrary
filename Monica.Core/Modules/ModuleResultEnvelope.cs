@@ -2,7 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Core.Results.Services;
@@ -24,9 +25,9 @@ public static class ModuleResultEnvelopeBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.ResultEnvelope)]
+[ModuleKey(BuiltInModuleKey.ResultEnvelope)]
 public class ModuleResultEnvelope(ModuleResultEnvelopeOption option)
-    : MoModule<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>(option)
+    : ModuleBase<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -47,7 +48,7 @@ public class ModuleResultEnvelope(ModuleResultEnvelopeOption option)
     }
 }
 
-public class ModuleResultEnvelopeGuide : MoModuleGuide<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>
+public class ModuleResultEnvelopeGuide : ModuleGuide<ModuleResultEnvelope, ModuleResultEnvelopeOption, ModuleResultEnvelopeGuide>
 {
     /// <summary>
     /// Configures top-level JSON field names for Monica result envelopes.
@@ -78,7 +79,7 @@ public class ModuleResultEnvelopeGuide : MoModuleGuide<ModuleResultEnvelope, Mod
     }
 }
 
-public class ModuleResultEnvelopeOption : MoModuleOption<ModuleResultEnvelope>
+public class ModuleResultEnvelopeOption : ModuleOptions<ModuleResultEnvelope>
 {
     /// <summary>
     /// Gets the top-level JSON field names used for Monica result envelopes.

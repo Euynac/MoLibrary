@@ -3,7 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Abstractions.Handlers;
@@ -30,10 +31,10 @@ public static class ModuleEventBusBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.EventBus)]
+[ModuleKey(BuiltInModuleKey.EventBus)]
 public class ModuleEventBus(ModuleEventBusOption option)
-    : MoModule<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
-      IWantIterateBusinessTypes
+    : ModuleBase<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
+      IBusinessTypeIterator
 {
     private readonly EventBusAutoDiscovery _autoDiscovery = new();
 
@@ -88,7 +89,7 @@ public class ModuleEventBus(ModuleEventBusOption option)
     }
 }
 
-public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
+public class ModuleEventBusGuide : ModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
 {
     /// <summary>
     /// Registers the shared distributed event bus provider for the default EventBus instance
@@ -169,7 +170,7 @@ public class ModuleEventBusGuide : MoModuleGuide<ModuleEventBus, ModuleEventBusO
     }
 }
 
-public class ModuleEventBusOption : MoModuleOptionWithMinimalApi<ModuleEventBus>
+public class ModuleEventBusOption : MinimalApiModuleOptions<ModuleEventBus>
 {
     /// <summary>
     /// Gets or sets a value indicating whether automatic discovery is disabled for types that

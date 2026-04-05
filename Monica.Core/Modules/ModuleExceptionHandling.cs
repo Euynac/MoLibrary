@@ -6,7 +6,8 @@ using Monica.Core;
 using Monica.Core.ExceptionHandling.Abstractions;
 using Monica.Core.ExceptionHandling.Services;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Tool.Extensions;
 using Monica.Core.Results;
@@ -29,9 +30,9 @@ public static class ModuleExceptionHandlingBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.ExceptionHandling)]
+[ModuleKey(BuiltInModuleKey.ExceptionHandling)]
 public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
-    : MoModule<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
+    : ModuleBase<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
 {
     /// <summary>
     /// Adds the ASP.NET Core exception handling middleware.
@@ -90,7 +91,7 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
 }
 
 public class ModuleExceptionHandlingGuide
-    : MoModuleGuide<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>
+    : ModuleGuide<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>
 {
     public ModuleExceptionHandlingGuide AddExceptionMapper<TMapper>() where TMapper : class, IExceptionResponseMapper
     {
@@ -102,6 +103,6 @@ public class ModuleExceptionHandlingGuide
     }
 }
 
-public class ModuleExceptionHandlingOption : MoModuleOption<ModuleExceptionHandling>
+public class ModuleExceptionHandlingOption : ModuleOptions<ModuleExceptionHandling>
 {
 }

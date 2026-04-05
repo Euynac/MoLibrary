@@ -8,7 +8,8 @@ using Monica.Core.JsonSerialization.Annotations;
 using Monica.Core.JsonSerialization.Services;
 using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
-using Monica.Core.Modularity.Interfaces;
+using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -28,9 +29,9 @@ public static class ModuleJsonSerializationBuilderExtensions
     }
 }
 
-[ModuleKey(EMoModuleKey.JsonSerialization)]
+[ModuleKey(BuiltInModuleKey.JsonSerialization)]
 public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
-    : MoModule<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(option)
+    : ModuleBase<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -56,11 +57,11 @@ public class ModuleJsonSerialization(ModuleJsonSerializationOption option)
     }
 }
 
-public class ModuleJsonSerializationGuide : MoModuleGuide<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>
+public class ModuleJsonSerializationGuide : ModuleGuide<ModuleJsonSerialization, ModuleJsonSerializationOption, ModuleJsonSerializationGuide>
 {
 }
 
-public class ModuleJsonSerializationOption : MoModuleOption<ModuleJsonSerialization>
+public class ModuleJsonSerializationOption : ModuleOptions<ModuleJsonSerialization>
 {
     public Action<JsonSerializerOptions>? ExtendAction { get; set; }
 
