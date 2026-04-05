@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
-using Monica.Core.Mediator;
 using Monica.Tool.Extensions;
 
-namespace Monica.Framework.Features.Decorators;
+namespace Monica.Core.Mediator.Extensions;
 
 public class LoggingBehavior<TRequest, TResponse>(ILogger<LoggingBehavior<TRequest, TResponse>> logger) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
