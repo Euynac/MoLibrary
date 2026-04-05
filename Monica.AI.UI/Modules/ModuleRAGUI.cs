@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
-using Monica.AI.UI.Services;
+using Monica.AI.UI.UIRAG.State;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -37,15 +37,10 @@ public static class ModuleRAGUIBuilderExtensions
 public class ModuleRAGUI(ModuleRAGUIOption option)
     : ModuleBase<ModuleRAGUI, ModuleRAGUIOption, ModuleRAGUIGuide>(option)
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<RAGMarkdownDocumentResolver>();
-        services.AddScoped<RAGChunkViewCoordinator>();
-        services.AddScoped<RAGBatchIndexCoordinator>();
-        services.AddScoped<RAGUIService>();
-        services.AddScoped<IEmbeddingModelManagementUIService, EmbeddingModelManagementUIService>();
-        services.AddScoped<IChunkerManagementUIService, ChunkerManagementUIService>();
+        services.AddScoped<RAGQueuePollingState>();
+        services.AddScoped<RAGManagePageState>();
     }
 
     public override void ClaimDependencies()
@@ -65,8 +60,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIAIRAGManagePage>(
-                        UIAIRAGManagePage.PAGE_URL,
+                    p.RegisterLocalizedComponent<UIRAGManagePage>(
+                        UIRAGManagePage.PAGE_URL,
                         "Pages:RAGManage:Title",
                         Icons.Material.Filled.Storage,
                         "Categories:AI",
@@ -80,8 +75,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIAIRAGDebugPage>(
-                        UIAIRAGDebugPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<UIRAGDebugPage>(
+                        UIRAGDebugPage.PAGE_URL,
                         "Pages:RAGDebug:Title",
                         Icons.Material.Filled.ManageSearch,
                         "Categories:AI",
@@ -95,8 +90,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIAIRAGChunkersPage>(
-                        UIAIRAGChunkersPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<UIRAGChunkersPage>(
+                        UIRAGChunkersPage.PAGE_URL,
                         "Pages:RAGChunkers:Title",
                         Icons.Material.Filled.AccountTree,
                         "Categories:AI",

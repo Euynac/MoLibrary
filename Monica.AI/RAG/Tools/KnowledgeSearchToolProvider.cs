@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
-using Monica.AI.Tools;
+using Monica.AI.Services.Support;
 using Monica.Modules;
 
 namespace Monica.AI.RAG.Tools;

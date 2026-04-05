@@ -8,9 +8,11 @@ using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
+using Monica.AI.RAG.Facades;
 using Monica.AI.Services;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
+using Monica.AI.RAG.Services.Support;
 using Monica.AI.RAG.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -58,6 +60,12 @@ public class ModuleRAG(ModuleRAGOption option)
         services.TryAddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
         services.TryAddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
+        services.AddScoped<MarkdownDocumentResolver>();
+        services.AddScoped<ChunkViewCoordinator>();
+        services.AddScoped<BatchIndexCoordinator>();
+        services.AddScoped<RAGFacade>();
+        services.AddScoped<EmbeddingModelFacade>();
+        services.AddScoped<ChunkerFacade>();
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());

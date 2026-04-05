@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.AI.Abstractions;
+using Monica.AI.Facades;
 using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.Providers.Anthropic;
 using Monica.AI.Providers.Fake;
 using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
-using Monica.AI.Tools;
+using Monica.AI.Services.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -64,14 +65,16 @@ public class ModuleAI(ModuleAIOption option)
 
         // Register provider manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
-        services.AddSingleton<AIProviderManager>();
-        services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderManager>());
+        services.AddSingleton<AIProviderRegistry>();
+        services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderRegistry>());
         services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IAIChatAgentDecorator, ToolInvocationTrackingAgentDecorator>());
 
         // Register chat service
         services.AddSingleton<AIChatService>();
+        services.AddScoped<ChatFacade>();
+        services.AddScoped<ProviderFacade>();
     }
 }
 
@@ -96,7 +99,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
 
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new OpenAIProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
@@ -122,7 +125,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
 
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new AnthropicProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
@@ -147,7 +150,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
 
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
             var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
             var provider = new FakeProvider(options, modelCatalog);
             manager.RegisterProvider(provider);
@@ -178,7 +181,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
     {
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderManager>();
+            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
             var provider = providerFactory(context.ApplicationBuilder.ApplicationServices);
             manager.RegisterProvider(provider);
         }, secondKey: $"custom-{typeof(TProvider).Name}", order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
@@ -204,7 +207,7 @@ public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide
 
             // Note: Session management endpoints removed as sessions are now managed by UI layer.
             // API endpoints should be stateless and not manage sessions.
-            // For stateful chat, use the UI service layer (AIChatUIService).
+            // For stateful chat, use the UI chat coordination layer.
         });
 
         return this;

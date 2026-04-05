@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.Pages;
-using Monica.AI.UI.Services;
+using Monica.AI.UI.UIChat.State;
+using Monica.AI.UI.UIChat.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -41,10 +42,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register UI services
-        services.AddScoped<AIChatUIService>();
-        services.AddScoped<ChatSessionStorage>();
-        services.AddScoped<ChatSessionStateManager>();
-        services.AddScoped<AIProviderUIService>();
+        services.AddScoped<ChatSessionStore>();
+        services.AddScoped<ChatSessionCoordinator>();
     }
 
     public override void ClaimDependencies()
@@ -64,8 +63,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIAIChatPage>(
-                        UIAIChatPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<UIChatPage>(
+                        UIChatPage.PAGE_URL,
                         "Pages:AIChat:Title",
                         Icons.Material.Filled.SmartToy,
                         "Categories:AI",
@@ -79,8 +78,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIAIProviderManagePage>(
-                        UIAIProviderManagePage.PAGE_URL,
+                    p.RegisterLocalizedComponent<UIProviderManagePage>(
+                        UIProviderManagePage.PAGE_URL,
                         "Pages:AIProviderManage:Title",
                         Icons.Material.Filled.Hub,
                         "Categories:AI",

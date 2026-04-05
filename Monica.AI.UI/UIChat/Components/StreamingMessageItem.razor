@@ -1,0 +1,225 @@
+@using Microsoft.Agents.AI
+@using Monica.AI.Extensions
+@using Monica.AI.Models
+@using Monica.UI.Shared.Components.Markdown
+@implements IAsyncDisposable
+
+<div class="message-wrapper assistant-message">
+    <MudStack Row="true" Spacing="2" Class="message-content-stack">
+        <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="message-avatar">
+            <MudIcon Icon="@Icons.Material.Filled.SmartToy" />
+        </MudAvatar>
+        <div class="message-content assistant-bubble">
+            @if (_hasError)
+            {
+                <div class="stream-error">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
+                    <MudText Typo="Typo.body2" Color="Color.Error">@_errorMessage</MudText>
+                </div>
+            }
+            else
+            {
+                @* Reasoning section *@
+                @if (!string.IsNullOrEmpty(_accumulator.FullReasoning))
+                {
+                    <div class="reasoning-section @(_isReasoning ? "reasoning-active" : "")">
+                        @if (_isReasoning)
+                        {
+                            <div class="reasoning-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="reasoning-label">Thinking...</MudText>
+                                <span class="reasoning-pulse"></span>
+                            </div>
+                            <div class="reasoning-body">
+                                <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="reasoning-header reasoning-header-clickable"
+                                 @onclick="ToggleReasoningExpanded">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Class="reasoning-label">
+                                    Thought for @FormatDuration(_reasoningDurationSeconds) seconds
+                                </MudText>
+                                <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                         Size="Size.Small" Class="reasoning-chevron" />
+                            </div>
+                            @if (_reasoningExpanded)
+                            {
+                                <div class="reasoning-body">
+                                    <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+
+                @* Tool call indicator *@
+                @if (_accumulator.ToolCalls.Count > 0)
+                {
+                    <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls"
+                                       EnableDebugMode="@ToolDebugEnabled" />
+                }
+
+                @* Main content *@
+                @if (EnableMarkdown && !string.IsNullOrEmpty(_accumulator.FullContent))
+                {
+                    <MoMarkdown Value="@_accumulator.FullContent" EnableMermaid="true" />
+                }
+                else if (!string.IsNullOrEmpty(_accumulator.FullContent))
+                {
+                    <MudText Typo="Typo.body1" Class="message-text">@_accumulator.FullContent</MudText>
+                }
+                else if (_isStreaming && string.IsNullOrEmpty(_accumulator.FullReasoning))
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="200px" />
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="160px" />
+                }
+                @if (_isStreaming && !string.IsNullOrEmpty(_accumulator.FullContent))
+                {
+                    <span class="typing-indicator"></span>
+                }
+            }
+        </div>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
+    [Parameter] public EventCallback<string> OnStreamComplete { get; set; }
+    [Parameter] public EventCallback<string> OnStreamError { get; set; }
+    [Parameter] public CancellationToken ExternalCancellationToken { get; set; }
+    [Parameter] public bool EnableMarkdown { get; set; } = true;
+    [Parameter] public bool ToolDebugEnabled { get; set; }
+
+    private readonly StreamingContentAccumulator _accumulator = new();
+    private bool _isStreaming = true;
+    private bool _isReasoning;
+    private bool _reasoningExpanded;
+    private double _reasoningDurationSeconds;
+    private bool _hasError;
+    private string? _errorMessage;
+    private CancellationTokenSource? _cts;
+    private bool _hasStarted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && StreamingContent != null && !_hasStarted)
+        {
+            _hasStarted = true;
+            _cts = new CancellationTokenSource();
+            _ = Task.Run(ConsumeStreamAsync);
+        }
+    }
+
+    private async Task ConsumeStreamAsync()
+    {
+        if (StreamingContent == null) return;
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            _cts!.Token,
+            ExternalCancellationToken);
+
+        try
+        {
+            await foreach (var update in StreamingContent.WithCancellation(linkedCts.Token))
+            {
+                var needsRender = false;
+
+                foreach (var content in update.Contents)
+                {
+                    _accumulator.ProcessContent(content);
+
+                    // Track reasoning state for UI
+                    if (content is TextReasoningContent && _accumulator.ReasoningStopwatch.IsRunning)
+                    {
+                        _isReasoning = true;
+                        needsRender = true;
+                    }
+                    else if (content is TextContent && !_accumulator.ReasoningStopwatch.IsRunning && _isReasoning)
+                    {
+                        _reasoningDurationSeconds = _accumulator.ReasoningStopwatch.Elapsed.TotalSeconds;
+                        _isReasoning = false;
+                        needsRender = true;
+                    }
+                    else if (content is TextContent or FunctionCallContent or FunctionResultContent)
+                    {
+                        needsRender = true;
+                    }
+                }
+
+                if (needsRender)
+                {
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is normal behavior - preserve partial content
+        }
+        catch (HttpRequestException ex)
+        {
+            await HandleStreamError($"Network error: {ex.Message}");
+        }
+        catch (TimeoutException ex)
+        {
+            await HandleStreamError($"Request timed out: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            await HandleStreamError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            if (_accumulator.ReasoningStopwatch.IsRunning)
+            {
+                _reasoningDurationSeconds = _accumulator.ReasoningStopwatch.Elapsed.TotalSeconds;
+                _isReasoning = false;
+            }
+            _isStreaming = false;
+            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(() => OnStreamComplete.InvokeAsync(_accumulator.FullContent));
+        }
+    }
+
+    private void ToggleReasoningExpanded()
+    {
+        _reasoningExpanded = !_reasoningExpanded;
+    }
+
+    private static string FormatDuration(double seconds)
+    {
+        return seconds < 1 ? $"{seconds:F1}" : $"{seconds:F1}";
+    }
+
+    private async Task HandleStreamError(string message)
+    {
+        _hasError = true;
+        _errorMessage = message;
+        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(() => OnStreamError.InvokeAsync(message));
+    }
+
+    /// <summary>
+    /// Cancel the ongoing stream
+    /// </summary>
+    public async Task CancelAsync()
+    {
+        if (_cts != null && !_cts.IsCancellationRequested)
+        {
+            await _cts.CancelAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_cts != null)
+        {
+            await _cts.CancelAsync();
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+}

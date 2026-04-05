@@ -1,0 +1,474 @@
+@page "/ai/rag/manage"
+@implements IDisposable
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.UIRAG.Models
+@using Monica.AI.UI.UIRAG.State
+@using Monica.UI.Localization
+@using Monica.Core.Results;
+@inject IStringLocalizer<AIResource> L
+@inject IStringLocalizer<SharedResource> Shared
+
+<PageTitle>@L["RAG:Navigation:Manage"]</PageTitle>
+
+<div class="rag-manage-page">
+    <div class="kb-list-panel">
+        <div class="panel-header">
+            <div class="panel-title-group">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="panel-title-icon" />
+                <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:KnowledgeBase:Title"]</MudText>
+            </div>
+        </div>
+
+        <div class="panel-actions">
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@ShowCreateKBDialog">
+                @L["Common:Create"]
+            </MudButton>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Edit"
+                       Disabled="@(_selectedKB is null)"
+                       OnClick="@ShowEditKBDialog">
+                @L["Common:Edit"]
+            </MudButton>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.Delete"
+                       Disabled="@(_selectedKB is null)"
+                       OnClick="@DeleteSelectedKnowledgeBase">
+                @L["Common:Delete"]
+            </MudButton>
+        </div>
+
+        @if (_isInitialLoading)
+        {
+            <div class="panel-loading-state">
+                <div class="loading-copy">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Primary"
+                             Class="loading-phase-chip">
+                        @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                    </MudChip>
+                    <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                        @_loadingPhaseText
+                    </MudText>
+                </div>
+                <MudProgressLinear Value="@_loadingProgressValue"
+                                   Color="Color.Primary"
+                                   Rounded="true"
+                                   Class="loading-progress" />
+                <div class="loading-skeletons">
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                    <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="kb-list">
+                @foreach (var kb in _knowledgeBases)
+                {
+                    <div class="kb-card @(_selectedKB?.Id == kb.Id ? "selected" : "")"
+                         @onclick="@(() => OnKBSelected(kb))">
+                        <div class="kb-card-content">
+                            <MudText Typo="Typo.body1" Class="kb-name">@kb.Name</MudText>
+                            @if (!string.IsNullOrEmpty(kb.Description))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kb-description">
+                                    @kb.Description
+                                </MudText>
+                            }
+                            <MudText Typo="Typo.caption" Class="kb-stats">
+                                @L["RAG:Debug:KBSidebar:Stats", kb.DocumentCount, kb.ChunkCount]
+                            </MudText>
+                            @if (HasEmbeddingBinding(kb))
+                            {
+                                <MudText Typo="Typo.caption" Class="kb-embedding-model">
+                                    @GetKnowledgeBaseModelDisplay(kb)
+                                </MudText>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (_knowledgeBases.Count == 0)
+            {
+                <div class="kb-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["RAG:KnowledgeBase:EmptyHint"]
+                    </MudText>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="kb-detail-panel">
+        @if (_isInitialLoading)
+        {
+            <div class="detail-loading-state">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Color="Color.Primary"
+                         Class="loading-phase-chip">
+                    @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                </MudChip>
+                <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                    @_loadingPhaseText
+                </MudText>
+                <MudProgressLinear Value="@_loadingProgressValue"
+                                   Color="Color.Primary"
+                                   Rounded="true"
+                                   Class="loading-progress" />
+            </div>
+        }
+        else if (_selectedKB != null)
+        {
+            @if (_isSelectionLoading)
+            {
+                <div class="detail-loading-state">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="Color.Primary"
+                             Class="loading-phase-chip">
+                        @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                    </MudChip>
+                    <MudText Typo="Typo.h6" Class="loading-title">@_selectedKB.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                        @_loadingPhaseText
+                    </MudText>
+                    <MudProgressLinear Value="@_loadingProgressValue"
+                                       Color="Color.Primary"
+                                       Rounded="true"
+                                       Class="loading-progress" />
+                </div>
+            }
+            else
+            {
+                <div class="detail-content">
+                <!-- Embedding Model Selector -->
+                    <div class="embedding-model-section">
+                        <EmbeddingModelSelector AvailableModels="@_availableModels"
+                                                SelectedModelKey="@_currentEmbeddingModelKey"
+                                                SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
+
+                        @if (_availableModels.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
+                                @L["RAG:EmbeddingModel:NotConfigured"]
+                            </MudAlert>
+                        }
+                    </div>
+
+                <!-- Embedding Model Warning -->
+                @if (HasEmbeddingBinding(_selectedKB)
+                    && !string.IsNullOrWhiteSpace(_currentEmbeddingModelKey)
+                    && !string.Equals(_currentEmbeddingModelKey, GetKnowledgeBaseModelKey(_selectedKB), StringComparison.OrdinalIgnoreCase))
+                {
+                    <EmbeddingModelWarning CurrentModelId="@GetModelDisplayByKey(_currentEmbeddingModelKey)"
+                                           KnowledgeBaseModelId="@GetKnowledgeBaseModelDisplay(_selectedKB)" />
+                }
+
+                <!-- KB Detail Header -->
+                <div class="kb-header">
+                    <div class="kb-header-info">
+                        <MudText Typo="Typo.h5">@_selectedKB.Name</MudText>
+                        @if (!string.IsNullOrEmpty(_selectedKB.Description))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@_selectedKB.Description</MudText>
+                        }
+                    </div>
+                    <div class="kb-badges">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Default"
+                                 Icon="@Icons.Material.Filled.Description">
+                            @_selectedKB.DocumentCount @L["RAG:KnowledgeBase:DocumentCount"]
+                        </MudChip>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Color="Color.Default"
+                                 Icon="@Icons.Material.Filled.GridView">
+                            @_selectedKB.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]
+                        </MudChip>
+                        @if (HasEmbeddingBinding(_selectedKB))
+                        {
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Info"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Memory"
+                                     Class="kb-header-model-chip">
+                                @_selectedKB.EmbeddingModelName
+                            </MudChip>
+                            <MudChip T="string"
+                                     Size="Size.Small"
+                                     Color="Color.Secondary"
+                                     Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Hub"
+                                     Class="kb-header-provider-chip">
+                                @GetProviderDisplayLabel(_selectedKB.EmbeddingProviderId, _selectedKB.EmbeddingModelName)
+                            </MudChip>
+                        }
+                    </div>
+                </div>
+
+                @if (ShouldShowMissingVectorWarning())
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Variant="Variant.Outlined"
+                              Class="vector-warning-alert">
+                        <div class="vector-warning-content">
+                            <div class="vector-warning-copy">
+                                <MudText Typo="Typo.subtitle2" Class="vector-warning-title">
+                                    @L["RAG:VectorValidation:MissingVectors:Title"]
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="vector-warning-message">
+                                    @GetMissingVectorWarningMessage()
+                                </MudText>
+                            </div>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Warning"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                       Class="vector-warning-action"
+                                       OnClick="@ReindexSelectedKnowledgeBase"
+                                       Disabled="@(!CanReindexSelectedKnowledgeBase())">
+                                @L["RAG:VectorValidation:MissingVectors:Action"]
+                            </MudButton>
+                        </div>
+                    </MudAlert>
+                }
+
+                <!-- Document Queue Table -->
+                <div class="document-queue-section">
+                    <div class="queue-header">
+                        <div class="queue-title-row">
+                            <MudIcon Icon="@Icons.Material.Filled.QueuePlayNext" Size="Size.Small" Class="queue-title-icon" />
+                            <div class="queue-title-copy">
+                                <MudText Typo="Typo.subtitle1" Class="queue-title">@L["RAG:DocumentQueue:Title"]</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="queue-meta">
+                                    @_documentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
+                                </MudText>
+                            </div>
+                        </div>
+                        <div class="queue-controls">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.ClearAll"
+                                       OnClick="@ClearDocumentQueue"
+                                       Disabled="@(!CanClearDocumentQueue())">
+                                @L["RAG:DocumentQueue:Actions:ClearQueue"]
+                            </MudButton>
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                       OnClick="@ClearKnowledgeBaseDocuments"
+                                       Disabled="@(!CanClearKnowledgeBaseDocuments())">
+                                @L["RAG:DocumentQueue:Actions:ClearDocuments"]
+                            </MudButton>
+                            <MudText Typo="Typo.caption" Class="parallel-label">
+                                @L["RAG:ParallelIndexing:Label"]
+                            </MudText>
+                            <MudNumericField T="int"
+                                             @bind-Value="@_parallelCount"
+                                             Min="1"
+                                             Max="10"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Class="parallel-input" />
+                             <MudButton Variant="Variant.Filled"
+                                        Color="Color.Primary"
+                                        Size="Size.Small"
+                                        StartIcon="@Icons.Material.Filled.PlayArrow"
+                                        OnClick="@StartBatchIndexing"
+                                        Class="queue-start-button"
+                                        Disabled="@(!CanStartBatchIndexing())">
+                                 @L["RAG:ParallelIndexing:Start"]
+                             </MudButton>
+                             <MudButton Variant="Variant.Outlined"
+                                        Color="Color.Warning"
+                                        Size="Size.Small"
+                                        StartIcon="@Icons.Material.Filled.StopCircle"
+                                        OnClick="@CancelBatchIndexing"
+                                        Class="queue-cancel-button"
+                                        Disabled="@(!CanCancelBatchIndexing())">
+                                 @L["Common:Cancel"]
+                             </MudButton>
+                        </div>
+                    </div>
+
+                    <div class="queue-table-wrapper">
+                        <MudTable T="DocumentQueueItem"
+                                  Items="@_documentQueue"
+                                  Dense="true"
+                                  Hover="true"
+                                  Class="document-queue-table">
+                            <HeaderContent>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
+                                <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
+                                    @switch (context.Status)
+                                    {
+                                        case DocumentStatus.Pending:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                                @L["RAG:DocumentQueue:Status:Pending"]
+                                            </MudChip>
+                                            break;
+                                        case DocumentStatus.Indexing:
+                                            <div class="indexing-status">
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                                    @L["RAG:DocumentQueue:Status:Indexing"]
+                                                </MudChip>
+                                                <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
+                                            </div>
+                                            break;
+                                        case DocumentStatus.Done:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                                @L["RAG:DocumentQueue:Status:Done"]
+                                            </MudChip>
+                                            break;
+                                        case DocumentStatus.Error:
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
+                                                @L["RAG:DocumentQueue:Status:Error"]
+                                            </MudChip>
+                                            break;
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
+                                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ShowChunkViewer(context))"
+                                                   title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => StartDocumentIndexing(context))"
+                                                   Disabled="@(!CanStartDocumentIndexing(context))"
+                                                   title="@L["RAG:DocumentQueue:Actions:StartIndex"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ReindexDocument(context))"
+                                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                                   title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteDocument(context))"
+                                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                                   title="@L["RAG:DocumentQueue:Actions:Delete"]" />
+                                     @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
+                                     {
+                                         <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
+                                                        Size="Size.Small"
+                                                        Color="Color.Warning"
+                                                        OnClick="@(() => ShowIndexingError(context))"
+                                                        title="@L["Common:Error"]" />
+                                     }
+                                 </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                </div>
+
+                <!-- Indexing Actions -->
+                <div class="indexing-actions-grid">
+                    <!-- Markdown Group Card -->
+                    <div class="indexing-card">
+                        <div class="indexing-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:Title"]</MudText>
+                        </div>
+                        <div class="markdown-group-section">
+                            @if (_isMarkdownGroupsLoading)
+                            {
+                                <div class="markdown-loading-state">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @Shared["ModuleSystem:SystemOverview:Labels:Loading"]
+                                    </MudText>
+                                    <MudProgressLinear Indeterminate="true"
+                                                       Color="Color.Primary"
+                                                       Rounded="true"
+                                                       Class="markdown-loading-progress" />
+                                </div>
+                            }
+                            <MudSelect T="string"
+                                       @bind-Value="@_selectedMarkdownGroup"
+                                       Label="@L["RAG:Indexing:MarkdownGroup"]"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@(_isMarkdownGroupsLoading || _markdownGroups.Count == 0)"
+                                       FullWidth="true">
+                                @foreach (var group in _markdownGroups)
+                                {
+                                    <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.FolderOpen"
+                                       OnClick="@ShowDocumentSelectionDialog"
+                                       Disabled="@string.IsNullOrEmpty(_selectedMarkdownGroup)"
+                                       FullWidth="true">
+                                @L["RAG:DocumentSelection:Title"]
+                            </MudButton>
+                        </div>
+                    </div>
+
+                    <!-- Upload Document Card -->
+                    <div class="indexing-card">
+                        <div class="indexing-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:UploadFile"]</MudText>
+                        </div>
+                        <MudFileUpload T="IBrowserFile"
+                                       Accept=".txt,.md,.pdf"
+                                       FilesChanged="@OnFileSelected"
+                                       MaximumFileCount="1"
+                                       Class="upload-file-input">
+                            <CustomContent Context="upload">
+                                <div class="upload-drop-zone" @onclick="upload.OpenFilePickerAsync">
+                                    <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Class="upload-icon" />
+                                    <MudText Typo="Typo.body2" Class="upload-hint-primary">@L["RAG:Indexing:ClickToUpload"]</MudText>
+                                    <MudText Typo="Typo.caption" Class="upload-hint-secondary">.md, .txt, .pdf</MudText>
+                                </div>
+                            </CustomContent>
+                        </MudFileUpload>
+                    </div>
+                </div>
+            </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <MudText Typo="Typo.h6" Color="Color.Secondary">
+                    @L["RAG:KnowledgeBase:SelectPrompt"]
+                </MudText>
+            </div>
+        }
+    </div>
+</div>

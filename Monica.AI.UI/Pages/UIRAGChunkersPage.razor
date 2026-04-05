@@ -1,0 +1,392 @@
+@page "/ai/rag/chunkers"
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.RAG.Facades
+@using Monica.AI.RAG.Models
+@using Monica.Core.Results;
+@inject IStringLocalizer<AIResource> L
+@inject ChunkerFacade ChunkerService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>@L["RAG:Navigation:Chunkers"]</PageTitle>
+
+<div class="rag-chunkers-page">
+    <div class="page-header">
+        <MudText Typo="Typo.h5">@L["RAG:Chunker:Title"]</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="LoadStateAsync">
+            @L["ProviderManage:Refresh"]
+        </MudButton>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="loading-state">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </div>
+    }
+    else
+    {
+        <div class="section-block">
+            <MudPaper Class="section-panel chunkers-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewList" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Registered"]</MudText>
+                </div>
+
+                <MudTable T="ChunkerDescriptor"
+                          Items="@_chunkers"
+                          Dense="true"
+                          Hover="true"
+                          Class="chunkers-table">
+                    <HeaderContent>
+                        <MudTh>@L["RAG:Chunker:Name"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Id"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Extensions"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Description"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["RAG:Chunker:Name"]">@context.DisplayName</MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Id"]"><code>@context.ChunkerId</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Extensions"]">
+                            @foreach (var extension in context.SupportedExtensions)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="extension-chip">
+                                    @extension
+                                </MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Description"]">@context.Description</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </div>
+
+        <div class="section-block">
+            <MudPaper Class="section-panel routes-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.Route" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:Routing"]</MudText>
+                </div>
+
+                <MudTable T="RouteEditor"
+                          Items="@_routes"
+                          Dense="true"
+                          Hover="true"
+                          Class="routes-table">
+                    <HeaderContent>
+                        <MudTh>@L["RAG:Chunker:Extension"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Current"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Target"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Affected"]</MudTh>
+                        <MudTh>@L["RAG:Chunker:Actions"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["RAG:Chunker:Extension"]"><code>@context.Extension</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Current"]"><code>@context.CurrentChunkerId</code></MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Target"]">
+                            <MudSelect T="string"
+                                       Value="@context.SelectedChunkerId"
+                                       ValueChanged="@((string value) => OnRouteTargetChangedAsync(context, value))"
+                                       Dense="true"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Class="route-target-select">
+                                @foreach (var candidate in context.CandidateChunkerIds)
+                                {
+                                    <MudSelectItem T="string" Value="@candidate">@candidate</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Affected"]">
+                            @if (context.Preview is null)
+                            {
+                                <MudText Typo="Typo.caption">-</MudText>
+                            }
+                            else
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Warning"
+                                         Variant="Variant.Outlined"
+                                         Class="route-affected-chip">
+                                    @L["RAG:Chunker:AffectedCount", context.Preview.AffectedDocumentCount]
+                                </MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="@L["RAG:Chunker:Actions"]">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       Disabled="@(context.IsApplying || string.Equals(context.CurrentChunkerId, context.SelectedChunkerId, StringComparison.OrdinalIgnoreCase))"
+                                       OnClick="@(() => ApplyRouteChangeAsync(context))">
+                                @L["RAG:Chunker:Apply"]
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </div>
+
+        <div class="section-block">
+            <MudPaper Class="section-panel test-panel" Elevation="0">
+                <div class="section-heading">
+                    <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="section-title">@L["RAG:Chunker:TestTitle"]</MudText>
+                </div>
+
+                <div class="test-form">
+                    <MudSelect T="string"
+                               Label="@L["RAG:Chunker:TestChunker"]"
+                               Value="@_testChunkerId"
+                               ValueChanged="@((string value) => _testChunkerId = value)"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Dense="true">
+                        @foreach (var chunker in _chunkers)
+                        {
+                            <MudSelectItem T="string" Value="@chunker.ChunkerId">@chunker.DisplayName (@chunker.ChunkerId)</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTextField T="string"
+                                  Label="@L["RAG:Chunker:TestDocument"]"
+                                  Value="@_testDocumentName"
+                                  ValueChanged="@((string value) => _testDocumentName = value)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+
+                    <MudTextField T="string"
+                                  Label="@L["RAG:Chunker:TestContent"]"
+                                  Value="@_testContent"
+                                  ValueChanged="@((string value) => _testContent = value)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="10" />
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Science"
+                               Disabled="@(_isTesting || string.IsNullOrWhiteSpace(_testChunkerId))"
+                               OnClick="RunChunkerTestAsync">
+                        @L["RAG:Chunker:RunTest"]
+                    </MudButton>
+                </div>
+
+                @if (_testResult is not null)
+                {
+                    <div class="test-result">
+                        <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">
+                            @L["RAG:Chunker:TestChunkCount", _testResult.Chunks.Count]
+                        </MudChip>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="ShowTestChunkPreviewAsync">
+                            @L["RAG:Chunker:ViewPreview"]
+                        </MudButton>
+                    </div>
+                }
+            </MudPaper>
+        </div>
+    }
+</div>
+
+@code {
+    public const string PAGE_URL = "/ai/rag/chunkers";
+
+    private IReadOnlyList<ChunkerDescriptor> _chunkers = [];
+    private List<RouteEditor> _routes = [];
+    private bool _isLoading = true;
+    private bool _isTesting;
+    private string _testChunkerId = string.Empty;
+    private string _testDocumentName = "sample.md";
+    private string _testContent = "# Sample\n\nThis is a sample document for chunker testing.";
+    private ChunkerTestResult? _testResult;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadStateAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadStateAsync()
+    {
+        _isLoading = true;
+        _testResult = null;
+        StateHasChanged();
+
+        var stateResult = await ChunkerService.GetManagementStateAsync();
+        if (stateResult.IsFailed(out var error, out var state))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            _isLoading = false;
+            return;
+        }
+
+        _chunkers = state.Chunkers;
+        _routes = state.Routes
+            .Select(route => new RouteEditor
+            {
+                Extension = route.Extension,
+                CurrentChunkerId = route.DefaultChunkerId,
+                SelectedChunkerId = route.DefaultChunkerId,
+                CandidateChunkerIds = route.CandidateChunkerIds
+            })
+            .ToList();
+
+        if (string.IsNullOrWhiteSpace(_testChunkerId) && _chunkers.Count > 0)
+        {
+            _testChunkerId = _chunkers[0].ChunkerId;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task OnRouteTargetChangedAsync(RouteEditor route, string targetChunkerId)
+    {
+        route.SelectedChunkerId = targetChunkerId;
+        route.Preview = null;
+
+        if (string.Equals(route.CurrentChunkerId, route.SelectedChunkerId, StringComparison.OrdinalIgnoreCase))
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var previewResult = await ChunkerService.PreviewRoutingChangeAsync(route.Extension, route.SelectedChunkerId);
+        if (previewResult.IsFailed(out var error, out var preview))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            return;
+        }
+
+        route.Preview = preview;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyRouteChangeAsync(RouteEditor route)
+    {
+        if (string.Equals(route.CurrentChunkerId, route.SelectedChunkerId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (route.Preview is null)
+        {
+            var previewResult = await ChunkerService.PreviewRoutingChangeAsync(route.Extension, route.SelectedChunkerId);
+            if (previewResult.IsFailed(out var previewError, out var preview))
+            {
+                Snackbar.Add(previewError.Message!, Severity.Error);
+                return;
+            }
+
+            route.Preview = preview;
+        }
+
+        if (route.Preview.AffectedDocumentCount > 0)
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync(
+                L["RAG:Chunker:ConfirmTitle"],
+                L["RAG:Chunker:ConfirmMessage", route.Preview.AffectedDocumentCount],
+                yesText: L["RAG:Chunker:Apply"],
+                cancelText: L["Common:Cancel"]);
+
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        route.IsApplying = true;
+        StateHasChanged();
+
+        var applyResult = await ChunkerService.ApplyRoutingChangeAsync(route.Extension, route.SelectedChunkerId);
+        route.IsApplying = false;
+
+        if (applyResult.IsFailed(out var applyError, out var applyDetails))
+        {
+            Snackbar.Add(applyError.Message!, Severity.Error);
+            return;
+        }
+
+        if (applyDetails.MarkedPendingDocumentCount > 0)
+        {
+            var detail = L["RAG:Chunker:AffectedCount", applyDetails.MarkedPendingDocumentCount];
+            Snackbar.Add($"{L["RAG:Chunker:ApplySuccess"]} {detail}", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(L["RAG:Chunker:ApplySuccess"], Severity.Success);
+        }
+
+        await LoadStateAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RunChunkerTestAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_testChunkerId))
+        {
+            return;
+        }
+
+        _isTesting = true;
+        StateHasChanged();
+
+        var testResult = await ChunkerService.TestChunkerAsync(_testChunkerId, _testDocumentName, _testContent);
+        _isTesting = false;
+
+        if (testResult.IsFailed(out var error, out var result))
+        {
+            Snackbar.Add(error.Message!, Severity.Error);
+            return;
+        }
+
+        _testResult = result;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ShowTestChunkPreviewAsync()
+    {
+        if (_testResult is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(ChunkViewerDialog.DocumentName), _testResult.DocumentName },
+            { nameof(ChunkViewerDialog.OriginalText), _testResult.OriginalText },
+            { nameof(ChunkViewerDialog.Chunks), _testResult.Chunks },
+            { nameof(ChunkViewerDialog.MatchedChunkIndex), (int?)null },
+            { nameof(ChunkViewerDialog.StatusText), L["RAG:Chunker:PreviewStatus", _testResult.ChunkerId].Value }
+        };
+
+        await DialogService.ShowAsync<ChunkViewerDialog>(
+            L["RAG:Chunker:PreviewTitle"].Value,
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    private sealed class RouteEditor
+    {
+        public required string Extension { get; init; }
+
+        public required string CurrentChunkerId { get; init; }
+
+        public required IReadOnlyList<string> CandidateChunkerIds { get; init; }
+
+        public required string SelectedChunkerId { get; set; }
+
+        public bool IsApplying { get; set; }
+
+        public ChunkerRoutingChangePreview? Preview { get; set; }
+    }
+}

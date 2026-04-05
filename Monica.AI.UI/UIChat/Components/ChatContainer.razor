@@ -1,0 +1,99 @@
+@using Monica.AI.UI.UIChat.Models
+<div class="chat-container">
+    <ChatErrorDisplay
+        ErrorMessage="@_params.ErrorMessage"
+        ShowRetry="@_params.ShowRetry"
+        OnRetry="@HandleRetry"
+        OnDismissed="@HandleErrorDismissed" />
+
+    <ChatMessageList
+        @ref="_messageListRef"
+        Messages="@_params.Messages"
+        StreamingContent="@_params.StreamingContent"
+        EnableMarkdown="@_params.EnableMarkdown"
+        ToolDebugEnabled="@_params.ToolDebugEnabled"
+        EnableAutoScroll="@_params.EnableAutoScroll"
+        CancellationToken="@_params.CancellationToken"
+        OnStreamComplete="@HandleStreamComplete"
+        OnStreamError="@HandleStreamError"
+        OnEditMessage="@_params.OnEditMessage"
+        OnRetryMessage="@_params.OnRetryMessage" />
+
+    <ChatInputArea
+        IsSending="@_params.IsSending"
+        ProviderName="@_params.ProviderName"
+        ModelName="@_params.ModelName"
+        ShowProviderInfo="@_params.ShowProviderInfo"
+        SupportsReasoning="@_params.SupportsReasoning"
+        ReasoningEnabled="@_params.ReasoningEnabled"
+        AvailableModels="@_params.AvailableModels"
+        ReasoningEnabledChanged="@_params.ReasoningEnabledChanged"
+        KnowledgeBases="@_params.KnowledgeBases"
+        SelectedKnowledgeBaseIds="@_params.SelectedKnowledgeBaseIds"
+        SelectedKnowledgeBaseIdsChanged="@_params.SelectedKnowledgeBaseIdsChanged"
+        OnSend="@HandleSend"
+        OnCancel="@HandleCancel"
+        OnModelChanged="@HandleModelChanged" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required ChatContainerParameters Parameters { get; set; }
+
+    private ChatMessageList? _messageListRef;
+    private ChatContainerParameters _params => Parameters;
+
+    private async Task HandleSend(string message)
+    {
+        await _params.OnSendMessage.InvokeAsync(message);
+
+        if (_messageListRef != null)
+        {
+            await _messageListRef.ScrollToBottomAsync();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleStreamComplete(string content)
+    {
+        await _params.OnStreamComplete.InvokeAsync(content);
+    }
+
+    private async Task HandleStreamError(string error)
+    {
+        await _params.OnStreamError.InvokeAsync(error);
+    }
+
+    private async Task HandleCancel()
+    {
+        if (_messageListRef != null)
+        {
+            await _messageListRef.CancelStreamAsync();
+        }
+        await _params.OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleRetry()
+    {
+        await _params.OnRetry.InvokeAsync();
+    }
+
+    private async Task HandleErrorDismissed()
+    {
+        await _params.OnErrorDismissed.InvokeAsync();
+    }
+
+    private async Task HandleModelChanged(string modelName)
+    {
+        await _params.OnModelChanged.InvokeAsync(modelName);
+    }
+
+    public async Task CancelStreamAsync()
+    {
+        if (_messageListRef != null)
+        {
+            await _messageListRef.CancelStreamAsync();
+        }
+    }
+}

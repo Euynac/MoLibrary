@@ -2,7 +2,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
-using Monica.AI.Tools;
+using Monica.AI.Services.Support;
 
 namespace Monica.AI.Services;
 

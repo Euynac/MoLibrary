@@ -3,15 +3,16 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.Abstractions;
+using Monica.AI.Models;
+using Monica.AI.Services.Support;
 using Monica.Modules;
-using Monica.AI.Tools;
 
 namespace Monica.AI.Services;
 
 /// <summary>
 /// Stateless AI chat service backed by the Microsoft Agent Framework.
-/// Creates and operates on AgentSessionState instances.
-/// Session management is handled by the UI service layer.
+/// Creates and operates on ChatSession instances.
+/// Session persistence and page state are handled outside the service.
 /// </summary>
 public class AIChatService(
     IAIProviderFactory providerFactory,
@@ -24,7 +25,7 @@ public class AIChatService(
     /// Create a new chat session backed by ChatClientAgent.
     /// Registered tool providers can enrich the agent based on the session configuration.
     /// </summary>
-    public async Task<AgentSessionState> CreateSessionAsync(
+    public async Task<ChatSession> CreateSessionAsync(
         string? providerId = null,
         string? modelName = null,
         string? systemPrompt = null,
@@ -47,7 +48,7 @@ public class AIChatService(
         var agent = await CreateAgentAsync(chatClient, resolvedPrompt, knowledgeBaseIds, ct);
         var session = await agent.CreateSessionAsync(ct);
 
-        var state = new AgentSessionState(agent, session, resolvedProviderId)
+        var state = new ChatSession(agent, session, resolvedProviderId)
         {
             Title = title ?? "New Chat",
             SystemPrompt = resolvedPrompt,
@@ -64,7 +65,7 @@ public class AIChatService(
     /// Preserves chat history by copying it to the new session.
     /// Resets the NeedsRecreation flag after completion.
     /// </summary>
-    public async Task RecreateAgentAsync(AgentSessionState state, CancellationToken ct = default)
+    public async Task RecreateAgentAsync(ChatSession state, CancellationToken ct = default)
     {
         var provider = providerFactory.GetProvider(state.ProviderId);
         if (provider == null)
@@ -97,7 +98,7 @@ public class AIChatService(
     /// Automatically recreates the agent if configuration has changed.
     /// </summary>
     public async IAsyncEnumerable<AgentResponseUpdate> SendMessageStreamingAsync(
-        AgentSessionState state,
+        ChatSession state,
         string message,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
@@ -123,7 +124,7 @@ public class AIChatService(
     /// Automatically recreates the agent if configuration has changed.
     /// </summary>
     public async Task<string> SendMessageAsync(
-        AgentSessionState state,
+        ChatSession state,
         string message,
         CancellationToken ct = default)
     {
@@ -178,7 +179,7 @@ public class AIChatService(
     }
 
     private static ChatClientAgentRunOptions CreateRunOptions(
-        AgentSessionState state,
+        ChatSession state,
         AgentResponseUpdateChannel updateChannel)
     {
         ArgumentNullException.ThrowIfNull(updateChannel);
@@ -201,7 +202,7 @@ public class AIChatService(
     }
 
     private static async Task ProduceStreamingUpdatesAsync(
-        AgentSessionState state,
+        ChatSession state,
         ChatMessage userMessage,
         ChatClientAgentRunOptions runOptions,
         AgentResponseUpdateChannel updateChannel,
