@@ -1,0 +1,204 @@
+@using Monica.Framework.ProjectUnits.Facades
+@using Monica.Core.Results;
+@using System.Text.Json
+@using Monica.Core.JsonSerialization.Abstractions
+@using Monica.Core.JsonSerialization.Services.Support
+@using Monica.Framework.ProjectUnits.Models
+@inject ProjectUnitsFacade ProjectUnitsFacade
+
+@inject IJsonSerializerOptionsProvider JsonSerializerOptionsProvider
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ProjectUnitsResource> L
+
+<div class="project-units-tab-section">
+    <MudStack Row="true"
+              Justify="Justify.SpaceBetween"
+              AlignItems="AlignItems.Center"
+              Class="project-units-tab-section__header">
+        <MudText Typo="Typo.h6">@L["DomainEventTester:Header:Title"]</MudText>
+        <div class="project-units-tab-section__actions">
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Primary"
+                      OnClick="LoadDomainEventsAsync"
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      Disabled="@_loading">
+                @L["DomainEventTester:Actions:Refresh"]
+            </MudButton>
+        </div>
+    </MudStack>
+    <div class="project-units-tab-section__body">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventList"]</MudText>
+                    @if (_loading)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+                    }
+                    else if (_domainEvents.Any())
+                    {
+                        <MudList T="string">
+                            @foreach (var eventItem in _domainEvents)
+                            {
+                                <MudListItem T="string" OnClick="@(() => SelectEvent(eventItem))">
+                                    <div style="width: 100%;">
+                                        <MudText Typo="Typo.subtitle1">@eventItem.Info.Title</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@eventItem.Info.Key</MudText>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            @L["DomainEventTester:States:Empty"]
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["DomainEventTester:Sections:EventTester"]</MudText>
+                    @if (_selectedEvent != null)
+                    {
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="_selectedEvent.Info.Title"
+                                         Label="@L["DomainEventTester:Fields:EventName"]"
+                                         Variant="Variant.Outlined"
+                                         ReadOnly="true" />
+
+                             <MudTextField @bind-Value="_eventContent"
+                                          Label="@L["DomainEventTester:Fields:EventContent"]"
+                                          Variant="Variant.Outlined"
+                                          Lines="@GetJsonLines()"
+                                          Sizing="InputSizing.Auto"
+                                          MaxLines="30"
+                                          Placeholder="@L["DomainEventTester:Fields:EventContentPlaceholder"]" />
+
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      OnClick="PublishEventAsync"
+                                      StartIcon="@Icons.Material.Filled.Send"
+                                      Disabled="@_publishing"
+                                      FullWidth="true">
+                                @if (_publishing)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">@L["DomainEventTester:Actions:Publishing"]</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>@L["DomainEventTester:Actions:Publish"]</MudText>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            @L["DomainEventTester:States:NoSelection"]
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+</div>
+
+
+@code {
+    private List<DtoDomainEventInfo> _domainEvents = [];
+    private bool _loading;
+    private bool _publishing;
+    private DtoDomainEventInfo? _selectedEvent;
+    private string _eventContent = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDomainEventsAsync();
+        }
+    }
+
+    private async Task LoadDomainEventsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ProjectUnitsFacade.GetDomainEventsAsync();
+            if (result.IsFailed(out var error, out var data))
+            {
+                Snackbar.Add(L["Shared:Messages:LoadFailed", error], Severity.Error);
+                return;
+            }
+
+            _domainEvents = data ?? [];
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(L["Shared:Messages:LoadException", ex.Message], Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectEvent(DtoDomainEventInfo eventInfo)
+    {
+        _selectedEvent = eventInfo;
+        _eventContent = JsonSerializer.Serialize(eventInfo.Structure, JsonSerializerOptionsProvider.SerializerOptions.Clone(o => o.WriteIndented = true)) ?? "{}";
+    }
+
+    private async Task PublishEventAsync()
+    {
+        if (_selectedEvent == null || string.IsNullOrWhiteSpace(_eventContent))
+        {
+            Snackbar.Add(L["DomainEventTester:Messages:SelectEventAndContent"], Severity.Warning);
+            return;
+        }
+
+        _publishing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ProjectUnitsFacade.PublishDomainEventAsync(_selectedEvent.Info.Title, _eventContent);
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(L["DomainEventTester:Messages:PublishFailed", error], Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(L["DomainEventTester:Messages:PublishSucceeded"], Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(L["DomainEventTester:Messages:PublishException", ex.Message], Severity.Error);
+        }
+        finally
+        {
+            _publishing = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private int GetJsonLines()
+    {
+        if (string.IsNullOrEmpty(_eventContent))
+        {
+            return 5;
+        }
+
+        var lines = _eventContent.Split('\n').Length;
+        return Math.Max(5, Math.Min(lines + 2, 30));
+    }
+}

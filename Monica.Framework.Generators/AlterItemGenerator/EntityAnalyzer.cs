@@ -278,10 +278,11 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
         if (property.IsIndexer)
             return true;
 
-        // Check the Ignore setting of AlterItemPropertyAttribute
+        // Check the Ignore setting of the change-item property attribute.
         var alterItemAttr = property.GetAttributes()
-            .FirstOrDefault(attr => attr.AttributeClass?.Name == "AlterItemPropertyAttribute" ||
-                                  attr.AttributeClass?.ToDisplayString().Contains("Monica.Framework.Generators.Attributes.AlterItemPropertyAttribute") == true);
+            .FirstOrDefault(attr =>
+                attr.AttributeClass?.Name == "ChangeItemPropertyAttribute" ||
+                attr.AttributeClass?.ToDisplayString().Contains("Monica.Framework.ChangeTracking.Annotations.ChangeItemPropertyAttribute") == true);
         
         if (alterItemAttr != null)
         {

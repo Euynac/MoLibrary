@@ -1,0 +1,351 @@
+{
+  "Page": {
+    "PageTitle": "项目单元",
+    "Header": {
+      "Title": "项目单元"
+    },
+    "Tabs": {
+      "ProjectUnit": "项目单元",
+      "ArchitectureVisualization": "架构可视化",
+      "DomainEventTester": "领域事件测试",
+      "RequestFilterManager": "请求过滤管理",
+      "EnumInfo": "枚举信息"
+    }
+  },
+  "Shared": {
+    "Actions": {
+      "Refresh": "刷新",
+      "Details": "详情",
+      "Close": "关闭",
+      "SelectAll": "全选",
+      "Clear": "清除",
+      "PreviousMatch": "上一个匹配",
+      "NextMatch": "下一个匹配"
+    },
+    "Labels": {
+      "Unknown": "未知"
+    },
+    "Messages": {
+      "LoadFailed": "加载失败: {0}",
+      "LoadException": "加载异常: {0}"
+    },
+    "ProjectUnitTypes": {
+      "ApplicationService": "应用服务",
+      "DomainService": "领域服务",
+      "Repository": "仓储",
+      "DomainEvent": "领域事件",
+      "DomainEventHandler": "领域事件处理程序",
+      "LocalEventHandler": "本地事件处理程序",
+      "Seeder": "种子数据",
+      "RecurringJob": "定时作业",
+      "TriggeredJob": "触发作业",
+      "HttpApi": "HTTP API",
+      "GrpcApi": "gRPC API",
+      "StateStore": "状态存储",
+      "EventBus": "事件总线",
+      "Actor": "Actor",
+      "Entity": "实体",
+      "RequestDto": "请求 DTO",
+      "Configuration": "配置"
+    },
+    "Counts": {
+      "Assembly": {
+        "Singular": "{0} 个程序集",
+        "Plural": "{0} 个程序集"
+      },
+      "Enum": {
+        "Singular": "{0} 个枚举",
+        "Plural": "{0} 个枚举"
+      },
+      "EnumValue": {
+        "Singular": "{0} 个枚举值",
+        "Plural": "{0} 个枚举值"
+      },
+      "ProjectUnit": {
+        "Singular": "{0} 个项目单元",
+        "Plural": "{0} 个项目单元"
+      },
+      "Dependency": {
+        "Singular": "依赖 {0}",
+        "Plural": "依赖 {0}"
+      },
+      "DependedBy": {
+        "Singular": "被依赖 {0}",
+        "Plural": "被依赖 {0}"
+      },
+      "Attribute": {
+        "Singular": "特性 {0}",
+        "Plural": "特性 {0}"
+      },
+      "Method": {
+        "Singular": "方法 {0}",
+        "Plural": "方法 {0}"
+      },
+      "Error": {
+        "Singular": "错误 {0}",
+        "Plural": "错误 {0}"
+      },
+      "Warning": {
+        "Singular": "警告 {0}",
+        "Plural": "警告 {0}"
+      },
+      "Info": {
+        "Singular": "信息 {0}",
+        "Plural": "信息 {0}"
+      },
+      "Match": {
+        "Singular": "{0} 个匹配",
+        "Plural": "{0} 个匹配"
+      }
+    },
+    "AlertLevels": {
+      "Info": "信息",
+      "Warning": "警告",
+      "Error": "错误"
+    },
+    "ConfigurationModes": {
+      "Offline": "离线配置",
+      "Online": "在线配置",
+      "Unknown": "未知模式"
+    },
+    "ConfigurationUsageTypes": {
+      "Offline": "IOptions（离线）",
+      "OnlineSnapshot": "IOptionsSnapshot（在线）",
+      "OnlineMonitor": "IOptionsMonitor（在线）",
+      "Unknown": "未知方式"
+    },
+    "MethodModifiers": {
+      "Static": "静态",
+      "Virtual": "虚方法",
+      "Abstract": "抽象",
+      "Async": "异步"
+    }
+  },
+  "DomainEventTester": {
+    "Header": {
+      "Title": "领域事件测试"
+    },
+    "Actions": {
+      "Refresh": "刷新事件列表",
+      "Publish": "发布事件",
+      "Publishing": "发布中..."
+    },
+    "Sections": {
+      "EventList": "事件列表",
+      "EventTester": "事件测试"
+    },
+    "Fields": {
+      "EventName": "事件名称",
+      "EventContent": "事件内容（JSON）",
+      "EventContentPlaceholder": "请输入事件的 JSON 数据..."
+    },
+    "States": {
+      "Empty": "暂无领域事件数据，请点击刷新按钮加载数据。",
+      "NoSelection": "请先从左侧列表选择要测试的领域事件。"
+    },
+    "Messages": {
+      "SelectEventAndContent": "请选择事件并填写事件内容。",
+      "PublishFailed": "发布失败: {0}",
+      "PublishSucceeded": "发布成功。",
+      "PublishException": "发布异常: {0}"
+    }
+  },
+  "EnumInfoViewer": {
+    "Header": {
+      "Title": "枚举信息查看器"
+    },
+    "Search": {
+      "Placeholder": "搜索程序集、枚举和值",
+      "Hint": "输入关键词后会在程序集、枚举和枚举值中同步高亮定位。"
+    },
+    "Panels": {
+      "Assemblies": "程序集",
+      "Enums": "枚举列表",
+      "Values": "枚举值"
+    },
+    "States": {
+      "Empty": "暂无枚举数据，请点击刷新按钮加载数据。",
+      "SelectAssembly": "请先从左侧选择一个程序集。",
+      "SelectEnum": "请先从中间列表选择一个枚举。"
+    },
+    "Summaries": {
+      "NotLoaded": "未加载数据",
+      "SelectAssembly": "选择程序集后显示",
+      "SelectEnum": "选择枚举后显示",
+      "StartSearch": "输入关键词开始搜索",
+      "MatchProgress": "{0} / {1} 个匹配"
+    }
+  },
+  "ProjectUnitFilterPanel": {
+    "Fields": {
+      "SearchLabel": "搜索项目单元",
+      "SearchHelper": "支持按名称、作者、分组或描述搜索"
+    },
+    "Sections": {
+      "TypeFilter": "单元类型筛选"
+    },
+    "Switches": {
+      "OnlyDependencies": "仅显示有依赖关系的单元",
+      "OnlyAlerts": "仅显示有告警的单元"
+    }
+  },
+  "ProjectUnitLayoutPanel": {
+    "Sections": {
+      "LayoutType": "布局类型"
+    },
+    "Layouts": {
+      "Force": "力导向",
+      "Hierarchy": "层次",
+      "Circular": "环形",
+      "MultiCircular": "多层环形"
+    },
+    "Fields": {
+      "ForceDistance": "节点间距: {0}",
+      "ForceStrength": "斥力强度: {0}"
+    }
+  },
+  "ProjectUnitMonitor": {
+    "Header": {
+      "Title": "项目单元监控"
+    },
+    "Columns": {
+      "Name": "单元名称",
+      "FullName": "完整名称",
+      "Type": "单元类型",
+      "Dependencies": "依赖数量",
+      "DependedBy": "被依赖数量",
+      "Actions": "操作"
+    },
+    "States": {
+      "Empty": "暂无项目单元数据，请点击刷新按钮加载数据。"
+    }
+  },
+  "ProjectUnitDetailDialog": {
+    "Title": "项目单元详情",
+    "Fields": {
+      "Name": "单元名称",
+      "FullName": "完整名称",
+      "Author": "作者",
+      "Group": "分组",
+      "Description": "描述",
+      "Type": "单元类型",
+      "Statistics": "统计信息",
+      "Dependencies": "依赖单元",
+      "DependedBy": "被依赖单元",
+      "Attributes": "特性",
+      "Methods": "方法信息",
+      "Alerts": "告警信息",
+      "Documentation": "文档",
+      "ConfigurationMode": "配置模式",
+      "ConfigurationUsage": "使用方式",
+      "ConstructorParameters": "构造参数"
+    },
+    "Sections": {
+      "ConfigurationUsageDetails": "配置使用详情（{0}）",
+      "ConstructorParameters": "构造函数参数（{0}）",
+      "PublicMethods": "公共方法（{0}）",
+      "MarkdownDocument": "Markdown 文档"
+    }
+  },
+  "ProjectUnitVisualization": {
+    "Header": {
+      "Title": "项目架构可视化"
+    },
+    "Actions": {
+      "RefreshTooltip": "刷新数据",
+      "ResetViewTooltip": "重置视图",
+      "LayoutSettingsTooltip": "布局设置",
+      "FilterSettingsTooltip": "筛选设置"
+    },
+    "States": {
+      "RelatedNodesAlert": "正在显示与 <strong>{0}</strong> 连通的所有节点。"
+    },
+    "Legend": {
+      "VisibleCount": "显示 {0} / {1} 个项目单元",
+      "SimpleUnit": "圆形：简单单元",
+      "ComplexUnit": "矩形：复杂单元"
+    },
+    "Messages": {
+      "CopiedToClipboard": "已复制到剪贴板。",
+      "ShowingRelatedNodes": "正在显示与 {0} 连通的所有节点。"
+    },
+    "ContextMenu": {
+      "Details": "查看详情",
+      "FocusNode": "聚焦此节点",
+      "FilterByType": "筛选同类型",
+      "ClearRelatedFilter": "取消连通节点筛选",
+      "ShowOtherRelatedNodes": "显示其他连通节点",
+      "ShowRelatedNodes": "显示连通节点",
+      "ClearAllFilters": "清除所有筛选",
+      "CopyFullName": "复制完整名称"
+    },
+    "Graph": {
+      "NoMetadata": "暂无元数据",
+      "Tooltip": {
+        "Type": "类型: {0}",
+        "Dependencies": "依赖数: {0}",
+        "DependedBy": "被依赖数: {0}"
+      },
+      "Summary": {
+        "Dependencies": "依赖: {0}",
+        "DependedBy": "被依赖: {0}"
+      },
+      "MetadataLabels": {
+        "Group": "分组",
+        "Description": "描述",
+        "AttributeCount": "特性数量",
+        "DependencyCount": "依赖数量",
+        "Method": "方法"
+      },
+      "Metadata": {
+        "MoreMethods": "还有 {0} 个方法"
+      }
+    }
+  },
+  "RequestFilterManager": {
+    "Header": {
+      "Title": "请求过滤管理"
+    },
+    "Actions": {
+      "RefreshState": "刷新状态",
+      "Disable": "禁用",
+      "Enable": "启用",
+      "BatchDisable": "批量禁用",
+      "BatchEnable": "批量启用",
+      "EnableAllUrls": "启用所有 URL"
+    },
+    "Fields": {
+      "UrlPath": "URL 路径",
+      "UrlPlaceholder": "例如: /api/test",
+      "BatchUrls": "批量 URL（每行一个）",
+      "BatchUrlsPlaceholder": "例如:\n/api/test1\n/api/test2\n/api/test3"
+    },
+    "Sections": {
+      "UrlManagement": "URL 管理",
+      "BatchManagement": "批量管理",
+      "DisabledUrls": "当前被禁用的 URL"
+    },
+    "States": {
+      "EmptyDisabledUrls": "当前没有被禁用的 URL，所有请求都可以正常访问。"
+    },
+    "Messages": {
+      "RequireUrl": "请输入 URL 路径。",
+      "RequireBatchUrls": "请输入要管理的 URL 列表。",
+      "NoValidUrls": "没有有效的 URL。",
+      "OperationFailed": "操作失败: {0}",
+      "OperationException": "操作异常: {0}",
+      "DisableSucceeded": "URL 禁用成功。",
+      "EnableSucceeded": "URL 启用成功。",
+      "BatchOperationFailed": "批量操作失败: {0}",
+      "BatchOperationException": "批量操作异常: {0}",
+      "BatchDisableSucceeded": "批量禁用成功，共处理 {0} 个 URL。",
+      "BatchEnableSucceeded": "批量启用成功，共处理 {0} 个 URL。",
+      "EnableSingleFailed": "启用失败: {0}",
+      "EnableSingleSucceeded": "URL {0} 启用成功。",
+      "EnableSingleException": "启用异常: {0}",
+      "EnableAllFailed": "启用所有 URL 失败: {0}",
+      "EnableAllSucceeded": "所有 URL 启用成功。",
+      "EnableAllException": "启用所有 URL 异常: {0}"
+    }
+  }
+}

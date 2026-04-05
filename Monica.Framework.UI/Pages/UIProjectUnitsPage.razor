@@ -1,0 +1,57 @@
+@attribute [Route(PROJECT_UNITS_PAGE_URL)]
+
+@using Monica.Framework.UI.UIProjectUnits.Components
+@inject IStringLocalizer<ProjectUnitsResource> L
+
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
+
+<div class="project-units-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="project-units-page__outer-container">
+        <div class="project-units-page__container">
+            <div class="project-units-page__header">
+                <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
+            </div>
+
+            <div class="project-units-page__content">
+                <MudTabs Elevation="1"
+                         Rounded="true"
+                         ApplyEffectsToContainer="true"
+                         Class="project-units-tabs">
+                    <MudTabPanel Text="@L["Page:Tabs:ProjectUnit"]"
+                                 Icon="@Icons.Material.Filled.AccountTree"
+                                 PanelClass="project-units-tab-panel">
+                        <ProjectUnitMonitor />
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="@L["Page:Tabs:ArchitectureVisualization"]"
+                                 Icon="@Icons.Material.Filled.Hub"
+                                 PanelClass="project-units-tab-panel">
+                        <ProjectUnitVisualization />
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="@L["Page:Tabs:DomainEventTester"]"
+                                 Icon="@Icons.Material.Filled.Event"
+                                 PanelClass="project-units-tab-panel">
+                        <DomainEventTester />
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="@L["Page:Tabs:RequestFilterManager"]"
+                                 Icon="@Icons.Material.Filled.FilterAlt"
+                                 PanelClass="project-units-tab-panel">
+                        <RequestFilterManager />
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="@L["Page:Tabs:EnumInfo"]"
+                                 Icon="@Icons.Material.Filled.List"
+                                 PanelClass="project-units-tab-panel">
+                        <EnumInfoViewer />
+                    </MudTabPanel>
+                </MudTabs>
+            </div>
+        </div>
+    </MudContainer>
+</div>
+
+@code {
+    public const string PROJECT_UNITS_PAGE_URL = "/project-units";
+}

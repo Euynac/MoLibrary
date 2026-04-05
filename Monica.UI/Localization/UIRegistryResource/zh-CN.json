@@ -61,8 +61,8 @@
     "ObservableInstance": {
       "Title": "单例服务监控"
     },
-    "FrameworkMonitor": {
-      "Title": "框架监控"
+    "ProjectUnits": {
+      "Title": "项目单元"
     },
     "EventBusMonitor": {
       "Title": "事件总线监控"

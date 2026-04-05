@@ -1,0 +1,135 @@
+@using System.Linq
+@using Monica.Framework.ProjectUnits.Models
+@inject IStringLocalizer<ProjectUnitsResource> L
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudTextField @bind-Value="FilterText"
+                          Label="@L["ProjectUnitFilterPanel:Fields:SearchLabel"]"
+                          HelperText="@L["ProjectUnitFilterPanel:Fields:SearchHelper"]"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          DebounceInterval="300"
+                          OnDebounceIntervalElapsed="OnFilterTextChanged" />
+        </MudItem>
+        <MudItem xs="12" md="8">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["ProjectUnitFilterPanel:Sections:TypeFilter"]</MudText>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="SelectAllTypes">
+                    @L["Shared:Actions:SelectAll"]
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Text"
+                           Color="Color.Secondary"
+                           OnClick="ClearAllTypes">
+                    @L["Shared:Actions:Clear"]
+                </MudButton>
+            </div>
+            <MudChipSet T="EProjectUnitType"
+                        SelectionMode="SelectionMode.MultiSelection"
+                        SelectedValues="SelectedUnitTypes"
+                        SelectedValuesChanged="OnSelectedUnitTypesChanged">
+                @foreach (var unitType in AllUnitTypes)
+                {
+                    var color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
+                    var isSelected = SelectedUnitTypes.Contains(unitType);
+                    <MudChip T="EProjectUnitType"
+                             Value="unitType"
+                             Style="@(isSelected
+                                 ? $"background-color: {color}; border-color: {color}; color: white"
+                                 : $"background-color: {color}20; border-color: {color}; color: {color}")"
+                             Size="Size.Small">
+                        @L.GetProjectUnitTypeText(unitType)
+                    </MudChip>
+                }
+            </MudChipSet>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSwitch T="bool" Value="ShowOnlyWithDependencies"
+                       ValueChanged="OnShowOnlyWithDependenciesChanged"
+                       Label="@L["ProjectUnitFilterPanel:Switches:OnlyDependencies"]"
+                       Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudSwitch T="bool" Value="ShowOnlyWithAlerts"
+                       ValueChanged="OnShowOnlyWithAlertsChanged"
+                       Label="@L["ProjectUnitFilterPanel:Switches:OnlyAlerts"]"
+                       Color="Color.Warning" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public string FilterText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> FilterTextChanged { get; set; }
+    
+    [Parameter] public IReadOnlyCollection<EProjectUnitType> SelectedUnitTypes { get; set; } = new HashSet<EProjectUnitType>();
+    [Parameter] public EventCallback<IReadOnlyCollection<EProjectUnitType>> SelectedUnitTypesChanged { get; set; }
+    
+    [Parameter] public bool ShowOnlyWithDependencies { get; set; }
+    [Parameter] public EventCallback<bool> ShowOnlyWithDependenciesChanged { get; set; }
+    
+    [Parameter] public bool ShowOnlyWithAlerts { get; set; }
+    [Parameter] public EventCallback<bool> ShowOnlyWithAlertsChanged { get; set; }
+    
+    [Parameter] public EventCallback OnFiltersChanged { get; set; }
+    
+    private List<EProjectUnitType> AllUnitTypes { get; set; } = [];
+    
+    protected override void OnInitialized()
+    {
+        AllUnitTypes = Enum.GetValues<EProjectUnitType>()
+            .Where(static type => type != EProjectUnitType.None)
+            .ToList();
+
+        if (!SelectedUnitTypes.Any())
+        {
+            var allTypes = new HashSet<EProjectUnitType>(AllUnitTypes);
+            SelectedUnitTypes = allTypes;
+            SelectedUnitTypesChanged.InvokeAsync(allTypes);
+        }
+    }
+    
+    private async Task OnFilterTextChanged()
+    {
+        await FilterTextChanged.InvokeAsync(FilterText);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnSelectedUnitTypesChanged(IReadOnlyCollection<EProjectUnitType> values)
+    {
+        SelectedUnitTypes = values;
+        await SelectedUnitTypesChanged.InvokeAsync(values);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task SelectAllTypes()
+    {
+        await OnSelectedUnitTypesChanged(new HashSet<EProjectUnitType>(AllUnitTypes));
+    }
+    
+    private async Task ClearAllTypes()
+    {
+        await OnSelectedUnitTypesChanged(new HashSet<EProjectUnitType>());
+    }
+    
+    private async Task OnShowOnlyWithDependenciesChanged(bool value)
+    {
+        ShowOnlyWithDependencies = value;
+        await ShowOnlyWithDependenciesChanged.InvokeAsync(value);
+        await OnFiltersChanged.InvokeAsync();
+    }
+    
+    private async Task OnShowOnlyWithAlertsChanged(bool value)
+    {
+        ShowOnlyWithAlerts = value;
+        await ShowOnlyWithAlertsChanged.InvokeAsync(value);
+        await OnFiltersChanged.InvokeAsync();
+    }
+}

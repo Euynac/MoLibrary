@@ -7,21 +7,21 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Monica.Framework.Generators.AlterItemGenerator;
 
 /// <summary>
-/// AlterItemData Source Generator
-/// Automatically generate the AlterItemData class and Apply method corresponding to the entity class
+/// Change-item data source generator.
+/// Automatically generates the change-item data class and Apply method for each tracked entity.
 /// </summary>
 [Generator]
 public class AlterItemDataGenerator : IIncrementalGenerator
 {
-    private const string GenerateAlterItemDataAttributeName = "Monica.Framework.Generators.Attributes.GenerateAlterItemDataAttribute";
-    private const string IMoTracingDataEntityInterfaceName = "Monica.Framework.Features.AlterChain.IMoTracingDataEntity";
+    private const string GenerateChangeItemDataAttributeName = "Monica.Framework.ChangeTracking.Annotations.GenerateChangeItemDataAttribute";
+    private const string ChangeTrackedEntityInterfaceName = "Monica.Framework.ChangeTracking.Abstractions.IChangeTrackedEntity";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         //Debugger.Launch();
         // No need to generate properties files anymore, use interface detection
 
-        // Find classes that implement the IMoTracingDataEntity interface and check these classes first
+        // Find classes that implement the change-tracked entity interface and check these classes first.
         var tracingDataEntities = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax,
@@ -61,7 +61,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Optimized entity information acquisition method: first check the IMoTracingDataEntity interface, and then check the GenerateAlterItemData property
+    /// Optimized entity information acquisition method: first check the change-tracked entity interface, and then check the generation attribute.
     /// </summary>
     private static EntityGenerationInfo? GetOptimizedEntityInfo(GeneratorSyntaxContext context)
     {
@@ -71,13 +71,13 @@ public class AlterItemDataGenerator : IIncrementalGenerator
         if (context.SemanticModel.GetDeclaredSymbol(classSyntax) is not INamedTypeSymbol entitySymbol)
             return null;
 
-        // First check whether the IMoTracingDataEntity interface is implemented
-        if (!ImplementsInterface(entitySymbol, IMoTracingDataEntityInterfaceName))
+        // First check whether the change-tracked entity interface is implemented.
+        if (!ImplementsInterface(entitySymbol, ChangeTrackedEntityInterfaceName))
             return null;
 
-        // Then check if there is a GenerateAlterItemData property and if so, use the settings in the property
+        // Then check if there is a generation attribute and, if so, use its settings.
         var generateAttribute = entitySymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == GenerateAlterItemDataAttributeName);
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == GenerateChangeItemDataAttributeName);
 
         if (generateAttribute != null)
         {
@@ -107,7 +107,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 
 
     /// <summary>
-    /// Generate AlterItemData code for entities
+    /// Generate change-item data code for entities.
     /// </summary>
     private static void GenerateAlterItemDataForEntity(SourceProductionContext context, EntityGenerationInfo entityInfo)
     {
@@ -157,7 +157,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Check whether the type implements the specified interface
+    /// Check whether the type implements the specified interface.
     /// </summary>
     private static bool ImplementsInterface(INamedTypeSymbol type, string interfaceName)
     {

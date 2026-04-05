@@ -4,7 +4,8 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Interfaces;
 using Monica.Core.Modularity.Models;
-using Monica.Framework.Features.MoSeeder;
+using Monica.Framework.Seeder.Abstractions;
+using Monica.Framework.Seeder.Services;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -32,7 +33,7 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
     {
         foreach (var type in _seedTypes)
         {
-            var seed = (IMoSeeder) ActivatorUtilities.CreateInstance(app.ApplicationServices, type);
+            var seed = (ISeeder) ActivatorUtilities.CreateInstance(app.ApplicationServices, type);
             seed.SeedAsync();
             //TODO optimize seed method execution strategy
         }
@@ -49,7 +50,7 @@ public class ModuleSeeder(ModuleSeederOption option) : MoModule<ModuleSeeder, Mo
             //    });
             //}
 
-            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(MoSeeder)))
+            if (type is { IsClass: true, IsAbstract: false} && type.IsSubclassOf(typeof(SeederBase)))
             {
                 _seedTypes.Add(type);
             }

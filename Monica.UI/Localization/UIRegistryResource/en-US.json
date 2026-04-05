@@ -61,8 +61,8 @@
     "ObservableInstance": {
       "Title": "Observable Instance"
     },
-    "FrameworkMonitor": {
-      "Title": "Framework Monitor"
+    "ProjectUnits": {
+      "Title": "Project Units"
     },
     "EventBusMonitor": {
       "Title": "Event Bus Monitor"

@@ -22,7 +22,7 @@ public enum EMoModuleKey
     /// </summary>
     ServiceInvocation,
     DataChannel,
-    FrameworkMonitor,
+    ProjectUnits,
     Locker,
     UnitOfWork,
     ObjectMapping,
@@ -107,7 +107,7 @@ public enum EMoModuleKey
     ConfigurationUI,
     MapperUI,
     ServiceDiscoveryUI,
-    FrameworkMonitorUI,
+    ProjectUnitsUI,
     /// <summary>
     /// Text diff highlight UI module.
     /// </summary>
