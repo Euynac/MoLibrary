@@ -1,0 +1,122 @@
+.document-queue-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+}
+
+.queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.queue-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.queue-title-icon {
+    color: var(--mud-palette-primary);
+    margin-top: 2px;
+}
+
+.queue-title-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.queue-title {
+    font-weight: 600;
+}
+
+.queue-meta {
+    display: block;
+}
+
+.queue-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.queue-controls ::deep .mud-button-root {
+    white-space: nowrap;
+}
+
+.parallel-label {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.parallel-input {
+    width: 88px;
+}
+
+.queue-start-button {
+    min-width: 132px;
+}
+
+.queue-cancel-button {
+    min-width: 110px;
+}
+
+.queue-table-wrapper {
+    min-width: 0;
+}
+
+.document-queue-table ::deep .mud-table-container {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--mud-palette-surface);
+}
+
+.document-queue-table ::deep .mud-table-head .mud-table-cell {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.document-queue-table ::deep .mud-table-body .mud-table-row:hover .mud-table-cell {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.document-queue-table ::deep .mud-chip {
+    font-weight: 600;
+}
+
+.document-queue-table ::deep .mud-icon-button {
+    padding: 4px;
+}
+
+.document-queue-table ::deep .indexing-status {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.document-queue-table ::deep .mud-progress-linear {
+    width: 100%;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+@media (max-width: 1200px) {
+    .queue-controls {
+        width: 100%;
+        margin-left: 0;
+    }
+}

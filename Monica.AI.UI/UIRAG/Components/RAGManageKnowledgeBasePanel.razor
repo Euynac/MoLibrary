@@ -1,0 +1,122 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Localization
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIRAG.State
+@using Monica.UI.Localization
+@inject IStringLocalizer<AIResource> L
+@inject IStringLocalizer<SharedResource> Shared
+
+<div class="kb-list-panel">
+    <div class="panel-header">
+        <div class="panel-title-group">
+            <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="panel-title-icon" />
+            <MudText Typo="Typo.subtitle1" Class="panel-title">@L["RAG:KnowledgeBase:Title"]</MudText>
+        </div>
+    </div>
+
+    <div class="panel-actions">
+        <MudButton Size="Size.Small"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@PageState.ShowCreateKnowledgeBaseDialogAsync">
+            @L["Common:Create"]
+        </MudButton>
+        <MudButton Size="Size.Small"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.Edit"
+                   Disabled="@(PageState.SelectedKnowledgeBase is null)"
+                   OnClick="@PageState.ShowEditKnowledgeBaseDialogAsync">
+            @L["Common:Edit"]
+        </MudButton>
+        <MudButton Size="Size.Small"
+                   Variant="Variant.Text"
+                   Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.Delete"
+                   Disabled="@(PageState.SelectedKnowledgeBase is null)"
+                   OnClick="@PageState.DeleteSelectedKnowledgeBaseAsync">
+            @L["Common:Delete"]
+        </MudButton>
+    </div>
+
+    @if (PageState.IsInitialLoading)
+    {
+        <div class="panel-loading-state">
+            <div class="loading-copy">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Variant="Variant.Outlined"
+                         Color="Color.Primary"
+                         Class="loading-phase-chip">
+                    @Shared["ModuleSystem:SystemOverview:States:Initializing"]
+                </MudChip>
+                <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
+                    @PageState.LoadingPhaseText
+                </MudText>
+            </div>
+            <MudProgressLinear Value="@PageState.LoadingProgressValue"
+                               Color="Color.Primary"
+                               Rounded="true"
+                               Class="loading-progress" />
+            <div class="loading-skeletons">
+                <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+                <MudSkeleton Height="64px" Width="100%" Animation="Animation.Wave" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="kb-list">
+            @foreach (var knowledgeBase in PageState.KnowledgeBases)
+            {
+                <div class="kb-card @(IsSelected(knowledgeBase) ? "selected" : string.Empty)"
+                     @onclick="@(() => PageState.SelectKnowledgeBaseAsync(knowledgeBase))">
+                    <div class="kb-card-content">
+                        <MudText Typo="Typo.body1" Class="kb-name">@knowledgeBase.Name</MudText>
+                        @if (!string.IsNullOrEmpty(knowledgeBase.Description))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="kb-description">
+                                @knowledgeBase.Description
+                            </MudText>
+                        }
+                        <MudText Typo="Typo.caption" Class="kb-stats">
+                            @L["RAG:Debug:KBSidebar:Stats", knowledgeBase.DocumentCount, knowledgeBase.ChunkCount]
+                        </MudText>
+                        @if (HasEmbeddingBinding(knowledgeBase))
+                        {
+                            <MudText Typo="Typo.caption" Class="kb-embedding-model">
+                                @GetKnowledgeBaseModelDisplay(knowledgeBase)
+                            </MudText>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (PageState.KnowledgeBases.Count == 0)
+        {
+            <div class="kb-empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["RAG:KnowledgeBase:EmptyHint"]
+                </MudText>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required RAGManagePageState PageState { get; set; }
+
+    private static bool HasEmbeddingBinding(KnowledgeBase knowledgeBase)
+        => RAGManagePageState.HasEmbeddingBinding(knowledgeBase);
+
+    private string GetKnowledgeBaseModelDisplay(KnowledgeBase knowledgeBase)
+        => PageState.GetKnowledgeBaseModelDisplay(knowledgeBase);
+
+    private bool IsSelected(KnowledgeBase knowledgeBase)
+        => string.Equals(PageState.SelectedKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase);
+}

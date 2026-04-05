@@ -1,0 +1,155 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Localization
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIRAG.State
+@inject IStringLocalizer<AIResource> L
+
+<div class="document-queue-section">
+    <div class="queue-header">
+        <div class="queue-title-row">
+            <MudIcon Icon="@Icons.Material.Filled.QueuePlayNext" Size="Size.Small" Class="queue-title-icon" />
+            <div class="queue-title-copy">
+                <MudText Typo="Typo.subtitle1" Class="queue-title">@L["RAG:DocumentQueue:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="queue-meta">
+                    @PageState.DocumentQueue.Count @L["RAG:KnowledgeBase:DocumentCount"]
+                </MudText>
+            </div>
+        </div>
+        <div class="queue-controls">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.ClearAll"
+                       OnClick="@PageState.ClearDocumentQueueAsync"
+                       Disabled="@(!PageState.CanClearDocumentQueue)">
+                @L["RAG:DocumentQueue:Actions:ClearQueue"]
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       OnClick="@PageState.ClearKnowledgeBaseDocumentsAsync"
+                       Disabled="@(!PageState.CanClearKnowledgeBaseDocuments)">
+                @L["RAG:DocumentQueue:Actions:ClearDocuments"]
+            </MudButton>
+            <MudText Typo="Typo.caption" Class="parallel-label">
+                @L["RAG:ParallelIndexing:Label"]
+            </MudText>
+            <MudNumericField T="int"
+                             @bind-Value="@ParallelCount"
+                             Min="1"
+                             Max="10"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Class="parallel-input" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       OnClick="@PageState.StartBatchIndexingAsync"
+                       Class="queue-start-button"
+                       Disabled="@(!PageState.CanStartBatchIndexing)">
+                @L["RAG:ParallelIndexing:Start"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Warning"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.StopCircle"
+                       OnClick="@PageState.CancelBatchIndexingAsync"
+                       Class="queue-cancel-button"
+                       Disabled="@(!PageState.CanCancelBatchIndexing)">
+                @L["Common:Cancel"]
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="queue-table-wrapper">
+        <MudTable T="DocumentQueueItem"
+                  Items="@PageState.DocumentQueue"
+                  Dense="true"
+                  Hover="true"
+                  Class="document-queue-table">
+            <HeaderContent>
+                <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
+                    @switch (context.Status)
+                    {
+                        case DocumentStatus.Pending:
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                @L["RAG:DocumentQueue:Status:Pending"]
+                            </MudChip>
+                            break;
+                        case DocumentStatus.Indexing:
+                            <div class="indexing-status">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                    @L["RAG:DocumentQueue:Status:Indexing"]
+                                </MudChip>
+                                <MudProgressLinear Value="@context.Progress" Color="Color.Info" Size="Size.Small" />
+                            </div>
+                            break;
+                        case DocumentStatus.Done:
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                @L["RAG:DocumentQueue:Status:Done"]
+                            </MudChip>
+                            break;
+                        case DocumentStatus.Error:
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" title="@context.ErrorMessage">
+                                @L["RAG:DocumentQueue:Status:Error"]
+                            </MudChip>
+                            break;
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Size="Size.Small"
+                                   OnClick="@(() => PageState.ShowChunkViewerAsync(context))"
+                                   title="@L["RAG:DocumentQueue:Actions:ViewChunks"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => PageState.StartDocumentIndexingAsync(context))"
+                                   Disabled="@(!PageState.CanStartDocumentIndexing(context))"
+                                   title="@L["RAG:DocumentQueue:Actions:StartIndex"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Size="Size.Small"
+                                   OnClick="@(() => PageState.ReindexDocumentAsync(context))"
+                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                   title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Size="Size.Small"
+                                   Color="Color.Error"
+                                   OnClick="@(() => PageState.DeleteDocumentAsync(context))"
+                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                   title="@L["RAG:DocumentQueue:Actions:Delete"]" />
+                    @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
+                                       Size="Size.Small"
+                                       Color="Color.Warning"
+                                       OnClick="@(() => PageState.ShowIndexingErrorAsync(context))"
+                                       title="@L["Common:Error"]" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required RAGManagePageState PageState { get; set; }
+
+    private int ParallelCount
+    {
+        get => PageState.ParallelCount;
+        set => PageState.ParallelCount = value;
+    }
+}

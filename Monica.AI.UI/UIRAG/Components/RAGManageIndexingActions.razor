@@ -1,0 +1,85 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIRAG.State
+@using Monica.UI.Localization
+@inject IStringLocalizer<AIResource> L
+@inject IStringLocalizer<SharedResource> Shared
+
+<div class="indexing-actions-grid">
+    <div class="indexing-card">
+        <div class="indexing-card-title">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:Title"]</MudText>
+        </div>
+        <div class="markdown-group-section">
+            @if (PageState.IsMarkdownGroupsLoading)
+            {
+                <div class="markdown-loading-state">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @Shared["ModuleSystem:SystemOverview:Labels:Loading"]
+                    </MudText>
+                    <MudProgressLinear Indeterminate="true"
+                                       Color="Color.Primary"
+                                       Rounded="true"
+                                       Class="markdown-loading-progress" />
+                </div>
+            }
+            <MudSelect T="string"
+                       @bind-Value="@SelectedMarkdownGroup"
+                       Label="@L["RAG:Indexing:MarkdownGroup"]"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Disabled="@(PageState.IsMarkdownGroupsLoading || PageState.MarkdownGroups.Count == 0)"
+                       FullWidth="true">
+                @foreach (var group in PageState.MarkdownGroups)
+                {
+                    <MudSelectItem T="string" Value="@group">@group</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.FolderOpen"
+                       OnClick="@PageState.ShowDocumentSelectionDialogAsync"
+                       Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)"
+                       FullWidth="true">
+                @L["RAG:DocumentSelection:Title"]
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="indexing-card">
+        <div class="indexing-card-title">
+            <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:UploadFile"]</MudText>
+        </div>
+        <MudFileUpload T="IBrowserFile"
+                       Accept=".txt,.md,.pdf"
+                       FilesChanged="@OnFileSelected"
+                       MaximumFileCount="1"
+                       Class="upload-file-input">
+            <CustomContent Context="upload">
+                <div class="upload-drop-zone" @onclick="upload.OpenFilePickerAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.UploadFile" Size="Size.Large" Class="upload-icon" />
+                    <MudText Typo="Typo.body2" Class="upload-hint-primary">@L["RAG:Indexing:ClickToUpload"]</MudText>
+                    <MudText Typo="Typo.caption" Class="upload-hint-secondary">.md, .txt, .pdf</MudText>
+                </div>
+            </CustomContent>
+        </MudFileUpload>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required RAGManagePageState PageState { get; set; }
+
+    private string? SelectedMarkdownGroup
+    {
+        get => PageState.SelectedMarkdownGroup;
+        set => PageState.SelectedMarkdownGroup = value;
+    }
+
+    private Task OnFileSelected(IBrowserFile file)
+        => PageState.UploadFileAsync(file);
+}
