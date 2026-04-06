@@ -60,8 +60,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIRAGManagePage>(
-                        UIRAGManagePage.PAGE_URL,
+                    p.RegisterLocalizedComponent<RAGManagePage>(
+                        RAGManagePage.PAGE_URL,
                         "Pages:RAGManage:Title",
                         Icons.Material.Filled.Storage,
                         "Categories:AI",
@@ -75,8 +75,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIRAGDebugPage>(
-                        UIRAGDebugPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<RAGDebugPage>(
+                        RAGDebugPage.PAGE_URL,
                         "Pages:RAGDebug:Title",
                         Icons.Material.Filled.ManageSearch,
                         "Categories:AI",
@@ -90,8 +90,8 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIRAGChunkersPage>(
-                        UIRAGChunkersPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<RAGChunkersPage>(
+                        RAGChunkersPage.PAGE_URL,
                         "Pages:RAGChunkers:Title",
                         Icons.Material.Filled.AccountTree,
                         "Categories:AI",

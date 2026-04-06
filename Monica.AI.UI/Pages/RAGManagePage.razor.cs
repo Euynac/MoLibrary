@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Components;
-using Monica.AI.UI.UIChat.State;
+using Monica.AI.UI.UIRAG.State;
 
 namespace Monica.AI.UI.Pages;
 
-public partial class UIChatPage : IDisposable
+public partial class RAGManagePage : IDisposable
 {
-    public const string PAGE_URL = "/ai-chat";
+    public const string PAGE_URL = "/ai/rag/manage";
 
     [Inject]
-    public required ChatPageState PageState { get; set; }
+    public required RAGManagePageState PageState { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

@@ -63,8 +63,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIChatPage>(
-                        UIChatPage.PAGE_URL,
+                    p.RegisterLocalizedComponent<ChatPage>(
+                        ChatPage.PAGE_URL,
                         "Pages:AIChat:Title",
                         Icons.Material.Filled.SmartToy,
                         "Categories:AI",
@@ -78,8 +78,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p =>
                 {
-                    p.RegisterLocalizedComponent<UIProviderManagePage>(
-                        UIProviderManagePage.PAGE_URL,
+                    p.RegisterLocalizedComponent<ProviderManagePage>(
+                        ProviderManagePage.PAGE_URL,
                         "Pages:AIProviderManage:Title",
                         Icons.Material.Filled.Hub,
                         "Categories:AI",
