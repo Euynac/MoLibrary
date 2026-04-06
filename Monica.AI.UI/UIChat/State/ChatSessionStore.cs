@@ -6,7 +6,7 @@ namespace Monica.AI.UI.UIChat.State;
 /// Session storage service for Blazor component state sharing.
 /// Manages ChatSession instances for the UI layer.
 /// </summary>
-public class ChatSessionStore
+public sealed class ChatSessionStore
 {
     private readonly List<ChatSession> _sessions = [];
     private string? _currentSessionId;
@@ -33,6 +33,11 @@ public class ChatSessionStore
     public IReadOnlyList<ChatSession> Sessions => _sessions.AsReadOnly();
 
     /// <summary>
+    /// Current session instance resolved from the current session identifier.
+    /// </summary>
+    public ChatSession? CurrentSession => GetSession(_currentSessionId);
+
+    /// <summary>
     /// Current session changed event
     /// </summary>
     public event Action? CurrentSessionChanged;
@@ -54,14 +59,32 @@ public class ChatSessionStore
     /// <summary>
     /// Update session
     /// </summary>
-    public void UpdateSession(string sessionId, Action<ChatSession> updateAction)
+    public bool UpdateSession(
+        string sessionId,
+        Action<ChatSession> updateAction,
+        bool notifySessionsChanged = false,
+        bool notifyCurrentSessionChanged = false)
     {
         var session = _sessions.FirstOrDefault(s => s.SessionId == sessionId);
-        if (session != null)
+        if (session == null)
         {
-            updateAction(session);
+            return false;
+        }
+
+        updateAction(session);
+
+        if (notifyCurrentSessionChanged
+            && string.Equals(_currentSessionId, sessionId, StringComparison.Ordinal))
+        {
+            CurrentSessionChanged?.Invoke();
+        }
+
+        if (notifySessionsChanged)
+        {
             SessionsChanged?.Invoke();
         }
+
+        return true;
     }
 
     /// <summary>
@@ -85,8 +108,13 @@ public class ChatSessionStore
     /// <summary>
     /// Get session
     /// </summary>
-    public ChatSession? GetSession(string sessionId)
+    public ChatSession? GetSession(string? sessionId)
     {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return null;
+        }
+
         return _sessions.FirstOrDefault(s => s.SessionId == sessionId);
     }
 

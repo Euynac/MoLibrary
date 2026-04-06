@@ -42,8 +42,8 @@ public class ModuleAIUI(ModuleAIUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register UI services
+        services.AddScoped<ChatPageState>();
         services.AddScoped<ChatSessionStore>();
-        services.AddScoped<ChatSessionCoordinator>();
     }
 
     public override void ClaimDependencies()

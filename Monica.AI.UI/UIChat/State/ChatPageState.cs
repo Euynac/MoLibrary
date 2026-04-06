@@ -1,80 +1,400 @@
 using Microsoft.Agents.AI;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using Monica.AI.Facades;
 using Monica.AI.Models;
+using Monica.AI.RAG.Facades;
 using Monica.AI.RAG.Models;
+using Monica.AI.UI.Localization;
+using Monica.AI.UI.UIChat.Models;
+using Monica.AI.UI.UIChat.Support;
+using Monica.Modules;
+using Monica.UI.Shell.Support;
+using MudBlazor;
 
 namespace Monica.AI.UI.UIChat.State;
 
 /// <summary>
-/// Encapsulates all state for the AI Chat page.
-/// Reduces field clutter and improves state management clarity.
+/// Owns mutable page state and UI orchestration for the AI chat page.
 /// </summary>
-public sealed class ChatPageState
+public sealed partial class ChatPageState : IDisposable
 {
-    // Provider/Model state (UI-specific)
-    public string CurrentProviderName { get; set; } = string.Empty;
-    public IReadOnlyList<AIProviderInfo> Providers { get; set; } = [];
-    public IReadOnlyList<AIModelInfo> CurrentProviderModels { get; set; } = [];
+    private readonly ChatFacade _chatFacade;
+    private readonly ChatSessionStore _sessionStore;
+    private readonly ProviderFacade _providerFacade;
+    private readonly ModuleAIUIOption _options;
+    private readonly ISnackbar _snackbar;
+    private readonly IDialogService _dialogService;
+    private readonly RAGFacade _ragFacade;
+    private readonly IStringLocalizer<AIResource> _localizer;
+    private readonly IBrowserStorage _browserStorage;
+    private bool _isAttached;
 
-    // Default provider/model for initial session creation (before any session exists)
-    public string? DefaultProviderId { get; set; }
-    public string? DefaultModelName { get; set; }
+    /// <summary>
+    /// Initializes the page state and its collaborators.
+    /// </summary>
+    public ChatPageState(
+        ChatFacade chatFacade,
+        ChatSessionStore sessionStore,
+        ProviderFacade providerFacade,
+        IOptions<ModuleAIUIOption> options,
+        ISnackbar snackbar,
+        IDialogService dialogService,
+        RAGFacade ragFacade,
+        IStringLocalizer<AIResource> localizer,
+        IBrowserStorage browserStorage)
+    {
+        _chatFacade = chatFacade;
+        _sessionStore = sessionStore;
+        _providerFacade = providerFacade;
+        _options = options.Value;
+        _snackbar = snackbar;
+        _dialogService = dialogService;
+        _ragFacade = ragFacade;
+        _localizer = localizer;
+        _browserStorage = browserStorage;
+    }
 
-    // Current chat session reference
-    public ChatSession? CurrentSession { get; set; }
+    /// <summary>
+    /// Raised when the page should re-render.
+    /// </summary>
+    public event Action? StateChanged;
 
-    // Computed properties from session state (with fallback to defaults)
+    /// <summary>
+    /// Whether the session list should be shown.
+    /// </summary>
+    public bool ShowSessionList => _options.ShowSessionList;
+
+    /// <summary>
+    /// Whether the provider selector should be shown.
+    /// </summary>
+    public bool ShowProviderSelector => _options.ShowProviderSelector;
+
+    /// <summary>
+    /// All available chat sessions.
+    /// </summary>
+    public IReadOnlyList<ChatSession> Sessions => _sessionStore.Sessions;
+
+    /// <summary>
+    /// Current chat session identifier.
+    /// </summary>
+    public string? CurrentSessionId => _sessionStore.CurrentSessionId;
+
+    /// <summary>
+    /// Current provider display name shown by the page.
+    /// </summary>
+    public string CurrentProviderName { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Available providers shown by the page.
+    /// </summary>
+    public IReadOnlyList<AIProviderInfo> Providers { get; private set; } = [];
+
+    /// <summary>
+    /// Models available for the currently selected provider.
+    /// </summary>
+    public IReadOnlyList<AIModelInfo> CurrentProviderModels { get; private set; } = [];
+
+    /// <summary>
+    /// Default provider identifier used before a session exists.
+    /// </summary>
+    public string? DefaultProviderId { get; private set; }
+
+    /// <summary>
+    /// Default model name used before a session exists.
+    /// </summary>
+    public string? DefaultModelName { get; private set; }
+
+    /// <summary>
+    /// Current chat session instance.
+    /// </summary>
+    public ChatSession? CurrentSession { get; private set; }
+
+    /// <summary>
+    /// Current provider identifier resolved from the session or defaults.
+    /// </summary>
     public string? CurrentProviderId => CurrentSession?.ProviderId ?? DefaultProviderId;
+
+    /// <summary>
+    /// Current model name resolved from the session or defaults.
+    /// </summary>
     public string? CurrentModelName => CurrentSession?.ModelName ?? DefaultModelName;
-    public string CurrentSessionTitle => CurrentSession?.Title ?? "New Conversation";
-    public IReadOnlyList<AIChatMessage> CurrentMessages => CurrentSession?.Messages ?? (IReadOnlyList<AIChatMessage>)Array.Empty<AIChatMessage>();
 
-    // UI state
-    public bool IsSending { get; set; }
-    public bool IsLoading { get; set; }
-    public string? ErrorMessage { get; set; }
-    public bool CanRetry { get; set; }
-    public string? LastMessage { get; set; }
+    /// <summary>
+    /// Current message list shown by the page.
+    /// </summary>
+    public IReadOnlyList<AIChatMessage> CurrentMessages
+        => CurrentSession?.Messages ?? (IReadOnlyList<AIChatMessage>)Array.Empty<AIChatMessage>();
 
-    // Streaming state
-    public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; set; }
-    public CancellationTokenSource? CancellationTokenSource { get; set; }
-    public CancellationToken CancellationToken { get; set; }
+    /// <summary>
+    /// Whether a request is currently in flight.
+    /// </summary>
+    public bool IsSending { get; private set; }
 
-    // Feature state
-    public bool ReasoningEnabled { get; set; }
-    public bool SupportsReasoning { get; set; }
-    public bool ToolDebugEnabled { get; set; }
+    /// <summary>
+    /// Current error message shown by the page.
+    /// </summary>
+    public string? ErrorMessage { get; private set; }
 
-    // RAG state
-    public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];
-    public List<string> SelectedKnowledgeBaseIds { get; set; } = [];
+    /// <summary>
+    /// Whether retry is currently available.
+    /// </summary>
+    public bool CanRetry { get; private set; }
 
-    public void ClearError()
+    /// <summary>
+    /// Last user message sent by the page.
+    /// </summary>
+    public string? LastMessage { get; private set; }
+
+    /// <summary>
+    /// Current streaming response sequence, if any.
+    /// </summary>
+    public IAsyncEnumerable<AgentResponseUpdate>? StreamingContent { get; private set; }
+
+    /// <summary>
+    /// Current cancellation token source for the active request.
+    /// </summary>
+    public CancellationTokenSource? CancellationTokenSource { get; private set; }
+
+    /// <summary>
+    /// Current cancellation token for the active request.
+    /// </summary>
+    public CancellationToken CancellationToken { get; private set; }
+
+    /// <summary>
+    /// Whether reasoning mode is currently enabled.
+    /// </summary>
+    public bool ReasoningEnabled { get; private set; }
+
+    /// <summary>
+    /// Whether the selected provider/model supports reasoning.
+    /// </summary>
+    public bool SupportsReasoning { get; private set; }
+
+    /// <summary>
+    /// Whether tool-call debug display is enabled.
+    /// </summary>
+    public bool ToolDebugEnabled { get; private set; }
+
+    /// <summary>
+    /// Available knowledge bases shown by the chat page.
+    /// </summary>
+    public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; private set; } = [];
+
+    /// <summary>
+    /// Selected knowledge-base identifiers for the current page session.
+    /// </summary>
+    public List<string> SelectedKnowledgeBaseIds { get; private set; } = [];
+
+    /// <summary>
+    /// Initialize the page for the current visit.
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        Attach();
+        ResetPageState();
+
+        Providers = ChatProviderResolver.GetChatProviders(_chatFacade.GetProviders());
+        InitializeDefaultProvider();
+        InitializeKnowledgeBaseSelection();
+        await LoadPersistedPreferencesAsync();
+        await LoadKnowledgeBasesAsync();
+        await EnsureSessionExistsAsync();
+        UpdateCurrentSession();
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Creates the current chat-container parameter object.
+    /// </summary>
+    public ChatContainerParameters BuildChatContainerParameters()
+    {
+        return new ChatContainerParameters
+        {
+            Messages = CurrentMessages,
+            StreamingContent = StreamingContent,
+            IsSending = IsSending,
+            ShowRetry = CanRetry,
+            ProviderName = CurrentProviderName,
+            ModelName = CurrentModelName,
+            ShowProviderInfo = !ShowProviderSelector,
+            AvailableModels = CurrentProviderModels,
+            ErrorMessage = ErrorMessage,
+            CancellationToken = CancellationToken,
+            EnableMarkdown = _options.EnableMarkdown,
+            EnableAutoScroll = _options.EnableAutoScroll,
+            SupportsReasoning = SupportsReasoning,
+            ReasoningEnabled = ReasoningEnabled,
+            ToolDebugEnabled = ToolDebugEnabled,
+            KnowledgeBases = KnowledgeBases,
+            SelectedKnowledgeBaseIds = SelectedKnowledgeBaseIds,
+            OnSendMessage = EventCallback.Factory.Create<string>(this, SendMessageAsync),
+            OnStreamComplete = EventCallback.Factory.Create<string>(this, CompleteStream),
+            OnStreamError = EventCallback.Factory.Create<string>(this, SetStreamError),
+            OnCancel = EventCallback.Factory.Create(this, CancelAsync),
+            OnRetry = EventCallback.Factory.Create(this, RetryLastMessageAsync),
+            OnErrorDismissed = EventCallback.Factory.Create(this, DismissError),
+            OnEditMessage = EventCallback.Factory.Create<(AIChatMessage, string)>(this, EditMessage),
+            OnRetryMessage = EventCallback.Factory.Create<AIChatMessage>(this, RetryMessage),
+            OnModelChanged = EventCallback.Factory.Create<string>(this, ChangeModelAsync),
+            ReasoningEnabledChanged = EventCallback.Factory.Create<bool>(this, SetReasoningEnabled),
+            SelectedKnowledgeBaseIdsChanged = EventCallback.Factory.Create<List<string>>(this, SetSelectedKnowledgeBases)
+        };
+    }
+
+    /// <summary>
+    /// Resolve the current tool-debug toggle tooltip.
+    /// </summary>
+    public string GetToolDebugTooltip()
+        => ToolDebugEnabled
+            ? _localizer["Chat:ToolCalls:DisableDebug"]
+            : _localizer["Chat:ToolCalls:EnableDebug"];
+
+    private void Attach()
+    {
+        if (_isAttached)
+        {
+            return;
+        }
+
+        _sessionStore.CurrentSessionChanged += OnCurrentSessionChanged;
+        _sessionStore.SessionsChanged += OnSessionsChanged;
+        _isAttached = true;
+    }
+
+    private void ResetPageState()
+    {
+        CancellationTokenSource?.Dispose();
+        CancellationTokenSource = null;
+        CancellationToken = CancellationToken.None;
+        StreamingContent = null;
+        IsSending = false;
+        LastMessage = null;
+        CurrentSession = null;
+        CurrentProviderName = string.Empty;
+        CurrentProviderModels = [];
+        ClearError();
+    }
+
+    private void InitializeDefaultProvider()
+    {
+        var defaultProvider = ChatProviderResolver.GetPreferredChatProvider(
+            Providers,
+            _chatFacade.GetDefaultProvider()?.ProviderId);
+        if (defaultProvider == null)
+        {
+            DefaultProviderId = null;
+            DefaultModelName = null;
+            CurrentProviderName = string.Empty;
+            CurrentProviderModels = [];
+            SupportsReasoning = false;
+            SetPageError(_localizer["Provider:NoChatProvider"], showSnackbar: false);
+            return;
+        }
+
+        ClearError();
+        DefaultProviderId = defaultProvider.ProviderId;
+        DefaultModelName = ChatProviderResolver.GetPreferredChatModel(defaultProvider, defaultProvider.DefaultModel);
+        CurrentProviderName = defaultProvider.DisplayName;
+        CurrentProviderModels = ChatProviderResolver.GetChatModels(defaultProvider);
+        SupportsReasoning = ChatProviderResolver.GetReasoningSupport(
+            Providers,
+            defaultProvider.ProviderId,
+            DefaultModelName);
+    }
+
+    private void InitializeKnowledgeBaseSelection()
+    {
+        SelectedKnowledgeBaseIds = new List<string>(_options.DefaultKnowledgeBaseIds);
+    }
+
+    private void OnCurrentSessionChanged()
+    {
+        UpdateCurrentSession();
+        NotifyStateChanged();
+    }
+
+    private void OnSessionsChanged()
+    {
+        NotifyStateChanged();
+    }
+
+    private void UpdateCurrentSession()
+    {
+        var currentSession = _sessionStore.CurrentSession;
+        CurrentSession = currentSession;
+
+        if (currentSession == null)
+        {
+            return;
+        }
+
+        var provider = ChatProviderResolver.FindProvider(Providers, currentSession.ProviderId);
+        if (provider != null)
+        {
+            CurrentProviderName = provider.DisplayName;
+            CurrentProviderModels = ChatProviderResolver.GetChatModels(provider);
+        }
+    }
+
+    private void ClearError()
     {
         ErrorMessage = null;
         CanRetry = false;
     }
 
-    public void SetError(string message, bool canRetry = false)
+    private void SetError(string message, bool canRetry = false)
     {
         ErrorMessage = message;
         CanRetry = canRetry;
     }
 
-    public void SetupCancellationToken(int timeoutMs = 0)
+    private void SetupCancellationToken()
     {
         CancellationTokenSource?.Dispose();
         CancellationTokenSource = new CancellationTokenSource();
         CancellationToken = CancellationTokenSource.Token;
 
-        if (timeoutMs > 0)
+        if (_options.RequestTimeoutMs > 0)
         {
-            CancellationTokenSource.CancelAfter(timeoutMs);
+            CancellationTokenSource.CancelAfter(_options.RequestTimeoutMs);
         }
     }
 
+    private void SetPageError(string message, bool canRetry = false, bool showSnackbar = true)
+    {
+        IsSending = false;
+        StreamingContent = null;
+        SetError(message, canRetry);
+
+        if (showSnackbar)
+        {
+            _snackbar.Add(message, Severity.Error);
+        }
+
+        NotifyStateChanged();
+    }
+
+    private void NotifyStateChanged()
+    {
+        StateChanged?.Invoke();
+    }
+
+    /// <inheritdoc />
     public void Dispose()
     {
         CancellationTokenSource?.Dispose();
+        CancellationTokenSource = null;
+        CancellationToken = CancellationToken.None;
+        StreamingContent = null;
+        IsSending = false;
+
+        if (_isAttached)
+        {
+            _sessionStore.CurrentSessionChanged -= OnCurrentSessionChanged;
+            _sessionStore.SessionsChanged -= OnSessionsChanged;
+            _isAttached = false;
+        }
     }
 }
