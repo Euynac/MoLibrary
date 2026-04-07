@@ -106,6 +106,12 @@ public class ModuleRpcClient(ModuleRpcClientOption option) :
                         {
                             var httpClientBuilder = services.AddHttpClient(appid);
                             httpClientBuilder.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
+
+                            if(Option.CustomHttpClientBuilder is { } method)
+                            {
+                                method.Invoke(httpClientBuilder);
+                            }
+
                             services.AddSingleton<IConfigureOptions<HttpClientFactoryOptions>>(provider =>
                                 new ConfigureNamedOptions<HttpClientFactoryOptions>(appid, options =>
                                 {
@@ -169,6 +175,15 @@ public class ModuleRpcClientGuide : ModuleGuide<ModuleRpcClient, ModuleRpcClient
         });
         return this;
     }
+
+    public ModuleRpcClientGuide ConfigHttpClientBuilder(Action<IHttpClientBuilder> builderFunc)
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.CustomHttpClientBuilder = builderFunc;
+        });
+        return this;
+    }
 }
 
 public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
@@ -177,7 +192,7 @@ public class ModuleRpcClientOption : ModuleOptions<ModuleRpcClient>
     /// Registers RPC clients through gRPC instead of HttpClient.
     /// </summary>
     public bool UseGrpc { get; set; }
-
+    public Action<IHttpClientBuilder>? CustomHttpClientBuilder { get; internal set; }
     internal Type? HttpClientRegisterProviderType { get; set; }
     internal IRpcClientDomainInfoProvider? DomainInfoProvider { get; set; }
 }

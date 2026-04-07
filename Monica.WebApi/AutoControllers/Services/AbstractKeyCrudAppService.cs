@@ -51,7 +51,7 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
     protected virtual IRepository<TEntity, TKey> Repository { get; } = repository;
 
     #region Query
-
+    protected virtual bool DisableProjectToType => false;
     /// <summary>
     /// Retrieves an entity by its ID and maps it to a DTO.
     /// </summary>
@@ -639,8 +639,15 @@ public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetList
     {
         // Important: if the DTO defines child-table fields, ProjectToType will query them automatically, so explicit Include is unnecessary.
         // As of 2024-04-22, Mapster does not support ProjectToType for complex types.
-        return await Mapper.ProjectToType<TCustomDto>(query).ToListAsync();
-        //return Mapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
+
+        if (!DisableProjectToType)
+        {
+            return await Mapper.ProjectToType<TCustomDto>(query).ToListAsync();
+        }
+        else
+        {
+            return Mapper.Map<List<TEntity>, List<TCustomDto>>(await query.ToListAsync());
+        }
     }
 
     #endregion

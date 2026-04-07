@@ -19,6 +19,8 @@ public interface IChangeItem
 
 public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChangeItem where TAlterItemData : class, IChangeItemData<TTargetEntity>, new() where TTargetEntity : class, IChangeTrackedEntity where TEnumAlterSource:Enum
 {
+    private const string EmptyValuePlaceholder = "[空值]";
+
     /// <summary>
     /// Change item ID
     /// </summary>
@@ -244,7 +246,20 @@ public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChan
                     record.NewValue = null;
                 }
 
+                record.OldValue = NormalizeDisplayValue(record.OldValue);
+                record.NewValue = NormalizeDisplayValue(record.NewValue);
+
                 return record;
+            }
+
+            static object NormalizeDisplayValue(object? value)
+            {
+                return value switch
+                {
+                    null => EmptyValuePlaceholder,
+                    string text when string.IsNullOrWhiteSpace(text) => EmptyValuePlaceholder,
+                    _ => value
+                };
             }
         }
 
