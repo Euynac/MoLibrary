@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Business Microservice"
+  short_description: "DDD microservice solution guidance for Monica projects"
+  default_prompt: "Use $monica-business-microservice with $monica-project-unit-development to design or extend a Monica DDD microservice subdomain."
