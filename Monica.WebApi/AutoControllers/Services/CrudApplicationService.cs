@@ -16,9 +16,9 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// Implement <see cref="ICrudDisableDelete"/> as well to disable delete operations.
 /// </para>
 /// </summary>
-public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
+public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetListInput, TRepository>(
     TRepository repository)
-    : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, CrudDisableDto, CrudDisableDto,
+    : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, CrudDisableDto, CrudDisableDto,
         CrudDisableDto, TRepository>(repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
@@ -33,9 +33,9 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, T
 /// and the default paged request DTO is used.
 /// </para>
 /// </summary>
-public abstract class CrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(
+public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TCreateInput, TUpdateInput, TRepository>(
     TRepository repository)
-    : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, CrudPageRequestDto, TCreateInput, TUpdateInput,
+    : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, CrudPageRequestDto, TCreateInput, TUpdateInput,
         CrudDisableDto, TRepository>(repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
@@ -49,10 +49,10 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TCreateInput, TU
 /// Simplified variant: bulk delete is not generated, and the single-item DTO matches the list-item DTO.
 /// </para>
 /// </summary>
-public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
+public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput,
     TRepository>(
         TRepository repository)
-    : CrudAppService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, CrudDisableDto, TRepository>(
+    : CrudApplicationService<TEntity, TEntityDto, TEntityDto, TKey, TGetListInput, TCreateInput, TUpdateInput, CrudDisableDto, TRepository>(
         repository)
     where TEntity : class, IEntity<TKey>
     where TEntityDto : IEntityDto<TKey>
@@ -78,7 +78,7 @@ public abstract class CrudAppService<TEntity, TEntityDto, TKey, TGetListInput, T
 /// <typeparam name="TBulkDeleteInput">The input type used for bulk delete operations.</typeparam>
 /// <typeparam name="TRepository">The repository type. Must implement <see cref="IRepository{TEntity}"/>.</typeparam>
 /// <param name="repository">The repository instance.</param>
-public abstract class CrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
+public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(
         TRepository repository) : 
     AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(

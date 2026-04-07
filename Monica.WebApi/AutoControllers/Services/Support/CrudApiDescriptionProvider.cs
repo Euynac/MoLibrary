@@ -95,7 +95,7 @@ public class CrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProv
             var finalBaseType = type.BaseType;
             while (finalBaseType is not null)
             {
-                if (finalBaseType.IsDerivedFromGenericType(typeof(CrudAppService<,,,,,,,,>)))
+                if (finalBaseType.IsDerivedFromGenericType(typeof(CrudApplicationService<,,,,,,,,>)))
                 {
                     break;
                 }
