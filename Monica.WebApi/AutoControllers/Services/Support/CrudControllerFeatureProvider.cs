@@ -21,7 +21,7 @@ public class CrudControllerFeatureProvider(ILogger<CrudControllerFeatureProvider
         //SearchTimes++;
         //logger.LogInformation(SearchTimes.ToString());
 
-        if (typeInfo is {IsClass: true, IsGenericType: false} && typeInfo.AsType().IsImplementInterface<ICrudAppService>())
+        if (typeInfo is {IsClass: true, IsGenericType: false} && typeInfo.AsType().IsImplementInterface<ICrudApplicationService>())
         {
             if (typeInfo.Name.EndsWith(options.Value.CrudControllerPostfix))
             {

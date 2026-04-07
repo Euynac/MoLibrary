@@ -31,7 +31,7 @@ namespace Monica.WebApi.AutoControllers.Services;
 /// <typeparam name="TGetListInput">The input type for GetList operations</typeparam>
 /// <typeparam name="TCreateInput">The input type for Create operations</typeparam>
 /// <typeparam name="TUpdateInput">The input type for Update operations</typeparam>
-public abstract class AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
+public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
     IRepository<TEntity, TKey> repository) : ApplicationService
     where TEntity : class, IEntity<TKey>
 {

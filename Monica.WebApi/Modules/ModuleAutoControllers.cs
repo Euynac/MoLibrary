@@ -91,7 +91,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         foreach (var type in types)
         {
             if (type is { IsClass: true, IsAbstract: false, IsGenericType: false } &&
-                (typeof(ControllerBase).IsAssignableFrom(type) || typeof(ICrudAppService).IsAssignableFrom(type)))
+                (typeof(ControllerBase).IsAssignableFrom(type) || typeof(ICrudApplicationService).IsAssignableFrom(type)))
             {
                 Option.AddApplicationPartType(type);
             }

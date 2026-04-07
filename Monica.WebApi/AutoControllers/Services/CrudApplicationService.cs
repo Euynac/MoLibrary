@@ -81,8 +81,8 @@ public abstract class CrudApplicationService<TEntity, TEntityDto, TKey, TGetList
 public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput,
     TUpdateInput, TBulkDeleteInput, TRepository>(
         TRepository repository) : 
-    AbstractKeyCrudAppService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
-        repository), ICrudAppService
+    AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, TGetListOutputDto, TKey, TGetListInput, TCreateInput, TUpdateInput>(
+        repository), ICrudApplicationService
     where TEntity : class, IEntity<TKey>
     where TGetOutputDto : IEntityDto<TKey>
     where TGetListOutputDto : IEntityDto<TKey>

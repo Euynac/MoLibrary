@@ -3,6 +3,6 @@ namespace Monica.WebApi.AutoControllers.Abstractions;
 /// <summary>
 /// Marker interface used to identify application services that participate in automatic CRUD controller generation.
 /// </summary>
-public interface ICrudAppService
+public interface ICrudApplicationService
 {
 }

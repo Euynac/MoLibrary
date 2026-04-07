@@ -40,7 +40,7 @@ public class CrudControllerServiceConvention(
         {
             var controllerType = controller.ControllerType.AsType();
 
-            if (!controllerType.IsImplementInterface<ICrudAppService>())
+            if (!controllerType.IsImplementInterface<ICrudApplicationService>())
             {
                 continue;
             }

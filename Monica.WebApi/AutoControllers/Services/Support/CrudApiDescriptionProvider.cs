@@ -81,7 +81,7 @@ public class CrudApiDescriptionProvider(IModelMetadataProvider modelMetadataProv
             var controllerActionDescriptor = apiDescription.ActionDescriptor.AsControllerActionDescriptor();
             var type = controllerActionDescriptor.ControllerTypeInfo;
 
-            if (!type.AsType().IsImplementInterface<ICrudAppService>())
+            if (!type.AsType().IsImplementInterface<ICrudApplicationService>())
             {
                 continue;
             }
