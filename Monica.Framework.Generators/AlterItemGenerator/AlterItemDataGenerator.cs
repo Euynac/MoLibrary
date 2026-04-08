@@ -21,25 +21,36 @@ public class AlterItemDataGenerator : IIncrementalGenerator
         //Debugger.Launch();
         // No need to generate properties files anymore, use interface detection
 
-        // Find classes that implement the change-tracked entity interface and check these classes first.
-        var tracingDataEntities = context.SyntaxProvider
+        var candidateClasses = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax,
-                transform: static (ctx, _) => GetOptimizedEntityInfo(ctx))
+                transform: static (ctx, _) => ctx.Node as ClassDeclarationSyntax)
+            .Where(static classSyntax => classSyntax is not null)
+            .Select(static (classSyntax, _) => classSyntax!);
+
+        // Find classes that implement the change-tracked entity interface and check these classes first.
+        var tracingDataEntities = candidateClasses
+            .Combine(context.CompilationProvider)
+            .Select(static (pair, _) => GetOptimizedEntityInfo(pair.Right, pair.Left))
             .Where(static info => info is not null)
             .Select(static (info, _) => info!);
 
+        var generationInputs = context.CompilationProvider.Combine(tracingDataEntities.Collect());
+
         // Generate code for all detected entities (with deduplication for partial classes)
-        context.RegisterSourceOutput(tracingDataEntities.Collect(), (ctx, entities) =>
+        context.RegisterSourceOutput(generationInputs, (ctx, input) =>
         {
+            var (compilation, entities) = input;
+
             // Deduplication: Use HashSet to ensure each entity is processed only once
             var uniqueEntities = new HashSet<EntityGenerationInfo>(entities);
+            var analyzer = new EntityAnalyzer(compilation, ctx.CancellationToken);
             
             foreach (var entity in uniqueEntities)
             {
                 try
                 {
-                    GenerateAlterItemDataForEntity(ctx, entity);
+                    GenerateAlterItemDataForEntity(ctx, entity, analyzer);
                 }
                 catch (Exception ex)
                 {
@@ -63,21 +74,31 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     /// <summary>
     /// Optimized entity information acquisition method: first check the change-tracked entity interface, and then check the generation attribute.
     /// </summary>
-    private static EntityGenerationInfo? GetOptimizedEntityInfo(GeneratorSyntaxContext context)
+    private static EntityGenerationInfo? GetOptimizedEntityInfo(
+        Compilation compilation,
+        ClassDeclarationSyntax classSyntax)
     {
-        if (context.Node is not ClassDeclarationSyntax classSyntax)
+        var semanticModel = compilation.GetSemanticModel(classSyntax.SyntaxTree);
+        if (semanticModel.GetDeclaredSymbol(classSyntax) is not INamedTypeSymbol entitySymbol)
             return null;
 
-        if (context.SemanticModel.GetDeclaredSymbol(classSyntax) is not INamedTypeSymbol entitySymbol)
+        var changeTrackedEntitySymbol = compilation.GetTypeByMetadataName(ChangeTrackedEntityInterfaceName);
+        if (changeTrackedEntitySymbol == null)
             return null;
 
         // First check whether the change-tracked entity interface is implemented.
-        if (!ImplementsInterface(entitySymbol, ChangeTrackedEntityInterfaceName))
+        if (!ImplementsInterface(entitySymbol, changeTrackedEntitySymbol))
             return null;
 
+        var generateChangeItemDataAttributeSymbol = compilation.GetTypeByMetadataName(GenerateChangeItemDataAttributeName);
+
         // Then check if there is a generation attribute and, if so, use its settings.
-        var generateAttribute = entitySymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == GenerateChangeItemDataAttributeName);
+        var generateAttribute = generateChangeItemDataAttributeSymbol == null
+            ? null
+            : entitySymbol.GetAttributes()
+                .FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(
+                    a.AttributeClass,
+                    generateChangeItemDataAttributeSymbol));
 
         if (generateAttribute != null)
         {
@@ -109,16 +130,12 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     /// <summary>
     /// Generate change-item data code for entities.
     /// </summary>
-    private static void GenerateAlterItemDataForEntity(SourceProductionContext context, EntityGenerationInfo entityInfo)
+    private static void GenerateAlterItemDataForEntity(
+        SourceProductionContext context,
+        EntityGenerationInfo entityInfo,
+        EntityAnalyzer analyzer)
     {
         var entitySymbol = entityInfo.EntitySymbol;
-        
-        // For source generators, we can get the compilation from the containing assembly
-        var compilation = entitySymbol.ContainingAssembly.Name != null ? 
-            Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create(entitySymbol.ContainingAssembly.Name) :
-            Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create("DummyCompilation");
-        
-        var analyzer = new EntityAnalyzer(compilation, context.CancellationToken);
         var analysisResult = analyzer.AnalyzeEntity(entitySymbol);
         
         if (analysisResult == null)
@@ -159,9 +176,9 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     /// <summary>
     /// Check whether the type implements the specified interface.
     /// </summary>
-    private static bool ImplementsInterface(INamedTypeSymbol type, string interfaceName)
+    private static bool ImplementsInterface(INamedTypeSymbol type, INamedTypeSymbol interfaceSymbol)
     {
-        return type.AllInterfaces.Any(i => i.ToDisplayString() == interfaceName);
+        return type.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, interfaceSymbol));
     }
 
 

@@ -12,7 +12,18 @@ namespace Monica.Framework.Generators.AlterItemGenerator;
 /// </summary>
 internal class EntityAnalyzer(Compilation compilation, CancellationToken cancellationToken)
 {
-    private readonly Compilation _compilation = compilation;
+    private static readonly string[] IgnoredPropertyNames = ["Id", "ExtraProperties", "ConcurrencyStamp"];
+
+    private readonly INamedTypeSymbol? _ownedAttributeSymbol = compilation.GetTypeByMetadataName("Microsoft.EntityFrameworkCore.OwnedAttribute");
+    private readonly INamedTypeSymbol? _changeItemPropertyAttributeSymbol = compilation.GetTypeByMetadataName("Monica.Framework.ChangeTracking.Annotations.ChangeItemPropertyAttribute");
+    private readonly INamedTypeSymbol? _notMappedAttributeSymbol = compilation.GetTypeByMetadataName("System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute");
+    private readonly INamedTypeSymbol? _jsonIgnoreAttributeSymbol = compilation.GetTypeByMetadataName("System.Text.Json.Serialization.JsonIgnoreAttribute");
+    private readonly INamedTypeSymbol? _dateTimeSymbol = compilation.GetTypeByMetadataName("System.DateTime");
+    private readonly INamedTypeSymbol? _dateTimeOffsetSymbol = compilation.GetTypeByMetadataName("System.DateTimeOffset");
+    private readonly INamedTypeSymbol? _timeSpanSymbol = compilation.GetTypeByMetadataName("System.TimeSpan");
+    private readonly INamedTypeSymbol? _guidSymbol = compilation.GetTypeByMetadataName("System.Guid");
+    private readonly INamedTypeSymbol? _listSymbol = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1");
+    private readonly INamedTypeSymbol? _iListSymbol = compilation.GetTypeByMetadataName("System.Collections.Generic.IList`1");
 
     /// <summary>
     /// Analyze entity classes and extract all attribute information that needs to be generated
@@ -27,7 +38,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
             var ownedTypes = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
             // Analyze all public properties of an entity
-            AnalyzePropertiesRecursive(entitySymbol, properties, ownedTypes, "", entitySymbol, false);
+            AnalyzePropertiesRecursive(entitySymbol, properties, ownedTypes, "", false);
 
             return new EntityAnalysisResult(
                 entitySymbol,
@@ -53,7 +64,6 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
         List<PropertyInfo> properties,
         HashSet<INamedTypeSymbol> ownedTypes,
         string propertyPathPrefix,
-        INamedTypeSymbol rootEntitySymbol,
         bool isFromOptionalNavigation = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -81,7 +91,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
                     ownedTypes.Add(namedType);
                     
                     // Recursively analyze properties of Owned type and flatten them
-                    AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, rootEntitySymbol, isFromOptionalNavigation);
+                    AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, isFromOptionalNavigation);
                 }
             }
             // Check if optional navigation properties (such as DepInfo, ArrInfo)
@@ -91,13 +101,13 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
                 if (underlyingType is INamedTypeSymbol namedType)
                 {
                     // Recursively analyze properties of optional navigation properties
-                    AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, rootEntitySymbol, true);
+                    AnalyzePropertiesRecursive(namedType, properties, ownedTypes, propertyPath, true);
                 }
             }
             else
             {
                 // Common properties
-                var propertyInfo = CreatePropertyInfo(property, propertyPath, rootEntitySymbol, isFromOptionalNavigation);
+                var propertyInfo = CreatePropertyInfo(property, propertyPath, isFromOptionalNavigation);
                 if (propertyInfo != null)
                 {
                     properties.Add(propertyInfo);
@@ -109,7 +119,10 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     /// <summary>
     /// Create attribute information
     /// </summary>
-    private PropertyInfo? CreatePropertyInfo(IPropertySymbol property, string propertyPath, INamedTypeSymbol rootEntitySymbol, bool isFromOptionalNavigation = false)
+    private PropertyInfo? CreatePropertyInfo(
+        IPropertySymbol property,
+        string propertyPath,
+        bool isFromOptionalNavigation = false)
     {
         try
         {
@@ -117,6 +130,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
             var isNullable = IsNullableType(property.Type);
             var propertyType = GetPropertyType(property.Type);
             var isOptionalNavigation = isFromOptionalNavigation || IsOptionalNavigationProperty(property);
+            var displayName = GetPropertyDisplayName(property);
 
             return new PropertyInfo(
                 property.Name,
@@ -126,7 +140,8 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
                 isNullable,
                 isOptionalNavigation,
                 property,
-                xmlDoc
+                xmlDoc,
+                displayName
             );
         }
         catch
@@ -172,10 +187,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
         if (type is not INamedTypeSymbol namedType)
             return false;
 
-        // Check if there is an [Owned] attribute
-        return namedType.GetAttributes()
-            .Any(attr => attr.AttributeClass?.Name == "OwnedAttribute" || 
-                        attr.AttributeClass?.ToDisplayString().Contains("Microsoft.EntityFrameworkCore.OwnedAttribute") == true);
+        return HasAttribute(namedType.GetAttributes(), _ownedAttributeSymbol);
     }
 
     /// <summary>
@@ -198,27 +210,22 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     /// </summary>
     private bool IsBuiltInType(INamedTypeSymbol type)
     {
-        var typeName = type.ToDisplayString();
-        return typeName switch
+        if (type.TypeKind == TypeKind.Enum || type.SpecialType != SpecialType.None)
+            return true;
+
+        if (SymbolEquals(type, _dateTimeSymbol) ||
+            SymbolEquals(type, _dateTimeOffsetSymbol) ||
+            SymbolEquals(type, _timeSpanSymbol) ||
+            SymbolEquals(type, _guidSymbol))
         {
-            "string" or "System.String" => true,
-            "int" or "System.Int32" => true,
-            "long" or "System.Int64" => true,
-            "short" or "System.Int16" => true,
-            "byte" or "System.Byte" => true,
-            "bool" or "System.Boolean" => true,
-            "float" or "System.Single" => true,
-            "double" or "System.Double" => true,
-            "decimal" or "System.Decimal" => true,
-            "System.DateTime" => true,
-            "System.DateTimeOffset" => true,
-            "System.TimeSpan" => true,
-            "System.Guid" => true,
-            _ when type.TypeKind == TypeKind.Enum => true,
-            _ when type.IsGenericType && type.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.List<") => true,
-            _ when type.IsGenericType && type.OriginalDefinition.ToDisplayString().StartsWith("System.Collections.Generic.IList<") => true,
-            _ => false
-        };
+            return true;
+        }
+
+        if (!type.IsGenericType)
+            return false;
+
+        return SymbolEquals(type.OriginalDefinition, _listSymbol) ||
+               SymbolEquals(type.OriginalDefinition, _iListSymbol);
     }
 
     /// <summary>
@@ -226,11 +233,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     /// </summary>
     private bool IsNullableType(ITypeSymbol type)
     {
-        return type.CanBeReferencedByName && 
-               (type.IsReferenceType || 
-                (type is INamedTypeSymbol namedType && 
-                 namedType.IsGenericType && 
-                 namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"));
+        return type.IsReferenceType || IsNullableValueType(type);
     }
 
     /// <summary>
@@ -259,9 +262,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
     /// </summary>
     private ITypeSymbol GetUnderlyingType(ITypeSymbol type)
     {
-        if (type is INamedTypeSymbol namedType && 
-            namedType.IsGenericType && 
-            namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+        if (type is INamedTypeSymbol namedType && IsNullableValueType(namedType))
         {
             return namedType.TypeArguments[0];
         }
@@ -279,10 +280,7 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
             return true;
 
         // Check the Ignore setting of the change-item property attribute.
-        var alterItemAttr = property.GetAttributes()
-            .FirstOrDefault(attr =>
-                attr.AttributeClass?.Name == "ChangeItemPropertyAttribute" ||
-                attr.AttributeClass?.ToDisplayString().Contains("Monica.Framework.ChangeTracking.Annotations.ChangeItemPropertyAttribute") == true);
+        var alterItemAttr = GetChangeItemPropertyAttribute(property);
         
         if (alterItemAttr != null)
         {
@@ -292,23 +290,60 @@ internal class EntityAnalyzer(Compilation compilation, CancellationToken cancell
         }
 
         // Ignore properties with the [NotMapped] attribute
-        if (property.GetAttributes().Any(attr => 
-            attr.AttributeClass?.Name == "NotMappedAttribute" ||
-            attr.AttributeClass?.ToDisplayString().Contains("System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute") == true))
+        var attributes = property.GetAttributes();
+        if (HasAttribute(attributes, _notMappedAttributeSymbol))
             return true;
 
         // Ignore properties with [JsonIgnore] attribute
-        if (property.GetAttributes().Any(attr => 
-            attr.AttributeClass?.Name == "JsonIgnoreAttribute" ||
-            attr.AttributeClass?.ToDisplayString().Contains("System.Text.Json.Serialization.JsonIgnoreAttribute") == true))
+        if (HasAttribute(attributes, _jsonIgnoreAttributeSymbol))
             return true;
 
         // Ignore common base class properties
-        var ignoredNames = new[] { "Id", "ExtraProperties", "ConcurrencyStamp" };
-        if (ignoredNames.Contains(property.Name))
+        if (IgnoredPropertyNames.Contains(property.Name))
             return true;
 
         return false;
+    }
+
+    private bool IsNullableValueType(ITypeSymbol type)
+    {
+        return type is INamedTypeSymbol namedType &&
+               namedType.IsGenericType &&
+               namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
+    }
+
+    private AttributeData? GetChangeItemPropertyAttribute(IPropertySymbol property)
+    {
+        return _changeItemPropertyAttributeSymbol == null
+            ? null
+            : property.GetAttributes()
+                .FirstOrDefault(attr => SymbolEquals(attr.AttributeClass, _changeItemPropertyAttributeSymbol));
+    }
+
+    private string GetPropertyDisplayName(IPropertySymbol property)
+    {
+        var changeItemPropertyAttribute = GetChangeItemPropertyAttribute(property);
+        if (changeItemPropertyAttribute == null)
+            return property.Name;
+
+        var titleNamedArg = changeItemPropertyAttribute.NamedArguments
+            .FirstOrDefault(arg => arg.Key == "Title");
+
+        return !titleNamedArg.Equals(default(KeyValuePair<string, TypedConstant>)) &&
+               titleNamedArg.Value.Value is string titleValue &&
+               !string.IsNullOrEmpty(titleValue)
+            ? titleValue
+            : property.Name;
+    }
+
+    private static bool HasAttribute(ImmutableArray<AttributeData> attributes, INamedTypeSymbol? targetSymbol)
+    {
+        return targetSymbol != null && attributes.Any(attr => SymbolEquals(attr.AttributeClass, targetSymbol));
+    }
+
+    private static bool SymbolEquals(ISymbol? left, ISymbol? right)
+    {
+        return left != null && right != null && SymbolEqualityComparer.Default.Equals(left, right);
     }
     
     /// <summary>
@@ -351,7 +386,8 @@ internal class PropertyInfo(
     bool isNullable,
     bool isOptionalNavigation,
     IPropertySymbol propertySymbol,
-    string? xmlDocumentation = null)
+    string? xmlDocumentation = null,
+    string? displayName = null)
 {
     public string Name { get; } = name;
     public string PropertyPath { get; } = propertyPath;
@@ -360,5 +396,6 @@ internal class PropertyInfo(
     public bool IsNullable { get; } = isNullable;
     public bool IsOptionalNavigation { get; } = isOptionalNavigation;
     public string? XmlDocumentation { get; } = xmlDocumentation;
+    public string DisplayName { get; } = string.IsNullOrWhiteSpace(displayName) ? name : displayName!;
     public IPropertySymbol PropertySymbol { get; } = propertySymbol;
 }

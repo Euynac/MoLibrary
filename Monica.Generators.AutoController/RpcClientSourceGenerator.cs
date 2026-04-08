@@ -126,7 +126,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             // Generate client code for each domain
             if (addHttp)
             {
-                GenerateHttpClients(spc, validMetadata, httpImplType ?? "Monica.WebApi.RpcClient.Abstractions.HttpRpcApi");
+                GenerateHttpClients(spc, validMetadata, httpImplType!);
             }
 
             if (addGrpc)
@@ -380,7 +380,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             // Extract configuration values
             bool addGrpc = false;
             bool addHttp = true;
-            string? httpImplType = null;
+            var httpImplType = ResolveDefaultHttpImplementationType(compilation);
 
             foreach (var namedArgument in clientConfigAttribute.NamedArguments)
             {
@@ -407,6 +407,18 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         {
             return (false, null, false, false, $"Failed to extract client configuration: {ex.Message}");
         }
+    }
+
+    private static string ResolveDefaultHttpImplementationType(Compilation compilation)
+    {
+        var httpRpcApiSymbol = compilation.GetTypeByMetadataName("Monica.WebApi.RpcClient.Abstractions.HttpRpcApi");
+        if (httpRpcApiSymbol == null)
+        {
+            throw new InvalidOperationException(
+                "Unable to resolve Monica.WebApi.RpcClient.Abstractions.HttpRpcApi from the current compilation.");
+        }
+
+        return httpRpcApiSymbol.ToDisplayString();
     }
 
     /// <summary>

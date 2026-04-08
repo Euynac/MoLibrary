@@ -74,7 +74,8 @@ internal class PropertyFlattener
             property.PropertyPath.Contains('.') && !property.IsOptionalNavigation,
             property.IsOptionalNavigation,
             property.PropertySymbol,
-            property.XmlDocumentation
+            property.XmlDocumentation,
+            property.DisplayName
         );
     }
 
@@ -113,13 +114,15 @@ internal class FlattenedProperty(
     bool isFromOwnedType,
     bool isOptionalNavigation,
     Microsoft.CodeAnalysis.IPropertySymbol originalPropertySymbol,
-    string? xmlDocumentation = null)
+    string? xmlDocumentation = null,
+    string? displayName = null)
 {
     public string Name { get; } = name;
     public string Type { get; } = type;
     public string OriginalType { get; } = originalType;
     public string PropertyPath { get; } = propertyPath;
     public string? XmlDocumentation { get; } = xmlDocumentation;
+    public string DisplayName { get; } = string.IsNullOrWhiteSpace(displayName) ? name : displayName!;
     public bool IsFromOwnedType { get; } = isFromOwnedType;
     public bool IsOptionalNavigation { get; } = isOptionalNavigation;
     public Microsoft.CodeAnalysis.IPropertySymbol OriginalPropertySymbol { get; } = originalPropertySymbol;
@@ -156,7 +159,7 @@ internal class NavigationPropertyGroup
         // If it is a nullable type, get the underlying type
         if (type is Microsoft.CodeAnalysis.INamedTypeSymbol namedType && 
             namedType.IsGenericType && 
-            namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+            namedType.OriginalDefinition.SpecialType == Microsoft.CodeAnalysis.SpecialType.System_Nullable_T)
         {
             return namedType.TypeArguments[0].Name;
         }

@@ -592,9 +592,7 @@ internal class CodeBuilder
         sb.AppendLine("            yield return new PropertyChange");
         sb.AppendLine("            {");
         
-        // Prefer the change-item property Title. Otherwise use the property name.
-        var displayName = GetPropertyDisplayName(property);
-        sb.AppendLine($"                DisplayName = \"{displayName}\",");
+        sb.AppendLine($"                DisplayName = \"{property.DisplayName}\",");
         sb.AppendLine($"                PropertyName = nameof({property.Name}),");
         sb.AppendLine($"                NewValue = {property.Name},");
         
@@ -635,30 +633,4 @@ internal class CodeBuilder
         return propertyPath;
     }
 
-    /// <summary>
-    /// Get the property display name.
-    /// </summary>
-    private string GetPropertyDisplayName(FlattenedProperty property)
-    {
-        // Check the change-item property attribute's Title setting.
-        var alterItemAttr = property.OriginalPropertySymbol.GetAttributes()
-            .FirstOrDefault(attr => attr.AttributeClass?.Name == "ChangeItemPropertyAttribute");
-        
-        if (alterItemAttr != null)
-        {
-            // Find the Title property
-            var titleNamedArg = alterItemAttr.NamedArguments
-                .FirstOrDefault(arg => arg.Key == "Title");
-            
-            if (!titleNamedArg.Equals(default(KeyValuePair<string, TypedConstant>)) && 
-                titleNamedArg.Value.Value is string titleValue && 
-                !string.IsNullOrEmpty(titleValue))
-            {
-                return titleValue;
-            }
-        }
-        
-        // Return attribute name by default
-        return property.Name;
-    }
 }
