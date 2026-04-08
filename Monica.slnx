@@ -4,6 +4,11 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/tests/">
+    <Project Path="tests/Test.Monica.JobScheduler.UI/Test.Monica.JobScheduler.UI.csproj" />
+    <Project Path="tests/Test.Monica.JobScheduler/Test.Monica.JobScheduler.csproj" />
+    <Project Path="tests/Test.Monica/Test.Monica.csproj" />
+  </Folder>
  
   <Project Path="Monica.AI.UI/Monica.AI.UI.csproj" />
   <Project Path="Monica.AI/Monica.AI.csproj" />
