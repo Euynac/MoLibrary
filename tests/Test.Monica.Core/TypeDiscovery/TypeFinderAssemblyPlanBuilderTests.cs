@@ -101,6 +101,71 @@ public class TypeFinderAssemblyPlanBuilderTests
                 "Monica.Docs.Domains.Documentation.Application");
     }
 
+    [Fact]
+    public void ResolveDefaultProjectAssemblies_WhenProjectDependencyEdgesAreMissing_ShouldFallBackToDirectProjectReferencesOnly()
+    {
+        var entryAssembly = typeof(TypeFinderAssemblyPlanBuilderTests).Assembly;
+        var dependencyLibraries = new[]
+        {
+            CreateProjectLibrary(
+                libraryName: entryAssembly.GetName().Name!,
+                assemblyName: entryAssembly.GetName().Name!),
+            CreateProjectLibrary(
+                libraryName: "Monica.Docs.Shared.Platform.Infrastructure",
+                assemblyName: "Monica.Docs.Shared.Platform.Infrastructure"),
+            CreatePackageLibrary(
+                libraryName: "Monica.Markdown",
+                assemblyName: "Monica.Markdown")
+        };
+
+        var referencedAssemblies = new[]
+        {
+            new AssemblyName("Monica.Docs.Shared.Platform.Infrastructure"),
+            new AssemblyName("Monica.Markdown")
+        };
+
+        var resolvedAssemblies = TypeFinderAssemblyPlanBuilder.ResolveDefaultProjectAssemblies(
+            entryAssembly,
+            dependencyLibraries,
+            referencedAssemblies);
+
+        resolvedAssemblies
+            .Select(static assembly => assembly.Name)
+            .Should()
+            .BeEquivalentTo("Monica.Docs.Shared.Platform.Infrastructure");
+    }
+
+    [Fact]
+    public void ResolveDefaultProjectAssemblies_WhenNoProjectLibrariesExist_ShouldFallBackToAllDirectReferences()
+    {
+        var entryAssembly = typeof(TypeFinderAssemblyPlanBuilderTests).Assembly;
+        var dependencyLibraries = new[]
+        {
+            CreatePackageLibrary(
+                libraryName: "Monica.Markdown",
+                assemblyName: "Monica.Markdown"),
+            CreatePackageLibrary(
+                libraryName: "Newtonsoft.Json",
+                assemblyName: "Newtonsoft.Json")
+        };
+
+        var referencedAssemblies = new[]
+        {
+            new AssemblyName("Monica.Markdown"),
+            new AssemblyName("Newtonsoft.Json")
+        };
+
+        var resolvedAssemblies = TypeFinderAssemblyPlanBuilder.ResolveDefaultProjectAssemblies(
+            entryAssembly,
+            dependencyLibraries,
+            referencedAssemblies);
+
+        resolvedAssemblies
+            .Select(static assembly => assembly.Name)
+            .Should()
+            .BeEquivalentTo("Monica.Markdown", "Newtonsoft.Json");
+    }
+
     private static TypeFinderDependencyLibraryDescriptor CreateProjectLibrary(
         string libraryName,
         string assemblyName,

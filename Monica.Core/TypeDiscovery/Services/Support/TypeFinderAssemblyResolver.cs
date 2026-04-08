@@ -76,11 +76,6 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
             .ToArray();
 
         var dependencyLibraries = BuildDependencyLibraries(dependencyContext);
-        var projectLibrariesByName = dependencyLibraries
-            .Where(static library => library.IsProject && !string.IsNullOrWhiteSpace(library.AssemblyName.Name))
-            .GroupBy(static library => library.AssemblyName.Name!, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(static group => group.Key, static group => group.First().AssemblyName, StringComparer.OrdinalIgnoreCase);
-
         var candidates = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
         RegisterAssemblyName(candidates, entryAssembly.GetName());
 
@@ -99,34 +94,12 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
         {
             RegisterAssemblyName(finalAssemblyNames, entryAssembly.GetName());
 
-            var defaultProjectAssemblies = ResolveDefaultProjectAssemblies(
+            foreach (var assemblyName in ResolveDefaultProjectAssemblies(
                 entryAssembly,
                 dependencyLibraries,
-                referencedAssemblies);
-
-            if (defaultProjectAssemblies.Count > 0)
+                referencedAssemblies))
             {
-                foreach (var assemblyName in defaultProjectAssemblies)
-                {
-                    RegisterAssemblyName(finalAssemblyNames, assemblyName);
-                }
-            }
-            else if (projectLibrariesByName.Count > 0)
-            {
-                foreach (var reference in referencedAssemblies)
-                {
-                    if (projectLibrariesByName.TryGetValue(reference.Name ?? string.Empty, out var projectAssemblyName))
-                    {
-                        RegisterAssemblyName(finalAssemblyNames, projectAssemblyName);
-                    }
-                }
-            }
-            else
-            {
-                foreach (var reference in referencedAssemblies)
-                {
-                    RegisterAssemblyName(finalAssemblyNames, reference);
-                }
+                RegisterAssemblyName(finalAssemblyNames, assemblyName);
             }
         }
 
@@ -251,7 +224,7 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
 
         if (projectLibrariesByName.Count == 0)
         {
-            return [];
+            return ResolveDirectReferencedAssemblies(referencedAssemblies);
         }
 
         var rootLibraryNames = ResolveRootProjectLibraryNames(
@@ -261,7 +234,7 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
 
         if (rootLibraryNames.Count == 0)
         {
-            return [];
+            return ResolveDirectProjectAssemblies(projectLibrariesByName, referencedAssemblies);
         }
 
         var resolvedAssemblies = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
@@ -299,9 +272,16 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
             resolvedAssemblies.Remove(entryAssemblyName);
         }
 
-        return resolvedAssemblies.Values
-            .OrderBy(static assemblyName => assemblyName.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        if (resolvedAssemblies.Count > 0)
+        {
+            return resolvedAssemblies.Values
+                .OrderBy(static assemblyName => assemblyName.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        // Some dependency contexts expose project libraries but omit project-to-project edges.
+        // Preserve the previous behavior by falling back to direct project references.
+        return ResolveDirectProjectAssemblies(projectLibrariesByName, referencedAssemblies);
     }
 
     private static IReadOnlyCollection<string> ResolveRootProjectLibraryNames(
@@ -334,6 +314,42 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
                 directReferencedAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty)))
             .Select(static group => group[0].LibraryName)
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<AssemblyName> ResolveDirectProjectAssemblies(
+        IReadOnlyDictionary<string, TypeFinderDependencyLibraryDescriptor[]> projectLibrariesByName,
+        IReadOnlyList<AssemblyName> referencedAssemblies)
+    {
+        var projectAssembliesByAssemblyName = projectLibrariesByName.Values
+            .SelectMany(static group => group)
+            .Where(static descriptor => !string.IsNullOrWhiteSpace(descriptor.AssemblyName.Name))
+            .GroupBy(static descriptor => descriptor.AssemblyName.Name!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.First().AssemblyName, StringComparer.OrdinalIgnoreCase);
+
+        var directProjectAssemblies = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var reference in referencedAssemblies)
+        {
+            var referenceName = reference.Name ?? string.Empty;
+            if (!projectAssembliesByAssemblyName.TryGetValue(referenceName, out var projectAssemblyName))
+            {
+                continue;
+            }
+
+            RegisterAssemblyName(directProjectAssemblies, projectAssemblyName);
+        }
+
+        return directProjectAssemblies.Values
+            .OrderBy(static assemblyName => assemblyName.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<AssemblyName> ResolveDirectReferencedAssemblies(
+        IReadOnlyList<AssemblyName> referencedAssemblies)
+    {
+        return referencedAssemblies
+            .OrderBy(static assemblyName => assemblyName.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
