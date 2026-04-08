@@ -1,0 +1,297 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Configuration.Json;
+using Microsoft.Extensions.Logging;
+using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Models;
+using Monica.Configuration.Models.Internal;
+using Monica.Configuration.Services.Support;
+using Monica.Core.Extensions;
+using Monica.Core.Results;
+using Monica.Tool.Extensions;
+
+namespace Monica.Configuration.Providers.JsonFile;
+
+public class JsonFileConfigurationWriter(ILogger<JsonFileConfigurationWriter> logger) : IConfigurationValueWriter
+{
+    public async Task<Res<OptionItem>> IsOptionExist(string key)
+    {
+        if (!ConfigurationRegistration.TryGetOptionItem(key, out var option))
+        {
+            return $"无法找到{key}所对应的配置项";
+        }
+
+        return option;
+    }
+
+    public async Task<Res<ConfigurationUpdateResult>> UpdateOption(string key, JsonNode? value)
+    {
+        if ((await IsOptionExist(key)).IsFailed(out var fail, out var option)) return fail;
+        return await UpdateOption(option, value);
+    }
+
+    public async Task<Res<ConfigurationUpdateResult>> UpdateOption(OptionItem option, JsonNode? value)
+    {
+        var key = option.Key;
+        if (option.Provider?.Equals(nameof(JsonConfigurationProvider)) is false)
+        {
+            return $"暂不支持更新Provider为{option.Provider}的配置项";
+        }
+
+        if (option.Source == null)
+        {
+            var error = $"配置更新失败：无法获取其Json文件来源。更新操作：{key} => {value}";
+            logger.LogError(error);
+            return error;
+        }
+
+        try
+        {
+            var configKey = key.Split(":").First();//获取配置类Key
+            if ((await IsConfigExist(configKey)).IsFailed(out var fail, out var config)) return fail;
+
+
+            var doc = new JsonSettingsDocument(option.Source);
+            var oldValue = JsonSettingsDocument.CloneJsonNode(doc[configKey]);
+            doc[key] = value;
+            doc.Save(option.Source);
+            
+            // Force configuration reload to ensure immediate availability of the new values
+            ConfigurationRuntime.Reload();
+            
+            var newValue = doc[configKey];
+            
+            return new ConfigurationUpdateResult()
+            {
+                Title = config.Info.Title ?? config.Name,
+                Key = configKey,
+                NewValue = newValue,
+                OldValue = oldValue,
+            };
+        }
+        catch (Exception e)
+        {
+            var error = $"配置更新失败：{e.GetMessageRecursively()}。更新操作：{key} => {value}";
+            logger.LogError(error);
+            return error;
+        }
+    }
+
+    public async Task<Res<ConfigurationDescriptor>> IsConfigExist(string key)
+    {
+        if (!ConfigurationRegistration.TryGetConfig(key, out var option))
+        {
+            return $"无法找到{key}所对应的配置类";
+        }
+
+        return option;
+    }
+
+    public async Task<Res<ConfigurationUpdateResult>> UpdateConfig(string key, JsonNode? value)
+    {
+        if ((await IsConfigExist(key)).IsFailed(out var fail, out var config)) return fail;
+        return await UpdateConfig(config, value);
+    }
+
+    public async Task<Res<ConfigurationUpdateResult>> UpdateConfig(ConfigurationDescriptor config, JsonNode? value)
+    {
+        var key = config.Key;
+
+        var options = config.OptionItems
+            .Where(p => p.Provider?.Equals(nameof(JsonConfigurationProvider)) is true && p.Source != null).ToList();
+        var option = options.FirstOrDefault(p => p.Source?.Contains(config.DefaultSourceFileName) is false) ?? options.FirstOrDefault();
+        
+        if (option == null)
+        {
+            return $"配置类{key}中找不到任何有效Json来源的配置项";
+        }
+  
+        if (option.Source == null)
+        {
+            var error = $"配置更新失败：无法获取其Json文件来源。更新操作：{key} => {value}";
+            logger.LogError(error);
+            return error;
+        }
+        
+        try
+        {
+            var doc = new JsonSettingsDocument(option.Source);
+            var oldValue = JsonSettingsDocument.CloneJsonNode(doc[key]);
+            doc[key] = value;
+            doc.Save(option.Source);
+            
+            // Force configuration reload to ensure immediate availability of the new values
+            ConfigurationRuntime.Reload();
+            
+            var newValue = doc[key];
+            return new ConfigurationUpdateResult()
+            {
+                Title = config.Info.Title ?? config.Name,
+                Key = key,
+                NewValue = newValue,
+                OldValue = oldValue
+            };
+        }
+        catch (Exception e)
+        {
+            var error = $"配置更新失败：{e.GetMessageRecursively()}。更新操作：{key} => {value}";
+            logger.LogError(error);
+            return error;
+        }
+    }
+}
+
+
+internal class JsonSettingsDocument
+{
+    private JsonNode? _doc;
+
+    public JsonNode? this[string key] { get => GetValue(key); set => SetValue(key, value); }
+
+    private readonly string _filePath;
+
+    public JsonSettingsDocument(string path)
+    {
+        _filePath = path;
+        using FileStream file = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        _doc = JsonNode.Parse(file,
+            new JsonNodeOptions {PropertyNameCaseInsensitive = true},
+            new JsonDocumentOptions {CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true});
+
+    }
+
+    private JsonNode? GetValue(string key)
+    {
+        return GetParentNode(key, false, out var targetProperty)?[targetProperty];
+    }
+
+    private void SetValue(string key, JsonNode? value, bool notExistThenCreate = false)
+    {
+        var node = GetParentNode(key, notExistThenCreate, out var targetProperty);
+        if (node == null)
+        {
+            throw new InvalidOperationException($"{_filePath}不存在{key}的Json Node");
+        }
+
+        var obj = node.AsObject();
+        
+        if (!obj.ContainsKey(targetProperty)) 
+        {
+            if (!notExistThenCreate)
+            {
+                throw new InvalidOperationException($"{_filePath}不存在{key}的Json Node");
+            }
+
+            node[targetProperty] = value;
+            return;
+        }
+
+        var targetNode = obj[targetProperty];
+        
+        // Configuration class (JsonObject) cannot be set to null
+        if (targetNode is JsonObject && value == null)
+        {
+            throw new InvalidOperationException($"{_filePath}中{key}是配置类，不能设置为null");
+        }
+        
+        if (!IsJsonNodeValueKindCompatible(targetNode, value, out var errorMessage))
+        {
+            throw new InvalidOperationException($"{_filePath}中类型不兼容：{errorMessage ?? $"{_filePath}中{key}的JsonNode类型{targetNode?.GetValueKind()}与将修改成为的类型{value?.GetValueKind()}不一致"}");
+        }
+        node[targetProperty] = value;
+    }
+
+    public static JsonNode? CloneJsonNode(JsonNode? node)
+    {
+        return JsonSerializer.Deserialize<JsonNode?>(JsonSerializer.Serialize(node));
+    }
+
+    private bool IsJsonNodeValueKindCompatible(JsonNode? targetNode, JsonNode? newNode, out string? errorMessage)
+    {
+        errorMessage = null;
+        var targetKind = targetNode?.GetValueKind() ?? JsonValueKind.Null;
+        var newKind = newNode?.GetValueKind() ?? JsonValueKind.Null;
+        if (targetKind == JsonValueKind.Null || newKind == JsonValueKind.Null) return true;
+
+        if (targetKind.EqualsAny(JsonValueKind.True, JsonValueKind.False) &&
+            newKind.EqualsAny(JsonValueKind.True, JsonValueKind.False))
+        {
+            return true;
+        }
+
+        // If they are all JsonObject, perform recursive type checking
+        if (targetNode is JsonObject targetObj && newNode is JsonObject newObj)
+        {
+            return IsJsonObjectPropertiesCompatible(targetObj, newObj, out errorMessage);
+        }
+
+        if (targetKind != newKind)
+        {
+            errorMessage = $"JsonNode类型{targetKind}与将修改成为的类型{newKind}不一致";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsJsonObjectPropertiesCompatible(JsonObject targetObj, JsonObject newObj, out string? errorMessage)
+    {
+        errorMessage = null;
+        // Checks whether each property in the new object is compatible with the type of the corresponding property in the target object
+        foreach (var newProperty in newObj)
+        {
+            if (targetObj.TryGetPropertyValue(newProperty.Key, out var targetValue))
+            {
+                if (!IsJsonNodeValueKindCompatible(targetValue, newProperty.Value, out var propertyErrorMessage))
+                {
+                    errorMessage = $"属性{newProperty.Key}的类型不兼容：{propertyErrorMessage}";
+                    return false;
+                }
+            }
+            // If the attribute does not exist in the target object, it is considered compatible (new attributes are allowed to be added)
+        }
+        return true;
+    }
+
+
+    private JsonNode? GetParentNode(string key, bool create, out string targetProperty)
+    {
+        var props = key.Split(':');
+        targetProperty = props[^1];
+        _doc ??= new JsonObject();
+        var parent = _doc.Root;
+        for (var i = 0; i < props.Length - 1; i++)
+        {
+            var node = parent[props[i]];
+            if (node is null)
+            {
+                if (create)
+                {
+                    node = new JsonObject();
+                    parent[props[i]] = node;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            parent = node;
+        }
+        return parent;
+    }
+
+    public void Save(string path)
+    {
+        using FileStream file = new(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        using Utf8JsonWriter jsonWriter = new(file, new JsonWriterOptions()
+        {
+            Indented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+        // Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping can prevent Unicode Chinese and other characters from being changed into the form of \u. Although it is not used, it does not affect the analysis. Does the official use Default's Encoder mainly for safety?
+        _doc ??= new JsonObject();
+        _doc.WriteTo(jsonWriter);
+    }
+
+}

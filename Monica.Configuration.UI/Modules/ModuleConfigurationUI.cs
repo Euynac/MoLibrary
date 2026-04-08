@@ -1,20 +1,9 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Monica.Configuration;
-using Monica.Configuration.UI.Implements;
-using Monica.Configuration.UI.Interfaces;
-using Monica.Configuration.UI.Model;
 using Monica.Configuration.UI.Pages;
-using Monica.Configuration.UI.Services;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Results;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -46,8 +35,6 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
     {
         // Depend on configuration module
         DependsOnModule<ModuleConfigurationGuide>().Register();
-        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
-        DependsOnModule<ModuleServiceInvocationGuide>().Register();
         
         if (!option.DisableConfigurationPage)
         {
@@ -66,117 +53,9 @@ public class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                         "Categories:Configuration",
                         addToNav: true,
                         navOrder: 10);
-                });
+            });
         }
     }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // Register the unified configuration UI service
-        services.AddScoped<ConfigurationUIService>();
-        services.TryAddTransient<IMoConfigurationStores, MoConfigurationDefaultMemoryStore>();
-        services.TryAddSingleton<IMoConfigurationModifier, MoConfigurationJsonFileModifier>();
-        services.TryAddSingleton<ConfigurationClientApiProvider>();
-        
-        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
-        {
-            // Dashboard mode: register the configuration API provider.
-            services.TryAddSingleton<ConfigurationCentreApiProvider>();
-            services.TryAddSingleton<IMoConfigurationApi>(p =>
-                p.GetRequiredService<ConfigurationCentreApiProvider>());
-
-            // Register service invoker based on standalone mode
-            if (GetOptions<ModuleServiceDiscoveryOption>().IsStandaloneMode)
-            {
-                services.TryAddSingleton<IConfigurationCentreServiceInvoker,
-                    ConfigurationCentreServiceInvokerStandaloneProvider>();
-            }
-            else
-            {
-                services.TryAddSingleton<IConfigurationCentreServiceInvoker,
-                    ConfigurationCentreServiceInvokerDistributedProvider>();
-            }
-        }
-        else
-        {
-            // Client mode: register client API provider
-            services.TryAddSingleton<IMoConfigurationApi>(p =>
-                p.GetRequiredService<ConfigurationClientApiProvider>());
-        }
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        // Dashboard mode endpoints.
-        UseEndpoints(app, endpoints =>
-        {
-            var tagName = option.GetApiGroupName();
-
-            endpoints.MapGet(MoConfigurationConventions.DashboardConfigHistory,
-                    async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
-                        [FromQuery] DateTime? end, [FromServices] ConfigurationUIService uiService) =>
-                    {
-                        return (await uiService.GetConfigHistoryAsync(key, appid, start, end)).GetResponse();
-                    })
-                .WithName("获取配置类历史")
-                .WithTags(tagName)
-                .WithSummary("获取配置类历史")
-                .WithDescription("获取配置类历史");
-
-            endpoints.MapPost(MoConfigurationConventions.DashboardConfigRollback,
-                    async ([FromBody] RollbackRequest req, [FromServices] ConfigurationUIService uiService) =>
-                    {
-                        return (await uiService.RollbackConfigAsync(req.Key, req.AppId, req.Version)).GetResponse();
-                    })
-                .WithName("回滚配置类")
-                .WithTags(tagName)
-                .WithSummary("回滚配置类")
-                .WithDescription("回滚配置类");
-
-            endpoints.MapPost(MoConfigurationConventions.DashboardConfigUpdate, async (DtoUpdateConfig req,
-                    [FromServices] ConfigurationUIService uiService) =>
-                {
-                    return (await uiService.UpdateConfigAsync(req)).GetResponse();
-                })
-                .WithName("更新指定配置")
-                .WithTags(tagName)
-                .WithSummary("更新指定配置")
-                .WithDescription("更新指定配置");
-
-            endpoints.MapGet(MoConfigurationConventions.DashboardOptionItemStatus,
-                    async ([FromQuery] string? appid, [FromQuery] string key,
-                        [FromServices] ConfigurationUIService uiService) =>
-                    {
-                        return (await uiService.GetOptionItemAsync(appid, key)).GetResponse();
-                    })
-                .WithName("获取指定配置状态")
-                .WithTags(tagName)
-                .WithSummary("获取指定配置状态")
-                .WithDescription("获取指定配置状态");
-
-            endpoints.MapGet(MoConfigurationConventions.DashboardAllConfigStatus, async (
-                    [FromServices] ConfigurationUIService uiService,
-                    [FromQuery] string? mode,
-                    [FromQuery] bool onlyCurDomain = false) =>
-                {
-                    return (await uiService.GetConfigsAsync(mode, onlyCurDomain)).GetResponse();
-                })
-                .WithName("获取所有微服务配置状态")
-                .WithTags(tagName)
-                .WithSummary("获取所有微服务配置状态")
-                .WithDescription("获取所有微服务配置状态");
-        });
-    }
-}
-
-/// <summary>
-/// Rollback request model
-/// </summary>
-public class RollbackRequest
-{
-    public required string Key { get; set; }
-    public required string AppId { get; set; }
-    public required string Version { get; set; }
 }
 
 /// <summary>
@@ -185,16 +64,6 @@ public class RollbackRequest
 public class ModuleConfigurationUIGuide : ModuleGuide<ModuleConfigurationUI, ModuleConfigurationUIOption,
     ModuleConfigurationUIGuide>
 {
-    /// <summary>
-    /// Configure a custom configuration store
-    /// </summary>
-    public ModuleConfigurationUIGuide ConfigCustomStore<TStore>()
-        where TStore : class, IMoConfigurationStores
-    {
-        ConfigureServices(context => { context.Services.AddTransient<IMoConfigurationStores, TStore>(); },
-            ModuleRegistrationOrder.PreConfig);
-        return this;
-    }
 }
 
 /// <summary>

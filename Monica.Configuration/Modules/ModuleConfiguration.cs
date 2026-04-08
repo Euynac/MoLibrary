@@ -1,19 +1,31 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration;
+using Monica.Configuration.Abstractions;
+using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Annotations;
-using Monica.Configuration.Implements;
-using Monica.Configuration.Interfaces;
-using Monica.Configuration.Model;
+using Monica.Configuration.Extensions;
+using Monica.Configuration.Facades;
+using Monica.Configuration.Models;
+using Monica.Configuration.Models.Internal;
 using Monica.Configuration.Providers;
+using Monica.Configuration.Providers.History;
+using Monica.Configuration.Providers.JsonFile;
+using Monica.Configuration.Providers.ProjectCatalog;
+using Monica.Configuration.Providers.ServiceInvocation;
+using Monica.Configuration.Services;
+using Monica.Configuration.Services.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -38,20 +50,52 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
 
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
+        DependsOnModule<ModuleServiceInvocationGuide>().Register();
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
-        MoConfigurationManager.Setting = Option;
-        MoConfigurationManager.AppConfiguration = Option.AppConfiguration;
+        ConfigurationRuntime.Setting = Option;
+        ConfigurationRuntime.AppConfiguration = Option.AppConfiguration;
 
         services.AddOptions();
-        services.AddSingleton<IMoConfigurationCardManager, MoConfigurationCardManager>();
-        services.TryAddSingleton<IMoProjectCatalog, ServiceDiscoveryProjectCatalog>(); // TODO: Decouple ServiceDiscovery dependency and define best-practice project layouts (monolith vs microservices).
-        services.AddSingleton<IMoConfigurationServiceInfo, MoConfigurationServiceInfoDefault>();
+        services.AddSingleton<IConfigurationCatalog, ConfigurationCatalogService>();
+        services.TryAddSingleton<IConfigurationProjectCatalog, ServiceDiscoveryProjectCatalog>(); // TODO: Decouple ServiceDiscovery dependency and define best-practice project layouts (monolith vs microservices).
+        services.TryAddTransient<IConfigurationHistoryStore, MemoryConfigurationHistoryStore>();
+        services.TryAddSingleton<IConfigurationValueWriter, JsonFileConfigurationWriter>();
+        services.TryAddSingleton<LocalConfigurationManagementApi>();
+        services.AddScoped<ConfigurationFacade>();
+
+        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
+        {
+            services.TryAddSingleton<RegistryConfigurationManagementApi>();
+            services.TryAddSingleton<IConfigurationManagementApi>(provider =>
+                provider.GetRequiredService<RegistryConfigurationManagementApi>());
+
+            if (GetOptions<ModuleServiceDiscoveryOption>().IsStandaloneMode)
+            {
+                services.TryAddSingleton<IConfigurationRemoteGateway,
+                    StandaloneConfigurationRemoteGateway>();
+            }
+            else
+            {
+                services.TryAddSingleton<IConfigurationRemoteGateway,
+                    DistributedConfigurationRemoteGateway>();
+            }
+        }
+        else
+        {
+            services.TryAddSingleton<IConfigurationManagementApi>(provider =>
+                provider.GetRequiredService<LocalConfigurationManagementApi>());
+        }
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         // {
-        //     Logger.LogDebug($"[MoConfiguration] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
+        //     Logger.LogDebug($"[ConfigurationDescriptor] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
         //     // TODO: 1) Consider JsonSerializer for configuration serialization storage. 2) Use a singleton DaprClient.
         //     var client = new DaprClientBuilder().Build();
         //     manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
@@ -80,8 +124,8 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
     {
         // Important behavior: when option properties are List/Array and multiple configuration sources exist,
         // .NET appends elements instead of replacing them. This is by design. See dotnet/runtime #36384.
-        MoConfigurationManager.Setting.SetOtherSourceAction?.Invoke((ConfigurationManager) MoConfigurationManager.AppConfiguration);
-        MoConfigurationCard.RefreshProviders();
+        ConfigurationRuntime.Setting.SetOtherSourceAction?.Invoke((ConfigurationManager) ConfigurationRuntime.AppConfiguration);
+        ConfigurationRegistration.RefreshProviders();
     }
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
@@ -92,10 +136,10 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
                          IsSubConfiguration: false
                      }))
         {
-            var card = new MoConfigurationCard(configType);
+            var card = new ConfigurationRegistration(configType);
             var provider = new LocalJsonFileProvider(card);
             provider.GenAndRegisterConfigurationFiles();
-            MoConfigurationCard.Register(card);
+            ConfigurationRegistration.Register(card);
 
             var configAttr = card.Configuration.Info;
             Logger.LogDebug($"AddOptions<{configType.Name}>");
@@ -111,14 +155,14 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
             {
                 Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
                 // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section), configAction);
-                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
+                ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
                     configAction);
             }
             else
             {
                 Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
                 // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration, configAction);
-                MoExtendedOptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration,
+                ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration,
                     configAction);
             }
 
@@ -127,12 +171,66 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
         }
     }
 
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        UseEndpoints(app, endpoints =>
+        {
+            endpoints.MapGet(ConfigurationRoutes.DashboardConfigHistory,
+                    async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
+                        [FromQuery] DateTime? end, [FromServices] ConfigurationFacade facade) =>
+                    {
+                        return (await facade.GetConfigHistoryAsync(key, appid, start, end)).GetResponse();
+                    })
+                .WithName("获取配置类历史");
+
+            endpoints.MapPost(ConfigurationRoutes.DashboardConfigRollback,
+                    async ([FromBody] ConfigurationRollbackRequest req, [FromServices] ConfigurationFacade facade) =>
+                    {
+                        return (await facade.RollbackConfigAsync(req.Key, req.AppId, req.Version)).GetResponse();
+                    })
+                .WithName("回滚配置类");
+
+            endpoints.MapPost(ConfigurationRoutes.DashboardConfigUpdate, async (ConfigurationUpdateRequest req,
+                    [FromServices] ConfigurationFacade facade) =>
+                {
+                    return (await facade.UpdateConfigAsync(req)).GetResponse();
+                })
+                .WithName("更新指定配置");
+
+            endpoints.MapGet(ConfigurationRoutes.DashboardOptionItemStatus,
+                    async ([FromQuery] string? appid, [FromQuery] string key,
+                        [FromServices] ConfigurationFacade facade) =>
+                    {
+                        return (await facade.GetOptionItemAsync(appid, key)).GetResponse();
+                    })
+                .WithName("获取指定配置状态");
+
+            endpoints.MapGet(ConfigurationRoutes.DashboardAllConfigStatus, async (
+                    [FromServices] ConfigurationFacade facade,
+                    [FromQuery] string? mode,
+                    [FromQuery] bool onlyCurDomain = false) =>
+                {
+                    return (await facade.GetConfigsAsync(mode, onlyCurDomain)).GetResponse();
+                })
+                .WithName("获取所有微服务配置状态");
+        });
+    }
+
    
 }
 
 public class ModuleConfigurationGuide : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
-
+    /// <summary>
+    /// Configures the history store used for configuration update and rollback records.
+    /// </summary>
+    public ModuleConfigurationGuide ConfigCustomStore<TStore>()
+        where TStore : class, IConfigurationHistoryStore
+    {
+        ConfigureServices(context => { context.Services.AddTransient<IConfigurationHistoryStore, TStore>(); },
+            ModuleRegistrationOrder.PreConfig);
+        return this;
+    }
 }
 
 public class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfiguration>

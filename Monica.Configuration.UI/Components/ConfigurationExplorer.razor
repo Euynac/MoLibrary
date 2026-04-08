@@ -1,0 +1,663 @@
+@using Monica.Configuration.UI.Support
+@using Monica.Configuration.Providers
+@using System.Text.Json
+@using Monica.Configuration.Providers.JsonFile
+
+@using Monica.Configuration.Models
+@using Monica.Configuration.UI.Models
+@using Monica.Configuration.UI.State
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+    <!-- Search area and action buttons -->
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="searchKeyword" 
+                         Label="搜索配置项" 
+                         Variant="Variant.Outlined"
+                         Adornment="Adornment.End"
+                         AdornmentIcon="@Icons.Material.Filled.Search"
+                         OnAdornmentClick="() => StateHasChanged()"
+                         Immediate="true"
+                         DebounceInterval="300"
+                         OnDebounceIntervalElapsed="() => StateHasChanged()" />
+        </MudItem>
+        <MudItem xs="12" md="6" Class="d-flex justify-end align-center">
+            @if (stateManager.GetModifiedConfigurations().Any())
+            {
+                <MudBadge Content="@stateManager.GetModifiedConfigurations().Sum(c => c.ModificationCount)" Color="Color.Warning" Class="mr-2">
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Save"
+                              OnClick="OpenSaveConfirmationDialog"
+                              Disabled="@isSaving">
+                        保存修改
+                    </MudButton>
+                </MudBadge>
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Secondary" 
+                          StartIcon="@Icons.Material.Filled.Undo"
+                          OnClick="ClearAllChanges"
+                          Class="ml-2">
+                    撤销所有
+                </MudButton>
+            }
+        </MudItem>
+    </MudGrid>
+    
+    <!-- three column layout -->
+    <MudGrid Class="config-explorer-grid">
+        <!-- Column 1: Domain and Service Navigation -->
+        <MudItem xs="3">
+            <MudPaper Class="pa-2 config-navigation-panel">
+                <MudText Typo="Typo.h6" Class="mb-3">配置导航</MudText>
+                <div class="nav-menu-wrapper">
+                <MudNavMenu>
+                    @foreach (var domain in FilteredConfigs)
+                    {
+                        <div class="mb-2">
+                            <MudNavGroup Title="@domain.Title" Icon="@Icons.Material.Filled.Domain" Expanded="true">
+                                @foreach (var service in domain.Children)
+                                {
+                                    <MudNavLink OnClick="() => SelectService(domain, service)" 
+                                               Icon="@Icons.Material.Filled.Apps" 
+                                               Class="@GetServiceNavLinkClass(service)">
+                                        @service.Title
+                                    </MudNavLink>
+                                }
+                            </MudNavGroup>
+                        </div>
+                    }
+                </MudNavMenu>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <!-- Second column: configuration table -->
+        <MudItem xs="4">
+            <MudPaper Class="pa-2 config-class-panel">
+                <MudText Typo="Typo.h6" Class="mb-3">配置类</MudText>
+                @if (selectedService != null)
+                {
+                    <div class="config-table-wrapper">
+                        <MudTable T="ConfigurationSnapshot" Items="selectedService.Children" Dense="true" Hover="true" 
+                                 SelectedItem="selectedConfig" SelectedItemChanged="SelectConfig" 
+                                 RowClassFunc="@GetConfigRowClass" 
+                                 SelectOnRowClick="true">
+                            <HeaderContent>
+                            <MudTh>名称</MudTh>
+                            <MudTh>类型</MudTh>
+                            <MudTh>配置项数</MudTh>
+                            <MudTh>最后更新</MudTh>
+                            <MudTh>操作</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="名称">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" />
+                                    <div>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.body2">@context.Title</MudText>
+
+                                            @{
+                                                var analysis = ConfigurationSourceAnalysisBuilder.Analyze(context);
+                                            }
+
+                                            @if (!analysis.IsConsistent)
+                                            {
+                                                <MudTooltip Text="此配置类中的配置项来自不同的配置源，点击查看详情">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Warning"
+                                                                  Size="Size.Small"
+                                                                  Color="Color.Warning"
+                                                                  Class="ml-1"
+                                                                  Style="font-size: 14px;"
+                                                                  OnClick="@(() => OpenSourceInconsistencyDialog(context, analysis))" />
+                                                </MudTooltip>
+                                            }
+
+                                            @if (!string.IsNullOrEmpty(context.Desc))
+                                            {
+                                                <MudTooltip Text="@context.Desc">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small"
+                                                            Color="Color.Primary" Class="ml-1"
+                                                            Style="font-size: 14px;" />
+                                                </MudTooltip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Name</MudText>
+                                    </div>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="类型">
+                                <MudText Typo="Typo.caption">@context.Type</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="配置项数">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@context.Items.Count.ToString()" />
+                            </MudTd>
+                            <MudTd DataLabel="最后更新">
+                                <MudText Typo="Typo.caption">
+                                    @(context.LastModificationTime?.ToString("MM-dd HH:mm") ?? "未知")
+                                </MudText>
+                            </MudTd>
+                            <MudTd DataLabel="操作">
+                                <MudTooltip Text="查看配置类历史记录">
+                                    <MudIconButton Icon="@Icons.Material.Filled.History" 
+                                                  Size="Size.Small"
+                                                  Color="Color.Info"
+                                                  OnClick="@(() => OpenConfigHistoryDialog(context))" />
+                                </MudTooltip>
+                            </MudTd>
+                        </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+                else
+                {
+                    <MudText Color="Color.Secondary" Class="text-center pa-4">请选择一个服务</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        
+        <!-- The third column: configuration item table -->
+        <MudItem xs="5">
+            <MudPaper Class="pa-2 config-item-panel">
+                <MudText Typo="Typo.h6" Class="mb-3">配置项</MudText>
+                @if (selectedConfig != null)
+                {
+                    <MudTable T="ConfigurationOptionSnapshot" Items="selectedConfig.Items" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>名称</MudTh>
+                            <MudTh>值</MudTh>
+                            <MudTh>类型</MudTh>
+                            <MudTh>操作</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="名称">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@GetOptionIcon(context)" Size="Size.Small" Class="mr-2" />
+                                    <div>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.body2">@context.Title</MudText>
+                                            @{
+                                                var itemViewModel = GetItemViewModel(context);
+                                            }
+                                            @if (itemViewModel?.IsModified == true)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" 
+                                                        Text="已修改" Class="ml-2" />
+                                            }
+                                            @if (!string.IsNullOrEmpty(context.Desc))
+                                            {
+                                                <MudTooltip Text="@context.Desc">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" 
+                                                            Color="Color.Primary" Class="ml-1" 
+                                                            Style="font-size: 14px;" />
+                                                </MudTooltip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Class="text-muted">@context.Name</MudText>
+                                    </div>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="值" Style="max-width: 200px;">
+                                <div class="config-value-container">
+                                    @{
+                                        var itemViewModel = GetItemViewModel(context);
+                                        var valueDisplay = GetValueDisplay(itemViewModel?.CurrentValue ?? context.Value);
+                                    }
+                                    @if (valueDisplay.Length > 30)
+                                    {
+                                        <MudTooltip Text="@valueDisplay">
+                                            <div class="config-value-truncated">
+                                                @(valueDisplay.Substring(0, 30))...
+                                            </div>
+                                        </MudTooltip>
+                                    }
+                                    else
+                                    {
+                                        <div class="config-value-normal">
+                                            @valueDisplay
+                                        </div>
+                                    }
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="类型">
+                                @if (!context.IsOffline)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="在线" />
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="离线" />
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="操作">
+                                <div class="d-flex gap-1">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                                              StartIcon="@Icons.Material.Filled.Edit"
+                                              OnClick="async () => await OpenEditDialog(context, selectedService!.AppId)">
+                                        编辑
+                                    </MudButton>
+                                    @{
+                                        var itemViewModel = GetItemViewModel(context);
+                                    }
+                                    @if (itemViewModel?.IsModified == true)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Text"
+                                                  StartIcon="@Icons.Material.Filled.Undo" 
+                                                  Color="Color.Warning"
+                                                  OnClick="() => UndoItemChange(context)">
+                                            撤销
+                                        </MudButton>
+                                    }
+                                </div>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudText Color="Color.Secondary" Class="text-center pa-4">请选择一个配置类</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<!-- ConfigurationEditor is now opened via IDialogService -->
+
+
+
+@code {
+    [Parameter] public List<ConfigurationDomainGroup> Configs { get; set; } = [];
+    [Parameter] public EventCallback<ConfigurationUpdateRequest> OnConfigUpdate { get; set; }
+    
+    private string searchKeyword = "";
+    
+    // Select status
+    private ConfigurationDomainGroup? selectedDomain;
+    private ConfigurationServiceGroup? selectedService;
+    private ConfigurationSnapshot? selectedConfig;
+    
+    // Status management
+    private ConfigurationStateManager stateManager = new();
+    
+    // Save confirmation dialog
+    private bool isSaveConfirmationDialogOpen = false;
+    private bool isSaving = false;
+    
+    private List<ConfigurationDomainGroup> FilteredConfigs => 
+        string.IsNullOrWhiteSpace(searchKeyword) ? Configs : FilterConfigs();
+
+    private ConfigurationOptionSnapshot? editingItem;
+    private string? editingAppId;
+    
+    private List<ConfigurationDomainGroup>? _lastConfigs;
+    
+    protected override void OnParametersSet()
+    {
+        // Only reinitialize the state manager when the configuration data actually changes
+        if (_lastConfigs != Configs) 
+        {
+            _lastConfigs = Configs;
+            stateManager.Initialize(Configs);
+            
+            // Restore selection state from state manager
+            RestoreSelectionFromStateManager();
+        }
+    }
+    
+    
+    private void SelectService(ConfigurationDomainGroup domain, ConfigurationServiceGroup service)
+    {
+        selectedDomain = domain;
+        selectedService = service;
+        selectedConfig = null; // 重置配置类选择
+        
+        // Update status manager
+        stateManager.UpdateSelection(domainName: domain.Name, serviceName: service.Name, configName: null);
+        
+        StateHasChanged();
+    }
+    
+    private void SelectConfig(ConfigurationSnapshot? config)
+    {
+        selectedConfig = config;
+        
+        // Update the state manager to pass the complete selection state
+        if (config != null && selectedDomain != null && selectedService != null)
+        {
+            stateManager.UpdateSelection(domainName: selectedDomain.Name, serviceName: selectedService.Name, configName: config.Name);
+        }
+        
+        StateHasChanged();
+    }
+    
+    private List<ConfigurationDomainGroup> FilterConfigs()
+    {
+        var keyword = searchKeyword.ToLowerInvariant();
+        var filtered = new List<ConfigurationDomainGroup>();
+        
+        foreach (var domain in Configs)
+        {
+            var filteredServices = new List<ConfigurationServiceGroup>();
+            
+            foreach (var service in domain.Children)
+            {
+                var filteredConfigs = new List<ConfigurationSnapshot>();
+                
+                foreach (var config in service.Children)
+                {
+                    var filteredItems = config.Items.Where(item =>
+                        item.Title.ToLowerInvariant().Contains(keyword) ||
+                        item.Key.ToLowerInvariant().Contains(keyword) ||
+                        (item.Desc?.ToLowerInvariant().Contains(keyword) ?? false) ||
+                        (item.Value?.ToString()?.ToLowerInvariant().Contains(keyword) ?? false)
+                    ).ToList();
+                    
+                    if (filteredItems.Any())
+                    {
+                        filteredConfigs.Add(new ConfigurationSnapshot
+                        {
+                            Title = config.Title,
+                            Name = config.Name,
+                            Type = config.Type,
+                            Desc = config.Desc,
+                            Items = filteredItems,
+                            Version = config.Version,
+                            LastModificationTime = config.LastModificationTime,
+                            LastModifierId = config.LastModifierId,
+                            Username = config.Username
+                        });
+                    }
+                }
+                
+                if (filteredConfigs.Any())
+                {
+                    filteredServices.Add(new ConfigurationServiceGroup
+                    {
+                        Title = service.Title,
+                        Name = service.Name,
+                        AppId = service.AppId,
+                        Children = filteredConfigs
+                    });
+                }
+            }
+            
+            if (filteredServices.Any())
+            {
+                filtered.Add(new ConfigurationDomainGroup
+                {
+                    Title = domain.Title,
+                    Name = domain.Name,
+                    Children = filteredServices
+                });
+            }
+        }
+        
+        return filtered;
+    }
+    
+    private string GetValueDisplay(object? value)
+    {
+        if (value == null) return "null";
+        
+        if (value is string strValue)
+        {
+            return strValue;
+        }
+        
+        try
+        {
+            return JsonSerializer.Serialize(value, JsonFileConventions.JsonSerializerOptions);
+        }
+        catch
+        {
+            return value.ToString() ?? "null";
+        }
+    }
+
+    
+    private readonly DialogOptions saveConfirmationDialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraLarge,
+        FullWidth = true
+    };
+
+    private string GetOptionIcon(ConfigurationOptionSnapshot item)
+    {
+        return item.Type switch
+        {
+            ConfigurationValueKind.Boolean => Icons.Material.Filled.ToggleOn,
+            ConfigurationValueKind.Numeric => Icons.Material.Filled.Numbers,
+            ConfigurationValueKind.String => Icons.Material.Filled.TextFields,
+            ConfigurationValueKind.DateTime => Icons.Material.Filled.Schedule,
+            ConfigurationValueKind.TimeSpan => Icons.Material.Filled.Timer,
+            ConfigurationValueKind.Enum => Icons.Material.Filled.List,
+            ConfigurationValueKind.Object => Icons.Material.Filled.DataObject,
+            _ => Icons.Material.Filled.Settings
+        };
+    }
+
+    private string GetConfigRowClass(ConfigurationSnapshot config, int rowNumber)
+    {
+        var baseClass = "cursor-pointer";
+        if (selectedConfig?.Name == config.Name)
+        {
+            baseClass += " config-selected-row mud-selected";
+        }
+        return baseClass;
+    }
+    
+    private string GetServiceNavLinkClass(ConfigurationServiceGroup service)
+    {
+        return selectedService?.Name == service.Name ? "mud-nav-link-active" : "";
+    }
+
+    private async Task OpenEditDialog(ConfigurationOptionSnapshot item, string appId)
+    {
+        try
+        {
+            editingItem = item;
+            editingAppId = appId;
+            
+            // Open the edit dialog using IDialogService
+            var parameters = new DialogParameters<ConfigurationEditor>
+            {
+                { x => x.OnConfigurationUpdated, EventCallback.Factory.Create(this, OnConfigurationUpdated) },
+                { x => x.ConfigItem, item },
+                { x => x.StateManager, stateManager },
+                { x => x.ConfigName, selectedConfig?.Name ?? "" }
+            };
+            
+            var options = new DialogOptions()
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            };
+            
+            var dialog = await DialogService.ShowAsync<ConfigurationEditor>($"编辑配置 - {item.Title}", parameters, options);
+            var result = await dialog.Result;
+            
+            if (result != null && !result.Canceled)
+            {
+                // Since the StateManager has already handled the update, just refresh the interface
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"编辑对话框打开失败: {ex.Message}");
+        }
+    }
+
+
+    private void OnConfigurationUpdated()
+    {
+        // When ConfigurationEditor updates the configuration callback, you only need to refresh the interface
+        StateHasChanged();
+    }
+    
+    
+    private ConfigurationItemViewModel? GetItemViewModel(ConfigurationOptionSnapshot item)
+    {
+        if (selectedConfig == null) return null;
+        var configViewModel = stateManager.GetConfiguration(selectedConfig.Name);
+        return configViewModel?.Items.FirstOrDefault(i => i.OriginalItem.Key == item.Key);
+    }
+    
+    private void UndoItemChange(ConfigurationOptionSnapshot item)
+    {
+        if (selectedConfig == null) return;
+        
+        stateManager.UndoItem(selectedConfig.Name, item.Key);
+        StateHasChanged();
+    }
+    
+    private async void OpenSaveConfirmationDialog()
+    {
+        // Make sure there are modifications before opening the dialog box
+        var modifiedConfigs = stateManager.GetModifiedConfigurations();
+        if (modifiedConfigs.Any())
+        {
+            var parameters = new DialogParameters
+            {
+                ["StateManager"] = stateManager,
+                ["IsSaving"] = isSaving
+            };
+            
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraLarge,
+                FullWidth = true,
+                CloseOnEscapeKey = false,
+                BackdropClick = true,
+                CloseButton = false
+            };
+            
+            var dialog = await DialogService.ShowAsync<SaveConfirmationDialog>("保存配置确认", parameters, options);
+            var result = await dialog.Result;
+            
+            if (result is { Canceled: false, Data: List<ConfigurationUpdateRequest> updateRequests})
+            {
+                await SaveAllChanges(updateRequests);
+            }
+        }
+    }
+    
+    private void CloseSaveConfirmationDialog()
+    {
+        isSaveConfirmationDialogOpen = false;
+    }
+    
+    private void OnSaveConfirmationDialogChanged(bool isVisible)
+    {
+        isSaveConfirmationDialogOpen = isVisible;
+    }
+    
+    
+    private async Task SaveAllChanges(List<ConfigurationUpdateRequest> updateRequests)
+    {
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Execute configuration class level update requests one by one
+            foreach (var updateRequest in updateRequests)
+            {
+                await OnConfigUpdate.InvokeAsync(updateRequest);
+            }
+            
+            // Clear modification history
+            stateManager.ClearAllModifications();
+            CloseSaveConfirmationDialog();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ClearAllChanges()
+    {
+        stateManager.ClearAllModifications();
+        StateHasChanged();
+    }
+
+    private async Task OpenConfigHistoryDialog(ConfigurationSnapshot config)
+    {
+        if (selectedService == null) return;
+
+        var parameters = new DialogParameters<ConfigurationHistoryDialog>
+        {
+            { x => x.ConfigKey, config.Name },
+            { x => x.AppId, selectedService.AppId },
+            { x => x.DialogTitle, $"配置历史记录 - {config.Title}" }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        await DialogService.ShowAsync<ConfigurationHistoryDialog>($"配置历史记录 - {config.Title}", parameters, options);
+    }
+
+    /// <summary>
+    /// Opens the Configuration Source Inconsistency dialog box
+    /// </summary>
+    private async Task OpenSourceInconsistencyDialog(ConfigurationSnapshot config, ConfigSourceAnalysis analysis)
+    {
+        var parameters = new DialogParameters<SourceInconsistencyDialog>
+        {
+            { x => x.Analysis, analysis }
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = true
+        };
+
+        await DialogService.ShowAsync<SourceInconsistencyDialog>(
+            $"配置来源分析 - {config.Title}",
+            parameters,
+            options);
+    }
+    
+    /// <summary>
+    /// Restore selection state from state manager
+    /// </summary>
+    private void RestoreSelectionFromStateManager()
+    {
+        var selectionState = stateManager.GetSelectionState();
+        
+        selectedDomain = null;
+        selectedService = null;
+        selectedConfig = null;
+        
+        if (!string.IsNullOrEmpty(selectionState.SelectedDomainName))
+        {
+            selectedDomain = Configs.FirstOrDefault(d => d.Name == selectionState.SelectedDomainName);
+            
+            if (selectedDomain != null && !string.IsNullOrEmpty(selectionState.SelectedServiceName))
+            {
+                selectedService = selectedDomain.Children.FirstOrDefault(s => s.Name == selectionState.SelectedServiceName);
+                
+                if (selectedService != null && !string.IsNullOrEmpty(selectionState.SelectedConfigName))
+                {
+                    selectedConfig = selectedService.Children.FirstOrDefault(c => c.Name == selectionState.SelectedConfigName);
+                }
+            }
+        }
+    }
+}

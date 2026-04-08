@@ -1,0 +1,74 @@
+@using Monica.Configuration.Models
+<div class="configuration-value-editor">
+    @* ArgumentGuard SpecialType first, it takes precedence over BasicType *@
+    @if (OptionItem?.SpecialType == ConfigurationSpecialValueKind.Array)
+    {
+        <ConfigurationArrayEditor Value="@Value" 
+                                  OriginalValue="@OriginalValue"
+                                  ValueChanged="@OnValueChanged" 
+                                  OptionItem="@OptionItem" />
+    }
+    else if (OptionItem?.SpecialType == ConfigurationSpecialValueKind.Dict)
+    {
+        <ConfigurationDictEditor @ref="dictEditor" 
+                                 Value="@Value" 
+                                 OriginalValue="@OriginalValue"
+                                 ValueChanged="@OnValueChanged" 
+                                 OptionItem="@OptionItem" />
+    }
+    @* If not a composite type, the component is selected based on BasicType *@
+    else if (OptionItem?.Type == ConfigurationValueKind.Object && OptionItem.SubStructure != null)
+    {
+        <ConfigurationObjectEditor Value="@Value" 
+                                   OriginalValue="@OriginalValue"
+                                   ValueChanged="@OnValueChanged" 
+                                   SubStructure="@OptionItem.SubStructure" />
+    }
+    else
+    {
+        <ConfigurationBasicTypeEditor Type="@(OptionItem?.Type ?? ConfigurationValueKind.String)"
+                                      Value="@Value"
+                                      OriginalValue="@OriginalValue"
+                                      ValueChanged="@OnValueChanged"
+                                      Label="@(OptionItem?.Title ?? "")"
+                                      HelperText="@OptionItem?.Desc"
+                                      RegexPattern="@OptionItem?.RegexPattern"
+                                      IsNullable="@(OptionItem?.IsNullable ?? false)" />
+    }
+
+    @if (OptionItem?.IsOffline == true)
+    {
+        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Class="mt-2">
+            <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Size="Size.Small" Class="mr-1" />
+            离线参数 - 需重启服务生效
+        </MudChip>
+    }
+</div>
+
+@code {
+    [Parameter] public ConfigurationOptionSnapshot? OptionItem { get; set; }
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public object? OriginalValue { get; set; }
+    [Parameter] public EventCallback<object?> ValueChanged { get; set; }
+
+    private ConfigurationDictEditor? dictEditor;
+
+    private async Task OnValueChanged(object? newValue)
+    {
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    /// <summary>
+    /// ArgumentGuard for validation errors
+    /// </summary>
+    public bool HasValidationErrors()
+    {
+        // Only check validation errors for dictionary editors, other types are not needed for the time being.
+        if (OptionItem?.SpecialType == ConfigurationSpecialValueKind.Dict)
+        {
+            return dictEditor?.HasValidationErrors() ?? false;
+        }
+        
+        return false;
+    }
+}

@@ -1,12 +1,11 @@
 @attribute [Route(PAGE_URL)]
-@using Monica.Configuration.UI.UIConfiguration.Components
-@using Monica.Configuration.UI.Services
-@using Monica.Configuration.Model
-@using Monica.Configuration.UI.Model
+@using Monica.Configuration.UI.Components
+@using Monica.Configuration.Facades
 @using Microsoft.Extensions.Options
+@using Monica.Configuration.Models
 @using Monica.Core.Results;
 @using Monica.Modules
-@inject ConfigurationUIService ConfigurationUIService
+@inject ConfigurationFacade ConfigurationFacade
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleServiceDiscoveryOption> Options
 
@@ -94,7 +93,7 @@
 @code {
     public const string PAGE_URL = "/configuration-dashboard";
 
-    private List<DtoDomainGroup>? configStatus;
+    private List<ConfigurationDomainGroup>? configStatus;
     private bool isLoading;
     private int activeTabIndex = 0;
     private ConfigurationDebugView? debugViewComponent;
@@ -119,7 +118,7 @@
 
         await Task.Yield();
 
-        if ((await ConfigurationUIService.GetConfigsAsync()).IsFailed(out var error, out var data))
+        if ((await ConfigurationFacade.GetConfigsAsync()).IsFailed(out var error, out var data))
         {
             Snackbar.Add($"加载配置状态失败: {error}", Severity.Error);
         }
@@ -132,9 +131,9 @@
         StateHasChanged();
     }
 
-    private async Task HandleConfigUpdate(DtoUpdateConfig updateRequest)
+    private async Task HandleConfigUpdate(ConfigurationUpdateRequest updateRequest)
     {
-        if ((await ConfigurationUIService.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
+        if ((await ConfigurationFacade.UpdateConfigAsync(updateRequest)).IsFailed(out var error))
         {
             Snackbar.Add($"配置更新失败: {error}", Severity.Error);
         }

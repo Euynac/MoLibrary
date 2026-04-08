@@ -28,7 +28,7 @@ internal static class HandlerCandidateExtractor
         try
         {
             // Validate ApplicationService inheritance
-            if (!ValidateApplicationServiceInheritance(classDeclaration, context))
+            if (!ValidateApplicationServiceInheritance(classDeclaration, compilation, context))
                 return null;
 
             // Extract and validate the Route attribute (with fallback to configuration)
@@ -244,21 +244,16 @@ internal static class HandlerCandidateExtractor
     /// Validates that the class properly inherits from ApplicationService with correct generic arguments.
     /// </summary>
     /// <param name="classDeclaration">The class declaration to validate</param>
+    /// <param name="compilation">The compilation used to resolve the inheritance chain semantically.</param>
     /// <param name="context">The source production context for error reporting</param>
     /// <returns>True if inheritance is valid, false otherwise</returns>
-    private static bool ValidateApplicationServiceInheritance(ClassDeclarationSyntax classDeclaration, SourceProductionContext context)
+    private static bool ValidateApplicationServiceInheritance(
+        ClassDeclarationSyntax classDeclaration,
+        Compilation compilation,
+        SourceProductionContext context)
     {
-        var baseTypeSyntax = classDeclaration.BaseList?.Types.FirstOrDefault()?.Type;
-        var genericBaseTypeSyntax = baseTypeSyntax switch
-        {
-            GenericNameSyntax genericNameSyntax => genericNameSyntax,
-            QualifiedNameSyntax { Right: GenericNameSyntax genericNameSyntax } => genericNameSyntax,
-            AliasQualifiedNameSyntax { Name: GenericNameSyntax genericNameSyntax } => genericNameSyntax,
-            _ => null
-        };
-
-        var genericArgumentCount = genericBaseTypeSyntax?.TypeArgumentList.Arguments.Count;
-        if (genericArgumentCount is not 1 and not 2)
+        var semanticModel = compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+        if (!ApplicationServiceSymbolHelper.IsSupportedHandlerCandidate(semanticModel, classDeclaration))
         {
             var diagnostic = Diagnostic.Create(
                 DiagnosticDescriptors.InvalidApplicationServiceInheritance,

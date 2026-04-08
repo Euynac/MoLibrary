@@ -1,0 +1,280 @@
+@using Monica.Configuration.Facades
+@using Monica.Configuration.Models
+@using Monica.Core.Results;
+@inject ConfigurationFacade ConfigurationFacade
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-2" Style="vertical-align: text-bottom;" />
+                配置提供者
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudTextField @bind-Value="searchText"
+                             Label="搜索"
+                             Placeholder="提供者名称、类型或配置键值"
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Search"
+                             Clearable="true"
+                             Immediate="false"
+                             DebounceInterval="300"
+                             OnDebounceIntervalElapsed="OnSearchChanged"
+                             Style="width: 280px;" />
+                <MudButton Variant="Variant.Text"
+                          StartIcon="@Icons.Material.Filled.ExpandMore"
+                          OnClick="ExpandAllProviders"
+                          Size="Size.Small">
+                    全部展开
+                </MudButton>
+                <MudButton Variant="Variant.Text"
+                          StartIcon="@Icons.Material.Filled.ExpandLess"
+                          OnClick="CollapseAllProviders"
+                          Size="Size.Small">
+                    全部折叠
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                          StartIcon="@Icons.Material.Filled.Refresh"
+                          OnClick="LoadProvidersAsync"
+                          Disabled="@isLoading">
+                    刷新
+                </MudButton>
+            </MudStack>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (FilteredProviderGroups != null && FilteredProviderGroups.Any())
+        {
+            @if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
+                    找到 @FilteredProviderGroups.Sum(g => g.Providers.Count) 个提供者，
+                    共 @FilteredProviderGroups.Sum(g => g.Providers.Sum(p => p.ConfigurationData.Count)) 个配置项
+                </MudAlert>
+            }
+
+            <MudExpansionPanels Class="mb-4" MultiExpansion="true">
+                @for (int i = 0; i < FilteredProviderGroups.Count; i++)
+                {
+                    var group = FilteredProviderGroups[i];
+                    <MudExpansionPanel @bind-Expanded="expandedStates[i]">
+                        <TitleContent>
+                            <div style="display: flex; align-items: center">
+                                <MudIcon Icon="@Icons.Material.Filled.Extension" class="mr-3"></MudIcon>
+                                <MudText>@group.GroupName (@group.Providers.Count 个提供者)</MudText>
+                            </div>
+                        </TitleContent>
+                        <ChildContent>
+                            @foreach (var provider in group.Providers)
+                            {
+                                <MudCard Class="mb-3" Elevation="1">
+                                    <MudCardHeader>
+                                        <CardHeaderContent>
+                                            <MudText Typo="Typo.h6">@provider.Name</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@provider.Type</MudChip>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+                                    <MudCardContent>
+                                        @if (provider.ConfigurationData.Any())
+                                        {
+                                            <MudTable T="ConfigurationEntry" Items="@GetConfigurationEntries(provider)" Dense="true" Hover="true" RowsPerPage="20">
+                                                <HeaderContent>
+                                                    <MudTh>配置键</MudTh>
+                                                    <MudTh>配置值</MudTh>
+                                                </HeaderContent>
+                                                <RowTemplate>
+                                                    <MudTd DataLabel="配置键">
+                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@HighlightSearchText(context.Key)</MudText>
+                                                    </MudTd>
+                                                    <MudTd DataLabel="配置值">
+                                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">@HighlightSearchText(context.Value)</MudText>
+                                                    </MudTd>
+                                                </RowTemplate>
+                                                <PagerContent>
+                                                    <MudTablePager PageSizeOptions="@(new[] { 10, 20, 50, 100 })" />
+                                                </PagerContent>
+                                            </MudTable>
+                                        }
+                                        else
+                                        {
+                                            <MudText Class="text-muted">该提供者暂无配置数据</MudText>
+                                        }
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        }
+        else if (isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    未找到匹配的配置提供者或配置项
+                </MudText>
+            </MudStack>
+        }
+        else if (!providerGroups.Any())
+        {
+            <MudAlert Severity="Severity.Info">暂无配置提供者数据，请检查配置模块是否正确初始化</MudAlert>
+        }
+        else
+        {
+            <MudText Class="text-muted">加载中...</MudText>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<ConfigurationProviderGroup> providerGroups = [];
+    private bool isLoading = false;
+    private Dictionary<int, bool> expandedStates = new();
+    private string searchText = string.Empty;
+
+    private List<ConfigurationProviderGroup> FilteredProviderGroups =>
+        string.IsNullOrWhiteSpace(searchText)
+            ? providerGroups
+            : FilterProviderGroups();
+
+    private static IEnumerable<ConfigurationEntry> GetConfigurationEntries(ConfigurationProviderSnapshot provider) =>
+        provider.ConfigurationData.Select(pair => new ConfigurationEntry(pair.Key, pair.Value ?? "null"));
+
+    private List<ConfigurationProviderGroup> FilterProviderGroups()
+    {
+        var keyword = searchText.Trim();
+        var filteredGroups = new List<ConfigurationProviderGroup>();
+
+        foreach (var group in providerGroups)
+        {
+            var filteredProviders = new List<ConfigurationProviderSnapshot>();
+
+            foreach (var provider in group.Providers)
+            {
+                // ArgumentGuard if provider name or type matches
+                bool providerMatches =
+                    provider.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                    provider.Type.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+                // Filter configuration data
+                var filteredConfigData = provider.ConfigurationData
+                    .Where(kvp =>
+                        kvp.Key.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                        (kvp.Value?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false))
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                // Include provider if it matches or has matching config data
+                if (providerMatches || filteredConfigData.Any())
+                {
+                    filteredProviders.Add(new ConfigurationProviderSnapshot
+                    {
+                        Name = provider.Name,
+                        Type = provider.Type,
+                        ConfigurationData = providerMatches
+                            ? provider.ConfigurationData  // Show all if provider matches
+                            : filteredConfigData          // Show only matching items
+                    });
+                }
+            }
+
+            if (filteredProviders.Any())
+            {
+                filteredGroups.Add(new ConfigurationProviderGroup
+                {
+                    GroupName = group.GroupName,
+                    Providers = filteredProviders
+                });
+            }
+        }
+
+        return filteredGroups;
+    }
+
+    private sealed record ConfigurationEntry(string Key, string Value);
+
+    private void OnSearchChanged()
+    {
+        // Auto-expand all groups when searching
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            ExpandAllProviders();
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProvidersAsync();
+    }
+
+    private MarkupString HighlightSearchText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+            return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
+
+        var keyword = searchText.Trim();
+        var escapedText = System.Net.WebUtility.HtmlEncode(text);
+        var escapedKeyword = System.Net.WebUtility.HtmlEncode(keyword);
+
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            escapedText,
+            System.Text.RegularExpressions.Regex.Escape(escapedKeyword),
+            match => $"<mark style='background-color: #ffeb3b; padding: 0 2px;'>{match.Value}</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return new MarkupString(highlighted);
+    }
+
+    public async Task LoadProvidersAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        if ((await ConfigurationFacade.GetProvidersAsync()).IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"加载配置提供者失败: {error}", Severity.Error);
+        }
+        else
+        {
+            providerGroups = data;
+            // Initialize expanded state
+            expandedStates.Clear();
+            for (int i = 0; i < providerGroups.Count; i++)
+            {
+                expandedStates[i] = false;
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public void ExpandAllProviders()
+    {
+        var filtered = FilteredProviderGroups;
+        for (int i = 0; i < filtered.Count; i++)
+        {
+            expandedStates[i] = true;
+        }
+        StateHasChanged();
+    }
+
+    public void CollapseAllProviders()
+    {
+        var filtered = FilteredProviderGroups;
+        for (int i = 0; i < filtered.Count; i++)
+        {
+            expandedStates[i] = false;
+        }
+        StateHasChanged();
+    }
+}

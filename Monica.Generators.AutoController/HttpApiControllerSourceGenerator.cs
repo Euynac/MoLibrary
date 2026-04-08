@@ -31,8 +31,15 @@ public class HttpApiControllerSourceGenerator : IIncrementalGenerator
         var classDeclarations = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (s, _) => s is ClassDeclarationSyntax { BaseList: { } },
-                transform: static (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
-            .Where(static c => c.BaseList!.Types.Any(t => t.ToString().Contains(GeneratorConstants.ClassNames.ApplicationService)));
+                transform: static (ctx, _) =>
+                {
+                    var classDeclaration = (ClassDeclarationSyntax)ctx.Node;
+                    return ApplicationServiceSymbolHelper.IsSupportedHandlerCandidate(ctx.SemanticModel, classDeclaration)
+                        ? classDeclaration
+                        : null;
+                })
+            .Where(static c => c is not null)
+            .Select(static (c, _) => c!);
 
         // Extract configuration from assembly-level attributes with error reporting
         var configProvider = context.CompilationProvider

@@ -1,0 +1,64 @@
+using Monica.Configuration.Models;
+using Monica.Core.Results;
+
+namespace Monica.Configuration.Abstractions.Internal;
+
+/// <summary>
+/// Unified configuration management API interface, supporting configuration center and client mode
+/// </summary>
+public interface IConfigurationManagementApi
+{
+    /// <summary>
+    /// Get all configuration status information
+    /// </summary>
+    /// <param name="mode">Display mode (optional)</param>
+    /// <param name="onlyCurDomain"></param>
+    /// <returns>Configuration status list</returns>
+    Task<Res<List<ConfigurationDomainGroup>>> GetConfigsAsync(string? mode = null, bool onlyCurDomain = false);
+
+    /// <summary>
+    /// Get the status information of the specified configuration item
+    /// </summary>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <returns>Configuration item status</returns>
+    Task<Res<ConfigurationOptionSnapshot>> GetOptionItemAsync(string key, string? appid = null);
+
+    /// <summary>
+    /// Get status information of specified configuration class
+    /// </summary>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <returns>Configuration class status</returns>
+    Task<Res<ConfigurationSnapshot>> GetConfigAsync(string key, string? appid = null);
+
+    /// <summary>
+    /// Get configuration history
+    /// </summary>
+    /// <param name="key">Configuration key (optional)</param>
+    /// <param name="appid">Application ID (optional)</param>
+    /// <param name="start">Start time (optional)</param>
+    /// <param name="end">End time (optional)</param>
+    /// <returns>Configuration history list</returns>
+    Task<Res<List<ConfigurationHistoryEntry>>> GetConfigHistoryAsync(
+        string? key = null,
+        string? appid = null,
+        DateTime? start = null,
+        DateTime? end = null);
+
+    /// <summary>
+    /// Update configuration
+    /// </summary>
+    /// <param name="request">Update request</param>
+    /// <returns>Update results</returns>
+    Task<Res<ConfigurationUpdateResult>> UpdateConfigAsync(ConfigurationUpdateRequest request);
+
+    /// <summary>
+    /// Roll back configuration to specified version
+    /// </summary>
+    /// <param name="key">Configuration key</param>
+    /// <param name="appid">Application ID</param>
+    /// <param name="version">Version number</param>
+    /// <returns>Rollback results</returns>
+    Task<Res<ConfigurationUpdateResult>> RollbackConfigAsync(string key, string appid, string version);
+}
