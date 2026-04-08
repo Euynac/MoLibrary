@@ -2,8 +2,8 @@
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
 
-<MudItem xs="12" md="6" Class="dependency-graph-side-card">
-    <MudCard Class="modern-card dependency-graph-side-card__card">
+<MudItem xs="12" lg="3" Class="dependency-graph-top-item">
+    <MudCard Class="modern-card dependency-graph-top-card dependency-graph-top-card--legend">
         <MudCardHeader>
             <CardHeaderContent>
                 <div class="d-flex align-center">
@@ -12,8 +12,8 @@
                 </div>
             </CardHeaderContent>
         </MudCardHeader>
-        <MudCardContent Class="pa-4 dependency-graph-side-card__content">
-            <MudStack Spacing="4" Class="dependency-graph-side-card__stack">
+        <MudCardContent Class="pa-4 dependency-graph-top-card__content">
+            <MudStack Spacing="4">
                 <div>
                     <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:NodeTypes"]</MudText>
                     <MudStack Spacing="2">

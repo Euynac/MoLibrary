@@ -6,6 +6,48 @@
     width: 100%;
 }
 
+.dependency-graph-container ::deep .dependency-graph-top-item {
+    display: flex;
+}
+
+.dependency-graph-container ::deep .dependency-graph-top-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
+}
+
+.dependency-graph-container ::deep .dependency-graph-top-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dependency-graph-container ::deep .dependency-graph-top-card__content {
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+.dependency-graph-container ::deep .mud-card-header {
+    flex-shrink: 0;
+}
+
+.dependency-graph-container ::deep .mud-card-content {
+    width: 100%;
+}
+
+.dependency-graph-overview-grid {
+    width: 100%;
+}
+
+@media (min-width: 1280px) {
+    .dependency-graph-container ::deep .dependency-graph-top-card {
+        height: 28rem;
+    }
+}
+
 .modern-card {
     border-radius: 12px;
     transition: all 0.3s ease;
@@ -76,6 +118,11 @@
 
 /* Dark theme adaptation */
 @media (prefers-color-scheme: dark) {
+    .dependency-graph-container ::deep .dependency-graph-top-card {
+        background: var(--mud-palette-surface);
+        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
+    }
+
     .modern-card {
         background: var(--mud-palette-surface);
         border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
@@ -93,6 +140,12 @@
 }
 
 /* MudBlazor dark theme adaptation */
+[data-theme="dark"] .dependency-graph-container ::deep .dependency-graph-top-card,
+.mud-theme-dark .dependency-graph-container ::deep .dependency-graph-top-card {
+    background: var(--mud-palette-surface);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
+}
+
 [data-theme="dark"] .modern-card,
 .mud-theme-dark .modern-card {
     background: var(--mud-palette-surface);

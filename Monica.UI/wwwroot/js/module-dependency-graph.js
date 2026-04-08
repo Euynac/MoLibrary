@@ -55,8 +55,6 @@ class ModuleDependencyGraph {
         this.interactionHandler = new NodeInteractionHandler({
             onClick: (event, node) => this.handleNodeClick(node),
             onRightClick: (event, node, position) => this.handleNodeRightClick(node, position),
-            onHover: (event, node) => this.showNodeInfo(node),
-            onHoverOut: () => this.hideNodeInfo(),
             highlightOptions: {
                 fadeOpacity: 0.22,
                 normalOpacity: 1
@@ -162,6 +160,10 @@ class ModuleDependencyGraph {
             links: this.edges,
             linkSelection: this.linkSelection
         });
+
+        this.nodeSelection.selectAll('title').remove();
+        this.nodeSelection.append('title')
+            .text(node => node.tooltip || node.label);
 
         this.startNodeStateAnimations();
         this.applyLayout(this.currentLayout);
@@ -380,7 +382,6 @@ class ModuleDependencyGraph {
         this.linkSelection.style('display', edge => visibleEdgeSet.has(edge) ? null : 'none');
         this.nodeSelection.style('display', node => finalVisibleNodeIds.has(node.id) ? null : 'none');
 
-        this.hideNodeInfo();
     }
 
     getBaseVisibleNodeIds(filters) {
@@ -504,69 +505,6 @@ class ModuleDependencyGraph {
         ]
             .filter(Boolean)
             .some(value => String(value).toLowerCase().includes(normalizedSearch));
-    }
-
-    showNodeInfo(node) {
-        const info = {
-            module: node.label,
-            directDependencies: node.directDependencyCount ?? 0,
-            transitiveDependencies: node.transitiveDependencyCount ?? 0,
-            dependedBy: node.dependentModuleCount ?? 0,
-            isPartOfCycle: !!node.isPartOfCycle,
-            statusText: node.statusText,
-            moduleCategory: node.moduleCategory
-        };
-
-        this.updateNodeInfoDisplay(info);
-    }
-
-    hideNodeInfo() {
-        this.updateNodeInfoDisplay(null);
-    }
-
-    updateNodeInfoDisplay(info) {
-        const nodeDetailElement = document.querySelector('.node-detail-content');
-        if (!nodeDetailElement) {
-            return;
-        }
-
-        if (!info) {
-            nodeDetailElement.innerHTML = `
-                <div class="d-flex align-center justify-center" style="height: 100%; color: var(--mud-palette-text-secondary);">
-                    <div class="text-center">
-                        <div style="font-size: 3rem; margin-bottom: 12px;">
-                            <i class="fas fa-mouse-pointer"></i>
-                        </div>
-                        <div>${this.texts.messages.hoverToViewDetails}</div>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        nodeDetailElement.innerHTML = `
-            <div class="node-info">
-                <h4 class="node-info__heading">${info.module}</h4>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.directDependencies}:</strong> ${info.directDependencies}
-                </div>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.transitiveDependencies}:</strong> ${info.transitiveDependencies}
-                </div>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.dependedBy}:</strong> ${info.dependedBy}
-                </div>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.circularDependency}:</strong> ${info.isPartOfCycle ? this.texts.states.yes : this.texts.states.no}
-                </div>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.moduleCategory}:</strong> ${info.moduleCategory}
-                </div>
-                <div class="node-info__row">
-                    <strong>${this.texts.labels.moduleStatus}:</strong> ${info.statusText}
-                </div>
-            </div>
-        `;
     }
 
     zoomIn() {

@@ -2,8 +2,8 @@
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
 
-<MudItem xs="12" md="8">
-    <MudCard Class="modern-card">
+<MudItem xs="12" lg="6" Class="dependency-graph-top-item">
+    <MudCard Class="modern-card dependency-graph-top-card dependency-graph-top-card--controls">
         <MudCardHeader>
             <CardHeaderContent>
                 <div class="d-flex align-center">
@@ -12,13 +12,14 @@
                 </div>
             </CardHeaderContent>
         </MudCardHeader>
-        <MudCardContent Class="pa-4">
+        <MudCardContent Class="pa-4 dependency-graph-top-card__content">
             <MudGrid Spacing="4">
                 <MudItem xs="12" md="4">
                     <MudSelect T="string"
                                Value="SelectedLayout"
                                Label="@L["ModuleSystem:DependencyGraph:Labels:LayoutAlgorithm"]"
                                ValueChanged="SelectedLayoutChanged"
+                               FullWidth="true"
                                Variant="Variant.Outlined"
                                AnchorOrigin="Origin.BottomCenter">
                         <MudSelectItem Value="@("force")">
@@ -47,6 +48,7 @@
                                   ValueChanged="SearchTextChanged"
                                   Label="@L["ModuleSystem:DependencyGraph:Labels:Search"]"
                                   Placeholder="@L["ModuleSystem:DependencyGraph:Labels:SearchPlaceholder"]"
+                                  FullWidth="true"
                                   Variant="Variant.Outlined"
                                   Immediate="true"
                                   Clearable="true"

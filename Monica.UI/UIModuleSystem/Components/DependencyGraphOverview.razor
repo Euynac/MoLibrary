@@ -3,17 +3,8 @@
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
 
-@if (!string.IsNullOrEmpty(RelatedNodeId))
-{
-    <MudItem xs="12">
-        <MudAlert Severity="Severity.Info" Class="mb-3" CloseIconClicked="HandleClearRelatedFilterAsync">
-            @L["ModuleSystem:DependencyGraph:Messages:ShowingRelatedNodes", RelatedNode?.ModuleName ?? RelatedNodeId]
-        </MudAlert>
-    </MudItem>
-}
-
-<MudItem xs="12" md="4">
-    <MudCard Class="modern-card">
+<MudItem xs="12" lg="3" Class="dependency-graph-top-item">
+    <MudCard Class="modern-card dependency-graph-top-card dependency-graph-top-card--overview">
         <MudCardHeader>
             <CardHeaderContent>
                 <div class="d-flex align-center">
@@ -22,52 +13,60 @@
                 </div>
             </CardHeaderContent>
         </MudCardHeader>
-        <MudCardContent Class="pa-4">
-            <MudStack Spacing="3">
-                <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:DependencyGraph:Labels:TotalNodes"]</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
+        <MudCardContent Class="pa-4 dependency-graph-top-card__content">
+            <MudGrid Spacing="3" Class="dependency-graph-overview-grid">
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:DependencyGraph:Labels:TotalNodes"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Primary">@DependencyGraphData.Nodes.Count.ToString()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Large" />
                         </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" Size="Size.Large" />
-                    </div>
-                </MudPaper>
-                <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:DependencyGraph:Labels:TotalDependencies"]</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:DependencyGraph:Labels:TotalDependencies"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Info">@DependencyGraphData.Edges.Count.ToString()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Large" />
                         </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Info" Size="Size.Large" />
-                    </div>
-                </MudPaper>
-                <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencies"]</MudText>
-                            <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? L["ModuleSystem:DependencyGraph:States:Exists"] : L["ModuleSystem:DependencyGraph:States:None"])</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencies"]</MudText>
+                                <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? L["ModuleSystem:DependencyGraph:States:Exists"] : L["ModuleSystem:DependencyGraph:States:None"])</MudText>
+                            </div>
+                            @if (DependencyGraphData.HasCircularDependencies)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                            }
                         </div>
-                        @if (DependencyGraphData.HasCircularDependencies)
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Large" />
-                        }
-                        else
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
-                        }
-                    </div>
-                </MudPaper>
-                <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:DependencyGraph:Labels:DependencyLayers"]</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:DependencyGraph:Labels:DependencyLayers"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Secondary">@DependencyGraphData.ModuleLayers.Count.ToString()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Large" />
                         </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Layers" Color="Color.Secondary" Size="Size.Large" />
-                    </div>
-                </MudPaper>
-            </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
         </MudCardContent>
     </MudCard>
 </MudItem>
@@ -75,18 +74,4 @@
 @code {
     [Parameter]
     public required ModuleDependencyGraph DependencyGraphData { get; set; }
-
-    [Parameter]
-    public string? RelatedNodeId { get; set; }
-
-    [Parameter]
-    public ModuleDependencyNode? RelatedNode { get; set; }
-
-    [Parameter]
-    public EventCallback OnClearRelatedFilter { get; set; }
-
-    private Task HandleClearRelatedFilterAsync()
-    {
-        return OnClearRelatedFilter.InvokeAsync();
-    }
 }

@@ -14,10 +14,16 @@
     @if (DependencyGraphData != null)
     {
         <MudGrid Spacing="4" Class="mb-4">
-            <DependencyGraphOverview DependencyGraphData="DependencyGraphData"
-                                     RelatedNodeId="@_state.RelatedNodeId"
-                                     RelatedNode="FindNode(_state.RelatedNodeId)"
-                                     OnClearRelatedFilter="ClearRelatedFilterClick" />
+            @if (!string.IsNullOrEmpty(_state.RelatedNodeId))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Class="mb-3" CloseIconClicked="ClearRelatedFilterClick">
+                        @L["ModuleSystem:DependencyGraph:Messages:ShowingRelatedNodes", FindNode(_state.RelatedNodeId)?.ModuleName ?? _state.RelatedNodeId]
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <DependencyGraphOverview DependencyGraphData="DependencyGraphData" />
 
             <DependencyGraphFilters SelectedLayout="@_state.SelectedLayout"
                                     SelectedLayoutChanged="OnLayoutChanged"
@@ -33,21 +39,20 @@
                                     ZoomOut="ZoomOut"
                                     ResetZoom="ResetZoom" />
 
+            <DependencyGraphLegend />
+
             <DependencyGraphCanvas OnBackgroundClick="OnBackgroundClick"
                                    OnExportGraph="ExportGraph" />
-
-            <DependencyGraphLegend />
-            <DependencyGraphNodeDetails />
         </MudGrid>
     }
     else
     {
         <MudGrid Spacing="4" Class="mb-4">
-            @for (int i = 0; i < 6; i++)
+            @for (int i = 0; i < 4; i++)
             {
-                <MudItem xs="12" md="@(i == 2 ? 12 : 6)">
+                <MudItem xs="12" md="@(i == 3 ? 12 : 4)">
                     <MudCard Class="modern-card">
-                        <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="@(i == 2 ? "min-height: 600px;" : "min-height: 300px;")">
+                        <MudCardContent Class="pa-4 d-flex align-center justify-center" Style="@(i == 3 ? "min-height: 600px;" : "min-height: 320px;")">
                             <div class="text-center">
                                 <MudProgressCircular Indeterminate="true" Class="mb-3" />
                                 <MudText Color="Color.Secondary">@GetLoadingText(i)</MudText>
@@ -128,6 +133,7 @@
         {
             id = n.Module.ToString(),
             label = n.ModuleName,
+            tooltip = BuildNodeTooltip(n),
             isPartOfCycle = n.IsPartOfCycle,
             isDisabled = !n.IsEnabled,
             isUIModule = n.IsUIModule,
@@ -300,11 +306,28 @@
     {
         0 => L["ModuleSystem:DependencyGraph:Loading:DependencyOverview"],
         1 => L["ModuleSystem:DependencyGraph:Loading:GraphControls"],
-        2 => L["ModuleSystem:DependencyGraph:Loading:DependencyGraph"],
-        3 => L["ModuleSystem:DependencyGraph:Loading:Legend"],
-        4 => L["ModuleSystem:DependencyGraph:Loading:NodeDetails"],
+        2 => L["ModuleSystem:DependencyGraph:Loading:Legend"],
+        3 => L["ModuleSystem:DependencyGraph:Loading:DependencyGraph"],
         _ => L["ModuleSystem:DependencyGraph:Loading:Default"]
     };
+
+    /// <summary>
+    /// Builds the native hover tooltip text shown for a graph node.
+    /// </summary>
+    private string BuildNodeTooltip(ModuleDependencyNode node)
+    {
+        var transitiveDependencyCount = Math.Max(0, node.TotalDependencyCount - node.DirectDependencyCount);
+
+        return string.Join(Environment.NewLine, [
+            node.ModuleName,
+            $"{L["ModuleSystem:DependencyGraph:Labels:DirectDependency"]}: {node.DirectDependencyCount}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:TransitiveDependency"]}: {transitiveDependencyCount}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:DependedBy"]}: {node.DependentModuleCount}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:CircularDependency"]}: {(node.IsPartOfCycle ? L["ModuleSystem:DependencyGraph:States:Yes"].Value : L["ModuleSystem:DependencyGraph:States:No"].Value)}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:ModuleCategory"]}: {GetModuleCategoryLabel(node)}",
+            $"{L["ModuleSystem:DependencyGraph:Labels:ModuleStatus"]}: {(node.IsEnabled ? L["ModuleSystem:DependencyGraph:States:Enabled"].Value : L["ModuleSystem:DependencyGraph:States:Disabled"].Value)}"
+        ]);
+    }
 
     /// <summary>
     /// Gets the localized module category label used by the graph.
