@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Repository pattern implementation with Entity Framework Core integration for Monica framework, providing data access abstractions and CRUD operations.</PackageDescription>
   </PropertyGroup>

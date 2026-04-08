@@ -1,6 +1,14 @@
 <Project>
-  <!-- Common NuGet Package Properties -->
   <PropertyGroup>
+    <SatelliteResourceLanguages>en;zh-Hans</SatelliteResourceLanguages>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);1591;NU1903;CS9107</NoWarn>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
     <Version>0.1.0-preview.1</Version>
     <Authors>Momean</Authors>
@@ -36,18 +44,16 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
 
-    <!-- Documentation -->
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <!-- Include Logo and README in All Packages -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)logo.png" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)PACKAGE_README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- Source Link Package Reference -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.102" PrivateAssets="All" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Automatic model generation and dynamic query capabilities for Monica framework with Entity Framework Core and System.Linq.Dynamic support.</PackageDescription>
   </PropertyGroup>

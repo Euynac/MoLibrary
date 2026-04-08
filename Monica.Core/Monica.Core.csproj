@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Fundamental types, utilities, and base infrastructure for Monica framework including built-in mediator dispatch, Mapster mapping, and core abstractions.</PackageDescription>
   </PropertyGroup>

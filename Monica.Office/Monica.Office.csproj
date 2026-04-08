@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Office document processing for Monica framework with support for Excel file operations using EPPlus and NPOI, enabling spreadsheet generation and manipulation.</PackageDescription>
   </PropertyGroup>

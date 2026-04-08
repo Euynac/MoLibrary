@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\common.xml"/>
-
     <PropertyGroup>
         <PackageDescription>Entity Framework Core metadata repository implementation for Monica JobScheduler, providing persistent storage for job definitions and execution history.</PackageDescription>
     </PropertyGroup>

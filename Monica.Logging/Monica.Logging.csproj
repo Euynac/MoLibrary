@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Structured logging infrastructure for Monica framework using Serilog with async sinks, providing comprehensive logging capabilities for ASP.NET Core applications.</PackageDescription>
   </PropertyGroup>

@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>State management, distributed persistence, task progress tracking, and cancellation coordination for Monica framework.</PackageDescription>
   </PropertyGroup>

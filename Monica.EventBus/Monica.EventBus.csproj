@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml"/>
-
   <PropertyGroup>
     <PackageDescription>Event bus abstractions and in-memory implementation for Monica framework, providing publish-subscribe patterns for loosely coupled event-driven architecture.</PackageDescription>
   </PropertyGroup>

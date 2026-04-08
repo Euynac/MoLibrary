@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <PackageDescription>Experimental Monica features under active development and not intended for NuGet publishing.</PackageDescription>

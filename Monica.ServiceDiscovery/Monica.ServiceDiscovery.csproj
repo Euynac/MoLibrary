@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <Import Project="..\common.xml"/>
-
   <PropertyGroup>
     <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
     <PackageDescription>Service registration and discovery for Monica framework, providing service registry capabilities for microservices architecture with health checking and load balancing.</PackageDescription>

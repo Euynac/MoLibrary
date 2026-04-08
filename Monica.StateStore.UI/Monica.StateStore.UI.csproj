@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <Import Project="..\common.xml"/>
-
   <PropertyGroup>
     <PackageDescription>State store monitoring UI components for Monica framework, providing visual interfaces for inspecting and managing distributed state storage.</PackageDescription>
   </PropertyGroup>

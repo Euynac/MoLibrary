@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<Import Project="..\common.xml"/>
-
 	<PropertyGroup>
 		<PackageDescription>Background job scheduling system for Monica framework with support for recurring jobs, triggered jobs, and cron expressions using Cronos.</PackageDescription>
 	</PropertyGroup>

@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <Import Project="..\common.xml"/>
-
   <PropertyGroup>
     <PackageDescription>Data channel abstractions for Monica framework with support for Kafka and ActiveMQ messaging systems, providing unified interfaces for message streaming.</PackageDescription>
   </PropertyGroup>

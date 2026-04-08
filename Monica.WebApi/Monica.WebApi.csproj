@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Web API infrastructure for Monica including automatic controller exposure, CRUD scaffolding, Swagger integration, RPC client support, and validation mapping.</PackageDescription>
   </PropertyGroup>

@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml"/>
-
   <PropertyGroup>
     <PackageDescription>Distributed locking abstractions for Monica framework with support for async keyed locks and distributed lock providers, ensuring thread-safe operations across services.</PackageDescription>
   </PropertyGroup>

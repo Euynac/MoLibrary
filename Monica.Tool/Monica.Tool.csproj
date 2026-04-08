@@ -1,7 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\common.xml" />
-
   <PropertyGroup>
     <PackageDescription>Common utilities and helper functions for Monica framework including extension methods, type converters, and general-purpose tools.</PackageDescription>
   </PropertyGroup>
