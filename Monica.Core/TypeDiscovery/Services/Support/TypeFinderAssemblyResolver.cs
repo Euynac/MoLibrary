@@ -99,7 +99,19 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
         {
             RegisterAssemblyName(finalAssemblyNames, entryAssembly.GetName());
 
-            if (projectLibrariesByName.Count > 0)
+            var defaultProjectAssemblies = ResolveDefaultProjectAssemblies(
+                entryAssembly,
+                dependencyLibraries,
+                referencedAssemblies);
+
+            if (defaultProjectAssemblies.Count > 0)
+            {
+                foreach (var assemblyName in defaultProjectAssemblies)
+                {
+                    RegisterAssemblyName(finalAssemblyNames, assemblyName);
+                }
+            }
+            else if (projectLibrariesByName.Count > 0)
             {
                 foreach (var reference in referencedAssemblies)
                 {
@@ -217,9 +229,112 @@ internal sealed class TypeFinderAssemblyPlanBuilder(TypeFinderOptions options)
                     library.Name,
                     library.Type,
                     library.Version,
-                    assemblyName));
+                    assemblyName,
+                    library.Dependencies.Select(static dependency => dependency.Name).ToArray()));
             })
             .ToList();
+    }
+
+    internal static IReadOnlyList<AssemblyName> ResolveDefaultProjectAssemblies(
+        Assembly entryAssembly,
+        IReadOnlyList<TypeFinderDependencyLibraryDescriptor> dependencyLibraries,
+        IReadOnlyList<AssemblyName> referencedAssemblies)
+    {
+        ArgumentNullException.ThrowIfNull(entryAssembly);
+        ArgumentNullException.ThrowIfNull(dependencyLibraries);
+        ArgumentNullException.ThrowIfNull(referencedAssemblies);
+
+        var projectLibrariesByName = dependencyLibraries
+            .Where(static library => library.IsProject)
+            .GroupBy(static library => library.LibraryName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        if (projectLibrariesByName.Count == 0)
+        {
+            return [];
+        }
+
+        var rootLibraryNames = ResolveRootProjectLibraryNames(
+            entryAssembly,
+            projectLibrariesByName,
+            referencedAssemblies);
+
+        if (rootLibraryNames.Count == 0)
+        {
+            return [];
+        }
+
+        var resolvedAssemblies = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
+        var visitedLibraries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pendingLibraries = new Queue<string>(rootLibraryNames);
+
+        while (pendingLibraries.Count > 0)
+        {
+            var libraryName = pendingLibraries.Dequeue();
+            if (!visitedLibraries.Add(libraryName)
+                || !projectLibrariesByName.TryGetValue(libraryName, out var descriptors))
+            {
+                continue;
+            }
+
+            foreach (var descriptor in descriptors)
+            {
+                RegisterAssemblyName(resolvedAssemblies, descriptor.AssemblyName);
+            }
+
+            foreach (var dependencyLibraryName in descriptors
+                         .SelectMany(static descriptor => descriptor.DependencyLibraryNames)
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (projectLibrariesByName.ContainsKey(dependencyLibraryName))
+                {
+                    pendingLibraries.Enqueue(dependencyLibraryName);
+                }
+            }
+        }
+
+        var entryAssemblyName = entryAssembly.GetName().Name ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(entryAssemblyName))
+        {
+            resolvedAssemblies.Remove(entryAssemblyName);
+        }
+
+        return resolvedAssemblies.Values
+            .OrderBy(static assemblyName => assemblyName.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyCollection<string> ResolveRootProjectLibraryNames(
+        Assembly entryAssembly,
+        IReadOnlyDictionary<string, TypeFinderDependencyLibraryDescriptor[]> projectLibrariesByName,
+        IReadOnlyList<AssemblyName> referencedAssemblies)
+    {
+        var entryAssemblyName = entryAssembly.GetName().Name ?? string.Empty;
+
+        var entryLibraryNames = projectLibrariesByName.Values
+            .Where(group => group.Any(descriptor =>
+                string.Equals(descriptor.AssemblyName.Name, entryAssemblyName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(descriptor.LibraryName, entryAssemblyName, StringComparison.OrdinalIgnoreCase)))
+            .Select(static group => group[0].LibraryName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (entryLibraryNames.Length > 0)
+        {
+            return entryLibraryNames;
+        }
+
+        var directReferencedAssemblyNames = referencedAssemblies
+            .Select(static reference => reference.Name)
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return projectLibrariesByName.Values
+            .Where(group => group.Any(descriptor =>
+                directReferencedAssemblyNames.Contains(descriptor.AssemblyName.Name ?? string.Empty)))
+            .Select(static group => group[0].LibraryName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static bool MatchesPattern(string? name, string? fullName, string pattern)
@@ -262,7 +377,12 @@ internal sealed class TypeFinderAssemblyPlan
     public required IReadOnlyList<TypeFinderPatternMatchInfo> ExcludePatternMatches { get; init; }
 }
 
-internal sealed class TypeFinderDependencyLibraryDescriptor(string libraryName, string libraryType, string? libraryVersion, AssemblyName assemblyName)
+internal sealed class TypeFinderDependencyLibraryDescriptor(
+    string libraryName,
+    string libraryType,
+    string? libraryVersion,
+    AssemblyName assemblyName,
+    IReadOnlyList<string> dependencyLibraryNames)
 {
     public string LibraryName { get; } = libraryName;
 
@@ -273,6 +393,8 @@ internal sealed class TypeFinderDependencyLibraryDescriptor(string libraryName, 
     public bool IsProject => string.Equals(LibraryType, "project", StringComparison.OrdinalIgnoreCase);
 
     public AssemblyName AssemblyName { get; } = assemblyName;
+
+    public IReadOnlyList<string> DependencyLibraryNames { get; } = dependencyLibraryNames;
 
     public string RuntimeDllPath => Path.Combine(AppContext.BaseDirectory, $"{AssemblyName.Name}.dll");
 
