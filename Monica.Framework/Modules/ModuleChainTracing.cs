@@ -62,6 +62,8 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
             return;
         }
 
+        DependsOnModule<ModuleJsonSerializationGuide>().Register();
+
         if (Option.EnableControllerTracing || Option.EnableAttachToRes)
         {
             DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcOption((options, _) =>
