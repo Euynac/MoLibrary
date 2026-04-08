@@ -1,19 +1,19 @@
-# Protocol Platform and Service Contracts
+# Platform Protocol and Service Contracts
 
-Use this file before adding anything to `Shared/ProtocolPlatform`.
+Use this file before adding anything to `Shared/Platform.Protocol`.
 
 ## Shared Platform Responsibilities
 
-- `BuildingBlocksPlatform` contains project-agnostic infrastructure building blocks and third-party framework extensions.
-- `InfrastructurePlatform` contains solution-owned infrastructure setup and integration wiring.
-- `ProtocolPlatform` contains the shared business language used across services.
+- `Platform.BuildingBlocks` contains project-agnostic infrastructure building blocks and third-party framework extensions.
+- `Platform.Infrastructure` contains solution-owned infrastructure setup and integration wiring.
+- `Platform.Protocol` contains the shared business language used across services.
 
 ## What Belongs Here
 
-- Put requests that another service or shared gateway may invoke into `ProtocolPlatform/PublishedLanguages`.
-- Put DTOs and enums that form part of a stable service contract into `ProtocolPlatform/PublishedLanguages`.
-- Put events that other services may subscribe to into `ProtocolPlatform/PublishedLanguages`.
-- Put optional `AppInterfaces` into `ProtocolPlatform/PublishedLanguages` only when direct synchronous collaboration is justified.
+- Put requests that another service or shared gateway may invoke into `Platform.Protocol/PublishedLanguages`.
+- Put DTOs and enums that form part of a stable service contract into `Platform.Protocol/PublishedLanguages`.
+- Put events that other services may subscribe to into `Platform.Protocol/PublishedLanguages`.
+- Put optional `AppInterfaces` into `Platform.Protocol/PublishedLanguages` only when direct synchronous collaboration is justified.
 
 ## What Does Not Belong Here
 

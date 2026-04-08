@@ -6,7 +6,7 @@ Use this workflow when adding a new business capability that deserves its own se
 
 - Choose a business name first, such as `Ordering`, `Billing`, or `Warehouse`.
 - Use that name consistently for:
-  - `Domain{Subdomain}` in `ProtocolPlatform/PublishedLanguages`
+  - `Domain{Subdomain}` in `Platform.Protocol/PublishedLanguages`
   - `{Subdomain}Service.API`
   - `{Subdomain}Service.Domain`
   - `{Subdomain}Service.Infrastructure`
@@ -17,7 +17,7 @@ Use this workflow when adding a new business capability that deserves its own se
 Create:
 
 ```text
-src/Shared/ProtocolPlatform/PublishedLanguages/Domain{Subdomain}/
+src/Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/
 ├── Requests/
 ├── Models/
 ├── Events/
@@ -49,7 +49,7 @@ Use `monica-project-unit-development` to fill the correct ProjectUnits inside th
 
 ## Step 5. Wire the host
 
-- Register the service in the solution's host or orchestration layer.
+- Register the service in the solution's host or gateway entry project.
 - Keep orchestration metadata outside the domain projects.
 
 ## Decision Rule

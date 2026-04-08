@@ -10,9 +10,9 @@ Use these rules to keep the microservice architecture from collapsing into a dis
 
 ## Dependency Direction
 
-- `Shared/BuildingBlocksPlatform` may be referenced where generic infrastructure building blocks are needed.
-- `Shared/InfrastructurePlatform` may be referenced by host and infrastructure composition code, but it is not a business-language surface.
-- `Shared/ProtocolPlatform/PublishedLanguages` may be referenced broadly.
+- `Shared/Platform.BuildingBlocks` may be referenced where generic infrastructure building blocks are needed.
+- `Shared/Platform.Infrastructure` may be referenced by host and infrastructure composition code, but it is not a business-language surface.
+- `Shared/Platform.Protocol/PublishedLanguages` may be referenced broadly.
 - A service's `Domain` and `Infrastructure` stay private to that service.
 - Cross-service collaboration happens through published requests, models, events, or explicitly chosen service interfaces.
 
@@ -24,5 +24,5 @@ Use these rules to keep the microservice architecture from collapsing into a dis
 
 ## Adapter Rule
 
-- `ServicesHttp`, `ServicesGrpc`, and host modules are delivery mechanisms.
+- `ServicesHttp`, `ServicesGrpc`, and host entry points are delivery mechanisms.
 - They do not replace `ApplicationService`, `DomainService`, `Entity`, `Repository`, or other ProjectUnits.

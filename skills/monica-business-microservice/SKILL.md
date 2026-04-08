@@ -1,6 +1,6 @@
 ---
 name: monica-business-microservice
-description: DDD microservice architecture guidance for Monica business projects. Use when creating or extending a subdomain service, planning shared platform layers, shaping ProtocolPlatform/PublishedLanguages, splitting API, Domain, Infrastructure, and migration projects, or deciding cross-service collaboration boundaries. Pair with monica-project-unit-development for unit-level implementation.
+description: DDD microservice architecture guidance for Monica business projects. Use when creating or extending a subdomain service, planning shared platform layers, shaping Platform.Protocol/PublishedLanguages, splitting API, Domain, Infrastructure, and migration projects, or deciding cross-service collaboration boundaries. Pair with monica-project-unit-development for unit-level implementation.
 ---
 
 # Monica Business Microservice
@@ -20,10 +20,10 @@ Use this skill to shape Monica business projects as DDD-aligned microservices. I
 ## Core Rules
 
 - Split by business capability and data ownership, not by transport or technical layer alone.
-- Keep the shared platform split explicit: `BuildingBlocksPlatform` for project-agnostic infrastructure extensions, `InfrastructurePlatform` for solution-owned infrastructure wiring, and `ProtocolPlatform` for shared business language.
-- Keep `Shared/ProtocolPlatform/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
+- Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
+- Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
 - Keep each subdomain service independently evolvable: `API`, `Domain`, `Infrastructure`, and migrations move together.
-- Treat `ServicesHttp`, `ServicesGrpc`, and host modules as adapters. Business decisions still belong in ProjectUnits from `monica-project-unit-development`.
+- Treat `ServicesHttp`, `ServicesGrpc`, and host entry points as adapters. Business decisions still belong in ProjectUnits from `monica-project-unit-development`.
 
 ## Reference Navigation
 

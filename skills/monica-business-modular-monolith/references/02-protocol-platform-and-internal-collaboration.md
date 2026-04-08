@@ -1,17 +1,17 @@
-# Protocol Platform and Internal Collaboration
+# Platform Protocol and Internal Collaboration
 
-Use this file before introducing a new dependency between modules.
+Use this file before introducing a new dependency between domains.
 
 ## Default Rule
 
-Other modules may depend on `Shared/ProtocolPlatform/PublishedLanguages` and optional `AppInterfaces`, not on another module's `Application` or `Infrastructure`.
+Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`, not on another domain's `Application` or `Infrastructure`.
 
-## What Belongs in ProtocolPlatform
+## What Belongs in Platform.Protocol
 
 - Requests
 - DTOs
 - Enums
-- Cross-module events
+- Cross-domain events
 - Optional `AppInterfaces` for deliberate synchronous collaboration
 
 ## What Stays Internal
@@ -24,6 +24,6 @@ Other modules may depend on `Shared/ProtocolPlatform/PublishedLanguages` and opt
 
 ## Collaboration Choices
 
-- Use direct contract-driven requests when another module needs synchronous data or command execution.
+- Use direct contract-driven requests when another domain needs synchronous data or command execution.
 - Use events when the collaboration can be asynchronous and loosely coupled.
-- Keep collaboration intentional. A modular monolith should not simulate service calls for everything, but it should still preserve module boundaries.
+- Keep collaboration intentional. A modular monolith should not simulate service calls for everything, but it should still preserve domain boundaries.
