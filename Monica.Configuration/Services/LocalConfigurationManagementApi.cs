@@ -30,7 +30,7 @@ public class LocalConfigurationManagementApi(
         }
     }
 
-    public virtual async Task<Res<ConfigurationOptionSnapshot>> GetOptionItemAsync(string key, string? appid = null)
+    public virtual Task<Res<ConfigurationOptionSnapshot>> GetOptionItemAsync(string key, string? appid = null)
     {
         try
         {
@@ -43,18 +43,18 @@ public class LocalConfigurationManagementApi(
                 .FirstOrDefault(p => p.Key == key);
 
             if (optionItem != null)
-                return optionItem;
+                return Task.FromResult<Res<ConfigurationOptionSnapshot>>(optionItem);
 
-            return "找不到相应的配置项";
+            return Task.FromResult<Res<ConfigurationOptionSnapshot>>("找不到相应的配置项");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "获取配置项状态失败");
-            return Res.Fail($"获取配置项状态失败: {ex.Message}");
+            return Task.FromResult<Res<ConfigurationOptionSnapshot>>(Res.Fail($"获取配置项状态失败: {ex.Message}"));
         }
     }
 
-    public virtual async Task<Res<ConfigurationSnapshot>> GetConfigAsync(string key, string? appid = null)
+    public virtual Task<Res<ConfigurationSnapshot>> GetConfigAsync(string key, string? appid = null)
     {
         try
         {
@@ -66,14 +66,14 @@ public class LocalConfigurationManagementApi(
                 .FirstOrDefault(p => p.Name == key);
 
             if (config != null)
-                return config;
+                return Task.FromResult<Res<ConfigurationSnapshot>>(config);
 
-            return "找不到相应的配置类";
+            return Task.FromResult<Res<ConfigurationSnapshot>>("找不到相应的配置类");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "获取配置类状态失败");
-            return Res.Fail($"获取配置类状态失败: {ex.Message}");
+            return Task.FromResult<Res<ConfigurationSnapshot>>(Res.Fail($"获取配置类状态失败: {ex.Message}"));
         }
     }
 

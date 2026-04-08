@@ -13,11 +13,9 @@ using Monica.Configuration.Extensions;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Models;
 using Monica.Configuration.Models.Internal;
-using Monica.Configuration.Providers;
 using Monica.Configuration.Providers.History;
 using Monica.Configuration.Providers.JsonFile;
 using Monica.Configuration.Providers.ProjectCatalog;
-using Monica.Configuration.Providers.ServiceInvocation;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
 using Monica.Core;
@@ -50,12 +48,6 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
 
-    public override void ClaimDependencies()
-    {
-        DependsOnModule<ModuleServiceDiscoveryGuide>().Register();
-        DependsOnModule<ModuleServiceInvocationGuide>().Register();
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
@@ -64,34 +56,14 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
 
         services.AddOptions();
         services.AddSingleton<IConfigurationCatalog, ConfigurationCatalogService>();
-        services.TryAddSingleton<IConfigurationProjectCatalog, ServiceDiscoveryProjectCatalog>(); // TODO: Decouple ServiceDiscovery dependency and define best-practice project layouts (monolith vs microservices).
+        services.TryAddSingleton<IConfigurationProjectCatalog, LocalConfigurationProjectCatalog>();
         services.TryAddTransient<IConfigurationHistoryStore, MemoryConfigurationHistoryStore>();
         services.TryAddSingleton<IConfigurationValueWriter, JsonFileConfigurationWriter>();
         services.TryAddSingleton<LocalConfigurationManagementApi>();
+        services.TryAddSingleton<IConfigurationManagementApi>(provider =>
+            provider.GetRequiredService<LocalConfigurationManagementApi>());
+        services.TryAddSingleton<IConfigurationDashboardContext, LocalConfigurationDashboardContext>();
         services.AddScoped<ConfigurationFacade>();
-
-        if (GetOptions<ModuleServiceDiscoveryOption>().IsRegistryServer)
-        {
-            services.TryAddSingleton<RegistryConfigurationManagementApi>();
-            services.TryAddSingleton<IConfigurationManagementApi>(provider =>
-                provider.GetRequiredService<RegistryConfigurationManagementApi>());
-
-            if (GetOptions<ModuleServiceDiscoveryOption>().IsStandaloneMode)
-            {
-                services.TryAddSingleton<IConfigurationRemoteGateway,
-                    StandaloneConfigurationRemoteGateway>();
-            }
-            else
-            {
-                services.TryAddSingleton<IConfigurationRemoteGateway,
-                    DistributedConfigurationRemoteGateway>();
-            }
-        }
-        else
-        {
-            services.TryAddSingleton<IConfigurationManagementApi>(provider =>
-                provider.GetRequiredService<LocalConfigurationManagementApi>());
-        }
 
         // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
         // {

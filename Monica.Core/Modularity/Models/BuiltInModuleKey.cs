@@ -15,7 +15,7 @@ public enum BuiltInModuleKey
     WebApi,
     Configuration,
     Authentication,
-    ConfigurationDashboard,
+    ConfigurationCenter,
     ServiceDiscovery,
     /// <summary>
     /// Service invocation module.

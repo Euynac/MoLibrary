@@ -1,13 +1,12 @@
 @attribute [Route(PAGE_URL)]
 @using Monica.Configuration.UI.Components
+@using Monica.Configuration.Abstractions
 @using Monica.Configuration.Facades
-@using Microsoft.Extensions.Options
 @using Monica.Configuration.Models
 @using Monica.Core.Results;
-@using Monica.Modules
 @inject ConfigurationFacade ConfigurationFacade
+@inject IConfigurationDashboardContext DashboardContext
 @inject ISnackbar Snackbar
-@inject IOptions<ModuleServiceDiscoveryOption> Options
 
 <PageTitle>@DashboardTitle</PageTitle>
 
@@ -98,8 +97,9 @@
     private int activeTabIndex = 0;
     private ConfigurationDebugView? debugViewComponent;
     private ConfigurationProviderView? providerViewComponent;
-    private string DashboardTitle => Options.Value.IsRegistryServer ? "配置中心面板" : "配置客户端面板";
-    private string DashboardDescription => Options.Value.IsRegistryServer
+    private bool IsCenterMode => DashboardContext.Mode == ConfigurationDashboardMode.Center;
+    private string DashboardTitle => IsCenterMode ? "配置中心面板" : "配置客户端面板";
+    private string DashboardDescription => IsCenterMode
         ? "集中查看配置状态、变更历史、配置概览、调试视图和提供者信息。"
         : "查看客户端配置状态、变更历史、配置概览、调试视图和提供者信息。";
 

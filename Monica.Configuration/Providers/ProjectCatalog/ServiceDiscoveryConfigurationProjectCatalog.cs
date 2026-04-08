@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Monica.Configuration.Abstractions;
 using Monica.ServiceDiscovery.Abstractions;
 
@@ -7,17 +6,14 @@ namespace Monica.Configuration.Providers.ProjectCatalog;
 /// <summary>
 /// Project catalog implementation using service discovery
 /// </summary>
-public class ServiceDiscoveryProjectCatalog : IConfigurationProjectCatalog
+public class ServiceDiscoveryConfigurationProjectCatalog : IConfigurationProjectCatalog
 {
     private readonly IServiceDiscoveryCatalogProvider _catalogProvider;
     private readonly Lazy<Dictionary<string, string>> _domainTitleCache;
     private readonly Lazy<string> _currentDomainName;
     private readonly Lazy<string> _currentAppId;
 
-    // Regex to extract domain from project name (e.g., "FlightService.API" → "Flight")
-    private static readonly Regex DomainPattern = new(@"^(.+?)Service\.", RegexOptions.Compiled);
-
-    public ServiceDiscoveryProjectCatalog(
+    public ServiceDiscoveryConfigurationProjectCatalog(
         IServiceDiscoveryCatalogProvider catalogProvider,
         IServiceDiscoveryClientInfo clientInfo)
     {
@@ -34,14 +30,7 @@ public class ServiceDiscoveryProjectCatalog : IConfigurationProjectCatalog
 
     public string GetDomainName(string projectName)
     {
-        var match = DomainPattern.Match(projectName);
-        if (match.Success)
-        {
-            return match.Groups[1].Value;
-        }
-
-        // Fallback for shared/platform projects
-        return "Shared";
+        return ConfigurationProjectCatalogConventions.GetDomainName(projectName);
     }
 
     public string GetDomainTitle(string domainName)
@@ -59,29 +48,7 @@ public class ServiceDiscoveryProjectCatalog : IConfigurationProjectCatalog
     {
         var domainName = GetDomainName(projectName);
         var domainTitle = GetDomainTitle(domainName);
-
-        // Generate display name based on project type
-        if (projectName.EndsWith(".Domain"))
-        {
-            return $"{domainTitle}领域层";
-        }
-        else if (projectName.EndsWith(".Infrastructure"))
-        {
-            return $"{domainTitle}基础设施层";
-        }
-        else if (projectName.EndsWith(".API"))
-        {
-            return $"{domainTitle}服务";
-        }
-
-        // Special cases
-        if (projectName == "ProtocolPlatform")
-        {
-            return "全局微服务配置";
-        }
-
-        // Default: use project name
-        return projectName;
+        return ConfigurationProjectCatalogConventions.GetProjectDisplayName(projectName, domainTitle);
     }
 
     public bool IsCurrentDomain(string projectName)

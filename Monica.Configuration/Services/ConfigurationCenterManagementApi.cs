@@ -11,7 +11,7 @@ namespace Monica.Configuration.Services;
 /// Configuration-center API provider.
 /// Uses the registration-state manager to discover registered services and invoke their configuration endpoints.
 /// </summary>
-public class RegistryConfigurationManagementApi(
+public class ConfigurationCenterManagementApi(
     IConfigurationValueWriter modifier,
     IConfigurationCatalog manager,
     IConfigurationHistoryStore stores,
