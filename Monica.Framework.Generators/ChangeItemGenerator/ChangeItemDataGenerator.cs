@@ -4,14 +4,14 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Monica.Framework.Generators.AlterItemGenerator;
+namespace Monica.Framework.Generators.ChangeItemGenerator;
 
 /// <summary>
 /// Change-item data source generator.
 /// Automatically generates the change-item data class and Apply method for each tracked entity.
 /// </summary>
 [Generator]
-public class AlterItemDataGenerator : IIncrementalGenerator
+public class ChangeItemDataGenerator : IIncrementalGenerator
 {
     private const string GenerateChangeItemDataAttributeName = "Monica.Framework.ChangeTracking.Annotations.GenerateChangeItemDataAttribute";
     private const string ChangeTrackedEntityInterfaceName = "Monica.Framework.ChangeTracking.Abstractions.IChangeTrackedEntity";
@@ -50,7 +50,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
             {
                 try
                 {
-                    GenerateAlterItemDataForEntity(ctx, entity, analyzer);
+                    GenerateChangeItemDataForEntity(ctx, entity, analyzer);
                 }
                 catch (Exception ex)
                 {
@@ -58,8 +58,8 @@ public class AlterItemDataGenerator : IIncrementalGenerator
                     var diagnostic = Diagnostic.Create(
                         new DiagnosticDescriptor(
                             "MOGEN001", 
-                            "AlterItemData generation failed", 
-                            $"Failed to generate AlterItemData for {entity.EntitySymbol.Name}: {ex.Message}", 
+                            "ChangeItemData generation failed", 
+                            $"Failed to generate ChangeItemData for {entity.EntitySymbol.Name}: {ex.Message}", 
                             "Monica.Generators", 
                             DiagnosticSeverity.Warning, 
                             isEnabledByDefault: true),
@@ -130,7 +130,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
     /// <summary>
     /// Generate change-item data code for entities.
     /// </summary>
-    private static void GenerateAlterItemDataForEntity(
+    private static void GenerateChangeItemDataForEntity(
         SourceProductionContext context,
         EntityGenerationInfo entityInfo,
         EntityAnalyzer analyzer)
@@ -161,7 +161,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
 
         // Generate code
         var codeBuilder = new CodeBuilder();
-        var generatedCode = codeBuilder.BuildAlterItemDataClass(
+        var generatedCode = codeBuilder.BuildChangeItemDataClass(
             analysisResult,
             flattenedResult,
             entityInfo.CustomNamespace,
@@ -169,7 +169,7 @@ public class AlterItemDataGenerator : IIncrementalGenerator
             entityInfo.IncludeDebugInfo);
 
         // Add generated source files
-        var fileName = $"{entityInfo.CustomClassName ?? $"{entitySymbol.Name}AlterItemDataGen"}.g.cs";
+        var fileName = $"{entityInfo.CustomClassName ?? $"{entitySymbol.Name}ChangeItemDataGen"}.g.cs";
         context.AddSource(fileName, generatedCode);
     }
 

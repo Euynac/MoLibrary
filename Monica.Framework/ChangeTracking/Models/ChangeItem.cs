@@ -17,7 +17,7 @@ public interface IChangeItem
     };
 }
 
-public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChangeItem where TAlterItemData : class, IChangeItemData<TTargetEntity>, new() where TTargetEntity : class, IChangeTrackedEntity where TEnumAlterSource:Enum
+public class ChangeItem<TTargetEntity, TChangeItemData, TEnumAlterSource> : IChangeItem where TChangeItemData : class, IChangeItemData<TTargetEntity>, new() where TTargetEntity : class, IChangeTrackedEntity where TEnumAlterSource:Enum
 {
     private const string EmptyValuePlaceholder = "[空值]";
 
@@ -30,14 +30,14 @@ public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChan
     #region 变更项
 
     public string DataJson { get; set; } = null!;
-    private TAlterItemData? _data;
+    private TChangeItemData? _data;
 
 
     [NotMapped]
     [JsonIgnore]
-    public TAlterItemData Data
+    public TChangeItemData Data
     {
-        get => _data ??= JsonSerializer.Deserialize<TAlterItemData>(DataJson, IChangeItem.ALTER_ITEM_SERIALIZER_OPTIONS)!;
+        get => _data ??= JsonSerializer.Deserialize<TChangeItemData>(DataJson, IChangeItem.ALTER_ITEM_SERIALIZER_OPTIONS)!;
         set
         {
             _data = value;
@@ -130,7 +130,7 @@ public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChan
     public List<string>? RelatedSourceId { get; set; }
     #endregion
 
-    public ChangeItem(string id, TEnumAlterSource source, DateTime alterTime, TAlterItemData data, string? sourceId, string? sourceInfo = null)
+    public ChangeItem(string id, TEnumAlterSource source, DateTime alterTime, TChangeItemData data, string? sourceId, string? sourceInfo = null)
     {
         Id = id;
         Source = source;
@@ -142,7 +142,7 @@ public class ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource> : IChan
     }
 
     public ChangeItem(string id, TEnumAlterSource source, DateTime alterTime, List<string> targetRollbackIds, string? sourceId, string? sourceInfo = null)
-        : this(id, source, alterTime, new TAlterItemData(), sourceId, sourceInfo)
+        : this(id, source, alterTime, new TChangeItemData(), sourceId, sourceInfo)
     {
         TargetRollbackIds = targetRollbackIds;
     }

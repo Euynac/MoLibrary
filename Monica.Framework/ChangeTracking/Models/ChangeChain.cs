@@ -8,8 +8,8 @@ using Monica.Tool.Extensions;
 namespace Monica.Framework.ChangeTracking.Models;
 
 
-public class ChangeChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAlterSource> where TAlterItem : ChangeItem<TTargetEntity, TAlterItemData, TEnumAlterSource>, new()
-    where TAlterItemData : class, IChangeItemData<TTargetEntity>, new() where TEnumAlterSource : Enum
+public class ChangeChain<TTargetEntity, TAlterItem, TChangeItemData, TEnumAlterSource> where TAlterItem : ChangeItem<TTargetEntity, TChangeItemData, TEnumAlterSource>, new()
+    where TChangeItemData : class, IChangeItemData<TTargetEntity>, new() where TEnumAlterSource : Enum
     where TTargetEntity : class, IChangeTrackedEntity
 {
     public class ChainJsonParseBridge
@@ -58,7 +58,7 @@ public class ChangeChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAlterSo
     /// Get the change history of the specified change attribute (returned in the order of initial -> last value) (rolled-back AlterItem has been eliminated)
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1>(Expression<Func<TAlterItemData, T1>> expr)
+    public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1>(Expression<Func<TChangeItemData, T1>> expr)
     {
         return GetSingleAlterItemHistory<T1, bool>(expr, null);
     }
@@ -66,7 +66,7 @@ public class ChangeChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAlterSo
     /// Get the change history of the specified change attribute (returned in the order of initial -> last value) (rolled-back AlterItem has been eliminated)
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1, T2>(Expression<Func<TAlterItemData, T1>> expr,  Expression<Func<TTargetEntity, T2>>? nestedSelectExpr)
+    public IEnumerable<PropertyHistory<TAlterItem>> GetSingleAlterItemHistory<T1, T2>(Expression<Func<TChangeItemData, T1>> expr,  Expression<Func<TTargetEntity, T2>>? nestedSelectExpr)
     {
         var status = GetInitialStatus();
         var initialValue = GetNestedValue(status)?.GetPropertyValue(expr.GetPropertyInfo().Name);
@@ -187,12 +187,12 @@ public class ChangeChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAlterSo
     /// <summary>
     /// Determine whether they are consistent and generate a change chain patch if they are inconsistent.
     /// </summary>
-    public bool IsConsistent(TTargetEntity entity, [NotNullWhen(false)] out TAlterItemData? data)
+    public bool IsConsistent(TTargetEntity entity, [NotNullWhen(false)] out TChangeItemData? data)
     {
         data = null;
         if (!entity.Equals(GetFinalStatus()))
         {
-            data = new TAlterItemData();
+            data = new TChangeItemData();
             return false;
         }
 
@@ -228,7 +228,7 @@ public class ChangeChain<TTargetEntity, TAlterItem, TAlterItemData, TEnumAlterSo
             SourceInfo = sourceInfo,
             AlterTime = rollbackTime,
             TargetRollbackIds = targetIds,
-            Data = new TAlterItemData()
+            Data = new TChangeItemData()
         };
         return rollbackItem;
     }

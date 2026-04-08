@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 
-namespace Monica.Framework.Generators.AlterItemGenerator;
+namespace Monica.Framework.Generators.ChangeItemGenerator;
 
 /// <summary>
 /// Entity analyzer, used to analyze entity classes and their properties

@@ -1,13 +1,13 @@
 namespace Monica.Framework.ChangeTracking.Annotations;
 
 /// <summary>
-/// Used to configure the property behavior when AlterItemData is generated
+/// Used to configure the property behavior when ChangeItemData is generated
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class ChangeItemPropertyAttribute : Attribute
 {
     /// <summary>
-    /// Whether to ignore this attribute and not generate it in AlterItemData
+    /// Whether to ignore this attribute and not generate it in ChangeItemData
     /// </summary>
     public bool Ignore { get; set; } = false;
     

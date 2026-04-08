@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Monica.Framework.Generators.AlterItemGenerator;
+namespace Monica.Framework.Generators.ChangeItemGenerator;
 
 /// <summary>
 /// Property flattener, flatten the properties of nested objects into a single-layer structure
