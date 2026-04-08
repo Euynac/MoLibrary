@@ -1,0 +1,99 @@
+.dependency-graph-side-card {
+    display: flex;
+}
+
+.dependency-graph-side-card__card {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
+}
+
+.dependency-graph-side-card__card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.dependency-graph-side-card__content {
+    display: flex;
+    flex: 1 1 auto;
+}
+
+.node-detail-content {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 240px;
+    border-radius: 8px;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.02) 0%, rgba(var(--mud-palette-secondary-rgb), 0.01) 100%);
+}
+
+.node-detail-placeholder {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.node-detail-placeholder__body {
+    max-width: 320px;
+}
+
+.node-detail-placeholder__icon {
+    margin-bottom: 12px;
+}
+
+.node-info {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    width: 100%;
+}
+
+.node-info__heading {
+    margin: 0 0 6px 0;
+    color: var(--mud-palette-primary);
+}
+
+.node-info__row {
+    margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .dependency-graph-side-card__card {
+        background: var(--mud-palette-surface);
+        border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
+    }
+
+    .node-detail-content {
+        background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-secondary-rgb), 0.04) 100%);
+    }
+}
+
+[data-theme="dark"] .dependency-graph-side-card__card,
+.mud-theme-dark .dependency-graph-side-card__card {
+    background: var(--mud-palette-surface);
+    border-color: rgba(var(--mud-palette-divider-rgb), 0.2);
+}
+
+[data-theme="dark"] .node-detail-content,
+.mud-theme-dark .node-detail-content {
+    background: linear-gradient(135deg, rgba(var(--mud-palette-surface-rgb), 0.08) 0%, rgba(var(--mud-palette-secondary-rgb), 0.04) 100%);
+}
+
+@media (min-width: 960px) {
+    .dependency-graph-side-card {
+        height: 440px;
+    }
+
+    .dependency-graph-side-card__card {
+        height: 100%;
+        min-height: 440px;
+    }
+}

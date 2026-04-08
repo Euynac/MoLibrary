@@ -2,8 +2,8 @@
 @using Monica.UI.Localization
 @inject IStringLocalizer<SharedResource> L
 
-<MudItem xs="12" md="6">
-    <MudCard Class="modern-card">
+<MudItem xs="12" md="6" Class="dependency-graph-side-card">
+    <MudCard Class="modern-card dependency-graph-side-card__card">
         <MudCardHeader>
             <CardHeaderContent>
                 <div class="d-flex align-center">
@@ -12,8 +12,8 @@
                 </div>
             </CardHeaderContent>
         </MudCardHeader>
-        <MudCardContent Class="pa-4">
-            <MudStack Spacing="4">
+        <MudCardContent Class="pa-4 dependency-graph-side-card__content">
+            <MudStack Spacing="4" Class="dependency-graph-side-card__stack">
                 <div>
                     <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:NodeTypes"]</MudText>
                     <MudStack Spacing="2">
@@ -43,16 +43,16 @@
                 <div>
                     <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:EdgeTypes"]</MudText>
                     <MudStack Spacing="2">
-                        <div class="d-flex align-center">
-                            <div class="legend-line" style="background-color: #81C784; width: 30px; height: 3px; margin-right: 12px;"></div>
+                        <div class="legend-edge-item">
+                            <div class="legend-line legend-line-direct"></div>
                             <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DirectDependency"]</MudText>
                         </div>
-                        <div class="d-flex align-center">
-                            <div class="legend-line" style="background-color: #BA68C8; width: 30px; height: 3px; margin-right: 12px; border-top: 2px dashed #BA68C8; background: none;"></div>
+                        <div class="legend-edge-item">
+                            <div class="legend-line legend-line-transitive"></div>
                             <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:TransitiveDependency"]</MudText>
                         </div>
-                        <div class="d-flex align-center">
-                            <div class="legend-line" style="background-color: #FF8A65; width: 30px; height: 3px; margin-right: 12px;"></div>
+                        <div class="legend-edge-item">
+                            <div class="legend-line legend-line-cycle"></div>
                             <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:CircularDependency"]</MudText>
                         </div>
                     </MudStack>
