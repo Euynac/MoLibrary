@@ -8,5 +8,7 @@ Use this checklist before finishing a modular-monolith architecture change.
 - Cross-domain dependencies point at `Shared/Platform.Protocol/PublishedLanguages`, not internal implementation projects.
 - The `.slnx` solution folders mirror the physical `src/AppHost`, `src/Shared`, and `src/Domains` layout.
 - Persistence ownership is clear for the new or changed domain.
-- AppHost handlers live in the owning entry project, while domain models, repositories, providers, and persistence stay inside the owning domain package.
+- AppHost stays as a Program-only composition entry point.
+- Domain-owned application units live under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
+- Domain models, `DomainServices`, repositories, providers, and persistence stay inside the owning domain package.
 - Unit-level implementation follows `monica-project-unit-development`.

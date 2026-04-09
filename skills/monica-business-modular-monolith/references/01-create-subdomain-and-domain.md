@@ -35,35 +35,41 @@ Create:
 ```text
 src/Domains/{Subdomain}/
 ├── Domains.{Subdomain}.csproj
+├── Application/
+│   ├── HandlersCommand/
+│   ├── HandlersQuery/
+│   ├── HandlersEvent/
+│   └── BackgroundWorkers/
 ├── Interfaces/
-├── Services/
+├── DomainServices/
 ├── Configurations/
-├── DependencyInjection/
 ├── Repository/
 ├── Persistence/
 └── Providers/
 ```
 
-Use `monica-project-unit-development` to place domain-owned units inside this project.
+Use `monica-project-unit-development` to place domain-owned units inside this project:
 
-## Step 4. Place AppHost handlers
+- `ApplicationService` units go under `Application/HandlersCommand/` or `Application/HandlersQuery/`.
+- Event handlers go under `Application/HandlersEvent/`.
+- Jobs go under `Application/BackgroundWorkers/`.
+- `DomainService` units go under `DomainServices/`.
+
+## Step 4. Keep AppHost as the Program-only entry
 
 Create or extend an AppHost entry project:
 
 ```text
 src/AppHost/{ProjectName}/
 ├── {ProjectName}.csproj
-├── HandlersCommand/
-├── HandlersQuery/
-├── EventHandlers/
-└── BackgroundWorkers/
+└── Program.cs
 ```
 
-Put entry-surface handlers here. Keep domain models, repositories, providers, and persistence out of AppHost.
+Keep AppHost as the composition root only. Do not place handlers, jobs, repositories, providers, or other business ProjectUnits here.
 
 ## Step 5. Register the domain and update the solution
 
-- Add domain registration and host composition in the AppHost entry project.
+- Add domain registration and host composition in `Program.cs`.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, and `src/Domains`.
 
 ## Step 6. Add persistence ownership

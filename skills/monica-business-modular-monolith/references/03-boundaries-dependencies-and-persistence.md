@@ -5,9 +5,9 @@ Use these rules to keep the modular monolith clean instead of turning it into a 
 ## Dependency Direction
 
 - `Shared/Platform.Protocol/PublishedLanguages` may be referenced by other domains and AppHost entry projects.
-- AppHost handlers depend on shared protocol contracts and their own domain package.
+- Domain-owned `Application` units depend on shared protocol contracts and their own domain package.
 - `Domains.{Subdomain}.csproj` owns the domain's persistence and integrations.
-- AppHost entry projects compose domains and may host delivery-specific handlers, but they should not absorb domain models, repositories, or providers.
+- AppHost entry projects compose domains, but they should not absorb handlers, jobs, domain models, repositories, or providers.
 
 ## Shared Platform Responsibilities
 
@@ -27,5 +27,6 @@ Use these rules to keep the modular monolith clean instead of turning it into a 
 - Separate `{Subdomain}.Application`, `{Subdomain}.Domain`, and `{Subdomain}.Infrastructure` projects when this layout already uses a merged domain package
 - A separate `{Subdomain}.Contracts` project when `Platform.Protocol/PublishedLanguages` already owns the shared language
 - Cross-domain references to another domain's repository or persistence implementation
-- AppHost handlers that bypass domain boundaries or reach into another domain's internals
+- AppHost entry projects that grow business handlers or jobs instead of staying composition-only
+- Cross-domain references to another domain's `Application` handlers or internals
 - `.slnx` files that flatten projects and ignore the `src/AppHost`, `src/Shared`, `src/Domains` layout

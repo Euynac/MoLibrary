@@ -18,6 +18,8 @@ The current Monica project-unit discovery logic recognizes these core patterns:
 | `RecurringJob` | `RecurringJob` | `Worker*` | Scheduled background work |
 | `TriggeredJob` | `TriggeredJob<TArgs>` | `Job*` | On-demand asynchronous work |
 
+For concrete folder placement in microservice and modular-monolith layouts, use [01-project-unit-naming-and-boundaries.md](01-project-unit-naming-and-boundaries.md).
+
 ## Selection Rules
 
 - Create a new `ApplicationService` when you need a new externally visible use case.
@@ -31,5 +33,5 @@ The current Monica project-unit discovery logic recognizes these core patterns:
 
 This skill does not decide the outer folder layout.
 
-- Use `monica-business-microservice` for `Shared/PublishedLanguages`, `Services/{Subdomain}`, and migration project placement.
-- Use `monica-business-modular-monolith` for `Modules/{Subdomain}`, host composition, and cross-module contracts.
+- Use `monica-business-microservice` for `Shared/Platform.Protocol/PublishedLanguages`, `Services/{Subdomain}`, service project placement, and migration placement.
+- Use `monica-business-modular-monolith` for `Domains/{Subdomain}`, AppHost composition, and cross-domain contracts.

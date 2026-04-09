@@ -6,7 +6,8 @@ Use this structure when a Monica business solution is intentionally split into i
 src/
 ├── AppHost/                                  # Optional orchestration/composition entry points
 │   └── Gateway/
-│       └── Gateway.csproj
+│       ├── Gateway.csproj
+│       └── Program.cs                        # Composition root only
 ├── Shared/
 │   ├── Platform.BuildingBlocks/
 │   │   └── Platform.BuildingBlocks.csproj    # Project-agnostic infrastructure building blocks and third-party extensions
@@ -23,7 +24,6 @@ src/
 ├── Services/
 │   └── {Subdomain}/
 │       ├── {Subdomain}Service.API/
-│       │   ├── DependencyInjection/          # Service registration and composition
 │       │   ├── HandlersCommand/              # ApplicationService units
 │       │   ├── HandlersQuery/                # ApplicationService units
 │       │   ├── HandlersEvent/                # Event handler units
@@ -61,6 +61,9 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Put cross-service contracts in `Shared/Platform.Protocol/PublishedLanguages`, not inside a service project.
 - Put business implementation in the service's own `API`, `Domain`, and `Infrastructure` projects.
+- Put `ApplicationService`, event-handler, and background-worker ProjectUnits in the service `API` project under `HandlersCommand`, `HandlersQuery`, `HandlersEvent`, and `BackgroundWorkers`.
+- Keep `DomainServices/` as the standard folder for `DomainService` units.
 - Put migrations beside the service boundary they belong to, not in a global dump folder.
 - Keep `ServicesHttp` and `ServicesGrpc` as adapters. Core business logic still lives in shared ProjectUnits.
+- Keep AppHost or gateway entry projects down to the project file and `Program.cs`. Do not place business ProjectUnits there.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view reflects AppHost, shared platform, services, and migrations ownership correctly.

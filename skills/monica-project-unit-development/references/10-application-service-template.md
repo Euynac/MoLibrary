@@ -6,7 +6,7 @@
 - `$RequestName$`: request type, such as `QueryGetOrder` or `CommandApproveOrder`
 - `$ResponseName$`: response DTO type when the handler returns data
 - `$RepositoryName$`: repository abstraction, such as `IRepositoryOrder`
-- `$EntryProjectNamespace$`: the boundary project namespace chosen by the architecture skill, such as `OrderingService.API` or `Ordering.Application`
+- `$ApplicationNamespace$`: the application-layer namespace chosen by the architecture skill, such as `OrderingService.API` or `Domains.Ordering.Application`
 
 ## Use When
 
@@ -21,6 +21,7 @@
 - Keep the handler thin. Push reusable rules into `DomainService` or the entity itself.
 - Catch exceptions only when you are adding boundary-specific context. Do not smother useful failures.
 - Add transport-specific attributes only if your chosen host conventions require them.
+- Place handlers in `HandlersCommand/` or `HandlersQuery/` under the application layer chosen by the architecture skill.
 
 ## Minimal Query Example
 
@@ -29,7 +30,7 @@ using Monica.Core.Results;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.WebApi.Abstractions;
 
-namespace $EntryProjectNamespace$.HandlersQuery;
+namespace $ApplicationNamespace$.HandlersQuery;
 
 public sealed record Query$FeatureName$(long Id) : IResultRequest<$ResponseName$>;
 
@@ -61,7 +62,7 @@ public sealed class QueryHandler$FeatureName$(
 using Monica.Core.Results;
 using Monica.WebApi.Abstractions;
 
-namespace $EntryProjectNamespace$.HandlersCommand;
+namespace $ApplicationNamespace$.HandlersCommand;
 
 public sealed record Command$FeatureName$(long Id) : IResultRequest;
 

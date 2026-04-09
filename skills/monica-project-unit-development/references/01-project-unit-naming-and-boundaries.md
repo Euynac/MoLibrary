@@ -1,21 +1,49 @@
-# ProjectUnit Naming and Boundaries
+# ProjectUnit Naming, Placement, and Boundaries
 
-Use these rules to keep Monica project-unit discovery, code navigation, and DDD boundaries aligned.
+Use these rules to keep Monica project-unit discovery, folder layout, code navigation, and DDD boundaries aligned.
 
-## Naming Rules
+## Default Naming Rules
 
-| Unit | Required or recommended pattern |
-| --- | --- |
-| `ApplicationService` | Include `Handler` in the class name. Prefer `CommandHandler*` or `QueryHandler*`. |
-| `DomainService` | Start the class name with `Domain`. |
-| `Repository` | Name the interface `IRepository*` and the implementation `Repository*`. |
-| `DomainEvent` | Start the event type with `Event`. |
-| `DomainEventHandler` | Start the handler type with `DomainEventHandler`. |
-| `LocalEventHandler` | Start the handler type with `LocalEventHandler`. |
-| `Entity` | Place the type under `Entities/`. |
-| `Configuration` | End the type name with `Options`. |
-| `RecurringJob` | Start the class name with `Worker`. |
-| `TriggeredJob` | Start the class name with `Job`. |
+These conventions mirror the current `Monica.Framework/ProjectUnits` default discovery rules. If you drift away from them, the framework can still compile, but project-unit discovery and solution scanning become less reliable.
+
+| Unit | ProjectUnits default convention | Recommended naming |
+| --- | --- | --- |
+| `ApplicationService` | Class name contains `Handler` | Prefer `CommandHandler*` or `QueryHandler*` |
+| `DomainService` | Class name starts with `Domain` | `Domain*` |
+| `Repository` implementation | Class name starts with `Repository` | Implementation `Repository*`, interface `IRepository*` |
+| `DomainEvent` | Class name starts with `Event` | `Event*` |
+| `DomainEventHandler` | Class name starts with `DomainEventHandler` | `DomainEventHandler*` |
+| `LocalEventHandler` | Class name starts with `LocalEventHandler` | `LocalEventHandler*` |
+| `Entity` | Namespace contains `Entities` | Place under `Entities/` |
+| `Configuration` | Class name ends with `Options` | `*Options` |
+| `RecurringJob` | Class name starts with `Worker` | `Worker*` |
+| `TriggeredJob` | Class name starts with `Job` | `Job*` |
+| `RequestDto` | Implements `IResultRequest<T>` or `IResultRequest` | Prefer `Command*`, `Query*`, or `Request*` |
+
+## Placement Rules
+
+Use the same leaf folder semantics across solution styles. Keep folders flat and rely on prefix naming before introducing extra sub-folders.
+
+| Unit | Microservice placement | Modular monolith placement |
+| --- | --- | --- |
+| `ApplicationService` command | `{Subdomain}Service.API/HandlersCommand/` | `Domains/{Subdomain}/Application/HandlersCommand/` |
+| `ApplicationService` query | `{Subdomain}Service.API/HandlersQuery/` | `Domains/{Subdomain}/Application/HandlersQuery/` |
+| `DomainEventHandler` / `LocalEventHandler` | `{Subdomain}Service.API/HandlersEvent/` | `Domains/{Subdomain}/Application/HandlersEvent/` |
+| `RecurringJob` / `TriggeredJob` | `{Subdomain}Service.API/BackgroundWorkers/` | `Domains/{Subdomain}/Application/BackgroundWorkers/` |
+| `DomainService` | `{Subdomain}Service.Domain/DomainServices/` | `Domains/{Subdomain}/DomainServices/` |
+| `RequestDto` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Requests/` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Requests/` |
+| `DomainEvent` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Events/` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Events/` |
+| `Entity` | `{Subdomain}Service.Domain/Entities/` | `Domains/{Subdomain}/Entities/` |
+| `Repository` interface | `{Subdomain}Service.Domain/Interfaces/` | `Domains/{Subdomain}/Interfaces/` |
+| `Repository` implementation | `{Subdomain}Service.Infrastructure/Repository/` | `Domains/{Subdomain}/Repository/` |
+| `Configuration` | `{Subdomain}Service.Domain/Configurations/` | `Domains/{Subdomain}/Configurations/` |
+
+## Folder Scanability Rules
+
+- Prefer prefix naming inside a folder instead of adding sub-folders with one or two files.
+- Keep leaf folders directly recognizable in the IDE: `QueryHandlerGetOrder.cs`, `CommandHandlerApproveOrder.cs`, `DomainEventHandlerOrderApproved.cs`, `WorkerRefreshOrderSnapshot.cs`.
+- Use `HandlersEvent` as the standard event-handler folder name. Do not alternate between `HandlersEvent` and `EventHandlers`.
+- Keep AppHost or gateway entry projects as composition only. Do not place business ProjectUnits there.
 
 ## Boundary Rules
 

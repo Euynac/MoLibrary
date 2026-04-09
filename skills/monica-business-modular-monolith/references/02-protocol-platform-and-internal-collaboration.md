@@ -4,7 +4,7 @@ Use this file before introducing a new dependency between domains.
 
 ## Default Rule
 
-Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`, not on another domain's internal implementation or another AppHost's handlers.
+Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`, not on another domain's internal implementation or another domain's `Application` handlers.
 
 ## What Belongs in Platform.Protocol
 
@@ -20,7 +20,7 @@ Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and op
 - Repositories
 - EF configuration
 - Infrastructure providers
-- AppHost-specific handlers
+- Domain-owned application handlers and background workers
 - Internal domain services and implementation details
 
 ## Collaboration Choices

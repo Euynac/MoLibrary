@@ -25,6 +25,7 @@ Use these rules to keep the microservice architecture from collapsing into a dis
 ## Adapter Rule
 
 - `ServicesHttp`, `ServicesGrpc`, and host entry points are delivery mechanisms.
+- AppHost or gateway projects are composition-only entry points and should stay limited to the project file and `Program.cs`.
 - They do not replace `ApplicationService`, `DomainService`, `Entity`, `Repository`, or other ProjectUnits.
 
 ## Solution View

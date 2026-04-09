@@ -7,10 +7,7 @@ src/
 ├── AppHost/
 │   └── {ProjectName}/
 │       ├── {ProjectName}.csproj              # Entry point, prefer explicit names such as Monica.Docs.Api
-│       ├── HandlersCommand/                  # ApplicationService units for this entry surface
-│       ├── HandlersQuery/                    # ApplicationService units for this entry surface
-│       ├── EventHandlers/                    # Event handler units for this entry surface
-│       └── BackgroundWorkers/                # Job units for this entry surface
+│       └── Program.cs                        # Composition root only
 ├── Shared/
 │   ├── Platform.BuildingBlocks/
 │   │   └── Platform.BuildingBlocks.csproj    # Project-agnostic infrastructure building blocks and third-party extensions
@@ -27,13 +24,17 @@ src/
 ├── Domains/
 │   └── {Subdomain}/
 │       ├── Domains.{Subdomain}.csproj        # Single domain package project
+│       ├── Application/                      # Domain-owned use cases and background workflows
+│       │   ├── HandlersCommand/              # ApplicationService command units
+│       │   ├── HandlersQuery/                # ApplicationService query units
+│       │   ├── HandlersEvent/                # Event handler units
+│       │   └── BackgroundWorkers/            # Job units
 │       ├── Entities/
 │       ├── ValueObjects/
 │       ├── Events/
 │       ├── Interfaces/
-│       ├── Services/
+│       ├── DomainServices/
 │       ├── Configurations/
-│       ├── DependencyInjection/              # Domain registration and composition helpers
 │       ├── Repository/
 │       ├── Persistence/
 │       └── Providers/
@@ -58,6 +59,8 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and referenceable from other domains.
 - Keep domain models, repositories, providers, and persistence ownership inside the owning `Domains.{Subdomain}.csproj`.
-- Put host-facing handlers in the owning AppHost entry project under `HandlersCommand`, `HandlersQuery`, `EventHandlers`, and `BackgroundWorkers`.
+- Put application services, event handlers, and background workers in the owning domain package under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
+- Keep `DomainServices/` as the standard folder for `DomainService` units.
+- Keep AppHost entry projects down to `{ProjectName}.csproj` and `Program.cs`. Do not place business ProjectUnits there.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view matches the layout rules.
 - Do not force `*.WebHost` naming or nested `Modules/Endpoints` folders inside AppHost.

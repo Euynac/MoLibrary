@@ -1,6 +1,6 @@
 # Repository and Persistence Template
 
-Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNamespace$` for the infrastructure project namespace chosen by the architecture skill.
+Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNamespace$` for the repository and persistence namespace chosen by the architecture skill, such as `OrderingService.Infrastructure` or `Domains.Ordering`.
 
 ## Use When
 

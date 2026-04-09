@@ -12,7 +12,8 @@
 - Use `TriggeredJob<TArgs>` for on-demand asynchronous work and name it `Job*`.
 - Keep the job focused on scheduling, retry, and orchestration. Put reusable business behavior in a `DomainService`.
 - Add `[JobConfig]` only when defaults are not enough.
-- Use `$EntryProjectNamespace$` for the boundary project namespace chosen by the architecture skill.
+- Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
+- Place jobs in `BackgroundWorkers/`.
 
 ## RecurringJob Example
 
@@ -20,7 +21,7 @@
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Annotations;
 
-namespace $EntryProjectNamespace$.BackgroundWorkers;
+namespace $ApplicationNamespace$.BackgroundWorkers;
 
 [JobConfig(CronSchedule = "0 */5 * * * *", RetryCount = 3)]
 public sealed class WorkerRefreshOrderSnapshot(
@@ -39,7 +40,7 @@ public sealed class WorkerRefreshOrderSnapshot(
 ```csharp
 using Monica.JobScheduler.Abstractions;
 
-namespace $EntryProjectNamespace$.BackgroundWorkers;
+namespace $ApplicationNamespace$.BackgroundWorkers;
 
 public sealed class RefreshOrderSnapshotArgs
 {

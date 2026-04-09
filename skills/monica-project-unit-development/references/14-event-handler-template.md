@@ -11,14 +11,15 @@
 - Use `LocalEventHandler<TEvent>` for in-process reactions.
 - Keep handlers thin. Delegate reusable logic to `DomainService`.
 - Make the event type stable before adding consumers.
-- Use `$EntryProjectNamespace$` for the boundary project namespace chosen by the architecture skill.
+- Use `$ApplicationNamespace$` for the application-layer namespace chosen by the architecture skill.
+- Place handlers in `HandlersEvent/`.
 
 ## Distributed Handler Example
 
 ```csharp
 using Monica.WebApi.Abstractions;
 
-namespace $EntryProjectNamespace$.HandlersEvent;
+namespace $ApplicationNamespace$.HandlersEvent;
 
 public sealed class DomainEventHandlerOrderApproved(
     DomainNotifyWarehouse domainService)
@@ -36,7 +37,7 @@ public sealed class DomainEventHandlerOrderApproved(
 ```csharp
 using Monica.WebApi.Abstractions;
 
-namespace $EntryProjectNamespace$.HandlersEvent;
+namespace $ApplicationNamespace$.HandlersEvent;
 
 public sealed class LocalEventHandlerOrderApproved(
     DomainRefreshReadModel domainService)

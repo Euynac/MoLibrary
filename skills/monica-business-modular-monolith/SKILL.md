@@ -1,6 +1,6 @@
 ---
 name: monica-business-modular-monolith
-description: DDD modular monolith architecture guidance for Monica business projects. Use when creating or extending a bounded context under Domains, planning shared platform layers, shaping Platform.Protocol/PublishedLanguages, defining AppHost handler layout, merged domain packages, and host composition, or deciding collaboration boundaries inside a single deployment. Pair with monica-project-unit-development for unit-level implementation.
+description: DDD modular monolith architecture guidance for Monica business projects. Use when creating or extending a bounded context under Domains, planning shared platform layers, shaping Platform.Protocol/PublishedLanguages, defining domain-owned Application layout, merged domain packages, and host composition, or deciding collaboration boundaries inside a single deployment. Pair with monica-project-unit-development for unit-level implementation.
 ---
 
 # Monica Business Modular Monolith
@@ -20,10 +20,11 @@ Use this skill to structure a Monica business solution as a modular monolith wit
 ## Core Rules
 
 - Split the solution by bounded context under `Domains/`, not by global `Application`, `Domain`, or `Infrastructure` buckets.
-- Each bounded context under `Domains/` uses a single `Domains.{Subdomain}.csproj` that keeps domain models plus domain-owned infrastructure together.
+- Each bounded context under `Domains/` uses a single `Domains.{Subdomain}.csproj` that keeps `Application`, domain models, and domain-owned infrastructure together.
 - Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
 - Keep cross-domain dependencies pointed at `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`. Do not reference another domain's internal implementation directly.
-- AppHost entry projects may own `HandlersCommand`, `HandlersQuery`, `EventHandlers`, and `BackgroundWorkers` for their delivery surface. Keep domain models, repositories, providers, and persistence ownership inside the owning domain package.
+- Keep domain-owned application units in `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
+- AppHost entry projects are composition-only entry points. Keep them down to the project file and `Program.cs`; do not place business ProjectUnits there.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, and `src/Domains`.
 - Treat the modular monolith as one deployment, not as hidden microservices in the same repository.
 

@@ -1,6 +1,6 @@
 # Entity, Request, and Event Template
 
-Use `$ContractNamespace$` for the contract project selected by the architecture skill, such as `ProtocolPlatform.PublishedLanguages.DomainOrdering` or `Ordering.Contracts`. Use `$DomainNamespace$` for the domain project namespace.
+Use `$ContractNamespace$` for the contract project selected by the architecture skill, such as `Platform.Protocol.PublishedLanguages.DomainOrdering`. Use `$DomainNamespace$` for the domain project namespace selected by the architecture skill, such as `OrderingService.Domain` or `Domains.Ordering`.
 
 ## Request Contract
 

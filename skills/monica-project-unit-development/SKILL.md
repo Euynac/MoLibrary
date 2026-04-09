@@ -20,7 +20,7 @@ Use this skill for unit-level business development in Monica-based DDD projects.
 ## Ground Rules
 
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
-- Follow the naming and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.Framework/ProjectUnits` discovery behavior.
+- Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.Framework/ProjectUnits` discovery behavior.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
@@ -28,7 +28,7 @@ Use this skill for unit-level business development in Monica-based DDD projects.
 ## Reference Navigation
 
 - Unit catalog and responsibilities: [00-project-unit-overview.md](references/00-project-unit-overview.md)
-- Naming and boundary rules: [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md)
+- Naming, placement, and boundary rules: [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md)
 - Unit selection by feature shape: [02-project-unit-composition-map.md](references/02-project-unit-composition-map.md)
 - `ApplicationService` templates: [10-application-service-template.md](references/10-application-service-template.md)
 - `DomainService` templates: [11-domain-service-template.md](references/11-domain-service-template.md)
