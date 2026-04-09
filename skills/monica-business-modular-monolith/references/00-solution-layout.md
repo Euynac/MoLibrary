@@ -35,9 +35,8 @@ src/
 │       ├── Interfaces/
 │       ├── DomainServices/
 │       ├── Configurations/
-│       ├── Repository/
-│       ├── Persistence/
-│       └── Providers/
+│       ├── Utilities/                       # Pure helper code, named `Utils*`
+│       └── Repository/                      # Repository implementations, DbContext, and EF mapping
 └── Database/
     └── DbMigrator/
         └── DbMigrator.csproj
@@ -58,9 +57,11 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and referenceable from other domains.
-- Keep domain models, repositories, providers, and persistence ownership inside the owning `Domains.{Subdomain}.csproj`.
+- Keep domain models, repositories, `DbContext` ownership, and helper code inside the owning `Domains.{Subdomain}.csproj`.
 - Put application services, event handlers, and background workers in the owning domain package under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
+- Keep `Utilities/` as the standard folder for pure helpers and name them `Utils*`.
+- Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Repository/`.
 - Keep AppHost entry projects down to `{ProjectName}.csproj` and `Program.cs`. Do not place business ProjectUnits there.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view matches the layout rules.
 - Do not force `*.WebHost` naming or nested `Modules/Endpoints` folders inside AppHost.

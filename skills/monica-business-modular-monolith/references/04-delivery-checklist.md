@@ -10,5 +10,5 @@ Use this checklist before finishing a modular-monolith architecture change.
 - Persistence ownership is clear for the new or changed domain.
 - AppHost stays as a Program-only composition entry point.
 - Domain-owned application units live under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
-- Domain models, `DomainServices`, repositories, providers, and persistence stay inside the owning domain package.
+- Domain models, `DomainServices`, `Utilities`, repositories, and `DbContext`-related files stay inside the owning domain package.
 - Unit-level implementation follows `monica-project-unit-development`.

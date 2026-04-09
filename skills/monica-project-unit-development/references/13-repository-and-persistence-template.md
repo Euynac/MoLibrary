@@ -1,6 +1,6 @@
-# Repository and Persistence Template
+# Repository and DbContext Template
 
-Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNamespace$` for the repository and persistence namespace chosen by the architecture skill, such as `OrderingService.Infrastructure` or `Domains.Ordering`.
+Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNamespace$` for the repository namespace chosen by the architecture skill, such as `OrderingService.Infrastructure` or `Domains.Ordering`.
 
 ## Use When
 
@@ -15,6 +15,7 @@ Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNam
 - Use `EfRepository<TDbContext, TEntity, TKey>` for standard EF-backed repositories.
 - Put query specialization in repositories, not in handlers.
 - Keep `DbContext` focused on persistence structure and mapping.
+- Do not create a separate `Persistence/` folder by default. Keep repository implementations, `DbContext`, and EF mapping together under `Repository/`.
 
 ## Repository Interface
 
@@ -57,7 +58,7 @@ using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.Persistence.Services;
 
-namespace $InfrastructureNamespace$.Persistence;
+namespace $InfrastructureNamespace$.Repository;
 
 public sealed class OrderingDbContext(
     DbContextOptions<OrderingDbContext> options,
@@ -72,4 +73,4 @@ public sealed class OrderingDbContext(
 
 - Keep repository interfaces narrow. Add methods for business-relevant queries, not for every LINQ variation.
 - If one aggregate needs eager-loading defaults, centralize them in the repository.
-- If persistence mapping becomes substantial, split it into dedicated configuration classes inside the persistence area selected by the architecture skill.
+- Keep EF mapping files beside the `DbContext` inside `Repository/`, using explicit type names instead of another folder layer.

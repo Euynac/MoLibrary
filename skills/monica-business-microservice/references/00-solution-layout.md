@@ -36,11 +36,10 @@ src/
 │       │   ├── DomainServices/
 │       │   ├── Events/
 │       │   ├── Interfaces/
-│       │   └── Configurations/
+│       │   ├── Configurations/
+│       │   └── Utilities/                   # Pure helper code, named `Utils*`
 │       └── {Subdomain}Service.Infrastructure/
-│           ├── Repository/
-│           ├── Persistence/
-│           └── Providers/
+│           └── Repository/                  # Repository implementations, DbContext, and EF mapping
 └── Migrations/
     └── {Subdomain}/                          # Migration project per service
 ```
@@ -63,6 +62,8 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Put business implementation in the service's own `API`, `Domain`, and `Infrastructure` projects.
 - Put `ApplicationService`, event-handler, and background-worker ProjectUnits in the service `API` project under `HandlersCommand`, `HandlersQuery`, `HandlersEvent`, and `BackgroundWorkers`.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
+- Keep `Utilities/` in the `Domain` project for pure helpers and name them `Utils*`.
+- Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Infrastructure/Repository/`.
 - Put migrations beside the service boundary they belong to, not in a global dump folder.
 - Keep `ServicesHttp` and `ServicesGrpc` as adapters. Core business logic still lives in shared ProjectUnits.
 - Keep AppHost or gateway entry projects down to the project file and `Program.cs`. Do not place business ProjectUnits there.

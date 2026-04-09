@@ -20,6 +20,14 @@ These conventions mirror the current `Monica.Framework/ProjectUnits` default dis
 | `TriggeredJob` | Class name starts with `Job` | `Job*` |
 | `RequestDto` | Implements `IResultRequest<T>` or `IResultRequest` | Prefer `Command*`, `Query*`, or `Request*` |
 
+## Additional Support-Type Conventions
+
+These are not part of `Monica.Framework/ProjectUnits` discovery, but they are part of the recommended business-project layout.
+
+| Support type | Recommended naming | Purpose |
+| --- | --- | --- |
+| `Utility` helper | `Utils*` | Pure helper code that stays inside the domain boundary and does not deserve its own `DomainService` |
+
 ## Placement Rules
 
 Use the same leaf folder semantics across solution styles. Keep folders flat and rely on prefix naming before introducing extra sub-folders.
@@ -36,7 +44,9 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 | `Entity` | `{Subdomain}Service.Domain/Entities/` | `Domains/{Subdomain}/Entities/` |
 | `Repository` interface | `{Subdomain}Service.Domain/Interfaces/` | `Domains/{Subdomain}/Interfaces/` |
 | `Repository` implementation | `{Subdomain}Service.Infrastructure/Repository/` | `Domains/{Subdomain}/Repository/` |
+| `DbContext` / EF mapping | `{Subdomain}Service.Infrastructure/Repository/` | `Domains/{Subdomain}/Repository/` |
 | `Configuration` | `{Subdomain}Service.Domain/Configurations/` | `Domains/{Subdomain}/Configurations/` |
+| `Utility` helper | `{Subdomain}Service.Domain/Utilities/` | `Domains/{Subdomain}/Utilities/` |
 
 ## Folder Scanability Rules
 
@@ -44,6 +54,7 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 - Keep leaf folders directly recognizable in the IDE: `QueryHandlerGetOrder.cs`, `CommandHandlerApproveOrder.cs`, `DomainEventHandlerOrderApproved.cs`, `WorkerRefreshOrderSnapshot.cs`.
 - Use `HandlersEvent` as the standard event-handler folder name. Do not alternate between `HandlersEvent` and `EventHandlers`.
 - Keep AppHost or gateway entry projects as composition only. Do not place business ProjectUnits there.
+- Put pure helper code in `Utilities/` with `Utils*` names. If a type starts accumulating orchestration or domain rules, move it into a `DomainService` or entity instead.
 
 ## Boundary Rules
 

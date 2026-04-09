@@ -19,7 +19,7 @@ Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and op
 - Entities
 - Repositories
 - EF configuration
-- Infrastructure providers
+- Infrastructure adapters
 - Domain-owned application handlers and background workers
 - Internal domain services and implementation details
 

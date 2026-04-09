@@ -43,9 +43,8 @@ src/Domains/{Subdomain}/
 ├── Interfaces/
 ├── DomainServices/
 ├── Configurations/
-├── Repository/
-├── Persistence/
-└── Providers/
+├── Utilities/
+└── Repository/
 ```
 
 Use `monica-project-unit-development` to place domain-owned units inside this project:
@@ -54,6 +53,8 @@ Use `monica-project-unit-development` to place domain-owned units inside this pr
 - Event handlers go under `Application/HandlersEvent/`.
 - Jobs go under `Application/BackgroundWorkers/`.
 - `DomainService` units go under `DomainServices/`.
+- Pure helpers go under `Utilities/` and use `Utils*` names.
+- Keep repository implementations, `DbContext`, and EF mapping in `Repository/`.
 
 ## Step 4. Keep AppHost as the Program-only entry
 
@@ -65,7 +66,7 @@ src/AppHost/{ProjectName}/
 └── Program.cs
 ```
 
-Keep AppHost as the composition root only. Do not place handlers, jobs, repositories, providers, or other business ProjectUnits here.
+Keep AppHost as the composition root only. Do not place handlers, jobs, repositories, utilities, or other business ProjectUnits here.
 
 ## Step 5. Register the domain and update the solution
 
@@ -74,7 +75,7 @@ Keep AppHost as the composition root only. Do not place handlers, jobs, reposito
 
 ## Step 6. Add persistence ownership
 
-- Add or extend the domain's `Persistence` area and the shared migrator entry point.
+- Add or extend the domain's `Repository` area and the shared migrator entry point.
 - Keep ownership explicit even though deployment is shared.
 
 ## Decision Rule

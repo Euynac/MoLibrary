@@ -23,6 +23,7 @@ Use this skill to shape Monica business projects as DDD-aligned microservices. I
 - Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
 - Keep each subdomain service independently evolvable: `API`, `Domain`, `Infrastructure`, and migrations move together.
+- Keep pure helper code in the service `Domain` project under `Utilities/`, using `Utils*` names.
 - Treat `ServicesHttp`, `ServicesGrpc`, and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits still belong in the service's `API`, `Domain`, and `Infrastructure` projects.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 

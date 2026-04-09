@@ -9,5 +9,6 @@ Use this checklist before finishing a ProjectUnit change.
 - Business rules live on entities or in `DomainService`, not in adapters.
 - Contracts are separate from persistence entities.
 - Repository interfaces and implementations live on the correct side of the boundary.
+- `DbContext`, EF mapping, and utility helpers use the expected folders and naming conventions.
 - New events, jobs, and options exist only because the feature genuinely needs them.
 - The selected architecture skill still agrees with the physical folder and project placement, including AppHost or gateway composition-only rules.

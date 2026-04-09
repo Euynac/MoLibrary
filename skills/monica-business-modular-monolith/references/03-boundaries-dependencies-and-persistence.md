@@ -6,8 +6,8 @@ Use these rules to keep the modular monolith clean instead of turning it into a 
 
 - `Shared/Platform.Protocol/PublishedLanguages` may be referenced by other domains and AppHost entry projects.
 - Domain-owned `Application` units depend on shared protocol contracts and their own domain package.
-- `Domains.{Subdomain}.csproj` owns the domain's persistence and integrations.
-- AppHost entry projects compose domains, but they should not absorb handlers, jobs, domain models, repositories, or providers.
+- `Domains.{Subdomain}.csproj` owns the domain's persistence and helper code.
+- AppHost entry projects compose domains, but they should not absorb handlers, jobs, domain models, repositories, or utility helpers.
 
 ## Shared Platform Responsibilities
 
@@ -18,7 +18,8 @@ Use these rules to keep the modular monolith clean instead of turning it into a 
 ## Persistence Ownership
 
 - Each domain owns its own persistence model, even when multiple domains share the same database engine.
-- Keep `DbContext`, repository implementations, and mapping in the owning `Domains.{Subdomain}.csproj`.
+- Keep `DbContext`, repository implementations, and EF mapping in `Repository/` inside the owning `Domains.{Subdomain}.csproj`.
+- Do not create `Persistence/` as a default folder in this layout.
 - Use the central migrator as an operational tool, not as an excuse to centralize domain ownership.
 
 ## Anti-Patterns

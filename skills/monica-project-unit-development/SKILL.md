@@ -33,7 +33,7 @@ Use this skill for unit-level business development in Monica-based DDD projects.
 - `ApplicationService` templates: [10-application-service-template.md](references/10-application-service-template.md)
 - `DomainService` templates: [11-domain-service-template.md](references/11-domain-service-template.md)
 - Entity, request, and event templates: [12-entity-request-event-template.md](references/12-entity-request-event-template.md)
-- Repository and persistence templates: [13-repository-and-persistence-template.md](references/13-repository-and-persistence-template.md)
+- Repository and DbContext templates: [13-repository-and-persistence-template.md](references/13-repository-and-persistence-template.md)
 - Event handler templates: [14-event-handler-template.md](references/14-event-handler-template.md)
 - Job templates: [15-job-template.md](references/15-job-template.md)
 - Configuration templates: [16-configuration-template.md](references/16-configuration-template.md)

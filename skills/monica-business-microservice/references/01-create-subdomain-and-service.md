@@ -48,14 +48,16 @@ src/Services/{Subdomain}/
 │   ├── DomainServices/
 │   ├── Events/
 │   ├── Interfaces/
-│   └── Configurations/
+│   ├── Configurations/
+│   └── Utilities/
 └── {Subdomain}Service.Infrastructure/
-    ├── Repository/
-    ├── Persistence/
-    └── Providers/
+    └── Repository/
 ```
 
 Use `monica-project-unit-development` to fill the correct ProjectUnits inside those projects.
+
+- Keep pure helpers in `{Subdomain}Service.Domain/Utilities/` and name them `Utils*`.
+- Keep repository implementations, `DbContext`, and EF mapping in `{Subdomain}Service.Infrastructure/Repository/`.
 
 ## Step 4. Add persistence ownership
 
