@@ -24,6 +24,7 @@ Use this skill to shape Monica business projects as DDD-aligned microservices. I
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
 - Keep each subdomain service independently evolvable: `API`, `Domain`, `Infrastructure`, and migrations move together.
 - Treat `ServicesHttp`, `ServicesGrpc`, and host entry points as adapters. Business decisions still belong in ProjectUnits from `monica-project-unit-development`.
+- Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 
 ## Reference Navigation
 

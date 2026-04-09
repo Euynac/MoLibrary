@@ -5,11 +5,11 @@ Use this workflow when a new bounded context should live inside the same deploya
 ## Step 1. Name the bounded context
 
 - Choose the business name first, such as `Ordering`, `Billing`, or `Warehouse`.
-- Use that name consistently for the shared language area and all three domain projects:
+- Use that name consistently for the shared language area and the merged domain package:
   - `Domain{Subdomain}` in `Platform.Protocol/PublishedLanguages`
-  - `{Subdomain}.Application`
-  - `{Subdomain}.Domain`
-  - `{Subdomain}.Infrastructure`
+  - `Domains.{Subdomain}.csproj`
+
+- If the solution does not already have a suitable entry project, create one with an explicit solution name, preferably ending with `Api`, such as `Monica.Docs.Api`.
 
 ## Step 2. Create the protocol language area
 
@@ -34,19 +34,39 @@ Create:
 
 ```text
 src/Domains/{Subdomain}/
-├── {Subdomain}.Application/
-├── {Subdomain}.Domain/
-└── {Subdomain}.Infrastructure/
+├── Domains.{Subdomain}.csproj
+├── Interfaces/
+├── Services/
+├── Configurations/
+├── DependencyInjection/
+├── Repository/
+├── Persistence/
+└── Providers/
 ```
 
-Use `monica-project-unit-development` to place the correct ProjectUnits inside these projects.
+Use `monica-project-unit-development` to place domain-owned units inside this project.
 
-## Step 4. Register the domain
+## Step 4. Place AppHost handlers
 
-- Add domain registration and host composition in an AppHost entry project, typically `AppHost/Api`.
-- Keep host startup thin; the domain still owns its behavior internally.
+Create or extend an AppHost entry project:
 
-## Step 5. Add persistence ownership
+```text
+src/AppHost/{ProjectName}/
+├── {ProjectName}.csproj
+├── HandlersCommand/
+├── HandlersQuery/
+├── EventHandlers/
+└── BackgroundWorkers/
+```
+
+Put entry-surface handlers here. Keep domain models, repositories, providers, and persistence out of AppHost.
+
+## Step 5. Register the domain and update the solution
+
+- Add domain registration and host composition in the AppHost entry project.
+- Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, and `src/Domains`.
+
+## Step 6. Add persistence ownership
 
 - Add or extend the domain's `Persistence` area and the shared migrator entry point.
 - Keep ownership explicit even though deployment is shared.

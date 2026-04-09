@@ -45,6 +45,15 @@ src/
     └── {Subdomain}/                          # Migration project per service
 ```
 
+Recommended `.slnx` folders should mirror the physical layout:
+
+```text
+/src/AppHost/
+/src/Shared/
+/src/Services/
+/src/Migrations/
+```
+
 ## Mapping Rules
 
 - Keep the same shared platform split across solution styles to reduce learning overhead.
@@ -54,3 +63,4 @@ src/
 - Put business implementation in the service's own `API`, `Domain`, and `Infrastructure` projects.
 - Put migrations beside the service boundary they belong to, not in a global dump folder.
 - Keep `ServicesHttp` and `ServicesGrpc` as adapters. Core business logic still lives in shared ProjectUnits.
+- Keep `.slnx` folders aligned with the real `src/` tree so the solution view reflects AppHost, shared platform, services, and migrations ownership correctly.

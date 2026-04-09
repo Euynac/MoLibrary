@@ -5,10 +5,12 @@ Use this structure when the business solution is one deployment but still needs 
 ```text
 src/
 ├── AppHost/
-│   ├── Api/
-│   │   └── Api.csproj                        # Typical single entry point
-│   └── {AnotherEntryPoint}/
-│       └── {AnotherEntryPoint}.csproj        # Optional extra entry point
+│   └── {ProjectName}/
+│       ├── {ProjectName}.csproj              # Entry point, prefer explicit names such as Monica.Docs.Api
+│       ├── HandlersCommand/                  # ApplicationService units for this entry surface
+│       ├── HandlersQuery/                    # ApplicationService units for this entry surface
+│       ├── EventHandlers/                    # Event handler units for this entry surface
+│       └── BackgroundWorkers/                # Job units for this entry surface
 ├── Shared/
 │   ├── Platform.BuildingBlocks/
 │   │   └── Platform.BuildingBlocks.csproj    # Project-agnostic infrastructure building blocks and third-party extensions
@@ -24,26 +26,28 @@ src/
 │               └── AppInterfaces/            # Optional synchronous domain contracts
 ├── Domains/
 │   └── {Subdomain}/
-│       ├── {Subdomain}.Application/
-│       │   ├── HandlersCommand/              # ApplicationService units
-│       │   ├── HandlersQuery/                # ApplicationService units
-│       │   ├── EventHandlers/                # Event handler units
-│       │   └── BackgroundWorkers/            # Job units
-│       ├── {Subdomain}.Domain/
-│       │   ├── Entities/
-│       │   ├── ValueObjects/
-│       │   ├── DomainServices/
-│       │   ├── Events/
-│       │   ├── Interfaces/
-│       │   └── Configurations/
-│       └── {Subdomain}.Infrastructure/
-│           ├── DependencyInjection/          # Domain registration and composition helpers
-│           ├── Repository/
-│           ├── Persistence/
-│           └── Providers/
+│       ├── Domains.{Subdomain}.csproj        # Single domain package project
+│       ├── Entities/
+│       ├── ValueObjects/
+│       ├── Events/
+│       ├── Interfaces/
+│       ├── Services/
+│       ├── Configurations/
+│       ├── DependencyInjection/              # Domain registration and composition helpers
+│       ├── Repository/
+│       ├── Persistence/
+│       └── Providers/
 └── Database/
     └── DbMigrator/
         └── DbMigrator.csproj
+```
+
+Recommended `.slnx` folders should mirror the physical layout:
+
+```text
+/src/AppHost/
+/src/Shared/
+/src/Domains/
 ```
 
 ## Mapping Rules
@@ -53,5 +57,7 @@ src/
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and referenceable from other domains.
-- Keep business implementation inside the owning domain's `Application`, `Domain`, and `Infrastructure` projects.
-- Keep AppHost focused on entry-point composition. Do not force `*.WebHost` naming or nested `Modules/Endpoints` folders there.
+- Keep domain models, repositories, providers, and persistence ownership inside the owning `Domains.{Subdomain}.csproj`.
+- Put host-facing handlers in the owning AppHost entry project under `HandlersCommand`, `HandlersQuery`, `EventHandlers`, and `BackgroundWorkers`.
+- Keep `.slnx` folders aligned with the real `src/` tree so the solution view matches the layout rules.
+- Do not force `*.WebHost` naming or nested `Modules/Endpoints` folders inside AppHost.

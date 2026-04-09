@@ -47,10 +47,11 @@ Use `monica-project-unit-development` to fill the correct ProjectUnits inside th
 - If the new service owns data, create or extend its migration project under `src/Migrations/{Subdomain}/`.
 - Keep each service responsible for its own persistence model and migrations.
 
-## Step 5. Wire the host
+## Step 5. Wire the host and update the solution
 
 - Register the service in the solution's host or gateway entry project.
 - Keep orchestration metadata outside the domain projects.
+- Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 
 ## Decision Rule
 
