@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Unit Testing"
+  short_description: "Monica unit testing standards and workflow"
+  default_prompt: "Use $mo-unit-testing to create or extend Monica unit tests under tests/ using the shared conventions."
