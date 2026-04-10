@@ -10,10 +10,10 @@ namespace Monica.Markdown.Events;
 /// <summary>
 /// Refreshes Markdown document groups bound to Git repositories after Git events.
 /// </summary>
-public class MarkdownGitBindingRefreshEventHandler(
+public class LocalEventHandlerMarkdownGitBindingRefresh(
     IOptions<ModuleMarkdownOption> options,
     IMarkdownDocumentCatalog markdownService,
-    ILogger<MarkdownGitBindingRefreshEventHandler> logger)
+    ILogger<LocalEventHandlerMarkdownGitBindingRefresh> logger)
     : ILocalEventHandler<GitRepositoryUpdatedEvent>, ILocalEventHandler<GitRepositoryDeletedEvent>
 {
     Task ILocalEventHandler<GitRepositoryUpdatedEvent>.HandleEventAsync(GitRepositoryUpdatedEvent eventData)
