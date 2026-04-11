@@ -1,0 +1,11 @@
+.di-service-cell,
+.di-implementation-cell {
+    min-width: 0;
+}
+
+.di-mono-truncate {
+    font-family: Consolas, "SFMono-Regular", Menlo, Monaco, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

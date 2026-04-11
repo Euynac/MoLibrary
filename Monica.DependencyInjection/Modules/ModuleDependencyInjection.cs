@@ -6,7 +6,9 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Abstractions.Internal;
+using Monica.DependencyInjection.Facades;
 using Monica.DependencyInjection.Services;
+using Monica.DependencyInjection.Services.Support;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -30,12 +32,28 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
     : ModuleBase<ModuleDependencyInjection, ModuleDependencyInjectionOption, ModuleDependencyInjectionGuide>(option), IBusinessTypeIterator
 {
     private IConventionalRegistrar? _registrar;
+    private DependencyInjectionDiagnosticsRegistry? _diagnosticsRegistry;
     private IServiceCollection? _services;
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        _registrar = new ConventionalRegistrar(Option);
+        DependencyInjectionDiagnosticsRegistry? diagnosticsRegistry = null;
+        if (Option.EnableAutoRegistrationDiagnostics)
+        {
+            _diagnosticsRegistry ??= new DependencyInjectionDiagnosticsRegistry();
+            _diagnosticsRegistry.BindServices(services);
+
+            services.AddSingleton(_diagnosticsRegistry);
+            services.AddSingleton<DependencyInjectionDiagnosticsService>();
+            services.AddSingleton<DependencyInjectionDiagnosticsFacade>();
+            services.AddHostedService<DependencyInjectionDiagnosticsHostedService>();
+
+            diagnosticsRegistry = _diagnosticsRegistry;
+        }
+
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
+
+        _registrar = new ConventionalRegistrar(Option, diagnosticsRegistry);
         _services = services;
     }
 
@@ -69,6 +87,19 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
 public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInjection, ModuleDependencyInjectionOption,
     ModuleDependencyInjectionGuide>
 {
+    /// <summary>
+    /// Enables or disables Monica automatic-registration diagnostics.
+    /// </summary>
+    /// <param name="enabled">
+    /// <see langword="true"/> to capture the diagnostics snapshot and emit startup logs for automatic registration;
+    /// otherwise, <see langword="false"/>.
+    /// </param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleDependencyInjectionGuide EnableAutoRegistrationDiagnostics(bool enabled = true)
+    {
+        ConfigureModuleOption(option => option.EnableAutoRegistrationDiagnostics = enabled);
+        return this;
+    }
 }
 
 /// <summary>
@@ -77,11 +108,12 @@ public class ModuleDependencyInjectionGuide : ModuleGuide<ModuleDependencyInject
 public class ModuleDependencyInjectionOption : ModuleOptions<ModuleDependencyInjection>
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the module should emit diagnostic logs for automatic service registration.
+    /// Gets or sets a value indicating whether Monica should capture automatic-registration diagnostics.
     /// </summary>
     /// <remarks>
-    /// Enable this when you want to inspect how Monica discovers service lifetimes and exposed service types.
-    /// The default is <c>false</c> to keep startup logging quiet.
+    /// When enabled, Monica emits startup diagnostic logs for automatic service registration and captures the
+    /// diagnostics snapshot consumed by the dependency-injection UI module.
+    /// Leave this disabled when diagnostics are not needed so startup registration avoids the extra tracking overhead.
     /// </remarks>
-    public bool EnableAutoRegistrationLogging { get; set; }
+    public bool EnableAutoRegistrationDiagnostics { get; set; }
 }

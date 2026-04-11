@@ -76,6 +76,9 @@
     "ModuleSystemDashboard": {
       "Title": "模块系统概览"
     },
+    "DependencyInjection": {
+      "Title": "依赖注入"
+    },
     "JobSchedulerDashboard": {
       "Title": "总览"
     },

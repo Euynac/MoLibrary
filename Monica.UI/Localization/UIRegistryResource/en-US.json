@@ -76,6 +76,9 @@
     "ModuleSystemDashboard": {
       "Title": "Module System Dashboard"
     },
+    "DependencyInjection": {
+      "Title": "Dependency Injection"
+    },
     "JobSchedulerDashboard": {
       "Title": "Dashboard"
     },

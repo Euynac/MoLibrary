@@ -1,0 +1,163 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Monica.DependencyInjection.Models
+@inject IStringLocalizer<DependencyInjectionResource> L
+
+<MudDataGrid T="DependencyInjectionDescriptorInfo"
+             Items="Items"
+             Dense="true"
+             Hover="true"
+             RowsPerPage="20"
+             FixedHeader="true"
+             Height="520px">
+    <Columns>
+        <TemplateColumn T="DependencyInjectionDescriptorInfo"
+                        Title="@L["Page:Grid:Columns:Service"]"
+                        SortBy="@(item => item.ServiceType)">
+            <CellTemplate>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="di-service-cell">
+                    @if (context.Item.IsAutoRegistered)
+                    {
+                        <MudTooltip Text="@L["Page:Grid:Badges:AutoRegistered"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Bolt" Color="Color.Warning" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+
+                    @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Warning))
+                    {
+                        <MudTooltip Text="@L["Page:Grid:Badges:Warning"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+
+                    @if (HasIssue(context.Item, DependencyInjectionDiagnosticSeverity.Error))
+                    {
+                        <MudTooltip Text="@L["Page:Grid:Badges:Error"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+
+                    @if (context.Item.IsKeyedService)
+                    {
+                        <MudTooltip Text="@L["Page:Grid:Badges:Keyed"]">
+                            <MudIcon Icon="@Icons.Material.Filled.VpnKey" Color="Color.Info" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+
+                    @if (context.Item.WasRewritten)
+                    {
+                        <MudTooltip Text="@L["Page:Grid:Badges:Rewritten"]">
+                            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Color="Color.Secondary" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+
+                    <MudTooltip Text="@context.Item.ServiceType">
+                        <MudText Typo="Typo.body2" Class="di-mono-truncate">
+                            @context.Item.ServiceTypeDisplayName
+                        </MudText>
+                    </MudTooltip>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DependencyInjectionDescriptorInfo"
+                        Title="@L["Page:Grid:Columns:Lifetime"]"
+                        SortBy="@(item => item.Lifetime)">
+            <CellTemplate>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small">
+                    @GetLifetimeText(context.Item.Lifetime)
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="DependencyInjectionDescriptorInfo"
+                        Title="@L["Page:Grid:Columns:Implementation"]"
+                        SortBy="@(item => item.ImplementationType ?? item.FactoryDisplay ?? string.Empty)">
+            <CellTemplate>
+                <MudStack Spacing="0" Class="di-implementation-cell">
+                    <MudTooltip Text="@GetImplementationTooltip(context.Item)">
+                        <MudText Typo="Typo.body2" Class="di-mono-truncate">
+                            @GetImplementationTitle(context.Item)
+                        </MudText>
+                    </MudTooltip>
+
+                    @if (!string.IsNullOrWhiteSpace(context.Item.FactoryDisplay))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="di-mono-truncate">
+                            @context.Item.FactoryDisplay
+                        </MudText>
+                    }
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn T="DependencyInjectionDescriptorInfo"
+                        TProperty="string"
+                        Property="x => x.ServiceKey"
+                        Title="@L["Page:Grid:Columns:ServiceKey"]" />
+
+        <TemplateColumn T="DependencyInjectionDescriptorInfo"
+                        Title="@L["Page:Grid:Columns:Kind"]"
+                        SortBy="@(item => item.ImplementationKind)">
+            <CellTemplate>
+                <MudChip T="string" Variant="Variant.Text" Size="Size.Small" Color="Color.Primary">
+                    @L[$"Page:Grid:Kinds:{context.Item.ImplementationKind}"]
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn T="DependencyInjectionDescriptorInfo"
+                        TProperty="int"
+                        Property="x => x.Index"
+                        Title="@L["Page:Grid:Columns:Index"]" />
+
+        <TemplateColumn T="DependencyInjectionDescriptorInfo"
+                        Title="@L["Page:Grid:Columns:Actions"]"
+                        Sortable="false">
+            <CellTemplate>
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Primary"
+                           OnClick="() => OnViewDetails.InvokeAsync(context.Item)">
+                    @L["Page:Grid:Actions:ViewDetails"]
+                </MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="DependencyInjectionDescriptorInfo" PageSizeOptions="@PageSizeOptions" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private static readonly int[] PageSizeOptions = [20, 50, 100];
+
+    [Parameter]
+    public IReadOnlyList<DependencyInjectionDescriptorInfo> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<DependencyInjectionDescriptorInfo> OnViewDetails { get; set; }
+
+    private string GetLifetimeText(ServiceLifetime lifetime)
+    {
+        return L[$"Page:Shared:Lifetimes:{lifetime}"];
+    }
+
+    private string GetImplementationTitle(DependencyInjectionDescriptorInfo item)
+    {
+        return item.ImplementationTypeDisplayName
+               ?? item.ImplementationType
+               ?? item.FactoryDisplay
+               ?? L["Page:States:NotAvailable"];
+    }
+
+    private string GetImplementationTooltip(DependencyInjectionDescriptorInfo item)
+    {
+        return item.ImplementationType
+               ?? item.FactoryDisplay
+               ?? L["Page:States:NotAvailable"];
+    }
+
+    private bool HasIssue(DependencyInjectionDescriptorInfo item, DependencyInjectionDiagnosticSeverity severity)
+    {
+        return item.AutoRegistration?.Issues.Any(issue => issue.Severity == severity) == true;
+    }
+}

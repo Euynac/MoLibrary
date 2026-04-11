@@ -1,0 +1,108 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Monica.Framework.UI.UIDependencyInjection.Models
+@using Monica.Framework.UI.UIDependencyInjection.State
+@inject IStringLocalizer<DependencyInjectionResource> L
+
+<MudPaper Class="pa-4">
+    <MudStack Spacing="2">
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Center">
+            <MudTextField T="string"
+                          Value="@State.SearchText"
+                          ValueChanged="OnSearchTextChangedAsync"
+                          Label="@L["Page:Filters:SearchLabel"]"
+                          Placeholder="@L["Page:Filters:SearchPlaceholder"]"
+                          Immediate="true"
+                          Clearable="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Style="min-width: 280px; flex: 1 1 320px;" />
+
+            <MudSelect T="DependencyInjectionDescriptorScopeFilter"
+                       Value="@State.ScopeFilter"
+                       ValueChanged="OnScopeFilterChangedAsync"
+                       Label="@L["Page:Filters:ScopeLabel"]"
+                       Style="min-width: 180px;">
+                <MudSelectItem T="DependencyInjectionDescriptorScopeFilter" Value="DependencyInjectionDescriptorScopeFilter.All">
+                    @L["Page:Filters:ScopeOptions:All"]
+                </MudSelectItem>
+                <MudSelectItem T="DependencyInjectionDescriptorScopeFilter" Value="DependencyInjectionDescriptorScopeFilter.AutoRegistered">
+                    @L["Page:Filters:ScopeOptions:AutoRegistered"]
+                </MudSelectItem>
+                <MudSelectItem T="DependencyInjectionDescriptorScopeFilter" Value="DependencyInjectionDescriptorScopeFilter.Other">
+                    @L["Page:Filters:ScopeOptions:Other"]
+                </MudSelectItem>
+            </MudSelect>
+
+            <MudSelect T="string"
+                       Value="@GetLifetimeFilterValue()"
+                       ValueChanged="OnLifetimeFilterChangedAsync"
+                       Label="@L["Page:Filters:LifetimeLabel"]"
+                       Style="min-width: 180px;">
+                <MudSelectItem T="string" Value="@AllLifetimeFilterValue">@L["Page:Filters:LifetimeOptions:All"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@ServiceLifetime.Singleton.ToString()">@L["Page:Shared:Lifetimes:Singleton"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@ServiceLifetime.Scoped.ToString()">@L["Page:Shared:Lifetimes:Scoped"]</MudSelectItem>
+                <MudSelectItem T="string" Value="@ServiceLifetime.Transient.ToString()">@L["Page:Shared:Lifetimes:Transient"]</MudSelectItem>
+            </MudSelect>
+
+            <MudSwitch T="bool"
+                       Value="@State.KeyedOnly"
+                       ValueChanged="OnKeyedOnlyChangedAsync"
+                       Color="Color.Primary">
+                @L["Page:Filters:KeyedOnly"]
+            </MudSwitch>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @L["Page:Filters:Showing", FilteredCount, State.Snapshot?.TotalDescriptorCount ?? 0]
+        </MudText>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private const string AllLifetimeFilterValue = "__all";
+
+    [Parameter]
+    public DependencyInjectionPageState State { get; set; } = null!;
+
+    [Parameter]
+    public int FilteredCount { get; set; }
+
+    [Parameter]
+    public EventCallback FiltersChanged { get; set; }
+
+    private async Task OnSearchTextChangedAsync(string? value)
+    {
+        State.SetSearchText(value);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnScopeFilterChangedAsync(DependencyInjectionDescriptorScopeFilter value)
+    {
+        State.SetScopeFilter(value);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnLifetimeFilterChangedAsync(string? value)
+    {
+        State.SetLifetimeFilter(value switch
+        {
+            nameof(ServiceLifetime.Singleton) => ServiceLifetime.Singleton,
+            nameof(ServiceLifetime.Scoped) => ServiceLifetime.Scoped,
+            nameof(ServiceLifetime.Transient) => ServiceLifetime.Transient,
+            _ => null
+        });
+
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnKeyedOnlyChangedAsync(bool value)
+    {
+        State.SetKeyedOnly(value);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private string GetLifetimeFilterValue()
+    {
+        return State.LifetimeFilter?.ToString() ?? AllLifetimeFilterValue;
+    }
+}
