@@ -260,8 +260,6 @@ internal static class DynamicProxyServiceRegistrar
 
         void AddNormalRegister(RegisterContext context)
         {
-            // Important: Controllers must be added via AddControllersAsServices; otherwise, they
-            // cannot be proxied dynamically.
             var proxiedDescriptor = new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {

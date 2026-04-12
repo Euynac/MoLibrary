@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -68,6 +70,10 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
                     ActivatorUtilities
                         .CreateInstance<CrudControllerFeatureProvider>(provider));
             });
+            builder.Services.Replace(ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
+            
+            // Important: ASP.NET Core MVC uses its own controller activation by default. However, for CrudApplicationService, it needs to be obtained from dependency injection (including ICachedServiceProvider).
+            
         }).ConfigMvcOption((o, provider) =>
         {
             o.ConfigAutoController(provider);
