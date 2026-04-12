@@ -184,6 +184,21 @@ http://0.0.0.0:<port>
 
 and passes it to `dotnet run` as an application argument. The external URL used for browser access remains the user-provided service URL.
 
+If the user provides `localhost` or `127.0.0.1` and the agent is running inside WSL, always consider a fallback:
+
+- if shell probes such as `curl` work
+- but Playwright gets `net::ERR_CONNECTION_REFUSED`
+
+then retry with the WSL gateway IP instead of `localhost`.
+
+Example:
+
+```bash
+ip route | awk '/default/ { print $3; exit }'
+```
+
+If that returns `172.31.96.1`, switch from `http://localhost:5092` to `http://172.31.96.1:5092`, restart the bridge with that URL, and use that URL for Playwright.
+
 ### 6. What the startup script guarantees
 
 `bridge_service.py` provides these behaviors:
@@ -258,5 +273,6 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 - [ ] Run `$mo-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright
+- [ ] If `localhost` works in shell probes but Playwright cannot connect in WSL, retry with the WSL gateway IP
 - [ ] Save screenshots and snapshots inside the task folder
 - [ ] Keep the bridge service running after successful verification
