@@ -12,6 +12,7 @@
       "AutoRegistered": "Auto Registered",
       "Keyed": "Keyed",
       "Factories": "Factories",
+      "Rewritten": "Rewritten",
       "Warnings": "Warnings",
       "Errors": "Errors"
     },
@@ -34,16 +35,24 @@
       "SearchLabel": "Search",
       "SearchPlaceholder": "Search by service, implementation, assembly, or key",
       "ScopeLabel": "Scope",
+      "SourceLabel": "Source",
       "LifetimeLabel": "Lifetime",
-      "KeyedOnly": "Keyed only",
+      "MarkersLabel": "Markers",
       "Showing": "Showing {0} of {1} descriptors",
-      "ScopeOptions": {
-        "All": "All descriptors",
+      "Actions": {
+        "SelectAll": "All",
+        "Clear": "Clear"
+      },
+      "SourceOptions": {
         "AutoRegistered": "Auto registered",
         "Other": "Other descriptors"
       },
-      "LifetimeOptions": {
-        "All": "All lifetimes"
+      "MarkerOptions": {
+        "Standard": "Standard",
+        "Keyed": "Keyed",
+        "Warnings": "Warnings",
+        "Errors": "Errors",
+        "Rewritten": "Rewritten"
       }
     },
     "Grid": {
@@ -100,7 +109,12 @@
         "Outcome": "Outcome",
         "ExposedServices": "Exposed services",
         "Issues": "Issues",
+        "RewriteKind": "Rewrite kind",
+        "InterceptorTypes": "Interceptor types",
         "RewriteReason": "Rewrite reason"
+      },
+      "Formats": {
+        "CachedProviderInjection": "Cached provider injection: {0}"
       },
       "States": {
         "NoAutoRegistration": "This descriptor was not created by Monica conventional registration.",

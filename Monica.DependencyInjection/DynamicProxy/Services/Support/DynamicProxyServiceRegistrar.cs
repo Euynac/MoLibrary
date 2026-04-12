@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.DependencyInjection.DynamicProxy.Providers.Castle;
+using Monica.DependencyInjection.Models;
 using Monica.DependencyInjection.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
@@ -217,7 +218,8 @@ internal static class DynamicProxyServiceRegistrar
                     return proxiedObject;
                 }, context.OldDescriptor.Lifetime);
             collection.Add(proxiedDescriptor);
-            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor, nameof(ModuleDynamicProxy));
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
         void AddFactoryRegister(RegisterContext context)
@@ -252,7 +254,8 @@ internal static class DynamicProxyServiceRegistrar
                     return proxiedObject;
                 }, context.OldDescriptor.Lifetime);
             collection.Add(proxiedDescriptor);
-            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor, nameof(ModuleDynamicProxy));
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
         void AddNormalRegister(RegisterContext context)
@@ -286,9 +289,40 @@ internal static class DynamicProxyServiceRegistrar
                     return proxiedObject;
                 }, context.OldDescriptor.Lifetime);
             collection.Add(proxiedDescriptor);
-            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor, nameof(ModuleDynamicProxy));
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
+    }
+
+    private static DependencyInjectionDescriptorRewriteInfo CreateRewriteInfo(RegisterContext context)
+    {
+        var interceptorTypes = context.InterceptorTypes
+            .DistinctBy(type => type.FullName)
+            .ToArray();
+        var interceptorDisplayNames = interceptorTypes
+            .Select(type => type.GetCleanName())
+            .ToArray();
+        var summary = interceptorDisplayNames.Length == 0
+            ? $"Dynamic proxy rewrite using {context.Kind}."
+            : $"Dynamic proxy rewrite using {context.Kind} with {string.Join(", ", interceptorDisplayNames)}.";
+
+        return new DependencyInjectionDescriptorRewriteInfo
+        {
+            SourceModule = nameof(ModuleDynamicProxy),
+            Summary = summary,
+            RewriteKind = "DynamicProxy",
+            ProxyKind = context.Kind.ToString(),
+            RegistrationStyle = context.Way.ToString(),
+            ImplementationType = context.ImplementType.GetCleanFullName(),
+            ImplementationTypeDisplayName = context.ImplementType.GetCleanName(),
+            ImplementationAssemblyName = context.ImplementType.Assembly.GetName().Name,
+            ShouldInjectCachedServiceProvider = context.ShouldInjectCachedServiceProvider,
+            InterceptorTypes = interceptorTypes
+                .Select(type => type.GetCleanFullName())
+                .ToArray(),
+            InterceptorTypeDisplayNames = interceptorDisplayNames
+        };
     }
 }
 

@@ -46,6 +46,11 @@ public sealed class DependencyInjectionDiagnosticsSnapshot
     public int InstanceDescriptorCount { get; init; }
 
     /// <summary>
+    /// Gets the number of descriptors rewritten after their original registration.
+    /// </summary>
+    public int RewrittenDescriptorCount { get; init; }
+
+    /// <summary>
     /// Gets the number of automatic-registration warnings captured in the snapshot.
     /// </summary>
     public int AutoRegistrationWarningCount { get; init; }

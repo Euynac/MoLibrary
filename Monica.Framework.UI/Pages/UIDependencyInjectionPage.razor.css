@@ -4,6 +4,8 @@
     gap: 1rem;
     height: 100%;
     min-height: 0;
+    padding: 1rem 1rem 1.5rem;
+    box-sizing: border-box;
 }
 
 .di-header {
@@ -24,6 +26,10 @@
     justify-content: center;
 }
 
+.di-issues-card {
+    flex: 0 0 auto;
+}
+
 .di-grid-shell {
     flex: 1 1 auto;
     min-height: 0;
@@ -37,4 +43,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+@media (max-width: 720px) {
+    .di-page {
+        padding: 0.75rem 0.75rem 1.25rem;
+    }
 }

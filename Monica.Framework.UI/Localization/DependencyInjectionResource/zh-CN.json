@@ -12,6 +12,7 @@
       "AutoRegistered": "自动注册",
       "Keyed": "Keyed",
       "Factories": "工厂",
+      "Rewritten": "已改写",
       "Warnings": "警告",
       "Errors": "错误"
     },
@@ -34,16 +35,24 @@
       "SearchLabel": "搜索",
       "SearchPlaceholder": "按服务、实现、程序集或键进行搜索",
       "ScopeLabel": "范围",
+      "SourceLabel": "来源",
       "LifetimeLabel": "生命周期",
-      "KeyedOnly": "仅 Keyed",
+      "MarkersLabel": "标记",
       "Showing": "显示 {0} / {1} 个描述符",
-      "ScopeOptions": {
-        "All": "全部描述符",
+      "Actions": {
+        "SelectAll": "全选",
+        "Clear": "清空"
+      },
+      "SourceOptions": {
         "AutoRegistered": "自动注册",
         "Other": "其他描述符"
       },
-      "LifetimeOptions": {
-        "All": "全部生命周期"
+      "MarkerOptions": {
+        "Standard": "标准",
+        "Keyed": "Keyed",
+        "Warnings": "警告",
+        "Errors": "错误",
+        "Rewritten": "已改写"
       }
     },
     "Grid": {
@@ -100,7 +109,12 @@
         "Outcome": "结果",
         "ExposedServices": "暴露服务",
         "Issues": "问题",
+        "RewriteKind": "改写方式",
+        "InterceptorTypes": "拦截器类型",
         "RewriteReason": "改写原因"
+      },
+      "Formats": {
+        "CachedProviderInjection": "缓存服务提供器注入：{0}"
       },
       "States": {
         "NoAutoRegistration": "该描述符不是由 Monica 约定注册创建的。",

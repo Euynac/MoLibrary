@@ -6,11 +6,6 @@ namespace Monica.Framework.UI.UIDependencyInjection.Models;
 public enum DependencyInjectionDescriptorScopeFilter
 {
     /// <summary>
-    /// Show every descriptor.
-    /// </summary>
-    All,
-
-    /// <summary>
     /// Show only descriptors created by Monica conventional registration.
     /// </summary>
     AutoRegistered,

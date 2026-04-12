@@ -95,11 +95,11 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
     public void TransferConventionalRegistration(
         ServiceDescriptor oldDescriptor,
         ServiceDescriptor newDescriptor,
-        string rewriteReason)
+        DependencyInjectionDescriptorRewriteInfo rewrite)
     {
         ArgumentNullException.ThrowIfNull(oldDescriptor);
         ArgumentNullException.ThrowIfNull(newDescriptor);
-        ArgumentException.ThrowIfNullOrWhiteSpace(rewriteReason);
+        ArgumentNullException.ThrowIfNull(rewrite);
 
         lock (_sync)
         {
@@ -109,7 +109,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
             }
 
             _recordsByDescriptor.Remove(oldDescriptor);
-            record.UpdateDescriptor(newDescriptor, rewriteReason);
+            record.UpdateDescriptor(newDescriptor, rewrite);
             _recordsByDescriptor[newDescriptor] = record;
             _snapshot = null;
         }
@@ -181,6 +181,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
             KeyedDescriptorCount = descriptors.Count(item => item.IsKeyedService),
             FactoryDescriptorCount = descriptors.Count(item => item.ImplementationKind == DependencyInjectionDescriptorImplementationKind.Factory),
             InstanceDescriptorCount = descriptors.Count(item => item.ImplementationKind == DependencyInjectionDescriptorImplementationKind.Instance),
+            RewrittenDescriptorCount = descriptors.Count(item => item.WasRewritten),
             AutoRegistrationWarningCount = autoRegistrationIssues.Count(item => item.Severity == DependencyInjectionDiagnosticSeverity.Warning),
             AutoRegistrationErrorCount = autoRegistrationIssues.Count(item => item.Severity == DependencyInjectionDiagnosticSeverity.Error)
         };
@@ -207,6 +208,8 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
     {
         var implementationType = descriptor.GetResolvedImplementationType();
         var implementationKind = descriptor.GetImplementationKind();
+        var hasWarningIssues = record?.Issues.Any(item => item.Severity == DependencyInjectionDiagnosticSeverity.Warning) ?? false;
+        var hasErrorIssues = record?.Issues.Any(item => item.Severity == DependencyInjectionDiagnosticSeverity.Error) ?? false;
 
         return new DependencyInjectionDescriptorInfo
         {
@@ -225,7 +228,10 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
             IsOpenGeneric = descriptor.ServiceType.IsGenericTypeDefinition || (implementationType?.IsGenericTypeDefinition ?? false),
             IsAutoRegistered = record != null,
             AutoRegistration = record == null ? null : CreateAutoRegistrationInfo(record),
+            HasWarningIssues = hasWarningIssues,
+            HasErrorIssues = hasErrorIssues,
             WasRewritten = record?.WasRewritten ?? false,
+            Rewrites = record?.Rewrites.ToArray() ?? [],
             RewriteReason = record?.RewriteReason
         };
     }
@@ -251,6 +257,7 @@ internal sealed class DependencyInjectionDiagnosticsRegistry
                 })
                 .ToArray(),
             Issues = record.Issues,
+            Rewrites = record.Rewrites.ToArray(),
             WasRewritten = record.WasRewritten,
             RewriteReason = record.RewriteReason
         };

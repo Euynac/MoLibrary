@@ -53,6 +53,11 @@ public sealed class DependencyInjectionAutoRegistrationInfo
     public IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Issues { get; init; } = [];
 
     /// <summary>
+    /// Gets the captured rewrite steps applied after the original registration.
+    /// </summary>
+    public IReadOnlyList<DependencyInjectionDescriptorRewriteInfo> Rewrites { get; init; } = [];
+
+    /// <summary>
     /// Gets whether a later step rewrote the applied descriptor.
     /// </summary>
     public bool WasRewritten { get; init; }

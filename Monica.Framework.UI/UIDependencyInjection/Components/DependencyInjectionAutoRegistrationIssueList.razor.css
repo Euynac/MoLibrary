@@ -1,0 +1,21 @@
+.di-issue-title {
+    width: 100%;
+}
+
+.di-issue-title-description {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.di-issue-panel-body {
+    background: var(--mud-palette-surface);
+}
+
+.di-issue-list-scroll {
+    max-height: 18rem;
+    overflow: auto;
+}
+
+.di-issue-item {
+    background: var(--mud-palette-background-gray);
+}

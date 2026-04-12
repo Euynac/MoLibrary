@@ -64,6 +64,11 @@
             </MudPaper>
 
             <MudPaper Class="pa-3 di-summary-card" Outlined="true">
+                <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Rewritten"]</MudText>
+                <MudText Typo="Typo.h5">@_state.Snapshot.RewrittenDescriptorCount</MudText>
+            </MudPaper>
+
+            <MudPaper Class="pa-3 di-summary-card" Outlined="true">
                 <MudText Typo="Typo.overline" Color="Color.Secondary">@L["Page:Summary:Warnings"]</MudText>
                 <MudText Typo="Typo.h5">@_state.Snapshot.AutoRegistrationWarningCount</MudText>
             </MudPaper>
@@ -77,7 +82,7 @@
 
     @if (_state.Snapshot is { AutoRegistrationIssues.Count: > 0 } snapshot)
     {
-        <MudPaper Class="pa-4" Outlined="true">
+        <MudPaper Class="pa-4 di-issues-card" Outlined="true">
             <MudStack Spacing="2">
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.h6">@L["Page:Issues:Title"]</MudText>

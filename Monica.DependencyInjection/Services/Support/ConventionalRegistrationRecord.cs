@@ -17,6 +17,8 @@ internal sealed class ConventionalRegistrationRecord(
     IReadOnlyList<ServiceIdentifier> exposedServices,
     IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> issues)
 {
+    private readonly List<DependencyInjectionDescriptorRewriteInfo> _rewrites = [];
+
     /// <summary>
     /// Gets the descriptor currently associated with the record.
     /// </summary>
@@ -65,22 +67,26 @@ internal sealed class ConventionalRegistrationRecord(
     /// <summary>
     /// Gets whether a later step rewrote the descriptor.
     /// </summary>
-    public bool WasRewritten { get; private set; }
+    public bool WasRewritten => _rewrites.Count > 0;
+
+    /// <summary>
+    /// Gets the captured rewrite steps.
+    /// </summary>
+    public IReadOnlyList<DependencyInjectionDescriptorRewriteInfo> Rewrites => _rewrites;
 
     /// <summary>
     /// Gets the rewrite reason when <see cref="WasRewritten"/> is <see langword="true"/>.
     /// </summary>
-    public string? RewriteReason { get; private set; }
+    public string? RewriteReason => _rewrites.Count == 0
+        ? null
+        : string.Join("; ", _rewrites.Select(item => item.Summary));
 
     /// <summary>
     /// Associates the record with a rewritten descriptor.
     /// </summary>
-    public void UpdateDescriptor(ServiceDescriptor descriptor, string rewriteReason)
+    public void UpdateDescriptor(ServiceDescriptor descriptor, DependencyInjectionDescriptorRewriteInfo rewrite)
     {
         CurrentDescriptor = descriptor;
-        WasRewritten = true;
-        RewriteReason = string.IsNullOrWhiteSpace(RewriteReason)
-            ? rewriteReason
-            : $"{RewriteReason}, {rewriteReason}";
+        _rewrites.Add(rewrite);
     }
 }
