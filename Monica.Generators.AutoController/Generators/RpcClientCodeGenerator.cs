@@ -39,7 +39,7 @@ internal static class RpcClientCodeGenerator
                 GeneratorConstants.HandlerTypes.Command);
 
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, commandInterfaceName, commandHandlers);
-            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
+            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, domainName, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
 
             result.Add(($"{commandInterfaceName}.g.cs", interfaceCode));
             result.Add(($"{commandImplName}.g.cs", implCode));
@@ -55,7 +55,7 @@ internal static class RpcClientCodeGenerator
                 GeneratorConstants.HandlerTypes.Query);
 
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, queryInterfaceName, queryHandlers);
-            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, queryInterfaceName, queryImplName, queryHandlers, httpImplType);
+            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, domainName, queryInterfaceName, queryImplName, queryHandlers, httpImplType);
 
             result.Add(($"{queryInterfaceName}.g.cs", interfaceCode));
             result.Add(($"{queryImplName}.g.cs", implCode));
@@ -142,6 +142,7 @@ internal static class RpcClientCodeGenerator
     private static string GenerateClientImplementation(
         RpcMetadata metadata,
         string contractNamespaceRoot,
+        string domainName,
         string interfaceName,
         string implementationName,
         List<HandlerMetadata> handlers,
@@ -171,6 +172,7 @@ internal static class RpcClientCodeGenerator
             "Monica.DependencyInjection.Abstractions",
             "Monica.Core.Results",
             "Monica.Framework.Extensions",
+            "Monica.WebApi.RpcClient.Annotations",
             interfaceNamespace
         };
 
@@ -188,6 +190,7 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine();
 
         // Implementation declaration
+        sb.AppendLine($"[RpcClientDomain(\"{EscapeCSharpStringLiteral(domainName)}\")]");
         sb.AppendLine($"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}");
         sb.AppendLine("{");
 
@@ -234,6 +237,11 @@ internal static class RpcClientCodeGenerator
         }
 
         sb.AppendLine();
+    }
+
+    private static string EscapeCSharpStringLiteral(string value)
+    {
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     /// <summary>
