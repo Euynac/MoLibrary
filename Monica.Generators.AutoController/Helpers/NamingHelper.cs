@@ -42,18 +42,38 @@ internal static class NamingHelper
     }
 
     /// <summary>
-    /// Generates a controller name from the route and handler type.
+    /// Generates an endpoint controller name from the route and handler type.
     /// </summary>
     /// <param name="route">The route path (e.g., "api/v1/Flight")</param>
+    /// <param name="transport">The transport name (e.g., "Http", "Grpc")</param>
     /// <param name="handlerType">The handler type (Command or Query)</param>
-    /// <returns>The generated controller name</returns>
-    public static string GenerateControllerName(string route, string handlerType)
+    /// <returns>The generated endpoint controller name</returns>
+    public static string GenerateEndpointControllerName(string route, string transport, string handlerType)
     {
-        var segments = route.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
-        var lastSegment = segments.LastOrDefault() ?? route;
-        var lastSegmentPascalCase = ConvertToPascalCase(lastSegment);
+        return GenerateTransportRoleName(
+            transport,
+            GeneratorConstants.Roles.Endpoint,
+            handlerType,
+            ExtractRouteDomainName(route));
+    }
 
-        return $"{GeneratorConstants.Templates.HttpApiControllerPrefix}{handlerType}{lastSegmentPascalCase}";
+    /// <summary>
+    /// Generates an RPC client implementation name using the shared transport-role naming convention.
+    /// </summary>
+    /// <param name="domainName">The logical domain name (e.g., "Flight")</param>
+    /// <param name="transport">The transport name (e.g., "Http", "Grpc")</param>
+    /// <param name="handlerType">The handler type (Command or Query)</param>
+    /// <returns>The generated RPC client implementation name</returns>
+    public static string GenerateRpcClientImplementationName(
+        string domainName,
+        string transport,
+        string handlerType)
+    {
+        return GenerateTransportRoleName(
+            transport,
+            GeneratorConstants.Roles.Rpc,
+            handlerType,
+            ConvertToPascalCase(domainName));
     }
 
     /// <summary>
@@ -79,6 +99,36 @@ internal static class NamingHelper
     public static string GenerateControllerFileName(string controllerName)
     {
         return $"{controllerName}.Generated.cs";
+    }
+
+    /// <summary>
+    /// Extracts the last route segment and converts it to PascalCase for generated type names.
+    /// </summary>
+    /// <param name="route">The route path</param>
+    /// <returns>The route domain name in PascalCase</returns>
+    private static string ExtractRouteDomainName(string route)
+    {
+        var segments = route.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+        var lastSegment = segments.LastOrDefault() ?? route;
+
+        return ConvertToPascalCase(lastSegment);
+    }
+
+    /// <summary>
+    /// Builds a generated type name using the shared transport-role naming pattern.
+    /// </summary>
+    /// <param name="transport">The transport name</param>
+    /// <param name="role">The generated type role</param>
+    /// <param name="handlerType">The handler type</param>
+    /// <param name="domainName">The domain name suffix</param>
+    /// <returns>The composed generated type name</returns>
+    private static string GenerateTransportRoleName(
+        string transport,
+        string role,
+        string handlerType,
+        string domainName)
+    {
+        return $"{transport}{role}{handlerType}{domainName}";
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Monica.Generators.AutoController.Constants;
 using Monica.Generators.AutoController.Helpers;
 using Monica.Generators.AutoController.Models;
 
@@ -32,7 +33,10 @@ internal static class RpcClientCodeGenerator
         if (commandHandlers.Count > 0)
         {
             var commandInterfaceName = $"ICommand{domainName}";
-            var commandImplName = $"CommandHttpApi{domainName}";
+            var commandImplName = NamingHelper.GenerateRpcClientImplementationName(
+                domainName,
+                GeneratorConstants.Transports.Http,
+                GeneratorConstants.HandlerTypes.Command);
 
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, commandInterfaceName, commandHandlers);
             var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
@@ -45,7 +49,10 @@ internal static class RpcClientCodeGenerator
         if (queryHandlers.Count > 0)
         {
             var queryInterfaceName = $"IQuery{domainName}";
-            var queryImplName = $"QueryHttpApi{domainName}";
+            var queryImplName = NamingHelper.GenerateRpcClientImplementationName(
+                domainName,
+                GeneratorConstants.Transports.Http,
+                GeneratorConstants.HandlerTypes.Query);
 
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, queryInterfaceName, queryHandlers);
             var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, queryInterfaceName, queryImplName, queryHandlers, httpImplType);

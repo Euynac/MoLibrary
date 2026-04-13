@@ -118,7 +118,10 @@ internal static class ControllerCodeGenerator
             var tags = group.SelectMany(c => c.Tags).Distinct().ToList();
 
             // Generate controller name
-            var controllerName = NamingHelper.GenerateControllerName(route, handlerType);
+            var controllerName = NamingHelper.GenerateEndpointControllerName(
+                route,
+                GeneratorConstants.Transports.Http,
+                handlerType);
 
             // Merge using directives
             var allUsings = MergeUsingDirectives(group);

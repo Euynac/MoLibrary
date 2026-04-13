@@ -24,7 +24,7 @@
 
 ### 业务场景
 
-FIPS2022 是一个大型微服务架构的航空信息处理系统，包含多个独立的 API 服务（如 FlightService.API、MessageService.API 等）。每个服务都通过 **Source Generator** (`HttpApiControllerSourceGenerator`) 自动生成 HTTP API 控制器。
+FIPS2022 是一个大型微服务架构的航空信息处理系统，包含多个独立的 API 服务（如 FlightService.API、MessageService.API 等）。每个服务都通过 **Source Generator** (`HttpApiControllerSourceGenerator`) 自动生成 HTTP Endpoint 控制器。
 
 ### 面临的挑战
 
@@ -156,7 +156,7 @@ graph LR
 │  RpcClientSourceGenerator (未来实现)                             │
 │  ├─ 读取所有 .rpc-metadata.json 文件                             │
 │  ├─ 生成接口定义 (I{Domain}Api)                                  │
-│  └─ 生成 HTTP 客户端实现 ({Domain}HttpApi)                       │
+│  └─ 生成 HTTP RPC 实现 (HttpRpc{HandlerType}{Domain})            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
