@@ -125,6 +125,14 @@ wslpath -w /mnt/d/Code/MoLibrary/Monica.AI.UI/Monica.AI.UI.csproj
 
 **Always remember**: In WSL, use Windows path format for all dotnet commands.
 
+## Solution File Format
+
+- This repository uses `Monica.slnx`.
+- Do not assume or create `Monica.sln`.
+```bash
+dotnet build 'Monica.slnx' -m
+```
+
 ## WSL Environment - dotnet Parallel Build Rule
 
 Do **NOT** run multiple independent `dotnet build` commands in parallel when the projects share dependencies or output paths.
