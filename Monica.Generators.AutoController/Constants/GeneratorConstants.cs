@@ -39,6 +39,7 @@ internal static class GeneratorConstants
 
     public static readonly string[] BaseUsingStatements = [
         "Microsoft.AspNetCore.Mvc",
+        "Monica.DependencyInjection.Abstractions",
         "System.Net", 
         "System.Threading.Tasks",
         "Monica.Core.Mediator",

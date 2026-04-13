@@ -35,7 +35,7 @@ internal static class ControllerTemplate
             {
                 [Route("{{route}}")]
                 [{{GeneratorConstants.AttributeNames.ApiController}}]{{tagAttributeContent}}
-                public class {{controllerName}}(IMediator mediator) : {{GeneratorConstants.ClassNames.ControllerBase}}
+                public class {{controllerName}}(IMediator mediator) : {{GeneratorConstants.ClassNames.ControllerBase}}, ITransientDependency
                 {
             {{methods}}
                 }
