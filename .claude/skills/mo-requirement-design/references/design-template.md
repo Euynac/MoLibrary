@@ -17,6 +17,7 @@
 | Module type | New module / Extension / Cross-cutting | {Why} |
 | Project name | `Monica.{Name}` | {Why} |
 | UI module | Mixed / Standalone / Framework / None | {Why} |
+| Runtime kind | `ModuleBase` / `WebModuleBase` / `WebModuleBase` with downgrade | {Why this lifecycle is needed} |
 
 ### High-Level Architecture
 
@@ -71,7 +72,7 @@ Mo.Add{Name}(options =>
 
 ### Module Dependencies
 
-Modules declare dependencies by overriding `ClaimDependencies()` on `MoModule<TModuleSelf, TModuleOption, TModuleGuide>`.
+Modules declare dependencies by overriding `ClaimDependencies()` on `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` or `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>`.
 
 ```csharp
 public override void ClaimDependencies()
@@ -86,8 +87,10 @@ public override void ClaimDependencies()
 Monica.{Name}/
 ├── Modules/
 │   └── Module{Name}.cs              # Module, Option, Guide, BuilderExtensions
-├── Interfaces/
-│   └── I{Feature}Service.cs         # Public interface
+├── Abstractions/
+│   └── I{Feature}Service.cs         # Public contract
+├── Facades/
+│   └── {Name}Facade.cs              # Host-facing Res<T> entry point
 ├── Services/
 │   └── {Feature}Service.cs          # Implementation
 ├── Models/
@@ -103,9 +106,12 @@ Monica.{Name}.UI/
 │   └── Module{Name}UI.cs
 ├── Pages/
 │   └── UI{Name}Page.razor
-├── Components/
-├── Services/
-│   └── {Name}UIService.cs
+├── UI{Name}/
+│   ├── Components/
+│   ├── Dialogs/
+│   ├── State/
+│   └── Support/
+├── Localization/
 └── Monica.{Name}.UI.csproj
 ```
 
@@ -142,22 +148,22 @@ public class {Feature}Service(
 }
 ```
 
-### UI Services (if applicable)
-
-{Services that use Res<T> for Blazor component consumption.}
+### Facade Entry Points
 
 ```csharp
-public class {Feature}UIService(
-    ILogger<{Feature}UIService> logger,
+public class {Feature}Facade(
+    ILogger<{Feature}Facade> logger,
     I{Feature}Service featureService
 )
 {
     public async Task<Res<{ReturnType}>> {Method}Async({params})
     {
-        // Wrap infrastructure service calls with Res
+        // Wrap infrastructure service calls with Res for UI / host consumption
     }
 }
 ```
+
+UI components inject Facades directly. Do not introduce a separate UI service layer unless the user explicitly asks for a different architecture.
 
 ## Implementation Plan
 
@@ -171,7 +177,7 @@ public class {Feature}UIService(
    - Add to solution
 
 2. **Define interfaces and models**
-   - Create public interfaces in `Interfaces/`
+   - Create public contracts in `Abstractions/`
    - Define data models in `Models/`
 
 3. **Implement services**
@@ -188,7 +194,7 @@ public class {Feature}UIService(
 
 5. **Create UI module**
    - Create UI project/module
-   - Implement UI service layer with `Res<T>`
+   - Reuse Facades directly from the infrastructure module
    - Build Blazor components and pages
 
 ## Design Decisions

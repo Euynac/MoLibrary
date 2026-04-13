@@ -1,7 +1,7 @@
 ---
 name: mo-architecture
-description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
-version: 1.1.3
+description: This skill should be used when the user asks to "design module structure", "plan module architecture", "review module layout", "create new module", "refactor module structure", "module folder structure", "module boundaries", "facade pattern", "internal vs public", "feature-first", "annotations folder", "developer-facing attributes", "where to put attributes", "page decomposition", "page too large", "extract page state", "IWebModule", "web module", "downgrade to non-web", "模块架构", "架构设计", "模块结构", "文件夹结构", or needs guidance on Monica module directory layout, layer responsibilities, dependency direction, public/internal boundaries, Facade placement, Provider separation, Annotations placement, page decomposition rules, module runtime kind selection, Features pattern for bundled sub-modules, or Mixed/Standalone/Composite UI module patterns.
+version: 1.1.4
 ---
 
 # Monica Unified Module Architecture
@@ -24,6 +24,7 @@ Other skills reference this skill:
 **Working in `Modules/`?** → See `Modules/ Is Registration Only`.
 **Grouping related files?** → Prefer prefix naming. Introduce sub-folders only when a folder stops being scannable. See Folder Depth & Grouping Rules.
 **Folder depth reaching 4 levels?** → Treat it as a design smell and justify it explicitly.
+**Need ASP.NET Core middleware or endpoints?** → Use the Web vs Non-Web Module Kind rule below. Do not assume every UI module is a web module.
 
 ## Core Principles
 
@@ -114,7 +115,17 @@ Do NOT proactively split them into separate files such as:
 
 Only split a module registration file when the user explicitly asks for that refactor.
 
-### 7. Utils Is the Unified Utility Folder
+### 7. Choose ModuleBase vs WebModuleBase Explicitly
+
+Use the runtime kind that matches the module lifecycle:
+
+- `ModuleBase<T...>` is the default. Use it when the module only needs builder, service-registration, post-service, and dependency phases.
+- `WebModuleBase<T...>` is only for modules that actually participate in `ConfigureApplicationBuilder` or `ConfigureEndpoints`.
+- A UI project does not imply `IWebModule`. If a UI module only registers pages, dialogs, localized components, shell items, or state/support types, keep it on `ModuleBase`.
+- If a web-capable module still has meaningful non-web behavior, implement downgrade explicitly with `CanDowngradeToNonWebModule()`. In downgrade mode the non-web phases still run, while web pipeline and endpoint phases are skipped.
+- When exposing module-system diagnostics or dashboards, surface capability separately from runtime mode. `IsWebModule` and `IsDowngradedFromWebModule` answer different questions and should not be collapsed into one flag.
+
+### 8. Utils Is the Unified Utility Folder
 
 `Utils/` replaces `Helpers/`, `Tools/`, `Utilities/`, `Common/`, `Misc/`. Only one utility folder name is allowed.
 
@@ -306,6 +317,7 @@ UI modules are pure presentation layers:
 - Do NOT have their own service layer for data access
 - Maximize reuse of Models from infrastructure module's public `Models/`
 - Prefer `UI{Name}/` feature directories for mixed or composite UI modules. Standalone single-feature UI modules may use the root-level equivalent layout.
+- Most UI modules stay on `ModuleBase`. Only use `WebModuleBase` for UI modules that truly configure middleware or endpoints.
 
 ### Standalone UI Module
 

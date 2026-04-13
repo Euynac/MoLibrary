@@ -13,7 +13,22 @@ This guide defines the standardized patterns and conventions for creating module
 | Options class | `Module{Name}Option` | `ModuleSignalROption` |
 | Guide class | `Module{Name}Guide` | `ModuleSignalRGuide` |
 | Builder extensions | `extension(Mo)` with `Add{Name}()` | `Mo.AddSignalR()` |
-| Module key entry | `EMoModuleKey.{Name}` | `EMoModuleKey.SignalR` |
+| Module key entry | `BuiltInModuleKey.{Name}` | `BuiltInModuleKey.SignalR` |
+
+## Module Runtime Kinds
+
+Choose the runtime kind before filling in the registration logic.
+
+| Kind | Base types | Use when |
+|------|------------|----------|
+| Non-web module | `ModuleBase` + `ModuleGuide` + `ModuleOptions` | The module only needs builder, services, post-services, and dependency phases |
+| Web module | `WebModuleBase` + `WebModuleGuide` + `ModuleOptions` or `MinimalApiModuleOptions` | The module configures ASP.NET Core middleware or endpoint phases |
+
+Rules:
+
+- A UI module is not automatically a web module. If it only registers pages, components, dialogs, or shell entries, prefer `ModuleBase`.
+- If a web module can still provide useful non-web behavior in a generic host, override `CanDowngradeToNonWebModule()` and return `true`.
+- Keep module capability and current runtime mode separate in diagnostics. `IsWebModule` and `IsDowngradedFromWebModule` are different facts.
 
 ## Standard Infrastructure Module Structure
 
@@ -114,9 +129,9 @@ internal class {Feature}Service(
 ### Basic Module
 
 ```csharp
-[ModuleKey(EMoModuleKey.{Name})]
+[ModuleKey(BuiltInModuleKey.{Name})]
 public class Module{Name}(Module{Name}Option option)
-    : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+    : ModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -131,9 +146,9 @@ public class Module{Name}(Module{Name}Option option)
 ### Module That Declares Dependencies
 
 ```csharp
-[ModuleKey(EMoModuleKey.{Name})]
+[ModuleKey(BuiltInModuleKey.{Name})]
 public class Module{Name}(Module{Name}Option option)
-    : MoModule<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+    : ModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -149,18 +164,46 @@ public class Module{Name}(Module{Name}Option option)
 }
 ```
 
+### Web Module
+
+```csharp
+[ModuleKey(BuiltInModuleKey.{Name})]
+public class Module{Name}(Module{Name}Option option)
+    : WebModuleBase<Module{Name}, Module{Name}Option, Module{Name}Guide>(option)
+{
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<{Name}Facade>();
+        services.AddScoped<{Feature}Service>();
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        UseEndpoints(app, endpoints =>
+        {
+            // Map endpoints here
+        });
+    }
+}
+```
+
 ## Options Class
 
 ```csharp
 // Standard module options
-public class Module{Name}Option : MoModuleOption<Module{Name}>
+public class Module{Name}Option : ModuleOptions<Module{Name}>
 {
     public bool EnableFeature { get; set; } = true;
     public int MaxItems { get; set; } = 100;
 }
 
 // Module with Minimal API endpoints
-public class Module{Name}Option : MoModuleOptionWithMinimalApi<Module{Name}>
+public class Module{Name}Option : MinimalApiModuleOptions<Module{Name}>
 {
     public bool EnableFeature { get; set; } = true;
 }
@@ -169,7 +212,7 @@ public class Module{Name}Option : MoModuleOptionWithMinimalApi<Module{Name}>
 ## Guide Class (Fluent Configuration)
 
 ```csharp
-public class Module{Name}Guide : MoModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>
+public class Module{Name}Guide : ModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>
 {
     public Module{Name}Guide EnableFeature(bool enable = true)
     {
@@ -178,6 +221,8 @@ public class Module{Name}Guide : MoModuleGuide<Module{Name}, Module{Name}Option,
     }
 }
 ```
+
+For web modules, switch the guide base type to `WebModuleGuide<Module{Name}, Module{Name}Option, Module{Name}Guide>` so the guide can record application-builder and endpoint phases.
 
 ## Builder Extensions
 
