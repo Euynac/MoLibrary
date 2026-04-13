@@ -337,32 +337,22 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
 
     /// <summary>
     /// Applies sorting to the query based on the input.
-    /// Handles special sorting requirements for EF Core split queries.
+    /// Keeps paged queries fully ordered so EF Core split queries and offset pagination stay deterministic.
     /// </summary>
     /// <param name="query">The entity query to apply sorting to</param>
     /// <param name="input">The input containing sorting parameters</param>
     /// <returns>The sorted query</returns>
     protected virtual IQueryable<TEntity> ApplySorting(IQueryable<TEntity> query, TGetListInput input)
     {
-        // Important: when Include is used, EF Core 8 may automatically switch to split queries.
-        // If split queries are combined with Skip or Take, every generated SQL query must produce the same ordering;
-        // otherwise rows can be missed or the query can fail because each query may return a different order.
-        // Include already introduces ordering by the primary key, while subqueries created by Skip or Take may not.
-        // Keep the ordering deterministic. See: https://learn.microsoft.com/en-us/ef/core/querying/single-split-queries#split-queries
-        if (WithDetail() && input is IHasRequestPage { DisablePage: not true })
-        {
-            query = query.HasBeenOrdered(out var ordered) ? ordered.ThenByDescending(p => p.Id) : query.OrderByDescending(p => p.Id);
-        }
-
-        // Important: repeated OrderBy calls are provider-dependent. For example, PostgreSQL applies only the last OrderBy and ignores earlier ones.
         if (input is IHasRequestSorting sortedResultRequest && !sortedResultRequest.Sorting.IsNullOrWhiteSpace())
         {
-            return query.HasBeenOrdered(out var ordered) ? ordered.ThenBy(sortedResultRequest.Sorting) : query.OrderBy(sortedResultRequest.Sorting);
+            query = ApplyRequestedSorting(query, sortedResultRequest.Sorting!);
+            return ShouldApplyStablePaginationSorting(input) ? ApplyStablePaginationSorting(query, sortedResultRequest.Sorting!) : query;
         }
 
         // Important: paginating sharded tables without ordering can produce incorrect ordering and row counts.
         // Important: after sharding, OrderBy cannot target fields removed by Select because ordering is performed in memory.
-        if (input is IHasRequestSelect select && select.HasUsingSelected() && Repository.IsShardingTable())
+        if (ShouldSkipSortingForProjectedShardingQuery(input))
         {
             return query;
         }
@@ -373,6 +363,85 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         }
 
         return input is IHasRequestLimitedResult ? ApplyDefaultSorting(query) : query;
+    }
+
+    /// <summary>
+    /// Applies the explicit client-requested ordering and resets any incidental ordering applied earlier in the query.
+    /// </summary>
+    /// <param name="query">The query to order.</param>
+    /// <param name="sorting">The Dynamic LINQ ordering string.</param>
+    /// <returns>The ordered query.</returns>
+    protected virtual IQueryable<TEntity> ApplyRequestedSorting(IQueryable<TEntity> query, string sorting)
+    {
+        // Important: repeated OrderBy calls are provider-dependent. Make the requested sorting the primary ordering explicitly.
+        return query.OrderBy(sorting);
+    }
+
+    /// <summary>
+    /// Adds the entity key as a deterministic tie-breaker for offset-style pagination when the current sorting is not unique.
+    /// </summary>
+    /// <param name="query">The already ordered query.</param>
+    /// <param name="sorting">The requested sorting string.</param>
+    /// <returns>The ordered query with a stable key tie-breaker when needed.</returns>
+    protected virtual IQueryable<TEntity> ApplyStablePaginationSorting(IQueryable<TEntity> query, string sorting)
+    {
+        if (ContainsEntityIdSorting(sorting) || !query.HasBeenOrdered(out var ordered))
+        {
+            return query;
+        }
+
+        return ordered.ThenBy(e => e.Id);
+    }
+
+    /// <summary>
+    /// Determines whether the current request needs a deterministic tie-breaker for offset-style paging.
+    /// </summary>
+    /// <param name="input">The list input.</param>
+    /// <returns><see langword="true"/> when a stable pagination ordering should be enforced; otherwise, <see langword="false"/>.</returns>
+    protected virtual bool ShouldApplyStablePaginationSorting(TGetListInput input)
+    {
+        if (input is not IHasRequestLimitedResult)
+        {
+            return false;
+        }
+
+        if (input is IHasRequestPage { DisablePage: true })
+        {
+            return false;
+        }
+
+        // TODO: upgrade keyset pagination to use a composite cursor that stores the effective sort values plus Id.
+        // The current cursor only encodes Id, so it cannot safely participate in the new stable-sorting pipeline.
+        return input is not IHasRequestKeysetPage requestKeysetPage || !requestKeysetPage.HasUsingKeyset();
+    }
+
+    /// <summary>
+    /// Determines whether server-side sorting should be skipped because sharding + projection forces ordering to happen after projection.
+    /// </summary>
+    /// <param name="input">The list input.</param>
+    /// <returns><see langword="true"/> when sorting should be skipped; otherwise, <see langword="false"/>.</returns>
+    protected virtual bool ShouldSkipSortingForProjectedShardingQuery(TGetListInput input)
+    {
+        return input is IHasRequestSelect select && select.HasUsingSelected() && Repository.IsShardingTable();
+    }
+
+    /// <summary>
+    /// Determines whether the explicit sorting already contains the entity key.
+    /// </summary>
+    /// <param name="sorting">The requested sorting string.</param>
+    /// <returns><see langword="true"/> when the entity key is already part of the ordering; otherwise, <see langword="false"/>.</returns>
+    protected virtual bool ContainsEntityIdSorting(string sorting)
+    {
+        foreach (var segment in sorting.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var tokens = segment.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tokens.Length > 0 && string.Equals(tokens[0], nameof(IEntity<TKey>.Id), StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -573,6 +642,8 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     {
         if (string.IsNullOrEmpty(cursor)) return queryable;
 
+        // TODO: replace the raw Id cursor with a composite cursor that captures the effective ordering columns.
+        // The current implementation only supports the legacy Id-based keyset flow.
         var paramExpression = Expression.Parameter(typeof(TEntity), "a");
         var memberExpression = Expression.PropertyOrField(paramExpression, "Id");
 
@@ -661,4 +732,3 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         public string? Cursor { get; set; }
     }
 }
-
