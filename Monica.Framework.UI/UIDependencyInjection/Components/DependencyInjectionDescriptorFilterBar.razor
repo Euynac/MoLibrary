@@ -1,0 +1,269 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Monica.Framework.UI.UIDependencyInjection.Models
+@using Monica.Framework.UI.UIDependencyInjection.State
+@inject IStringLocalizer<DependencyInjectionResource> L
+
+<MudPaper Class="pa-4 di-filter-shell" Outlined="true">
+    <MudStack Spacing="2">
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Start" Class="di-filter-header">
+            <MudTextField T="string"
+                          Value="@State.SearchText"
+                          ValueChanged="OnSearchTextChangedAsync"
+                          Label="@L["Page:Filters:SearchLabel"]"
+                          Placeholder="@L["Page:Filters:SearchPlaceholder"]"
+                          Immediate="true"
+                          Clearable="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Class="di-search-field" />
+
+            <MudChip T="string"
+                     Size="Size.Medium"
+                     Variant="Variant.Outlined"
+                     Color="Color.Primary"
+                     Class="di-filter-count">
+                @L["Page:Filters:Showing", FilteredCount, State.Snapshot?.TotalDescriptorCount ?? 0]
+            </MudChip>
+        </MudStack>
+
+        <div class="di-filter-groups">
+            <section class="di-filter-group">
+                <div class="di-filter-group-header">
+                    <MudText Typo="Typo.subtitle2">@L["Page:Filters:SourceLabel"]</MudText>
+                    <div class="di-filter-actions">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="SelectAllSourcesAsync">
+                            @L["Page:Filters:Actions:SelectAll"]
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="ClearSourcesAsync">
+                            @L["Page:Filters:Actions:Clear"]
+                        </MudButton>
+                    </div>
+                </div>
+
+                <MudChipSet T="DependencyInjectionDescriptorScopeFilter"
+                            SelectionMode="SelectionMode.MultiSelection"
+                            SelectedValues="State.ScopeFilters"
+                            SelectedValuesChanged="OnScopeFiltersChangedAsync"
+                            CheckMark="true"
+                            Class="di-filter-chipset">
+                    @foreach (var filter in ScopeOptions)
+                    {
+                        var isSelected = State.ScopeFilters.Contains(filter);
+                        <MudChip T="DependencyInjectionDescriptorScopeFilter"
+                                 Value="filter"
+                                 Size="Size.Small"
+                                 Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                 Color="@(isSelected ? Color.Primary : Color.Default)">
+                            @L[$"Page:Filters:SourceOptions:{filter}"]
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </section>
+
+            <section class="di-filter-group">
+                <div class="di-filter-group-header">
+                    <MudText Typo="Typo.subtitle2">@L["Page:Filters:LifetimeLabel"]</MudText>
+                    <div class="di-filter-actions">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="SelectAllLifetimesAsync">
+                            @L["Page:Filters:Actions:SelectAll"]
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="ClearLifetimesAsync">
+                            @L["Page:Filters:Actions:Clear"]
+                        </MudButton>
+                    </div>
+                </div>
+
+                <MudChipSet T="ServiceLifetime"
+                            SelectionMode="SelectionMode.MultiSelection"
+                            SelectedValues="State.LifetimeFilters"
+                            SelectedValuesChanged="OnLifetimeFiltersChangedAsync"
+                            CheckMark="true"
+                            Class="di-filter-chipset">
+                    @foreach (var lifetime in LifetimeOptions)
+                    {
+                        var isSelected = State.LifetimeFilters.Contains(lifetime);
+                        <MudChip T="ServiceLifetime"
+                                 Value="lifetime"
+                                 Size="Size.Small"
+                                 Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                 Color="@GetLifetimeColor(lifetime, isSelected)">
+                            @L[$"Page:Shared:Lifetimes:{lifetime}"]
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </section>
+
+            <section class="di-filter-group">
+                <div class="di-filter-group-header">
+                    <MudText Typo="Typo.subtitle2">@L["Page:Filters:MarkersLabel"]</MudText>
+                    <div class="di-filter-actions">
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   OnClick="SelectAllMarkersAsync">
+                            @L["Page:Filters:Actions:SelectAll"]
+                        </MudButton>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="ClearMarkersAsync">
+                            @L["Page:Filters:Actions:Clear"]
+                        </MudButton>
+                    </div>
+                </div>
+
+                <MudChipSet T="DependencyInjectionDescriptorMarkerFilter"
+                            SelectionMode="SelectionMode.MultiSelection"
+                            SelectedValues="State.MarkerFilters"
+                            SelectedValuesChanged="OnMarkerFiltersChangedAsync"
+                            CheckMark="true"
+                            Class="di-filter-chipset">
+                    @foreach (var marker in MarkerOptions)
+                    {
+                        var isSelected = State.MarkerFilters.Contains(marker);
+                        <MudChip T="DependencyInjectionDescriptorMarkerFilter"
+                                 Value="marker"
+                                 Size="Size.Small"
+                                 Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                                 Color="@GetMarkerColor(marker, isSelected)">
+                            @L[$"Page:Filters:MarkerOptions:{marker}"]
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </section>
+        </div>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private static readonly DependencyInjectionDescriptorScopeFilter[] ScopeOptions =
+    [
+        DependencyInjectionDescriptorScopeFilter.AutoRegistered,
+        DependencyInjectionDescriptorScopeFilter.Other
+    ];
+
+    private static readonly ServiceLifetime[] LifetimeOptions =
+    [
+        ServiceLifetime.Singleton,
+        ServiceLifetime.Scoped,
+        ServiceLifetime.Transient
+    ];
+
+    private static readonly DependencyInjectionDescriptorMarkerFilter[] MarkerOptions =
+    [
+        DependencyInjectionDescriptorMarkerFilter.Standard,
+        DependencyInjectionDescriptorMarkerFilter.Keyed,
+        DependencyInjectionDescriptorMarkerFilter.Warnings,
+        DependencyInjectionDescriptorMarkerFilter.Errors,
+        DependencyInjectionDescriptorMarkerFilter.Rewritten
+    ];
+
+    [Parameter]
+    public DependencyInjectionPageState State { get; set; } = null!;
+
+    [Parameter]
+    public int FilteredCount { get; set; }
+
+    [Parameter]
+    public EventCallback FiltersChanged { get; set; }
+
+    private async Task OnSearchTextChangedAsync(string? value)
+    {
+        State.SetSearchText(value);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnScopeFiltersChangedAsync(IReadOnlyCollection<DependencyInjectionDescriptorScopeFilter>? values)
+    {
+        State.SetScopeFilters(values);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnLifetimeFiltersChangedAsync(IReadOnlyCollection<ServiceLifetime>? values)
+    {
+        State.SetLifetimeFilters(values);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private async Task OnMarkerFiltersChangedAsync(IReadOnlyCollection<DependencyInjectionDescriptorMarkerFilter>? values)
+    {
+        State.SetMarkerFilters(values);
+        await FiltersChanged.InvokeAsync();
+    }
+
+    private Task SelectAllSourcesAsync()
+    {
+        return OnScopeFiltersChangedAsync(ScopeOptions);
+    }
+
+    private Task ClearSourcesAsync()
+    {
+        return OnScopeFiltersChangedAsync([]);
+    }
+
+    private Task SelectAllLifetimesAsync()
+    {
+        return OnLifetimeFiltersChangedAsync(LifetimeOptions);
+    }
+
+    private Task ClearLifetimesAsync()
+    {
+        return OnLifetimeFiltersChangedAsync([]);
+    }
+
+    private Task SelectAllMarkersAsync()
+    {
+        return OnMarkerFiltersChangedAsync(MarkerOptions);
+    }
+
+    private Task ClearMarkersAsync()
+    {
+        return OnMarkerFiltersChangedAsync([]);
+    }
+
+    private Color GetLifetimeColor(ServiceLifetime lifetime, bool isSelected)
+    {
+        if (!isSelected)
+        {
+            return Color.Default;
+        }
+
+        return lifetime switch
+        {
+            ServiceLifetime.Singleton => Color.Primary,
+            ServiceLifetime.Scoped => Color.Info,
+            ServiceLifetime.Transient => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetMarkerColor(DependencyInjectionDescriptorMarkerFilter marker, bool isSelected)
+    {
+        if (!isSelected)
+        {
+            return Color.Default;
+        }
+
+        return marker switch
+        {
+            DependencyInjectionDescriptorMarkerFilter.Standard => Color.Default,
+            DependencyInjectionDescriptorMarkerFilter.Keyed => Color.Info,
+            DependencyInjectionDescriptorMarkerFilter.Warnings => Color.Warning,
+            DependencyInjectionDescriptorMarkerFilter.Errors => Color.Error,
+            DependencyInjectionDescriptorMarkerFilter.Rewritten => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+}

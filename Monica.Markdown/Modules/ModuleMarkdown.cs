@@ -45,7 +45,7 @@ public class ModuleMarkdown(ModuleMarkdownOption option)
         services.TryAddSingleton<IMarkdownDocumentSearcher, MarkdownDocumentSearchService>();
         services.AddSingleton<IMarkdownDocumentCatalog, MarkdownDocumentCatalogService>();
         services.AddSingleton<MarkdownFacade>();
-        services.AddTransient<MarkdownGitBindingRefreshEventHandler>();
+        services.AddTransient<LocalEventHandlerMarkdownGitBindingRefresh>();
     }
 }
 

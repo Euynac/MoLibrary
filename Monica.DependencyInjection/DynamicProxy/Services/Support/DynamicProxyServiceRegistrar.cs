@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.DynamicProxy.Models;
 using Monica.DependencyInjection.DynamicProxy.Providers.Castle;
+using Monica.DependencyInjection.Models;
+using Monica.DependencyInjection.Services.Support;
 using Monica.Modules;
 using Monica.Tool.Extensions;
 
@@ -112,6 +114,8 @@ internal static class DynamicProxyServiceRegistrar
     /// <param name="option"></param>
     internal static void ApplyInterceptors(IServiceCollection collection, ModuleDynamicProxyOption option)
     {
+        var diagnosticsRegistry = DependencyInjectionDiagnosticsRegistryLocator.GetRegistry(collection);
+
         for (var index = collection.Count - 1; index >= 0; index--)
         {
             var oldDescriptor = collection[index];
@@ -188,7 +192,7 @@ internal static class DynamicProxyServiceRegistrar
 
         void AddInstanceRegister(RegisterContext context)
         {
-            collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
+            var proxiedDescriptor = new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {
                     var instance = context.OldDescriptor.ImplementationInstance!;
@@ -212,13 +216,16 @@ internal static class DynamicProxyServiceRegistrar
                             throw new ArgumentOutOfRangeException();
                     }
                     return proxiedObject;
-                }, context.OldDescriptor.Lifetime));
+                }, context.OldDescriptor.Lifetime);
+            collection.Add(proxiedDescriptor);
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
         void AddFactoryRegister(RegisterContext context)
         {
             var factory = context.OldDescriptor.ImplementationFactory!;
-            collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
+            var proxiedDescriptor = new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {
                     var proxyGenerator = provider.GetRequiredService<ServiceProviderProxyGenerator>();
@@ -245,14 +252,15 @@ internal static class DynamicProxyServiceRegistrar
                     }
 
                     return proxiedObject;
-                }, context.OldDescriptor.Lifetime));
+                }, context.OldDescriptor.Lifetime);
+            collection.Add(proxiedDescriptor);
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
         void AddNormalRegister(RegisterContext context)
         {
-            // Important: Controllers must be added via AddControllersAsServices; otherwise, they
-            // cannot be proxied dynamically.
-            collection.Add(new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
+            var proxiedDescriptor = new ServiceDescriptor(context.OldDescriptor.ServiceType, context.OldDescriptor.ServiceKey,
                 (provider, o) =>
                 {
                     var proxyGenerator = provider.GetRequiredService<ServiceProviderProxyGenerator>();
@@ -277,9 +285,42 @@ internal static class DynamicProxyServiceRegistrar
 
                   
                     return proxiedObject;
-                }, context.OldDescriptor.Lifetime));
+                }, context.OldDescriptor.Lifetime);
+            collection.Add(proxiedDescriptor);
+            diagnosticsRegistry?.TransferConventionalRegistration(context.OldDescriptor, proxiedDescriptor,
+                CreateRewriteInfo(context));
         }
 
+    }
+
+    private static DependencyInjectionDescriptorRewriteInfo CreateRewriteInfo(RegisterContext context)
+    {
+        var interceptorTypes = context.InterceptorTypes
+            .DistinctBy(type => type.FullName)
+            .ToArray();
+        var interceptorDisplayNames = interceptorTypes
+            .Select(type => type.GetCleanName())
+            .ToArray();
+        var summary = interceptorDisplayNames.Length == 0
+            ? $"Dynamic proxy rewrite using {context.Kind}."
+            : $"Dynamic proxy rewrite using {context.Kind} with {string.Join(", ", interceptorDisplayNames)}.";
+
+        return new DependencyInjectionDescriptorRewriteInfo
+        {
+            SourceModule = nameof(ModuleDynamicProxy),
+            Summary = summary,
+            RewriteKind = "DynamicProxy",
+            ProxyKind = context.Kind.ToString(),
+            RegistrationStyle = context.Way.ToString(),
+            ImplementationType = context.ImplementType.GetCleanFullName(),
+            ImplementationTypeDisplayName = context.ImplementType.GetCleanName(),
+            ImplementationAssemblyName = context.ImplementType.Assembly.GetName().Name,
+            ShouldInjectCachedServiceProvider = context.ShouldInjectCachedServiceProvider,
+            InterceptorTypes = interceptorTypes
+                .Select(type => type.GetCleanFullName())
+                .ToArray(),
+            InterceptorTypeDisplayNames = interceptorDisplayNames
+        };
     }
 }
 

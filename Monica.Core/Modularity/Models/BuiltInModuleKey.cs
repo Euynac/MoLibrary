@@ -96,6 +96,10 @@ public enum BuiltInModuleKey
     /// </summary>
     ModuleSystemUI,
     FrameworkUI,
+    /// <summary>
+    /// Dependency-injection diagnostics UI module.
+    /// </summary>
+    DependencyInjectionUI,
     SignalRUI,
     SystemInfoUI,
     ExecutionTimingUI,

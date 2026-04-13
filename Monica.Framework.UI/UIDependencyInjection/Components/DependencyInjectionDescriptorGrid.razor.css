@@ -1,0 +1,37 @@
+.di-grid-root {
+    min-width: 0;
+}
+
+.di-grid-root ::deep th:nth-child(1),
+.di-grid-root ::deep td:nth-child(1) {
+    width: 19rem;
+    max-width: 19rem;
+}
+
+.di-grid-root ::deep th:nth-child(3),
+.di-grid-root ::deep td:nth-child(3) {
+    width: 24rem;
+    max-width: 24rem;
+}
+
+.di-grid-root ::deep .di-service-cell,
+.di-grid-root ::deep .di-implementation-cell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.di-grid-root ::deep .di-implementation-cell > *,
+.di-grid-root ::deep .di-service-cell > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.di-grid-root ::deep .di-mono-truncate {
+    display: block;
+    max-width: 100%;
+    font-family: Consolas, "SFMono-Regular", Menlo, Monaco, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

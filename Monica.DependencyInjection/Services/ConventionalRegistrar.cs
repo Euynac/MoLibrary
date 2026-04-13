@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Abstractions.Internal;
 using Monica.DependencyInjection.Annotations;
+using Monica.DependencyInjection.Models;
 using Monica.DependencyInjection.Models.Internal;
 using Monica.DependencyInjection.Services.Support;
 using Monica.Modules;
@@ -14,9 +15,9 @@ namespace Monica.DependencyInjection.Services;
 /// <summary>
 /// Registers discovered Monica services using lifetime markers and exposure attributes.
 /// </summary>
-internal class ConventionalRegistrar(ModuleDependencyInjectionOption option) : IConventionalRegistrar
+internal class ConventionalRegistrar(ModuleDependencyInjectionOption option, DependencyInjectionDiagnosticsRegistry? diagnosticsRegistry = null) : IConventionalRegistrar
 {
-    private ILogger logger => option.Logger;
+    private ILogger Logger => option.Logger;
     
     /// <summary>
     /// Registers a single type into the service collection based on its attributes and lifetime.
@@ -36,38 +37,49 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option) : I
         }
 
         var typeName = type.Name;
+        var lifetimeSource = ResolveLifetimeSource(type, dependencyAttribute);
+        var registrationMode = ResolveRegistrationMode(dependencyAttribute);
+        var shouldEmitDiagnostics = option.EnableAutoRegistrationDiagnostics;
+        var shouldCaptureDiagnostics = shouldEmitDiagnostics && diagnosticsRegistry != null;
 
         var exposedServiceAndKeyedServiceTypes = GetExposedKeyedServiceTypes(type)
             .Concat(GetExposedServiceTypes(type).Select(t => new ServiceIdentifier(t)))
             .ToList();
+        var exposedServicesByKey = exposedServiceAndKeyedServiceTypes.ToLookup(item => item.ServiceKey);
+        var autoRegistrationIssues = shouldEmitDiagnostics
+            ? CreateAutoRegistrationIssues(type, lifeTime.Value, lifetimeSource, exposedServiceAndKeyedServiceTypes)
+            : [];
 
-       
-        if (option.EnableAutoRegistrationLogging)
+        if (shouldEmitDiagnostics)
         {
             if (exposedServiceAndKeyedServiceTypes.Count == 0)
             {
-                logger.LogError("Failed to auto-register type: {TypeName} {Lifetime}", typeName, lifeTime);
+                Logger.LogError("Failed to auto-register type: {TypeName} {Lifetime}", typeName, lifeTime);
             }
-            else if (exposedServiceAndKeyedServiceTypes is [{ServiceType: { } typeSelf}] && typeSelf.Name == typeName)
+            else if (autoRegistrationIssues.Any(item => item.Kind == DependencyInjectionAutoRegistrationIssueKind.ConcreteTypeOnlyExposure))
             {
-                
-                logger.LogWarning("Only the concrete type was registered: {TypeName} {Lifetime}", typeName, lifeTime);
+                Logger.LogWarning("Only the concrete type was registered: {TypeName} {Lifetime}", typeName, lifeTime);
             }
             else
             {
-                
-                logger.LogInformation("Auto-registered: {TypeName}->{ServiceTypes} {Lifetime}",
+                Logger.LogInformation("Auto-registered: {TypeName}->{ServiceTypes} {Lifetime}",
                     typeName,
                     $"[{exposedServiceAndKeyedServiceTypes.Select(p => p.ServiceType.Name).StringJoin(", ")}]",
                     lifeTime);
             }
         }
+
+        if (shouldCaptureDiagnostics && exposedServiceAndKeyedServiceTypes.Count == 0 && autoRegistrationIssues.Count > 0)
+        {
+            diagnosticsRegistry!.RecordStandaloneAutoRegistrationIssues(autoRegistrationIssues);
+        }
         
         foreach (var exposedServiceType in exposedServiceAndKeyedServiceTypes)
         {
-            var allExposingServiceTypes = exposedServiceType.ServiceKey == null
-                ? exposedServiceAndKeyedServiceTypes.Where(x => x.ServiceKey == null).ToList()
-                : exposedServiceAndKeyedServiceTypes.Where(x => x.ServiceKey?.ToString() == exposedServiceType.ServiceKey?.ToString()).ToList();
+            var allExposingServiceTypes = exposedServicesByKey[exposedServiceType.ServiceKey].ToList();
+            var hadExistingDescriptor = shouldCaptureDiagnostics &&
+                services.Any(existing =>
+                    existing.MatchesServiceIdentity(exposedServiceType.ServiceType, exposedServiceType.ServiceKey));
             var serviceDescriptor = CreateServiceDescriptor(
                 type,
                 exposedServiceType.ServiceKey,
@@ -75,17 +87,21 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option) : I
                 allExposingServiceTypes,
                 lifeTime.Value
             );
-            if (dependencyAttribute?.ReplaceServices == true)
+            var descriptorWasAdded = ApplyRegistrationMode(services, serviceDescriptor, registrationMode, hadExistingDescriptor);
+
+            if (shouldCaptureDiagnostics && descriptorWasAdded)
             {
-                services.Replace(serviceDescriptor);
-            }
-            else if (dependencyAttribute?.TryRegister == true)
-            {
-                services.TryAdd(serviceDescriptor);
-            }
-            else
-            {
-                services.Add(serviceDescriptor);
+                diagnosticsRegistry!.RecordConventionalRegistration(
+                    serviceDescriptor,
+                    type,
+                    lifeTime.Value,
+                    lifetimeSource,
+                    registrationMode,
+                    hadExistingDescriptor && registrationMode == DependencyInjectionAutoRegistrationMode.Replace
+                        ? DependencyInjectionAutoRegistrationOutcome.ReplacedExisting
+                        : DependencyInjectionAutoRegistrationOutcome.Added,
+                    [.. exposedServiceAndKeyedServiceTypes],
+                    autoRegistrationIssues);
             }
         }
     }
@@ -128,6 +144,127 @@ internal class ConventionalRegistrar(ModuleDependencyInjectionOption option) : I
             return ServiceLifetime.Scoped;
         }
         return null;
+    }
+
+    protected virtual DependencyInjectionLifetimeSource ResolveLifetimeSource(
+        Type type,
+        DependencyAttribute? dependencyAttribute)
+    {
+        if (dependencyAttribute?.Lifetime != null)
+        {
+            return DependencyInjectionLifetimeSource.DependencyAttribute;
+        }
+
+        if (typeof(ITransientDependency).IsAssignableFrom(type))
+        {
+            return DependencyInjectionLifetimeSource.TransientMarkerInterface;
+        }
+
+        if (typeof(ISingletonDependency).IsAssignableFrom(type))
+        {
+            return DependencyInjectionLifetimeSource.SingletonMarkerInterface;
+        }
+
+        if (typeof(IScopedDependency).IsAssignableFrom(type))
+        {
+            return DependencyInjectionLifetimeSource.ScopedMarkerInterface;
+        }
+
+        return DependencyInjectionLifetimeSource.Unknown;
+    }
+
+    protected virtual DependencyInjectionAutoRegistrationMode ResolveRegistrationMode(DependencyAttribute? dependencyAttribute)
+    {
+        if (dependencyAttribute?.ReplaceServices == true)
+        {
+            return DependencyInjectionAutoRegistrationMode.Replace;
+        }
+
+        if (dependencyAttribute?.TryRegister == true)
+        {
+            return DependencyInjectionAutoRegistrationMode.TryAdd;
+        }
+
+        return DependencyInjectionAutoRegistrationMode.Add;
+    }
+
+    private bool ApplyRegistrationMode(
+        IServiceCollection services,
+        ServiceDescriptor descriptor,
+        DependencyInjectionAutoRegistrationMode registrationMode,
+        bool hadExistingDescriptor)
+    {
+        switch (registrationMode)
+        {
+            case DependencyInjectionAutoRegistrationMode.Replace:
+                services.Replace(descriptor);
+                return true;
+            case DependencyInjectionAutoRegistrationMode.TryAdd:
+                services.TryAdd(descriptor);
+                return !hadExistingDescriptor;
+            default:
+                services.Add(descriptor);
+                return true;
+        }
+    }
+
+    private IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> CreateAutoRegistrationIssues(
+        Type sourceImplementationType,
+        ServiceLifetime lifetime,
+        DependencyInjectionLifetimeSource lifetimeSource,
+        IReadOnlyList<ServiceIdentifier> exposedServices)
+    {
+        if (exposedServices.Count == 0)
+        {
+            return [CreateAutoRegistrationIssue(
+                sourceImplementationType,
+                lifetime,
+                lifetimeSource,
+                DependencyInjectionAutoRegistrationIssueKind.MissingExposedServices,
+                exposedServices)];
+        }
+
+        if (exposedServices is [{ ServiceType: { } serviceType }] && serviceType == sourceImplementationType)
+        {
+            return [CreateAutoRegistrationIssue(
+                sourceImplementationType,
+                lifetime,
+                lifetimeSource,
+                DependencyInjectionAutoRegistrationIssueKind.ConcreteTypeOnlyExposure,
+                exposedServices)];
+        }
+
+        return [];
+    }
+
+    private DependencyInjectionAutoRegistrationIssueInfo CreateAutoRegistrationIssue(
+        Type sourceImplementationType,
+        ServiceLifetime lifetime,
+        DependencyInjectionLifetimeSource lifetimeSource,
+        DependencyInjectionAutoRegistrationIssueKind kind,
+        IReadOnlyList<ServiceIdentifier> exposedServices)
+    {
+        return new DependencyInjectionAutoRegistrationIssueInfo
+        {
+            Severity = kind == DependencyInjectionAutoRegistrationIssueKind.MissingExposedServices
+                ? DependencyInjectionDiagnosticSeverity.Error
+                : DependencyInjectionDiagnosticSeverity.Warning,
+            Kind = kind,
+            SourceImplementationType = sourceImplementationType.GetCleanFullName(),
+            SourceImplementationTypeDisplayName = sourceImplementationType.GetCleanName(),
+            SourceImplementationAssemblyName = sourceImplementationType.Assembly.GetName().Name,
+            Lifetime = lifetime,
+            LifetimeSource = lifetimeSource,
+            ExposedServices = exposedServices
+                .Select(item => new DependencyInjectionExposedServiceInfo
+                {
+                    ServiceType = item.ServiceType.GetCleanFullName(),
+                    ServiceTypeDisplayName = item.ServiceType.GetCleanName(),
+                    IsKeyedService = item.ServiceKey != null,
+                    ServiceKey = ServiceDescriptorDiagnosticsExtensions.FormatServiceKey(item.ServiceKey)
+                })
+                .ToArray()
+        };
     }
   
     /// <summary>

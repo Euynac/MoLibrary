@@ -1,0 +1,258 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Monica.DependencyInjection.Models
+@using Monica.Framework.UI.UIDependencyInjection.Components
+@inject IStringLocalizer<DependencyInjectionResource> L
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Info" />
+            <MudText Typo="Typo.h6">@L["Page:Dialog:Title"]</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:Descriptor"]</MudText>
+                <MudSimpleTable Dense="true">
+                    <tbody>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ServiceType"]</td>
+                        <td><code>@Descriptor.ServiceType</code></td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ServiceAssembly"]</td>
+                        <td>@GetTextOrFallback(Descriptor.ServiceAssemblyName)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:Lifetime"]</td>
+                        <td>@L[$"Page:Shared:Lifetimes:{Descriptor.Lifetime}"]</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ServiceKey"]</td>
+                        <td>@GetTextOrFallback(Descriptor.ServiceKey)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:Index"]</td>
+                        <td>@Descriptor.Index</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:IsKeyed"]</td>
+                        <td>@GetYesNo(Descriptor.IsKeyedService)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:IsOpenGeneric"]</td>
+                        <td>@GetYesNo(Descriptor.IsOpenGeneric)</td>
+                    </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:Implementation"]</MudText>
+                <MudSimpleTable Dense="true">
+                    <tbody>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ImplementationKind"]</td>
+                        <td>@L[$"Page:Grid:Kinds:{Descriptor.ImplementationKind}"]</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ImplementationType"]</td>
+                        <td><code>@GetTextOrFallback(Descriptor.ImplementationType)</code></td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:ImplementationAssembly"]</td>
+                        <td>@GetTextOrFallback(Descriptor.ImplementationAssemblyName)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["Page:Dialog:Fields:FactoryDisplay"]</td>
+                        <td><code>@GetTextOrFallback(Descriptor.FactoryDisplay)</code></td>
+                    </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:AutoRegistration"]</MudText>
+                @if (Descriptor.AutoRegistration is { } autoRegistration)
+                {
+                    <MudSimpleTable Dense="true">
+                        <tbody>
+                        <tr>
+                            <td>@L["Page:Dialog:Fields:SourceImplementationType"]</td>
+                            <td><code>@autoRegistration.SourceImplementationType</code></td>
+                        </tr>
+                        <tr>
+                            <td>@L["Page:Dialog:Fields:SourceImplementationAssembly"]</td>
+                            <td>@GetTextOrFallback(autoRegistration.SourceImplementationAssemblyName)</td>
+                        </tr>
+                        <tr>
+                            <td>@L["Page:Dialog:Fields:LifetimeSource"]</td>
+                            <td>@L[$"Page:Shared:LifetimeSources:{autoRegistration.LifetimeSource}"]</td>
+                        </tr>
+                        <tr>
+                            <td>@L["Page:Dialog:Fields:RegistrationMode"]</td>
+                            <td>@L[$"Page:Shared:RegistrationModes:{autoRegistration.RegistrationMode}"]</td>
+                        </tr>
+                        <tr>
+                            <td>@L["Page:Dialog:Fields:Outcome"]</td>
+                            <td>@L[$"Page:Shared:Outcomes:{autoRegistration.Outcome}"]</td>
+                        </tr>
+                        </tbody>
+                    </MudSimpleTable>
+
+                    <MudDivider Class="my-3" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Page:Dialog:Fields:ExposedServices"]</MudText>
+                    <MudStack Spacing="1">
+                        @foreach (var exposedService in autoRegistration.ExposedServices)
+                        {
+                            <MudPaper Class="pa-2" Outlined="true">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+                                    @if (exposedService.IsKeyedService)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                                            @GetTextOrFallback(exposedService.ServiceKey)
+                                        </MudChip>
+                                    }
+                                    <MudText Typo="Typo.body2">
+                                        <code>@exposedService.ServiceType</code>
+                                    </MudText>
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+
+                    @if (autoRegistration.Issues.Count > 0)
+                    {
+                        <MudDivider Class="my-3" />
+
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Page:Dialog:Fields:Issues"]</MudText>
+                        <DependencyInjectionAutoRegistrationIssueList Items="autoRegistration.Issues" />
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">@L["Page:Dialog:States:NoAutoRegistration"]</MudAlert>
+                }
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Page:Dialog:Sections:Rewrite"]</MudText>
+                @if (Descriptor.WasRewritten)
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var rewrite in Descriptor.Rewrites)
+                        {
+                            <MudPaper Class="pa-3" Outlined="true">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">
+                                            @GetTextOrFallback(rewrite.SourceModule)
+                                        </MudChip>
+
+                                        @if (!string.IsNullOrWhiteSpace(rewrite.ProxyKind))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                                                @GetTextOrFallback(rewrite.ProxyKind)
+                                            </MudChip>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(rewrite.RegistrationStyle))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                                @GetTextOrFallback(rewrite.RegistrationStyle)
+                                            </MudChip>
+                                        }
+
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                            @L["Page:Dialog:Formats:CachedProviderInjection", GetYesNo(rewrite.ShouldInjectCachedServiceProvider)]
+                                        </MudChip>
+                                    </MudStack>
+
+                                    <MudText Typo="Typo.body2">@GetTextOrFallback(rewrite.Summary)</MudText>
+
+                                    <MudSimpleTable Dense="true">
+                                        <tbody>
+                                        <tr>
+                                            <td>@L["Page:Dialog:Fields:ImplementationType"]</td>
+                                            <td><code>@GetTextOrFallback(rewrite.ImplementationType)</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td>@L["Page:Dialog:Fields:ImplementationAssembly"]</td>
+                                            <td>@GetTextOrFallback(rewrite.ImplementationAssemblyName)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>@L["Page:Dialog:Fields:RewriteKind"]</td>
+                                            <td>@GetTextOrFallback(rewrite.RewriteKind)</td>
+                                        </tr>
+                                        </tbody>
+                                    </MudSimpleTable>
+
+                                    @if (rewrite.InterceptorTypeDisplayNames.Count > 0)
+                                    {
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @L["Page:Dialog:Fields:InterceptorTypes"]
+                                            </MudText>
+
+                                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                @for (var index = 0; index < rewrite.InterceptorTypeDisplayNames.Count; index++)
+                                                {
+                                                    var displayName = rewrite.InterceptorTypeDisplayNames[index];
+                                                    var fullName = index < rewrite.InterceptorTypes.Count
+                                                        ? rewrite.InterceptorTypes[index]
+                                                        : displayName;
+
+                                                    <MudTooltip Text="@fullName">
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
+                                                            @displayName
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    }
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">@L["Page:Dialog:States:NoRewrite"]</MudAlert>
+                }
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">@L["Page:Dialog:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public DependencyInjectionDescriptorInfo Descriptor { get; set; } = null!;
+
+    private string GetTextOrFallback(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? L["Page:States:NotAvailable"]
+            : value;
+    }
+
+    private string GetYesNo(bool value)
+    {
+        return value
+            ? L["Page:Shared:Common:Yes"]
+            : L["Page:Shared:Common:No"];
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

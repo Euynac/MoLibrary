@@ -1,0 +1,166 @@
+{
+  "Page": {
+    "PageTitle": "依赖注入",
+    "Header": {
+      "Title": "依赖注入",
+      "Description": "查看最终的 ServiceCollection，并标记由 Monica 约定注册生成的描述符。",
+      "Refresh": "刷新",
+      "GeneratedAt": "快照生成时间：{0}"
+    },
+    "Summary": {
+      "Total": "描述符",
+      "AutoRegistered": "自动注册",
+      "Keyed": "Keyed",
+      "Factories": "工厂",
+      "Rewritten": "已改写",
+      "Warnings": "警告",
+      "Errors": "错误"
+    },
+    "Issues": {
+      "Title": "自动注册问题",
+      "Description": "这些警告和错误来自 Monica 约定注册诊断。有些错误只会显示在这里，因为它们没有生成最终的服务描述符。"
+    },
+    "States": {
+      "Loading": "正在加载依赖注入诊断信息...",
+      "Empty": "当前筛选条件下没有匹配的服务描述符。",
+      "LoadFailed": "加载依赖注入诊断信息失败。",
+      "NotAvailable": "不可用"
+    },
+    "Messages": {
+      "RefreshSucceeded": "依赖注入诊断信息已刷新。",
+      "RefreshFailed": "加载依赖注入诊断信息失败：{0}",
+      "DialogOpenFailed": "打开描述符详情失败：{0}"
+    },
+    "Filters": {
+      "SearchLabel": "搜索",
+      "SearchPlaceholder": "按服务、实现、程序集或键进行搜索",
+      "ScopeLabel": "范围",
+      "SourceLabel": "来源",
+      "LifetimeLabel": "生命周期",
+      "MarkersLabel": "标记",
+      "Showing": "显示 {0} / {1} 个描述符",
+      "Actions": {
+        "SelectAll": "全选",
+        "Clear": "清空"
+      },
+      "SourceOptions": {
+        "AutoRegistered": "自动注册",
+        "Other": "其他描述符"
+      },
+      "MarkerOptions": {
+        "Standard": "标准",
+        "Keyed": "Keyed",
+        "Warnings": "警告",
+        "Errors": "错误",
+        "Rewritten": "已改写"
+      }
+    },
+    "Grid": {
+      "Columns": {
+        "Service": "服务",
+        "Lifetime": "生命周期",
+        "Implementation": "实现",
+        "ServiceKey": "键",
+        "Kind": "类型",
+        "Index": "序号",
+        "Actions": "操作"
+      },
+      "Badges": {
+        "AutoRegistered": "由 ModuleDependencyInjection 自动注册",
+        "Warning": "自动注册警告",
+        "Error": "自动注册错误",
+        "Keyed": "Keyed 服务",
+        "Rewritten": "注册后被改写"
+      },
+      "Actions": {
+        "ViewDetails": "详情"
+      },
+      "Kinds": {
+        "Type": "类型",
+        "Factory": "工厂",
+        "Instance": "实例"
+      }
+    },
+    "Dialog": {
+      "Title": "服务描述符详情",
+      "Close": "关闭",
+      "Sections": {
+        "Descriptor": "描述符",
+        "Implementation": "实现",
+        "AutoRegistration": "自动注册",
+        "Rewrite": "改写 / 代理"
+      },
+      "Fields": {
+        "ServiceType": "服务类型",
+        "ServiceAssembly": "服务程序集",
+        "Lifetime": "生命周期",
+        "ServiceKey": "服务键",
+        "Index": "序号",
+        "IsKeyed": "是否 Keyed",
+        "IsOpenGeneric": "是否开放泛型",
+        "ImplementationKind": "实现方式",
+        "ImplementationType": "实现类型",
+        "ImplementationAssembly": "实现程序集",
+        "FactoryDisplay": "工厂",
+        "SourceImplementationType": "源实现类型",
+        "SourceImplementationAssembly": "源程序集",
+        "LifetimeSource": "生命周期来源",
+        "RegistrationMode": "注册方式",
+        "Outcome": "结果",
+        "ExposedServices": "暴露服务",
+        "Issues": "问题",
+        "RewriteKind": "改写方式",
+        "InterceptorTypes": "拦截器类型",
+        "RewriteReason": "改写原因"
+      },
+      "Formats": {
+        "CachedProviderInjection": "缓存服务提供器注入：{0}"
+      },
+      "States": {
+        "NoAutoRegistration": "该描述符不是由 Monica 约定注册创建的。",
+        "NoRewrite": "未检测到注册后的描述符改写。"
+      }
+    },
+    "Shared": {
+      "Common": {
+        "Yes": "是",
+        "No": "否"
+      },
+      "Lifetimes": {
+        "Singleton": "单例",
+        "Scoped": "作用域",
+        "Transient": "瞬态"
+      },
+      "RegistrationModes": {
+        "Add": "Add",
+        "TryAdd": "TryAdd",
+        "Replace": "Replace"
+      },
+      "Outcomes": {
+        "Added": "已添加",
+        "ReplacedExisting": "已替换已有描述符"
+      },
+      "LifetimeSources": {
+        "Unknown": "未知",
+        "DependencyAttribute": "DependencyAttribute",
+        "TransientMarkerInterface": "ITransientDependency",
+        "ScopedMarkerInterface": "IScopedDependency",
+        "SingletonMarkerInterface": "ISingletonDependency"
+      },
+      "IssueSeverities": {
+        "Warning": "警告",
+        "Error": "错误"
+      },
+      "IssueKinds": {
+        "MissingExposedServices": {
+          "Title": "未找到暴露服务类型",
+          "Description": "Monica 将 {0} 识别为 {1}，但没有找到任何暴露服务类型，因此不会注册任何描述符。"
+        },
+        "ConcreteTypeOnlyExposure": {
+          "Title": "只暴露了具体类型",
+          "Description": "Monica 只为 {0} 注册了具体类型。如果其他组件应依赖该服务，请考虑暴露抽象类型。"
+        }
+      }
+    }
+  }
+}

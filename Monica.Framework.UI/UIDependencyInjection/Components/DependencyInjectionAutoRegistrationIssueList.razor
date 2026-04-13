@@ -1,0 +1,145 @@
+@using Microsoft.Extensions.DependencyInjection
+@using Monica.DependencyInjection.Models
+@inject IStringLocalizer<DependencyInjectionResource> L
+
+@if (IssueGroups.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        @L["Page:States:NotAvailable"]
+    </MudAlert>
+}
+else
+{
+    <MudExpansionPanels Elevation="0" Dense="true" MultiExpansion="true" Class="di-issue-panels">
+        @foreach (var group in IssueGroups)
+        {
+            <MudExpansionPanel Class="di-issue-panel">
+                <TitleContent>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="1" Class="di-issue-title">
+                        <MudChip T="string" Size="Size.Small" Color="@GetChipColor(group.Severity)" Variant="Variant.Filled">
+                            @L[$"Page:Shared:IssueSeverities:{group.Severity}"]
+                        </MudChip>
+                        <MudText Typo="Typo.subtitle2">@GetIssueTitle(group.Kind)</MudText>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                            @group.Items.Count
+                        </MudChip>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="di-issue-title-description">
+                            @GetIssueDescription(group.Kind, group.Items[0])
+                        </MudText>
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    <MudPaper Class="pa-3 di-issue-panel-body" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @GetIssueDescription(group.Kind, group.Items[0])
+                            </MudText>
+
+                            <div class="di-issue-list-scroll">
+                                <MudStack Spacing="2">
+                                    @foreach (var issue in group.Items)
+                                    {
+                                        <MudPaper Class="pa-2 di-issue-item" Outlined="true">
+                                            <MudStack Spacing="1">
+                                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+                                                    <MudTooltip Text="@issue.SourceImplementationType">
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                                                            @issue.SourceImplementationTypeDisplayName
+                                                        </MudChip>
+                                                    </MudTooltip>
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                                        @L[$"Page:Shared:Lifetimes:{issue.Lifetime}"]
+                                                    </MudChip>
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                                                        @L[$"Page:Shared:LifetimeSources:{issue.LifetimeSource}"]
+                                                    </MudChip>
+                                                </MudStack>
+
+                                                @if (issue.ExposedServices.Count > 0)
+                                                {
+                                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1" AlignItems="AlignItems.Center">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            @L["Page:Dialog:Fields:ExposedServices"]
+                                                        </MudText>
+                                                        @foreach (var exposedService in issue.ExposedServices)
+                                                        {
+                                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                                                @GetExposedServiceText(exposedService)
+                                                            </MudChip>
+                                                        }
+                                                    </MudStack>
+                                                }
+                                            </MudStack>
+                                        </MudPaper>
+                                    }
+                                </MudStack>
+                            </div>
+                        </MudStack>
+                    </MudPaper>
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    </MudExpansionPanels>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Items { get; set; } = [];
+
+    private IReadOnlyList<IssueGroup> IssueGroups => Items
+        .GroupBy(item => item.Kind)
+        .Select(group => new IssueGroup(
+            group.Key,
+            ResolveGroupSeverity(group),
+            group.OrderBy(item => item.SourceImplementationTypeDisplayName, StringComparer.OrdinalIgnoreCase).ToArray()))
+        .OrderByDescending(group => group.Severity == DependencyInjectionDiagnosticSeverity.Error)
+        .ThenBy(group => group.Kind.ToString(), StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private static DependencyInjectionDiagnosticSeverity ResolveGroupSeverity(
+        IEnumerable<DependencyInjectionAutoRegistrationIssueInfo> issues)
+    {
+        return issues.Any(item => item.Severity == DependencyInjectionDiagnosticSeverity.Error)
+            ? DependencyInjectionDiagnosticSeverity.Error
+            : DependencyInjectionDiagnosticSeverity.Warning;
+    }
+
+    private Color GetChipColor(DependencyInjectionDiagnosticSeverity severity)
+    {
+        return severity == DependencyInjectionDiagnosticSeverity.Error
+            ? Color.Error
+            : Color.Warning;
+    }
+
+    private string GetIssueTitle(DependencyInjectionAutoRegistrationIssueKind kind)
+    {
+        return L[$"Page:Shared:IssueKinds:{kind}:Title"];
+    }
+
+    private string GetIssueDescription(DependencyInjectionAutoRegistrationIssueKind kind, DependencyInjectionAutoRegistrationIssueInfo issue)
+    {
+        return kind switch
+        {
+            DependencyInjectionAutoRegistrationIssueKind.MissingExposedServices => L[
+                $"Page:Shared:IssueKinds:{kind}:Description",
+                issue.SourceImplementationTypeDisplayName,
+                L[$"Page:Shared:Lifetimes:{issue.Lifetime}"]],
+            DependencyInjectionAutoRegistrationIssueKind.ConcreteTypeOnlyExposure => L[
+                $"Page:Shared:IssueKinds:{kind}:Description",
+                issue.SourceImplementationTypeDisplayName],
+            _ => issue.SourceImplementationTypeDisplayName
+        };
+    }
+
+    private string GetExposedServiceText(DependencyInjectionExposedServiceInfo exposedService)
+    {
+        return exposedService.IsKeyedService
+            ? $"{exposedService.ServiceTypeDisplayName} ({exposedService.ServiceKey})"
+            : exposedService.ServiceTypeDisplayName;
+    }
+
+    private sealed record IssueGroup(
+        DependencyInjectionAutoRegistrationIssueKind Kind,
+        DependencyInjectionDiagnosticSeverity Severity,
+        IReadOnlyList<DependencyInjectionAutoRegistrationIssueInfo> Items);
+}

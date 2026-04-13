@@ -1,0 +1,166 @@
+{
+  "Page": {
+    "PageTitle": "Dependency Injection",
+    "Header": {
+      "Title": "Dependency Injection",
+      "Description": "Inspect the finalized service collection and highlight descriptors created by Monica conventional registration.",
+      "Refresh": "Refresh",
+      "GeneratedAt": "Snapshot captured at {0}"
+    },
+    "Summary": {
+      "Total": "Descriptors",
+      "AutoRegistered": "Auto Registered",
+      "Keyed": "Keyed",
+      "Factories": "Factories",
+      "Rewritten": "Rewritten",
+      "Warnings": "Warnings",
+      "Errors": "Errors"
+    },
+    "Issues": {
+      "Title": "Auto-registration issues",
+      "Description": "These warnings and errors come from Monica conventional registration diagnostics. Some errors are shown here because they never produced a final service descriptor."
+    },
+    "States": {
+      "Loading": "Loading dependency injection diagnostics...",
+      "Empty": "No service descriptors matched the current filters.",
+      "LoadFailed": "Failed to load dependency injection diagnostics.",
+      "NotAvailable": "Not available"
+    },
+    "Messages": {
+      "RefreshSucceeded": "Dependency injection diagnostics refreshed.",
+      "RefreshFailed": "Failed to load dependency injection diagnostics: {0}",
+      "DialogOpenFailed": "Failed to open descriptor details: {0}"
+    },
+    "Filters": {
+      "SearchLabel": "Search",
+      "SearchPlaceholder": "Search by service, implementation, assembly, or key",
+      "ScopeLabel": "Scope",
+      "SourceLabel": "Source",
+      "LifetimeLabel": "Lifetime",
+      "MarkersLabel": "Markers",
+      "Showing": "Showing {0} of {1} descriptors",
+      "Actions": {
+        "SelectAll": "All",
+        "Clear": "Clear"
+      },
+      "SourceOptions": {
+        "AutoRegistered": "Auto registered",
+        "Other": "Other descriptors"
+      },
+      "MarkerOptions": {
+        "Standard": "Standard",
+        "Keyed": "Keyed",
+        "Warnings": "Warnings",
+        "Errors": "Errors",
+        "Rewritten": "Rewritten"
+      }
+    },
+    "Grid": {
+      "Columns": {
+        "Service": "Service",
+        "Lifetime": "Lifetime",
+        "Implementation": "Implementation",
+        "ServiceKey": "Key",
+        "Kind": "Kind",
+        "Index": "Index",
+        "Actions": "Actions"
+      },
+      "Badges": {
+        "AutoRegistered": "Auto registered by ModuleDependencyInjection",
+        "Warning": "Automatic-registration warning",
+        "Error": "Automatic-registration error",
+        "Keyed": "Keyed service",
+        "Rewritten": "Rewritten after registration"
+      },
+      "Actions": {
+        "ViewDetails": "Details"
+      },
+      "Kinds": {
+        "Type": "Type",
+        "Factory": "Factory",
+        "Instance": "Instance"
+      }
+    },
+    "Dialog": {
+      "Title": "Service Descriptor Details",
+      "Close": "Close",
+      "Sections": {
+        "Descriptor": "Descriptor",
+        "Implementation": "Implementation",
+        "AutoRegistration": "Auto Registration",
+        "Rewrite": "Rewrite / Proxy"
+      },
+      "Fields": {
+        "ServiceType": "Service type",
+        "ServiceAssembly": "Service assembly",
+        "Lifetime": "Lifetime",
+        "ServiceKey": "Service key",
+        "Index": "Index",
+        "IsKeyed": "Keyed",
+        "IsOpenGeneric": "Open generic",
+        "ImplementationKind": "Implementation kind",
+        "ImplementationType": "Implementation type",
+        "ImplementationAssembly": "Implementation assembly",
+        "FactoryDisplay": "Factory",
+        "SourceImplementationType": "Source implementation",
+        "SourceImplementationAssembly": "Source assembly",
+        "LifetimeSource": "Lifetime source",
+        "RegistrationMode": "Registration mode",
+        "Outcome": "Outcome",
+        "ExposedServices": "Exposed services",
+        "Issues": "Issues",
+        "RewriteKind": "Rewrite kind",
+        "InterceptorTypes": "Interceptor types",
+        "RewriteReason": "Rewrite reason"
+      },
+      "Formats": {
+        "CachedProviderInjection": "Cached provider injection: {0}"
+      },
+      "States": {
+        "NoAutoRegistration": "This descriptor was not created by Monica conventional registration.",
+        "NoRewrite": "No post-registration rewrite was detected."
+      }
+    },
+    "Shared": {
+      "Common": {
+        "Yes": "Yes",
+        "No": "No"
+      },
+      "Lifetimes": {
+        "Singleton": "Singleton",
+        "Scoped": "Scoped",
+        "Transient": "Transient"
+      },
+      "RegistrationModes": {
+        "Add": "Add",
+        "TryAdd": "TryAdd",
+        "Replace": "Replace"
+      },
+      "Outcomes": {
+        "Added": "Added",
+        "ReplacedExisting": "Replaced existing descriptor"
+      },
+      "LifetimeSources": {
+        "Unknown": "Unknown",
+        "DependencyAttribute": "DependencyAttribute",
+        "TransientMarkerInterface": "ITransientDependency",
+        "ScopedMarkerInterface": "IScopedDependency",
+        "SingletonMarkerInterface": "ISingletonDependency"
+      },
+      "IssueSeverities": {
+        "Warning": "Warning",
+        "Error": "Error"
+      },
+      "IssueKinds": {
+        "MissingExposedServices": {
+          "Title": "No exposed service types were found",
+          "Description": "Monica resolved {0} as {1}, but it did not expose any service type, so nothing was registered."
+        },
+        "ConcreteTypeOnlyExposure": {
+          "Title": "Only the concrete type was exposed",
+          "Description": "Monica registered only the concrete type for {0}. Consider exposing an abstraction when other components should depend on it."
+        }
+      }
+    }
+  }
+}
