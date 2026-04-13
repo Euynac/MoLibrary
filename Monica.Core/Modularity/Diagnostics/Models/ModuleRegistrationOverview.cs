@@ -74,6 +74,16 @@ public class ModuleBasicInfo
     public bool IsDisabled { get; set; }
 
     /// <summary>
+    /// Indicates whether the module participates in the ASP.NET Core lifecycle.
+    /// </summary>
+    public bool IsWebModule { get; set; }
+
+    /// <summary>
+    /// Indicates whether the module is currently running in downgraded non-web mode.
+    /// </summary>
+    public bool IsDowngradedFromWebModule { get; set; }
+
+    /// <summary>
     /// Indicates whether registration errors exist.
     /// </summary>
     public bool HasErrors { get; set; }

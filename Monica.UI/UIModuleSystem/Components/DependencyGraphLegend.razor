@@ -41,6 +41,20 @@
                 </div>
                 <MudDivider />
                 <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:CapabilityStates"]</MudText>
+                    <MudStack Spacing="2">
+                        <div class="legend-item">
+                            <div class="legend-circle legend-circle-web"></div>
+                            <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:WebModule"]</MudText>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-circle legend-circle-downgraded"></div>
+                            <MudText Typo="Typo.body2">@L["ModuleSystem:DependencyGraph:Labels:DowngradedWebModule"]</MudText>
+                        </div>
+                    </MudStack>
+                </div>
+                <MudDivider />
+                <div>
                     <MudText Typo="Typo.subtitle1" Class="mb-3">@L["ModuleSystem:DependencyGraph:Labels:EdgeTypes"]</MudText>
                     <MudStack Spacing="2">
                         <div class="legend-edge-item">

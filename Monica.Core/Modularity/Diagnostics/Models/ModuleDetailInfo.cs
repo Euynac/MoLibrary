@@ -49,6 +49,16 @@ public class ModuleConfigInfo
     public bool IsDisabled { get; set; }
 
     /// <summary>
+    /// Indicates whether the module participates in the ASP.NET Core lifecycle.
+    /// </summary>
+    public bool IsWebModule { get; set; }
+
+    /// <summary>
+    /// Indicates whether the module is running in downgraded non-web mode.
+    /// </summary>
+    public bool IsDowngradedFromWebModule { get; set; }
+
+    /// <summary>
     /// Reason the module was disabled.
     /// </summary>
     public string? DisabledReason { get; set; }

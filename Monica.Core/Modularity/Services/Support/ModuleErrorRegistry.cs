@@ -12,11 +12,6 @@ namespace Monica.Core.Modularity.Services.Support;
 /// </summary>
 public static class ModuleErrorRegistry
 {
-
-    /// <summary>
-    /// Module registration errors.
-    /// </summary>
-    public static List<ModuleRegistrationError> ModuleRegisterErrors { get; } = [];
     /// <summary>
     /// Validates module configuration requirements and throws an exception if requirements are not met.
     /// </summary>
@@ -43,7 +38,7 @@ public static class ModuleErrorRegistry
                     MissingConfigKeys = missingKeys,
                     ErrorType = ModuleRegistrationErrorType.MissingRequiredConfig
                 };
-                if(!CheckDisableModuleIfHasException(moduleType, error)) ModuleRegisterErrors.Add(error);
+                if(!CheckDisableModuleIfHasException(moduleType, error)) ModuleRegistry.ModuleRegisterErrors.Add(error);
             }
 
         }
@@ -99,7 +94,7 @@ public static class ModuleErrorRegistry
                     if (!ModuleDependencyAnalyzer.ModuleKeyToTypeDict.TryGetValue(moduleKey, out var moduleType) || moduleType == null)
                         continue;
 
-                    ModuleRegisterErrors.Add(new ModuleRegistrationError
+                    ModuleRegistry.ModuleRegisterErrors.Add(new ModuleRegistrationError
                     {
                         ModuleType = moduleType,
                         ErrorMessage = $"Module is part of a circular dependency chain: {string.Join(" → ", dependencyInfo.CyclePath)} → {moduleKey}",
@@ -132,7 +127,7 @@ public static class ModuleErrorRegistry
             Phase = phase,
             StackTrace = exception.StackTrace
         };
-        ModuleRegisterErrors.Add(error);
+        ModuleRegistry.ModuleRegisterErrors.Add(error);
         
         if(phase > ModulePhase.InitFinalConfigures)
         {
@@ -162,10 +157,25 @@ public static class ModuleErrorRegistry
             Phase = request.RequestMethod,
             StackTrace = exception.StackTrace
         };
-        ModuleRegisterErrors.Add(error);
+        ModuleRegistry.ModuleRegisterErrors.Add(error);
         
         // Immediately check if the module should be disabled due to exception
         CheckDisableModuleIfHasException(moduleType, error);
+    }
+
+    /// <summary>
+    /// Records an error indicating that the current host cannot satisfy a module's ASP.NET Core requirements.
+    /// </summary>
+    /// <param name="moduleType">The incompatible module type.</param>
+    /// <param name="message">The compatibility error message.</param>
+    public static void RecordHostCompatibilityError(Type moduleType, string message)
+    {
+        ModuleRegistry.ModuleRegisterErrors.Add(new ModuleRegistrationError
+        {
+            ModuleType = moduleType,
+            ErrorMessage = message,
+            ErrorType = ModuleRegistrationErrorType.HostCompatibility
+        });
     }
     
     /// <summary>
@@ -234,13 +244,13 @@ public static class ModuleErrorRegistry
     /// </summary>
     public static void RaiseModuleErrors()
     {
-        if (ModuleRegisterErrors.Count == 0)
+        if (ModuleRegistry.ModuleRegisterErrors.Count == 0)
         {
             return;
         }
 
         // Filter out errors for modules that have already been disabled
-        var errorsToThrow = ModuleRegisterErrors.Where(e => !ModuleStateRegistry.IsModuleDisabled(e.ModuleType)).ToList();
+        var errorsToThrow = ModuleRegistry.ModuleRegisterErrors.Where(e => !ModuleStateRegistry.IsModuleDisabled(e.ModuleType)).ToList();
         
         //// Log summary of disabled modules
         //var disabledModules = ModuleStateRegistry.GetDisabledModuleTypes();

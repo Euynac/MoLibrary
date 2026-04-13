@@ -82,10 +82,13 @@
         "TotalModules": "总模块数",
         "EnabledModules": "启用模块",
         "DisabledModules": "禁用模块",
+        "WebModules": "具备 Web 能力的模块",
+        "DowngradedModules": "已降级的 Web 模块",
         "TotalInitTime": "总初始化时间",
         "ModuleDistribution": "模块分布",
         "ModuleName": "模块名称",
         "Status": "状态",
+        "RuntimeMode": "运行模式",
         "Order": "顺序",
         "InitTime": "初始化时间",
         "Dependencies": "依赖",
@@ -93,7 +96,12 @@
       },
       "States": {
         "Enabled": "启用",
-        "Disabled": "禁用"
+        "Disabled": "禁用",
+        "WebModule": "Web 模块",
+        "NonWebModule": "非 Web 模块",
+        "WebRuntime": "Web 运行时",
+        "NonWebRuntime": "非 Web 运行时",
+        "Downgraded": "已降级为非 Web"
       },
       "Loading": {
         "Statistics": "加载模块统计...",
@@ -165,6 +173,8 @@
         "DependencyOverview": "依赖关系概览",
         "TotalNodes": "总节点数",
         "TotalDependencies": "总依赖关系",
+        "WebModules": "具备 Web 能力的模块",
+        "DowngradedWebModules": "已降级的 Web 模块",
         "CircularDependencies": "循环依赖",
         "DependencyLayers": "依赖层级",
         "GraphControls": "图表控制",
@@ -180,17 +190,22 @@
         "ExportImage": "导出图片",
         "Legend": "图例",
         "NodeTypes": "节点类型",
+        "CapabilityStates": "能力状态",
         "BuiltInModule": "内置模块",
         "UIModule": "UI模块",
         "ThirdPartyModule": "第三方模块",
         "DisabledModule": "禁用模块",
         "CircularDependencyModule": "循环依赖模块",
+        "WebModule": "Web 模块",
+        "DowngradedWebModule": "已降级的 Web 模块",
         "EdgeTypes": "连线类型",
         "DirectDependency": "直接依赖",
         "TransitiveDependency": "传递依赖",
         "DependedBy": "被依赖",
         "CircularDependency": "循环依赖",
         "ModuleCategory": "模块类别",
+        "ModuleCapability": "模块能力",
+        "RuntimeMode": "运行模式",
         "ModuleStatus": "状态",
         "NodeDetails": "节点详情"
       },
@@ -199,6 +214,11 @@
         "None": "无",
         "Enabled": "启用",
         "Disabled": "禁用",
+        "WebModule": "Web 模块",
+        "NonWebModule": "非 Web 模块",
+        "WebRuntime": "Web 运行时",
+        "NonWebRuntime": "非 Web 运行时",
+        "Downgraded": "已降级为非 Web",
         "Yes": "是",
         "No": "否"
       },
@@ -211,6 +231,8 @@
         "BuiltIn": "内置模块",
         "UI": "UI模块",
         "ThirdParty": "第三方模块",
+        "Web": "Web 模块",
+        "DowngradedWeb": "已降级的 Web 模块",
         "Disabled": "禁用模块",
         "Circular": "循环依赖模块"
       },
@@ -260,6 +282,8 @@
         "RegistrationOrder": "注册顺序",
         "InitializationTime": "初始化时间",
         "ModuleStatus": "模块状态",
+        "ModuleCapability": "模块能力",
+        "RuntimeMode": "运行模式",
         "ModuleOption": "模块选项",
         "ExtraOption": "额外选项",
         "TotalDuration": "总耗时",
@@ -275,11 +299,19 @@
       "States": {
         "Enabled": "启用",
         "Disabled": "禁用",
+        "WebModule": "Web 模块",
+        "NonWebModule": "非 Web 模块",
+        "WebRuntime": "Web 运行时",
+        "NonWebRuntime": "非 Web 运行时",
+        "Downgraded": "已降级为非 Web",
         "Unknown": "Unknown"
       },
       "Messages": {
         "CircularDependencyDetected": "检测到循环依赖",
-        "CircularPath": "循环路径"
+        "CircularPath": "循环路径",
+        "DowngradedRuntimeDescription": "该模块具备 Web 能力，但当前以通用主机降级模式运行，仅执行非 Web 阶段。",
+        "WebRuntimeDescription": "该模块会参与完整的 ASP.NET Core 生命周期。",
+        "NonWebRuntimeDescription": "该模块仅提供非 Web 注册阶段。"
       }
     },
     "ModuleOption": {

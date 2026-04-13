@@ -36,7 +36,7 @@ public static class ModuleAuthenticationBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Authentication)]
-public class ModuleAuthentication(ModuleAuthenticationOption option) : ModuleBase<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
+public class ModuleAuthentication(ModuleAuthenticationOption option) : WebModuleBase<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -145,7 +145,7 @@ public class ModuleAuthentication(ModuleAuthenticationOption option) : ModuleBas
     }
 }
 
-public class ModuleAuthenticationGuide : ModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
+public class ModuleAuthenticationGuide : WebModuleGuide<ModuleAuthentication, ModuleAuthenticationOption, ModuleAuthenticationGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {

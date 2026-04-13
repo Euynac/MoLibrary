@@ -21,7 +21,7 @@ namespace Monica.Modules;
 
 [ModuleKey(BuiltInModuleKey.K8S)]
 public class ModuleK8S(ModuleK8SOption option)
-    : ModuleBase<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
+    : WebModuleBase<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -207,7 +207,7 @@ public static class ModuleK8SBuilderExtensions
     }
 }
 
-public class ModuleK8SGuide : ModuleGuide<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>
+public class ModuleK8SGuide : WebModuleGuide<ModuleK8S, ModuleK8SOption, ModuleK8SGuide>
 {
 }
 

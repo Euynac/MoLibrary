@@ -143,6 +143,22 @@
                                 @L["ModuleSystem:DependencyGraph:Types:ThirdParty"]
                             </MudChip>
                             <MudChip T="string"
+                                     Value="@("web")"
+                                     Size="Size.Small"
+                                     Variant="@GetFilterChipVariant(SelectedTypeFilters, "web")"
+                                     Color="@GetTypeFilterColor("web")"
+                                     Icon="@Icons.Material.Filled.Language">
+                                @L["ModuleSystem:DependencyGraph:Types:Web"]
+                            </MudChip>
+                            <MudChip T="string"
+                                     Value="@("downgraded-web")"
+                                     Size="Size.Small"
+                                     Variant="@GetFilterChipVariant(SelectedTypeFilters, "downgraded-web")"
+                                     Color="@GetTypeFilterColor("downgraded-web")"
+                                     Icon="@Icons.Material.Filled.ArrowDownward">
+                                @L["ModuleSystem:DependencyGraph:Types:DowngradedWeb"]
+                            </MudChip>
+                            <MudChip T="string"
                                      Value="@("disabled")"
                                      Size="Size.Small"
                                      Variant="@GetFilterChipVariant(SelectedTypeFilters, "disabled")"
@@ -262,6 +278,8 @@
         "built-in" => Color.Primary,
         "ui" => Color.Info,
         "third-party" => Color.Success,
+        "web" => Color.Secondary,
+        "downgraded-web" => Color.Warning,
         "disabled" => Color.Default,
         "cycle" => Color.Error,
         _ => Color.Default

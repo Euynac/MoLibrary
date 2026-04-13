@@ -43,7 +43,7 @@ public static class ModuleAutoControllersBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.AutoControllers)]
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
-    : ModuleBase<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IBusinessTypeIterator
+    : WebModuleBase<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IBusinessTypeIterator
 {
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
@@ -107,7 +107,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
     }
 }
 
-public class ModuleAutoControllersGuide : ModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
+public class ModuleAutoControllersGuide : WebModuleGuide<ModuleAutoControllers, ModuleAutoControllersOption,
     ModuleAutoControllersGuide>
 {
 

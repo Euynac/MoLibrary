@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Logging;
 using Monica.Core.Modularity.Models;
@@ -176,7 +175,7 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     /// <param name="context">The module registration context action.</param>
     /// <param name="order">The execution order.</param>
     /// <param name="requestMethod">The configuration method being requested.</param>
-    private void ConfigureModule(string key, string? secondKey, Action<ModuleConfigurationContext> context, int order,
+    protected internal void ConfigureModule(string key, string? secondKey, Action<ModuleConfigurationContext> context, int order,
         ModulePhase requestMethod)
     {
         var request = new ModuleConfigurationRequest($"{key}{secondKey?.BeAfter("_")}")
@@ -231,37 +230,6 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     }
 
     /// <summary>
-    /// Configures middleware in the application builder pipeline.
-    /// </summary>
-    /// <param name="context">The application builder configuration context action.</param>
-    /// <param name="order">The concrete middleware execution order.</param>
-    /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
-    /// <param name="key">The unique configuration method key.</param>
-    protected internal void ConfigureApplicationBuilder(
-        Action<ModuleApplicationConfigurationContext<TModuleOption>> context, int order,
-        string? secondKey = null, [CallerMemberName] string key = "")
-    {
-        ConfigureModule(key, secondKey, registerContext =>
-        {
-            context.Invoke(new ModuleApplicationConfigurationContext<TModuleOption>(registerContext));
-        }, order, ModulePhase.ConfigureApplicationBuilder);
-    }
-
-    /// <summary>
-    /// <inheritdoc cref="ConfigureApplicationBuilder(System.Action{ModuleApplicationConfigurationContext{TModuleOption}},int,string?,string)"/>
-    /// </summary>
-    /// <param name="context">The application builder configuration context action.</param>
-    /// <param name="order">The middleware execution order enum value.</param>
-    /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
-    /// <param name="key">The unique configuration method key.</param>
-    protected internal void ConfigureApplicationBuilder(
-        Action<ModuleApplicationConfigurationContext<TModuleOption>> context,
-        ModuleApplicationMiddlewareOrder order, string? secondKey = null, [CallerMemberName] string key = "")
-    {
-        ConfigureApplicationBuilder(context, (int)order, secondKey, key);
-    }
-
-    /// <summary>
     /// Configures post-service registration actions for the module.
     /// </summary>
     /// <param name="context">The post-service configuration context action.</param>
@@ -293,7 +261,7 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     }
 
     /// <summary>
-    /// Configures the <see cref="IHostApplicationBuilder"/> for the module.
+    /// Configures the <see cref="Microsoft.Extensions.Hosting.IHostApplicationBuilder"/> for the module.
     /// </summary>
     /// <param name="context">The builder configuration context action.</param>
     /// <param name="order">The concrete execution order value.</param>
@@ -320,38 +288,6 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     {
         ConfigureBuilder(context, (int)order, secondKey, key);
     }
-
-    /// <summary>
-    /// Configures endpoint routing for the module.
-    /// </summary>
-    /// <param name="context">The endpoint configuration context action.</param>
-    /// <param name="order">The concrete execution order value.</param>
-    /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
-    /// <param name="key">The unique configuration method key.</param>
-    protected internal void ConfigureEndpoints(
-        Action<ModuleApplicationConfigurationContext<TModuleOption>> context,
-        int order, string? secondKey = null, [CallerMemberName] string key = "")
-    {
-        ConfigureModule(key, secondKey, registerContext =>
-        {
-            context.Invoke(new ModuleApplicationConfigurationContext<TModuleOption>(registerContext));
-        }, order, ModulePhase.ConfigureEndpoints);
-    }
-
-    /// <summary>
-    /// <inheritdoc cref="ConfigureEndpoints(System.Action{ModuleApplicationConfigurationContext{TModuleOption}},int,string?,string)"/>
-    /// </summary>
-    /// <param name="context">The endpoint configuration context action.</param>
-    /// <param name="order">The execution order enum value.</param>
-    /// <param name="secondKey">A secondary key for methods that may be invoked multiple times. Use <see cref="Guid.NewGuid()"/> when repeated calls are valid.</param>
-    /// <param name="key">The unique configuration method key.</param>
-    protected internal void ConfigureEndpoints(
-        Action<ModuleApplicationConfigurationContext<TModuleOption>> context,
-        ModuleRegistrationOrder order = ModuleRegistrationOrder.Normal, string? secondKey = null, [CallerMemberName] string key = "")
-    {
-        ConfigureEndpoints(context, (int)order, secondKey, key);
-    }
-
 
     #endregion
 

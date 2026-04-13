@@ -8,7 +8,7 @@ namespace Monica.UI.UIModuleSystem.State;
 /// </summary>
 public sealed class DependencyGraphState
 {
-    private static readonly string[] AvailableTypeFilters = ["built-in", "ui", "third-party", "disabled", "cycle"];
+    private static readonly string[] AvailableTypeFilters = ["built-in", "ui", "third-party", "web", "downgraded-web", "disabled", "cycle"];
 
     /// <summary>
     /// Gets the selected graph layout.

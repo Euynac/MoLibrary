@@ -33,5 +33,10 @@ public enum ModuleRegistrationErrorType
     /// <summary>
     /// Error during module configuration.
     /// </summary>
-    ConfigurationError = 5
+    ConfigurationError = 5,
+
+    /// <summary>
+    /// Error indicating that the current host cannot satisfy a module's ASP.NET Core requirements.
+    /// </summary>
+    HostCompatibility = 6
 } 

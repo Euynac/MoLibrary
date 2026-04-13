@@ -25,7 +25,7 @@ namespace Monica.Modules;
 /// </summary>
 [ModuleKey(BuiltInModuleKey.MarkdownUI)]
 public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
-    : ModuleBase<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
+    : WebModuleBase<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>(option)
 {
     /// <summary>
     /// Configures services for the Markdown UI module.
@@ -145,7 +145,7 @@ public static class ModuleMarkdownUIBuilderExtensions
 /// <summary>
 /// Guide for the Markdown UI module.
 /// </summary>
-public class ModuleMarkdownUIGuide : ModuleGuide<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>
+public class ModuleMarkdownUIGuide : WebModuleGuide<ModuleMarkdownUI, ModuleMarkdownUIOption, ModuleMarkdownUIGuide>
 {
     /// <summary>
     /// Gets the requested configuration method keys.

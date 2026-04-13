@@ -39,7 +39,7 @@ public static class ModuleGitBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.Git)]
 public class ModuleGit(ModuleGitOption option)
-    : ModuleBase<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
+    : WebModuleBase<ModuleGit, ModuleGitOption, ModuleGitGuide>(option)
 {
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -89,7 +89,7 @@ public class ModuleGit(ModuleGitOption option)
 /// <summary>
 /// Fluent guide for the Git synchronization module.
 /// </summary>
-public class ModuleGitGuide : ModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
+public class ModuleGitGuide : WebModuleGuide<ModuleGit, ModuleGitOption, ModuleGitGuide>
 {
     /// <summary>
     /// Sets which synchronization triggers are enabled.

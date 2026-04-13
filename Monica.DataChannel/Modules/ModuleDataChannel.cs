@@ -18,7 +18,7 @@ namespace Monica.Modules;
 
 [ModuleKey(BuiltInModuleKey.DataChannel)]
 public class ModuleDataChannel(ModuleDataChannelOption option)
-    : ModuleBase<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
+    : WebModuleBase<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -133,7 +133,7 @@ public static class ModuleDataChannelBuilderExtensions
     }
 }
 
-public class ModuleDataChannelGuide : ModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
+public class ModuleDataChannelGuide : WebModuleGuide<ModuleDataChannel, ModuleDataChannelOption, ModuleDataChannelGuide>
 {
 
     protected override string[] GetRequestedConfigMethodKeys()

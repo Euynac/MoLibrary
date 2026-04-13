@@ -36,7 +36,7 @@ public static class ModuleSystemInfoUIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.SystemInfoUI)]
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
-    : ModuleBase<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
+    : WebModuleBase<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -86,7 +86,7 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 /// <summary>
 /// SystemInfoUI module guide.
 /// </summary>
-public class ModuleSystemInfoUIGuide : ModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
+public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
 {
     /// <summary>
     /// Adds a custom shortcut link to the system information page.

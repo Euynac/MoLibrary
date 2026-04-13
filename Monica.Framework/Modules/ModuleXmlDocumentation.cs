@@ -33,7 +33,7 @@ public static class ModuleXmlDocumentationBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.XmlDocumentation)]
 public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
-    : ModuleBase<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
+    : WebModuleBase<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>(option)
 {
     public static IXmlDocumentationService? Singleton { get; private set; }
 
@@ -108,7 +108,7 @@ public class ModuleXmlDocumentation(ModuleXmlDocumentationOption option)
     }
 }
 
-public class ModuleXmlDocumentationGuide : ModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
+public class ModuleXmlDocumentationGuide : WebModuleGuide<ModuleXmlDocumentation, ModuleXmlDocumentationOption, ModuleXmlDocumentationGuide>
 {
 }
 

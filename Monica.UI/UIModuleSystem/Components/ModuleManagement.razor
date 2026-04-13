@@ -51,6 +51,24 @@
                             <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
                                 <div class="d-flex justify-space-between align-center">
                                     <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:ModuleManagement:Labels:WebModules"]</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Info">@GetWebModuleCount().ToString()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.Language" Color="Color.Info" Size="Size.Large" />
+                                </div>
+                            </MudPaper>
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:ModuleManagement:Labels:DowngradedModules"]</MudText>
+                                        <MudText Typo="Typo.h4" Color="Color.Secondary">@GetDowngradedWebModuleCount().ToString()</MudText>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Secondary" Size="Size.Large" />
+                                </div>
+                            </MudPaper>
+                            <MudPaper Class="pa-4 modern-stat-card" Elevation="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
                                         <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:ModuleManagement:Labels:TotalInitTime"]</MudText>
                                         <MudText Typo="Typo.h4" Color="Color.Info">@($"{RegistrationInfo.Statistics.TotalInitializationTimeMs}ms")</MudText>
                                     </div>
@@ -116,6 +134,26 @@
                                                Icon="@(context.Item.IsDisabled ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)">
                                             @(context.Item.IsDisabled ? L["ModuleSystem:ModuleManagement:States:Disabled"] : L["ModuleSystem:ModuleManagement:States:Enabled"])
                                         </MudChip>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="@L["ModuleSystem:ModuleManagement:Labels:RuntimeMode"]">
+                                    <CellTemplate>
+                                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                            <MudChip T="string"
+                                                     Color="@GetCapabilityColor(context.Item)"
+                                                     Variant="Variant.Outlined"
+                                                     Size="Size.Small"
+                                                     Icon="@GetCapabilityIcon(context.Item)">
+                                                @GetCapabilityLabel(context.Item)
+                                            </MudChip>
+                                            <MudChip T="string"
+                                                     Color="@GetRuntimeModeColor(context.Item)"
+                                                     Size="Size.Small"
+                                                     Variant="@(context.Item.IsDowngradedFromWebModule ? Variant.Filled : Variant.Outlined)"
+                                                     Icon="@GetRuntimeModeIcon(context.Item)">
+                                                @GetRuntimeModeLabel(context.Item)
+                                            </MudChip>
+                                        </MudStack>
                                     </CellTemplate>
                                 </TemplateColumn>
                                 <PropertyColumn Property="x => x.Order" Title="@L["ModuleSystem:ModuleManagement:Labels:Order"]" />
@@ -225,6 +263,29 @@
     }
 
     /// <summary>
+    /// Gets all modules in the current registration snapshot.
+    /// </summary>
+    private IEnumerable<ModuleBasicInfo> GetAllModules()
+    {
+        if (RegistrationInfo == null)
+        {
+            return [];
+        }
+
+        return RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules);
+    }
+
+    /// <summary>
+    /// Gets the count of modules that can participate in the web lifecycle.
+    /// </summary>
+    private int GetWebModuleCount() => GetAllModules().Count(module => module.IsWebModule);
+
+    /// <summary>
+    /// Gets the count of modules currently downgraded to non-web runtime.
+    /// </summary>
+    private int GetDowngradedWebModuleCount() => GetAllModules().Count(module => module.IsDowngradedFromWebModule);
+
+    /// <summary>
     /// Get initialization time color
     /// </summary>
     /// <param name="timeMs">Time in milliseconds</param>
@@ -246,9 +307,74 @@
     {
         if (RegistrationInfo == null) return 0;
         
-        var allModules = RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules);
+        var allModules = GetAllModules();
         var maxTime = allModules.Max(m => m.InitializationTimeMs);
         
         return maxTime > 0 ? (double)timeMs / maxTime * 100 : 0;
     }
-} 
+
+    /// <summary>
+    /// Gets the capability label for a module.
+    /// </summary>
+    private string GetCapabilityLabel(ModuleBasicInfo module)
+    {
+        return module.IsWebModule
+            ? L["ModuleSystem:ModuleManagement:States:WebModule"]
+            : L["ModuleSystem:ModuleManagement:States:NonWebModule"];
+    }
+
+    /// <summary>
+    /// Gets the runtime mode label for a module.
+    /// </summary>
+    private string GetRuntimeModeLabel(ModuleBasicInfo module)
+    {
+        if (module.IsDowngradedFromWebModule)
+        {
+            return L["ModuleSystem:ModuleManagement:States:Downgraded"];
+        }
+
+        return module.IsWebModule
+            ? L["ModuleSystem:ModuleManagement:States:WebRuntime"]
+            : L["ModuleSystem:ModuleManagement:States:NonWebRuntime"];
+    }
+
+    /// <summary>
+    /// Gets the capability chip color.
+    /// </summary>
+    private static Color GetCapabilityColor(ModuleBasicInfo module) => module.IsWebModule ? Color.Info : Color.Default;
+
+    /// <summary>
+    /// Gets the runtime mode chip color.
+    /// </summary>
+    private static Color GetRuntimeModeColor(ModuleBasicInfo module)
+    {
+        if (module.IsDowngradedFromWebModule)
+        {
+            return Color.Warning;
+        }
+
+        return module.IsWebModule ? Color.Success : Color.Secondary;
+    }
+
+    /// <summary>
+    /// Gets the capability chip icon.
+    /// </summary>
+    private static string GetCapabilityIcon(ModuleBasicInfo module) => module.IsWebModule
+        ? Icons.Material.Filled.Language
+        : Icons.Material.Filled.Memory;
+
+    /// <summary>
+    /// Gets the runtime mode chip icon.
+    /// </summary>
+    private static string GetRuntimeModeIcon(ModuleBasicInfo module)
+    {
+        if (module.IsDowngradedFromWebModule)
+        {
+            return Icons.Material.Filled.ArrowDownward;
+        }
+
+        return module.IsWebModule
+            ? Icons.Material.Filled.CloudDone
+            : Icons.Material.Filled.Storage;
+    }
+}

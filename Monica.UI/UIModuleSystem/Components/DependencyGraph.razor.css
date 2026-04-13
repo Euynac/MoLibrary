@@ -13,8 +13,9 @@
 .dependency-graph-container ::deep .dependency-graph-top-card {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     width: 100%;
-    height: 100%;
+    height: auto;
     border-radius: 12px;
     transition: all 0.3s ease;
     border: 1px solid rgba(var(--mud-palette-divider-rgb), 0.12);
@@ -44,7 +45,7 @@
 
 @media (min-width: 1280px) {
     .dependency-graph-container ::deep .dependency-graph-top-card {
-        height: 28rem;
+        min-height: 28rem;
     }
 }
 

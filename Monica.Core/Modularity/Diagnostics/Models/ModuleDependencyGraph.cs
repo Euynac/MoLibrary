@@ -69,6 +69,16 @@ public class ModuleDependencyNode
     public bool IsUIModule { get; set; }
 
     /// <summary>
+    /// Indicates whether the module participates in the ASP.NET Core lifecycle when available.
+    /// </summary>
+    public bool IsWebModule { get; set; }
+
+    /// <summary>
+    /// Indicates whether the module is currently running in downgraded non-web mode.
+    /// </summary>
+    public bool IsDowngradedFromWebModule { get; set; }
+
+    /// <summary>
     /// Indicates whether the module comes from a third-party source.
     /// </summary>
     public bool IsThirdPartyModule { get; set; }

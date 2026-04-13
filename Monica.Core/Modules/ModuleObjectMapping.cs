@@ -37,7 +37,7 @@ public static class ModuleObjectMappingBuilderExtensions
 /// Provides the Mapster-based object mapping capability.
 /// </summary>
 [ModuleKey(BuiltInModuleKey.ObjectMapping)]
-public class ModuleObjectMapping(ModuleObjectMappingOption option) : ModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
+public class ModuleObjectMapping(ModuleObjectMappingOption option) : WebModuleBase<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -103,7 +103,7 @@ public class ModuleObjectMapping(ModuleObjectMappingOption option) : ModuleBase<
     }
 }
 
-public class ModuleObjectMappingGuide : ModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
+public class ModuleObjectMappingGuide : WebModuleGuide<ModuleObjectMapping, ModuleObjectMappingOption, ModuleObjectMappingGuide>
 {
 }
 

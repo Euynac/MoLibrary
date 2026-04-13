@@ -65,6 +65,11 @@ public class ModuleRegistrationState(Type moduleType)
     /// </summary>
     public ModuleBase? ModuleSingleton { get; internal set; }
 
+    /// <summary>
+    /// Indicates whether a web module is currently running in downgraded non-web mode.
+    /// </summary>
+    public bool IsDowngradedFromWebModule { get; internal set; }
+
     public void SetModulePhase(ModulePhase phase)
     {
         ModulePhase = phase;

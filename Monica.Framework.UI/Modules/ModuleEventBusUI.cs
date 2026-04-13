@@ -35,7 +35,7 @@ public static class ModuleEventBusUIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.EventBusUI)]
 public class ModuleEventBusUI(ModuleEventBusUIOption option)
-    : ModuleBase<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
+    : WebModuleBase<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -161,7 +161,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
 /// <summary>
 /// EventBusUI Module Wizard
 /// </summary>
-public class ModuleEventBusUIGuide : ModuleGuide<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>
+public class ModuleEventBusUIGuide : WebModuleGuide<ModuleEventBusUI, ModuleEventBusUIOption, ModuleEventBusUIGuide>
 {
 }
 

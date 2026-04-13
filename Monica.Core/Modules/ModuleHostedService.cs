@@ -33,7 +33,7 @@ public static class ModuleHostedServiceBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.HostedService)]
 public class ModuleHostedService(ModuleHostedServiceOption option)
-    : ModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
+    : WebModuleBase<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -65,7 +65,7 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 /// Fluent configuration guide for the HostedService observability module
 /// </summary>
 public class ModuleHostedServiceGuide
-    : ModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>
+    : WebModuleGuide<ModuleHostedService, ModuleHostedServiceOption, ModuleHostedServiceGuide>
 {
 }
 

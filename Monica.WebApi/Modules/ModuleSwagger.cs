@@ -17,7 +17,7 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 namespace Monica.Modules;
 
 [ModuleKey(BuiltInModuleKey.Swagger)]
-public class ModuleSwagger(ModuleSwaggerOption option) : ModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
+public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
 
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
@@ -147,7 +147,7 @@ public static class ModuleSwaggerBuilderExtensions
     }
 }
 
-public class ModuleSwaggerGuide : ModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
+public class ModuleSwaggerGuide : WebModuleGuide<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>
 {
 }
 

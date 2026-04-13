@@ -34,7 +34,7 @@ public static class ModuleProjectUnitsBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.ProjectUnits)]
 public class ModuleProjectUnits(ModuleProjectUnitsOption option)
-    : ModuleBase<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(option), IBusinessTypeIterator
+    : WebModuleBase<ModuleProjectUnits, ModuleProjectUnitsOption, ModuleProjectUnitsGuide>(option), IBusinessTypeIterator
 {
 
     public override void ClaimDependencies()
@@ -160,7 +160,7 @@ public class ModuleProjectUnits(ModuleProjectUnitsOption option)
     }
 }
 
-public class ModuleProjectUnitsGuide : ModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
+public class ModuleProjectUnitsGuide : WebModuleGuide<ModuleProjectUnits, ModuleProjectUnitsOption,
     ModuleProjectUnitsGuide>
 {
 

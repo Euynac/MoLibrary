@@ -38,7 +38,7 @@ public static class ModuleRuntimeMetricsBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.RuntimeMetrics)]
 public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
-    : ModuleBase<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(option)
+    : WebModuleBase<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -74,7 +74,7 @@ public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
 /// Fluent guide for the runtime metrics module.
 /// </summary>
 public class ModuleRuntimeMetricsGuide
-    : ModuleGuide<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>
+    : WebModuleGuide<ModuleRuntimeMetrics, ModuleRuntimeMetricsOption, ModuleRuntimeMetricsGuide>
 {
 }
 

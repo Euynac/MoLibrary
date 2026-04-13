@@ -143,6 +143,8 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
                     : [],
                 InitializationTimeMs = 0,
                 IsDisabled = true,
+                IsWebModule = typeof(IWebModule).IsAssignableFrom(moduleType),
+                IsDowngradedFromWebModule = false,
                 HasErrors = false
             };
             disabledModules.Add(basicInfo);
@@ -212,6 +214,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     public ModuleDependencyGraph GetDependencyGraph()
     {
         var graph = ModuleDependencyAnalyzer.CalculateCompleteModuleDependencyGraph();
+        var moduleSnapshotsByKey = ModuleRegistry.ModuleSnapshots.ToDictionary(snapshot => snapshot.ModuleKey);
         var nodes = new List<ModuleDependencyNode>();
         var edges = new List<ModuleDependencyEdge>();
         var edgeKeys = new HashSet<(ModuleKey Source, ModuleKey Target, DependencyType Type)>();
@@ -220,9 +223,13 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         foreach (var moduleKey in graph.Nodes)
         {
             var moduleType = ModuleDependencyAnalyzer.ModuleKeyToTypeDict.GetValueOrDefault(moduleKey);
+            moduleSnapshotsByKey.TryGetValue(moduleKey, out var snapshot);
 
             var isEnabled = moduleType != null && !ModuleStateRegistry.IsModuleDisabled(moduleType);
             var status = GetModuleStatus(moduleKey, moduleType);
+            var isWebModule = snapshot?.IsWebModule
+                ?? (moduleType != null && typeof(IWebModule).IsAssignableFrom(moduleType));
+            var isDowngradedFromWebModule = snapshot?.IsDowngradedFromWebModule ?? false;
 
             var dependencies = ModuleDependencyAnalyzer.CalculateModuleDependencies(moduleKey);
             var directDeps = ModuleDependencyAnalyzer.ModuleDependencyMap.TryGetValue(moduleKey, out var directDependencies)
@@ -239,6 +246,8 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
                 ModuleTypeName = moduleType?.Name ?? "Unknown",
                 IsEnabled = isEnabled,
                 IsUIModule = moduleKey.IsUIModule,
+                IsWebModule = isWebModule,
+                IsDowngradedFromWebModule = isDowngradedFromWebModule,
                 IsThirdPartyModule = !moduleKey.IsBuiltIn,
                 DirectDependencyCount = directDeps,
                 TotalDependencyCount = dependencies.Count,
@@ -427,6 +436,8 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
             Dependencies = dependencies,
             InitializationTimeMs = snapshot.TotalInitializationDurationMs,
             IsDisabled = false,
+            IsWebModule = snapshot.IsWebModule,
+            IsDowngradedFromWebModule = snapshot.IsDowngradedFromWebModule,
             HasErrors = hasErrors
         };
     }
@@ -450,6 +461,8 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
         var configInfo = new ModuleConfigInfo
         {
             IsDisabled = false,
+            IsWebModule = snapshot.IsWebModule,
+            IsDowngradedFromWebModule = snapshot.IsDowngradedFromWebModule,
             ConfigurationItems = [], // This may later be populated from concrete module configuration data.
             ConfiguredOptions = CreateConfiguredOptions(snapshot.RegisterInfo),
             RegisterRequestCount = snapshot.RegisterInfo.RegisterRequests.Count,

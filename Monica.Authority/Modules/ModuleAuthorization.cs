@@ -32,7 +32,7 @@ public static class ModuleAuthorizationBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Authority)]
-public class ModuleAuthorization(ModuleAuthorizationOption option) : ModuleBase<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
+public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBase<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -70,7 +70,7 @@ public class ModuleAuthorization(ModuleAuthorizationOption option) : ModuleBase<
     }
 }
 
-public class ModuleAuthorizationGuide : ModuleGuide<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>
+public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {

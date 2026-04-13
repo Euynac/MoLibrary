@@ -43,7 +43,7 @@ public static class ModuleConfigurationBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Configuration)]
-public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
+public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
 {
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
@@ -191,7 +191,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : ModuleBase<
    
 }
 
-public class ModuleConfigurationGuide : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
+public class ModuleConfigurationGuide : WebModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
     /// <summary>
     /// Configures the history store used for configuration update and rollback records.

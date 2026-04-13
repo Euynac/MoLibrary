@@ -41,6 +41,28 @@
                     <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
                         <div class="d-flex justify-space-between align-center">
                             <div>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@L["ModuleSystem:DependencyGraph:Labels:WebModules"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Secondary">@GetWebModuleCount().ToString()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Language" Color="Color.Secondary" Size="Size.Large" />
+                        </div>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
+                                <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:DependencyGraph:Labels:DowngradedWebModules"]</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Warning">@GetDowngradedWebModuleCount().ToString()</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Warning" Size="Size.Large" />
+                        </div>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" lg="6">
+                    <MudPaper Class="pa-4 overview-stat-card" Elevation="2">
+                        <div class="d-flex justify-space-between align-center">
+                            <div>
                                 <MudText Typo="Typo.subtitle1" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@L["ModuleSystem:DependencyGraph:Labels:CircularDependencies"]</MudText>
                                 <MudText Typo="Typo.h5" Color="@(DependencyGraphData.HasCircularDependencies ? Color.Warning : Color.Success)">@(DependencyGraphData.HasCircularDependencies ? L["ModuleSystem:DependencyGraph:States:Exists"] : L["ModuleSystem:DependencyGraph:States:None"])</MudText>
                             </div>
@@ -74,4 +96,8 @@
 @code {
     [Parameter]
     public required ModuleDependencyGraph DependencyGraphData { get; set; }
+
+    private int GetWebModuleCount() => DependencyGraphData.Nodes.Count(node => node.IsWebModule);
+
+    private int GetDowngradedWebModuleCount() => DependencyGraphData.Nodes.Count(node => node.IsDowngradedFromWebModule);
 }

@@ -31,7 +31,7 @@ public static class ModuleAutoModelBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.AutoModel)]
-public class ModuleAutoModel(ModuleAutoModelOption option) : ModuleBase<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
+public class ModuleAutoModel(ModuleAutoModelOption option) : WebModuleBase<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -85,7 +85,7 @@ public class ModuleAutoModel(ModuleAutoModelOption option) : ModuleBase<ModuleAu
     }
 }
 
-public class ModuleAutoModelGuide : ModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
+public class ModuleAutoModelGuide : WebModuleGuide<ModuleAutoModel, ModuleAutoModelOption, ModuleAutoModelGuide>
 {
 
 }

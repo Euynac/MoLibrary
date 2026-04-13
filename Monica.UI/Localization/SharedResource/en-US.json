@@ -82,10 +82,13 @@
         "TotalModules": "Total Modules",
         "EnabledModules": "Enabled Modules",
         "DisabledModules": "Disabled Modules",
+        "WebModules": "Web-capable Modules",
+        "DowngradedModules": "Downgraded Web Modules",
         "TotalInitTime": "Total Init Time",
         "ModuleDistribution": "Module Distribution",
         "ModuleName": "Module Name",
         "Status": "Status",
+        "RuntimeMode": "Runtime Mode",
         "Order": "Order",
         "InitTime": "Init Time",
         "Dependencies": "Dependencies",
@@ -93,7 +96,12 @@
       },
       "States": {
         "Enabled": "Enabled",
-        "Disabled": "Disabled"
+        "Disabled": "Disabled",
+        "WebModule": "Web Module",
+        "NonWebModule": "Non-Web Module",
+        "WebRuntime": "Web Runtime",
+        "NonWebRuntime": "Non-Web Runtime",
+        "Downgraded": "Downgraded to Non-Web"
       },
       "Loading": {
         "Statistics": "Loading module statistics...",
@@ -165,6 +173,8 @@
         "DependencyOverview": "Dependency Overview",
         "TotalNodes": "Total Nodes",
         "TotalDependencies": "Total Dependencies",
+        "WebModules": "Web-capable Modules",
+        "DowngradedWebModules": "Downgraded Web Modules",
         "CircularDependencies": "Circular Dependencies",
         "DependencyLayers": "Dependency Layers",
         "GraphControls": "Graph Controls",
@@ -180,17 +190,22 @@
         "ExportImage": "Export Image",
         "Legend": "Legend",
         "NodeTypes": "Node Types",
+        "CapabilityStates": "Capability States",
         "BuiltInModule": "Built-in Module",
         "UIModule": "UI Module",
         "ThirdPartyModule": "Third-party Module",
         "DisabledModule": "Disabled Module",
         "CircularDependencyModule": "Circular Dependency Module",
+        "WebModule": "Web Module",
+        "DowngradedWebModule": "Downgraded Web Module",
         "EdgeTypes": "Edge Types",
         "DirectDependency": "Direct Dependency",
         "TransitiveDependency": "Transitive Dependency",
         "DependedBy": "Depended By",
         "CircularDependency": "Circular Dependency",
         "ModuleCategory": "Module Category",
+        "ModuleCapability": "Module Capability",
+        "RuntimeMode": "Runtime Mode",
         "ModuleStatus": "Status",
         "NodeDetails": "Node Details"
       },
@@ -199,6 +214,11 @@
         "None": "None",
         "Enabled": "Enabled",
         "Disabled": "Disabled",
+        "WebModule": "Web Module",
+        "NonWebModule": "Non-Web Module",
+        "WebRuntime": "Web Runtime",
+        "NonWebRuntime": "Non-Web Runtime",
+        "Downgraded": "Downgraded to Non-Web",
         "Yes": "Yes",
         "No": "No"
       },
@@ -211,6 +231,8 @@
         "BuiltIn": "Built-in Module",
         "UI": "UI Module",
         "ThirdParty": "Third-party Module",
+        "Web": "Web Module",
+        "DowngradedWeb": "Downgraded Web Module",
         "Disabled": "Disabled Module",
         "Circular": "Circular Dependency Module"
       },
@@ -260,6 +282,8 @@
         "RegistrationOrder": "Registration Order",
         "InitializationTime": "Initialization Time",
         "ModuleStatus": "Module Status",
+        "ModuleCapability": "Module Capability",
+        "RuntimeMode": "Runtime Mode",
         "ModuleOption": "Module Option",
         "ExtraOption": "Extra Option",
         "TotalDuration": "Total Duration",
@@ -275,11 +299,19 @@
       "States": {
         "Enabled": "Enabled",
         "Disabled": "Disabled",
+        "WebModule": "Web Module",
+        "NonWebModule": "Non-Web Module",
+        "WebRuntime": "Web Runtime",
+        "NonWebRuntime": "Non-Web Runtime",
+        "Downgraded": "Downgraded to Non-Web",
         "Unknown": "Unknown"
       },
       "Messages": {
         "CircularDependencyDetected": "Circular Dependency Detected",
-        "CircularPath": "Circular Path"
+        "CircularPath": "Circular Path",
+        "DowngradedRuntimeDescription": "This web-capable module is active in generic-host downgrade mode and only runs non-web phases.",
+        "WebRuntimeDescription": "This module participates in the full ASP.NET Core lifecycle.",
+        "NonWebRuntimeDescription": "This module only exposes non-web registration phases."
       }
     },
     "ModuleOption": {

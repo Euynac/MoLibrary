@@ -41,7 +41,7 @@ public static class ModuleShellUIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.UICore)]
 public class ModuleShellUI(ModuleShellUIOption option)
-    : ModuleBase<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(option)
+    : WebModuleBase<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>(option)
 {
     /// <summary>
     /// Declare module dependencies
@@ -117,7 +117,7 @@ public class ModuleShellUI(ModuleShellUIOption option)
 /// <summary>
 /// Shell UI module configuration guide.
 /// </summary>
-public class ModuleShellUIGuide : ModuleGuide<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>
+public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOption, ModuleShellUIGuide>
 {
 
     /// <summary>

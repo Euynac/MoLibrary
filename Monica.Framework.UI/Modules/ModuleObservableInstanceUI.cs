@@ -34,7 +34,7 @@ public static class ModuleObservableInstanceUIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.ObservableInstanceUI)]
 public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
-    : ModuleBase<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
+    : WebModuleBase<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -163,7 +163,7 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
 /// <summary>
 /// ObservableInstanceUI module guide
 /// </summary>
-public class ModuleObservableInstanceUIGuide : ModuleGuide<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>
+public class ModuleObservableInstanceUIGuide : WebModuleGuide<ModuleObservableInstanceUI, ModuleObservableInstanceUIOption, ModuleObservableInstanceUIGuide>
 {
 }
 

@@ -33,12 +33,16 @@ public static class ModuleLocalizationBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.Localization)]
 public class ModuleLocalization(ModuleLocalizationOption option)
-    : ModuleBase<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IBusinessTypeIterator
+    : WebModuleBase<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IBusinessTypeIterator
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
     private readonly List<Type> _discoveredResourceMarkerTypes = [];
 
-    
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -98,7 +102,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     }
 }
 
-public class ModuleLocalizationGuide : ModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
+public class ModuleLocalizationGuide : WebModuleGuide<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>
 {
     public ModuleLocalizationGuide()
     {
@@ -162,4 +166,3 @@ public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
     /// </summary>
     public List<Type> ResourceMarkerTypes { get; set; } = [];
 }
-

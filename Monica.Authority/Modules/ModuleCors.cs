@@ -24,11 +24,11 @@ public static class ModuleCorsBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Cors)]
-public class ModuleCors(ModuleCorsOption option) : ModuleBase<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
+public class ModuleCors(ModuleCorsOption option) : WebModuleBase<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
 {
 }
 
-public class ModuleCorsGuide : ModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
+public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
 {
     /// <summary>
     /// Configure a permissive CORS policy (intended for development/testing).

@@ -26,7 +26,7 @@ public static class ModuleSeederBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Seeder)]
-public class ModuleSeeder(ModuleSeederOption option) : ModuleBase<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IBusinessTypeIterator
+public class ModuleSeeder(ModuleSeederOption option) : WebModuleBase<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>(option), IBusinessTypeIterator
 {
     private readonly List<Type> _seedTypes = [];
 
@@ -60,7 +60,7 @@ public class ModuleSeeder(ModuleSeederOption option) : ModuleBase<ModuleSeeder, 
     }
 }
 
-public class ModuleSeederGuide : ModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>
+public class ModuleSeederGuide : WebModuleGuide<ModuleSeeder, ModuleSeederOption, ModuleSeederGuide>
 {
 
 }

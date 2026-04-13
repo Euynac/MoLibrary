@@ -36,8 +36,13 @@ public static class ModuleLoggingBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Logging)]
-public class ModuleLogging(ModuleLoggingOption option) : ModuleBase<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
+public class ModuleLogging(ModuleLoggingOption option) : WebModuleBase<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>(option)
 {
+    public override bool CanDowngradeToNonWebModule()
+    {
+        return true;
+    }
+
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
         Log.Logger = SerilogLoggingBootstrapper.CreateLogger(builder.Configuration, option);
@@ -54,7 +59,7 @@ public class ModuleLogging(ModuleLoggingOption option) : ModuleBase<ModuleLoggin
     }
 }
 
-public class ModuleLoggingGuide : ModuleGuide<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>
+public class ModuleLoggingGuide : WebModuleGuide<ModuleLogging, ModuleLoggingOption, ModuleLoggingGuide>
 {
     public ModuleLoggingGuide AddRequestResponseLoggingMiddleware(bool disableResponse = false, bool disableRequest = false)
     {

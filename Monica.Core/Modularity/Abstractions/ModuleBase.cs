@@ -1,6 +1,4 @@
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,26 +8,37 @@ using Monica.Core.Modularity.Services.Support;
 
 namespace Monica.Core.Modularity.Abstractions;
 
-public abstract class ModuleBase : IWebModule
+/// <summary>
+/// Base type for Monica modules that participate only in the host-builder and service-registration lifecycle.
+/// </summary>
+public abstract class ModuleBase : IModule
 {
+    /// <summary>
+    /// Gets the resolved module key declared on the concrete module type.
+    /// </summary>
     public ModuleKey ModuleKey => ModuleDependencyAnalyzer.ResolveModuleKey(GetType());
 
+    /// <summary>
+    /// Configures the host application builder.
+    /// </summary>
+    /// <param name="builder">The host application builder.</param>
     public virtual void ConfigureBuilder(IHostApplicationBuilder builder)
     {
     }
 
+    /// <summary>
+    /// Configures service registrations for the module.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
     public virtual void ConfigureServices(IServiceCollection services)
     {
     }
-  
-    public virtual void PostConfigureServices(IServiceCollection services)
-    {
-    }
-    public virtual void ConfigureApplicationBuilder(IApplicationBuilder app)
-    {
-    }
 
-    public virtual void ConfigureEndpoints(IApplicationBuilder app)
+    /// <summary>
+    /// Configures post-service registration actions after business-type iteration finishes.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    public virtual void PostConfigureServices(IServiceCollection services)
     {
     }
 
@@ -39,7 +48,6 @@ public abstract class ModuleBase : IWebModule
 
 /// <summary>
 /// Base abstract class for Monica modules.
-/// Provides the default implementation of <see cref="IWebModule"/>.
 /// </summary>
 public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModuleOption option) : ModuleBase, IModuleRequirementChecker, IModuleDependencyDeclarer
     where TModuleOption : ModuleOptions<TModuleSelf>, new() 
@@ -93,36 +101,16 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
         {
             PostConfigureServices(context.Services);
         }, -1);
-
-        guide.ConfigureApplicationBuilder(context =>
-        {
-            ConfigureApplicationBuilder(context.ApplicationBuilder);
-        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
-        
-        guide.ConfigureEndpoints(context =>
-        {
-            ConfigureEndpoints(context.ApplicationBuilder);
-        }, -1);
     }
-    
 
     public void CheckRequiredMethod(string methodName, string? errorDetail = null)
     {
         new TModuleGuide().CheckRequiredMethod(methodName, errorDetail);
     }
 
-    protected void UseEndpoints(IApplicationBuilder builder, Action<IEndpointRouteBuilder> configure)
-    {
-        if (Option is IMinimalApiModuleOptions option && option.GetIsMinimalApiDisabled())
-        {
-            return;
-        }
-        builder.UseEndpoints(configure);
-    }
     public virtual void ClaimDependencies()
     {
     }
-
 
     [MustUseReturnValue]
     protected TOtherModuleGuide DependsOnModule<TOtherModuleGuide>()

@@ -22,7 +22,7 @@ namespace Monica.Modules;
 
 [ModuleKey(BuiltInModuleKey.FileOps)]
 public class ModuleFileOps(ModuleFileOpsOption option)
-    : ModuleBase<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(option)
+    : WebModuleBase<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -211,7 +211,7 @@ public static class ModuleFileOpsBuilderExtensions
     }
 }
 
-public class ModuleFileOpsGuide : ModuleGuide<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>
+public class ModuleFileOpsGuide : WebModuleGuide<ModuleFileOps, ModuleFileOpsOption, ModuleFileOpsGuide>
 {
 }
 

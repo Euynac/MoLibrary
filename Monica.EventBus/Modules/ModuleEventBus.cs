@@ -33,7 +33,7 @@ public static class ModuleEventBusBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.EventBus)]
 public class ModuleEventBus(ModuleEventBusOption option)
-    : ModuleBase<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
+    : WebModuleBase<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>(option),
       IBusinessTypeIterator
 {
     private readonly EventBusAutoDiscovery _autoDiscovery = new();
@@ -89,7 +89,7 @@ public class ModuleEventBus(ModuleEventBusOption option)
     }
 }
 
-public class ModuleEventBusGuide : ModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
+public class ModuleEventBusGuide : WebModuleGuide<ModuleEventBus, ModuleEventBusOption, ModuleEventBusGuide>
 {
     /// <summary>
     /// Registers the shared distributed event bus provider for the default EventBus instance

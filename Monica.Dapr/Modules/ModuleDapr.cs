@@ -26,7 +26,7 @@ public static class ModuleDaprBuilderExtensions
 }
 
 [ModuleKey(BuiltInModuleKey.Dapr)]
-public class ModuleDapr(ModuleDaprOption option) : ModuleBase<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
+public class ModuleDapr(ModuleDaprOption option) : WebModuleBase<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -56,7 +56,7 @@ public class ModuleDapr(ModuleDaprOption option) : ModuleBase<ModuleDapr, Module
     }
 }
 
-public class ModuleDaprGuide : ModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>
+public class ModuleDaprGuide : WebModuleGuide<ModuleDapr, ModuleDaprOption, ModuleDaprGuide>
 {
 
 }

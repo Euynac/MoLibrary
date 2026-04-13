@@ -146,6 +146,7 @@ public static class ModuleRegistry
             }
         }
         ModuleStateRegistry.Init();
+        ValidateWebModuleCompatibility(builder);
         // 2.1 Validate required configuration for every initialized module.
         ModuleErrorRegistry.ValidateModuleRequirements(ModuleRegisterContextDict.Where(p => p.Value.ModulePhase == ModulePhase.InitFinalConfigures).ToDictionary());
         ModuleInitializationProfiler.StopPhase(nameof(ModulePhase.InitFinalConfigures));
@@ -267,7 +268,10 @@ public static class ModuleRegistry
 
         Func<ModuleConfigurationRequest, bool> filter = afterGivenOrder ? request => request.Order > order : request => request.Order <= order;
         // Execute application builder requests in priority order.
-        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase is ModulePhase.PostConfigureServices or ModulePhase.ConfigureApplicationBuilder))
+        foreach (var module in ModuleSnapshots.Where(p =>
+                     p.ModuleInstance is IWebModule &&
+                     !p.RegisterInfo.IsDowngradedFromWebModule &&
+                     p.RegisterInfo.ModulePhase is (ModulePhase.PostConfigureServices or ModulePhase.ConfigureApplicationBuilder)))
         {
             module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureApplicationBuilder);
 
@@ -303,7 +307,10 @@ public static class ModuleRegistry
         ModuleInitializationProfiler.StartPhase(nameof(ModulePhase.ConfigureEndpoints));
 
         // Execute endpoint configuration requests in priority order.
-        foreach (var module in ModuleSnapshots.Where(p => p.RegisterInfo.ModulePhase == ModulePhase.ConfigureApplicationBuilder))
+        foreach (var module in ModuleSnapshots.Where(p =>
+                     p.ModuleInstance is IWebModule &&
+                     !p.RegisterInfo.IsDowngradedFromWebModule &&
+                     p.RegisterInfo.ModulePhase == ModulePhase.ConfigureApplicationBuilder))
         {
             module.RegisterInfo.StartModulePhase(ModulePhase.ConfigureEndpoints);
 
@@ -368,5 +375,40 @@ public static class ModuleRegistry
                         && provider.ProvidesFor == targetModuleKey)
             .Select(s => (TProvider)s.ModuleInstance)
             .ToList();
+    }
+
+    private static void ValidateWebModuleCompatibility(IHostApplicationBuilder builder)
+    {
+        if (builder is WebApplicationBuilder)
+        {
+            return;
+        }
+
+        foreach (var (moduleType, info) in ModuleRegisterContextDict
+                     .Where(entry => entry.Value.ModulePhase == ModulePhase.InitFinalConfigures)
+                     .OrderBy(entry => entry.Value.Order))
+        {
+            if (info.ModuleSingleton is not IWebModule webModule)
+            {
+                continue;
+            }
+
+            if (webModule.CanDowngradeToNonWebModule())
+            {
+                info.IsDowngradedFromWebModule = true;
+                Logger.LogInformation(
+                    "Module {ModuleName} is running in downgraded non-web mode because the current host is {HostBuilderType}.",
+                    moduleType.Name,
+                    builder.GetType().FullName);
+                continue;
+            }
+
+            var moduleKey = ModuleDependencyAnalyzer.ResolveModuleKey(moduleType);
+            ModuleErrorRegistry.RecordHostCompatibilityError(
+                moduleType,
+                $"Module {moduleType.Name} ({moduleKey}) requires an ASP.NET Core host and cannot downgrade to a non-web module.");
+        }
+
+        ModuleErrorRegistry.RaiseModuleErrors();
     }
 }

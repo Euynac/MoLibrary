@@ -42,7 +42,7 @@ public static class ModuleChainTracingBuilderExtensions
 /// <param name="option">The module options.</param>
 [ModuleKey(BuiltInModuleKey.ChainTracing)]
 public class ModuleChainTracing(ModuleChainTracingOption option)
-    : ModuleBase<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
+    : WebModuleBase<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -85,7 +85,7 @@ public class ModuleChainTracing(ModuleChainTracingOption option)
 /// <summary>
 /// Configuration guide for the chain tracing module.
 /// </summary>
-public class ModuleChainTracingGuide : ModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
+public class ModuleChainTracingGuide : WebModuleGuide<ModuleChainTracing, ModuleChainTracingOption, ModuleChainTracingGuide>
 {
     /// <summary>
     /// Enables method-invocation tracing through the DynamicProxy module.

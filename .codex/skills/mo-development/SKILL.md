@@ -1,7 +1,7 @@
 ---
 name: mo-development
-description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
-version: 1.0.0
+description: This skill should be used when the user asks to "create module", "add module", "module structure", "use Res type", "return Res", "Res.Ok", "Res.Fail", "IsFailed pattern", "module registration", "module dependencies", "module pattern", "Monica architecture", "service layer pattern", "create service", "add service", "create hosted service", "add background service", "MoBackgroundService", "MoHostedService", "RecordState", "hosted service observability", "service state tracking", "CoordinatedLeaderService", "GetRequestedConfigMethodKeys", "required config", "required configuration methods", "IWebModule", "web module", "downgrade to non-web", or needs guidance on Monica module architecture, the unified result model Res, module registration patterns, module runtime kinds, Res usage scope (UI vs infrastructure), required Guide configuration validation, or hosted service development with observability.
+version: 1.1.0
 ---
 
 # Monica Development Guide
@@ -18,15 +18,26 @@ Every module follows a consistent pattern with four components in one `Module{Na
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
-| `Module{Name}` | Core module implementation inheriting from `MoModule` | `ModuleSignalR` |
+| `Module{Name}` | Core module implementation inheriting from `ModuleBase` or `WebModuleBase` | `ModuleSignalR` |
 | `Module{Name}Option` | Configuration options for the module | `ModuleSignalROption` |
 | `Module{Name}Guide` | Configuration guide/builder for fluent API | `ModuleSignalRGuide` |
-| `Module{Name}BuilderExtensions` | Extension methods for `WebApplicationBuilder` | `ModuleSignalRBuilderExtensions` |
+| `Module{Name}BuilderExtensions` | Extension methods for `Mo` registration entry points | `ModuleSignalRBuilderExtensions` |
 
 ### ModuleKey Rules
 
-- For Monica first-party modules in this repository, add new keys to `Monica.Core/Modularity/Models/EMoModuleKey.cs` and use `[ModuleKey(EMoModuleKey.YourModule)]`.
+- For Monica first-party modules in this repository, add new keys to `Monica.Core/Modularity/Models/BuiltInModuleKey.cs` and use `[ModuleKey(BuiltInModuleKey.YourModule)]`.
 - Do not introduce ad-hoc string keys such as `BuildingBlocksPlatform.*` for Monica-owned modules unless the module is intentionally external to Monica's built-in key set.
+
+### Module Runtime Kinds
+
+Choose the module runtime kind before writing registration code:
+
+- Use `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` with `ModuleGuide<TModule, TModuleOption, TGuide>` when the module only participates in host-builder, service-registration, post-service, and dependency phases.
+- Use `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` with `WebModuleGuide<TModule, TModuleOption, TGuide>` only when the module actually configures ASP.NET Core middleware or endpoint phases.
+- Do not equate UI module with web module. A UI module that only registers pages, components, dialogs, or shell contributions should usually remain a non-web `ModuleBase`.
+- Use `MinimalApiModuleOptions<TModule>` when the module exposes minimal APIs and needs API-group or API-disable controls.
+- If a web module still provides useful non-web behavior in a generic host, override `CanDowngradeToNonWebModule()` and return `true`. In downgrade mode only the non-web phases execute; `ConfigureApplicationBuilder` and `ConfigureEndpoints` are skipped.
+- If you surface module-system diagnostics or dashboard data, keep module capability and runtime mode separate: `IsWebModule` answers what the module can do, `IsDowngradedFromWebModule` answers how it is currently running.
 
 ### Localization Registration Rules
 
@@ -52,7 +63,7 @@ Monica.{Project}/
 ### Core Dependencies
 
 **Monica.Core** is the foundation for all other modules, containing:
-- `MoModule` base class
+- `ModuleBase` / `WebModuleBase` base classes
 - Module registration system
 - Automatic middleware ordering
 - Core utilities and extensions
@@ -87,7 +98,7 @@ public override void ClaimDependencies()
 }
 ```
 
-Modules declare dependencies by overriding `ClaimDependencies()` on `MoModule<TModuleSelf, TModuleOption, TModuleGuide>`.
+Modules declare dependencies by overriding `ClaimDependencies()` on `ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>` or `WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>`.
 
 Dependencies are automatically registered when a module is added.
 
@@ -99,7 +110,7 @@ When a module's services depend on registrations that must come from Guide metho
 
 ```csharp
 public class ModuleExampleGuide
-    : MoModuleGuide<ModuleExample, ModuleExampleOption, ModuleExampleGuide>
+    : ModuleGuide<ModuleExample, ModuleExampleOption, ModuleExampleGuide>
 {
     // 1. Define constants for required configuration keys
     private const string CONFIG_STORE = nameof(CONFIG_STORE);
@@ -266,6 +277,8 @@ For detailed hosted service patterns including `CoordinatedLeaderService` for le
 ### Source Code Reference
 
 - **Res type definition**: `Monica.Tool/Results/Res.cs`
-- **Module base class**: `Monica.Core/Module/MoModule.cs`
+- **Module base classes**: `Monica.Core/Modularity/Abstractions/ModuleBase.cs`, `Monica.Core/Modularity/Abstractions/WebModuleBase.cs`
+- **Module guides**: `Monica.Core/Modularity/Abstractions/ModuleGuide.cs`, `Monica.Core/Modularity/Abstractions/WebModuleGuide.cs`
+- **Web module contract**: `Monica.Core/Modularity/Abstractions/IWebModule.cs`
 - **MoBackgroundService**: `Monica.Core/Features/HostedServices/MoBackgroundService.cs`
 - **CoordinatedLeaderService**: `Monica.RegisterCentre/Core/CoordinatedLeaderService.cs`

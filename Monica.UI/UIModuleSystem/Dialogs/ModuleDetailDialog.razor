@@ -69,6 +69,45 @@
                                     </MudChip>
                                 </MudPaper>
                             </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4 detail-card" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@GetCapabilityIcon(SelectedModuleDetail.ConfigInfo)"
+                                                 Color="@GetCapabilityColor(SelectedModuleDetail.ConfigInfo)"
+                                                 Size="Size.Small"
+                                                 Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:ModuleCapability"]</MudText>
+                                    </div>
+                                    <MudChip T="string"
+                                             Color="@GetCapabilityColor(SelectedModuleDetail.ConfigInfo)"
+                                             Variant="Variant.Outlined"
+                                             Size="Size.Small"
+                                             Icon="@GetCapabilityIcon(SelectedModuleDetail.ConfigInfo)">
+                                        @GetCapabilityLabel(SelectedModuleDetail.ConfigInfo)
+                                    </MudChip>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Class="pa-4 detail-card" Elevation="2">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudIcon Icon="@GetRuntimeModeIcon(SelectedModuleDetail.ConfigInfo)"
+                                                 Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
+                                                 Size="Size.Small"
+                                                 Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["ModuleSystem:ModuleDetail:Labels:RuntimeMode"]</MudText>
+                                    </div>
+                                    <MudChip T="string"
+                                             Color="@GetRuntimeModeColor(SelectedModuleDetail.ConfigInfo)"
+                                             Variant="@(SelectedModuleDetail.ConfigInfo.IsDowngradedFromWebModule ? Variant.Filled : Variant.Outlined)"
+                                             Size="Size.Small"
+                                             Icon="@GetRuntimeModeIcon(SelectedModuleDetail.ConfigInfo)">
+                                        @GetRuntimeModeLabel(SelectedModuleDetail.ConfigInfo)
+                                    </MudChip>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                                        @GetRuntimeModeDescription(SelectedModuleDetail.ConfigInfo)
+                                    </MudText>
+                                </MudPaper>
+                            </MudItem>
                         </MudGrid>
                     </div>
                 </MudTabPanel>
@@ -379,4 +418,84 @@
         var totalDuration = SelectedModuleDetail.PerformanceInfo.PhaseDurations.Values.Sum();
         return totalDuration > 0 ? (double)duration / totalDuration * 100 : 0;
     }
-} 
+
+    /// <summary>
+    /// Gets the localized capability label for the selected module.
+    /// </summary>
+    private string GetCapabilityLabel(ModuleConfigInfo configInfo)
+    {
+        return configInfo.IsWebModule
+            ? L["ModuleSystem:ModuleDetail:States:WebModule"]
+            : L["ModuleSystem:ModuleDetail:States:NonWebModule"];
+    }
+
+    /// <summary>
+    /// Gets the localized runtime mode label for the selected module.
+    /// </summary>
+    private string GetRuntimeModeLabel(ModuleConfigInfo configInfo)
+    {
+        if (configInfo.IsDowngradedFromWebModule)
+        {
+            return L["ModuleSystem:ModuleDetail:States:Downgraded"];
+        }
+
+        return configInfo.IsWebModule
+            ? L["ModuleSystem:ModuleDetail:States:WebRuntime"]
+            : L["ModuleSystem:ModuleDetail:States:NonWebRuntime"];
+    }
+
+    /// <summary>
+    /// Gets a short runtime description for the selected module.
+    /// </summary>
+    private string GetRuntimeModeDescription(ModuleConfigInfo configInfo)
+    {
+        if (configInfo.IsDowngradedFromWebModule)
+        {
+            return L["ModuleSystem:ModuleDetail:Messages:DowngradedRuntimeDescription"];
+        }
+
+        return configInfo.IsWebModule
+            ? L["ModuleSystem:ModuleDetail:Messages:WebRuntimeDescription"]
+            : L["ModuleSystem:ModuleDetail:Messages:NonWebRuntimeDescription"];
+    }
+
+    /// <summary>
+    /// Gets the capability icon for the selected module.
+    /// </summary>
+    private static string GetCapabilityIcon(ModuleConfigInfo configInfo) => configInfo.IsWebModule
+        ? Icons.Material.Filled.Language
+        : Icons.Material.Filled.Memory;
+
+    /// <summary>
+    /// Gets the runtime mode icon for the selected module.
+    /// </summary>
+    private static string GetRuntimeModeIcon(ModuleConfigInfo configInfo)
+    {
+        if (configInfo.IsDowngradedFromWebModule)
+        {
+            return Icons.Material.Filled.ArrowDownward;
+        }
+
+        return configInfo.IsWebModule
+            ? Icons.Material.Filled.CloudDone
+            : Icons.Material.Filled.Storage;
+    }
+
+    /// <summary>
+    /// Gets the capability chip color for the selected module.
+    /// </summary>
+    private static Color GetCapabilityColor(ModuleConfigInfo configInfo) => configInfo.IsWebModule ? Color.Info : Color.Default;
+
+    /// <summary>
+    /// Gets the runtime mode chip color for the selected module.
+    /// </summary>
+    private static Color GetRuntimeModeColor(ModuleConfigInfo configInfo)
+    {
+        if (configInfo.IsDowngradedFromWebModule)
+        {
+            return Color.Warning;
+        }
+
+        return configInfo.IsWebModule ? Color.Success : Color.Secondary;
+    }
+}

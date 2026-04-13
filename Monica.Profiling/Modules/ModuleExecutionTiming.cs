@@ -37,7 +37,7 @@ public static class ModuleExecutionTimingBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.ExecutionTiming)]
 public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
-    : ModuleBase<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
+    : WebModuleBase<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>(option)
 {
     public override void ClaimDependencies()
     {
@@ -106,7 +106,7 @@ public class ModuleExecutionTiming(ModuleExecutionTimingOption option)
 /// Configuration guide for the execution-timing module.
 /// </summary>
 public class ModuleExecutionTimingGuide
-    : ModuleGuide<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>
+    : WebModuleGuide<ModuleExecutionTiming, ModuleExecutionTimingOption, ModuleExecutionTimingGuide>
 {
     /// <summary>
     /// Aggregates timing samples immediately on the caller thread.

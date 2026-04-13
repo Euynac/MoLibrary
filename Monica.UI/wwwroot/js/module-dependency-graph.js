@@ -10,7 +10,7 @@ import { ForceLayoutManager } from './d3js/d3-force-layout.js';
 import { NodeInteractionHandler } from './d3js/d3-node-interaction.js';
 import { createLayoutAlgorithms } from './d3js/d3-layout-algorithms.js';
 
-const ALL_TYPE_FILTERS = Object.freeze(['built-in', 'ui', 'third-party', 'disabled', 'cycle']);
+const ALL_TYPE_FILTERS = Object.freeze(['built-in', 'ui', 'third-party', 'web', 'downgraded-web', 'disabled', 'cycle']);
 
 const DEFAULT_FILTERS = Object.freeze({
     edgeFilter: 'all',
@@ -71,7 +71,9 @@ class ModuleDependencyGraph {
                 dependedBy: 'Depended By',
                 circularDependency: 'Circular Dependency',
                 moduleStatus: 'Status',
-                moduleCategory: 'Module Category'
+                moduleCategory: 'Module Category',
+                moduleCapability: 'Module Capability',
+                runtimeMode: 'Runtime Mode'
             },
             states: {
                 yes: 'Yes',
@@ -138,8 +140,15 @@ class ModuleDependencyGraph {
             .attr('class', 'node-core')
             .attr('r', 25)
             .attr('fill', node => this.getNodeFillColor(node))
-            .attr('stroke', node => this.getNodeStrokeColor(node))
-            .attr('stroke-width', 2);
+            .attr('data-base-stroke', node => this.getNodeStrokeColor(node))
+            .attr('data-base-stroke-width', node => this.getNodeStrokeWidth(node).toString())
+            .attr('data-base-stroke-dasharray', node => this.getNodeStrokeDasharray(node))
+            .attr('stroke', function() { return this.getAttribute('data-base-stroke'); })
+            .attr('stroke-width', function() { return this.getAttribute('data-base-stroke-width'); })
+            .attr('stroke-dasharray', function() {
+                const value = this.getAttribute('data-base-stroke-dasharray');
+                return value || null;
+            });
 
         this.nodeSelection.append('text')
             .attr('class', 'node-label')
@@ -190,6 +199,14 @@ class ModuleDependencyGraph {
             return 'var(--mud-palette-error)';
         }
 
+        if (node.isDowngradedFromWebModule) {
+            return 'var(--mud-palette-warning)';
+        }
+
+        if (node.isWebModule) {
+            return 'var(--mud-palette-secondary)';
+        }
+
         if (node.isDisabled) {
             return 'var(--mud-palette-text-disabled)';
         }
@@ -202,11 +219,31 @@ class ModuleDependencyGraph {
             return 'var(--mud-palette-error)';
         }
 
+        if (node.isDowngradedFromWebModule) {
+            return 'var(--mud-palette-warning)';
+        }
+
         if (node.isDisabled) {
             return 'var(--mud-palette-text-disabled)';
         }
 
         return null;
+    }
+
+    getNodeStrokeWidth(node) {
+        if (node.isPartOfCycle || node.isDowngradedFromWebModule) {
+            return 4;
+        }
+
+        if (node.isWebModule) {
+            return 3;
+        }
+
+        return 2;
+    }
+
+    getNodeStrokeDasharray(node) {
+        return node.isDowngradedFromWebModule ? '6,4' : '';
     }
 
     getEdgeColorByType(type) {
@@ -223,13 +260,19 @@ class ModuleDependencyGraph {
     }
 
     hasPulseState(node) {
-        return node.isPartOfCycle || node.isDisabled;
+        return node.isPartOfCycle || node.isDisabled || node.isDowngradedFromWebModule;
     }
 
     getPulseConfig(node) {
-        return node.isPartOfCycle
-            ? { duration: 820, minRadius: 30, maxRadius: 40, minOpacity: 0.18, maxOpacity: 0.48 }
-            : { duration: 1200, minRadius: 29, maxRadius: 37, minOpacity: 0.12, maxOpacity: 0.28 };
+        if (node.isPartOfCycle) {
+            return { duration: 820, minRadius: 30, maxRadius: 40, minOpacity: 0.18, maxOpacity: 0.48 };
+        }
+
+        if (node.isDowngradedFromWebModule) {
+            return { duration: 980, minRadius: 30, maxRadius: 39, minOpacity: 0.14, maxOpacity: 0.36 };
+        }
+
+        return { duration: 1200, minRadius: 29, maxRadius: 37, minOpacity: 0.12, maxOpacity: 0.28 };
     }
 
     applyLayout(layoutType) {
@@ -487,6 +530,10 @@ class ModuleDependencyGraph {
             case 'ui':
             case 'third-party':
                 return node.categoryKey === typeFilter;
+            case 'web':
+                return !!node.isWebModule;
+            case 'downgraded-web':
+                return !!node.isDowngradedFromWebModule;
             case 'disabled':
                 return !!node.isDisabled;
             case 'cycle':
@@ -500,7 +547,10 @@ class ModuleDependencyGraph {
         return [
             node.label,
             node.id,
+            node.moduleTypeName,
             node.moduleCategory,
+            node.capabilityText,
+            node.runtimeModeText,
             node.statusText
         ]
             .filter(Boolean)
@@ -536,7 +586,7 @@ class ModuleDependencyGraph {
             .attr('stroke-width', 5)
             .transition()
             .duration(220)
-            .attr('stroke-width', 2);
+            .attr('stroke-width', function() { return this.getAttribute('data-base-stroke-width'); });
     }
 
     fitToNodes(nodes, duration = 500) {

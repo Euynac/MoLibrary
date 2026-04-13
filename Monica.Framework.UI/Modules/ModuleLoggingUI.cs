@@ -36,7 +36,7 @@ public static class ModuleLoggingUIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.LoggingUI)]
 public class ModuleLoggingUI(ModuleLoggingUIOption option)
-    : ModuleBase<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
+    : WebModuleBase<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>(option)
 {
 
     public override void ConfigureServices(IServiceCollection services)
@@ -123,7 +123,7 @@ public class ModuleLoggingUI(ModuleLoggingUIOption option)
 /// <summary>
 /// Logging UI module wizard
 /// </summary>
-public class ModuleLoggingUIGuide : ModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
+public class ModuleLoggingUIGuide : WebModuleGuide<ModuleLoggingUI, ModuleLoggingUIOption, ModuleLoggingUIGuide>
 {
 }
 

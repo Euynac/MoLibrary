@@ -26,7 +26,7 @@ using Polly.Retry;
 namespace Monica.Modules;
 
 [ModuleKey(BuiltInModuleKey.ServiceDiscovery)]
-public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : ModuleBase<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(option)
+public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : WebModuleBase<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>(option)
 {
 
     public override void ClaimDependencies()
@@ -148,7 +148,7 @@ public class ModuleServiceDiscovery(ModuleServiceDiscoveryOption option) : Modul
     }
 }
 
-public class ModuleServiceDiscoveryGuide : ModuleGuide<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>
+public class ModuleServiceDiscoveryGuide : WebModuleGuide<ModuleServiceDiscovery, ModuleServiceDiscoveryOption, ModuleServiceDiscoveryGuide>
 {
     private const string SET_STATE_STORE = nameof(SET_STATE_STORE);
 

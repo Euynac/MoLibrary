@@ -22,7 +22,7 @@ namespace Monica.Modules;
 /// Registers the DiffHighlight mixed module.
 /// </summary>
 [ModuleKey(BuiltInModuleKey.DiffHighlight)]
-public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : ModuleBase<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
+public class ModuleDiffHighlight(ModuleDiffHighlightOption option) : WebModuleBase<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>(option)
 {
     /// <summary>
     /// Registers the diff highlighting services, facade, and rendering strategies.
@@ -126,7 +126,7 @@ public class DiffHighlightRequest
 /// <summary>
 /// Configuration guide for the diff highlight module.
 /// </summary>
-public class ModuleDiffHighlightGuide : ModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
+public class ModuleDiffHighlightGuide : WebModuleGuide<ModuleDiffHighlight, ModuleDiffHighlightOption, ModuleDiffHighlightGuide>
 {
 
 }

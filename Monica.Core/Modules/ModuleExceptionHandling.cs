@@ -32,7 +32,7 @@ public static class ModuleExceptionHandlingBuilderExtensions
 
 [ModuleKey(BuiltInModuleKey.ExceptionHandling)]
 public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
-    : ModuleBase<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
+    : WebModuleBase<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>(option)
 {
     /// <summary>
     /// Adds the ASP.NET Core exception handling middleware.
@@ -91,7 +91,7 @@ public class ModuleExceptionHandling(ModuleExceptionHandlingOption option)
 }
 
 public class ModuleExceptionHandlingGuide
-    : ModuleGuide<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>
+    : WebModuleGuide<ModuleExceptionHandling, ModuleExceptionHandlingOption, ModuleExceptionHandlingGuide>
 {
     public ModuleExceptionHandlingGuide AddExceptionMapper<TMapper>() where TMapper : class, IExceptionResponseMapper
     {

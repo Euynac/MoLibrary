@@ -27,6 +27,16 @@ public class ModuleRuntimeSnapshot(ModuleBase moduleInstance, ModuleRegistration
     public Type ModuleType { get; set; } = moduleInstance.GetType();
 
     /// <summary>
+    /// Gets whether the module participates in the ASP.NET Core lifecycle.
+    /// </summary>
+    public bool IsWebModule => ModuleInstance is IWebModule;
+
+    /// <summary>
+    /// Gets whether the module was accepted in a generic host by downgrading its web behavior.
+    /// </summary>
+    public bool IsDowngradedFromWebModule => RegisterInfo.IsDowngradedFromWebModule;
+
+    /// <summary>
     /// Gets the <see cref="ModuleKey"/> for the module.
     /// </summary>
     public ModuleKey ModuleKey => ModuleDependencyAnalyzer.ResolveModuleKey(ModuleType);

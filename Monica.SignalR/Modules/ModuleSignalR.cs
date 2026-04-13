@@ -47,7 +47,7 @@ public static class ModuleSignalRBuilderExtensions
 /// <param name="option">The module configuration options.</param>
 [ModuleKey(BuiltInModuleKey.SignalR)]
 public class ModuleSignalR(ModuleSignalROption option)
-    : ModuleBase<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
+    : WebModuleBase<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -89,7 +89,7 @@ public class ModuleSignalR(ModuleSignalROption option)
 /// <summary>
 /// Fluent registration guide for the SignalR infrastructure module.
 /// </summary>
-public class ModuleSignalRGuide : ModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
+public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROption, ModuleSignalRGuide>
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {

@@ -13,6 +13,9 @@ UI modules are **pure presentation layers**. They:
 - Do NOT have their own service layer for data access
 - Focus on components, page composition, state management, and localization
 - Maximize reuse of Models from the infrastructure module's public `Models/` folder
+- Usually inherit from `ModuleBase`, not `WebModuleBase`
+
+Only choose `WebModuleBase` / `WebModuleGuide` when the UI module itself configures ASP.NET Core middleware or endpoints. A UI module that only registers pages, dialogs, shell navigation, or localized components should stay non-web.
 
 ## UI Module Architecture Patterns
 
@@ -144,9 +147,9 @@ Key characteristics:
 ## UI Module Class Implementation
 
 ```csharp
-[ModuleKey(EMoModuleKey.{Name}UI)]
+[ModuleKey(BuiltInModuleKey.{Name}UI)]
 public class Module{Name}UI(Module{Name}UIOption option)
-    : MoModule<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
+    : ModuleBase<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>(option)
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -160,7 +163,7 @@ public class Module{Name}UI(Module{Name}UIOption option)
         if (!Option.Disable{Name}Page)
         {
             DependsOnModule<Module{Name}Guide>().Register();
-            DependsOnModule<ModuleUICoreGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UI{Name}Page>(
                     UI{Name}Page.{NAME}_URL,
                     displayNameKey: "Pages:{Name}:Title",
@@ -171,7 +174,19 @@ public class Module{Name}UI(Module{Name}UIOption option)
         }
     }
 }
+
+public class Module{Name}UIGuide
+    : ModuleGuide<Module{Name}UI, Module{Name}UIOption, Module{Name}UIGuide>
+{
+}
+
+public class Module{Name}UIOption : ModuleOptions<Module{Name}UI>
+{
+    public bool Disable{Name}Page { get; set; }
+}
 ```
+
+If the UI module also maps middleware or endpoints, switch the module to `WebModuleBase<...>` and the guide to `WebModuleGuide<...>`. If those web phases can be skipped safely in a generic host, implement `CanDowngradeToNonWebModule()` and document that downgrade behavior.
 
 ## UI Folder Responsibilities
 

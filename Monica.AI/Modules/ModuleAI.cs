@@ -44,7 +44,7 @@ public static class ModuleAIBuilderExtensions
 /// </summary>
 [ModuleKey(BuiltInModuleKey.AI)]
 public class ModuleAI(ModuleAIOption option)
-    : ModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
+    : WebModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
 {
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
@@ -81,7 +81,7 @@ public class ModuleAI(ModuleAIOption option)
 /// <summary>
 /// Builder for AI module configuration.
 /// </summary>
-public class ModuleAIGuide : ModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
+public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGuide>
 {
     /// <summary>
     /// Adds an OpenAI provider.
