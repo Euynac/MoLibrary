@@ -1,4 +1,4 @@
 interface:
   display_name: "Monica ProjectUnit Development"
-  short_description: "Shared Monica ProjectUnit development guidance"
+  short_description: "Shared Monica ProjectUnit placement and implementation guidance"
   default_prompt: "Use $monica-project-unit-development to create or refine Monica-native DDD ProjectUnits."

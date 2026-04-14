@@ -27,9 +27,7 @@ src/
 │       │   ├── HandlersCommand/              # ApplicationService units
 │       │   ├── HandlersQuery/                # ApplicationService units
 │       │   ├── HandlersEvent/                # Event handler units
-│       │   ├── BackgroundWorkers/            # Job units
-│       │   ├── ServicesHttp/                 # HTTP adapters only
-│       │   └── ServicesGrpc/                 # gRPC adapters only
+│       │   └── BackgroundWorkers/            # Job units
 │       ├── {Subdomain}Service.Domain/
 │       │   ├── Entities/
 │       │   ├── ValueObjects/
@@ -37,9 +35,8 @@ src/
 │       │   ├── Events/
 │       │   ├── Interfaces/
 │       │   ├── Configurations/
-│       │   └── Utilities/                   # Pure helper code, named `Utils*`
-│       └── {Subdomain}Service.Infrastructure/
-│           └── Repository/                  # Repository implementations, DbContext, and EF mapping
+│       │   ├── Utilities/                   # Pure helper code, named `Utils*`
+│       │   └── Repository/                  # Repository implementations, DbContext, and EF mapping
 └── Migrations/
     └── {Subdomain}/                          # Migration project per service
 ```
@@ -56,15 +53,16 @@ Recommended `.slnx` folders should mirror the physical layout:
 ## Mapping Rules
 
 - Keep the same shared platform split across solution styles to reduce learning overhead.
+- Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Put cross-service contracts in `Shared/Platform.Protocol/PublishedLanguages`, not inside a service project.
-- Put business implementation in the service's own `API`, `Domain`, and `Infrastructure` projects.
+- Put business implementation in the service's own `API` and `Domain` projects.
+- Keep service-only package references in `{Subdomain}Service.Domain`. Do not add extra shared-project references just to reach them.
 - Put `ApplicationService`, event-handler, and background-worker ProjectUnits in the service `API` project under `HandlersCommand`, `HandlersQuery`, `HandlersEvent`, and `BackgroundWorkers`.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
 - Keep `Utilities/` in the `Domain` project for pure helpers and name them `Utils*`.
-- Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Infrastructure/Repository/`.
+- Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Domain/Repository/`.
 - Put migrations beside the service boundary they belong to, not in a global dump folder.
-- Keep `ServicesHttp` and `ServicesGrpc` as adapters. Core business logic still lives in shared ProjectUnits.
 - Keep AppHost or gateway entry projects down to the project file and `Program.cs`. Do not place business ProjectUnits there.
 - Keep `.slnx` folders aligned with the real `src/` tree so the solution view reflects AppHost, shared platform, services, and migrations ownership correctly.

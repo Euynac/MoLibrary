@@ -1,6 +1,6 @@
 # Repository and DbContext Template
 
-Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNamespace$` for the repository namespace chosen by the architecture skill, such as `OrderingService.Infrastructure` or `Domains.Ordering`.
+Use `$DomainNamespace$` for the domain project namespace and `$RepositoryNamespace$` for the repository namespace chosen by the architecture skill, such as `OrderingService.Domain` or `Domains.Ordering`.
 
 ## Use When
 
@@ -11,7 +11,8 @@ Use `$DomainNamespace$` for the domain project namespace and `$InfrastructureNam
 ## Rules
 
 - Keep the repository interface on the domain side of the boundary.
-- Keep the repository implementation on the infrastructure side.
+- Keep the repository implementation on the owning domain-side infrastructure boundary: `{Subdomain}Service.Domain/Repository/` for microservices and `Domains/{Subdomain}/Repository/` for modular monolith domains.
+- Keep libraries that only this repository or adapter needs in the owning subdomain/service project. Do not move the implementation to shared `Platform` only because it uses a third-party package.
 - Use `EfRepository<TDbContext, TEntity, TKey>` for standard EF-backed repositories.
 - Put query specialization in repositories, not in handlers.
 - Keep `DbContext` focused on persistence structure and mapping.
@@ -36,7 +37,7 @@ public interface IRepositoryOrder : IRepository<Order, long>
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Services;
 
-namespace $InfrastructureNamespace$.Repository;
+namespace $RepositoryNamespace$.Repository;
 
 public sealed class RepositoryOrder(
     IDbContextProvider<OrderingDbContext> dbContextProvider)
@@ -58,7 +59,7 @@ using Microsoft.EntityFrameworkCore;
 using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.Persistence.Services;
 
-namespace $InfrastructureNamespace$.Repository;
+namespace $RepositoryNamespace$.Repository;
 
 public sealed class OrderingDbContext(
     DbContextOptions<OrderingDbContext> options,

@@ -22,6 +22,7 @@ Use this skill for unit-level business development in Monica-based DDD projects.
 - Use Monica-native base classes and interfaces only. Do not introduce `Our*` wrappers or FIPS-specific conventions.
 - Follow the naming, placement, and boundary rules in [01-project-unit-naming-and-boundaries.md](references/01-project-unit-naming-and-boundaries.md). These rules are aligned with the current `Monica.Framework/ProjectUnits` discovery behavior.
 - Keep persistence concerns in repositories and persistence classes, not in request handlers.
+- Keep repository implementations in the owning subdomain or service infrastructure boundary. Do not move a repository or adapter to `Platform` just because it uses an external library; only project-common reusable infrastructure belongs in `Platform`.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 

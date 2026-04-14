@@ -54,9 +54,11 @@ Recommended `.slnx` folders should mirror the physical layout:
 
 - Split by subdomain under `Domains/` first. Do not create global `Application`, `Domain`, or `Infrastructure` buckets for the whole solution.
 - Keep the same shared platform split across solution styles to reduce learning overhead.
+- Use the strict solution-project reference chain `AppHost -> Domains.{Subdomain} -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 - Put project-agnostic infrastructure extensions into `Shared/Platform.BuildingBlocks/Platform.BuildingBlocks.csproj`.
 - Put solution-owned infrastructure composition and integration configuration into `Shared/Platform.Infrastructure/Platform.Infrastructure.csproj`.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and referenceable from other domains.
+- Keep subdomain-specific package references in the owning `Domains.{Subdomain}.csproj`; do not introduce extra shared-project references just to reach them.
 - Keep domain models, repositories, `DbContext` ownership, and helper code inside the owning `Domains.{Subdomain}.csproj`.
 - Put application services, event handlers, and background workers in the owning domain package under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.

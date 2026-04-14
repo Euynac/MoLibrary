@@ -43,8 +43,8 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 | `DomainEvent` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Events/` | `Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/Events/` |
 | `Entity` | `{Subdomain}Service.Domain/Entities/` | `Domains/{Subdomain}/Entities/` |
 | `Repository` interface | `{Subdomain}Service.Domain/Interfaces/` | `Domains/{Subdomain}/Interfaces/` |
-| `Repository` implementation | `{Subdomain}Service.Infrastructure/Repository/` | `Domains/{Subdomain}/Repository/` |
-| `DbContext` / EF mapping | `{Subdomain}Service.Infrastructure/Repository/` | `Domains/{Subdomain}/Repository/` |
+| `Repository` implementation | `{Subdomain}Service.Domain/Repository/` | `Domains/{Subdomain}/Repository/` |
+| `DbContext` / EF mapping | `{Subdomain}Service.Domain/Repository/` | `Domains/{Subdomain}/Repository/` |
 | `Configuration` | `{Subdomain}Service.Domain/Configurations/` | `Domains/{Subdomain}/Configurations/` |
 | `Utility` helper | `{Subdomain}Service.Domain/Utilities/` | `Domains/{Subdomain}/Utilities/` |
 
@@ -62,6 +62,9 @@ Use the same leaf folder semantics across solution styles. Keep folders flat and
 - Keep orchestration in `ApplicationService`, not business rules. If a handler becomes hard to explain in one paragraph, move the reusable rule into a `DomainService` or the entity itself.
 - Keep entity invariants on the entity. Do not let handlers or repositories directly toggle domain state through scattered property assignments.
 - Keep repository interfaces on the domain side of the boundary and repository implementations on the infrastructure side.
+- For modular monolith projects, the merged `Domains.{Subdomain}.csproj` is the infrastructure side for that subdomain, so repository implementations stay under `Domains/{Subdomain}/Repository/`.
+- For microservice projects, repository implementations stay in `{Subdomain}Service.Domain/Repository/`.
+- Keep libraries that are only used by one repository or adapter in the owning subdomain/service project. Do not move that implementation into `Platform` unless the implementation itself is project-common reusable infrastructure.
 - Keep request, response, and event contracts separate from persistence entities.
 - Keep adapter code thin. HTTP attributes, endpoint registration, gRPC definitions, or background-host wiring should not replace ProjectUnits.
 

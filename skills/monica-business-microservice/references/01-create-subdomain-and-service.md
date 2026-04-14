@@ -9,7 +9,6 @@ Use this workflow when adding a new business capability that deserves its own se
   - `Domain{Subdomain}` in `Platform.Protocol/PublishedLanguages`
   - `{Subdomain}Service.API`
   - `{Subdomain}Service.Domain`
-  - `{Subdomain}Service.Infrastructure`
   - `Migrations/{Subdomain}`
 
 ## Step 2. Create the shared contract area
@@ -29,7 +28,7 @@ Rules:
 - Put only stable cross-service contracts here.
 - Do not copy entity types into this area.
 
-## Step 3. Create the service trio
+## Step 3. Create the service pair
 
 Create:
 
@@ -39,9 +38,7 @@ src/Services/{Subdomain}/
 │   ├── HandlersCommand/
 │   ├── HandlersQuery/
 │   ├── HandlersEvent/
-│   ├── BackgroundWorkers/
-│   ├── ServicesHttp/
-│   └── ServicesGrpc/
+│   └── BackgroundWorkers/
 ├── {Subdomain}Service.Domain/
 │   ├── Entities/
 │   ├── ValueObjects/
@@ -49,15 +46,15 @@ src/Services/{Subdomain}/
 │   ├── Events/
 │   ├── Interfaces/
 │   ├── Configurations/
-│   └── Utilities/
-└── {Subdomain}Service.Infrastructure/
-    └── Repository/
+│   ├── Utilities/
+│   └── Repository/
 ```
 
 Use `monica-project-unit-development` to fill the correct ProjectUnits inside those projects.
 
 - Keep pure helpers in `{Subdomain}Service.Domain/Utilities/` and name them `Utils*`.
-- Keep repository implementations, `DbContext`, and EF mapping in `{Subdomain}Service.Infrastructure/Repository/`.
+- Keep repository implementations, `DbContext`, and EF mapping in `{Subdomain}Service.Domain/Repository/`.
+- Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 
 ## Step 4. Add persistence ownership
 

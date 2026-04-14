@@ -6,6 +6,8 @@ Use this file before introducing a new dependency between domains.
 
 Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`, not on another domain's internal implementation or another domain's `Application` handlers.
 
+Within solution-project references, use the chain `Domains.{Subdomain} -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`. Do not make domains jump directly to `Platform.Protocol` or `Platform.BuildingBlocks`.
+
 ## What Belongs in Platform.Protocol
 
 - Requests

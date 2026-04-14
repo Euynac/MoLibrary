@@ -8,6 +8,8 @@ Use this file before adding anything to `Shared/Platform.Protocol`.
 - `Platform.Infrastructure` contains solution-owned infrastructure setup and integration wiring.
 - `Platform.Protocol` contains the shared business language used across services.
 
+Within solution-project references, use the chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`. Do not make service projects jump directly to `Platform.Protocol` or `Platform.BuildingBlocks`.
+
 ## What Belongs Here
 
 - Put requests that another service or shared gateway may invoke into `Platform.Protocol/PublishedLanguages`.

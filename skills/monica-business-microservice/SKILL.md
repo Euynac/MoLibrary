@@ -1,6 +1,6 @@
 ---
 name: monica-business-microservice
-description: DDD microservice architecture guidance for Monica business projects. Use when creating or extending a subdomain service, planning shared platform layers, shaping Platform.Protocol/PublishedLanguages, splitting API, Domain, Infrastructure, and migration projects, or deciding cross-service collaboration boundaries. Pair with monica-project-unit-development for unit-level implementation.
+description: DDD microservice architecture guidance for Monica business projects. Use when creating or extending a subdomain service, planning the strict solution-project dependency chain across Platform layers, placing project-common versus service-only library references, shaping Platform.Protocol/PublishedLanguages, splitting API, Domain, and migration projects, or deciding cross-service collaboration boundaries. Pair with monica-project-unit-development for unit-level implementation.
 ---
 
 # Monica Business Microservice
@@ -21,10 +21,12 @@ Use this skill to shape Monica business projects as DDD-aligned microservices. I
 
 - Split by business capability and data ownership, not by transport or technical layer alone.
 - Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
+- Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
+- Put project-common library references in `Platform.BuildingBlocks`. Keep service-only package references in the owning `{Subdomain}Service.Domain` project.
 - Keep `Shared/Platform.Protocol/PublishedLanguages` stable and explicit. Do not leak persistence entities across service boundaries.
-- Keep each subdomain service independently evolvable: `API`, `Domain`, `Infrastructure`, and migrations move together.
+- Keep each subdomain service independently evolvable: `API`, `Domain`, and migrations move together.
 - Keep pure helper code in the service `Domain` project under `Utilities/`, using `Utils*` names.
-- Treat `ServicesHttp`, `ServicesGrpc`, and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits still belong in the service's `API`, `Domain`, and `Infrastructure` projects.
+- Treat the service `API` project and AppHost or gateway entry points as adapters or composition only. Keep AppHost or gateway projects down to the project file and `Program.cs`; business ProjectUnits belong in the service's `API` and `Domain` projects.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 
 ## Reference Navigation
