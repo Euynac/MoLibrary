@@ -23,6 +23,7 @@
    
 	</ItemGroup>
 	<ItemGroup>
+	  <ProjectReference Include="..\Monica.AI\Monica.AI.csproj" />
 	  <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
 	  <ProjectReference Include="..\Monica.AutoModel\Monica.AutoModel.csproj" />
 	  <ProjectReference Include="..\Monica.Configuration.UI\Monica.Configuration.UI.csproj">
@@ -33,7 +34,13 @@
 	  </ProjectReference>
 	  <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
 	  <ProjectReference Include="..\Monica.Dapr\Monica.Dapr.csproj" />
+	  <ProjectReference Include="..\Monica.DataChannel\Monica.DataChannel.csproj" />
 	  <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+	  <ProjectReference Include="..\Monica.DevOps\Monica.DevOps.csproj" />
+	  <ProjectReference Include="..\Monica.JobScheduler.EfCore\Monica.JobScheduler.EfCore.csproj" />
+	  <ProjectReference Include="..\Monica.Markdown\Monica.Markdown.csproj" />
+	  <ProjectReference Include="..\Monica.Office\Monica.Office.csproj" />
+	  <ProjectReference Include="..\Monica.StateStore.StackExchange\Monica.StateStore.StackExchange.csproj" />
 	  <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
 	  <ProjectReference Include="..\Monica.EventBus\Monica.EventBus.csproj" />
 	  <ProjectReference Include="..\Monica.JobScheduler\Monica.JobScheduler.csproj" />
