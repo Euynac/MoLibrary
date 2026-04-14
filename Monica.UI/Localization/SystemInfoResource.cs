@@ -1,6 +1,6 @@
 using Monica.Core.Localization;
 
-namespace Monica.Framework.UI.Localization;
+namespace Monica.UI.Localization;
 
 /// <summary>
 /// Marker class for System Info UI localization resources.

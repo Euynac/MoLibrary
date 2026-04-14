@@ -1,140 +1,140 @@
 using System.Diagnostics;
 
-namespace Monica.Framework.UI.UISystemInfo.Models;
+namespace Monica.UI.UISystemInfo.Models;
 
 /// <summary>
-/// System information response model
+/// Represents the data returned by the system information endpoint.
 /// </summary>
 public class SystemInfoResponse
 {
     /// <summary>
-    /// Build time
+    /// Gets or sets the application build timestamp.
     /// </summary>
     public DateTime BuildTime { get; set; }
 
     /// <summary>
-    /// local time
+    /// Gets or sets the current local server time.
     /// </summary>
     public DateTime LocalTime { get; set; }
 
     /// <summary>
-    /// UTC time
+    /// Gets or sets the current UTC server time.
     /// </summary>
     public DateTime UtcTime { get; set; }
 
     /// <summary>
-    /// Product version (simplified mode)
+    /// Gets or sets the product version returned in simplified mode.
     /// </summary>
     public string? ProductVersion { get; set; }
 
     /// <summary>
-    /// process start time
+    /// Gets or sets the process start time when available.
     /// </summary>
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
-    /// File information (verbose mode)
+    /// Gets or sets verbose file metadata.
     /// </summary>
     public FileVersionInfo? FileInfo { get; set; }
 
     /// <summary>
-    /// Environmental information (verbose mode)
+    /// Gets or sets verbose environment details.
     /// </summary>
     public EnvironmentInfo? EnvironmentInfo { get; set; }
 }
 
 /// <summary>
-/// environmental information
+/// Represents verbose host environment details for the system information page.
 /// </summary>
 public class EnvironmentInfo
 {
     /// <summary>
-    /// .NET version
+    /// Gets or sets the .NET runtime version.
     /// </summary>
     public Version? Version { get; set; }
 
     /// <summary>
-    /// username
+    /// Gets or sets the current user name.
     /// </summary>
     public string? UserName { get; set; }
 
     /// <summary>
-    /// Machine name
+    /// Gets or sets the machine name.
     /// </summary>
     public string? MachineName { get; set; }
 
     /// <summary>
-    /// Operating system version
+    /// Gets or sets the operating system version.
     /// </summary>
     public OperatingSystem? OSVersion { get; set; }
 
     /// <summary>
-    /// Process ID
+    /// Gets or sets the current process identifier.
     /// </summary>
     public int ProcessId { get; set; }
 
     /// <summary>
-    /// process start time
+    /// Gets or sets the current process start time.
     /// </summary>
     public DateTime? ProcessStartTime { get; set; }
 
     /// <summary>
-    /// current directory
+    /// Gets or sets the current working directory.
     /// </summary>
     public string? CurrentDirectory { get; set; }
 
     /// <summary>
-    /// Has the shutdown started?
+    /// Gets or sets a value indicating whether process shutdown has started.
     /// </summary>
     public bool HasShutdownStarted { get; set; }
 
     /// <summary>
-    /// Is it a 64-bit operating system?
+    /// Gets or sets a value indicating whether the operating system is 64-bit.
     /// </summary>
     public bool Is64BitOperatingSystem { get; set; }
 
     /// <summary>
-    /// Is it a 64-bit process?
+    /// Gets or sets a value indicating whether the process is 64-bit.
     /// </summary>
     public bool Is64BitProcess { get; set; }
 
     /// <summary>
-    /// Is the process a privileged process?
+    /// Gets or sets a value indicating whether the process is privileged.
     /// </summary>
     public bool IsPrivilegedProcess { get; set; }
 
     /// <summary>
-    /// System tick count
+    /// Gets or sets the current system tick count.
     /// </summary>
     public int TickCount { get; set; }
 
     /// <summary>
-    /// User domain name
+    /// Gets or sets the current user domain name.
     /// </summary>
     public string? UserDomainName { get; set; }
 
     /// <summary>
-    /// working set size
+    /// Gets or sets the working set size in bytes.
     /// </summary>
     public long WorkingSet { get; set; }
 
     /// <summary>
-    /// System page size
+    /// Gets or sets the operating system page size in bytes.
     /// </summary>
     public int SystemPageSize { get; set; }
 
     /// <summary>
-    /// environment variables
+    /// Gets or sets the captured environment variables.
     /// </summary>
     public IDictionary<string, object?>? Environments { get; set; }
 
     /// <summary>
-    /// Is the user interactive?
+    /// Gets or sets a value indicating whether the current process is running interactively.
     /// </summary>
     public bool UserInteractive { get; set; }
 
     /// <summary>
-    /// process path
+    /// Gets or sets the current process path.
     /// </summary>
     public string? ProcessPath { get; set; }
-} 
+}

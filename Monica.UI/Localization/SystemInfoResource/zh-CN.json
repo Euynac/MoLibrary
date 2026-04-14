@@ -89,6 +89,7 @@
   },
   "Service": {
     "Errors": {
+      "BrowserRuntimeUnsupported": "浏览器运行时不支持获取系统信息",
       "EntryAssemblyUnavailable": "无法获取入口程序集信息",
       "GetSystemInfoFailed": "获取系统信息失败: {0}"
     }

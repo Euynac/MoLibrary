@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace Monica.Framework.UI.UISystemInfo.Models;
+namespace Monica.UI.UISystemInfo.Models;
 
 /// <summary>
 /// Defines the supported HTML target values for a custom system information link.

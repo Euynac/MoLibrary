@@ -1,4 +1,4 @@
-namespace Monica.Framework.UI.UISystemInfo.Models;
+namespace Monica.UI.UISystemInfo.Models;
 
 /// <summary>
 /// Represents a grouped set of custom system information links.

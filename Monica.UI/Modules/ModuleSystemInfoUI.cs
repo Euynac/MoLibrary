@@ -8,10 +8,10 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
-using Monica.Framework.UI.Localization;
-using Monica.Framework.UI.UISystemInfo.Models;
-using Monica.Framework.UI.Pages;
-using Monica.Framework.UI.UISystemInfo.Support;
+using Monica.UI.Localization;
+using Monica.UI.Pages;
+using Monica.UI.UISystemInfo.Models;
+using Monica.UI.UISystemInfo.Support;
 using MudBlazor;
 
 // ReSharper disable once CheckNamespace
@@ -38,12 +38,17 @@ public static class ModuleSystemInfoUIBuilderExtensions
 public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
     : WebModuleBase<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>(option)
 {
-
+    /// <summary>
+    /// Registers the services required by the system information UI.
+    /// </summary>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<SystemInfoService>();
     }
 
+    /// <summary>
+    /// Declares localization, shell, and page dependencies for the system information UI.
+    /// </summary>
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleLocalizationGuide>().Register()
@@ -62,6 +67,9 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
         }
     }
 
+    /// <summary>
+    /// Maps the system information API endpoints.
+    /// </summary>
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>
@@ -145,4 +153,4 @@ public class ModuleSystemInfoUIOption : MinimalApiModuleOptions<ModuleSystemInfo
     /// Gets the custom shortcut links displayed on the system information page.
     /// </summary>
     public List<SystemInfoCustomLink> CustomLinks { get; set; } = new();
-} 
+}

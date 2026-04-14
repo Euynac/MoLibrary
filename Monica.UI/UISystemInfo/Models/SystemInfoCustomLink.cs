@@ -1,4 +1,4 @@
-namespace Monica.Framework.UI.UISystemInfo.Models;
+namespace Monica.UI.UISystemInfo.Models;
 
 /// <summary>
 /// Represents a custom shortcut link shown on the system information page.

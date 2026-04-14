@@ -89,6 +89,7 @@
   },
   "Service": {
     "Errors": {
+      "BrowserRuntimeUnsupported": "System information is unavailable in a browser runtime.",
       "EntryAssemblyUnavailable": "Unable to resolve the entry assembly information.",
       "GetSystemInfoFailed": "Failed to get system information: {0}"
     }

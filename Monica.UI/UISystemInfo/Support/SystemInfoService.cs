@@ -3,10 +3,10 @@ using System.Reflection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Results;
-using Monica.Framework.UI.Localization;
-using Monica.Framework.UI.UISystemInfo.Models;
+using Monica.UI.Localization;
+using Monica.UI.UISystemInfo.Models;
 
-namespace Monica.Framework.UI.UISystemInfo.Support;
+namespace Monica.UI.UISystemInfo.Support;
 
 /// <summary>
 /// Provides system information for the System Info UI page.
@@ -26,6 +26,12 @@ public class SystemInfoService(
     {
         try
         {
+            if (OperatingSystem.IsBrowser())
+            {
+                logger.LogWarning("System information is unavailable when running in a browser runtime.");
+                return Res.Fail(localizer["Service:Errors:BrowserRuntimeUnsupported"].Value);
+            }
+
             var entryAssembly = Assembly.GetEntryAssembly();
             if (entryAssembly == null)
             {
@@ -93,4 +99,4 @@ public class SystemInfoService(
             return Res.Fail(localizer["Service:Errors:GetSystemInfoFailed", ex.Message].Value);
         }
     }
-} 
+}

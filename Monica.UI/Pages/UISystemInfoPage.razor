@@ -1,11 +1,13 @@
 @attribute [Route(PAGE_URL)]
 @using System.Globalization
-@using Monica.Framework.UI.UISystemInfo.Components
-@using Monica.Framework.UI.UISystemInfo.Models
-@using Monica.Modules
-@using Monica.Core.Results;
+@using Microsoft.Extensions.Localization
 @using Microsoft.Extensions.Options
-@using Monica.Framework.UI.UISystemInfo.Support
+@using Monica.Core.Results
+@using Monica.Modules
+@using Monica.UI.Localization
+@using Monica.UI.UISystemInfo.Components
+@using Monica.UI.UISystemInfo.Models
+@using Monica.UI.UISystemInfo.Support
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
