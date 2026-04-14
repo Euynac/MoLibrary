@@ -102,45 +102,54 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBa
 
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
-        foreach (var configType in types
-                     .Where(x => x.IsClass && x.GetCustomAttribute<ConfigurationAttribute>(false) is
-                     {
-                         IsSubConfiguration: false
-                     }))
+        foreach (var type in types)
         {
-            var card = new ConfigurationRegistration(configType);
-            var provider = new LocalJsonFileProvider(card);
-            provider.GenAndRegisterConfigurationFiles();
-            ConfigurationRegistration.Register(card);
-
-            var configAttr = card.Configuration.Info;
-            Logger.LogDebug($"AddOptions<{configType.Name}>");
-            dynamic optionsBuilder = _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
-
-            var configAction = new Action<BinderOptions>(o =>
+            // Keep the full business type stream available for downstream modules such as auto-controllers,
+            // localization, and other discovery-based features.
+            if (type.IsClass && type.GetCustomAttribute<ConfigurationAttribute>(false) is
             {
-                o.ErrorOnUnknownConfiguration =
-                    configAttr.ErrorOnUnknownConfiguration ?? Option.ErrorOnUnknownConfiguration;
-                o.BindNonPublicProperties = configAttr.BindNonPublicProperties ?? false;
-            });
-            if (configAttr.Section is { } section)
-            {
-                Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
-                // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section), configAction);
-                ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
-                    configAction);
+                IsSubConfiguration: false
             }
-            else
+            )
             {
-                Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
-                // OptionsBuilderConfigurationExtensions.Bind(optionsBuilder, Option.AppConfiguration, configAction);
-                ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration,
-                    configAction);
+                RegisterConfigurationType(type);
             }
 
-            OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionsBuilder);
-            yield return configType;
+            yield return type;
         }
+    }
+
+    private void RegisterConfigurationType(Type configType)
+    {
+        var card = new ConfigurationRegistration(configType);
+        var provider = new LocalJsonFileProvider(card);
+        provider.GenAndRegisterConfigurationFiles();
+        ConfigurationRegistration.Register(card);
+
+        var configAttr = card.Configuration.Info;
+        Logger.LogDebug($"AddOptions<{configType.Name}>");
+        dynamic optionsBuilder = _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
+
+        var configAction = new Action<BinderOptions>(o =>
+        {
+            o.ErrorOnUnknownConfiguration =
+                configAttr.ErrorOnUnknownConfiguration ?? Option.ErrorOnUnknownConfiguration;
+            o.BindNonPublicProperties = configAttr.BindNonPublicProperties ?? false;
+        });
+        if (configAttr.Section is { } section)
+        {
+            Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
+            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
+                configAction);
+        }
+        else
+        {
+            Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
+            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration,
+                configAction);
+        }
+
+        OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionsBuilder);
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -28,14 +27,8 @@ public static class ModuleAutoControllersBuilderExtensions
         /// </summary>
         public static ModuleAutoControllersGuide AddAutoControllers(Action<ModuleAutoControllersOption>? action = null, Action<CrudControllerOption>? crudOptionAction = null)
         {
-            var applicationPartTypes = new HashSet<Type>();
-
             return new ModuleAutoControllersGuide()
-                .Register(option =>
-                {
-                    option.SetApplicationPartTypes(applicationPartTypes);
-                    action?.Invoke(option);
-                })
+                .Register(action)
                 .ConfigureExtraOption(crudOptionAction);
         }
     }
@@ -45,6 +38,14 @@ public static class ModuleAutoControllersBuilderExtensions
 public class ModuleAutoControllers(ModuleAutoControllersOption option)
     : WebModuleBase<ModuleAutoControllers, ModuleAutoControllersOption, ModuleAutoControllersGuide>(option), IBusinessTypeIterator
 {
+    private readonly AutoControllerApplicationPartCatalog _applicationPartCatalog = new();
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Keep discovery state on a module-owned singleton so direct and transitive registration paths share it.
+        services.AddSingleton(_applicationPartCatalog);
+    }
+
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
         UseEndpoints(app, endpoints =>
@@ -58,18 +59,16 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
         DependsOnModule<ModuleAutoModelGuide>().Register();
         DependsOnModule<ModuleControllersGuide>().Register().ConfigMvcBuilder((builder, provider) =>
         {
-            builder.ConfigureApplicationPartManager(manager =>
-            {
-                var option = provider.GetRequiredService<IOptions<ModuleAutoControllersOption>>().Value;
+            var catalog = provider.GetRequiredService<AutoControllerApplicationPartCatalog>();
+            var applicationPartTypes = catalog.GetApplicationPartTypes();
 
-                manager.ApplicationParts.Clear();
-                manager.ApplicationParts.Add(new TypeCollectionApplicationPart(option.ApplicationPartTypes));
+            builder.PartManager.ApplicationParts.Clear();
+            builder.PartManager.ApplicationParts.Add(new TypeCollectionApplicationPart(applicationPartTypes));
 
-                // Used to identify generated CRUD controllers from the registered types.
-                manager.FeatureProviders.Add(
-                    ActivatorUtilities
-                        .CreateInstance<CrudControllerFeatureProvider>(provider));
-            });
+            // Used to identify generated CRUD controllers from the registered types.
+            builder.PartManager.FeatureProviders.Add(
+                ActivatorUtilities
+                    .CreateInstance<CrudControllerFeatureProvider>(provider));
             builder.Services.Replace(ServiceDescriptor.Transient<IControllerActivator, ServiceBasedControllerActivator>());
             
             // Important: ASP.NET Core MVC uses its own controller activation by default. However, for CrudApplicationService, it needs to be obtained from dependency injection (including ICachedServiceProvider).
@@ -99,7 +98,7 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
             if (type is { IsClass: true, IsAbstract: false, IsGenericType: false } &&
                 (typeof(ControllerBase).IsAssignableFrom(type) || typeof(ICrudApplicationService).IsAssignableFrom(type)))
             {
-                Option.AddApplicationPartType(type);
+                _applicationPartCatalog.Add(type);
             }
 
             yield return type;
@@ -113,17 +112,4 @@ public class ModuleAutoControllersGuide : WebModuleGuide<ModuleAutoControllers, 
 
 }
 
-public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>
-{
-    internal HashSet<Type> ApplicationPartTypes { get; private set; } = [];
-
-    internal void SetApplicationPartTypes(HashSet<Type> applicationPartTypes)
-    {
-        ApplicationPartTypes = applicationPartTypes;
-    }
-
-    internal void AddApplicationPartType(Type type)
-    {
-        ApplicationPartTypes.Add(type);
-    }
-}
+public class ModuleAutoControllersOption : ModuleOptions<ModuleAutoControllers>;
