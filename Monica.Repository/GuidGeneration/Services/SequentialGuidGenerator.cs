@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
-using Monica.DependencyInjection.Abstractions;
 using Monica.Repository.GuidGeneration.Abstractions;
 using Monica.Repository.GuidGeneration.Models;
 
@@ -12,7 +11,7 @@ namespace Monica.Repository.GuidGeneration.Services;
 /// Implements <see cref="IGuidGenerator"/> by creating sequential Guids.
 /// Use <see cref="SequentialGuidGeneratorOptions"/> to configure.
 /// </summary>
-public class SequentialGuidGenerator : IGuidGenerator, ITransientDependency
+public class SequentialGuidGenerator : IGuidGenerator
 {
     public SequentialGuidGeneratorOptions Options { get; }
 
