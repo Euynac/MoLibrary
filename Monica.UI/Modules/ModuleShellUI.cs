@@ -189,10 +189,17 @@ public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOpt
     /// <param name="fromPath">Source path (such as "/")</param>
     /// <param name="toPath">Target path (such as "/swagger" or "~/swagger")</param>
     /// <returns>Configuration Director</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the source path has already been registered.</exception>
     public ModuleShellUIGuide AddRouteRedirect(string fromPath, string toPath)
     {
         ConfigureModuleOption(option =>
         {
+            if (option.RouteRedirects.TryGetValue(fromPath, out var existingTarget))
+            {
+                throw new InvalidOperationException(
+                    $"Route redirect '{fromPath}' is already registered and points to '{existingTarget}'.");
+            }
+
             option.RouteRedirects[fromPath] = toPath;
         }, secondKey: fromPath);
 

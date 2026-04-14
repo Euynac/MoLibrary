@@ -85,6 +85,19 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
 public class ModuleSwaggerUIGuide : ModuleGuide<ModuleSwaggerUI, ModuleSwaggerUIOption, ModuleSwaggerUIGuide>
 {
     /// <summary>
+    /// Redirects the application root route to the Swagger UI page.
+    /// This helper assumes Swagger UI is exposed at <c>/swagger</c>.
+    /// </summary>
+    /// <returns>The current module guide.</returns>
+    public ModuleSwaggerUIGuide SetAsRootRoute()
+    {
+        DependsOnModule<ModuleShellUIGuide>().Register()
+            .AddRouteRedirect("/", "/swagger");
+
+        return this;
+    }
+
+    /// <summary>
     /// Add custom navigation buttons to Swagger UI
     /// </summary>
     /// <param name="name">Button display text</param>
