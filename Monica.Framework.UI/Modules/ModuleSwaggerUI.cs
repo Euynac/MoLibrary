@@ -92,7 +92,7 @@ public class ModuleSwaggerUIGuide : ModuleGuide<ModuleSwaggerUI, ModuleSwaggerUI
     public ModuleSwaggerUIGuide SetAsRootRoute()
     {
         DependsOnModule<ModuleShellUIGuide>().Register()
-            .AddRouteRedirect("/", "/swagger");
+            .AddRouteRedirect("/", "/swagger"); //TODO after module system refactor then resolve this hard code problem, replace by Option in swagger module.
 
         return this;
     }
