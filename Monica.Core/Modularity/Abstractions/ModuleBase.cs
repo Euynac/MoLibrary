@@ -83,6 +83,40 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
             throw new InvalidOperationException($"Module {moduleType.Name} does not have option {typeof(TSpecificModuleOption).Name} or is not initialized in current stage.");
         return (TSpecificModuleOption)value;
     }
+
+    /// <summary>
+    /// Gets the registration order for the module-owned host builder phase.
+    /// </summary>
+    /// <remarks>
+    /// Override this when built-in builder behavior must execute at a specific point without relying on entry-only guide methods.
+    /// </remarks>
+    protected virtual int GetConfigureBuilderOrder()
+    {
+        return -1;
+    }
+
+    /// <summary>
+    /// Gets the registration order for the module-owned service registration phase.
+    /// </summary>
+    /// <remarks>
+    /// Override this when built-in service registration must execute at a specific point without relying on entry-only guide methods.
+    /// </remarks>
+    protected virtual int GetConfigureServicesOrder()
+    {
+        return -1;
+    }
+
+    /// <summary>
+    /// Gets the registration order for the module-owned post-service phase.
+    /// </summary>
+    /// <remarks>
+    /// Override this when built-in post-configuration must execute at a specific point without relying on entry-only guide methods.
+    /// </remarks>
+    protected virtual int GetPostConfigureServicesOrder()
+    {
+        return -1;
+    }
+
     internal override void ConvertToRegisterRequest()
     {
         var guide = new TModuleGuide(); // TODO: this path does not currently preserve the original registration source.
@@ -90,17 +124,17 @@ public abstract class ModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TModu
         guide.ConfigureBuilder(context =>
         {
             ConfigureBuilder(context.HostApplicationBuilder);
-        }, -1);
+        }, GetConfigureBuilderOrder());
 
         guide.ConfigureServices(context =>
         {
             ConfigureServices(context.Services);
-        }, -1);
+        }, GetConfigureServicesOrder());
 
         guide.PostConfigureServices(context =>
         {
             PostConfigureServices(context.Services);
-        }, -1);
+        }, GetPostConfigureServicesOrder());
     }
 
     public void CheckRequiredMethod(string methodName, string? errorDetail = null)

@@ -30,7 +30,7 @@ public static class ModuleShellUIBuilderExtensions
         /// </summary>
         public static ModuleShellUIGuide AddUIShell(Action<ModuleShellUIOption>? action = null)
         {
-            return new ModuleShellUIGuide().Register(action).AddBasicMiddlewares();
+            return new ModuleShellUIGuide().Register(action);
         }
     }
 }
@@ -112,6 +112,52 @@ public class ModuleShellUI(ModuleShellUIOption option)
         // Register user context service
         services.AddScoped<UserContextState>();
     }
+
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        var webApp = RequireWebApplication(app);
+
+        webApp.MapStaticAssets();  // .NET 9 support
+
+        // Antiforgery middleware must stay in the routed pipeline.
+        app.UseAntiforgery();
+    }
+
+    public override void ConfigureEndpoints(IApplicationBuilder app)
+    {
+        var webApp = RequireWebApplication(app);
+        var registry = app.ApplicationServices.GetRequiredService<IPageRegistry>();
+
+        foreach (var redirect in Option.RouteRedirects)
+        {
+            var fromPath = redirect.Key;
+            var toPath = redirect.Value;
+            webApp.MapGet(fromPath, () => Results.LocalRedirect(toPath));
+        }
+
+        webApp.MapRazorComponents<AppShell>()
+            .AddInteractiveServerRenderMode()
+            .AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
+        // Huge pitfall: if AddAdditionalAssemblies is missing here, pressing F5 refresh may return 404,
+        // while navigation through Router may still work.
+    }
+
+    protected override int GetConfigureApplicationBuilderOrder()
+    {
+        return (int)ModuleApplicationMiddlewareOrder.AfterUseRouting;
+    }
+
+    protected override int GetConfigureEndpointsOrder()
+    {
+        return (int)ModuleRegistrationOrder.Normal;
+    }
+
+    private static WebApplication RequireWebApplication(IApplicationBuilder app)
+    {
+        return app as WebApplication
+               ?? throw new InvalidOperationException(
+                   $"{nameof(ModuleShellUI)} requires {nameof(WebApplication)} during application configuration.");
+    }
 }
 
 /// <summary>
@@ -153,57 +199,6 @@ public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOpt
         return this;
     }
 
-    /// <summary>
-    /// Add UI basic middleware
-    /// NOTE: These middlewares should be called by the host application
-    /// </summary>
-    /// <returns>Configuration Director</returns>
-    public ModuleShellUIGuide AddBasicMiddlewares()
-    {
-        ConfigureApplicationBuilder(builder =>
-        {
-            var app = builder.RequireWebApplication();
-
-            //app.UseExceptionHandler("/Error", createScopeForErrors: true);
-
-            app.MapStaticAssets();  // .NET 9 support
-
-            // //Static file support (for MudBlazor resources and Razor class library static resources)
-            // app.UseStaticFiles();
-            
-            //app.UseStaticFiles(new StaticFileOptions()
-            //{
-            //    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "CustomStyles")),
-            //    RequestPath = new PathString("/CustomStyles")
-            //});
-
-            // Antiforgery middleware:
-            // Call app.UseAntiforgery() after authentication/authorization and within the routing pipeline.
-            builder.ApplicationBuilder.UseAntiforgery();
-
-        }, ModuleApplicationMiddlewareOrder.AfterUseRouting);
-
-        ConfigureEndpoints(builder =>
-        {
-            var app = builder.RequireWebApplication();
-            var registry = builder.ApplicationBuilder.ApplicationServices.GetRequiredService<IPageRegistry>();
-
-            // Configure route redirection
-            foreach (var redirect in builder.ModuleOption.RouteRedirects)
-            {
-                var fromPath = redirect.Key;
-                var toPath = redirect.Value;
-                app.MapGet(fromPath, () => Results.LocalRedirect(toPath));
-            }
-
-            app.MapRazorComponents<AppShell>()
-                .AddInteractiveServerRenderMode().AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
-            // Huge pitfall: if AddAdditionalAssemblies is missing here, pressing F5 refresh may return 404,
-            // while navigation through Router may still work.
-        });
-
-        return this;
-    }
 }
 
 /// <summary>

@@ -26,7 +26,7 @@ public static class ModuleAuthorizationBuilderExtensions
         public static ModuleAuthorizationGuide AddAuthorization<TEnum>(string claimTypeDefinition) where TEnum : struct, Enum
         {
             return new ModuleAuthorizationGuide().Register()
-                .AddDefaultPermissionBit<TEnum>(claimTypeDefinition).AddDefaultMiddleware();
+                .AddDefaultPermissionBit<TEnum>(claimTypeDefinition);
         }
     }
 }
@@ -34,6 +34,15 @@ public static class ModuleAuthorizationBuilderExtensions
 [ModuleKey(BuiltInModuleKey.Authority)]
 public class ModuleAuthorization(ModuleAuthorizationOption option) : WebModuleBase<ModuleAuthorization, ModuleAuthorizationOption, ModuleAuthorizationGuide>(option)
 {
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        app.UseAuthorization();
+    }
+
+    protected override int GetConfigureApplicationBuilderOrder()
+    {
+        return (int)ModuleApplicationMiddlewareOrder.AfterUseRouting;
+    }
 
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -74,16 +83,7 @@ public class ModuleAuthorizationGuide : WebModuleGuide<ModuleAuthorization, Modu
 {
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [nameof(AddDefaultPermissionBit), nameof(AddDefaultMiddleware)];
-    }
-
-    internal ModuleAuthorizationGuide AddDefaultMiddleware()
-    {
-        ConfigureApplicationBuilder(o =>
-        {
-            o.ApplicationBuilder.UseAuthorization();
-        }, ModuleApplicationMiddlewareOrder.AfterUseRouting);
-        return this;
+        return [nameof(AddDefaultPermissionBit)];
     }
 
     /// <summary>

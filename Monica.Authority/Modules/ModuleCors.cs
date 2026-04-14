@@ -18,7 +18,7 @@ public static class ModuleCorsBuilderExtensions
         /// </summary>
         public static ModuleCorsGuide AddCors()
         {
-            return new ModuleCorsGuide().Register().ConfigCorsMiddleware();
+            return new ModuleCorsGuide().Register();
         }
     }
 }
@@ -26,6 +26,15 @@ public static class ModuleCorsBuilderExtensions
 [ModuleKey(BuiltInModuleKey.Cors)]
 public class ModuleCors(ModuleCorsOption option) : WebModuleBase<ModuleCors, ModuleCorsOption, ModuleCorsGuide>(option)
 {
+    public override void ConfigureApplicationBuilder(IApplicationBuilder app)
+    {
+        app.UseCors();
+    }
+
+    protected override int GetConfigureApplicationBuilderOrder()
+    {
+        return ModuleOrder.MIDDLEWARE_USE_ROUTING + 1;
+    }
 }
 
 public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, ModuleCorsGuide>
@@ -53,17 +62,6 @@ public class ModuleCorsGuide : WebModuleGuide<ModuleCors, ModuleCorsOption, Modu
                 });
             });
         });
-        return this;
-    }
-
-    internal ModuleCorsGuide ConfigCorsMiddleware()
-    {
-        // Must be registered after UseRouting but before UseAuthorization so CORS takes effect when Origin headers are present
-        ConfigureApplicationBuilder(o =>
-        {
-            o.ApplicationBuilder.UseCors();
-        }, ModuleOrder.MIDDLEWARE_USE_ROUTING + 1);
-
         return this;
     }
 }

@@ -69,6 +69,28 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
     {
     }
 
+    /// <summary>
+    /// Gets the registration order for the module-owned application-builder phase.
+    /// </summary>
+    /// <remarks>
+    /// Override this when built-in middleware must execute at a specific point without relying on entry-only guide methods.
+    /// </remarks>
+    protected virtual int GetConfigureApplicationBuilderOrder()
+    {
+        return (int)ModuleApplicationMiddlewareOrder.BeforeUseRouting;
+    }
+
+    /// <summary>
+    /// Gets the registration order for the module-owned endpoint phase.
+    /// </summary>
+    /// <remarks>
+    /// Override this when built-in endpoint mapping must execute at a specific point without relying on entry-only guide methods.
+    /// </remarks>
+    protected virtual int GetConfigureEndpointsOrder()
+    {
+        return -1;
+    }
+
     internal override void ConvertToRegisterRequest()
     {
         base.ConvertToRegisterRequest();
@@ -78,12 +100,12 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
         guide.ConfigureApplicationBuilder(context =>
         {
             ConfigureApplicationBuilder(context.ApplicationBuilder);
-        }, ModuleApplicationMiddlewareOrder.BeforeUseRouting);
+        }, GetConfigureApplicationBuilderOrder());
 
         guide.ConfigureEndpoints(context =>
         {
             ConfigureEndpoints(context.ApplicationBuilder);
-        }, -1);
+        }, GetConfigureEndpointsOrder());
     }
 
     /// <summary>

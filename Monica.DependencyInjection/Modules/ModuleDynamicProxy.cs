@@ -23,7 +23,7 @@ public static class ModuleDynamicProxyBuilderExtensions
         /// </summary>
         public static ModuleDynamicProxyGuide AddDynamicProxy(Action<ModuleDynamicProxyOption>? action = null)
         {
-            return new ModuleDynamicProxyGuide().Register(action).EnsureCoreServices();
+            return new ModuleDynamicProxyGuide().Register(action);
         }
     }
 }
@@ -32,25 +32,22 @@ public static class ModuleDynamicProxyBuilderExtensions
 public class ModuleDynamicProxy(ModuleDynamicProxyOption option)
     : ModuleBase<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>(option)
 {
+    public override void PostConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton(new ServiceProviderProxyGenerator());
+        services.AddTransient(typeof(AsyncDeterminationInterceptorAdapter<>));
+        DynamicProxyServiceRegistrar.ApplyInterceptors(services, Option);
+    }
+
+    protected override int GetPostConfigureServicesOrder()
+    {
+        return (int)ModuleRegistrationOrder.PostConfig;
+    }
 }
 
 public class
     ModuleDynamicProxyGuide : ModuleGuide<ModuleDynamicProxy, ModuleDynamicProxyOption, ModuleDynamicProxyGuide>
 {
-    private const string CONFIG_CORE_SERVICES = nameof(CONFIG_CORE_SERVICES);
-
-    internal ModuleDynamicProxyGuide EnsureCoreServices()
-    {
-        PostConfigureServices(context =>
-        {
-            context.Services.AddSingleton(new ServiceProviderProxyGenerator());
-            context.Services.AddTransient(typeof(AsyncDeterminationInterceptorAdapter<>));
-            DynamicProxyServiceRegistrar.ApplyInterceptors(context.Services,
-                context.ModuleOption);
-        }, ModuleRegistrationOrder.PostConfig, key: CONFIG_CORE_SERVICES);
-        return this;
-    }
-
     /// <summary>
     /// Registers a dynamic-proxy interceptor through the module guide.
     /// </summary>
@@ -62,8 +59,6 @@ public class
         string? secondKey = null)
         where TInterceptor : InvocationInterceptor
     {
-        EnsureCoreServices();
-
         var interceptorKey = secondKey ?? Guid.NewGuid().ToString();
 
         ConfigureModuleOption(option => option.AddInterceptor<TInterceptor>(shouldIntercept), secondKey: interceptorKey);
@@ -79,7 +74,6 @@ public class
     /// <param name="kind">The proxy kind.</param>
     public ModuleDynamicProxyGuide SetProxyKindOfServiceType<TServiceType>(EDynamicProxyKind kind)
     {
-        EnsureCoreServices();
         ConfigureModuleOption(option => option.SetProxyKindOfServiceType<TServiceType>(kind),
             secondKey: typeof(TServiceType).FullName);
         return this;
