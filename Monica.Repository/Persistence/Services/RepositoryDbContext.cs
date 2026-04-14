@@ -22,7 +22,7 @@ using Monica.Tool.Runtime;
 
 namespace Monica.Repository.Persistence.Services;
 
-public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IUnitOfWorkAwareDbContext, ITransientDependency
+public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContext> options, ICachedServiceProvider serviceProvider) : DbContext(options), IUnitOfWorkAwareDbContext
     where TDbContext : DbContext
 {
     public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;

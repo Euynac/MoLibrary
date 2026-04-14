@@ -68,6 +68,8 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 case DbContextProviderType.ContextFactory:
                     // Register EF Core factory and wrap it with our provider interface
                     context.Services.AddDbContextFactory<TDbContext>(optionsAction);
+                    context.Services.AddTransient<TDbContext>(serviceProvider =>
+                        serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>().CreateDbContext());
                     context.Services.AddSingleton(
                         typeof(IDbContextProvider<TDbContext>),
                         typeof(DbContextFactoryProvider<TDbContext>));
