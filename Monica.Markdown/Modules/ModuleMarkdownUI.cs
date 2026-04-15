@@ -45,7 +45,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
     {
         DependsOnModule<ModuleMarkdownGuide>().Register();
 
-        var uiCoreGuide = DependsOnModule<ModuleShellUIGuide>().Register();
+        var uiCoreGuide = DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true);
         if (!Option.DisableMarkdownPage)
         {
             DependsOnModule<ModuleLocalizationGuide>().Register()

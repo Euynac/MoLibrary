@@ -46,7 +46,7 @@ public class ModuleProjectUnitsUI(ModuleProjectUnitsUIOption option)
                 .AddResource<ProjectUnitsResource>();
 
             DependsOnModule<ModuleProjectUnitsGuide>().Register();
-            DependsOnModule<ModuleShellUIGuide>().Register()
+            DependsOnModule<ModuleShellUIGuide>().Register(o => o.EnableMarkdown = true)
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIProjectUnitsPage>(
                     UIProjectUnitsPage.PAGE_URL,
                     "Pages:ProjectUnits:Title",
