@@ -50,6 +50,13 @@
   },
   "CustomLinks": {
     "Title": "Quick Links",
+    "Items": {
+      "Swagger": {
+        "Name": "API Management",
+        "Description": "View and test API endpoints.",
+        "Category": "Monica"
+      }
+    },
     "Actions": {
       "CopyUserName": "Copy user name",
       "CopyPassword": "Copy password"

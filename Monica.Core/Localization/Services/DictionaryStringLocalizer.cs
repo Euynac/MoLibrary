@@ -1,15 +1,15 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Monica.Modules;
+using Monica.Core.Localization.Models;
 
-namespace Monica.Core.Localization.Localizers;
+namespace Monica.Core.Localization.Services;
 
-public class MoDictionaryStringLocalizer(
+internal sealed class DictionaryStringLocalizer(
     string resourceName,
     Dictionary<string, Dictionary<string, string>> resources,
-    ModuleLocalizationOption option,
-    ILogger<MoDictionaryStringLocalizer> logger) : IStringLocalizer
+    LocalizationManagerOptions options,
+    ILogger<DictionaryStringLocalizer> logger) : IStringLocalizer
 {
     public LocalizedString this[string name]
     {
@@ -73,9 +73,9 @@ public class MoDictionaryStringLocalizer(
         }
 
         // 3. Default culture
-        if (option.DefaultCulture != culture.Name)
+        if (options.DefaultCulture != culture.Name)
         {
-            culturesToTry.Add(option.DefaultCulture);
+            culturesToTry.Add(options.DefaultCulture);
         }
 
         foreach (var cultureToTry in culturesToTry)

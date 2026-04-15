@@ -1,8 +1,8 @@
-namespace Monica.Core.Localization;
+namespace Monica.Core.Localization.Abstractions;
 
 /// <summary>
 /// Marker interface for type-based Monica localization resources.
 /// </summary>
-public interface IMoLocalizationResource
+public interface ILocalizationResource
 {
 }

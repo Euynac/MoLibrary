@@ -45,6 +45,8 @@
                         <div class="system-info-custom-links__items">
                             @foreach (var link in group.Links)
                             {
+                                var description = GetDescription(link);
+
                                 <div class="system-info-custom-link-row">
                                     <div class="system-info-custom-link-row__content">
                                         <MudLink Href="@link.Url"
@@ -52,15 +54,13 @@
                                                  Typo="Typo.body2">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                                 <MudIcon Icon="@link.Icon" Size="Size.Small" Color="Color.Info" />
-                                                <span class="system-info-custom-link-row__name">@link.Name</span>
+                                                <span class="system-info-custom-link-row__name">@GetDisplayName(link)</span>
                                             </MudStack>
                                         </MudLink>
 
-                                        @if (!string.IsNullOrWhiteSpace(link.Description))
+                                        @if (!string.IsNullOrWhiteSpace(description))
                                         {
-                                            <MudText Typo="Typo.caption" Class="system-info-custom-link-row__description">
-                                                @link.Description
-                                            </MudText>
+                                            <MudText Typo="Typo.caption" Class="system-info-custom-link-row__description">@description</MudText>
                                         }
                                     </div>
 
@@ -114,7 +114,7 @@
         var visibleLinks = Links?
             .Where(link => link.Enabled)
             .OrderBy(link => link.Order)
-            .ThenBy(link => link.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(GetDisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList() ?? [];
 
         if (visibleLinks.Count == 0)
@@ -123,9 +123,40 @@
         }
 
         return visibleLinks
-            .GroupBy(link => NormalizeCategory(link.Category))
+            .GroupBy(GetCategory)
             .Select(group => new SystemInfoCustomLinkGroup(group.Key, group.ToList()))
             .ToList();
+    }
+
+    private string GetDisplayName(SystemInfoCustomLink link)
+    {
+        return GetLocalizedText(link.Name, link.NameKey);
+    }
+
+    private string? GetDescription(SystemInfoCustomLink link)
+    {
+        return GetLocalizedTextOrNull(link.Description, link.DescriptionKey);
+    }
+
+    private string? GetCategory(SystemInfoCustomLink link)
+    {
+        return NormalizeCategory(GetLocalizedTextOrNull(link.Category, link.CategoryKey));
+    }
+
+    private string GetLocalizedText(string fallback, string? key)
+    {
+        return GetLocalizedTextOrNull(fallback, key) ?? fallback;
+    }
+
+    private string? GetLocalizedTextOrNull(string? fallback, string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return fallback;
+        }
+
+        var localized = L[key];
+        return localized.ResourceNotFound ? fallback : localized.Value;
     }
 
     private static string? NormalizeCategory(string? category)

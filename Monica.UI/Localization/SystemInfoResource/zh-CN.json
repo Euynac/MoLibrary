@@ -50,6 +50,13 @@
   },
   "CustomLinks": {
     "Title": "快捷链接",
+    "Items": {
+      "Swagger": {
+        "Name": "接口管理",
+        "Description": "查看和测试 API 接口",
+        "Category": "Monica"
+      }
+    },
     "Actions": {
       "CopyUserName": "复制用户名",
       "CopyPassword": "复制密码"

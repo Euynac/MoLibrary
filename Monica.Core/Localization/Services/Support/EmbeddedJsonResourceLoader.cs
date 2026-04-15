@@ -1,10 +1,10 @@
 using System.Reflection;
 using System.Text.Json;
-using Monica.Core.Localization.Models;
+using Monica.Core.Localization.Models.Internal;
 
-namespace Monica.Core.Localization.Json;
+namespace Monica.Core.Localization.Services.Support;
 
-public static class JsonResourceLoader
+internal static class EmbeddedJsonResourceLoader
 {
     internal static Dictionary<string, Dictionary<string, string>> Load(
         LocalizationResourceRegistration registration,
@@ -38,10 +38,10 @@ public static class JsonResourceLoader
         return result;
     }
 
-    public static Dictionary<string, Dictionary<string, string>> LoadFromAssembly(
+    internal static Dictionary<string, Dictionary<string, string>> LoadFromAssembly(
         Assembly assembly,
         Type resourceType,
-        List<string> supportedCultures)
+        IReadOnlyCollection<string> supportedCultures)
     {
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentNullException.ThrowIfNull(resourceType);

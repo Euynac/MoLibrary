@@ -11,6 +11,11 @@ public record SystemInfoCustomLink
     public required string Name { get; init; }
 
     /// <summary>
+    /// Gets the optional localization key used to resolve <see cref="Name"/>.
+    /// </summary>
+    public string? NameKey { get; init; }
+
+    /// <summary>
     /// Gets the link URL. Supports relative and absolute URLs.
     /// </summary>
     public required string Url { get; init; }
@@ -26,9 +31,19 @@ public record SystemInfoCustomLink
     public string? Description { get; init; }
 
     /// <summary>
+    /// Gets the optional localization key used to resolve <see cref="Description"/>.
+    /// </summary>
+    public string? DescriptionKey { get; init; }
+
+    /// <summary>
     /// Gets the optional category used to group links together.
     /// </summary>
     public string? Category { get; init; }
+
+    /// <summary>
+    /// Gets the optional localization key used to resolve <see cref="Category"/>.
+    /// </summary>
+    public string? CategoryKey { get; init; }
 
     /// <summary>
     /// Gets the display order. Smaller values appear first.

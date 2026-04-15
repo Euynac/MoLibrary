@@ -1,8 +1,8 @@
 using System.Reflection;
 
-namespace Monica.Core.Localization.Models;
+namespace Monica.Core.Localization.Models.Internal;
 
-internal record LocalizationResourceRegistration(
+internal sealed record LocalizationResourceRegistration(
     Type ResourceType,
     Assembly Assembly,
     string BasePath)

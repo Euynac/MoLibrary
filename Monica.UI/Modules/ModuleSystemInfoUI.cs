@@ -96,6 +96,11 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
 /// </summary>
 public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, ModuleSystemInfoUIOption, ModuleSystemInfoUIGuide>
 {
+    private const string SwaggerLinkSecondKey = nameof(AddSwaggerLink);
+    private const string SwaggerLinkNameKey = "CustomLinks:Items:Swagger:Name";
+    private const string SwaggerLinkDescriptionKey = "CustomLinks:Items:Swagger:Description";
+    private const string SwaggerLinkCategoryKey = "CustomLinks:Items:Swagger:Category";
+
     /// <summary>
     /// Adds a custom shortcut link to the system information page.
     /// </summary>
@@ -119,21 +124,53 @@ public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, Module
         string? userName = null,
         string? password = null)
     {
+        return AddCustomLink(new SystemInfoCustomLink
+        {
+            Name = name,
+            Url = url,
+            Icon = icon ?? Icons.Material.Filled.Link,
+            Description = description,
+            Category = category,
+            Order = order,
+            Target = target,
+            UserName = userName,
+            Password = password
+        }, secondKey: name);
+    }
+
+    /// <summary>
+    /// Adds a localized quick link that opens the Swagger UI page from system information.
+    /// This helper currently assumes Swagger UI is exposed at <c>/swagger</c>.
+    /// </summary>
+    /// <param name="order">Display order. Smaller values are shown first.</param>
+    /// <param name="target">Target behavior used by the generated anchor element.</param>
+    /// <returns>The current module guide.</returns>
+    public ModuleSystemInfoUIGuide AddSwaggerLink(
+        int order = 0,
+        SystemInfoCustomLinkTarget target = SystemInfoCustomLinkTarget.NewTab)
+    {
+        return AddCustomLink(new SystemInfoCustomLink
+        {
+            Name = "API Management",
+            NameKey = SwaggerLinkNameKey,
+            // TODO: Replace this hardcoded route after the Swagger module exposes its UI path as an option.
+            Url = "/swagger",
+            Icon = Icons.Material.Filled.Api,
+            Description = "View and test API endpoints.",
+            DescriptionKey = SwaggerLinkDescriptionKey,
+            Category = "Monica",
+            CategoryKey = SwaggerLinkCategoryKey,
+            Order = order,
+            Target = target
+        }, secondKey: SwaggerLinkSecondKey);
+    }
+
+    private ModuleSystemInfoUIGuide AddCustomLink(SystemInfoCustomLink link, string secondKey)
+    {
         ConfigureModuleOption(option =>
         {
-            option.CustomLinks.Add(new SystemInfoCustomLink
-            {
-                Name = name,
-                Url = url,
-                Icon = icon ?? Icons.Material.Filled.Link,
-                Description = description,
-                Category = category,
-                Order = order,
-                Target = target,
-                UserName = userName,
-                Password = password
-            });
-        }, secondKey: name);
+            option.CustomLinks.Add(link);
+        }, secondKey: secondKey);
 
         return this;
     }

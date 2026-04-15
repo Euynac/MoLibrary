@@ -1,4 +1,7 @@
-namespace Monica.Core.Localization.Models;
+using Monica.Core.Localization.Abstractions;
+using Monica.Core.Localization.Models.Internal;
+
+namespace Monica.Core.Localization.Services.Support;
 
 internal sealed class LocalizationResourceRegistry
 {
@@ -12,7 +15,7 @@ internal sealed class LocalizationResourceRegistry
 
         var registrations = types
             .Where(type => type is { IsClass: true, IsAbstract: false } &&
-                           typeof(IMoLocalizationResource).IsAssignableFrom(type))
+                           typeof(ILocalizationResource).IsAssignableFrom(type))
             .Distinct()
             .Select(LocalizationResourceRegistration.Create)
             .OrderBy(registration => registration.ResourceType.FullName, StringComparer.Ordinal)

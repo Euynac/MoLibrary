@@ -7,8 +7,10 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Localization;
-using Monica.Core.Localization.Localizers;
+using Monica.Core.Localization.Abstractions;
 using Monica.Core.Localization.Models;
+using Monica.Core.Localization.Services;
+using Monica.Core.Localization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -36,7 +38,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
     : WebModuleBase<ModuleLocalization, ModuleLocalizationOption, ModuleLocalizationGuide>(option), IBusinessTypeIterator
 {
     private readonly LocalizationResourceRegistry _resourceRegistry = new();
-    private readonly List<Type> _discoveredResourceMarkerTypes = [];
+    private readonly List<Type> _resourceMarkerTypesDiscoveredFromTypeScan = [];
 
     public override bool CanDowngradeToNonWebModule()
     {
@@ -46,12 +48,14 @@ public class ModuleLocalization(ModuleLocalizationOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        LocalizationManager.UseOptions(Option.ToManagerOptions());
+
         // Add ASP.NET Core localization services
         services.AddLocalization();
         services.TryAddSingleton(_resourceRegistry);
 
         // Replace default factory with custom JSON-based factory
-        services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, MoStringLocalizerFactory>());
+        services.Replace(ServiceDescriptor.Singleton<IStringLocalizerFactory, JsonStringLocalizerFactory>());
 
         // Configure RequestLocalizationOptions
         services.Configure<RequestLocalizationOptions>(options =>
@@ -86,9 +90,9 @@ public class ModuleLocalization(ModuleLocalizationOption option)
         foreach (var type in types)
         {
             if (type is { IsClass: true, IsAbstract: false } &&
-                typeof(IMoLocalizationResource).IsAssignableFrom(type))
+                typeof(ILocalizationResource).IsAssignableFrom(type))
             {
-                _discoveredResourceMarkerTypes.Add(type);
+                _resourceMarkerTypesDiscoveredFromTypeScan.Add(type);
             }
 
             yield return type;
@@ -97,7 +101,7 @@ public class ModuleLocalization(ModuleLocalizationOption option)
 
     public override void PostConfigureServices(IServiceCollection _)
     {
-        _resourceRegistry.ReplaceFromTypes(Option.ResourceMarkerTypes.Concat(_discoveredResourceMarkerTypes));
+        _resourceRegistry.ReplaceFromTypes(Option.ResourceMarkerTypes.Concat(_resourceMarkerTypesDiscoveredFromTypeScan));
         Logger.LogInformation("Registered {Count} localization resource marker types.", _resourceRegistry.GetRegistrations().Count);
     }
 }
@@ -118,7 +122,7 @@ public class ModuleLocalizationGuide : WebModuleGuide<ModuleLocalization, Module
     /// Use this method when a resource type should not depend on the host application's business-type scan.
     /// Host or business application resource types should continue to rely on automatic discovery through <see cref="IBusinessTypeIterator"/>.
     /// </summary>
-    public ModuleLocalizationGuide AddResource<TResource>() where TResource : class, IMoLocalizationResource
+    public ModuleLocalizationGuide AddResource<TResource>() where TResource : class, ILocalizationResource
     {
         ConfigureModuleOption(option =>
         {
@@ -165,4 +169,13 @@ public class ModuleLocalizationOption : ModuleOptions<ModuleLocalization>
     /// instead of relying on <see cref="IBusinessTypeIterator"/>, which is intended for the host application's scanned types.
     /// </summary>
     public List<Type> ResourceMarkerTypes { get; set; } = [];
+
+    internal LocalizationManagerOptions ToManagerOptions()
+    {
+        return new LocalizationManagerOptions
+        {
+            DefaultCulture = DefaultCulture,
+            SupportedCultures = [.. SupportedCultures]
+        };
+    }
 }

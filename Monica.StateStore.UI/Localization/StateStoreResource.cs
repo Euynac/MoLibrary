@@ -1,10 +1,11 @@
 using Monica.Core.Localization;
+using Monica.Core.Localization.Abstractions;
 
 namespace Monica.StateStore.UI.Localization;
 
 /// <summary>
 /// Marker class for StateStore UI localization resources
 /// </summary>
-public class StateStoreResource : IMoLocalizationResource
+public class StateStoreResource : ILocalizationResource
 {
 }
