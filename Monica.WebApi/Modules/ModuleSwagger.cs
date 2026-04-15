@@ -1,15 +1,13 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Tool.Extensions;
-using Monica.WebApi.Swagger;
+using Monica.WebApi.Swagger.Models;
+using Monica.WebApi.Swagger.Services.Support;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
@@ -19,118 +17,26 @@ namespace Monica.Modules;
 [ModuleKey(BuiltInModuleKey.Swagger)]
 public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
-
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint($"/swagger/{Option.Version}/swagger.json",
-                $"{Option.AppName ?? "Unknown"} {Option.Version}");
-            c.DocumentTitle = Option.AppName ?? "Swagger UI";
-            c.RoutePrefix = Option.RoutePrefix;
+        var documentCatalog = new SwaggerDocumentCatalog(Option);
 
-            // Allow other modules to extend SwaggerUI configuration
-            Option.ExtendSwaggerUIAction?.Invoke(c);
+        app.UseSwagger();
+        app.UseSwaggerUI(swaggerUiOptions =>
+        {
+            SwaggerUIOptionConfigurator.Configure(swaggerUiOptions, Option, documentCatalog);
         });
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSwaggerGen(options =>
+        var documentCatalog = new SwaggerDocumentCatalog(Option);
+
+        services.AddSwaggerGen(swaggerGenOptions =>
         {
-            // Add a filter that maps ApiExplorer.GroupName values to Swagger tags.
-            // options.OperationFilter<GroupNameToTagsOperationFilter>();
-            
-            options.SwaggerDoc(Option.Version, new OpenApiInfo
-            {
-                Title = Option.AppName,
-                Version = Option.Version,
-                Description = Option.Description ?? ""
-            });
-            options.AddEnumDocumentation();
-
-            // Pitfall: this API guards the visibility toggle in the Swagger UI's top-right group picker, and if omitted ABP (and our CrudAutoController-generated endpoints) will hide every controller.
-            options.DocInclusionPredicate((docName, description) => true);
-
-            //https://github.com/swagger-api/swagger-ui/issues/7911
-            //https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet/issues/285
-
-            // Pitfall: Swagger uses a type's full name for schema IDs by default, so anonymous types with unstable or duplicated names can collide when multiple methods return structurally identical payloads.
-            // Pitfall: illegal characters also crash schema generation, so we filter them out. Replacing '+' with '.' is necessary; `.Replace("`", "_")` appears redundant.
-            // Best practice is to expose explicit DTO types instead of anonymous results.
-            options.CustomSchemaIds(type => type.GetCleanFullName());
-
-            if(!Option.DisableXmlDocumentation)
-            {
-                // Pitfall: to generate Swagger docs you must enable `<GenerateDocumentationFile>True</GenerateDocumentationFile>` in each project and supply the resulting XML documents.
-                var documentAssemblies = (Option.DocumentAssemblies ?? []).ToList();
-                if (!Option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
-                {
-                    documentAssemblies.AddRange(Mo.Options.GlobalTypeFinder.GetAssemblies().Select(p => p.GetName().Name!));
-                }
-
-                var xmlFilePaths = new List<string>();
-                foreach (var name in documentAssemblies.Distinct())
-                {
-                    var filePath = Path.Combine(AppContext.BaseDirectory, $"{name}.xml");
-                    if (File.Exists(filePath))
-                    {
-                        xmlFilePaths.Add(filePath);
-                    }
-                    else if (!name.StartsWith(nameof(Monica)))
-                    {
-                        Logger.LogWarning(
-                            "Swagger XML file not found: {FilePath}. Enable <GenerateDocumentationFile>True</GenerateDocumentationFile> in the project file to generate Swagger documentation.",
-                            filePath);
-                    }
-                }
-
-                if (!Option.DisableInheritDocFilter)
-                {
-                    options.IncludeXmlCommentsWithInheritDoc(xmlFilePaths, includeControllerXmlComments: true, Logger);
-                }
-                else
-                {
-                    foreach (var filePath in xmlFilePaths)
-                    {
-                        options.IncludeXmlComments(filePath);
-                    }
-                }
-            }
-          
-
-            if (Option.UseAuth)
-            {
-                ConfigureJwtBearerSecurity(options);
-            }
-
-            Option.ExtendSwaggerGenAction?.Invoke(options);
-
-        }); //https://github.com/domaindrivendev/Swashbuckle.AspNetCore#include-descriptions-from-xml-comments
-    }
-
-    private const string JwtSecuritySchemeId = JwtBearerDefaults.AuthenticationScheme;
-    private const string JwtBearerHttpScheme = "bearer";
-
-    private static void ConfigureJwtBearerSecurity(SwaggerGenOptions options)
-    {
-        options.AddSecurityDefinition(JwtSecuritySchemeId, new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-            Description = "Enter JWT Bearer token **_only_**",
-            In = ParameterLocation.Header,
-            Type = SecuritySchemeType.Http,
-            Scheme = JwtBearerHttpScheme,
-            BearerFormat = "JWT"
-        });
-
-        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-        {
-            [new OpenApiSecuritySchemeReference(JwtSecuritySchemeId, document)] = []
+            SwaggerGenOptionConfigurator.Configure(swaggerGenOptions, Option, Logger, documentCatalog);
         });
     }
-
 }
 
 public static class ModuleSwaggerBuilderExtensions
@@ -153,6 +59,9 @@ public class ModuleSwaggerGuide : WebModuleGuide<ModuleSwagger, ModuleSwaggerOpt
 
 public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
 {
+    /// <summary>
+    /// Callback that can extend Swagger generation after the Monica defaults have been applied.
+    /// </summary>
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
 
     /// <summary>
@@ -169,6 +78,31 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     /// API version.
     /// </summary>
     public string? Version { get; set; } = "v1";
+
+    /// <summary>
+    /// Swagger document name used for Monica framework endpoints.
+    /// </summary>
+    public string MonicaDocumentName { get; set; } = "monica";
+
+    /// <summary>
+    /// Display title used for the Monica Swagger definition.
+    /// </summary>
+    public string MonicaDocumentTitle { get; set; } = "Monica API";
+
+    /// <summary>
+    /// Swagger document name used for business or application endpoints.
+    /// </summary>
+    public string BusinessDocumentName { get; set; } = "business";
+
+    /// <summary>
+    /// Display title used for the business Swagger definition.
+    /// </summary>
+    public string BusinessDocumentTitle { get; set; } = "Business API";
+
+    /// <summary>
+    /// Resolves the Swagger document kind for an endpoint. Return <see langword="null"/> to use the default built-in-Monica-module detection rule.
+    /// </summary>
+    public Func<ApiDescription, ESwaggerDocumentKind?>? DocumentKindResolver { get; set; }
 
     /// <summary>
     /// Document description.
@@ -189,8 +123,6 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     /// Disable automatically adding module-system-related assemblies to the Swagger generation pipeline.
     /// </summary>
     public bool DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly { get; set; }
-    
-    
 
     /// <summary>
     /// Require authentication for Swagger UI.

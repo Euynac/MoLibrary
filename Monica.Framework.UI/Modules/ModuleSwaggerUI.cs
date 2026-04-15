@@ -39,11 +39,17 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
         // Depend on ModuleSwagger and configure its SwaggerUI extensibility hook
         DependsOnModule<ModuleSwaggerGuide>().Register(swaggerOption =>
         {
+            var existingAction = swaggerOption.ExtendSwaggerUIAction;
+
             swaggerOption.ExtendSwaggerUIAction = c =>
             {
+                existingAction?.Invoke(c);
+
                 // Only inject if there are navigation buttons configured
                 if (Option.NavigationButtons.Count == 0)
+                {
                     return;
+                }
 
                 // Serialize enabled buttons and inject configuration
                 var buttonsJson = JsonSerializer.Serialize(
@@ -53,22 +59,20 @@ public class ModuleSwaggerUI(ModuleSwaggerUIOption option)
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
 
-                // Inject button configuration via inline script
-                c.HeadContent = $$"""
+                // Append button configuration without clobbering any existing head injections.
+                c.HeadContent += $$"""
 
                                   <script>
                                       window.MoSwagger = window.MoSwagger || {};
                                       window.MoSwagger.config = { buttons: {{buttonsJson}} };
                                   </script>
                                   """;
-                
-                
+
                 // Inject custom JavaScript for navigation buttons
                 c.InjectJavascript("../_content/Monica.Framework.UI/UISwagger/custom.js");
 
                 // Inject custom CSS for navigation buttons
                 c.InjectStylesheet("../_content/Monica.Framework.UI/UISwagger/custom.css");
-
             };
         });
     }

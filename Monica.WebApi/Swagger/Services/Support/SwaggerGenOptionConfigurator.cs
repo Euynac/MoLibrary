@@ -1,0 +1,108 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi;
+using Monica.Modules;
+using Monica.Tool.Extensions;
+using Monica.WebApi.Swagger.Extensions;
+using Swashbuckle.AspNetCore.SwaggerGen;
+
+namespace Monica.WebApi.Swagger.Services.Support;
+
+/// <summary>
+/// Applies Monica's shared SwaggerGen configuration.
+/// </summary>
+internal static class SwaggerGenOptionConfigurator
+{
+    private const string JwtSecuritySchemeId = JwtBearerDefaults.AuthenticationScheme;
+    private const string JwtBearerHttpScheme = "bearer";
+
+    public static void Configure(
+        SwaggerGenOptions options,
+        ModuleSwaggerOption option,
+        ILogger logger,
+        SwaggerDocumentCatalog documentCatalog)
+    {
+        ConfigureDocuments(options, option, documentCatalog);
+
+        options.AddEnumDocumentation();
+
+        // Pitfall: this API guards the visibility toggle in the Swagger UI's top-right group picker, and if omitted ABP (and our CrudAutoController-generated endpoints) will hide every controller.
+        options.DocInclusionPredicate(documentCatalog.ShouldInclude);
+
+        // https://github.com/swagger-api/swagger-ui/issues/7911
+        // https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet/issues/285
+        //
+        // Pitfall: Swagger uses a type's full name for schema IDs by default, so anonymous types with unstable or duplicated names can collide when multiple methods return structurally identical payloads.
+        // Pitfall: illegal characters also crash schema generation, so we filter them out. Replacing '+' with '.' is necessary; `.Replace("`", "_")` appears redundant.
+        // Best practice is to expose explicit DTO types instead of anonymous results.
+        options.CustomSchemaIds(type => type.GetCleanFullName());
+
+        ConfigureXmlDocumentation(options, option, logger);
+
+        if (option.UseAuth)
+        {
+            ConfigureJwtBearerSecurity(options);
+        }
+
+        option.ExtendSwaggerGenAction?.Invoke(options);
+    }
+
+    private static void ConfigureDocuments(
+        SwaggerGenOptions options,
+        ModuleSwaggerOption option,
+        SwaggerDocumentCatalog documentCatalog)
+    {
+        foreach (var document in documentCatalog.Documents)
+        {
+            options.SwaggerDoc(document.Name, new OpenApiInfo
+            {
+                Title = documentCatalog.GetOpenApiDocumentTitle(document),
+                Version = documentCatalog.DocumentVersion,
+                Description = option.Description ?? string.Empty
+            });
+        }
+    }
+
+    private static void ConfigureXmlDocumentation(
+        SwaggerGenOptions options,
+        ModuleSwaggerOption option,
+        ILogger logger)
+    {
+        if (option.DisableXmlDocumentation)
+        {
+            return;
+        }
+
+        var xmlFilePaths = SwaggerXmlDocumentationFileResolver.Resolve(option, logger);
+        if (option.DisableInheritDocFilter)
+        {
+            foreach (var filePath in xmlFilePaths)
+            {
+                options.IncludeXmlComments(filePath);
+            }
+
+            return;
+        }
+
+        options.IncludeXmlCommentsWithInheritDoc(xmlFilePaths, includeControllerXmlComments: true, logger);
+    }
+
+    private static void ConfigureJwtBearerSecurity(SwaggerGenOptions options)
+    {
+        options.AddSecurityDefinition(JwtSecuritySchemeId, new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Description = "Enter JWT Bearer token **_only_**",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = JwtBearerHttpScheme,
+            BearerFormat = "JWT"
+        });
+
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(JwtSecuritySchemeId, document)] = []
+        });
+    }
+}
