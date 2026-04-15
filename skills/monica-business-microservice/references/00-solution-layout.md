@@ -24,6 +24,7 @@ src/
 ├── Services/
 │   └── {Subdomain}/
 │       ├── {Subdomain}Service.API/
+│       │   ├── Program.cs                    # Service entry point and AutoControllerConfig placement
 │       │   ├── HandlersCommand/              # ApplicationService units
 │       │   ├── HandlersQuery/                # ApplicationService units
 │       │   ├── HandlersEvent/                # Event handler units
@@ -60,6 +61,7 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Put business implementation in the service's own `API` and `Domain` projects.
 - Keep service-only package references in `{Subdomain}Service.Domain`. Do not add extra shared-project references just to reach them.
 - Put `ApplicationService`, event-handler, and background-worker ProjectUnits in the service `API` project under `HandlersCommand`, `HandlersQuery`, `HandlersEvent`, and `BackgroundWorkers`.
+- Put the service-wide default `ApplicationService` route config in `{Subdomain}Service.API/Program.cs`, not in a shared gateway project.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
 - Keep `Utilities/` in the `Domain` project for pure helpers and name them `Utils*`.
 - Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Domain/Repository/`.

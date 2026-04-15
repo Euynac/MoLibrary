@@ -27,6 +27,7 @@ Use this skill to structure a Monica business solution as a modular monolith wit
 - Keep cross-domain dependencies pointed at `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`. Do not reference another domain's internal implementation directly.
 - Keep domain-owned application units in `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Keep repository implementations and `DbContext`-related files in `Repository/`, and keep pure helper code in `Utilities/` with `Utils*` names.
+- When a domain exposes `ApplicationService` HTTP endpoints through default routing, keep one assembly-level `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")` file in the domain project root instead of repeating class-level `Route` attributes on every handler.
 - AppHost entry projects are composition-only entry points. Keep them down to the project file and `Program.cs`; do not place business ProjectUnits there.
 - Keep `.slnx` solution folders aligned with the physical layout under `src/AppHost`, `src/Shared`, and `src/Domains`.
 - Treat the modular monolith as one deployment, not as hidden microservices in the same repository.

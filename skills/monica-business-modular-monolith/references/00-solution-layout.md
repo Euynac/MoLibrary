@@ -24,6 +24,7 @@ src/
 ├── Domains/
 │   └── {Subdomain}/
 │       ├── Domains.{Subdomain}.csproj        # Single domain package project
+│       ├── AutoControllerGeneratorConfig.cs  # Assembly-level default route config for ApplicationService handlers
 │       ├── Application/                      # Domain-owned use cases and background workflows
 │       │   ├── HandlersCommand/              # ApplicationService command units
 │       │   ├── HandlersQuery/                # ApplicationService query units
@@ -61,6 +62,7 @@ Recommended `.slnx` folders should mirror the physical layout:
 - Keep subdomain-specific package references in the owning `Domains.{Subdomain}.csproj`; do not introduce extra shared-project references just to reach them.
 - Keep domain models, repositories, `DbContext` ownership, and helper code inside the owning `Domains.{Subdomain}.csproj`.
 - Put application services, event handlers, and background workers in the owning domain package under `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
+- For default `ApplicationService` routing, add one assembly-level `AutoControllerConfig` file at the domain project root and let handlers contribute only request-level routes such as `tree` or `publish`.
 - Keep `DomainServices/` as the standard folder for `DomainService` units.
 - Keep `Utilities/` as the standard folder for pure helpers and name them `Utils*`.
 - Do not create `Persistence/` or `Providers/` as default folders. Keep repository implementations, `DbContext`, and EF mapping in `Repository/`.

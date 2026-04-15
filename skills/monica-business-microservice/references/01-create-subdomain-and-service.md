@@ -35,6 +35,7 @@ Create:
 ```text
 src/Services/{Subdomain}/
 ├── {Subdomain}Service.API/
+│   ├── Program.cs
 │   ├── HandlersCommand/
 │   ├── HandlersQuery/
 │   ├── HandlersEvent/
@@ -55,6 +56,7 @@ Use `monica-project-unit-development` to fill the correct ProjectUnits inside th
 - Keep pure helpers in `{Subdomain}Service.Domain/Utilities/` and name them `Utils*`.
 - Keep repository implementations, `DbContext`, and EF mapping in `{Subdomain}Service.Domain/Repository/`.
 - Use the strict solution-project reference chain `{Subdomain}Service.API -> {Subdomain}Service.Domain -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
+- Put `[assembly: AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")]` in `{Subdomain}Service.API/Program.cs` so handlers only declare request-level routes.
 
 ## Step 4. Add persistence ownership
 
@@ -64,6 +66,7 @@ Use `monica-project-unit-development` to fill the correct ProjectUnits inside th
 ## Step 5. Wire the host and update the solution
 
 - Register the service in the solution's host or gateway `Program.cs`.
+- Keep the service's default `ApplicationService` route config in `{Subdomain}Service.API/Program.cs`, even if the solution also has a gateway or AppHost.
 - Keep orchestration metadata outside the domain projects.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, `src/Services`, and `src/Migrations`.
 
