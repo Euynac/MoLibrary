@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
+using Monica.Core.Localization.Models;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
@@ -126,11 +127,11 @@ public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, Module
     {
         return AddCustomLink(new SystemInfoCustomLink
         {
-            Name = name,
+            Name = LocalizedText.Plain(name),
             Url = url,
             Icon = icon ?? Icons.Material.Filled.Link,
-            Description = description,
-            Category = category,
+            Description = LocalizedText.PlainOrNull(description),
+            Category = LocalizedText.PlainOrNull(category),
             Order = order,
             Target = target,
             UserName = userName,
@@ -151,15 +152,12 @@ public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, Module
     {
         return AddCustomLink(new SystemInfoCustomLink
         {
-            Name = "API Management",
-            NameKey = SwaggerLinkNameKey,
+            Name = LocalizedText.Resource(SwaggerLinkNameKey, "API Management"),
             // TODO: Replace this hardcoded route after the Swagger module exposes its UI path as an option.
             Url = "/swagger",
             Icon = Icons.Material.Filled.Api,
-            Description = "View and test API endpoints.",
-            DescriptionKey = SwaggerLinkDescriptionKey,
-            Category = "Monica",
-            CategoryKey = SwaggerLinkCategoryKey,
+            Description = LocalizedText.Resource(SwaggerLinkDescriptionKey, "View and test API endpoints."),
+            Category = LocalizedText.Resource(SwaggerLinkCategoryKey, "Monica"),
             Order = order,
             Target = target
         }, secondKey: SwaggerLinkSecondKey);
