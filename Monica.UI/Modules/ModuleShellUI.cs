@@ -132,7 +132,8 @@ public class ModuleShellUI(ModuleShellUIOption option)
         {
             var fromPath = redirect.Key;
             var toPath = redirect.Value;
-            webApp.MapGet(fromPath, () => Results.LocalRedirect(toPath));
+            webApp.MapGet(fromPath, () => Results.LocalRedirect(toPath))
+                .WithMetadata(MonicaMinimalApiMetadata.Instance);
         }
 
         webApp.MapRazorComponents<AppShell>()

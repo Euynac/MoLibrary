@@ -120,6 +120,12 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
             return;
         }
 
-        builder.UseEndpoints(configure);
+        builder.UseEndpoints(endpoints =>
+        {
+            // Stamp Monica-owned Minimal APIs once at the module boundary so Swagger can classify them without assembly scanning.
+            var monicaEndpoints = endpoints.MapGroup(string.Empty)
+                .WithMetadata(MonicaMinimalApiMetadata.Instance);
+            configure(monicaEndpoints);
+        });
     }
 }

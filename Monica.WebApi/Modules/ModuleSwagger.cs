@@ -100,7 +100,7 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
     public string BusinessDocumentTitle { get; set; } = "Business API";
 
     /// <summary>
-    /// Resolves the Swagger document kind for an endpoint. Return <see langword="null"/> to use the default built-in-Monica-module detection rule.
+    /// Resolves the Swagger document kind for an endpoint. Return <see langword="null"/> to use the default Monica endpoint marker rule.
     /// </summary>
     public Func<ApiDescription, ESwaggerDocumentKind?>? DocumentKindResolver { get; set; }
 

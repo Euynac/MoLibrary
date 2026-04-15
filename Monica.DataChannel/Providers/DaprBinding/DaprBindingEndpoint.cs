@@ -3,6 +3,7 @@ using Dapr.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Monica.Core.Modularity.Models;
 using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Abstractions.Communication;
 using Monica.DataChannel.Pipeline;
@@ -47,6 +48,7 @@ public class DaprBindingEndpoint(DaprBindingOptions metadata, DaprClient client)
                     {
                         await SendDataAsync(new ChannelDataContext(ChannelSide.Outer, body));
                     })
+                    .WithMetadata(MonicaMinimalApiMetadata.Instance)
                     .WithName("DaprBinding路由")
                     .WithTags("基础功能")
                     .WithSummary("DaprBinding路由")

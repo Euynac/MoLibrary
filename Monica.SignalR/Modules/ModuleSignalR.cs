@@ -165,7 +165,8 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
         {
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
-                endpoints.MapHub<THub>(pattern);
+                endpoints.MapHub<THub>(pattern)
+                    .WithMetadata(MonicaMinimalApiMetadata.Instance);
             });
         }, secondKey: typeof(THub).Name);
 

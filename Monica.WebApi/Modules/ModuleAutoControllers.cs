@@ -48,8 +48,9 @@ public class ModuleAutoControllers(ModuleAutoControllersOption option)
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
     {
-        UseEndpoints(app, endpoints =>
+        app.UseEndpoints(endpoints =>
         {
+            // AutoControllers exposes host/business MVC controllers, so it must stay unmarked and therefore defaults to the business Swagger document.
             endpoints.MapControllers();
         });
     }

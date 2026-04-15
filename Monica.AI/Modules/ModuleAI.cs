@@ -203,7 +203,8 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
 
             // Get all providers
             endpoints.MapGet($"{routePrefix}/providers", () =>
-                TypedResults.Ok(providerFactory.GetAllProviderInfos()));
+                TypedResults.Ok(providerFactory.GetAllProviderInfos()))
+                .WithMetadata(MonicaMinimalApiMetadata.Instance);
 
             // Note: Session management endpoints removed as sessions are now managed by UI layer.
             // API endpoints should be stateless and not manage sessions.

@@ -43,11 +43,6 @@ internal static class SwaggerXmlDocumentationFileResolver
 
     private static bool ShouldSuppressMissingXmlWarning(string assemblyName)
     {
-        var assembly = AppDomain.CurrentDomain
-            .GetAssemblies()
-            .FirstOrDefault(currentAssembly =>
-                string.Equals(currentAssembly.GetName().Name, assemblyName, StringComparison.Ordinal));
-
-        return assembly is not null && SwaggerDocumentKindResolver.IsMonicaFrameworkAssembly(assembly);
+        return assemblyName.StartsWith("Monica.", StringComparison.Ordinal);
     }
 }
