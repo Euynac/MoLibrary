@@ -162,12 +162,6 @@ def normalize_probe_path(probe_path: str | None) -> str:
     return candidate if candidate.startswith("/") else f"/{candidate}"
 
 
-def resolve_probe_path(args: argparse.Namespace) -> str:
-    explicit_probe_path = getattr(args, "probe_path", None)
-    legacy_home_path = getattr(args, "home_path", None)
-    return normalize_probe_path(explicit_probe_path or legacy_home_path or DEFAULT_PROBE_PATH)
-
-
 def build_probe_url(service_url: str, probe_path: str) -> str:
     normalized = normalize_base_service_url(service_url)
     return urljoin(f"{normalized}/", probe_path.lstrip("/"))
@@ -232,7 +226,7 @@ def build_context(args: argparse.Namespace) -> BridgeContext:
     expected_listen_urls = [service_url]
     if bind_url and bind_url not in expected_listen_urls:
         expected_listen_urls.append(bind_url)
-    probe_path = resolve_probe_path(args)
+    probe_path = normalize_probe_path(getattr(args, "probe_path", None))
     probe_url = build_probe_url(service_url, probe_path)
     port = parse_port(service_url)
     return BridgeContext(
@@ -1192,10 +1186,6 @@ def add_shared_run_arguments(parser: argparse.ArgumentParser, include_project: b
     parser.add_argument(
         "--probe-path",
         help=f"HTTP path checked by wait-ready. Default: {DEFAULT_PROBE_PATH}",
-    )
-    parser.add_argument(
-        "--home-path",
-        help=argparse.SUPPRESS,
     )
 
 

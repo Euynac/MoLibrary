@@ -70,7 +70,7 @@ Success rules by default:
 
 Default probe behavior:
 
-- `wait-ready` probes the service root URL by default instead of assuming `/home`
+- `wait-ready` probes the service root URL by default
 - `404`, `401`, and `403` still count as reachable because they prove the ASP.NET Core pipeline is serving requests
 - Use `--probe-path` when a project has a stronger application-specific readiness endpoint
 
