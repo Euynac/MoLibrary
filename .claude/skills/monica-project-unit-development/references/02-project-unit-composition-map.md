@@ -83,6 +83,7 @@ Create:
 
 - `Configuration`
 - Consumers that inject `IOptions<T>`, `IOptionsSnapshot<T>`, or `IOptionsMonitor<T>`
+- Host-composition wiring that uses `Mo.AddConfiguration(...)` plus `Mo.RegisterInstantly(builder)` when the option must be consumed during registration rather than normal runtime injection
 
 Load:
 

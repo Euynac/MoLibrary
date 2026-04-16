@@ -9,7 +9,7 @@
 5. [Code sample rules](#5-code-sample-rules)
 6. [Configuration and Guide tables](#6-configuration-and-guide-tables)
 7. [Links and asset rules](#7-links-and-asset-rules)
-8. [Bilingual rules](#8-bilingual-rules)
+8. [Locale scope rules](#8-locale-scope-rules)
 9. [Do not do these things](#9-do-not-do-these-things)
 
 ## 1. Audience and scope
@@ -32,10 +32,10 @@ Source priority is strict:
 
 1. Current source code in this repository
 2. Current architecture guidance, especially `$mo-architecture`
-3. Current README or package README content, only if it matches code
-4. Legacy docs in `../Monica.Docs/docs`, only as migration material
+3. Existing pages under `../Monica.Docs/docs`, but only after re-verifying them against current code
+4. Current README or package README content, only if it matches code
 
-If old docs conflict with code, follow the code and rewrite the docs.
+`../Monica.Docs/docs` is the current documentation project, not a legacy dump. If a page there conflicts with code, follow the code and rewrite the page in place.
 
 ## 3. Required frontmatter
 
@@ -70,7 +70,7 @@ Style rules:
 - Put the answer first, then detail
 - Prefer short sections and tables over long prose
 - Keep identifiers, API names, types, namespaces, and code in English
-- Keep narrative language in the target locale
+- Keep narrative language in Chinese unless the user explicitly requests another locale
 - Explain defaults and tradeoffs, not just names
 - Be explicit about required vs optional setup
 
@@ -117,24 +117,23 @@ If the module uses `GetRequestedConfigMethodKeys()`, add a **Required setup** se
 - Use **relative links** for local markdown pages and local assets
 - Do **not** hard-code Monica.Docs backend asset URLs such as `/api/docs/assets/...`
 - Prefer page-local assets when only one page uses them
-- If an asset is shared across multiple pages or locales, place it under `docs/shared/attachments/`
+- If an asset is shared across multiple pages, place it under `docs/shared/attachments/`
 - Prefer text over screenshots when the concept can be explained clearly without an image
 
 The Monica.Docs backend rewrites relative local asset links automatically. Preserve that behavior by keeping the markdown source relative.
 
-## 8. Bilingual rules
+## 8. Locale scope rules
 
-The default bilingual structure is mirrored:
+The default documentation target for this skill is:
 
-- `docs/zh-CN/...`
-- `docs/en-US/...`
+- `../Monica.Docs/docs/zh-CN/...`
 
 Rules:
 
-- Keep the same file tree in both locales
-- Keep the same section structure and meaning
-- Keep code samples functionally identical unless locale-specific text is part of the example
-- Update both locales in the same task unless the user explicitly scopes the task to one locale
+- Update Chinese docs in `zh-CN` by default
+- Do not create or maintain `en-US` mirrors unless the user explicitly asks for English documentation
+- Keep narrative language in Chinese for Monica user docs unless the user explicitly requests another locale
+- If an English page already exists but the task is not explicitly multi-locale, you still only update the Chinese source by default
 
 ## 9. Do not do these things
 

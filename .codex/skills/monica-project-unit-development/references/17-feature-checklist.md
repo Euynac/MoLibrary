@@ -11,4 +11,5 @@ Use this checklist before finishing a ProjectUnit change.
 - Repository interfaces and implementations live on the correct side of the boundary.
 - `DbContext`, EF mapping, and utility helpers use the expected folders and naming conventions.
 - New events, jobs, and options exist only because the feature genuinely needs them.
+- If a `Configuration` unit is consumed during registration or bootstrap, the entry project uses `Mo.AddConfiguration(...)` followed by `Mo.RegisterInstantly(builder)` before dependent registrations.
 - The selected architecture skill still agrees with the physical folder and project placement, including AppHost or gateway composition-only rules.

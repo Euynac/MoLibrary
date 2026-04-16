@@ -71,14 +71,15 @@ Acceptable secondary sources:
 
 These are confirmation sources, not primary authority.
 
-## 7. Legacy docs migration rule
+## 7. Existing docs revision rule
 
-When migrating from `../Monica.Docs/docs`:
+When revising content under `../Monica.Docs/docs`:
 
 - keep only explanations that still match the code
 - rewrite old registration names to current `Mo.Add*()` names
+- add `Mo.RegisterInstantly(builder)` guidance when the real host composition requires registration-time module availability
 - discard stale architectural descriptions
-- remove speculation, abandoned plans, and historical notes unless the target page is explicitly a migration page
+- remove speculation, abandoned plans, and historical notes unless the target page is explicitly about migration history
 
 ## 8. Final verification before delivery
 
@@ -90,7 +91,8 @@ Confirm all of the following:
 - required setup is called out when applicable
 - package name is correct
 - public / private boundary is respected
-- zh-CN and en-US structures match when both locales are in scope
+- the target output path is intentional and defaults to `../Monica.Docs/docs/zh-CN/`
+- no `en-US` mirror is added unless the user explicitly asks for English documentation
 
 ## Useful discovery commands
 

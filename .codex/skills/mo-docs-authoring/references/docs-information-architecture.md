@@ -15,20 +15,16 @@ Use a docs tree that is:
 
 - Easy to scan
 - Stable for future migration
-- Friendly to bilingual maintenance
+- Focused on the active Chinese documentation set
 - Organized around **Monica modules and concepts**, not random historical folders
 
 ## 2. Root layout
 
+The markdown source for this skill lives in the sibling docs project at `../Monica.Docs/docs`.
+
 ```text
-docs/
+../Monica.Docs/docs/
 ├── zh-CN/
-│   ├── index.md
-│   ├── getting-started/
-│   ├── concepts/
-│   ├── modules/
-│   └── scenarios/
-├── en-US/
 │   ├── index.md
 │   ├── getting-started/
 │   ├── concepts/
@@ -38,7 +34,7 @@ docs/
     └── attachments/
 ```
 
-Keep `zh-CN` and `en-US` fully mirrored.
+Author documentation in `zh-CN` by default. Treat other locale trees as out of scope unless the user explicitly requests them.
 
 ## 3. Page families
 
@@ -99,7 +95,7 @@ Rules:
 ## 5. Module documentation pack layout
 
 ```text
-docs/{locale}/modules/{module-slug}/
+../Monica.Docs/docs/zh-CN/modules/{module-slug}/
 ├── index.md
 ├── quick-start.md
 ├── configuration.md
@@ -114,7 +110,7 @@ Use this pack by default for a real Monica module.
 Use these rules:
 
 - Page-local asset → keep it close to the page when practical
-- Cross-page or cross-locale asset → place it under `docs/shared/attachments/`
+- Cross-page shared asset → place it under `docs/shared/attachments/`
 - Reference assets through relative paths from the markdown file
 
 Avoid a giant flat attachment dumping ground when assets have clear page ownership.

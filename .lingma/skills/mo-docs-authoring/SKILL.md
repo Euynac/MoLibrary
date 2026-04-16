@@ -1,11 +1,11 @@
 ---
 name: mo-docs-authoring
-description: This skill should be used when the user asks to "write docs", "document module", "rewrite docs", "migrate docs", "quick start", "configuration reference", "guide method docs", "双语文档", "编写文档", "模块文档", "文档迁移", or needs to create, revise, migrate, or standardize Monica user documentation from current source code, including Monica.Docs/docs pages, framework guides, module documentation packs, configuration tables, provider guides, and zh-CN/en-US mirrored docs.
+description: This skill should be used when the user asks to "write docs", "document module", "rewrite docs", "migrate docs", "quick start", "configuration reference", "guide method docs", "双语文档", "编写文档", "模块文档", "文档迁移", or needs to create, revise, migrate, or standardize Monica user documentation from current source code, including Monica.Docs/docs pages, framework guides, module documentation packs, configuration tables, provider guides, and zh-CN documentation pages.
 ---
 
 # Monica Docs Authoring
 
-Standardize how Codex writes Monica user documentation. Treat current source code and `$mo-architecture` as the source of truth. Treat legacy docs under `../Monica.Docs/docs` as migration input only.
+Standardize how Codex writes Monica user documentation. Treat current source code and `$mo-architecture` as the source of truth. The Monica documentation project lives in `../Monica.Docs`, and the markdown source lives under `../Monica.Docs/docs`.
 
 ## Workflow
 
@@ -40,7 +40,7 @@ Always extract and verify:
 - Declared module dependencies
 - Host-facing public surface and notable providers
 
-Never trust an old doc over current code.
+Existing docs under `../Monica.Docs/docs` are the current publication target. Revise them in place when they already exist, but never trust them over current code.
 
 ### 3. Choose the output shape
 
@@ -48,7 +48,9 @@ Use `references/docs-information-architecture.md`.
 
 Default rules:
 
-- Keep a **mirrored bilingual tree** under `docs/zh-CN/` and `docs/en-US/`
+- Keep documentation under `../Monica.Docs/docs/`
+- Default all doc authoring work to `../Monica.Docs/docs/zh-CN/`
+- Do **not** create or maintain `en-US` mirrors unless the user explicitly asks for English documentation
 - Use **module-level slugs** in kebab-case, derived from the public module name / registration name
 - Give each module its own documentation pack instead of mixing multiple modules into one large page
 
@@ -79,11 +81,11 @@ When the user asks for “module docs”, default to the module pack template un
 - If a project exposes multiple modules, document them as **separate module packs**
 - If an infra module has a related UI module, cross-link them; do not merge them by default
 - Prefer file-path-based slugs; do not add frontmatter `slug` unless the site explicitly needs an override
-- Keep zh-CN and en-US files structurally mirrored and semantically equivalent
+- Write and revise Chinese docs in `zh-CN` only unless the user explicitly expands scope to another locale
 
 ## References
 
-- **`references/doc-writing-rules.md`** — tone, frontmatter, tables, code sample rules, asset rules, bilingual rules
+- **`references/doc-writing-rules.md`** — tone, frontmatter, tables, code sample rules, asset rules, and locale-scope rules
 - **`references/docs-information-architecture.md`** — canonical docs folder layout and page ownership
 - **`references/framework-page-template.md`** — template for intro, installation, concept, and onboarding pages
 - **`references/module-doc-pack-template.md`** — default 5-page module documentation pack template

@@ -14,6 +14,7 @@ Use `$DomainNamespace$` for the domain project namespace selected by the archite
 - Use `IOptions<T>` for mostly static configuration.
 - Use `IOptionsSnapshot<T>` for per-scope refreshed values.
 - Use `IOptionsMonitor<T>` for long-lived services that react to changes.
+- If registration code must use the option during host composition, the entry project must call `Mo.AddConfiguration(...)` and then `Mo.RegisterInstantly(builder)` before the dependent registration code.
 
 ## Options Class Example
 
@@ -52,7 +53,21 @@ public sealed class DomainOrderApproval(
 }
 ```
 
+## Registration-Time Host Example
+
+```csharp
+Mo.AddConfiguration(setting =>
+{
+    setting.AppConfiguration = builder.Configuration;
+});
+
+Mo.RegisterInstantly(builder);
+
+// Registrations below this point can now consume Configuration-backed options.
+```
+
 ## Notes
 
 - Use configuration for environment- or host-specific behavior, not for domain constants that belong in code.
 - Keep option names explicit and developer-facing.
+- Use `Mo.RegisterInstantly(builder)` only when registration-time consumption is required. For normal runtime injection, the default module registration order is simpler.

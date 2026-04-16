@@ -5,7 +5,7 @@ This is the default output shape for a Monica module.
 ## File layout
 
 ```text
-docs/{locale}/modules/{module-slug}/
+../Monica.Docs/docs/zh-CN/modules/{module-slug}/
 ├── index.md
 ├── quick-start.md
 ├── configuration.md

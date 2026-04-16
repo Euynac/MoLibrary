@@ -74,6 +74,7 @@ Keep AppHost as the composition root only. Do not place handlers, jobs, reposito
 
 - Add domain registration and host composition in `Program.cs`.
 - Keep the default `ApplicationService` base route inside the domain project root config file, not in AppHost `Program.cs`.
+- If AppHost registration must consume `Configurations/*Options`, register `Mo.AddConfiguration(o => o.AppConfiguration = builder.Configuration)` and then call `Mo.RegisterInstantly(builder)` before later registrations use those options.
 - Keep `.slnx` folders aligned with `src/AppHost`, `src/Shared`, and `src/Domains`.
 
 ## Step 6. Add persistence ownership

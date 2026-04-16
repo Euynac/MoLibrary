@@ -26,6 +26,7 @@ Use this skill for unit-level business development in Monica-based DDD projects.
 - Keep contracts stable: requests, DTOs, and events are not persistence entities.
 - If a handler returns `Res<string>`, use `Res.Ok<string>(value)` instead of `Res.Ok(value)` to avoid the non-generic string overload.
 - For HTTP-exposed `ApplicationService` handlers, prefer the controller route pattern `api/{version}/{DomainName(PascalCase)}` and keep only the request-specific segment on the handler method, such as `GET api/v1/Documentation/tree`.
+- If host composition must consume a `Configuration` ProjectUnit during registration, register `Mo.AddConfiguration(...)` first and then call `Mo.RegisterInstantly(builder)` before the dependent registration code runs.
 
 ## Reference Navigation
 
