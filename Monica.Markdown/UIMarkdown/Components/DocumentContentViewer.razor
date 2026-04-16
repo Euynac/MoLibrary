@@ -2,6 +2,7 @@
 @using Monica.Markdown.Localization
 @using Monica.Markdown.Models
 @using Monica.Markdown.UIMarkdown.Models
+@using Monica.Markdown.UIMarkdown.Support
 @using Monica.UI.Shared.Components.Markdown
 @inject IStringLocalizer<MarkdownResource> L
 
@@ -202,7 +203,7 @@
 
     protected override void OnParametersSet()
     {
-        _strippedContent = StripFrontMatterAndLeadingTitle(Content);
+        _strippedContent = RewriteHtmlDocumentLinks(StripFrontMatterAndLeadingTitle(Content));
         ResetHeadingsIfDocumentChanged();
         BuildBreadcrumbs();
     }
@@ -355,6 +356,15 @@
 
         var newlineIndex = trimmed.IndexOf('\n');
         return newlineIndex >= 0 ? trimmed[(newlineIndex + 1)..].TrimStart() : string.Empty;
+    }
+
+    private string? RewriteHtmlDocumentLinks(string? content)
+    {
+        // Raw HTML anchors bypass the markdown link override pipeline, so they need a source-level rewrite.
+        return MarkdownHtmlDocumentLinkRewriter.Rewrite(
+            content,
+            Document?.GroupKey,
+            Document?.RelativePath);
     }
 
     private Task OnHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)

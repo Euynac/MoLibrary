@@ -1,9 +1,10 @@
+using Monica.Markdown.UIMarkdown.Models;
 using Monica.UI.Shared.Components.Markdown;
 
 namespace Monica.Markdown.UIMarkdown.Support;
 
 /// <summary>
-/// Rewrites local markdown image references to the module asset endpoint.
+/// Rewrites local markdown resources to runtime-safe viewer or asset URLs.
 /// </summary>
 public class MarkdownAssetUrlResolver(
     MarkdownLocalAssetService assetService) : IMoMarkdownAssetResolver
@@ -17,9 +18,18 @@ public class MarkdownAssetUrlResolver(
         string? scopeKey,
         string? documentRelativePath)
     {
+        if (!isImage)
+        {
+            return MarkdownViewerLocation.TryResolveDocumentLink(
+                       scopeKey,
+                       documentRelativePath,
+                       originalUrl)
+                   ?? originalUrl;
+        }
+
         return assetService.BuildRenderUrl(
             originalUrl,
-            isImage,
+            true,
             scopeKey,
             documentRelativePath);
     }
