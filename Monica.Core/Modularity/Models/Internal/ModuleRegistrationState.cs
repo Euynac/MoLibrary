@@ -212,10 +212,19 @@ public class ModuleRegistrationState(Type moduleType)
         if (RequiredConfigMethodKeys.Count == 0)
             return [];
 
-        var configuredKeys = RegisterRequests.Select(r => r.Key).ToHashSet();
+        var configuredKeys = RegisterRequests
+            .Select(r => r.Key)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .ToHashSet(StringComparer.Ordinal);
         return RequiredConfigMethodKeys
-            .Where(key => !configuredKeys.Contains(key))
+            .Where(requiredKey => !configuredKeys.Any(configuredKey => MatchesRequiredConfigKey(requiredKey, configuredKey)))
             .ToList();
+    }
+
+    private static bool MatchesRequiredConfigKey(string requiredKey, string configuredKey)
+    {
+        return configuredKey.Equals(requiredKey, StringComparison.Ordinal)
+            || configuredKey.StartsWith($"{requiredKey}_", StringComparison.Ordinal);
     }
 
     /// <summary>
