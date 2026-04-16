@@ -39,7 +39,7 @@ public class ModuleJobSchedulerUI(ModuleJobSchedulerUIOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register UI-only support helpers.
-        services.AddSingleton<JobStateColorResolver>();
+        services.AddScoped<JobStateColorResolver>();
         services.AddSingleton<JobArgsJsonSchemaSupport>();
         services.AddSingleton<CronExpressionSupport>();
         // StackTraceParser is now registered by ModuleStackTraceUI.
