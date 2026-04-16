@@ -1,8 +1,12 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Monica.Core.Results;
+using Monica.Modules;
 using Monica.UI.Localization;
 using Monica.UI.UISystemInfo.Models;
 
@@ -13,10 +17,17 @@ namespace Monica.UI.UISystemInfo.Support;
 /// </summary>
 /// <param name="logger">The logger.</param>
 /// <param name="localizer">The localizer.</param>
+/// <param name="applicationLifetime">The host lifetime controller used to request graceful shutdown.</param>
+/// <param name="options">The system information UI options.</param>
 public class SystemInfoService(
     ILogger<SystemInfoService> logger,
-    IStringLocalizer<SystemInfoResource> localizer)
+    IStringLocalizer<SystemInfoResource> localizer,
+    IHostApplicationLifetime applicationLifetime,
+    IOptions<ModuleSystemInfoUIOption> options)
 {
+    private readonly ModuleSystemInfoUIOption _options = options.Value;
+    private int _restartRequested;
+
     /// <summary>
     /// Gets system information.
     /// </summary>
@@ -98,5 +109,52 @@ public class SystemInfoService(
             logger.LogError(ex, "Failed to retrieve system information.");
             return Res.Fail(localizer["Service:Errors:GetSystemInfoFailed", ex.Message].Value);
         }
+    }
+
+    /// <summary>
+    /// Requests a graceful shutdown for the current process so an external supervisor can restart it.
+    /// </summary>
+    /// <returns>
+    /// A successful response when shutdown has been scheduled.
+    /// This is not a true in-process restart. The service only starts again when the hosting environment restarts it.
+    /// </returns>
+    public Task<Res> RequestSelfRestartAsync()
+    {
+        if (!_options.EnableSelfRestartAction)
+        {
+            logger.LogWarning("Self restart was requested but the action is disabled.");
+            return Task.FromResult(Res.Fail(localizer["Service:Errors:SelfRestartDisabled"].Value));
+        }
+
+        if (Interlocked.CompareExchange(ref _restartRequested, 1, 0) != 0)
+        {
+            logger.LogWarning("Ignoring duplicate self restart request because shutdown is already scheduled.");
+            return Task.FromResult(Res.Fail(localizer["Service:Errors:RestartAlreadyRequested"].Value));
+        }
+
+        var shutdownDelay = _options.SelfRestartDelay < TimeSpan.Zero ? TimeSpan.Zero : _options.SelfRestartDelay;
+        logger.LogWarning(
+            "Graceful self restart requested. Shutdown will begin in {Delay}.",
+            shutdownDelay);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (shutdownDelay > TimeSpan.Zero)
+                {
+                    await Task.Delay(shutdownDelay);
+                }
+
+                applicationLifetime.StopApplication();
+            }
+            catch (Exception ex)
+            {
+                Interlocked.Exchange(ref _restartRequested, 0);
+                logger.LogError(ex, "Failed while scheduling application shutdown for a self restart request.");
+            }
+        });
+
+        return Task.FromResult(Res.Ok(localizer["Service:Messages:RestartRequested", shutdownDelay.TotalSeconds].Value));
     }
 }

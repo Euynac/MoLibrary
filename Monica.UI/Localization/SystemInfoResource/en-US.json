@@ -3,7 +3,16 @@
     "PageTitle": "System Information",
     "Header": {
       "Title": "System Information",
-      "Refresh": "Refresh"
+      "Refresh": "Refresh",
+      "Restart": "Restart Service"
+    },
+    "RestartDialog": {
+      "Title": "Restart Service",
+      "Summary": "This action requests a graceful shutdown for the current service.",
+      "DelayNotice": "Shutdown will begin in about {0} seconds after confirmation so the current request can complete.",
+      "SupervisorNote": "This is not an in-process restart. The service only comes back if the host environment has an external restart policy such as Kubernetes, systemd, IIS, or Windows Service.",
+      "Cancel": "Cancel",
+      "Confirm": "Restart Now"
     },
     "States": {
       "LoadingTitle": "Loading system information...",
@@ -45,7 +54,10 @@
     "Messages": {
       "LoadFailed": "Failed to load system information: {0}",
       "LoadError": "An error occurred while loading system information: {0}",
-      "RefreshSucceeded": "System information refreshed."
+      "RefreshSucceeded": "System information refreshed.",
+      "RestartFailed": "Failed to request service restart: {0}",
+      "RestartError": "An error occurred while requesting service restart: {0}",
+      "RestartRequestedFallback": "Graceful shutdown has been requested. The host will stop shortly."
     }
   },
   "CustomLinks": {
@@ -95,10 +107,15 @@
     }
   },
   "Service": {
+    "Messages": {
+      "RestartRequested": "Graceful shutdown has been requested. The host will stop in about {0} seconds. An external supervisor must restart it."
+    },
     "Errors": {
       "BrowserRuntimeUnsupported": "System information is unavailable in a browser runtime.",
       "EntryAssemblyUnavailable": "Unable to resolve the entry assembly information.",
-      "GetSystemInfoFailed": "Failed to get system information: {0}"
+      "GetSystemInfoFailed": "Failed to get system information: {0}",
+      "SelfRestartDisabled": "Self restart is disabled for this module.",
+      "RestartAlreadyRequested": "A restart request is already pending."
     }
   }
 }

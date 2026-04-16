@@ -6,8 +6,10 @@
 @using Monica.Modules
 @using Monica.UI.Localization
 @using Monica.UI.UISystemInfo.Components
+@using Monica.UI.UISystemInfo.Dialogs
 @using Monica.UI.UISystemInfo.Models
 @using Monica.UI.UISystemInfo.Support
+@inject IDialogService DialogService
 @inject SystemInfoService SystemInfoService
 @inject ISnackbar Snackbar
 @inject IOptions<ModuleSystemInfoUIOption> SystemInfoUIOptions
@@ -24,6 +26,18 @@
                 <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">@L["Page:Header:Title"]</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
+                @if (SystemInfoUIOptions.Value.EnableSelfRestartAction)
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.RestartAlt"
+                               Color="Color.Inherit"
+                               Variant="Variant.Outlined"
+                               OnClick="RequestSelfRestartAsync"
+                               Size="Size.Medium"
+                               Disabled="_restartRequested"
+                               Style="border-color: white; color: white;">
+                        @L["Page:Header:Restart"]
+                    </MudButton>
+                }
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh"
                            Color="Color.Inherit"
                            Variant="Variant.Outlined"
@@ -272,6 +286,7 @@
     public const string PAGE_URL = "/system-info";
 
     private bool _loading = true;
+    private bool _restartRequested;
     private SystemInfoResponse? _systemInfo;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -319,6 +334,56 @@
         if (await LoadSystemInfoAsync())
         {
             Snackbar.Add(L["Page:Messages:RefreshSucceeded"].Value, Severity.Success);
+        }
+    }
+
+    private async Task RequestSelfRestartAsync()
+    {
+        if (_restartRequested)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<SystemInfoRestartConfirmDialog>
+        {
+            { dialog => dialog.DelaySeconds, Math.Max(0d, SystemInfoUIOptions.Value.SelfRestartDelay.TotalSeconds) }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<SystemInfoRestartConfirmDialog>(
+            L["Page:RestartDialog:Title"].Value,
+            parameters,
+            options);
+
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        try
+        {
+            var restartResult = await SystemInfoService.RequestSelfRestartAsync();
+            if (restartResult.IsFailed(out var error))
+            {
+                Snackbar.Add(L["Page:Messages:RestartFailed", error.Message ?? string.Empty].Value, Severity.Error);
+                return;
+            }
+
+            _restartRequested = true;
+            Snackbar.Add(
+                restartResult.Message ?? L["Page:Messages:RestartRequestedFallback"].Value,
+                Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(L["Page:Messages:RestartError", ex.Message].Value, Severity.Error);
         }
     }
 

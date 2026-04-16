@@ -3,7 +3,16 @@
     "PageTitle": "系统信息",
     "Header": {
       "Title": "系统信息",
-      "Refresh": "刷新信息"
+      "Refresh": "刷新信息",
+      "Restart": "重启服务"
+    },
+    "RestartDialog": {
+      "Title": "重启服务",
+      "Summary": "此操作会请求当前服务执行优雅关闭。",
+      "DelayNotice": "确认后大约 {0} 秒开始关闭，以便当前请求有机会完成。",
+      "SupervisorNote": "这不是进程内自重启。只有当宿主环境配置了外部重启策略（例如 Kubernetes、systemd、IIS 或 Windows 服务）时，服务才会重新启动。",
+      "Cancel": "取消",
+      "Confirm": "立即重启"
     },
     "States": {
       "LoadingTitle": "正在加载系统信息...",
@@ -45,7 +54,10 @@
     "Messages": {
       "LoadFailed": "加载系统信息失败: {0}",
       "LoadError": "加载系统信息时发生错误: {0}",
-      "RefreshSucceeded": "系统信息已刷新"
+      "RefreshSucceeded": "系统信息已刷新",
+      "RestartFailed": "请求重启服务失败: {0}",
+      "RestartError": "请求重启服务时发生错误: {0}",
+      "RestartRequestedFallback": "已请求优雅关闭，服务很快会停止。"
     }
   },
   "CustomLinks": {
@@ -95,10 +107,15 @@
     }
   },
   "Service": {
+    "Messages": {
+      "RestartRequested": "已请求优雅关闭，宿主将在大约 {0} 秒后停止。服务是否重新启动取决于外部托管器。"
+    },
     "Errors": {
       "BrowserRuntimeUnsupported": "浏览器运行时不支持获取系统信息",
       "EntryAssemblyUnavailable": "无法获取入口程序集信息",
-      "GetSystemInfoFailed": "获取系统信息失败: {0}"
+      "GetSystemInfoFailed": "获取系统信息失败: {0}",
+      "SelfRestartDisabled": "当前模块未启用自重启功能",
+      "RestartAlreadyRequested": "已有重启请求正在等待执行"
     }
   }
 }

@@ -88,6 +88,20 @@ public class ModuleSystemInfoUI(ModuleSystemInfoUIOption option)
                 .WithTags(tagName)
                 .WithSummary("获取微服务信息")
                 .WithDescription("获取微服务信息");
+
+            if (Option.EnableSelfRestartAction)
+            {
+                endpoints.MapPost("/system/restart",
+                    async ([FromServices] SystemInfoService systemInfoService) =>
+                    {
+                        var result = await systemInfoService.RequestSelfRestartAsync();
+                        return result.GetResponse();
+                    })
+                    .WithName("Request service self restart")
+                    .WithTags(tagName)
+                    .WithSummary("Requests a graceful self restart for the current service.")
+                    .WithDescription("Requests graceful shutdown through IHostApplicationLifetime.StopApplication(). The process only starts again when the host environment has an external restart policy.");
+            }
         });
     }
 }
@@ -163,6 +177,37 @@ public class ModuleSystemInfoUIGuide : WebModuleGuide<ModuleSystemInfoUI, Module
         }, secondKey: SwaggerLinkSecondKey);
     }
 
+    /// <summary>
+    /// Enables the self-restart action on the system information page and exposes the matching API endpoint.
+    /// This action only requests graceful shutdown through <see cref="Microsoft.Extensions.Hosting.IHostApplicationLifetime.StopApplication" />.
+    /// The process restarts only when an external supervisor such as Kubernetes, systemd, IIS, or the Windows Service Control Manager restarts it.
+    /// </summary>
+    /// <param name="shutdownDelay">
+    /// Optional delay before shutdown begins. Use a short positive delay to give the initiating HTTP request or Blazor event
+    /// time to complete and flush feedback to the user before the host starts shutting down.
+    /// </param>
+    /// <returns>The current module guide.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="shutdownDelay" /> is negative.</exception>
+    public ModuleSystemInfoUIGuide EnableSelfRestartAction(TimeSpan? shutdownDelay = null)
+    {
+        if (shutdownDelay < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(shutdownDelay), shutdownDelay, "Shutdown delay must be zero or positive.");
+        }
+
+        ConfigureModuleOption(option =>
+        {
+            option.EnableSelfRestartAction = true;
+
+            if (shutdownDelay.HasValue)
+            {
+                option.SelfRestartDelay = shutdownDelay.Value;
+            }
+        }, secondKey: nameof(EnableSelfRestartAction));
+
+        return this;
+    }
+
     private ModuleSystemInfoUIGuide AddCustomLink(SystemInfoCustomLink link, string secondKey)
     {
         ConfigureModuleOption(option =>
@@ -183,6 +228,23 @@ public class ModuleSystemInfoUIOption : MinimalApiModuleOptions<ModuleSystemInfo
     /// Gets or sets a value indicating whether the system information page is disabled.
     /// </summary>
     public bool DisablePage { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the module exposes the self-restart control surface.
+    /// When enabled, the system information page shows a restart button and the module maps <c>POST /system/restart</c>.
+    /// The action only requests graceful shutdown through <see cref="Microsoft.Extensions.Hosting.IHostApplicationLifetime.StopApplication" />.
+    /// The process returns only when an external host supervisor is configured to restart it.
+    /// Defaults to <c>false</c>.
+    /// </summary>
+    public bool EnableSelfRestartAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delay between accepting a self-restart request and calling
+    /// <see cref="Microsoft.Extensions.Hosting.IHostApplicationLifetime.StopApplication" />.
+    /// A short delay allows the triggering HTTP request or Blazor UI event to complete and deliver user feedback before shutdown begins.
+    /// Defaults to one second.
+    /// </summary>
+    public TimeSpan SelfRestartDelay { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Gets the custom shortcut links displayed on the system information page.

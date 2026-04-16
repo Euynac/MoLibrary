@@ -1,0 +1,44 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
+@inject IStringLocalizer<SystemInfoResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body1">
+                    @L["Page:RestartDialog:Summary"]
+                </MudText>
+            </MudAlert>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @L["Page:RestartDialog:DelayNotice", DelaySeconds]
+            </MudAlert>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                @L["Page:RestartDialog:SupervisorNote"]
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            @L["Page:RestartDialog:Cancel"]
+        </MudButton>
+        <MudButton OnClick="Confirm"
+                   Variant="Variant.Filled"
+                   Color="Color.Warning"
+                   StartIcon="@Icons.Material.Filled.RestartAlt">
+            @L["Page:RestartDialog:Confirm"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public double DelaySeconds { get; set; }
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private void Confirm() => MudDialog?.Close(DialogResult.Ok(true));
+}
