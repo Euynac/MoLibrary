@@ -318,6 +318,9 @@ public class ModuleGuide<TModule, TModuleOption, TModuleGuideSelf> : ModuleGuide
     {
         if(optionAction == null) return (TModuleGuideSelf) this;
 
+        // Cascaded dependency configuration should be deduplicated per requester, not globally by method name.
+        secondKey ??= GuideFrom?.ToString();
+
         var requestInfo = RegisterModule();
         requestInfo.AddConfigureAction(order, optionAction, GuideFrom, secondKey, key);
         return (TModuleGuideSelf) this;
