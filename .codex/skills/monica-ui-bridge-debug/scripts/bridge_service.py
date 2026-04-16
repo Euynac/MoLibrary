@@ -30,7 +30,7 @@ DEFAULT_LOG_NAME = "app-run.log"
 DEFAULT_READY_NAME = "bridge-ready.json"
 DEFAULT_REPORT_NAME = "bridge-ready-report.json"
 DEFAULT_STATE_NAME = "bridge-process.json"
-DEFAULT_HOME_PATH = "/home"
+DEFAULT_PROBE_PATH = "/"
 SCRIPT_MARKER = "[bridge-service]"
 
 
@@ -47,7 +47,8 @@ class BridgeContext:
     service_url: str
     bind_url: str | None
     expected_listen_urls: list[str]
-    home_url: str
+    probe_path: str
+    probe_url: str
     port: int
 
 
@@ -152,10 +153,24 @@ def build_bind_url(service_url: str) -> str | None:
     return f"{parsed.scheme}://0.0.0.0:{parsed.port}"
 
 
-def build_home_url(service_url: str, home_path: str) -> str:
+def normalize_probe_path(probe_path: str | None) -> str:
+    if not probe_path:
+        return DEFAULT_PROBE_PATH
+    candidate = probe_path.strip()
+    if not candidate:
+        return DEFAULT_PROBE_PATH
+    return candidate if candidate.startswith("/") else f"/{candidate}"
+
+
+def resolve_probe_path(args: argparse.Namespace) -> str:
+    explicit_probe_path = getattr(args, "probe_path", None)
+    legacy_home_path = getattr(args, "home_path", None)
+    return normalize_probe_path(explicit_probe_path or legacy_home_path or DEFAULT_PROBE_PATH)
+
+
+def build_probe_url(service_url: str, probe_path: str) -> str:
     normalized = normalize_base_service_url(service_url)
-    path = home_path if home_path.startswith("/") else f"/{home_path}"
-    return urljoin(f"{normalized}/", path.lstrip("/"))
+    return urljoin(f"{normalized}/", probe_path.lstrip("/"))
 
 
 def discover_project_file(project_dir: Path, project_file: str | None) -> Path:
@@ -217,7 +232,8 @@ def build_context(args: argparse.Namespace) -> BridgeContext:
     expected_listen_urls = [service_url]
     if bind_url and bind_url not in expected_listen_urls:
         expected_listen_urls.append(bind_url)
-    home_url = build_home_url(service_url, getattr(args, "home_path", DEFAULT_HOME_PATH))
+    probe_path = resolve_probe_path(args)
+    probe_url = build_probe_url(service_url, probe_path)
     port = parse_port(service_url)
     return BridgeContext(
         project_dir=project_dir,
@@ -231,7 +247,8 @@ def build_context(args: argparse.Namespace) -> BridgeContext:
         service_url=service_url,
         bind_url=bind_url,
         expected_listen_urls=expected_listen_urls,
-        home_url=home_url,
+        probe_path=probe_path,
+        probe_url=probe_url,
         port=port,
     )
 
@@ -269,7 +286,8 @@ def build_state_payload(context: BridgeContext, status: str, **extra: object) ->
         "state_path": str(context.state_path),
         "service_url": context.service_url,
         "bind_url": context.bind_url,
-        "home_url": context.home_url,
+        "probe_path": context.probe_path,
+        "probe_url": context.probe_url,
         "expected_listen_urls": context.expected_listen_urls,
         "runner_pid": os.getpid(),
     }
@@ -645,7 +663,8 @@ def make_ready_payload(
         "bind_url": context.bind_url,
         "observed_listen_url": observed_url,
         "expected_listen_urls": context.expected_listen_urls,
-        "home_url": context.home_url,
+        "probe_path": context.probe_path,
+        "probe_url": context.probe_url,
         "pid": listener_pid,
         "child_pid": process.pid,
         "listener_pid": listener_pid,
@@ -847,15 +866,16 @@ def read_recent_log_content(path: Path, max_bytes: int = 128_000) -> str:
         return stream.read().decode("utf-8", errors="replace")
 
 
-def probe_home(url: str, timeout_seconds: float) -> tuple[bool, int | None, str | None]:
+def probe_url(url: str, timeout_seconds: float) -> tuple[bool, int | None, str | None]:
     request = Request(url, method="GET")
     try:
         with urlopen(request, timeout=timeout_seconds) as response:
             body = response.read(512).decode("utf-8", errors="replace")
-            return 200 <= response.status < 400, response.status, body
+            return 200 <= response.status < 500, response.status, body
     except HTTPError as error:
         body = error.read(512).decode("utf-8", errors="replace")
-        return False, error.code, body
+        # A 4xx response still proves the ASP.NET Core pipeline is reachable.
+        return error.code < 500, error.code, body
     except URLError as error:
         return False, None, str(error.reason)
     except Exception as error:
@@ -870,9 +890,9 @@ def write_wait_report(context: BridgeContext, payload: dict) -> None:
 def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float, strict_marker: bool) -> int:
     deadline = time.monotonic() + timeout_seconds
     wait_started_epoch = time.time()
-    consecutive_successes = 0
-    last_http_status: int | None = None
-    last_http_excerpt: str | None = None
+    consecutive_probe_successes = 0
+    last_probe_status: int | None = None
+    last_probe_excerpt: str | None = None
     marker_seen = False
     observed_marker: str | None = None
     ready_file_seen = False
@@ -932,12 +952,12 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     observed_marker = expected
                     break
 
-        ok, status_code, excerpt = probe_home(context.home_url, timeout_seconds=5)
-        last_http_status = status_code
-        last_http_excerpt = excerpt
-        consecutive_successes = consecutive_successes + 1 if ok else 0
+        ok, status_code, excerpt = probe_url(context.probe_url, timeout_seconds=5)
+        last_probe_status = status_code
+        last_probe_excerpt = excerpt
+        consecutive_probe_successes = consecutive_probe_successes + 1 if ok else 0
 
-        if consecutive_successes >= 3 and marker_seen:
+        if consecutive_probe_successes >= 3 and marker_seen:
             write_wait_report(
                 context,
                 {
@@ -945,12 +965,13 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     "timestamp": now_iso(),
                     "service_url": context.service_url,
                     "bind_url": context.bind_url,
-                    "home_url": context.home_url,
+                    "probe_path": context.probe_path,
+                    "probe_url": context.probe_url,
                     "marker_seen": True,
                     "observed_marker": observed_marker,
                     "ready_file_seen": ready_file_seen,
-                    "consecutive_home_successes": consecutive_successes,
-                    "last_http_status": last_http_status,
+                    "consecutive_probe_successes": consecutive_probe_successes,
+                    "last_probe_status": last_probe_status,
                     "state_status": state_status,
                     "state_exit_code": state_exit_code,
                     "runner_pid": runner_pid,
@@ -961,7 +982,7 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
             )
             return 0
 
-        if consecutive_successes >= 3 and not strict_marker:
+        if consecutive_probe_successes >= 3 and not strict_marker:
             write_wait_report(
                 context,
                 {
@@ -969,13 +990,14 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     "timestamp": now_iso(),
                     "service_url": context.service_url,
                     "bind_url": context.bind_url,
-                    "home_url": context.home_url,
+                    "probe_path": context.probe_path,
+                    "probe_url": context.probe_url,
                     "marker_seen": False,
                     "observed_marker": observed_marker,
                     "ready_file_seen": ready_file_seen,
-                    "consecutive_home_successes": consecutive_successes,
-                    "last_http_status": last_http_status,
-                    "warning": "Home endpoint became reachable before a listening marker was observed.",
+                    "consecutive_probe_successes": consecutive_probe_successes,
+                    "last_probe_status": last_probe_status,
+                    "warning": "Probe URL became reachable before a listening marker was observed.",
                     "state_status": state_status,
                     "state_exit_code": state_exit_code,
                     "runner_pid": runner_pid,
@@ -989,7 +1011,7 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
         if (
             state_updated_during_wait
             and state_status in {"stopped", "failed"}
-            and consecutive_successes < 3
+            and consecutive_probe_successes < 3
         ):
             write_wait_report(
                 context,
@@ -998,13 +1020,14 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
                     "timestamp": now_iso(),
                     "service_url": context.service_url,
                     "bind_url": context.bind_url,
-                    "home_url": context.home_url,
+                    "probe_path": context.probe_path,
+                    "probe_url": context.probe_url,
                     "marker_seen": marker_seen,
                     "observed_marker": observed_marker,
                     "ready_file_seen": ready_file_seen,
-                    "consecutive_home_successes": consecutive_successes,
-                    "last_http_status": last_http_status,
-                    "last_http_excerpt": last_http_excerpt,
+                    "consecutive_probe_successes": consecutive_probe_successes,
+                    "last_probe_status": last_probe_status,
+                    "last_probe_excerpt": last_probe_excerpt,
                     "strict_marker": strict_marker,
                     "state_status": state_status,
                     "state_exit_code": state_exit_code,
@@ -1026,13 +1049,14 @@ def wait_ready(context: BridgeContext, timeout_seconds: int, poll_seconds: float
             "timestamp": now_iso(),
             "service_url": context.service_url,
             "bind_url": context.bind_url,
-            "home_url": context.home_url,
+            "probe_path": context.probe_path,
+            "probe_url": context.probe_url,
             "marker_seen": marker_seen,
             "observed_marker": observed_marker,
             "ready_file_seen": ready_file_seen,
-            "consecutive_home_successes": consecutive_successes,
-            "last_http_status": last_http_status,
-            "last_http_excerpt": last_http_excerpt,
+            "consecutive_probe_successes": consecutive_probe_successes,
+            "last_probe_status": last_probe_status,
+            "last_probe_excerpt": last_probe_excerpt,
             "strict_marker": strict_marker,
             "state_status": state_status,
             "state_exit_code": state_exit_code,
@@ -1072,8 +1096,8 @@ def build_background_command(context: BridgeContext, args: argparse.Namespace) -
         str(context.report_path),
         "--state-name",
         str(context.state_path),
-        "--home-path",
-        getattr(args, "home_path", DEFAULT_HOME_PATH),
+        "--probe-path",
+        context.probe_path,
         "--file-lock-retries",
         str(args.file_lock_retries),
         "--skip-cleanup",
@@ -1166,9 +1190,12 @@ def add_shared_run_arguments(parser: argparse.ArgumentParser, include_project: b
         help=f"Bridge process state file name or absolute path. Default: {DEFAULT_STATE_NAME}",
     )
     parser.add_argument(
+        "--probe-path",
+        help=f"HTTP path checked by wait-ready. Default: {DEFAULT_PROBE_PATH}",
+    )
+    parser.add_argument(
         "--home-path",
-        default=DEFAULT_HOME_PATH,
-        help=f"Health page path checked by wait-ready. Default: {DEFAULT_HOME_PATH}",
+        help=argparse.SUPPRESS,
     )
 
 
@@ -1215,7 +1242,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     wait_parser = subparsers.add_parser(
         "wait-ready",
-        help="Wait for readiness evidence by checking the ready file or log marker plus repeated /home success.",
+        help="Wait for readiness evidence by checking the ready file or log marker plus repeated HTTP reachability on the probe URL.",
     )
     add_shared_run_arguments(wait_parser, include_project=False)
     wait_parser.add_argument("--timeout", type=int, default=120, help="Maximum wait time in seconds. Default: 120")
@@ -1228,7 +1255,7 @@ def build_parser() -> argparse.ArgumentParser:
     wait_parser.add_argument(
         "--strict-marker",
         action="store_true",
-        help="Fail when /home becomes reachable but no listening marker is observed.",
+        help="Fail when the probe URL becomes reachable but no listening marker is observed.",
     )
     wait_parser.set_defaults(func=command_wait_ready)
 
