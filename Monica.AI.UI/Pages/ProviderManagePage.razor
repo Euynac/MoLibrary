@@ -22,11 +22,18 @@
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.PlayCircle"
                        OnClick="TestAllAsync"
-                       Disabled="@(!_providers.Any() || _isTestingAll)">
+                       Disabled="@(!HasTestableProviders || _isTestingAll)">
                 @L["ProviderManage:TestAll"]
             </MudButton>
         </MudStack>
     </div>
+
+    @if (DisabledProviderCount > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
+            @L["ProviderManage:DisabledProvidersSummary", DisabledProviderCount]
+        </MudAlert>
+    }
 
     @if (_isLoading)
     {
@@ -75,6 +82,8 @@
     private readonly Dictionary<string, ProviderTestState> _testStates = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _modelTesting = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, RemoteModelState> _remoteModelStates = new(StringComparer.OrdinalIgnoreCase);
+    private bool HasTestableProviders => _providers.Any(provider => provider.IsValid);
+    private int DisabledProviderCount => _providers.Count(provider => provider.Status == AIProviderStatus.ConfigurationError);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -172,7 +181,7 @@
         _isTestingAll = true;
         StateHasChanged();
 
-        foreach (var provider in _providers)
+        foreach (var provider in _providers.Where(provider => provider.IsValid))
         {
             await TestProviderAsync(provider.ProviderId);
         }
@@ -324,7 +333,7 @@
         {
             state.Models = result.Data;
             state.Error = null;
-            Snackbar.Add($"已获取 {result.Data?.Count ?? 0} 个远程模型", Severity.Success);
+            Snackbar.Add(L["ProviderManage:FetchRemoteModelsSuccess", result.Data?.Count ?? 0], Severity.Success);
         }
 
         state.IsFetching = false;

@@ -143,7 +143,7 @@
                     <MudButton Variant="Variant.Outlined"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.PlayCircle"
-                               Disabled="@isTesting"
+                               Disabled="@(isTesting || DisableActions)"
                                OnClick="() => OnTestModel.InvokeAsync(context)">
                         @(isTesting ? "测试中" : "测试")
                     </MudButton>
@@ -154,7 +154,7 @@
                     <MudButton Variant="Variant.Outlined"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Radar"
-                               Disabled="@isProbing"
+                               Disabled="@(isProbing || DisableActions)"
                                OnClick="() => OnProbeEmbedding.InvokeAsync(context)">
                         @(isProbing ? "探测中" : "探测维度")
                     </MudButton>
@@ -180,6 +180,7 @@
     [Parameter] public EventCallback<AIModelInfo> OnTestModel { get; set; }
     [Parameter] public EventCallback<AIModelInfo> OnProbeEmbedding { get; set; }
     [Parameter] public Func<AIModelInfo, bool>? IsModelTesting { get; set; }
+    [Parameter] public bool DisableActions { get; set; }
 
     private HashSet<string>? _remoteModelIds;
     private IReadOnlyList<AIRemoteModelInfo>? _lastRemoteModels;

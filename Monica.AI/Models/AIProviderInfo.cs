@@ -51,6 +51,11 @@ public class AIProviderInfo
     public IReadOnlyList<string>? InvalidModels { get; init; }
 
     /// <summary>
+    /// Friendly configuration errors that explain why the provider is disabled.
+    /// </summary>
+    public IReadOnlyList<string>? ConfigurationErrors { get; init; }
+
+    /// <summary>
     /// Indicates whether this is the default provider.
     /// </summary>
     public bool IsDefault { get; init; }

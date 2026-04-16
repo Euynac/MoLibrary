@@ -70,6 +70,9 @@ public class AIChatService(
         var provider = providerFactory.GetProvider(state.ProviderId);
         if (provider == null)
             throw new InvalidOperationException($"Provider '{state.ProviderId}' not found.");
+        if (!provider.Info.IsValid)
+            throw new InvalidOperationException(
+                AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(provider.Info));
 
         var chatClient = provider.GetChatClient(state.ModelName);
         var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, state.ActiveKnowledgeBaseIds, ct);
@@ -150,13 +153,25 @@ public class AIChatService(
         if (!string.IsNullOrEmpty(providerId))
         {
             provider = providerFactory.GetProvider(providerId);
-            if (provider != null) return provider;
+            if (provider == null)
+            {
+                throw new InvalidOperationException($"Provider '{providerId}' not found.");
+            }
+
+            if (!provider.Info.IsValid)
+            {
+                throw new InvalidOperationException(
+                    AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(provider.Info));
+            }
+
+            return provider;
         }
 
         provider = providerFactory.GetDefaultProvider();
-        if (provider != null) return provider;
+        if (provider != null && provider.Info.IsValid) return provider;
 
-        throw new InvalidOperationException("No AI provider available.");
+        throw new InvalidOperationException(
+            AIProviderAvailabilityMessages.BuildNoEnabledProviderMessage(providerFactory.GetAllProviderInfos()));
     }
 
     /// <summary>

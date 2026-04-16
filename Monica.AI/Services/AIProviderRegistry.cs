@@ -21,8 +21,13 @@ public class AIProviderRegistry : IAIProviderFactory, IDisposable
     {
         _providers[provider.ProviderId] = provider;
 
-        // If this is the default provider or the first registered provider
-        if (provider.Info.IsDefault || _defaultProviderId == null)
+        if (!provider.Info.IsValid)
+        {
+            return;
+        }
+
+        // If this is the default provider or the first valid registered provider
+        if (provider.Info.IsDefault || _defaultProviderId == null || !HasValidProvider(_defaultProviderId))
         {
             _defaultProviderId = provider.ProviderId;
         }
@@ -34,7 +39,7 @@ public class AIProviderRegistry : IAIProviderFactory, IDisposable
     /// <param name="providerId">Provider ID</param>
     public void SetDefaultProvider(string providerId)
     {
-        if (_providers.ContainsKey(providerId))
+        if (HasValidProvider(providerId))
         {
             _defaultProviderId = providerId;
         }
@@ -61,12 +66,12 @@ public class AIProviderRegistry : IAIProviderFactory, IDisposable
     /// <inheritdoc />
     public IAIProvider? GetDefaultProvider()
     {
-        if (_defaultProviderId == null)
+        if (_defaultProviderId != null && HasValidProvider(_defaultProviderId))
         {
-            return _providers.Values.FirstOrDefault();
+            return _providers.GetValueOrDefault(_defaultProviderId);
         }
 
-        return _providers.GetValueOrDefault(_defaultProviderId);
+        return _providers.Values.FirstOrDefault(provider => provider.Info.IsValid);
     }
 
     /// <inheritdoc />
@@ -95,5 +100,10 @@ public class AIProviderRegistry : IAIProviderFactory, IDisposable
             }
             _disposed = true;
         }
+    }
+
+    private bool HasValidProvider(string providerId)
+    {
+        return _providers.TryGetValue(providerId, out var provider) && provider.Info.IsValid;
     }
 }

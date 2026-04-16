@@ -1,3 +1,7 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
 <MudPaper Class="provider-card" Elevation="2">
     <div class="provider-card-inner">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
@@ -14,7 +18,7 @@
                                Size="Size.Small"
                                OnClick="HandleEditPrompt"
                                Class="config-button" />
-                <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@IsTesting">
+                <MudButton Variant="Variant.Outlined" OnClick="HandleTest" Disabled="@(!CanRunConnectivityActions || IsTesting)">
                     @if (IsTesting)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -29,24 +33,37 @@
             <MudText Typo="Typo.body2" Class="provider-description">@Provider.Description</MudText>
         }
 
+        @if (Provider.ConfigurationErrors is { Count: > 0 })
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="provider-warning">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.caption">@L["ProviderManage:Card:ConfigurationErrorTitle"]</MudText>
+                    @foreach (var error in Provider.ConfigurationErrors)
+                    {
+                        <MudText Typo="Typo.caption">@error</MudText>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+
         @if (!Provider.IsValid)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Class="provider-warning">
                 <MudStack Spacing="1">
-                    <MudText Typo="Typo.caption">模型配置不完整，请补充模型信息。</MudText>
+                    <MudText Typo="Typo.caption">@L["ProviderManage:Card:InvalidModelsHint"]</MudText>
                     @if (Provider.InvalidModels is { Count: > 0 })
                     {
                         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                            <MudText Typo="Typo.caption">缺失模型:</MudText>
+                            <MudText Typo="Typo.caption">@L["ProviderManage:Card:InvalidModelsLabel"]</MudText>
                             @foreach (var model in Provider.InvalidModels)
                             {
                                 <MudChip T="string" Size="Size.Small" Color="Color.Warning">@model</MudChip>
                             }
                         </MudStack>
                     }
-                    else
+                    else if (Provider.ConfigurationErrors is not { Count: > 0 })
                     {
-                        <MudText Typo="Typo.caption">未配置 SupportedModels。</MudText>
+                        <MudText Typo="Typo.caption">@L["ProviderManage:Card:NoSupportedModels"]</MudText>
                     }
                 </MudStack>
             </MudAlert>
@@ -56,7 +73,7 @@
             <MudChip T="string" Size="Size.Small" Color="@GetTestStatusColor()">@GetTestStatusText()</MudChip>
             @if (!Provider.IsValid)
             {
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning">无效</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@L["ProviderManage:Card:Status:Invalid"]</MudChip>
             }
             @if (TestedAt.HasValue)
             {
@@ -135,7 +152,7 @@
                                            Size="Size.Small"
                                            StartIcon="@Icons.Material.Filled.CloudDownload"
                                            OnClick="HandleFetchRemoteModels"
-                                           Disabled="@IsFetchingRemoteModels">
+                                           Disabled="@(IsFetchingRemoteModels || !CanRunConnectivityActions)">
                                     @if (IsFetchingRemoteModels)
                                     {
                                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
@@ -149,7 +166,8 @@
                                             RemoteModels="@RemoteModels"
                                             OnTestModel="HandleTestModel"
                                             OnProbeEmbedding="HandleProbeEmbedding"
-                                            IsModelTesting="IsModelTesting" />
+                                            IsModelTesting="IsModelTesting"
+                                            DisableActions="@(!Provider.IsValid)" />
 
                         @if (RemoteModels != null)
                         {
@@ -203,6 +221,7 @@
     [Parameter] public bool IsFetchingRemoteModels { get; set; }
     [Parameter] public string? RemoteModelsFetchError { get; set; }
     [Parameter] public EventCallback<string> OnFetchRemoteModels { get; set; }
+    private bool CanRunConnectivityActions => Provider.IsValid;
 
     private async Task HandleTest()
     {
@@ -255,6 +274,11 @@
 
     private Color GetTestStatusColor()
     {
+        if (Provider.Status == AIProviderStatus.ConfigurationError)
+        {
+            return Color.Warning;
+        }
+
         if (IsTesting)
         {
             return Color.Info;
@@ -270,16 +294,26 @@
 
     private string GetTestStatusText()
     {
+        if (Provider.Status == AIProviderStatus.ConfigurationError)
+        {
+            return L["ProviderManage:Card:Status:ConfigurationError"];
+        }
+
+        if (!Provider.IsValid)
+        {
+            return L["ProviderManage:Card:Status:InvalidConfiguration"];
+        }
+
         if (IsTesting)
         {
-            return "测试中";
+            return L["ProviderManage:Card:Status:Testing"];
         }
 
         return TestSuccess switch
         {
-            true => "可用",
-            false => "失败",
-            _ => "未测试"
+            true => L["ProviderManage:Card:Status:Available"],
+            false => L["ProviderManage:Card:Status:Failed"],
+            _ => L["ProviderManage:Card:Status:NotTested"]
         };
     }
 

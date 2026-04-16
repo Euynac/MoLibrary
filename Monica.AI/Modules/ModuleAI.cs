@@ -12,10 +12,12 @@ using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
 using Monica.AI.Services.Support;
 using Monica.Core;
+using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Modularity.Models.Internal;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -99,10 +101,18 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
 
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
-            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
-            var provider = new OpenAIProvider(options, modelCatalog);
-            manager.RegisterProvider(provider);
+            RegisterProvider(
+                context,
+                options,
+                nameof(EAIProviderType.OpenAI),
+                "OpenAI-compatible chat and embedding provider.",
+                "openai",
+                supportsRemoteModelListing: true,
+                modelCatalog =>
+                {
+                    EnsureApiKeyConfigured(options);
+                    return new OpenAIProvider(options, modelCatalog);
+                });
         }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
@@ -125,10 +135,18 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
 
         ConfigureApplicationBuilder(context =>
         {
-            var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
-            var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
-            var provider = new AnthropicProvider(options, modelCatalog);
-            manager.RegisterProvider(provider);
+            RegisterProvider(
+                context,
+                options,
+                nameof(EAIProviderType.Anthropic),
+                "Anthropic Claude chat provider.",
+                "anthropic",
+                supportsRemoteModelListing: true,
+                modelCatalog =>
+                {
+                    EnsureApiKeyConfigured(options);
+                    return new AnthropicProvider(options, modelCatalog);
+                });
         }, secondKey: options.ProviderId, order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
@@ -187,6 +205,63 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
         }, secondKey: $"custom-{typeof(TProvider).Name}", order: ModuleApplicationMiddlewareOrder.BeforeUseRouting);
 
         return this;
+    }
+
+    private static void RegisterProvider<TOptions>(
+        ModuleApplicationConfigurationContext<ModuleAIOption> context,
+        TOptions options,
+        string providerType,
+        string description,
+        string icon,
+        bool supportsRemoteModelListing,
+        Func<AIModelCatalog, IAIProvider> providerFactory)
+        where TOptions : AIProviderOptions
+    {
+        var manager = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIProviderRegistry>();
+        var modelCatalog = context.ApplicationBuilder.ApplicationServices.GetRequiredService<AIModelCatalog>();
+
+        try
+        {
+            manager.RegisterProvider(providerFactory(modelCatalog));
+        }
+        catch (Exception ex)
+        {
+            manager.RegisterProvider(DisabledAIProvider.FromOptions(
+                options,
+                modelCatalog,
+                providerType,
+                description,
+                icon,
+                BuildConfigurationErrors(options, ex),
+                supportsRemoteModelListing));
+        }
+    }
+
+    private static void EnsureApiKeyConfigured(AIProviderOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            throw new InvalidOperationException(
+                "API key is empty. Configure a non-empty API key to enable this provider.");
+        }
+    }
+
+    private static IReadOnlyList<string> BuildConfigurationErrors(AIProviderOptions options, Exception ex)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            errors.Add("API key is empty. Configure a non-empty API key to enable this provider.");
+        }
+
+        var exceptionMessage = ex.GetMessageRecursively();
+        if (errors.All(existing => !string.Equals(existing, exceptionMessage, StringComparison.Ordinal)))
+        {
+            errors.Add($"Provider initialization failed: {exceptionMessage}");
+        }
+
+        return errors;
     }
 
     /// <summary>

@@ -89,7 +89,7 @@
   "Provider": {
     "Label": "Provider",
     "NotFound": "未找到可用 Provider",
-    "NoChatProvider": "没有可用于聊天的 Provider。请至少配置一个包含 LLM 模型的 Provider。",
+    "NoChatProvider": "当前没有可用的聊天 Provider。请至少配置一个包含 LLM 模型且凭据有效的 Provider。",
     "Default": "默认",
     "Settings": {
       "Title": "系统提示词设置",
@@ -324,6 +324,7 @@
     "Refresh": "刷新",
     "TestAll": "测试全部",
     "NoProviders": "未发现已配置的 AI Provider",
+    "DisabledProvidersSummary": "有 {0} 个 Provider 因配置错误被禁用。请打开下方卡片查看详细原因。",
     "LoadFailed": "加载 Provider 失败",
     "TestFailed": "Provider 测试失败",
     "TestSuccess": "连接成功",
@@ -334,7 +335,23 @@
     "DimensionDetectFailed": "维度探测失败",
     "DimensionDetectSuccess": "探测成功: 维度 = {0}",
     "UpdatePromptFailed": "更新提示词失败",
-    "GetRemoteModelsFailed": "获取远程模型列表失败"
+    "GetRemoteModelsFailed": "获取远程模型列表失败",
+    "FetchRemoteModelsSuccess": "已获取 {0} 个远程模型。",
+    "Card": {
+      "ConfigurationErrorTitle": "该 Provider 因配置错误已被禁用。",
+      "InvalidModelsHint": "模型配置不完整，请在使用前补全 Provider 配置。",
+      "InvalidModelsLabel": "缺失模型:",
+      "NoSupportedModels": "未配置 SupportedModels。",
+      "Status": {
+        "ConfigurationError": "配置错误",
+        "InvalidConfiguration": "配置无效",
+        "Testing": "测试中",
+        "Available": "可用",
+        "Failed": "失败",
+        "NotTested": "未测试",
+        "Invalid": "无效"
+      }
+    }
   },
   "Pages": {
     "RAGChunkers": {

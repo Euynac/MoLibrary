@@ -14,7 +14,7 @@ public static class ChatProviderResolver
     public static IReadOnlyList<AIProviderInfo> GetChatProviders(IReadOnlyList<AIProviderInfo> providers)
     {
         return providers
-            .Where(HasChatModel)
+            .Where(provider => provider.IsValid && HasChatModel(provider))
             .ToList();
     }
 

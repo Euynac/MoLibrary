@@ -89,7 +89,7 @@
   "Provider": {
     "Label": "Provider",
     "NotFound": "No provider available",
-    "NoChatProvider": "No chat-capable provider available. Configure at least one provider with an LLM model.",
+    "NoChatProvider": "No enabled chat-capable provider is available. Configure at least one provider with an LLM model and valid credentials.",
     "Default": "Default",
     "Settings": {
       "Title": "System Prompt Settings",
@@ -324,6 +324,7 @@
     "Refresh": "Refresh",
     "TestAll": "Test All",
     "NoProviders": "No configured AI providers found",
+    "DisabledProvidersSummary": "{0} provider(s) are disabled because of configuration errors. Open each provider card below for details.",
     "LoadFailed": "Failed to load providers",
     "TestFailed": "Provider test failed",
     "TestSuccess": "Connection successful",
@@ -334,7 +335,23 @@
     "DimensionDetectFailed": "Dimension detection failed",
     "DimensionDetectSuccess": "Detection successful: dimension = {0}",
     "UpdatePromptFailed": "Failed to update prompt",
-    "GetRemoteModelsFailed": "Failed to get remote model list"
+    "GetRemoteModelsFailed": "Failed to get remote model list",
+    "FetchRemoteModelsSuccess": "Fetched {0} remote model(s).",
+    "Card": {
+      "ConfigurationErrorTitle": "This provider is disabled because of configuration errors.",
+      "InvalidModelsHint": "Model configuration is incomplete. Update the provider settings before using it.",
+      "InvalidModelsLabel": "Missing models:",
+      "NoSupportedModels": "No SupportedModels are configured.",
+      "Status": {
+        "ConfigurationError": "Configuration Error",
+        "InvalidConfiguration": "Invalid Configuration",
+        "Testing": "Testing",
+        "Available": "Available",
+        "Failed": "Failed",
+        "NotTested": "Not Tested",
+        "Invalid": "Invalid"
+      }
+    }
   },
   "Pages": {
     "RAGChunkers": {

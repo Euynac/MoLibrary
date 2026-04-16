@@ -22,6 +22,7 @@ public class EmbeddingModelFacade(
         try
         {
             var options = providerFactory.GetAllProviders()
+                .Where(provider => provider.Info.IsValid)
                 .SelectMany(provider => provider.Info.SupportedModels?
                     .OfType<EmbeddingModelInfo>()
                     .Select(model => new EmbeddingModelOption
