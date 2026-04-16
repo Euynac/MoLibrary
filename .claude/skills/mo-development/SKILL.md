@@ -102,6 +102,16 @@ Modules declare dependencies by overriding `ClaimDependencies()` on `ModuleBase<
 
 Dependencies are automatically registered when a module is added.
 
+### Module State Ownership Rules
+
+- Keep `Module{Name}Option` focused on developer configuration. Do not use options objects as mutable runtime registries for discovered types, generated endpoints, caches, or other cross-phase state.
+- Do not put required shared runtime state in builder-extension local variables or closures inside `Mo.Add{ModuleName}(...)`. A module can be registered directly or transitively through `DependsOnModule(...).Register()`, and both paths must behave identically.
+- If a module needs mutable state across registration phases such as `ConfigureServices`, `IterateBusinessTypes`, `PostConfigureServices`, MVC configuration, or endpoint mapping, create and own that state inside the module and expose the same instance through a module-owned singleton or internal registry service.
+- Do not hide required default services, middleware, endpoint mapping, or post-configuration in `Mo.Add{ModuleName}()` convenience methods by chaining extra guide calls after `Register(...)`. Direct registration and transitive dependency registration must share the same module-owned baseline behavior.
+- If a module's built-in behavior needs a non-default phase order, model that order as module-owned lifecycle behavior instead of keeping the behavior in builder-entry-only guide methods.
+- When reviewing an existing module, treat builder-entry-only state as a design bug even if the direct registration path currently works.
+- `IBusinessTypeIterator` should almost always preserve the full incoming type stream. Use it for discovery side effects and enrichment, not for accidentally filtering later modules out of the host's business types. Only drop types when the module is explicitly intended to transform the downstream scan set.
+
 ### Required Configuration Methods (GetRequestedConfigMethodKeys)
 
 When a module's services depend on registrations that must come from Guide methods (e.g., choosing a store implementation), the Guide class must override `GetRequestedConfigMethodKeys` to declare those requirements. The module system validates at startup that all required keys have been satisfied, throwing a clear error if any are missing.

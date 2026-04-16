@@ -1,0 +1,32 @@
+# Platform Protocol and Internal Collaboration
+
+Use this file before introducing a new dependency between domains.
+
+## Default Rule
+
+Other domains may depend on `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`, not on another domain's internal implementation or another domain's `Application` handlers.
+
+Within solution-project references, use the chain `Domains.{Subdomain} -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`. Do not make domains jump directly to `Platform.Protocol` or `Platform.BuildingBlocks`.
+
+## What Belongs in Platform.Protocol
+
+- Requests
+- DTOs
+- Enums
+- Cross-domain events
+- Optional `AppInterfaces` for deliberate synchronous collaboration
+
+## What Stays Internal
+
+- Entities
+- Repositories
+- EF configuration
+- Infrastructure adapters
+- Domain-owned application handlers and background workers
+- Internal domain services and implementation details
+
+## Collaboration Choices
+
+- Use direct contract-driven requests when another domain needs synchronous data or command execution.
+- Use events when the collaboration can be asynchronous and loosely coupled.
+- Keep collaboration intentional. A modular monolith should not simulate service calls for everything, but it should still preserve domain boundaries.
