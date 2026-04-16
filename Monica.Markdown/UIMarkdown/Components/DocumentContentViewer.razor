@@ -202,7 +202,7 @@
 
     protected override void OnParametersSet()
     {
-        _strippedContent = StripLeadingTitle(Content);
+        _strippedContent = StripFrontMatterAndLeadingTitle(Content);
         ResetHeadingsIfDocumentChanged();
         BuildBreadcrumbs();
     }
@@ -259,6 +259,85 @@
             { TotalDays: < 30 } => L["MarkdownViewer:Time:DaysAgo", (int)elapsed.TotalDays].Value,
             _ => utcTime.ToLocalTime().ToString("yyyy-MM-dd")
         };
+    }
+
+    private static string? StripFrontMatterAndLeadingTitle(string? content)
+    {
+        return StripLeadingTitle(StripFrontMatter(content));
+    }
+
+    private static string? StripFrontMatter(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        var span = content.AsSpan().TrimStart();
+        if (!span.StartsWith("---"))
+        {
+            return content;
+        }
+
+        var firstLineEnd = span.IndexOfAny('\r', '\n');
+        if (firstLineEnd < 0)
+        {
+            return content;
+        }
+
+        var afterFirstLine = firstLineEnd;
+        while (afterFirstLine < span.Length && (span[afterFirstLine] is '\r' or '\n'))
+        {
+            afterFirstLine++;
+        }
+
+        var remaining = span[afterFirstLine..];
+        var closingIndex = FindFrontMatterClosingDelimiter(remaining);
+        if (closingIndex < 0)
+        {
+            return content;
+        }
+
+        var afterClosing = closingIndex;
+        while (afterClosing < remaining.Length && remaining[afterClosing] is not '\r' and not '\n')
+        {
+            afterClosing++;
+        }
+
+        while (afterClosing < remaining.Length && (remaining[afterClosing] is '\r' or '\n'))
+        {
+            afterClosing++;
+        }
+
+        return remaining[afterClosing..].ToString();
+    }
+
+    private static int FindFrontMatterClosingDelimiter(ReadOnlySpan<char> content)
+    {
+        var position = 0;
+        while (position < content.Length)
+        {
+            var lineStart = position;
+            var lineLength = content[position..].IndexOfAny('\r', '\n');
+            if (lineLength < 0)
+            {
+                lineLength = content.Length - position;
+            }
+
+            var line = content.Slice(position, lineLength).Trim();
+            if (line is "---" or "...")
+            {
+                return lineStart;
+            }
+
+            position += lineLength;
+            while (position < content.Length && (content[position] is '\r' or '\n'))
+            {
+                position++;
+            }
+        }
+
+        return -1;
     }
 
     private static string? StripLeadingTitle(string? content)
