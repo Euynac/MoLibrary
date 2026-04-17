@@ -1,0 +1,41 @@
+name: Unit Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Build.props
+            Monica.slnx
+            tests/Directory.Build.props
+            tests/Directory.Packages.props
+            **/*.csproj
+
+      - name: Restore solution
+        run: dotnet restore Monica.slnx
+
+      - name: Run unit tests
+        run: dotnet test Monica.slnx --no-restore --configuration Release --verbosity minimal --logger "trx;LogFilePrefix=unit-tests" --results-directory tests/TestResults -m
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: tests/TestResults
+          if-no-files-found: warn

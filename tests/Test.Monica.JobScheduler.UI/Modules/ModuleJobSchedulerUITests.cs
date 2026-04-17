@@ -12,7 +12,7 @@ namespace Test.Monica.JobScheduler.UI.Modules;
 public class ModuleJobSchedulerUITests
 {
     [Fact]
-    public void ConfigureServices_ShouldRegisterUiSupportHelpersAsSingletons()
+    public void ConfigureServices_ShouldRegisterUiSupportHelpersWithExpectedLifetimes()
     {
         var services = new ServiceCollection();
         var module = new ModuleJobSchedulerUI(new ModuleJobSchedulerUIOption());
@@ -22,7 +22,7 @@ public class ModuleJobSchedulerUITests
         services.Should().ContainSingle(descriptor =>
             descriptor.ServiceType == typeof(JobStateColorResolver) &&
             descriptor.ImplementationType == typeof(JobStateColorResolver) &&
-            descriptor.Lifetime == ServiceLifetime.Singleton);
+            descriptor.Lifetime == ServiceLifetime.Scoped);
         services.Should().ContainSingle(descriptor =>
             descriptor.ServiceType == typeof(JobArgsJsonSchemaSupport) &&
             descriptor.ImplementationType == typeof(JobArgsJsonSchemaSupport) &&
