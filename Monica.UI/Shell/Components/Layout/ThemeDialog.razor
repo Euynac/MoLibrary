@@ -1,6 +1,7 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @using Monica.UI.Shell.State
+@using Monica.UI.Theming
 @inject ThemeState ThemeService
 @inject IStringLocalizer<SharedResource> L
 @implements IDisposable
@@ -20,7 +21,7 @@
                     <MudText Typo="Typo.subtitle1" Class="mb-3">@L["Theme:SelectStyle"]</MudText>
 
                     <MudStack Spacing="2">
-                        @foreach (var theme in ThemeState.AvailableThemes)
+                        @foreach (var theme in _themeOptions)
                         {
                             <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)"
                                      Class="@GetThemeCardClass(theme.Name)"
@@ -67,11 +68,14 @@
 </MudDialog>
 
 @code {
+    private IReadOnlyList<(string Name, string DisplayName, string Description)> _themeOptions = [];
+
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
 
     protected override void OnInitialized()
     {
+        RefreshThemeOptions();
         ThemeService.OnThemeChanged += HandleThemeChanged;
     }
 
@@ -98,9 +102,12 @@
 
     private string GetCurrentThemeDisplayName()
     {
-        var current = ThemeState.AvailableThemes.FirstOrDefault(t => t.Name == ThemeService.CurrentThemeName);
-        var mode = ThemeService.IsDarkMode ? L["Theme:Dark"] : L["Theme:Light"];
-        return $"{current.DisplayName} - {mode}";
+        return ThemeDisplayTextProvider.GetCurrentThemeSummary(L, ThemeService.CurrentThemeName, ThemeService.IsDarkMode);
+    }
+
+    private void RefreshThemeOptions()
+    {
+        _themeOptions = ThemeDisplayTextProvider.GetThemeOptions(L);
     }
 
     private string GetThemeCardClass(string themeName)

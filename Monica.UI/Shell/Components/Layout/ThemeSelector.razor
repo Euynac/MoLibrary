@@ -1,13 +1,16 @@
+@using Microsoft.Extensions.Localization
+@using Monica.UI.Localization
 @using Monica.UI.Shell.State
 @inject ThemeState ThemeService
 @inject IDialogService DialogService
+@inject IStringLocalizer<SharedResource> L
 
 <MudIconButton Icon="@Icons.Material.Filled.Palette"
                Color="Color.Primary"
                Size="Size.Medium"
                Class="action-button"
                OnClick="OpenThemeDialog"
-               title="主题设置" />
+               title="@L["Theme:Settings"]" />
 
 @code {
     private async Task OpenThemeDialog()
@@ -20,6 +23,6 @@
             CloseButton = true
         };
         
-        await DialogService.ShowAsync<ThemeDialog>("主题设置", options);
+        await DialogService.ShowAsync<ThemeDialog>(string.Empty, options);
     }
 }
