@@ -213,7 +213,7 @@ If that returns `172.31.96.1`, switch from `http://localhost:5092` to `http://17
 - Automatic retry when MSBuild reports file-lock markers such as `MSB3026`
 - `bridge-ready.json` creation when a listening marker is observed
 - `bridge-ready-report.json` creation when readiness checks finish
-- Safer readiness semantics: if `/home` becomes reachable three times but the log marker is still missing, `wait-ready` returns success with a warning by default instead of incorrectly treating the run as blocked
+- Safer readiness semantics: if the probe URL becomes reachable three times but the log marker is still missing, `wait-ready` returns success with a warning by default instead of incorrectly treating the run as blocked
 
 If strict log-marker enforcement is required, add `--strict-marker` to `wait-ready`.
 

@@ -28,7 +28,7 @@ Optional arguments:
 - `--ready-name`
 - `--report-name`
 - `--state-name`
-- `--home-path`
+- `--probe-path`
 - `--file-lock-retries`
 
 Artifacts written to the task folder by default:
@@ -66,7 +66,13 @@ Wait for readiness evidence.
 Success rules by default:
 
 1. `bridge-ready.json` exists or `app-run.log` contains a matching `Now listening on:` marker
-2. `<service-url>/home` succeeds three consecutive times
+2. The probe URL responds three consecutive times without a `5xx` status
+
+Default probe behavior:
+
+- `wait-ready` probes the service root URL by default
+- `404`, `401`, and `403` still count as reachable because they prove the ASP.NET Core pipeline is serving requests
+- Use `--probe-path` when a project has a stronger application-specific readiness endpoint
 
 If rule 2 succeeds before rule 1, the command returns success with `ready-with-warning` unless `--strict-marker` is provided.
 
