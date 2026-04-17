@@ -8,7 +8,49 @@
     "DarkMode": "深色模式",
     "CurrentTheme": "当前主题",
     "Dark": "深色",
-    "Light": "浅色"
+    "Light": "浅色",
+    "Options": {
+      "mudblazor": {
+        "Name": "MudBlazor 默认",
+        "Description": "保留原始 MudBlazor 风格"
+      },
+      "default": {
+        "Name": "默认主题",
+        "Description": "经典的 Material 风格"
+      },
+      "glassmorphic": {
+        "Name": "毛玻璃",
+        "Description": "柔和玻璃质感与模糊效果"
+      },
+      "neonpulse": {
+        "Name": "霓虹脉冲",
+        "Description": "明亮霓虹配色，节奏感更强"
+      },
+      "fresh": {
+        "Name": "小清新",
+        "Description": "薄荷浅色调，清爽安静"
+      },
+      "aurora-flow": {
+        "Name": "极光流彩",
+        "Description": "极光渐变配合轻盈玻璃感"
+      },
+      "ink-landscape": {
+        "Name": "墨韵山水",
+        "Description": "水墨留白风格，沉静克制"
+      },
+      "macaron-sweet": {
+        "Name": "马卡龙甜心",
+        "Description": "柔和粉彩配色，轻松活泼"
+      },
+      "deep-ocean": {
+        "Name": "深海静谧",
+        "Description": "深海蓝绿色调，安静发光"
+      },
+      "vintage-press": {
+        "Name": "复古印刷",
+        "Description": "暖纸张色调，复古排印感"
+      }
+    }
   },
   "Layout": {
     "SearchTooltip": "搜索 (Ctrl+K)",
