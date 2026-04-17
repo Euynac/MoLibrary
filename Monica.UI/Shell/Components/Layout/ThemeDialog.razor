@@ -86,7 +86,6 @@
 
     private void HandleThemeChanged()
     {
-        RefreshThemeOptions();
         InvokeAsync(StateHasChanged);
     }
 
@@ -98,7 +97,6 @@
     private void OnThemeChanged(string newTheme)
     {
         ThemeService.CurrentThemeName = newTheme;
-        RefreshThemeOptions();
         StateHasChanged();
     }
 
