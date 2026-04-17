@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup Condition="'$(IsPackable)' != 'false'">
+    <!--
+      SourceLink.Common only consults this package-path property to decide whether missing
+      source-control metadata should emit a warning. Clearing it here keeps SourceLink enabled
+      while suppressing the warning for local clones whose repository metadata cannot be resolved.
+    -->
+    <PkgMicrosoft_SourceLink_Common></PkgMicrosoft_SourceLink_Common>
+  </PropertyGroup>
+</Project>

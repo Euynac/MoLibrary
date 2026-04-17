@@ -23,7 +23,7 @@ internal static class SwaggerGenOptionConfigurator
         ILogger logger,
         SwaggerDocumentCatalog documentCatalog)
     {
-        ConfigureDocuments(options, option, documentCatalog);
+        ConfigureDocuments(options, documentCatalog);
 
         options.AddEnumDocumentation();
 
@@ -50,17 +50,11 @@ internal static class SwaggerGenOptionConfigurator
 
     private static void ConfigureDocuments(
         SwaggerGenOptions options,
-        ModuleSwaggerOption option,
         SwaggerDocumentCatalog documentCatalog)
     {
         foreach (var document in documentCatalog.Documents)
         {
-            options.SwaggerDoc(document.Name, new OpenApiInfo
-            {
-                Title = documentCatalog.GetOpenApiDocumentTitle(document),
-                Version = documentCatalog.DocumentVersion,
-                Description = option.Description ?? string.Empty
-            });
+            options.SwaggerDoc(document.Name, documentCatalog.GetOpenApiInfo(document));
         }
     }
 

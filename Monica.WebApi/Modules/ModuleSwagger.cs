@@ -17,25 +17,28 @@ namespace Monica.Modules;
 [ModuleKey(BuiltInModuleKey.Swagger)]
 public class ModuleSwagger(ModuleSwaggerOption option) : WebModuleBase<ModuleSwagger, ModuleSwaggerOption, ModuleSwaggerGuide>(option)
 {
+    private SwaggerDocumentCatalog? _documentCatalog;
+
     public override void ConfigureApplicationBuilder(IApplicationBuilder app)
     {
-        var documentCatalog = new SwaggerDocumentCatalog(Option);
-
         app.UseSwagger();
         app.UseSwaggerUI(swaggerUiOptions =>
         {
-            SwaggerUIOptionConfigurator.Configure(swaggerUiOptions, Option, documentCatalog);
+            SwaggerUIOptionConfigurator.Configure(swaggerUiOptions, Option, GetDocumentCatalog());
         });
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        var documentCatalog = new SwaggerDocumentCatalog(Option);
-
         services.AddSwaggerGen(swaggerGenOptions =>
         {
-            SwaggerGenOptionConfigurator.Configure(swaggerGenOptions, Option, Logger, documentCatalog);
+            SwaggerGenOptionConfigurator.Configure(swaggerGenOptions, Option, Logger, GetDocumentCatalog());
         });
+    }
+
+    private SwaggerDocumentCatalog GetDocumentCatalog()
+    {
+        return _documentCatalog ??= new SwaggerDocumentCatalog(Option, Logger);
     }
 }
 
@@ -60,54 +63,54 @@ public class ModuleSwaggerGuide : WebModuleGuide<ModuleSwagger, ModuleSwaggerOpt
 public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
 {
     /// <summary>
-    /// Callback that can extend Swagger generation after the Monica defaults have been applied.
+    /// Callback that can extend Swagger generation after Monica's document defaults have been applied.
     /// </summary>
     public Action<SwaggerGenOptions>? ExtendSwaggerGenAction { get; set; }
 
     /// <summary>
-    /// Callback to extend Swagger UI configuration, allowing other modules (such as the SwaggerUI module) to customize its behavior.
+    /// Callback that can extend Swagger UI configuration after Monica has registered the default document endpoints.
     /// </summary>
     public Action<SwaggerUIOptions>? ExtendSwaggerUIAction { get; set; }
 
     /// <summary>
-    /// Application name.
+    /// Application name used by the Swagger UI title and the default business document title.
     /// </summary>
     public string? AppName { get; set; } = "ApplicationName";
 
     /// <summary>
-    /// API version.
+    /// OpenAPI version stamped onto every registered Swagger document. Defaults to <c>v1</c>.
     /// </summary>
-    public string? Version { get; set; } = "v1";
+    public string Version { get; set; } = "v1";
 
     /// <summary>
-    /// Swagger document name used for Monica framework endpoints.
+    /// Route segment of the primary business document. When not set, the Swagger module falls back to <see cref="Version"/>.
     /// </summary>
-    public string MonicaDocumentName { get; set; } = "monica";
+    public string? BusinessDocumentName { get; set; }
 
     /// <summary>
-    /// Display title used for the Monica Swagger definition.
+    /// Display title of the primary business document. When not set, the Swagger module uses <c>{AppName} API</c> or <c>Business API</c>.
     /// </summary>
-    public string MonicaDocumentTitle { get; set; } = "Monica API";
+    public string? BusinessDocumentTitle { get; set; }
 
     /// <summary>
-    /// Swagger document name used for business or application endpoints.
-    /// </summary>
-    public string BusinessDocumentName { get; set; } = "business";
-
-    /// <summary>
-    /// Display title used for the business Swagger definition.
-    /// </summary>
-    public string BusinessDocumentTitle { get; set; } = "Business API";
-
-    /// <summary>
-    /// Resolves the Swagger document kind for an endpoint. Return <see langword="null"/> to use the default Monica endpoint marker rule.
-    /// </summary>
-    public Func<ApiDescription, ESwaggerDocumentKind?>? DocumentKindResolver { get; set; }
-
-    /// <summary>
-    /// Document description.
+    /// Top-level OpenAPI description of the primary business document.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Monica framework document settings. Set <see cref="MonicaDocumentSettings.Enabled"/> to <see langword="false"/> to suppress it entirely.
+    /// </summary>
+    public MonicaDocumentSettings Monica { get; set; } = new();
+
+    /// <summary>
+    /// Additional Swagger documents registered beyond the primary business and Monica framework documents.
+    /// </summary>
+    public IList<SwaggerDocumentDescriptor> AdditionalDocuments { get; } = new List<SwaggerDocumentDescriptor>();
+
+    /// <summary>
+    /// Optional endpoint-to-document override. Return a registered document name to force the document, or <see langword="null"/> to fall through to the default resolution chain.
+    /// </summary>
+    public Func<ApiDescription, string?>? DocumentNameResolver { get; set; }
 
     /// <summary>
     /// Disable Swagger's automatic XML documentation loading.
