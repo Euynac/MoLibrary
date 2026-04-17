@@ -20,8 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-REPO_DIR = Path("/root/.openclaw/workspace/MoLibrary")
-OWNER_REPO = "Tairitsua/Monica"
+REPO_DIR = Path(os.getenv("MONICA_REPO_DIR", "/root/.openclaw/workspace/MoLibrary"))
+OWNER_REPO = os.getenv("MONICA_OWNER_REPO", "Tairitsua/Monica")
 STATE_PATH = Path.home() / ".hermes" / "state" / "monica-pr-monitor-state.json"
 BRANCH_PREFIXES = ("kou/", "codex/", "agent/", "fix/", "feat/")
 ALWAYS_INCLUDE_NUMBERS = {6}
@@ -128,12 +128,23 @@ def fetch_inline_comments(number: int) -> list[dict[str, str]]:
     return compact
 
 
-def compact_checks(number: int) -> str:
-    result = run(["gh", "pr", "checks", str(number), "--repo", OWNER_REPO], timeout=45, allow_failure=True)
-    out = (result.stdout or "").strip()
-    err = (result.stderr or "").strip()
-    text = out or err
-    return text[:3000]
+def compact_checks(pr: dict[str, Any]) -> str:
+    checks = pr.get("statusCheckRollup") or []
+    compact: list[str] = []
+    for check in checks:
+        typename = str(check.get("__typename") or "")
+        if typename == "CheckRun":
+            name = str(check.get("name") or "")
+            status = str(check.get("status") or "")
+            conclusion = str(check.get("conclusion") or "")
+            details_url = str(check.get("detailsUrl") or "")
+            compact.append("\t".join(part for part in (name, status, conclusion, details_url) if part))
+        elif typename == "StatusContext":
+            context = str(check.get("context") or "")
+            state = str(check.get("state") or "")
+            target_url = str(check.get("targetUrl") or "")
+            compact.append("\t".join(part for part in (context, state, target_url) if part))
+    return "\n".join(compact)[:3000]
 
 
 def pr_signal(pr: dict[str, Any], inline_comments: list[dict[str, str]], checks: str) -> str:
@@ -186,8 +197,8 @@ def build_action_prompt(changed: list[dict[str, Any]], all_scoped: list[dict[str
         "Task:\n"
         "Monitor open Monica pull requests created from local agent branches and handle straightforward review feedback.\n\n"
         "Scope:\n"
-        "- Repository: /root/.openclaw/workspace/MoLibrary\n"
-        "- GitHub repo: Tairitsua/Monica\n"
+        f"- Repository: {REPO_DIR}\n"
+        f"- GitHub repo: {OWNER_REPO}\n"
         "- Focus only on changed_prs above unless another scoped PR is clearly required for context.\n\n"
         "Hard rules:\n"
         "- Do NOT create or schedule cron jobs from this run.\n"
@@ -230,7 +241,7 @@ def main() -> int:
                 "--limit",
                 "50",
                 "--json",
-                "number,title,url,state,headRefName,baseRefName,author,updatedAt,reviewDecision,mergeStateStatus,comments,reviews",
+                "number,title,url,state,headRefName,baseRefName,author,updatedAt,reviewDecision,mergeStateStatus,comments,reviews,statusCheckRollup",
             ]
         ) or []
         scoped = [pr for pr in prs if is_scoped_pr(pr)]
@@ -250,7 +261,7 @@ def main() -> int:
         for pr in scoped:
             number = int(pr["number"])
             inline = fetch_inline_comments(number)
-            checks = compact_checks(number)
+            checks = compact_checks(pr)
             signal = pr_signal(pr, inline, checks)
             key = str(number)
             new_prs[key] = {
