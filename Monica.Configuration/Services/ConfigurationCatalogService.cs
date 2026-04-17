@@ -85,9 +85,11 @@ public static class ConfigurationSnapshotMappingExtensions
         {
             Desc = i.Info?.Description,
             IsOffline = i.Info?._IsOffline ?? c.Info._IsOffline ?? false,
+            IsSensitive = i.IsSensitive,
+            HasStoredValue = i.HasStoredValue,
             Name = i.Name,
             Title = i.Title,
-            Value = ConvertValueForDto(i),
+            Value = i.IsSensitive ? null : ConvertValueForDto(i),
             Type = i.BasicType,
             SpecialType = i.SpecialType,
             IsNullable = i.PropertyInfo.IsMarkedAsNullable(),

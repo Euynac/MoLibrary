@@ -33,7 +33,9 @@
                                       Label="@(OptionItem?.Title ?? "")"
                                       HelperText="@OptionItem?.Desc"
                                       RegexPattern="@OptionItem?.RegexPattern"
-                                      IsNullable="@(OptionItem?.IsNullable ?? false)" />
+                                      IsNullable="@(OptionItem?.IsNullable ?? false)"
+                                      IsSensitive="@(OptionItem?.IsSensitive ?? false)"
+                                      HasStoredValue="@(OptionItem?.HasStoredValue ?? false)" />
     }
 
     @if (OptionItem?.IsOffline == true)

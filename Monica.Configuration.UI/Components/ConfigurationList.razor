@@ -1,5 +1,6 @@
 @using Monica.Configuration.Facades
 @using Monica.Configuration.Models
+@using Monica.Configuration.UI.Support
 @using Monica.Core.Results;
 @inject ConfigurationFacade ConfigurationFacade
 @inject ISnackbar Snackbar
@@ -89,8 +90,8 @@
                 </MudTd>
                 <MudTd DataLabel="配置值">
                     <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                         title="@context.Value?.ToString()">
-                        @context.Value?.ToString()
+                         title="@GetValueDisplay(context)">
+                        @GetValueDisplay(context)
                     </div>
                 </MudTd>
                 <MudTd DataLabel="类型">
@@ -244,7 +245,7 @@
         {
             filtered = filtered.Where(c => 
                 c.Key.Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
-                (c.Value?.ToString() ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
+                (!c.IsSensitive && (c.Value?.ToString() ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase)) ||
                 (c.Desc ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase) ||
                 (c.Title ?? "").Contains(_searchKeyword, StringComparison.OrdinalIgnoreCase));
         }
@@ -263,6 +264,11 @@
 
         _configurations = filtered.ToList();
         _totalCount = _configurations.Count;
+    }
+
+    private static string GetValueDisplay(ConfigurationOptionSnapshot option)
+    {
+        return ConfigurationDisplayHelper.GetDisplayText(option, option.Value);
     }
 
     private async Task OnPageChanged(int page)

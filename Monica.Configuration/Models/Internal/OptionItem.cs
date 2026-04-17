@@ -44,7 +44,15 @@ public class OptionItem
     /// <summary>
     /// Option description.
     /// </summary>
-    public string? Description => Info?.Title;
+    public string? Description => Info?.Description;
+    /// <summary>
+    /// Indicates whether this option should be treated as sensitive in management surfaces.
+    /// </summary>
+    public bool IsSensitive => Info?.IsSensitive ?? false;
+    /// <summary>
+    /// Indicates whether the current option value is configured.
+    /// </summary>
+    public bool HasStoredValue => ConfigurationSensitiveDataRedactor.HasStoredValue(Value);
     /// <summary>
     /// Reflected property info for this option.
     /// </summary>
@@ -149,6 +157,10 @@ public class OptionItem
 
     public override string ToString()
     {
+        var displayValue = IsSensitive && HasStoredValue
+            ? ConfigurationSensitiveDataRedactor.MaskedValue
+            : Value;
+
         if (Value == null)
         {
             return $"{Key}：<null>";
@@ -156,9 +168,10 @@ public class OptionItem
 
         if (Info?.LoggingFormat is { } format)
         {
-            return string.Format(format, Value);
+            return string.Format(format, displayValue);
         }
-        return $"{Key}: {Value}";
+
+        return $"{Key}: {displayValue}";
     }
 
     /// <summary>

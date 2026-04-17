@@ -121,6 +121,15 @@
                             Icon="@Icons.Material.Filled.Category">
                         @_configType
                     </MudChip>
+                    @if (_isSensitive)
+                    {
+                        <MudTooltip Text="敏感参数不会回显当前明文，输入新值后才会替换现有值">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text"
+                                    Icon="@Icons.Material.Filled.VisibilityOff" Class="ml-2">
+                                敏感
+                            </MudChip>
+                        </MudTooltip>
+                    }
                     @if (_isOffline)
                     {
                         <MudTooltip Text="离线参数，修改后需要重启服务才能生效">
@@ -136,6 +145,20 @@
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Class="me-2" />
                     编辑配置值
                 </MudText>
+                @if (_isSensitive)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                        当前值采用写入专用模式。
+                        @if (_hasStoredValue)
+                        {
+                            <span>现有值已配置，留空表示保持不变。</span>
+                        }
+                        else
+                        {
+                            <span>当前尚未配置值，输入后保存即可写入。</span>
+                        }
+                    </MudAlert>
+                }
                 <ConfigurationValueEditor @ref="valueEditor" 
                                          OptionItem="_currentConfig" 
                                          Value="_editValue" 
@@ -180,6 +203,8 @@
     private string _configSource = string.Empty;
     private string _validationMessage = string.Empty;
     private bool _isOffline = false;
+    private bool _isSensitive = false;
+    private bool _hasStoredValue = false;
     private object? _editValue;
     private ConfigurationValueEditor? valueEditor;
     private List<ConfigurationSourceEntry>? _sourceList;
@@ -215,6 +240,8 @@
         _configProvider = config.Provider ?? "Unknown";
         _configSource = config.Source ?? string.Empty;
         _isOffline = config.IsOffline;
+        _isSensitive = config.IsSensitive;
+        _hasStoredValue = config.HasStoredValue;
         _sourceList = config.SourceList;
 
         // Get the current value from the StateManager, or use the original value if it has not been modified

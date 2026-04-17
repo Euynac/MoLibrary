@@ -1,4 +1,3 @@
-@using Monica.Configuration.UI.Support
 @using Monica.Configuration.Providers
 @using System.Text.Json
 @using Monica.Configuration.Providers.JsonFile
@@ -203,7 +202,7 @@
                                 <div class="config-value-container">
                                     @{
                                         var itemViewModel = GetItemViewModel(context);
-                                        var valueDisplay = GetValueDisplay(itemViewModel?.CurrentValue ?? context.Value);
+                                        var valueDisplay = GetValueDisplay(context, itemViewModel?.CurrentValue ?? context.Value);
                                     }
                                     @if (valueDisplay.Length > 30)
                                     {
@@ -352,7 +351,7 @@
                         item.Title.ToLowerInvariant().Contains(keyword) ||
                         item.Key.ToLowerInvariant().Contains(keyword) ||
                         (item.Desc?.ToLowerInvariant().Contains(keyword) ?? false) ||
-                        (item.Value?.ToString()?.ToLowerInvariant().Contains(keyword) ?? false)
+                        (!item.IsSensitive && (item.Value?.ToString()?.ToLowerInvariant().Contains(keyword) ?? false))
                     ).ToList();
                     
                     if (filteredItems.Any())
@@ -398,23 +397,9 @@
         return filtered;
     }
     
-    private string GetValueDisplay(object? value)
+    private string GetValueDisplay(ConfigurationOptionSnapshot item, object? value)
     {
-        if (value == null) return "null";
-        
-        if (value is string strValue)
-        {
-            return strValue;
-        }
-        
-        try
-        {
-            return JsonSerializer.Serialize(value, JsonFileConventions.JsonSerializerOptions);
-        }
-        catch
-        {
-            return value.ToString() ?? "null";
-        }
+        return ConfigurationDisplayHelper.GetDisplayText(item, value);
     }
 
     

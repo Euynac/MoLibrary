@@ -3,57 +3,68 @@
 @using Monica.Configuration.Providers.JsonFile
 
 @using Monica.Configuration.Models
+@using Monica.Configuration.UI.Support
 
-@if (OptionItem?.Value != null)
+@if (OptionItem != null && (OptionItem.Value != null || OptionItem.IsSensitive))
 {
-    <div class="value-display">
-        @switch (OptionItem.Type)
-        {
-            case ConfigurationValueKind.Boolean:
-                <MudChip T="string" Size="Size.Small" Color="@(GetBooleanValue() ? Color.Success : Color.Default)" 
-                         Text="@(GetBooleanValue() ? "True" : "False")" />
-                break;
+    @if (OptionItem.IsSensitive)
+    {
+        <div class="value-display">
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                     Text="@ConfigurationDisplayHelper.GetDisplayText(OptionItem, OptionItem.Value)" />
+        </div>
+    }
+    else
+    {
+        <div class="value-display">
+            @switch (OptionItem.Type)
+            {
+                case ConfigurationValueKind.Boolean:
+                    <MudChip T="string" Size="Size.Small" Color="@(GetBooleanValue() ? Color.Success : Color.Default)"
+                             Text="@(GetBooleanValue() ? "True" : "False")" />
+                    break;
 
-            case ConfigurationValueKind.Numeric:
-                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@GetNumericValue().ToString()" />
-                break;
+                case ConfigurationValueKind.Numeric:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@GetNumericValue().ToString()" />
+                    break;
 
-            case ConfigurationValueKind.String:
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetStringValue()" />
-                break;
+                case ConfigurationValueKind.String:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetStringValue()" />
+                    break;
 
-            case ConfigurationValueKind.DateTime:
-                <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Text="@GetDateTimeValue().ToString("yyyy-MM-dd HH:mm:ss")" />
-                break;
+                case ConfigurationValueKind.DateTime:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Text="@GetDateTimeValue().ToString("yyyy-MM-dd HH:mm:ss")" />
+                    break;
 
-            case ConfigurationValueKind.TimeSpan:
-                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Text="@GetTimeSpanValue().ToString()" />
-                break;
+                case ConfigurationValueKind.TimeSpan:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Text="@GetTimeSpanValue().ToString()" />
+                    break;
 
-            case ConfigurationValueKind.Enum:
-                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@GetStringValue()" />
-                break;
+                case ConfigurationValueKind.Enum:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@GetStringValue()" />
+                    break;
 
-            case ConfigurationValueKind.Object:
-                @if (OptionItem.SpecialType == ConfigurationSpecialValueKind.Array)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="@($"Array[{GetArrayLength()}]")" />
-                }
-                else if (OptionItem.SpecialType == ConfigurationSpecialValueKind.Dict)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@($"Dict[{GetDictLength()}]")" />
-                }
-                else
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Dark" Text="Object" />
-                }
-                break;
+                case ConfigurationValueKind.Object:
+                    @if (OptionItem.SpecialType == ConfigurationSpecialValueKind.Array)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="@($"Array[{GetArrayLength()}]")" />
+                    }
+                    else if (OptionItem.SpecialType == ConfigurationSpecialValueKind.Dict)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@($"Dict[{GetDictLength()}]")" />
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Text="Object" />
+                    }
+                    break;
 
-            default:
-                <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetJsonDisplay()" />
-                break;
-        }
-    </div>
+                default:
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Text="@GetJsonDisplay()" />
+                    break;
+            }
+        </div>
+    }
 }
 
 @code {

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
 using Monica.Core.Results;
 
 namespace Monica.Configuration.Services;
@@ -83,17 +84,21 @@ public class LocalConfigurationManagementApi(
         DateTime? start = null,
         DateTime? end = null)
     {
+        Task<Res<List<ConfigurationHistoryEntry>>> historyTask;
         if (appid != null && key != null)
         {
-            return stores.GetHistory(key, appid);
+            historyTask = stores.GetHistory(key, appid);
         }
-
-        if (start != null && end != null)
+        else if (start != null && end != null)
         {
-            return stores.GetHistory(start.Value, end.Value);
+            historyTask = stores.GetHistory(start.Value, end.Value);
+        }
+        else
+        {
+            historyTask = stores.GetHistory(DateTime.Now.Subtract(TimeSpan.FromDays(180)), DateTime.Now);
         }
 
-        return stores.GetHistory(DateTime.Now.Subtract(TimeSpan.FromDays(180)), DateTime.Now);
+        return GetRedactedHistoryAsync(historyTask);
     }
 
     public virtual async Task<Res<ConfigurationUpdateResult>> UpdateConfigAsync(ConfigurationUpdateRequest request)
@@ -147,5 +152,16 @@ public class LocalConfigurationManagementApi(
         res.AppId = appid;
         if((await stores.SaveUpdate(res)).IsFailed(out var err)) return err;
         return res;
+    }
+
+    private static async Task<Res<List<ConfigurationHistoryEntry>>> GetRedactedHistoryAsync(
+        Task<Res<List<ConfigurationHistoryEntry>>> historyTask)
+    {
+        if ((await historyTask).IsFailed(out var error, out var history))
+        {
+            return error;
+        }
+
+        return Res.Ok(ConfigurationSensitiveDataRedactor.RedactHistoryEntries(history));
     }
 }

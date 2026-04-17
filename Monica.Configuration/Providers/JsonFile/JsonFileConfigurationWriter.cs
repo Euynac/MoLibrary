@@ -118,7 +118,8 @@ public class JsonFileConfigurationWriter(ILogger<JsonFileConfigurationWriter> lo
         {
             var doc = new JsonSettingsDocument(option.Source);
             var oldValue = JsonSettingsDocument.CloneJsonNode(doc[key]);
-            doc[key] = value;
+            var mergedValue = MergeSensitiveValues(config, oldValue, value);
+            doc[key] = mergedValue;
             doc.Save(option.Source);
             
             // Force configuration reload to ensure immediate availability of the new values
@@ -139,6 +140,38 @@ public class JsonFileConfigurationWriter(ILogger<JsonFileConfigurationWriter> lo
             logger.LogError(error);
             return error;
         }
+    }
+
+    private static JsonNode? MergeSensitiveValues(
+        ConfigurationDescriptor config,
+        JsonNode? currentValue,
+        JsonNode? incomingValue)
+    {
+        if (incomingValue is not JsonObject incomingObject)
+        {
+            return incomingValue;
+        }
+
+        var mergedObject = JsonSettingsDocument.CloneJsonNode(incomingObject)?.AsObject() ?? new JsonObject();
+        if (currentValue is not JsonObject currentObject)
+        {
+            return mergedObject;
+        }
+
+        foreach (var option in config.OptionItems.Where(option => option.IsSensitive))
+        {
+            if (mergedObject.ContainsKey(option.Name))
+            {
+                continue;
+            }
+
+            if (currentObject.TryGetPropertyValue(option.Name, out var currentSensitiveValue))
+            {
+                mergedObject[option.Name] = JsonSettingsDocument.CloneJsonNode(currentSensitiveValue);
+            }
+        }
+
+        return mergedObject;
     }
 }
 

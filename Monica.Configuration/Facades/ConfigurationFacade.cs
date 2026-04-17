@@ -120,7 +120,8 @@ public class ConfigurationFacade(
     {
         try
         {
-            var debugView = ConfigurationRuntime.GetDebugView().Split(Environment.NewLine);
+            var debugView = ConfigurationSensitiveDataRedactor.RedactDebugView(ConfigurationRuntime.GetDebugView())
+                .Split(Environment.NewLine);
             return Task.FromResult(Res.Ok(debugView));
         }
         catch (Exception ex)
@@ -137,7 +138,8 @@ public class ConfigurationFacade(
     {
         try
         {
-            return Task.FromResult(Res.Ok(ConfigurationRuntime.GetProvidersGrouped()));
+            var providers = ConfigurationSensitiveDataRedactor.RedactProviderGroups(ConfigurationRuntime.GetProvidersGrouped());
+            return Task.FromResult(Res.Ok(providers));
         }
         catch (Exception ex)
         {

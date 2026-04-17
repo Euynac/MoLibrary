@@ -29,6 +29,13 @@ public class OptionSettingAttribute : Attribute
     public string? Description { get; set; }
 
     /// <summary>
+    /// Marks the option as sensitive and therefore write-only in management surfaces.
+    /// Sensitive options are masked in dashboards, history, diagnostics, and logs.
+    /// This flag does not encrypt the underlying provider value at rest.
+    /// </summary>
+    public bool IsSensitive { get; set; }
+
+    /// <summary>
     /// Marks the option as offline-only, meaning a service restart is required to apply changes.
     /// </summary>
     public bool IsOffline

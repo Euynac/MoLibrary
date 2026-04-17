@@ -1,6 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Monica.Configuration.Models;
 using Monica.Configuration.Providers.JsonFile;
+using Monica.Configuration.Services.Support;
+using Monica.Configuration.UI.Support;
 
 namespace Monica.Configuration.UI.State;
 
@@ -83,27 +86,9 @@ public class ConfigurationStateManager
     /// </summary>
     public List<ConfigurationUpdateRequest> BuildUpdateRequests()
     {
-        var requests = new List<ConfigurationUpdateRequest>();
-        
-        foreach (var config in GetModifiedConfigurations())
-        {
-            var configJson = new Dictionary<string, object?>();
-            
-            // Build the complete configuration JSON, including all items (modified and unmodified)
-            foreach (var item in config.Items)
-            {
-                configJson[item.OriginalItem.Name] = item.CurrentValue;
-            }
-            
-            requests.Add(new ConfigurationUpdateRequest
-            {
-                AppId = config.AppId,
-                Key = config.ConfigName,
-                Value = JsonSerializer.SerializeToNode(configJson, JsonFileConventions.JsonSerializerOptions)
-            });
-        }
-        
-        return requests;
+        return GetModifiedConfigurations()
+            .Select(config => config.BuildUpdateRequest())
+            .ToList();
     }
     
     /// <summary>
@@ -124,19 +109,8 @@ public class ConfigurationStateManager
     {
         if (!_configurations.TryGetValue(configName, out var config))
             return "{}";
-            
-        var configJson = new Dictionary<string, object?>();
-        foreach (var item in config.Items)
-        {
-            configJson[item.OriginalItem.Name] = item.CurrentValue;
-        }
-        
-        var request = new ConfigurationUpdateRequest
-        {
-            AppId = config.AppId,
-            Key = config.ConfigName,
-            Value = JsonSerializer.SerializeToNode(configJson, JsonFileConventions.JsonSerializerOptions)
-        };
+
+        var request = config.BuildPreviewUpdateRequest();
         
         var preview = new
         {
@@ -255,6 +229,39 @@ public class ConfigurationViewModel
     {
         return Items.Where(i => i.IsModified).ToList();
     }
+
+    public ConfigurationUpdateRequest BuildUpdateRequest()
+    {
+        return new ConfigurationUpdateRequest
+        {
+            AppId = AppId,
+            Key = ConfigName,
+            Value = BuildConfigValue(redactSensitiveValues: false)
+        };
+    }
+
+    public ConfigurationUpdateRequest BuildPreviewUpdateRequest()
+    {
+        return new ConfigurationUpdateRequest
+        {
+            AppId = AppId,
+            Key = ConfigName,
+            Value = BuildConfigValue(redactSensitiveValues: true)
+        };
+    }
+
+    private JsonNode? BuildConfigValue(bool redactSensitiveValues)
+    {
+        var configJson = new Dictionary<string, object?>();
+        foreach (var item in Items.Where(item => item.ShouldIncludeInRequest()))
+        {
+            configJson[item.OriginalItem.Name] = redactSensitiveValues
+                ? item.GetPreviewValue()
+                : item.GetRequestValue();
+        }
+
+        return JsonSerializer.SerializeToNode(configJson, JsonFileConventions.JsonSerializerOptions);
+    }
 }
 
 /// <summary>
@@ -277,20 +284,44 @@ public class ConfigurationItemViewModel
     public ConfigurationItemViewModel(ConfigurationOptionSnapshot originalItem)
     {
         OriginalItem = originalItem;
-        _currentValue = originalItem.Value;
+        _currentValue = originalItem.IsSensitive ? null : originalItem.Value;
         _isModified = false;
     }
     
     public void UpdateValue(object? newValue)
     {
+        if (OriginalItem.IsSensitive)
+        {
+            _currentValue = NormalizeSensitiveValue(newValue);
+            _isModified = ConfigurationSensitiveDataRedactor.HasStoredValue(_currentValue);
+            return;
+        }
+
         _currentValue = newValue;
         _isModified = !ValuesEqual(_currentValue, OriginalItem.Value);
     }
     
     public void UndoModification()
     {
-        _currentValue = OriginalItem.Value;
+        _currentValue = OriginalItem.IsSensitive ? null : OriginalItem.Value;
         _isModified = false;
+    }
+
+    public bool ShouldIncludeInRequest()
+    {
+        return !OriginalItem.IsSensitive || IsModified;
+    }
+
+    public object? GetRequestValue()
+    {
+        return _currentValue;
+    }
+
+    public object? GetPreviewValue()
+    {
+        return OriginalItem.IsSensitive && ConfigurationSensitiveDataRedactor.HasStoredValue(_currentValue)
+            ? ConfigurationSensitiveDataRedactor.MaskedValue
+            : _currentValue;
     }
     
     /// <summary>
@@ -298,7 +329,7 @@ public class ConfigurationItemViewModel
     /// </summary>
     public string GetOriginalJson()
     {
-        return JsonSerializer.Serialize(OriginalItem.Value, JsonFileConventions.JsonSerializerOptions);
+        return ConfigurationDisplayHelper.GetJsonText(OriginalItem, OriginalItem.Value);
     }
     
     /// <summary>
@@ -306,7 +337,17 @@ public class ConfigurationItemViewModel
     /// </summary>
     public string GetCurrentJson()
     {
-        return JsonSerializer.Serialize(CurrentValue, JsonFileConventions.JsonSerializerOptions);
+        return ConfigurationDisplayHelper.GetJsonText(OriginalItem, CurrentValue);
+    }
+
+    private static object? NormalizeSensitiveValue(object? value)
+    {
+        return value switch
+        {
+            string stringValue when string.IsNullOrWhiteSpace(stringValue) => null,
+            JsonElement { ValueKind: JsonValueKind.String } element when string.IsNullOrWhiteSpace(element.GetString()) => null,
+            _ => value
+        };
     }
     
     private static bool ValuesEqual(object? value1, object? value2)

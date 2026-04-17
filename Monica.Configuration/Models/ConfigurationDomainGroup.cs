@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Monica.Configuration.Providers.JsonFile;
+using Monica.Configuration.Services.Support;
 using Monica.Core.JsonSerialization.Converters;
 using Monica.Tool.Diagnostics;
 
@@ -37,6 +38,16 @@ public class ConfigurationOptionSnapshot
     /// Whether the option is offline-only and requires service restart to take effect.
     /// </summary>
     public bool IsOffline { get; set; }
+
+    /// <summary>
+    /// Indicates whether the option is sensitive and therefore masked in management surfaces.
+    /// </summary>
+    public bool IsSensitive { get; set; }
+
+    /// <summary>
+    /// Indicates whether a sensitive option already has a stored value even though the plaintext is hidden.
+    /// </summary>
+    public bool HasStoredValue { get; set; }
 
     /// <summary>
     /// Basic option value type.
@@ -155,7 +166,9 @@ public class ConfigurationSnapshot
         var configJson = new Dictionary<string, object?>();
         foreach (var item in Items)
         {
-            configJson[item.Name] = item.Value;
+            configJson[item.Name] = item.IsSensitive && item.HasStoredValue
+                ? ConfigurationSensitiveDataRedactor.MaskedValue
+                : item.Value;
         }
 
         return configJson.ToJsonString(customOptions: JsonFileConventions.JsonSerializerOptions) ?? "{}";

@@ -43,8 +43,11 @@ public static class ConfigurationLoggingExtensions
         {
             var value = option.Value;
             
-            var displayValue = option.Value;
-            if (value != null && value.GetType().IsClass && value.GetType() != typeof(string))
+            object? displayValue = option.IsSensitive && option.HasStoredValue
+                ? ConfigurationSensitiveDataRedactor.MaskedValue
+                : option.Value;
+
+            if (!option.IsSensitive && value != null && value.GetType().IsClass && value.GetType() != typeof(string))
             {
                 displayValue = value.ToJsonString();
             }
