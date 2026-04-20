@@ -15,7 +15,8 @@ Within solution-project references, use the chain `{Subdomain}Service.API -> {Su
 - Put requests that another service or shared gateway may invoke into `Platform.Protocol/PublishedLanguages`.
 - Put DTOs and enums that form part of a stable service contract into `Platform.Protocol/PublishedLanguages`.
 - Put events that other services may subscribe to into `Platform.Protocol/PublishedLanguages`.
-- Put optional `AppInterfaces` into `Platform.Protocol/PublishedLanguages` only when direct synchronous collaboration is justified.
+- Put optional checked-in synchronous abstractions into `Platform.Protocol/PublishedLanguages/.../Contracts`.
+- Put optional checked-in local or actor-backed providers into `Platform.Protocol/PublishedLanguages/.../Implementations/Local`.
 
 ## What Does Not Belong Here
 
@@ -29,6 +30,7 @@ Within solution-project references, use the chain `{Subdomain}Service.API -> {Su
 
 - Prefer async collaboration through events when eventual consistency is acceptable.
 - Prefer direct service contracts only when the caller truly needs synchronous data or command execution.
+- When RPC generation is enabled, generated HTTP clients may surface as `Implementations.Http`; do not check in parallel `Implementations/Http` source unless you are intentionally wrapping or customizing that client surface.
 - Keep `PublishedLanguages` narrow. If a contract is only used inside one service, keep it local.
 
 ## Stability Rules

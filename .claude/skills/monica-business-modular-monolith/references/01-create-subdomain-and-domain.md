@@ -20,12 +20,15 @@ src/Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/
 ├── Requests/
 ├── Models/
 ├── Events/
-└── AppInterfaces/    # only if synchronous domain-to-domain calls are required
+├── Contracts/        # only if checked-in synchronous domain-to-domain contracts are required
+└── Implementations/
+    ├── Http/         # only if wrapping or extending the generated HTTP RPC clients
+    └── Local/        # only if local or actor-backed providers are shared intentionally
 ```
 
 Rules:
 
-- Put only stable cross-domain requests, DTOs, enums, events, and optional service interfaces here.
+- Put only stable cross-domain requests, DTOs, enums, events, and optional shared `Contracts/` or `Implementations/*` surfaces here.
 - Keep persistence entities and repositories out of `Platform.Protocol`.
 
 ## Step 3. Create the domain package

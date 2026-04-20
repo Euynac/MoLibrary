@@ -181,9 +181,9 @@ def load_runtime_paths() -> RuntimePaths:
     config = load_json(bootstrap_config_path, default={})
     root_dir = Path(config.get("root_dir", bootstrap_root)).expanduser()
     if not root_dir.is_absolute():
-        root_dir = (repo_root / root_dir).resolve()
+        root_dir = absolute_path(repo_root / root_dir)
     else:
-        root_dir = root_dir.resolve()
+        root_dir = absolute_path(root_dir)
 
     return RuntimePaths(
         bootstrap_root=bootstrap_root,
@@ -246,9 +246,10 @@ def handle_config(runtime: RuntimePaths, args: argparse.Namespace) -> int:
         if not new_root.is_absolute():
             raise CatalogError("config set-root requires an absolute path.")
 
+        new_root = absolute_path(new_root)
         new_root.mkdir(parents=True, exist_ok=True)
-        save_config(runtime, new_root.resolve())
-        print(f"[OK] Active runtime root updated to {new_root.resolve()}")
+        save_config(runtime, new_root)
+        print(f"[OK] Active runtime root updated to {new_root}")
         print("[INFO] Existing cached data was not migrated.")
         return 0
 
@@ -563,6 +564,7 @@ def inspect_source_root(source_path: Path) -> dict:
 
 
 def scan_local_sources(base_path: Path, max_depth: int, runtime: RuntimePaths) -> list[Path]:
+    base_path = absolute_path(base_path)
     if not base_path.exists():
         raise CatalogError(f"Scan path does not exist: {base_path}")
     if not base_path.is_dir():
@@ -572,14 +574,14 @@ def scan_local_sources(base_path: Path, max_depth: int, runtime: RuntimePaths) -
 
     discovered: list[Path] = []
     seen: set[Path] = set()
-    skip_paths = {runtime.state_dir.resolve(), runtime.repos_dir.resolve()}
-    bootstrap_state = runtime.bootstrap_state_dir.resolve()
-    if bootstrap_state != runtime.state_dir.resolve():
+    skip_paths = {absolute_path(runtime.state_dir), absolute_path(runtime.repos_dir)}
+    bootstrap_state = absolute_path(runtime.bootstrap_state_dir)
+    if bootstrap_state != absolute_path(runtime.state_dir):
         skip_paths.add(bootstrap_state)
 
     for current_root, dirnames, filenames in os.walk(base_path):
-        current_path = Path(current_root).resolve()
-        rel_depth = depth_from(base_path.resolve(), current_path)
+        current_path = absolute_path(current_root)
+        rel_depth = depth_from(base_path, current_path)
         if rel_depth > max_depth:
             dirnames[:] = []
             continue
@@ -591,7 +593,7 @@ def scan_local_sources(base_path: Path, max_depth: int, runtime: RuntimePaths) -
             and not is_internal_child(current_path / item, skip_paths)
         ]
 
-        if current_path != base_path.resolve() and is_source_root(current_path, filenames):
+        if current_path != base_path and is_source_root(current_path, filenames):
             if current_path not in seen:
                 discovered.append(current_path)
                 seen.add(current_path)
@@ -777,7 +779,8 @@ def print_record_detail(runtime: RuntimePaths, record: dict) -> None:
 
 def refresh_record_summary(runtime: RuntimePaths, record: dict) -> dict:
     downloads = record.setdefault("downloads", {"clone": None, "tags": {}})
-    local_sources = record.setdefault("local_sources", [])
+    local_sources = dedupe_local_sources(record.setdefault("local_sources", []))
+    record["local_sources"] = local_sources
     manifest_status = "missing"
     if get_manifest_path(runtime, record, enriched=True).exists():
         manifest_status = "enriched"
@@ -811,6 +814,21 @@ def refresh_record_summary(runtime: RuntimePaths, record: dict) -> dict:
     record["detected_version"] = detected_version
     record["updated_at"] = utc_now()
     return record
+
+
+def dedupe_local_sources(local_sources: list[dict]) -> list[dict]:
+    if not local_sources:
+        return []
+
+    deduped: list[dict] = []
+    seen_paths: set[str] = set()
+    for source in sorted(local_sources, key=lambda item: item.get("added_at", ""), reverse=True):
+        path = source.get("path")
+        if not path or path in seen_paths:
+            continue
+        deduped.append(source)
+        seen_paths.add(path)
+    return deduped
 
 
 def ensure_stub_manifest(runtime: RuntimePaths, record: dict) -> None:
@@ -1190,7 +1208,7 @@ def normalize_source_path(raw_path: str) -> Path:
     path = Path(raw_path).expanduser()
     if not path.is_absolute():
         raise CatalogError("Local source paths must be absolute.")
-    return path.resolve()
+    return absolute_path(path)
 
 
 def load_json(path: Path, default):
@@ -1239,6 +1257,10 @@ def safe_file_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", value)
 
 
+def absolute_path(path: str | Path) -> Path:
+    return Path(os.path.abspath(os.fspath(path)))
+
+
 def path_hash(path: Path) -> str:
     return hashlib.sha1(str(path).encode("utf-8")).hexdigest()[:10]
 
@@ -1267,8 +1289,8 @@ def depth_from(base_path: Path, current_path: Path) -> int:
 
 
 def is_internal_child(candidate: Path, skip_paths: set[Path]) -> bool:
-    resolved = candidate.resolve()
-    return any(is_relative_to(resolved, parent) for parent in skip_paths)
+    absolute_candidate = absolute_path(candidate)
+    return any(is_relative_to(absolute_candidate, parent) for parent in skip_paths)
 
 
 def is_relative_to(path: Path, other: Path) -> bool:

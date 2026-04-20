@@ -20,7 +20,10 @@ src/
 │               ├── Requests/                 # Shared request contracts
 │               ├── Models/                   # Shared DTOs and enums
 │               ├── Events/                   # Shared event contracts
-│               └── AppInterfaces/            # Optional synchronous service contracts
+│               ├── Contracts/                # Optional checked-in synchronous service contracts
+│               └── Implementations/
+│                   ├── Http/                 # Optional wrappers or adapters around generated HTTP RPC clients
+│                   └── Local/                # Optional checked-in local or actor-backed providers
 ├── Services/
 │   └── {Subdomain}/
 │       ├── {Subdomain}Service.API/

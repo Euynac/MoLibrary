@@ -20,7 +20,10 @@ src/
 │               ├── Requests/                 # Shared request contracts
 │               ├── Models/                   # Stable DTOs and enums
 │               ├── Events/                   # Cross-domain event contracts
-│               └── AppInterfaces/            # Optional synchronous domain contracts
+│               ├── Contracts/                # Optional checked-in synchronous domain contracts
+│               └── Implementations/
+│                   ├── Http/                 # Optional wrappers or adapters around generated HTTP RPC clients
+│                   └── Local/                # Optional checked-in local or actor-backed providers
 ├── Domains/
 │   └── {Subdomain}/
 │       ├── Domains.{Subdomain}.csproj        # Single domain package project

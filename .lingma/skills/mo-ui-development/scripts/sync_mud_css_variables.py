@@ -12,10 +12,11 @@ from pathlib import Path
 
 from check_mudblazor_source import (
     REQUIRED_RELATIVE_FILE,
+    registration_commands,
     resolve_mudblazor_source_root,
     resolve_source_configuration,
 )
-from mudblazor_skill_state import SOURCE_CONFIG_FILE, VARIABLES_JSON_FILE, ensure_state_dir
+from mudblazor_skill_state import THIRD_PARTY_CATALOG_FILE, VARIABLES_JSON_FILE, ensure_state_dir
 
 OUTPUT_JSON = VARIABLES_JSON_FILE
 CONST_PATTERN = re.compile(r'private const string\s+(\w+)\s*=\s*"([^"]+)";')
@@ -61,31 +62,24 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Rewrite JSON even when unchanged.")
     args = parser.parse_args()
 
-    configured_path, config_source = resolve_source_configuration()
+    catalog_path, config_source = resolve_source_configuration()
     resolved_root, candidates = resolve_mudblazor_source_root()
     if resolved_root is None:
-        if configured_path is None:
-            print("[ERROR] MudBlazor source root is not configured.")
-            print(f"Config file: {SOURCE_CONFIG_FILE}")
-            print(f"Configuration state: {config_source}")
-            print()
-            print("This source-dependent workflow cannot continue.")
-            print("Ask the user for the local MudBlazor source path, or ask them to download the source first.")
-            print("Then save the path into the project temp config with:")
-            print("  python scripts/check_mudblazor_source.py --save-source-root <path>")
-        else:
-            print("[ERROR] MudBlazor source is missing.")
-            print(f"Config file: {SOURCE_CONFIG_FILE}")
-            print(f"Configured path: {configured_path}")
-            print(f"Configured via:  {config_source}")
-            print("Checked candidates:")
+        print("[ERROR] MudBlazor source is not available through third-party-source-catalog.")
+        print(f"Catalog file: {THIRD_PARTY_CATALOG_FILE}")
+        print(f"Catalog state: {config_source}")
+        if catalog_path:
+            print(f"Matched catalog path: {catalog_path}")
+        if candidates:
+            print("Checked candidate roots:")
             for candidate in candidates:
                 print(f"  - {candidate.as_posix()}")
-            print()
-            print("This source-dependent workflow cannot continue.")
-            print("Ask the user to download MudBlazor source to the configured path above, or provide the correct local source path.")
-            print("Then save the path into the project temp config with:")
-            print("  python scripts/check_mudblazor_source.py --save-source-root <path>")
+        print()
+        print("This source-dependent workflow cannot continue.")
+        print("Register MudBlazor source with third-party-source-catalog, then rerun this script.")
+        print("Suggested commands:")
+        for command in registration_commands():
+            print(f"  {command}")
         print("Run scripts/check_mudblazor_source.py for detailed diagnostics.")
         return 1
 
