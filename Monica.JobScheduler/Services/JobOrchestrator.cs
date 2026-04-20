@@ -257,6 +257,7 @@ public class JobOrchestrator(
         // Create execution context
         var context = new JobExecutionContext
         {
+            InstanceId = instance.InstanceId,
             ServiceProvider = scopedProvider,
             JobType = jobType,
             JobArgs = jobArgs,

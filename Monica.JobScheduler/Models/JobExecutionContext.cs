@@ -7,6 +7,11 @@ namespace Monica.JobScheduler.Models;
 public class JobExecutionContext
 {
     /// <summary>
+    /// Gets or sets the job instance identifier being executed.
+    /// </summary>
+    public required string InstanceId { get; init; }
+
+    /// <summary>
     /// Gets or sets the service provider for resolving job instances and dependencies.
     /// </summary>
     public required IServiceProvider ServiceProvider { get; init; }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,7 @@ public class JobInstanceManager(
     ILogger<JobInstanceManager> logger)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
+    private readonly ConcurrentDictionary<string, InstanceMutationLock> _instanceLocks = new();
 
     /// <summary>
     /// Creates a new job instance with the specified initial state.
@@ -90,28 +92,67 @@ public class JobInstanceManager(
         string? message = null,
         CancellationToken cancellationToken = default)
     {
-        var instance = await metadataRepository.GetInstanceAsync(instanceId, cancellationToken);
-        if (instance == null)
-        {
-            logger.LogError("Job instance {InstanceId} not found for state update", instanceId);
-            throw new InvalidOperationException($"Job instance {instanceId} not found");
-        }
+        var mutation = await MutateInstanceAsync(
+            instanceId,
+            instance =>
+            {
+                var currentState = instance.State;
+                var sourceClientId = ResolveSourceClientId(newState);
 
-        var currentState = instance.State;
-        var sourceClientId = ResolveSourceClientId(newState);
-
-        instance.UpdateStateAsync(newState, message, sourceClientId);
-        await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
+                instance.UpdateStateAsync(newState, message, sourceClientId);
+                return new InstanceMutationResult(instance, currentState, newState, sourceClientId);
+            },
+            cancellationToken);
 
         logger.LogDebug(
             "Updated job instance {InstanceId} state from {OldState} to {NewState} by client {SourceClientId}",
             instanceId,
-            currentState,
+            mutation.OldState,
             newState,
-            sourceClientId ?? "(unknown)");
+            mutation.SourceClientId ?? "(unknown)");
 
-        // Publish lifecycle events based on state transitions
-        await PublishLifecycleEventAsync(instance, currentState, newState);
+        await PublishLifecycleEventAsync(mutation.Instance, mutation.OldState!.Value, mutation.NewState!.Value);
+    }
+
+    /// <summary>
+    /// Appends an execution log entry to an existing job instance without changing its state.
+    /// </summary>
+    internal async Task AppendExecutionLogAsync(
+        string instanceId,
+        string message,
+        LogLevel logLevel = LogLevel.Information,
+        Exception? exception = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(instanceId))
+        {
+            throw new ArgumentException("Instance ID cannot be null or empty.", nameof(instanceId));
+        }
+
+        if (string.IsNullOrWhiteSpace(message) && exception == null)
+        {
+            throw new ArgumentException("Either a message or an exception must be provided.", nameof(message));
+        }
+
+        await MutateInstanceAsync(
+            instanceId,
+            instance =>
+            {
+                instance.AppendExecutionLog(
+                    message,
+                    logLevel,
+                    exception,
+                    DateTime.UtcNow,
+                    TryResolveSourceClientId());
+
+                return new InstanceMutationResult(instance);
+            },
+            cancellationToken);
+
+        logger.LogDebug(
+            "Appended execution log to job instance {InstanceId} with level {LogLevel}",
+            instanceId,
+            logLevel);
     }
 
     /// <summary>
@@ -198,6 +239,22 @@ public class JobInstanceManager(
 
     private string? ResolveSourceClientId(JobState newState)
     {
+        var sourceClientId = TryResolveSourceClientId();
+        if (!string.IsNullOrWhiteSpace(sourceClientId))
+        {
+            return sourceClientId;
+        }
+
+        if (newState == JobState.Processing)
+        {
+            throw new InvalidOperationException("RunningClientId must be available when transitioning to Processing.");
+        }
+
+        return null;
+    }
+
+    private string? TryResolveSourceClientId()
+    {
         try
         {
             var sourceClientId = clientInfo.GetServiceStatus().InstanceId;
@@ -208,14 +265,136 @@ public class JobInstanceManager(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to resolve current source client id for job state update");
-        }
-
-        if (newState == JobState.Processing)
-        {
-            throw new InvalidOperationException("RunningClientId must be available when transitioning to Processing.");
+            logger.LogWarning(ex, "Failed to resolve current source client id for job instance mutation");
         }
 
         return null;
+    }
+
+    private async Task<InstanceMutationResult> MutateInstanceAsync(
+        string instanceId,
+        Func<JobInstance, InstanceMutationResult> mutate,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(instanceId))
+        {
+            throw new ArgumentException("Instance ID cannot be null or empty.", nameof(instanceId));
+        }
+
+        return await WithInstanceLockAsync(
+            instanceId,
+            async token =>
+            {
+                var instance = await metadataRepository.GetInstanceAsync(instanceId, token);
+                if (instance == null)
+                {
+                    logger.LogError("Job instance {InstanceId} not found for mutation", instanceId);
+                    throw new InvalidOperationException($"Job instance {instanceId} not found");
+                }
+
+                var mutation = mutate(instance);
+                await metadataRepository.SaveInstanceAsync(instance, token);
+                return mutation;
+            },
+            cancellationToken);
+    }
+
+    private async Task<TResult> WithInstanceLockAsync<TResult>(
+        string instanceId,
+        Func<CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken)
+    {
+        var instanceLock = AcquireInstanceLock(instanceId);
+        try
+        {
+            await instanceLock.Semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                return await action(cancellationToken);
+            }
+            finally
+            {
+                instanceLock.Semaphore.Release();
+            }
+        }
+        finally
+        {
+            ReleaseInstanceLock(instanceId, instanceLock);
+        }
+    }
+
+    private InstanceMutationLock AcquireInstanceLock(string instanceId)
+    {
+        while (true)
+        {
+            if (_instanceLocks.TryGetValue(instanceId, out var existingLock))
+            {
+                if (existingLock.TryAddReference())
+                {
+                    return existingLock;
+                }
+
+                continue;
+            }
+
+            var createdLock = new InstanceMutationLock();
+            if (_instanceLocks.TryAdd(instanceId, createdLock))
+            {
+                return createdLock;
+            }
+        }
+    }
+
+    private void ReleaseInstanceLock(string instanceId, InstanceMutationLock instanceLock)
+    {
+        if (!instanceLock.ReleaseReference())
+        {
+            return;
+        }
+
+        if (_instanceLocks.TryRemove(new KeyValuePair<string, InstanceMutationLock>(instanceId, instanceLock)))
+        {
+            instanceLock.Dispose();
+        }
+    }
+
+    private sealed record InstanceMutationResult(
+        JobInstance Instance,
+        JobState? OldState = null,
+        JobState? NewState = null,
+        string? SourceClientId = null);
+
+    private sealed class InstanceMutationLock : IDisposable
+    {
+        private int _referenceCount = 1;
+
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+        public bool TryAddReference()
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref _referenceCount);
+                if (current == 0)
+                {
+                    return false;
+                }
+
+                if (Interlocked.CompareExchange(ref _referenceCount, current + 1, current) == current)
+                {
+                    return true;
+                }
+            }
+        }
+
+        public bool ReleaseReference()
+        {
+            return Interlocked.Decrement(ref _referenceCount) == 0;
+        }
+
+        public void Dispose()
+        {
+            Semaphore.Dispose();
+        }
     }
 }

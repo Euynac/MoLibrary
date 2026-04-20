@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Monica.JobScheduler.Abstractions;
 
 namespace Monica.JobScheduler.Models;
@@ -13,6 +14,11 @@ public class JobInstance
     /// Label used for the synthetic first history entry before an instance enters its initial job state.
     /// </summary>
     public const string CreatedStateHistoryLabel = "Created";
+
+    /// <summary>
+    /// Label used for execution log entries written while a job instance is running.
+    /// </summary>
+    public const string ExecutionLogStateHistoryLabel = "Log";
 
     /// <summary>
     /// Gets or sets the scheduler scope key used to isolate shared persistence and events across environments.
@@ -211,6 +217,29 @@ public class JobInstance
     }
 
     /// <summary>
+    /// Appends an execution log record to the current job instance history without changing state.
+    /// </summary>
+    internal void AppendExecutionLog(
+        string? message,
+        LogLevel logLevel,
+        Exception? exception,
+        DateTime timestamp,
+        string? sourceClientId = null)
+    {
+        if (string.IsNullOrWhiteSpace(message) && exception == null)
+        {
+            throw new ArgumentException("Either a message or an exception must be provided.", nameof(message));
+        }
+
+        AppendStateHistory(
+            ExecutionLogStateHistoryLabel,
+            State,
+            FormatExecutionLogMessage(message, logLevel, exception),
+            timestamp,
+            sourceClientId);
+    }
+
+    /// <summary>
     /// Parses the state history string into a list of structured records.
     /// Handles line-prefix format where entries start with ">>> ".
     /// </summary>
@@ -379,6 +408,35 @@ public class JobInstance
         var message = messageBuilder.ToString();
         record = new StateHistoryRecord(timestamp, previousStateLabel, newState, message, sourceClientId);
         return true;
+    }
+
+    private static string FormatExecutionLogMessage(string? message, LogLevel logLevel, Exception? exception)
+    {
+        var builder = new StringBuilder();
+
+        if (logLevel != LogLevel.Information)
+        {
+            builder.Append('[')
+                .Append(logLevel)
+                .Append("] ");
+        }
+
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            builder.Append(message.Trim());
+        }
+
+        if (exception != null)
+        {
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+            }
+
+            builder.Append(exception);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
