@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -26,7 +25,6 @@ public class JobInstanceManager(
     ILogger<JobInstanceManager> logger)
 {
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
-    private readonly ConcurrentDictionary<string, InstanceMutationLock> _instanceLocks = new();
 
     /// <summary>
     /// Creates a new job instance with the specified initial state.
@@ -281,81 +279,18 @@ public class JobInstanceManager(
             throw new ArgumentException("Instance ID cannot be null or empty.", nameof(instanceId));
         }
 
-        return await WithInstanceLockAsync(
-            instanceId,
-            async token =>
-            {
-                var instance = await metadataRepository.GetInstanceAsync(instanceId, token);
-                if (instance == null)
-                {
-                    logger.LogError("Job instance {InstanceId} not found for mutation", instanceId);
-                    throw new InvalidOperationException($"Job instance {instanceId} not found");
-                }
-
-                var mutation = mutate(instance);
-                await metadataRepository.SaveInstanceAsync(instance, token);
-                return mutation;
-            },
-            cancellationToken);
-    }
-
-    private async Task<TResult> WithInstanceLockAsync<TResult>(
-        string instanceId,
-        Func<CancellationToken, Task<TResult>> action,
-        CancellationToken cancellationToken)
-    {
-        var instanceLock = AcquireInstanceLock(instanceId);
-        try
+        // TODO: This read-mutate-save flow can race when multiple local or distributed actors mutate
+        // the same instance. Revisit with a repository-level atomic mutation/concurrency design.
+        var instance = await metadataRepository.GetInstanceAsync(instanceId, cancellationToken);
+        if (instance == null)
         {
-            await instanceLock.Semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                return await action(cancellationToken);
-            }
-            finally
-            {
-                instanceLock.Semaphore.Release();
-            }
-        }
-        finally
-        {
-            ReleaseInstanceLock(instanceId, instanceLock);
-        }
-    }
-
-    private InstanceMutationLock AcquireInstanceLock(string instanceId)
-    {
-        while (true)
-        {
-            if (_instanceLocks.TryGetValue(instanceId, out var existingLock))
-            {
-                if (existingLock.TryAddReference())
-                {
-                    return existingLock;
-                }
-
-                continue;
-            }
-
-            var createdLock = new InstanceMutationLock();
-            if (_instanceLocks.TryAdd(instanceId, createdLock))
-            {
-                return createdLock;
-            }
-        }
-    }
-
-    private void ReleaseInstanceLock(string instanceId, InstanceMutationLock instanceLock)
-    {
-        if (!instanceLock.ReleaseReference())
-        {
-            return;
+            logger.LogError("Job instance {InstanceId} not found for mutation", instanceId);
+            throw new InvalidOperationException($"Job instance {instanceId} not found");
         }
 
-        if (_instanceLocks.TryRemove(new KeyValuePair<string, InstanceMutationLock>(instanceId, instanceLock)))
-        {
-            instanceLock.Dispose();
-        }
+        var mutation = mutate(instance);
+        await metadataRepository.SaveInstanceAsync(instance, cancellationToken);
+        return mutation;
     }
 
     private sealed record InstanceMutationResult(
@@ -363,38 +298,4 @@ public class JobInstanceManager(
         JobState? OldState = null,
         JobState? NewState = null,
         string? SourceClientId = null);
-
-    private sealed class InstanceMutationLock : IDisposable
-    {
-        private int _referenceCount = 1;
-
-        public SemaphoreSlim Semaphore { get; } = new(1, 1);
-
-        public bool TryAddReference()
-        {
-            while (true)
-            {
-                var current = Volatile.Read(ref _referenceCount);
-                if (current == 0)
-                {
-                    return false;
-                }
-
-                if (Interlocked.CompareExchange(ref _referenceCount, current + 1, current) == current)
-                {
-                    return true;
-                }
-            }
-        }
-
-        public bool ReleaseReference()
-        {
-            return Interlocked.Decrement(ref _referenceCount) == 0;
-        }
-
-        public void Dispose()
-        {
-            Semaphore.Dispose();
-        }
-    }
 }
