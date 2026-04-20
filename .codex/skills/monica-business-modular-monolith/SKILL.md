@@ -24,7 +24,7 @@ Use this skill to structure a Monica business solution as a modular monolith wit
 - Keep the shared platform split explicit: `Platform.BuildingBlocks` for project-agnostic infrastructure extensions, `Platform.Infrastructure` for solution-owned infrastructure wiring, and `Platform.Protocol` for shared business language.
 - Use the strict solution-project reference chain `AppHost -> Domains.{Subdomain} -> Platform.Infrastructure -> Platform.Protocol -> Platform.BuildingBlocks`.
 - Put project-common library references in `Platform.BuildingBlocks`. Keep subdomain-only package references in the owning `Domains.{Subdomain}.csproj`.
-- Keep cross-domain dependencies pointed at `Shared/Platform.Protocol/PublishedLanguages` and optional `AppInterfaces`. Do not reference another domain's internal implementation directly.
+- Keep cross-domain dependencies pointed at `Shared/Platform.Protocol/PublishedLanguages`, consuming shared `Contracts/` and only the deliberate `Implementations/*` surfaces exposed there. Do not reference another domain's internal implementation directly.
 - Keep domain-owned application units in `Application/HandlersCommand`, `Application/HandlersQuery`, `Application/HandlersEvent`, and `Application/BackgroundWorkers`.
 - Keep repository implementations and `DbContext`-related files in `Repository/`, and keep pure helper code in `Utilities/` with `Utils*` names.
 - When a domain exposes `ApplicationService` HTTP endpoints through default routing, keep one assembly-level `AutoControllerConfig(DefaultRoutePrefix = "api/v1", DomainName = "{Subdomain}")` file in the domain project root instead of repeating class-level `Route` attributes on every handler.

@@ -20,12 +20,17 @@ src/Shared/Platform.Protocol/PublishedLanguages/Domain{Subdomain}/
 ├── Requests/
 ├── Models/
 ├── Events/
-└── AppInterfaces/    # only if synchronous service-to-service calls are required
+├── Contracts/        # only if checked-in synchronous service-to-service contracts are required
+└── Implementations/
+    ├── Http/         # only if wrapping or extending the generated HTTP RPC clients
+    └── Local/        # only if local or actor-backed providers are shared intentionally
 ```
 
 Rules:
 
 - Put only stable cross-service contracts here.
+- Put checked-in synchronous abstractions in `Contracts/`.
+- Put checked-in shared providers in `Implementations/Local/` or deliberate wrappers in `Implementations/Http/`.
 - Do not copy entity types into this area.
 
 ## Step 3. Create the service pair
