@@ -44,6 +44,13 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        
+        // builder.Services.Configure<HostOptions>(options =>
+        // {
+        //     options.ServicesStartConcurrently = true;
+        //     options.ServicesStopConcurrently = true;
+        // });
+
         services.AddSingleton<HostedServiceRegistry>();
         services.AddSingleton<IHostedServiceRegistryWriter>(provider => provider.GetRequiredService<HostedServiceRegistry>());
         services.AddSingleton<IMoHostedServiceRegistry>(provider => provider.GetRequiredService<HostedServiceRegistry>());
