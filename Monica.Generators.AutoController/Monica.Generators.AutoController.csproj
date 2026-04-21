@@ -11,6 +11,11 @@
 	<PropertyGroup>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<DevelopmentDependency>true</DevelopmentDependency>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<IncludeSymbols>false</IncludeSymbols>
+		<Version>0.1.0-preview.2</Version>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBuildTaskAssets</TargetsForTfmSpecificContentInPackage>
 		<PackageDescription>Source generator for automatic RPC controller generation in Monica framework, enabling seamless API endpoint creation from service interfaces.</PackageDescription>
 	</PropertyGroup>
 
@@ -27,5 +32,26 @@
 	  <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
 	  <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+		<None Include="build\Monica.Generators.AutoController.props" Pack="true" PackagePath="build\Monica.Generators.AutoController.props" />
+		<None Include="build\Monica.Generators.AutoController.targets" Pack="true" PackagePath="build\Monica.Generators.AutoController.targets" />
+		<None Include="buildTransitive\Monica.Generators.AutoController.props" Pack="true" PackagePath="buildTransitive\Monica.Generators.AutoController.props" />
+		<None Include="buildTransitive\Monica.Generators.AutoController.targets" Pack="true" PackagePath="buildTransitive\Monica.Generators.AutoController.targets" />
+	</ItemGroup>
+
+	<Target Name="PackBuildTaskAssets">
+	  <MSBuild Projects="..\Monica.Generators.AutoController.BuildTasks\Monica.Generators.AutoController.BuildTasks.csproj"
+	           Targets="Build"
+	           RemoveProperties="TargetFramework;TargetFrameworks"
+	           Properties="Configuration=$(Configuration);TargetFramework=net10.0" />
+
+	  <ItemGroup>
+	    <TfmSpecificPackageFile Include="..\Monica.Generators.AutoController.BuildTasks\bin\$(Configuration)\net10.0\Monica.Generators.AutoController.BuildTasks.dll">
+	      <PackagePath>build\Monica.Generators.AutoController.BuildTasks.dll</PackagePath>
+	    </TfmSpecificPackageFile>
+	  </ItemGroup>
+	</Target>
 
 </Project>
