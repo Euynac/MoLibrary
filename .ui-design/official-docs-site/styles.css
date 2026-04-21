@@ -16,6 +16,7 @@
   --radius-md: 16px;
   --font-display: "Bricolage Grotesque", sans-serif;
   --font-serif: "Newsreader", serif;
+  --font-cjk: "Noto Serif SC", serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
@@ -36,6 +37,41 @@ body {
     linear-gradient(135deg, #fbf4e9 0%, #f5e7d1 48%, #efe1c8 100%);
   font-family: var(--font-serif);
   overflow-x: hidden;
+}
+
+html[lang="zh-CN"] body {
+  font-family: var(--font-cjk);
+}
+
+html[lang="zh-CN"] .hero-copy h1,
+html[lang="zh-CN"] .split-heading h2,
+html[lang="zh-CN"] .doc-article h3,
+html[lang="zh-CN"] .module-card h3,
+html[lang="zh-CN"] .pipeline-detail h3,
+html[lang="zh-CN"] .pipeline-stage strong,
+html[lang="zh-CN"] .principle-card h3 {
+  font-family: var(--font-cjk);
+  letter-spacing: -0.06em;
+}
+
+html[lang="zh-CN"] .hero-copy h1 {
+  max-width: 760px;
+  font-size: clamp(3.2rem, 6.6vw, 5.6rem);
+  line-height: 0.96;
+}
+
+html[lang="zh-CN"] .split-heading h2 {
+  line-height: 0.96;
+}
+
+html[lang="zh-CN"] .brand-subtitle,
+html[lang="zh-CN"] .instrument-topline,
+html[lang="zh-CN"] .section-kicker,
+html[lang="zh-CN"] .eyebrow,
+html[lang="zh-CN"] .doc-group-title,
+html[lang="zh-CN"] .toc-title {
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 body::after {
@@ -198,6 +234,20 @@ body.signal-mode .command-button {
 body.signal-mode .command-button kbd {
   color: #fffaf0;
   background: rgba(21, 19, 34, 0.74);
+}
+
+body.signal-mode .language-switch {
+  border-color: rgba(255, 250, 240, 0.24);
+  background: rgba(255, 250, 240, 0.08);
+}
+
+body.signal-mode .language-option {
+  color: #f3e9f8;
+}
+
+body.signal-mode .language-option.active {
+  color: #071018;
+  background: #58d6df;
 }
 
 body.signal-mode .install-card {
@@ -415,6 +465,40 @@ kbd,
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 42px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--porcelain) 68%, transparent);
+}
+
+.language-option {
+  min-width: 36px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.language-option:hover {
+  transform: translateY(-1px);
+}
+
+.language-option.active {
+  color: white;
+  background: var(--ink);
 }
 
 .ghost-pill,

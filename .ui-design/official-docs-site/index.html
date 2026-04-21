@@ -7,7 +7,7 @@
   <meta name="description" content="Interactive official website and documentation prototype for Monica.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,500;10..48,700;10..48,800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,500;10..48,700;10..48,800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -48,25 +48,29 @@
       <span class="brand-mark">M</span>
       <span>
         <span class="brand-name">Monica</span>
-        <span class="brand-subtitle">Modular .NET Infrastructure</span>
+        <span class="brand-subtitle" data-i18n="brand.subtitle">Modular .NET Infrastructure</span>
       </span>
     </a>
 
     <nav class="desktop-nav" aria-label="Primary navigation">
-      <a href="#overview">Overview</a>
-      <a href="#docs">Docs</a>
-      <a href="#modules">Modules</a>
-      <a href="#architecture">Architecture</a>
+      <a href="#overview" data-i18n="nav.overview">Overview</a>
+      <a href="#docs" data-i18n="nav.docs">Docs</a>
+      <a href="#modules" data-i18n="nav.modules">Modules</a>
+      <a href="#architecture" data-i18n="nav.architecture">Architecture</a>
     </nav>
 
     <div class="header-actions">
+      <div class="language-switch" role="group" aria-label="Language switch">
+        <button type="button" class="language-option active" data-language="en">EN</button>
+        <button type="button" class="language-option" data-language="zh">中</button>
+      </div>
       <button class="ghost-pill" type="button" id="tone-toggle" aria-pressed="false">
         <i data-lucide="radar"></i>
-        Signal mode
+        <span data-i18n="actions.signalMode">Signal mode</span>
       </button>
       <button class="command-button" type="button" id="open-search">
         <i data-lucide="search"></i>
-        Search
+        <span data-i18n="actions.search">Search</span>
         <kbd>Ctrl K</kbd>
       </button>
     </div>
@@ -77,72 +81,70 @@
       <div class="hero-copy">
         <div class="eyebrow" data-reveal>
           <span class="pulse-dot"></span>
-          Internal development preview
+          <span data-i18n="hero.eyebrow">Internal development preview</span>
         </div>
-        <h1 data-reveal>Infrastructure modules that read like a system map.</h1>
+        <h1 data-reveal data-i18n="hero.title">Infrastructure modules that read like a system map.</h1>
         <p class="hero-lede" data-reveal>
-          Monica is modular .NET infrastructure for cutting-edge apps: independent packages,
-          unified `Mo.Add*()` registration, built-in dashboards, and a documentation product
-          that doubles as a real Monica modular-monolith example.
+          <span data-i18n="hero.lede">Monica is modular .NET infrastructure for cutting-edge apps: independent packages, unified `Mo.Add*()` registration, built-in dashboards, and a documentation product that doubles as a real Monica modular-monolith example.</span>
         </p>
 
         <div class="hero-cta" data-reveal>
           <a class="primary-cta" href="#docs">
-            Explore docs shell
+            <span data-i18n="hero.primaryCta">Explore docs shell</span>
             <i data-lucide="arrow-right"></i>
           </a>
           <a class="secondary-cta" href="#modules">
-            Browse module atlas
+            <span data-i18n="hero.secondaryCta">Browse module atlas</span>
           </a>
         </div>
 
         <div class="install-card" data-reveal>
           <div>
-            <span class="label">Start with one module</span>
+            <span class="label" data-i18n="hero.installLabel">Start with one module</span>
             <code id="install-command">dotnet add package Monica.Core</code>
           </div>
-          <button type="button" id="copy-install">Copy</button>
+          <button type="button" id="copy-install" data-i18n="actions.copy">Copy</button>
         </div>
       </div>
 
       <aside class="hero-instrument" data-reveal>
         <div class="instrument-topline">
-          <span>Module registration spine</span>
+          <span data-i18n="hero.spineLabel">Module registration spine</span>
           <span class="mono">Mo.Add*</span>
         </div>
         <div class="spine">
           <div class="spine-step active">
             <span>01</span>
             <strong>Option</strong>
-            <p>Configure purpose, defaults, and host-level constraints.</p>
+            <p data-i18n="hero.optionText">Configure purpose, defaults, and host-level constraints.</p>
           </div>
           <div class="spine-step">
             <span>02</span>
             <strong>Guide</strong>
-            <p>Chain providers and optional module capabilities.</p>
+            <p data-i18n="hero.guideText">Chain providers and optional module capabilities.</p>
           </div>
           <div class="spine-step">
             <span>03</span>
             <strong>Module</strong>
-            <p>Register infrastructure without forcing the whole framework.</p>
+            <p data-i18n="hero.moduleText">Register infrastructure without forcing the whole framework.</p>
           </div>
           <div class="spine-step">
             <span>04</span>
             <strong>Facade</strong>
-            <p>Expose public UI and Minimal API entry points with `Res`.</p>
+            <p data-i18n="hero.facadeText">Expose public UI and Minimal API entry points with `Res`.</p>
           </div>
         </div>
         <div class="instrument-grid">
           <div>
-            <span>Modules</span>
+            <span data-i18n="hero.metricModules">Modules</span>
             <strong>30+</strong>
           </div>
           <div>
-            <span>Docs source</span>
+            <span data-i18n="hero.metricDocs">Docs source</span>
             <strong>Markdown</strong>
           </div>
           <div>
-            <span>Runtime</span>
+            <span data-i18n="hero.metricRuntime">Runtime</span>
             <strong>.NET 10</strong>
           </div>
         </div>
@@ -150,58 +152,57 @@
     </section>
 
     <section class="narrative-section section-shell">
-      <div class="section-kicker" data-reveal>Why this site feels different</div>
+      <div class="section-kicker" data-reveal data-i18n="narrative.kicker">Why this site feels different</div>
       <div class="split-heading">
-        <h2 data-reveal>Documentation should expose Monica's architecture, not hide it.</h2>
+        <h2 data-reveal data-i18n="narrative.title">Documentation should expose Monica's architecture, not hide it.</h2>
         <p data-reveal>
-          The prototype treats docs as a product surface: routes, module contracts, source markdown,
-          published language DTOs, and host integration are visible and searchable.
+          <span data-i18n="narrative.body">The prototype treats docs as a product surface: routes, module contracts, source markdown, published language DTOs, and host integration are visible and searchable.</span>
         </p>
       </div>
       <div class="principle-grid">
         <article class="principle-card" data-reveal>
           <i data-lucide="blocks"></i>
-          <h3>Independent modules</h3>
-          <p>Each package can stand alone, while sharing the same Option, Guide, Module, and extension method shape.</p>
+          <h3 data-i18n="principles.independentTitle">Independent modules</h3>
+          <p data-i18n="principles.independentBody">Each package can stand alone, while sharing the same Option, Guide, Module, and extension method shape.</p>
         </article>
         <article class="principle-card tall" data-reveal>
           <i data-lucide="route"></i>
-          <h3>Guided onboarding</h3>
-          <p>Quick Start leads into concepts, then module packages, then scenario guides for real host composition.</p>
+          <h3 data-i18n="principles.onboardingTitle">Guided onboarding</h3>
+          <p data-i18n="principles.onboardingBody">Quick Start leads into concepts, then module packages, then scenario guides for real host composition.</p>
         </article>
         <article class="principle-card accent" data-reveal>
           <i data-lucide="activity"></i>
-          <h3>Operations-native</h3>
-          <p>Configuration, jobs, profiling, SignalR, DataChannel, and ProjectUnits all point toward inspectable runtime surfaces.</p>
+          <h3 data-i18n="principles.opsTitle">Operations-native</h3>
+          <p data-i18n="principles.opsBody">Configuration, jobs, profiling, SignalR, DataChannel, and ProjectUnits all point toward inspectable runtime surfaces.</p>
         </article>
         <article class="principle-card" data-reveal>
           <i data-lucide="workflow"></i>
-          <h3>Docs as example app</h3>
-          <p>`Monica.Docs` becomes a modular monolith with a decoupled frontend and Documentation bounded context.</p>
+          <h3 data-i18n="principles.docsTitle">Docs as example app</h3>
+          <p data-i18n="principles.docsBody">`Monica.Docs` becomes a modular monolith with a decoupled frontend and Documentation bounded context.</p>
         </article>
       </div>
     </section>
 
     <section class="docs-section section-shell" id="docs">
-      <div class="section-kicker" data-reveal>Interactive docs shell</div>
+      <div class="section-kicker" data-reveal data-i18n="docs.kicker">Interactive docs shell</div>
       <div class="split-heading">
-        <h2 data-reveal>Read by task, module, or command.</h2>
+        <h2 data-reveal data-i18n="docs.title">Read by task, module, or command.</h2>
         <p data-reveal>
-          The reader mirrors the current `docs/zh-CN` information architecture while presenting an English-first official site frame.
+          <span data-i18n="docs.body">The reader mirrors the current `docs/zh-CN` information architecture while presenting an English-first official site frame.</span>
         </p>
       </div>
 
       <div class="reader-toolbar" data-reveal>
         <div class="mode-tabs" role="tablist" aria-label="Reading mode">
-          <button type="button" class="mode-tab active" data-doc-filter="all">All</button>
-          <button type="button" class="mode-tab" data-doc-filter="start">Start</button>
-          <button type="button" class="mode-tab" data-doc-filter="concept">Concepts</button>
-          <button type="button" class="mode-tab" data-doc-filter="module">Modules</button>
-          <button type="button" class="mode-tab" data-doc-filter="scenario">Scenarios</button>
+          <button type="button" class="mode-tab active" data-doc-filter="all" data-i18n="filters.all">All</button>
+          <button type="button" class="mode-tab" data-doc-filter="start" data-i18n="filters.start">Start</button>
+          <button type="button" class="mode-tab" data-doc-filter="concept" data-i18n="filters.concepts">Concepts</button>
+          <button type="button" class="mode-tab" data-doc-filter="module" data-i18n="filters.modules">Modules</button>
+          <button type="button" class="mode-tab" data-doc-filter="scenario" data-i18n="filters.scenarios">Scenarios</button>
         </div>
         <button type="button" class="mobile-tree-toggle" id="mobile-tree-toggle">
           <i data-lucide="panel-left-open"></i>
-          Docs tree
+          <span data-i18n="docs.treeButton">Docs tree</span>
         </button>
       </div>
 
@@ -219,10 +220,10 @@
         <article class="doc-article" id="doc-article" aria-live="polite"></article>
 
         <aside class="toc-panel" aria-label="On this page">
-          <span class="toc-title">On this page</span>
+          <span class="toc-title" data-i18n="docs.tocTitle">On this page</span>
           <div id="toc-list"></div>
           <div class="api-note">
-            <span>API preview</span>
+            <span data-i18n="docs.apiPreview">API preview</span>
             <code>GET /api/v1/Documentation/doc?slug=...</code>
           </div>
         </aside>
@@ -230,11 +231,11 @@
     </section>
 
     <section class="modules-section section-shell" id="modules">
-      <div class="section-kicker" data-reveal>Module atlas</div>
+      <div class="section-kicker" data-reveal data-i18n="modules.kicker">Module atlas</div>
       <div class="split-heading">
-        <h2 data-reveal>Pick only the infrastructure you need.</h2>
+        <h2 data-reveal data-i18n="modules.title">Pick only the infrastructure you need.</h2>
         <p data-reveal>
-          Module cards are shaped from the current documentation packages: package name, registration entry, UI module, and intended usage.
+          <span data-i18n="modules.body">Module cards are shaped from the current documentation packages: package name, registration entry, UI module, and intended usage.</span>
         </p>
       </div>
 
@@ -243,11 +244,11 @@
     </section>
 
     <section class="architecture-section section-shell" id="architecture">
-      <div class="section-kicker" data-reveal>Documentation product architecture</div>
+      <div class="section-kicker" data-reveal data-i18n="architecture.kicker">Documentation product architecture</div>
       <div class="split-heading">
-        <h2 data-reveal>From markdown source to a decoupled docs frontend.</h2>
+        <h2 data-reveal data-i18n="architecture.title">From markdown source to a decoupled docs frontend.</h2>
         <p data-reveal>
-          This mirrors the target `Monica.Docs` direction: domain-first backend, published language contracts, and a separate frontend consuming HTTP APIs.
+          <span data-i18n="architecture.body">This mirrors the target `Monica.Docs` direction: domain-first backend, published language contracts, and a separate frontend consuming HTTP APIs.</span>
         </p>
       </div>
 
@@ -261,29 +262,29 @@
   <footer class="site-footer">
     <div>
       <span class="footer-logo">M</span>
-      <p>Monica is under active internal development. This prototype is a design artifact for the future official site and docs frontend.</p>
+      <p data-i18n="footer.note">Monica is under active internal development. This prototype is a design artifact for the future official site and docs frontend.</p>
     </div>
     <div class="footer-links">
-      <a href="#overview">Overview</a>
-      <a href="#docs">Docs reader</a>
-      <a href="#modules">Module atlas</a>
-      <a href="#architecture">Architecture</a>
+      <a href="#overview" data-i18n="footer.overview">Overview</a>
+      <a href="#docs" data-i18n="footer.docs">Docs reader</a>
+      <a href="#modules" data-i18n="footer.modules">Module atlas</a>
+      <a href="#architecture" data-i18n="footer.architecture">Architecture</a>
     </div>
   </footer>
 
   <div class="search-overlay" id="search-overlay" aria-hidden="true">
-    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search Monica docs">
+    <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search Monica docs" data-i18n-aria-label="search.dialogLabel">
       <div class="search-input-wrap">
         <i data-lucide="search"></i>
-        <input id="search-input" type="search" placeholder="Search modules, concepts, APIs, docs paths..." autocomplete="off">
+        <input id="search-input" type="search" placeholder="Search modules, concepts, APIs, docs paths..." autocomplete="off" data-i18n-placeholder="search.placeholder">
         <button type="button" id="close-search" aria-label="Close search">
           <i data-lucide="x"></i>
         </button>
       </div>
       <div class="search-results" id="search-results"></div>
       <div class="search-help">
-        <span>Try: `Res`, `Configuration`, `Mo.AddJobScheduler`, `Facade`</span>
-        <span>Esc to close</span>
+        <span data-i18n="search.help">Try: `Res`, `Configuration`, `Mo.AddJobScheduler`, `Facade`</span>
+        <span data-i18n="search.closeHint">Esc to close</span>
       </div>
     </div>
   </div>
