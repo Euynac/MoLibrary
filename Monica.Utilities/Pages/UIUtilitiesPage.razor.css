@@ -1,18 +1,25 @@
 .utilities-page {
     height: 100%;
+    min-height: 0;
+}
+
+.utilities-page ::deep .utilities-page__container {
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
 }
 
 .utilities-page__content {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
     min-height: 0;
 }
 
-.utilities-page__hero {
+.utilities-page ::deep .utilities-page__hero {
     border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 1rem;
     background: var(--mud-palette-surface);
-    padding: 1.25rem;
+    padding: 1.5rem 1.5rem 1.75rem;
 }
 
 .utilities-page__eyebrow {
@@ -20,14 +27,69 @@
     text-transform: uppercase;
 }
 
-.utilities-page ::deep .mud-tabs {
-    background: transparent;
+.utilities-page ::deep .utilities-page__tabs {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 1rem;
+    background: var(--mud-palette-surface);
+    padding: 0.5rem 1rem 1.25rem;
+}
+
+.utilities-page ::deep .utilities-page__tabs > .mud-tabs-tabbar {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
 .utilities-page ::deep .mud-tab {
     min-height: 56px;
+    padding-inline: 1rem;
 }
 
-.utilities-page ::deep .mud-tabpanel {
-    padding-top: 1rem;
+.utilities-page ::deep .utilities-page__tabs .mud-tabs-panels {
+    padding-top: 0.25rem;
+}
+
+.utilities-page ::deep .utilities-page__tabs .mud-tab-panel {
+    padding-top: 1.25rem;
+}
+
+@media (max-width: 960px) {
+    .utilities-page ::deep .utilities-page__container {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .utilities-page ::deep .utilities-page__hero {
+        padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    .utilities-page ::deep .utilities-page__tabs {
+        padding: 0.4rem 0.85rem 1rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .utilities-page ::deep .utilities-page__container {
+        padding: 1rem 0.75rem 1.5rem;
+    }
+
+    .utilities-page__content {
+        gap: 1rem;
+    }
+
+    .utilities-page ::deep .utilities-page__hero {
+        padding: 1.1rem 1rem 1.25rem;
+    }
+
+    .utilities-page ::deep .utilities-page__tabs {
+        padding: 0.35rem 0.5rem 0.85rem;
+    }
+
+    .utilities-page ::deep .mud-tab {
+        min-height: 52px;
+        padding-inline: 0.75rem;
+    }
+
+    .utilities-page ::deep .utilities-page__tabs .mud-tab-panel {
+        padding-top: 1rem;
+    }
 }

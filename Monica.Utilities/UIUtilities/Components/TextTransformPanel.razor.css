@@ -1,13 +1,14 @@
-.text-transform-panel__card {
+.text-transform-panel ::deep .text-transform-panel__card {
     border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 1rem;
     background: var(--mud-palette-surface);
 }
 
-.text-transform-panel__actions {
+.text-transform-panel ::deep .text-transform-panel__actions {
     flex-wrap: wrap;
 }
 
-.text-transform-panel__editor {
+.text-transform-panel ::deep .text-transform-panel__editor {
     width: 100%;
 }
 
@@ -15,7 +16,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 12rem;
+    min-height: 11rem;
     border-top: 1px solid var(--mud-palette-lines-default);
     padding-top: 1rem;
     text-align: center;

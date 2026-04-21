@@ -5,9 +5,9 @@
 @inject IStringLocalizer<UtilitiesResource> L
 
 <div class="connectivity-panel">
-    <MudGrid Spacing="3">
-        <MudItem xs="12" lg="5">
-            <MudPaper Class="connectivity-panel__card pa-4" Elevation="0">
+    <MudGrid Spacing="2" Class="connectivity-panel__grid">
+        <MudItem xs="12" lg="6" xl="5">
+            <MudPaper Class="connectivity-panel__card connectivity-panel__card--form pa-4" Elevation="0">
                 <MudStack Spacing="3">
                     <div>
                         <MudText Typo="Typo.h6">@L["Connectivity:Title"]</MudText>
@@ -116,8 +116,8 @@
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" lg="7">
-            <MudPaper Class="connectivity-panel__card pa-4" Elevation="0">
+        <MudItem xs="12" lg="6" xl="7">
+            <MudPaper Class="connectivity-panel__card connectivity-panel__card--result pa-4" Elevation="0">
                 @if (State.LastResult is null)
                 {
                     <div class="connectivity-panel__empty">
