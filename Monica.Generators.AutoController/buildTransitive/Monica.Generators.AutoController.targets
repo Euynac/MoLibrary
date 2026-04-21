@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="..\build\Monica.Generators.AutoController.targets" />
+</Project>

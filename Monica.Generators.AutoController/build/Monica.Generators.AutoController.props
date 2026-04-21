@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <MonicaRpcMetadataConsumeDirectory Condition="'$(MonicaRpcMetadataConsumeDirectory)' == ''">RpcMetadata</MonicaRpcMetadataConsumeDirectory>
+    <MonicaRpcMetadataFileName Condition="'$(MonicaRpcMetadataFileName)' == ''">__RpcMetadata.g.cs</MonicaRpcMetadataFileName>
+    <MonicaRpcMetadataBuildTasksAssembly Condition="'$(MonicaRpcMetadataBuildTasksAssembly)' == ''">$(MSBuildThisFileDirectory)Monica.Generators.AutoController.BuildTasks.dll</MonicaRpcMetadataBuildTasksAssembly>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MonicaRpcMetadataExportDirectory)' != ''">
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+</Project>

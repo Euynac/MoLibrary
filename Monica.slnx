@@ -28,7 +28,7 @@
   <Project Path="Monica.Framework.Generators/Monica.Framework.Generators.csproj" />
   <Project Path="Monica.Framework.UI/Monica.Framework.UI.csproj" />
   <Project Path="Monica.Framework/Monica.Framework.csproj" />
-  <Project Path="Monica.Generators.AutoController.Tool/Monica.Generators.AutoController.Tool.csproj" />
+  <Project Path="Monica.Generators.AutoController.BuildTasks/Monica.Generators.AutoController.BuildTasks.csproj" />
   <Project Path="Monica.Generators.AutoController/Monica.Generators.AutoController.csproj" />
   <Project Path="Monica.JobScheduler.EfCore/Monica.JobScheduler.EfCore.csproj" />
   <Project Path="Monica.JobScheduler.UI/Monica.JobScheduler.UI.csproj" />

@@ -66,6 +66,12 @@ internal static class MetadataFileGenerator
 
         foreach (var candidate in candidates)
         {
+            var contractRelatedNamespaces = ResolveContractRelatedNamespaces(candidate, config.DomainName);
+            if (contractRelatedNamespaces.Count == 0)
+            {
+                continue;
+            }
+
             var handlerMetadata = new HandlerMetadata
             {
                 RequestType = candidate.RequestType,
@@ -80,7 +86,7 @@ internal static class MetadataFileGenerator
             metadata.Handlers.Add(handlerMetadata);
 
             // Collect namespaces from this candidate
-            foreach (var ns in candidate.RelatedNamespaces)
+            foreach (var ns in contractRelatedNamespaces)
             {
                 allNamespaces.Add(ns);
             }
@@ -90,6 +96,26 @@ internal static class MetadataFileGenerator
         metadata.RelatedNamespaces = allNamespaces.OrderBy(ns => ns).ToList();
 
         return metadata;
+    }
+
+    private static IReadOnlyCollection<string> ResolveContractRelatedNamespaces(
+        HandlerCandidate candidate,
+        string? domainName)
+    {
+        var contractNamespaceRoot = ContractNamespaceHelper.ResolveContractNamespaceRoot(
+            candidate.RelatedNamespaces,
+            domainName);
+
+        if (string.IsNullOrWhiteSpace(contractNamespaceRoot))
+        {
+            return [];
+        }
+
+        return candidate.RelatedNamespaces
+            .Where(ns => ns.Equals(contractNamespaceRoot, System.StringComparison.Ordinal)
+                         || ns.StartsWith(contractNamespaceRoot + ".", System.StringComparison.Ordinal))
+            .OrderBy(ns => ns, System.StringComparer.Ordinal)
+            .ToArray();
     }
 
     /// <summary>
