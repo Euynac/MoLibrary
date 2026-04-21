@@ -25,6 +25,16 @@ Request these inputs before bridge-based UI testing starts:
 
 Do not hardcode any bridge project path or service URL inside the workflow.
 
+## DOM-first bridge diagnosis
+
+When debugging Monica UI through a bridge app, prioritize runtime DOM and CSS evidence over screenshots.
+
+- Always inspect the live page HTML for the target elements before changing code.
+- Always inspect computed styles for the target elements when the issue is spacing, sizing, alignment, overflow, or visibility.
+- Always inspect the loaded stylesheet rules or emitted Blazor `*.bundle.scp.css` when a class appears in HTML but the expected style does not apply.
+- Validate actual runtime MudBlazor DOM class names before writing selectors. Do not guess internal names.
+- Use screenshots only to confirm the visible impact after the root cause is understood. Do not diagnose layout issues from screenshots alone.
+
 ## Select execution mode first
 
 Choose the workflow before launching the bridge service.
@@ -226,6 +236,24 @@ After readiness succeeds, build the page URL from:
 
 Then use `$playwright-cli` to inspect and capture the page.
 
+For UI debugging, the default workflow is:
+
+1. Open the page and save a snapshot.
+2. Inspect the target element HTML with `eval`, for example:
+
+```bash
+playwright-cli eval "() => document.querySelector('<selector>')?.outerHTML"
+```
+
+3. Inspect computed styles for the same element, for example:
+
+```bash
+playwright-cli eval "() => JSON.stringify((() => { const el = document.querySelector('<selector>'); if (!el) return null; const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return { width: r.width, height: r.height, padding: cs.padding, margin: cs.margin, display: cs.display, borderRadius: cs.borderRadius }; })(), null, 2)"
+```
+
+4. If the class is present but styling is missing, inspect loaded stylesheet rules or fetch the emitted Blazor CSS bundle and compare the selector shape against the runtime DOM.
+5. Only after the DOM/CSS root cause is clear, capture screenshots to confirm the visible result.
+
 Use explicit artifact paths inside the task folder, for example:
 
 ```bash
@@ -235,6 +263,8 @@ playwright-cli screenshot --filename="<task-folder>/page.png"
 ```
 
 If the global `playwright-cli` binary is unavailable, fall back to `npx playwright-cli`.
+
+If `open` is unavailable but an existing browser session is already running, prefer reusing that session with `playwright-cli list`, `-s=<session> goto`, `snapshot`, and `eval` instead of switching to screenshot-only debugging.
 
 ### 8. Debug logging and log markers
 
@@ -252,6 +282,11 @@ Do not claim a runtime UI error unless one of these is true:
 
 - the error text is visible in the saved screenshot, or
 - the same error text is searchable in the saved Playwright snapshot
+
+For layout and styling bugs, do not claim a root cause unless one of these is true:
+
+- the target HTML and computed styles confirm the cause, or
+- the emitted stylesheet rules and runtime DOM mismatch confirm the cause
 
 Otherwise report it as unconfirmed instead of as a verified UI error.
 

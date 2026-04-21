@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IMoBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.6.0
+version: 2.7.0
 ---
 
 # Monica UI Development Guide
@@ -70,6 +70,11 @@ rg -n "ShowAsync|ShowMessageBoxAsync|GetDefaultConverter|IReversibleConverter" <
 - Use `.razor.css` files.
 - CSS isolation applies to HTML elements, not Razor components.
 - For MudBlazor styling, wrap with a container and use `::deep`.
+- Do not assume a class added to a Razor component such as `MudPaper`, `MudGrid`, `MudTabs`, `MudStack`, or `MudContainer` can be styled by a plain isolated selector like `.my-class { ... }`.
+- A class on a rendered MudBlazor root can appear in the live DOM while still missing the component's Blazor scope attribute, so isolated selectors compiled to `.my-class[b-xxxx]` will not match.
+- If you need to style a MudBlazor component root or internal structure, put the scope on a real HTML wrapper and target the MudBlazor element with `::deep`.
+- If a class is visible in HTML but computed styles remain at Mud defaults, inspect the emitted `*.bundle.scp.css` and compare the compiled selector against the actual runtime DOM before changing layout code.
+- Validate actual runtime MudBlazor DOM class names before writing selectors. Do not guess names such as `toolbar` vs `tabbar`.
 
 ```razor
 <div class="table-wrapper">
@@ -80,6 +85,32 @@ rg -n "ShowAsync|ShowMessageBoxAsync|GetDefaultConverter|IReversibleConverter" <
 ```css
 .table-wrapper ::deep .mud-table {
     background-color: var(--mud-palette-surface);
+}
+```
+
+Anti-pattern:
+
+```razor
+<MudPaper Class="my-card" />
+```
+
+```css
+.my-card {
+    padding: 1rem;
+}
+```
+
+Preferred pattern:
+
+```razor
+<div class="card-wrapper">
+    <MudPaper Class="my-card" />
+</div>
+```
+
+```css
+.card-wrapper ::deep .my-card {
+    padding: 1rem;
 }
 ```
 
