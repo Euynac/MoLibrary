@@ -1,0 +1,146 @@
+@using Monica.Utilities.Localization
+@using Monica.Utilities.Text.Models
+@inject TextTransformState State
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<UtilitiesResource> L
+
+<div class="text-transform-panel">
+    <MudPaper Class="text-transform-panel__card pa-4" Elevation="0">
+        <MudStack Spacing="3">
+            <div>
+                <MudText Typo="Typo.h6">@L["TextJson:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["TextJson:Subtitle"]</MudText>
+            </div>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                @L["TextJson:Hint"]
+            </MudAlert>
+
+            @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
+                    @State.ErrorMessage
+                </MudAlert>
+            }
+            else if (State.LastResult is not null)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Dense="true">
+                    @State.LastResult.Summary
+                </MudAlert>
+            }
+
+            <MudStack Row="true" Spacing="2" Class="text-transform-panel__actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.DecodeEscapedText))">
+                    @L["TextJson:DecodeEscapedText"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Execute(TextTransformOperation.FormatJson))">
+                    @L["TextJson:FormatJson"]
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(() => Execute(TextTransformOperation.MinifyJson))">
+                    @L["TextJson:MinifyJson"]
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Disabled="@string.IsNullOrEmpty(State.OutputText)" OnClick="ReuseOutput">
+                    @L["TextJson:UseOutputAsInput"]
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => State.Clear())">
+                    @L["TextJson:Clear"]
+                </MudButton>
+            </MudStack>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" lg="6">
+                    <MudTextField T="string"
+                                  @bind-Value="State.InputText"
+                                  Label="@L["TextJson:Input"]"
+                                  Placeholder="@L["TextJson:InputPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Lines="18"
+                                  Immediate="true"
+                                  Class="text-transform-panel__editor" />
+                </MudItem>
+                <MudItem xs="12" lg="6">
+                    <MudTextField T="string"
+                                  Value="State.OutputText"
+                                  Label="@L["TextJson:Output"]"
+                                  Placeholder="@L["TextJson:OutputPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Lines="18"
+                                  ReadOnly="true"
+                                  Class="text-transform-panel__editor" />
+                </MudItem>
+            </MudGrid>
+
+            @if (State.LastResult is null)
+            {
+                <div class="text-transform-panel__empty">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Large" Color="Color.Default" />
+                        <MudText Typo="Typo.h6">@L["TextJson:NoOutputTitle"]</MudText>
+                        <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                            @L["TextJson:NoOutputSubtitle"]
+                        </MudText>
+                    </MudStack>
+                </div>
+            }
+            else
+            {
+                <div class="text-transform-panel__detail">
+                    <MudText Typo="Typo.subtitle1">@L["TextJson:ResultTitle"]</MudText>
+                    <div class="text-transform-panel__stats">
+                        <article class="text-transform-panel__stat">
+                            <span class="text-transform-panel__stat-label">@L["TextJson:Operation"]</span>
+                            <strong>@GetOperationText(State.LastResult.Operation)</strong>
+                        </article>
+                        <article class="text-transform-panel__stat">
+                            <span class="text-transform-panel__stat-label">@L["TextJson:InputLength"]</span>
+                            <strong>@State.LastResult.InputLength</strong>
+                        </article>
+                        <article class="text-transform-panel__stat">
+                            <span class="text-transform-panel__stat-label">@L["TextJson:OutputLength"]</span>
+                            <strong>@State.LastResult.OutputLength</strong>
+                        </article>
+                        <article class="text-transform-panel__stat">
+                            <span class="text-transform-panel__stat-label">@L["TextJson:DecodePasses"]</span>
+                            <strong>@State.LastResult.DecodePasses</strong>
+                        </article>
+                        <article class="text-transform-panel__stat">
+                            <span class="text-transform-panel__stat-label">@L["TextJson:JsonLayers"]</span>
+                            <strong>@State.LastResult.JsonStringLayersRemoved</strong>
+                        </article>
+                    </div>
+                </div>
+            }
+        </MudStack>
+    </MudPaper>
+</div>
+
+@code {
+    private void Execute(TextTransformOperation operation)
+    {
+        var result = State.Execute(operation);
+        if (result.IsFailed(out var error, out _))
+        {
+            Snackbar.Add(error.Message ?? L["TextJson:ResultTitle"].Value, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["Messages:TransformCompleted"].Value, Severity.Success);
+    }
+
+    private void ReuseOutput()
+    {
+        State.UseOutputAsInput();
+        Snackbar.Add(L["Messages:OutputReused"].Value, Severity.Info);
+    }
+
+    private string GetOperationText(TextTransformOperation operation)
+    {
+        return operation switch
+        {
+            TextTransformOperation.DecodeEscapedText => L["TextJson:Operations:DecodeEscapedText"],
+            TextTransformOperation.FormatJson => L["TextJson:Operations:FormatJson"],
+            TextTransformOperation.MinifyJson => L["TextJson:Operations:MinifyJson"],
+            _ => operation.ToString()
+        };
+    }
+}

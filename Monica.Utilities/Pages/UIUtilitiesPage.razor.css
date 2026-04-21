@@ -1,0 +1,33 @@
+.utilities-page {
+    height: 100%;
+}
+
+.utilities-page__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 0;
+}
+
+.utilities-page__hero {
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+    padding: 1.25rem;
+}
+
+.utilities-page__eyebrow {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.utilities-page ::deep .mud-tabs {
+    background: transparent;
+}
+
+.utilities-page ::deep .mud-tab {
+    min-height: 56px;
+}
+
+.utilities-page ::deep .mud-tabpanel {
+    padding-top: 1rem;
+}

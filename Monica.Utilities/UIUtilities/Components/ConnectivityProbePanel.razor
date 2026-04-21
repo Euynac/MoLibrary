@@ -1,0 +1,253 @@
+@using Monica.Utilities.Connectivity.Models
+@using Monica.Utilities.Localization
+@inject ConnectivityProbeState State
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<UtilitiesResource> L
+
+<div class="connectivity-panel">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="connectivity-panel__card pa-4" Elevation="0">
+                <MudStack Spacing="3">
+                    <div>
+                        <MudText Typo="Typo.h6">@L["Connectivity:Title"]</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Connectivity:Subtitle"]</MudText>
+                    </div>
+
+                    <MudTextField T="string"
+                                  @bind-Value="State.Host"
+                                  Label="@L["Connectivity:TargetHost"]"
+                                  Placeholder="@L["Connectivity:TargetHostPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true" />
+
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="ConnectivityProbeKind"
+                                       Value="State.ProbeKind"
+                                       ValueChanged="State.SetProbeKind"
+                                       Label="@L["Connectivity:ProbeKind"]"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense">
+                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Tcp">@L["Connectivity:Kinds:Tcp"]</MudSelectItem>
+                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Http">@L["Connectivity:Kinds:Http"]</MudSelectItem>
+                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Https">@L["Connectivity:Kinds:Https"]</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField T="int?"
+                                             @bind-Value="State.Port"
+                                             Label="@L["Connectivity:Port"]"
+                                             Placeholder="@L["Connectivity:PortPlaceholder"]"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Min="1"
+                                             Max="65535"
+                                             Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField T="int"
+                                             @bind-Value="State.TimeoutMilliseconds"
+                                             Label="@L["Connectivity:Timeout"]"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Min="250"
+                                             Max="60000"
+                                             Immediate="true" />
+                        </MudItem>
+                        @if (State.RequiresHttpPath)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string"
+                                              @bind-Value="State.Path"
+                                              Label="@L["Connectivity:Path"]"
+                                              Placeholder="@L["Connectivity:PathPlaceholder"]"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              Immediate="true" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+
+                    @if (State.ShowsCertificateToggle)
+                    {
+                        <MudSwitch T="bool"
+                                   @bind-Value="State.AllowInvalidCertificate"
+                                   Color="Color.Warning"
+                                   Label="@L["Connectivity:AllowInvalidCertificate"]" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Connectivity:AllowInvalidCertificateHelper"]
+                        </MudText>
+                    }
+
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        @(State.RequiresHttpPath ? L["Connectivity:HintHttp"] : L["Connectivity:HintTcp"])
+                    </MudAlert>
+
+                    @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true">
+                            @State.ErrorMessage
+                        </MudAlert>
+                    }
+
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="@State.IsBusy"
+                                   OnClick="RunProbeAsync">
+                            @if (State.IsBusy)
+                            {
+                                <MudProgressCircular Color="Color.Inherit" Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                                @L["Connectivity:Running"]
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
+                                @L["Connectivity:Run"]
+                            }
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="@(() => State.Reset())">
+                            @L["Connectivity:Reset"]
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="connectivity-panel__card pa-4" Elevation="0">
+                @if (State.LastResult is null)
+                {
+                    <div class="connectivity-panel__empty">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.TravelExplore" Size="Size.Large" Color="Color.Default" />
+                            <MudText Typo="Typo.h6">@L["Connectivity:NoResultTitle"]</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                                @L["Connectivity:NoResultSubtitle"]
+                            </MudText>
+                        </MudStack>
+                    </div>
+                }
+                else
+                {
+                    <MudStack Spacing="3">
+                        <div>
+                            <MudText Typo="Typo.h6">@L["Connectivity:ResultTitle"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Connectivity:ResultSubtitle"]</MudText>
+                        </div>
+
+                        <MudAlert Severity="@(State.LastResult.Succeeded ? Severity.Success : Severity.Warning)" Variant="Variant.Filled">
+                            <MudText Typo="Typo.subtitle2">
+                                @(State.LastResult.Succeeded ? L["Connectivity:Succeeded"] : L["Connectivity:Failed"])
+                            </MudText>
+                            <MudText Typo="Typo.body2">@State.LastResult.Summary</MudText>
+                        </MudAlert>
+
+                        <div class="connectivity-panel__stats">
+                            <article class="connectivity-panel__stat">
+                                <span class="connectivity-panel__stat-label">@L["Connectivity:Endpoint"]</span>
+                                <strong>@State.LastResult.Endpoint</strong>
+                            </article>
+                            <article class="connectivity-panel__stat">
+                                <span class="connectivity-panel__stat-label">@L["Connectivity:Duration"]</span>
+                                <strong>@($"{State.LastResult.TotalDurationMilliseconds} ms")</strong>
+                            </article>
+                            <article class="connectivity-panel__stat">
+                                <span class="connectivity-panel__stat-label">@L["Connectivity:TcpLatency"]</span>
+                                <strong>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</strong>
+                            </article>
+                            <article class="connectivity-panel__stat">
+                                <span class="connectivity-panel__stat-label">@L["Connectivity:StartedAt"]</span>
+                                <strong>@State.LastResult.StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</strong>
+                            </article>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(State.LastResult.ResolutionError))
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                <strong>@L["Connectivity:ResolutionError"]:</strong> @State.LastResult.ResolutionError
+                            </MudAlert>
+                        }
+
+                        <div>
+                            <MudText Typo="Typo.subtitle1">@L["Connectivity:ResolvedAddresses"]</MudText>
+                            @if (State.LastResult.ResolvedAddresses.Count == 0)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Common:Empty"]</MudText>
+                            }
+                            else
+                            {
+                                <div class="connectivity-panel__chips">
+                                    @foreach (var address in State.LastResult.ResolvedAddresses)
+                                    {
+                                        <MudChip T="string" Value="@address" Color="Color.Info" Variant="Variant.Outlined">@address</MudChip>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="connectivity-panel__detail">
+                            <MudText Typo="Typo.subtitle1">@L["Connectivity:TcpTitle"]</MudText>
+                            <dl class="connectivity-panel__kv">
+                                <dt>@L["Connectivity:RemoteEndpoint"]</dt>
+                                <dd>@(State.LastResult.Tcp.RemoteEndpoint ?? L["Common:Empty"].Value)</dd>
+                                <dt>@L["Connectivity:TcpLatency"]</dt>
+                                <dd>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</dd>
+                                <dt>@L["Connectivity:Failure"]</dt>
+                                <dd>@(State.LastResult.Tcp.FailureMessage ?? L["Common:Empty"].Value)</dd>
+                            </dl>
+                        </div>
+
+                        @if (State.LastResult.Http is not null)
+                        {
+                            <div class="connectivity-panel__detail">
+                                <MudText Typo="Typo.subtitle1">@L["Connectivity:HttpTitle"]</MudText>
+                                <dl class="connectivity-panel__kv">
+                                    <dt>@L["Connectivity:Method"]</dt>
+                                    <dd>@State.LastResult.Http.Method</dd>
+                                    <dt>@L["Connectivity:RequestUri"]</dt>
+                                    <dd>@State.LastResult.Http.RequestUri</dd>
+                                    <dt>@L["Connectivity:StatusCode"]</dt>
+                                    <dd>@(State.LastResult.Http.StatusCode?.ToString() ?? L["Common:Empty"].Value)</dd>
+                                    <dt>@L["Connectivity:ReasonPhrase"]</dt>
+                                    <dd>@(State.LastResult.Http.ReasonPhrase ?? L["Common:Empty"].Value)</dd>
+                                    <dt>@L["Connectivity:ServerHeader"]</dt>
+                                    <dd>@(string.IsNullOrWhiteSpace(State.LastResult.Http.ServerHeader) ? L["Common:Empty"].Value : State.LastResult.Http.ServerHeader)</dd>
+                                    <dt>@L["Connectivity:HttpLatency"]</dt>
+                                    <dd>@FormatMilliseconds(State.LastResult.Http.LatencyMilliseconds)</dd>
+                                    <dt>@L["Connectivity:Failure"]</dt>
+                                    <dd>@(State.LastResult.Http.FailureMessage ?? L["Common:Empty"].Value)</dd>
+                                </dl>
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</div>
+
+@code {
+    private async Task RunProbeAsync()
+    {
+        var result = await State.RunAsync();
+        if (result.IsFailed(out var error, out var probeResult))
+        {
+            Snackbar.Add(error.Message ?? L["Connectivity:Failed"].Value, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(
+            probeResult.Succeeded ? L["Messages:ProbeCompleted"].Value : L["Messages:ProbeFailed"].Value,
+            probeResult.Succeeded ? Severity.Success : Severity.Warning);
+    }
+
+    private string FormatMilliseconds(long? milliseconds)
+    {
+        return milliseconds is > 0
+            ? $"{milliseconds.Value} ms"
+            : L["Common:Empty"].Value;
+    }
+}

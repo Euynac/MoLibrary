@@ -46,4 +46,5 @@
   <Project Path="Monica.StateStore/Monica.StateStore.csproj" />
   <Project Path="Monica.Tool/Monica.Tool.csproj" />
   <Project Path="Monica.UI/Monica.UI.csproj" />
+  <Project Path="Monica.Utilities/Monica.Utilities.csproj" />
 </Solution>

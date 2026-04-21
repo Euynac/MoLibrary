@@ -102,6 +102,9 @@
     },
     "K8S": {
       "Title": "K8S 运维"
+    },
+    "UtilitiesToolbox": {
+      "Title": "实用工具箱"
     }
   }
 }

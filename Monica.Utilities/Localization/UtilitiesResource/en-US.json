@@ -1,0 +1,96 @@
+{
+  "Page": {
+    "DocumentTitle": "Utilities Toolbox",
+    "Title": "Utilities Toolbox",
+    "Subtitle": "A practical workspace for connectivity diagnostics and escaped text or JSON cleanup without leaving the Monica shell.",
+    "Eyebrow": "Operations helpers"
+  },
+  "Tabs": {
+    "Connectivity": "Connectivity Probe",
+    "TextJson": "Text && JSON"
+  },
+  "Connectivity": {
+    "Title": "Connectivity Probe",
+    "Subtitle": "Validate DNS resolution, TCP reachability, and optional HTTP or HTTPS responsiveness from the current host.",
+    "TargetHost": "Host or IP",
+    "TargetHostPlaceholder": "example.com or 10.0.0.8",
+    "ProbeKind": "Probe type",
+    "Port": "Port",
+    "PortPlaceholder": "Leave empty to use protocol default",
+    "Timeout": "Timeout (ms)",
+    "Path": "HTTP path",
+    "PathPlaceholder": "/health or /",
+    "AllowInvalidCertificate": "Allow invalid HTTPS certificate",
+    "AllowInvalidCertificateHelper": "Useful for internal environments with self-signed certificates. Leave disabled for normal TLS validation.",
+    "HintTcp": "Use TCP mode to verify whether the target port is reachable through routing and firewall rules.",
+    "HintHttp": "Use HTTP or HTTPS mode when you also want to confirm that an application responds after the transport handshake succeeds.",
+    "Run": "Run probe",
+    "Reset": "Reset",
+    "Running": "Running probe...",
+    "NoResultTitle": "No probe result yet",
+    "NoResultSubtitle": "Provide a target host and start a probe to inspect reachability, latency, and HTTP response details.",
+    "ResultTitle": "Latest probe result",
+    "ResultSubtitle": "A network failure is still a useful diagnostic outcome. The tool reports the failure instead of hiding it behind a generic exception.",
+    "Succeeded": "Probe succeeded",
+    "Failed": "Probe failed",
+    "Endpoint": "Endpoint",
+    "StartedAt": "Started",
+    "Duration": "Duration",
+    "ResolvedAddresses": "Resolved addresses",
+    "ResolutionError": "Resolution detail",
+    "TcpTitle": "TCP handshake",
+    "HttpTitle": "HTTP response",
+    "TcpLatency": "TCP latency",
+    "RemoteEndpoint": "Remote endpoint",
+    "Failure": "Failure",
+    "Method": "Method",
+    "RequestUri": "Request URI",
+    "StatusCode": "Status code",
+    "ReasonPhrase": "Reason",
+    "ServerHeader": "Server header",
+    "HttpLatency": "HTTP latency",
+    "Kinds": {
+      "Tcp": "TCP port",
+      "Http": "HTTP",
+      "Https": "HTTPS"
+    }
+  },
+  "TextJson": {
+    "Title": "Text && JSON Cleanup",
+    "Subtitle": "Decode JSON-style escape sequences, format JSON with readable Unicode output, or minify payloads for transport.",
+    "Input": "Input",
+    "InputPlaceholder": "Paste escaped text or JSON here",
+    "Output": "Output",
+    "OutputPlaceholder": "Transformation output appears here",
+    "DecodeEscapedText": "Decode escaped text",
+    "FormatJson": "Format JSON",
+    "MinifyJson": "Minify JSON",
+    "UseOutputAsInput": "Use output as next input",
+    "Clear": "Clear",
+    "Hint": "Format and minify keep Unicode readable instead of converting characters such as Chinese back into \\uXXXX sequences.",
+    "NoOutputTitle": "No transformation output yet",
+    "NoOutputSubtitle": "Paste escaped text or JSON, then run one of the actions above.",
+    "ResultTitle": "Transformation summary",
+    "Operation": "Operation",
+    "InputLength": "Input length",
+    "OutputLength": "Output length",
+    "DecodePasses": "Decode passes",
+    "JsonLayers": "JSON string layers removed",
+    "Operations": {
+      "DecodeEscapedText": "Decode escaped text",
+      "FormatJson": "Format JSON",
+      "MinifyJson": "Minify JSON"
+    }
+  },
+  "Messages": {
+    "ProbeCompleted": "Probe completed.",
+    "ProbeFailed": "Probe reached the target but reported a failure.",
+    "TransformCompleted": "Transformation completed.",
+    "OutputReused": "Output moved back into the input editor."
+  },
+  "ServiceMessages": {
+    "ConnectivityProbeFailed": "Connectivity probe failed: {0}",
+    "TextTransformFailed": "Text transformation failed: {0}"
+  },
+  "Common:Empty": "-"
+}

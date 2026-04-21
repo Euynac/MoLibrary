@@ -1,0 +1,96 @@
+{
+  "Page": {
+    "DocumentTitle": "实用工具箱",
+    "Title": "实用工具箱",
+    "Subtitle": "在 Monica Shell 内直接完成连通性诊断，以及转义文本或 JSON 清洗，无需切换到外部工具。",
+    "Eyebrow": "运维助手"
+  },
+  "Tabs": {
+    "Connectivity": "连通性探测",
+    "TextJson": "文本与 JSON"
+  },
+  "Connectivity": {
+    "Title": "连通性探测",
+    "Subtitle": "从当前宿主机验证 DNS 解析、TCP 端口可达性，以及可选的 HTTP/HTTPS 应用响应情况。",
+    "TargetHost": "Host 或 IP",
+    "TargetHostPlaceholder": "example.com 或 10.0.0.8",
+    "ProbeKind": "探测类型",
+    "Port": "端口",
+    "PortPlaceholder": "留空时使用协议默认端口",
+    "Timeout": "超时（毫秒）",
+    "Path": "HTTP 路径",
+    "PathPlaceholder": "/health 或 /",
+    "AllowInvalidCertificate": "允许无效的 HTTPS 证书",
+    "AllowInvalidCertificateHelper": "适用于使用自签名证书的内网环境。常规 TLS 校验场景请保持关闭。",
+    "HintTcp": "TCP 模式适合确认目标端口是否可达，以及链路或防火墙规则是否放通。",
+    "HintHttp": "HTTP/HTTPS 模式会在传输层握手成功后继续验证应用是否有响应。",
+    "Run": "开始探测",
+    "Reset": "重置",
+    "Running": "正在执行探测...",
+    "NoResultTitle": "还没有探测结果",
+    "NoResultSubtitle": "输入目标 host 后发起探测，即可查看可达性、延迟和 HTTP 返回细节。",
+    "ResultTitle": "最近一次探测结果",
+    "ResultSubtitle": "网络失败本身也是有效诊断结果。这里会直接展示失败原因，而不是把它吞成泛化异常。",
+    "Succeeded": "探测成功",
+    "Failed": "探测失败",
+    "Endpoint": "目标端点",
+    "StartedAt": "开始时间",
+    "Duration": "总耗时",
+    "ResolvedAddresses": "解析地址",
+    "ResolutionError": "解析信息",
+    "TcpTitle": "TCP 握手",
+    "HttpTitle": "HTTP 响应",
+    "TcpLatency": "TCP 延迟",
+    "RemoteEndpoint": "远端端点",
+    "Failure": "失败原因",
+    "Method": "方法",
+    "RequestUri": "请求地址",
+    "StatusCode": "状态码",
+    "ReasonPhrase": "原因短语",
+    "ServerHeader": "Server 头",
+    "HttpLatency": "HTTP 延迟",
+    "Kinds": {
+      "Tcp": "TCP 端口",
+      "Http": "HTTP",
+      "Https": "HTTPS"
+    }
+  },
+  "TextJson": {
+    "Title": "文本与 JSON 清洗",
+    "Subtitle": "解码 JSON 风格的转义字符，将 JSON 格式化为可读 Unicode 输出，或将其压缩为便于传输的紧凑格式。",
+    "Input": "输入",
+    "InputPlaceholder": "将转义文本或 JSON 粘贴到这里",
+    "Output": "输出",
+    "OutputPlaceholder": "转换结果会显示在这里",
+    "DecodeEscapedText": "解码转义文本",
+    "FormatJson": "格式化 JSON",
+    "MinifyJson": "压缩 JSON",
+    "UseOutputAsInput": "将输出作为下一次输入",
+    "Clear": "清空",
+    "Hint": "格式化和压缩会保留可读的 Unicode 字符，不会把中文等内容重新写回 \\uXXXX。",
+    "NoOutputTitle": "还没有转换结果",
+    "NoOutputSubtitle": "粘贴转义文本或 JSON 后，执行上方任一操作即可查看结果。",
+    "ResultTitle": "转换摘要",
+    "Operation": "操作",
+    "InputLength": "输入长度",
+    "OutputLength": "输出长度",
+    "DecodePasses": "解码轮次",
+    "JsonLayers": "移除的 JSON 字符串层数",
+    "Operations": {
+      "DecodeEscapedText": "解码转义文本",
+      "FormatJson": "格式化 JSON",
+      "MinifyJson": "压缩 JSON"
+    }
+  },
+  "Messages": {
+    "ProbeCompleted": "探测已完成。",
+    "ProbeFailed": "探测已经执行完成，但结果显示目标不可达或应用未响应。",
+    "TransformCompleted": "转换已完成。",
+    "OutputReused": "已将输出内容放回输入编辑器。"
+  },
+  "ServiceMessages": {
+    "ConnectivityProbeFailed": "连通性探测失败：{0}",
+    "TextTransformFailed": "文本转换失败：{0}"
+  },
+  "Common:Empty": "-"
+}

@@ -102,6 +102,9 @@
     },
     "K8S": {
       "Title": "K8S Operations"
+    },
+    "UtilitiesToolbox": {
+      "Title": "Utilities Toolbox"
     }
   }
 }

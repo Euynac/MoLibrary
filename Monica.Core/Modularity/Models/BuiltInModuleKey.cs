@@ -207,6 +207,14 @@ public enum BuiltInModuleKey
     /// </summary>
     FileOpsUI,
     /// <summary>
+    /// Practical utility module that provides connectivity probing and text transformation services.
+    /// </summary>
+    Utilities,
+    /// <summary>
+    /// Practical utility toolbox UI module.
+    /// </summary>
+    UtilitiesUI,
+    /// <summary>
     /// RAG (Retrieval-Augmented Generation) module
     /// </summary>
     RAG,
