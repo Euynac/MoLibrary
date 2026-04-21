@@ -99,6 +99,9 @@ for /f "usebackq tokens=* delims=" %%L in ("%CONFIG_FILE%") do (
                 call :replace_in_path "!SYNC_TARGET_DIR!\skills" "%CURRENT_AGENT%" "!TARGET_AGENT!" "%SOURCE_DOC_NAME%" "!TARGET_DOC_NAME!"
                 if errorlevel 1 exit /b 1
 
+                call :post_process_commands "!TARGET_AGENT!" "!SYNC_TARGET_DIR!\commands"
+                if errorlevel 1 exit /b 1
+
                 if /I not "!TARGET_DOC_NAME!"=="%SOURCE_DOC_NAME%" (
                     echo "!SYNCED_DOC_NAMES!" | findstr /I /L /C:"|!TARGET_DOC_NAME!|" >nul
                     if errorlevel 1 (
@@ -135,6 +138,56 @@ exit /b 0
 :get_doc_name
 set "%~2=AGENTS.md"
 if /I "%~1"==".claude" set "%~2=CLAUDE.md"
+if /I "%~1"==".gemini" set "%~2=GEMINI.md"
+exit /b 0
+
+:post_process_commands
+set "TARGET_AGENT_NAME=%~1"
+set "TARGET_COMMANDS_DIR=%~2"
+
+if /I "%TARGET_AGENT_NAME%"==".gemini" (
+    call :convert_markdown_commands_to_gemini "%TARGET_COMMANDS_DIR%"
+    if errorlevel 1 exit /b 1
+)
+
+exit /b 0
+
+:convert_markdown_commands_to_gemini
+set "TARGET_COMMANDS_DIR=%~1"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$path = [System.IO.Path]::GetFullPath($env:TARGET_COMMANDS_DIR);" ^
+    "if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw ('Commands folder not found: ' + $path) }" ^
+    "$files = Get-ChildItem -LiteralPath $path -Recurse -File -Filter '*.md';" ^
+    "foreach ($file in $files) {" ^
+    "    $content = [System.IO.File]::ReadAllText($file.FullName);" ^
+    "    $description = '';" ^
+    "    $prompt = $content;" ^
+    "    $match = [regex]::Match($content, '\A---\r?\n(?<frontmatter>.*?)\r?\n---\r?\n(?<body>.*)\z', [System.Text.RegularExpressions.RegexOptions]::Singleline);" ^
+    "    if ($match.Success) {" ^
+    "        $prompt = $match.Groups['body'].Value.TrimStart();" ^
+    "        foreach ($line in ($match.Groups['frontmatter'].Value -split '\r?\n')) {" ^
+    "            if ($line -match '^\s*description\s*:\s*(?<value>.*)\s*$') { $description = $Matches['value'].Trim(); break }" ^
+    "        }" ^
+    "    }" ^
+    "    $tomlPath = [System.IO.Path]::ChangeExtension($file.FullName, '.toml');" ^
+    "    $toml = New-Object System.Text.StringBuilder;" ^
+    "    if (-not [string]::IsNullOrWhiteSpace($description)) {" ^
+    "        [void]$toml.Append('description = ');" ^
+    "        [void]$toml.AppendLine(($description | ConvertTo-Json -Compress));" ^
+    "        [void]$toml.AppendLine();" ^
+    "    }" ^
+    "    [void]$toml.Append('prompt = ');" ^
+    "    [void]$toml.AppendLine(($prompt | ConvertTo-Json -Compress));" ^
+    "    [System.IO.File]::WriteAllText($tomlPath, $toml.ToString());" ^
+    "    Remove-Item -LiteralPath $file.FullName -Force;" ^
+    "}"
+
+if errorlevel 1 (
+    echo [error] Failed to convert Gemini commands in %TARGET_COMMANDS_DIR%
+    exit /b 1
+)
+
 exit /b 0
 
 :replace_in_path

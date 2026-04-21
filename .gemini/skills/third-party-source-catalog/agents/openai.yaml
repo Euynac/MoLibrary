@@ -1,0 +1,4 @@
+interface:
+  display_name: "Third-Party Source Catalog"
+  short_description: "Find and cache third-party source trees"
+  default_prompt: "Use $third-party-source-catalog to locate, download, or register third-party library source trees for inspection."
