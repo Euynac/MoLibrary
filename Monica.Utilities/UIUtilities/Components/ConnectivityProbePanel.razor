@@ -30,22 +30,26 @@
                                        Label="@L["Connectivity:ProbeKind"]"
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense">
+                                <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Ping">@L["Connectivity:Kinds:Ping"]</MudSelectItem>
                                 <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Tcp">@L["Connectivity:Kinds:Tcp"]</MudSelectItem>
                                 <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Http">@L["Connectivity:Kinds:Http"]</MudSelectItem>
                                 <MudSelectItem T="ConnectivityProbeKind" Value="ConnectivityProbeKind.Https">@L["Connectivity:Kinds:Https"]</MudSelectItem>
                             </MudSelect>
                         </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudNumericField T="int?"
-                                             @bind-Value="State.Port"
-                                             Label="@L["Connectivity:Port"]"
-                                             Placeholder="@L["Connectivity:PortPlaceholder"]"
-                                             Variant="Variant.Outlined"
-                                             Margin="Margin.Dense"
-                                             Min="1"
-                                             Max="65535"
-                                             Immediate="true" />
-                        </MudItem>
+                        @if (State.RequiresPort)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="int?"
+                                                 @bind-Value="State.Port"
+                                                 Label="@L["Connectivity:Port"]"
+                                                 Placeholder="@L["Connectivity:PortPlaceholder"]"
+                                                 Variant="Variant.Outlined"
+                                                 Margin="Margin.Dense"
+                                                 Min="1"
+                                                 Max="65535"
+                                                 Immediate="true" />
+                            </MudItem>
+                        }
                         <MudItem xs="12" md="6">
                             <MudNumericField T="int"
                                              @bind-Value="State.TimeoutMilliseconds"
@@ -82,7 +86,7 @@
                     }
 
                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                        @(State.RequiresHttpPath ? L["Connectivity:HintHttp"] : L["Connectivity:HintTcp"])
+                        @GetHintText()
                     </MudAlert>
 
                     @if (!string.IsNullOrWhiteSpace(State.ErrorMessage))
@@ -155,8 +159,8 @@
                                 <strong>@($"{State.LastResult.TotalDurationMilliseconds} ms")</strong>
                             </article>
                             <article class="connectivity-panel__stat">
-                                <span class="connectivity-panel__stat-label">@L["Connectivity:TcpLatency"]</span>
-                                <strong>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</strong>
+                                <span class="connectivity-panel__stat-label">@GetPrimaryLatencyLabel()</span>
+                                <strong>@GetPrimaryLatencyValue(State.LastResult)</strong>
                             </article>
                             <article class="connectivity-panel__stat">
                                 <span class="connectivity-panel__stat-label">@L["Connectivity:StartedAt"]</span>
@@ -188,17 +192,37 @@
                             }
                         </div>
 
-                        <div class="connectivity-panel__detail">
-                            <MudText Typo="Typo.subtitle1">@L["Connectivity:TcpTitle"]</MudText>
-                            <dl class="connectivity-panel__kv">
-                                <dt>@L["Connectivity:RemoteEndpoint"]</dt>
-                                <dd>@(State.LastResult.Tcp.RemoteEndpoint ?? L["Common:Empty"].Value)</dd>
-                                <dt>@L["Connectivity:TcpLatency"]</dt>
-                                <dd>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</dd>
-                                <dt>@L["Connectivity:Failure"]</dt>
-                                <dd>@(State.LastResult.Tcp.FailureMessage ?? L["Common:Empty"].Value)</dd>
-                            </dl>
-                        </div>
+                        @if (State.LastResult.Ping is not null)
+                        {
+                            <div class="connectivity-panel__detail">
+                                <MudText Typo="Typo.subtitle1">@L["Connectivity:PingTitle"]</MudText>
+                                <dl class="connectivity-panel__kv">
+                                    <dt>@L["Connectivity:ReplyAddress"]</dt>
+                                    <dd>@(State.LastResult.Ping.ReplyAddress ?? L["Common:Empty"].Value)</dd>
+                                    <dt>@L["Connectivity:PingStatus"]</dt>
+                                    <dd>@(State.LastResult.Ping.Status ?? L["Common:Empty"].Value)</dd>
+                                    <dt>@L["Connectivity:PingLatency"]</dt>
+                                    <dd>@FormatMilliseconds(State.LastResult.Ping.LatencyMilliseconds)</dd>
+                                    <dt>@L["Connectivity:Failure"]</dt>
+                                    <dd>@(State.LastResult.Ping.FailureMessage ?? L["Common:Empty"].Value)</dd>
+                                </dl>
+                            </div>
+                        }
+
+                        @if (State.LastResult.Tcp is not null)
+                        {
+                            <div class="connectivity-panel__detail">
+                                <MudText Typo="Typo.subtitle1">@L["Connectivity:TcpTitle"]</MudText>
+                                <dl class="connectivity-panel__kv">
+                                    <dt>@L["Connectivity:RemoteEndpoint"]</dt>
+                                    <dd>@(State.LastResult.Tcp.RemoteEndpoint ?? L["Common:Empty"].Value)</dd>
+                                    <dt>@L["Connectivity:TcpLatency"]</dt>
+                                    <dd>@FormatMilliseconds(State.LastResult.Tcp.LatencyMilliseconds)</dd>
+                                    <dt>@L["Connectivity:Failure"]</dt>
+                                    <dd>@(State.LastResult.Tcp.FailureMessage ?? L["Common:Empty"].Value)</dd>
+                                </dl>
+                            </div>
+                        }
 
                         @if (State.LastResult.Http is not null)
                         {
@@ -246,8 +270,34 @@
 
     private string FormatMilliseconds(long? milliseconds)
     {
-        return milliseconds is > 0
+        return milliseconds is not null
             ? $"{milliseconds.Value} ms"
             : L["Common:Empty"].Value;
+    }
+
+    private string GetHintText()
+    {
+        return State.ProbeKind switch
+        {
+            ConnectivityProbeKind.Ping => L["Connectivity:HintPing"].Value,
+            ConnectivityProbeKind.Tcp => L["Connectivity:HintTcp"].Value,
+            _ => L["Connectivity:HintHttp"].Value
+        };
+    }
+
+    private string GetPrimaryLatencyLabel()
+    {
+        return State.LastResult?.ProbeKind == ConnectivityProbeKind.Ping
+            ? L["Connectivity:PingLatency"].Value
+            : L["Connectivity:TcpLatency"].Value;
+    }
+
+    private string GetPrimaryLatencyValue(ConnectivityProbeResult result)
+    {
+        return result.ProbeKind switch
+        {
+            ConnectivityProbeKind.Ping => FormatMilliseconds(result.Ping?.LatencyMilliseconds),
+            _ => FormatMilliseconds(result.Tcp?.LatencyMilliseconds)
+        };
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -10,7 +11,7 @@ using Monica.Utilities.Connectivity.Models;
 namespace Monica.Utilities.Connectivity.Services;
 
 /// <summary>
-/// Executes DNS, TCP, and optional HTTP or HTTPS probes for the utilities toolbox.
+/// Executes DNS, ICMP, TCP, and optional HTTP or HTTPS probes for the utilities toolbox.
 /// </summary>
 public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> options)
 {
@@ -22,7 +23,7 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
     /// </summary>
     /// <param name="request">Probe request supplied by the caller.</param>
     /// <param name="cancellationToken">Cancellation token that aborts the probe.</param>
-    /// <returns>A structured result describing DNS, TCP, and optional HTTP outcomes.</returns>
+    /// <returns>A structured result describing DNS, ICMP, TCP, and optional HTTP outcomes.</returns>
     public async Task<ConnectivityProbeResult> ProbeAsync(
         ConnectivityProbeRequest request,
         CancellationToken cancellationToken = default)
@@ -32,36 +33,52 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
             _option.MaximumProbeTimeoutMilliseconds,
             _option.DefaultHttpRequestPath);
 
-        var port = normalized.Port!.Value;
+        var port = normalized.Port;
         var endpoint = BuildEndpoint(normalized, port);
         var startedAt = DateTimeOffset.UtcNow;
         var totalWatch = Stopwatch.StartNew();
 
         var (resolvedAddresses, resolutionError) = await ResolveAddressesAsync(normalized.Host, cancellationToken);
-        var tcpResult = await ProbeTcpAsync(normalized.Host, port, normalized.TimeoutMilliseconds, cancellationToken);
 
+        ConnectivityPingProbeResult? pingResult = null;
+        ConnectivityTcpProbeResult? tcpResult = null;
         ConnectivityHttpProbeResult? httpResult = null;
-        if (normalized.ProbeKind is ConnectivityProbeKind.Http or ConnectivityProbeKind.Https)
+
+        if (normalized.ProbeKind == ConnectivityProbeKind.Ping)
         {
-            httpResult = tcpResult.Succeeded
-                ? await ProbeHttpAsync(normalized, port, cancellationToken)
-                : new ConnectivityHttpProbeResult(
-                    false,
-                    s_httpMethod.Method,
-                    BuildUri(normalized, port).ToString(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    "HTTP request was skipped because the TCP handshake did not complete.");
+            pingResult = await ProbePingAsync(normalized, cancellationToken);
+        }
+        else
+        {
+            tcpResult = await ProbeTcpAsync(
+                normalized.Host,
+                port!.Value,
+                normalized.TimeoutMilliseconds,
+                cancellationToken);
+
+            if (normalized.ProbeKind is ConnectivityProbeKind.Http or ConnectivityProbeKind.Https)
+            {
+                httpResult = tcpResult.Succeeded
+                    ? await ProbeHttpAsync(normalized, port.Value, cancellationToken)
+                    : new ConnectivityHttpProbeResult(
+                        false,
+                        s_httpMethod.Method,
+                        BuildUri(normalized, port.Value).ToString(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        "HTTP request was skipped because the TCP handshake did not complete.");
+            }
         }
 
         totalWatch.Stop();
 
         var succeeded = normalized.ProbeKind switch
         {
-            ConnectivityProbeKind.Tcp => tcpResult.Succeeded,
-            _ => tcpResult.Succeeded && httpResult is { Succeeded: true }
+            ConnectivityProbeKind.Ping => pingResult is { Succeeded: true },
+            ConnectivityProbeKind.Tcp => tcpResult is { Succeeded: true },
+            _ => tcpResult is { Succeeded: true } && httpResult is { Succeeded: true }
         };
 
         return new ConnectivityProbeResult(
@@ -75,6 +92,7 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
             succeeded,
             resolvedAddresses,
             resolutionError,
+            pingResult,
             tcpResult,
             httpResult);
     }
@@ -135,6 +153,40 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
         {
             watch.Stop();
             return new ConnectivityTcpProbeResult(false, watch.ElapsedMilliseconds, null, ex.Message);
+        }
+    }
+
+    private static async Task<ConnectivityPingProbeResult> ProbePingAsync(
+        ConnectivityProbeRequest request,
+        CancellationToken cancellationToken)
+    {
+        using var ping = new Ping();
+
+        try
+        {
+            var reply = await ping.SendPingAsync(
+                request.Host,
+                TimeSpan.FromMilliseconds(request.TimeoutMilliseconds),
+                cancellationToken: cancellationToken);
+
+            var succeeded = reply.Status == IPStatus.Success;
+            return new ConnectivityPingProbeResult(
+                succeeded,
+                succeeded ? reply.RoundtripTime : null,
+                reply.Address?.ToString(),
+                reply.Status.ToString(),
+                succeeded ? null : BuildPingFailureMessage(reply.Status, request.TimeoutMilliseconds));
+        }
+        catch (Exception ex) when (ex is PingException or SocketException or OperationCanceledException or InvalidOperationException or PlatformNotSupportedException)
+        {
+            return new ConnectivityPingProbeResult(
+                false,
+                null,
+                null,
+                ex is OperationCanceledException && !cancellationToken.IsCancellationRequested ? IPStatus.TimedOut.ToString() : null,
+                ex is OperationCanceledException && !cancellationToken.IsCancellationRequested
+                    ? $"ICMP echo timed out after {request.TimeoutMilliseconds} ms."
+                    : ex.InnerException?.Message ?? ex.Message);
         }
     }
 
@@ -217,12 +269,13 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
         }
     }
 
-    private static string BuildEndpoint(ConnectivityProbeRequest request, int port)
+    private static string BuildEndpoint(ConnectivityProbeRequest request, int? port)
     {
         return request.ProbeKind switch
         {
+            ConnectivityProbeKind.Ping => request.Host,
             ConnectivityProbeKind.Tcp => $"{request.Host}:{port}",
-            _ => BuildUri(request, port).ToString()
+            _ => BuildUri(request, port!.Value).ToString()
         };
     }
 
@@ -235,5 +288,14 @@ public sealed class ConnectivityProbeService(IOptions<ModuleUtilitiesOption> opt
             Port = port,
             Path = request.Path
         }.Uri;
+    }
+
+    private static string BuildPingFailureMessage(IPStatus status, int timeoutMilliseconds)
+    {
+        return status switch
+        {
+            IPStatus.TimedOut => $"ICMP echo timed out after {timeoutMilliseconds} ms.",
+            _ => $"Ping reply status: {status}."
+        };
     }
 }

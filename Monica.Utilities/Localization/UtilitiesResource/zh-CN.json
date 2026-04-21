@@ -11,7 +11,7 @@
   },
   "Connectivity": {
     "Title": "连通性探测",
-    "Subtitle": "从当前宿主机验证 DNS 解析、TCP 端口可达性，以及可选的 HTTP/HTTPS 应用响应情况。",
+    "Subtitle": "从当前宿主机验证 DNS 解析、ICMP Ping 可达性、TCP 端口连通性，以及可选的 HTTP/HTTPS 应用响应情况。",
     "TargetHost": "Host 或 IP",
     "TargetHostPlaceholder": "example.com 或 10.0.0.8",
     "ProbeKind": "探测类型",
@@ -22,6 +22,7 @@
     "PathPlaceholder": "/health 或 /",
     "AllowInvalidCertificate": "允许无效的 HTTPS 证书",
     "AllowInvalidCertificateHelper": "适用于使用自签名证书的内网环境。常规 TLS 校验场景请保持关闭。",
+    "HintPing": "Ping 模式适合先快速确认目标是否能收到 ICMP 回显，再决定是否继续做端口或应用层探测。",
     "HintTcp": "TCP 模式适合确认目标端口是否可达，以及链路或防火墙规则是否放通。",
     "HintHttp": "HTTP/HTTPS 模式会在传输层握手成功后继续验证应用是否有响应。",
     "Run": "开始探测",
@@ -38,9 +39,13 @@
     "Duration": "总耗时",
     "ResolvedAddresses": "解析地址",
     "ResolutionError": "解析信息",
+    "PingTitle": "ICMP 回显",
     "TcpTitle": "TCP 握手",
     "HttpTitle": "HTTP 响应",
+    "PingStatus": "Ping 状态",
+    "PingLatency": "Ping 延迟",
     "TcpLatency": "TCP 延迟",
+    "ReplyAddress": "响应地址",
     "RemoteEndpoint": "远端端点",
     "Failure": "失败原因",
     "Method": "方法",
@@ -50,6 +55,7 @@
     "ServerHeader": "Server 头",
     "HttpLatency": "HTTP 延迟",
     "Kinds": {
+      "Ping": "Ping",
       "Tcp": "TCP 端口",
       "Http": "HTTP",
       "Https": "HTTPS"

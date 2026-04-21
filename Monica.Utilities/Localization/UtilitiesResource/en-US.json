@@ -11,7 +11,7 @@
   },
   "Connectivity": {
     "Title": "Connectivity Probe",
-    "Subtitle": "Validate DNS resolution, TCP reachability, and optional HTTP or HTTPS responsiveness from the current host.",
+    "Subtitle": "Validate DNS resolution, ICMP ping reachability, TCP ports, and optional HTTP or HTTPS responsiveness from the current host.",
     "TargetHost": "Host or IP",
     "TargetHostPlaceholder": "example.com or 10.0.0.8",
     "ProbeKind": "Probe type",
@@ -22,6 +22,7 @@
     "PathPlaceholder": "/health or /",
     "AllowInvalidCertificate": "Allow invalid HTTPS certificate",
     "AllowInvalidCertificateHelper": "Useful for internal environments with self-signed certificates. Leave disabled for normal TLS validation.",
+    "HintPing": "Use Ping mode for a quick ICMP reachability check before moving on to port or application-level diagnostics.",
     "HintTcp": "Use TCP mode to verify whether the target port is reachable through routing and firewall rules.",
     "HintHttp": "Use HTTP or HTTPS mode when you also want to confirm that an application responds after the transport handshake succeeds.",
     "Run": "Run probe",
@@ -38,9 +39,13 @@
     "Duration": "Duration",
     "ResolvedAddresses": "Resolved addresses",
     "ResolutionError": "Resolution detail",
+    "PingTitle": "ICMP echo reply",
     "TcpTitle": "TCP handshake",
     "HttpTitle": "HTTP response",
+    "PingStatus": "Ping status",
+    "PingLatency": "Ping latency",
     "TcpLatency": "TCP latency",
+    "ReplyAddress": "Reply address",
     "RemoteEndpoint": "Remote endpoint",
     "Failure": "Failure",
     "Method": "Method",
@@ -50,6 +55,7 @@
     "ServerHeader": "Server header",
     "HttpLatency": "HTTP latency",
     "Kinds": {
+      "Ping": "Ping",
       "Tcp": "TCP port",
       "Http": "HTTP",
       "Https": "HTTPS"

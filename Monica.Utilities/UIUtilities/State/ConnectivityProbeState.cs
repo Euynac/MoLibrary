@@ -28,7 +28,7 @@ public sealed class ConnectivityProbeState(
     /// <summary>
     /// Gets or sets the selected probe kind.
     /// </summary>
-    public ConnectivityProbeKind ProbeKind { get; private set; } = ConnectivityProbeKind.Tcp;
+    public ConnectivityProbeKind ProbeKind { get; private set; } = ConnectivityProbeKind.Ping;
 
     /// <summary>
     /// Gets or sets the HTTP request path used by HTTP or HTTPS probes.
@@ -61,6 +61,11 @@ public sealed class ConnectivityProbeState(
     public ConnectivityProbeResult? LastResult { get; private set; }
 
     /// <summary>
+    /// Gets whether the current probe kind requires a target port.
+    /// </summary>
+    public bool RequiresPort => ProbeKind != ConnectivityProbeKind.Ping;
+
+    /// <summary>
     /// Gets whether the current probe kind uses an HTTP request path.
     /// </summary>
     public bool RequiresHttpPath => ProbeKind is ConnectivityProbeKind.Http or ConnectivityProbeKind.Https;
@@ -78,6 +83,13 @@ public sealed class ConnectivityProbeState(
     {
         ProbeKind = probeKind;
 
+        if (probeKind == ConnectivityProbeKind.Ping)
+        {
+            Port = null;
+            AllowInvalidCertificate = false;
+            return;
+        }
+
         switch (probeKind)
         {
             case ConnectivityProbeKind.Http when Port is null:
@@ -88,8 +100,13 @@ public sealed class ConnectivityProbeState(
                 break;
         }
 
-        if (probeKind == ConnectivityProbeKind.Tcp)
+        if (!RequiresHttpPath)
         {
+            if (probeKind != ConnectivityProbeKind.Https)
+            {
+                AllowInvalidCertificate = false;
+            }
+
             return;
         }
 
@@ -149,7 +166,7 @@ public sealed class ConnectivityProbeState(
     {
         Host = string.Empty;
         Port = null;
-        ProbeKind = ConnectivityProbeKind.Tcp;
+        ProbeKind = ConnectivityProbeKind.Ping;
         Path = _moduleOption.DefaultHttpRequestPath;
         TimeoutMilliseconds = _moduleOption.DefaultProbeTimeoutMilliseconds;
         AllowInvalidCertificate = false;

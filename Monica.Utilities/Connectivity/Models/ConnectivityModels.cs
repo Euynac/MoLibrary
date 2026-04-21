@@ -8,6 +8,11 @@ namespace Monica.Utilities.Connectivity.Models;
 public enum ConnectivityProbeKind
 {
     /// <summary>
+    /// Resolve the target and send an ICMP echo request.
+    /// </summary>
+    Ping,
+
+    /// <summary>
     /// Resolve the target and attempt a raw TCP connection to the selected port.
     /// </summary>
     Tcp,
@@ -42,7 +47,7 @@ public sealed record ConnectivityProbeRequest
     /// <summary>
     /// Gets or sets the requested probe kind.
     /// </summary>
-    public ConnectivityProbeKind ProbeKind { get; init; } = ConnectivityProbeKind.Tcp;
+    public ConnectivityProbeKind ProbeKind { get; init; } = ConnectivityProbeKind.Ping;
 
     /// <summary>
     /// Gets or sets the request path used by HTTP and HTTPS probes.
@@ -86,14 +91,16 @@ public sealed record ConnectivityProbeRequest
             ? NormalizePath(string.IsNullOrWhiteSpace(Path) ? defaultHttpRequestPath : Path)
             : "/";
 
-        var port = Port ?? ProbeKind switch
+        var port = ProbeKind == ConnectivityProbeKind.Ping
+            ? null
+            : Port ?? ProbeKind switch
         {
             ConnectivityProbeKind.Http => 80,
             ConnectivityProbeKind.Https => 443,
             _ => null
         };
 
-        if (port is null or < 1 or > 65535)
+        if (ProbeKind != ConnectivityProbeKind.Ping && port is not (>= 1 and <= 65535))
         {
             throw new ArgumentException("A valid target port between 1 and 65535 is required.", nameof(Port));
         }
@@ -127,33 +134,50 @@ public sealed record ConnectivityProbeResult(
     string Host,
     string Endpoint,
     ConnectivityProbeKind ProbeKind,
-    int Port,
+    int? Port,
     int TimeoutMilliseconds,
     DateTimeOffset StartedAt,
     long TotalDurationMilliseconds,
     bool Succeeded,
     IReadOnlyList<string> ResolvedAddresses,
     string? ResolutionError,
-    ConnectivityTcpProbeResult Tcp,
+    ConnectivityPingProbeResult? Ping,
+    ConnectivityTcpProbeResult? Tcp,
     ConnectivityHttpProbeResult? Http)
 {
+    private string HostWithPort => Port is int port ? $"{Host}:{port}" : Host;
+
     /// <summary>
     /// Human-readable summary describing the most important outcome for the probe.
     /// </summary>
     public string Summary =>
         ProbeKind switch
         {
+            ConnectivityProbeKind.Ping when Succeeded =>
+                $"Ping to {Host} replied from {Ping?.ReplyAddress ?? Host} in {Ping?.LatencyMilliseconds ?? TotalDurationMilliseconds} ms.",
+            ConnectivityProbeKind.Ping =>
+                $"Ping to {Host} failed: {Ping?.FailureMessage ?? Ping?.Status ?? ResolutionError ?? "Unknown error"}.",
             ConnectivityProbeKind.Tcp when Succeeded =>
-                $"TCP connection to {Host}:{Port} succeeded in {Tcp.LatencyMilliseconds ?? TotalDurationMilliseconds} ms.",
+                $"TCP connection to {HostWithPort} succeeded in {Tcp?.LatencyMilliseconds ?? TotalDurationMilliseconds} ms.",
             ConnectivityProbeKind.Tcp =>
-                $"TCP connection to {Host}:{Port} failed: {Tcp.FailureMessage ?? ResolutionError ?? "Unknown error"}.",
+                $"TCP connection to {HostWithPort} failed: {Tcp?.FailureMessage ?? ResolutionError ?? "Unknown error"}.",
             _ when Succeeded =>
                 $"HTTP probe to {Endpoint} returned {(Http?.StatusCode?.ToString() ?? "response")} {Http?.ReasonPhrase}".TrimEnd() +
                 $" in {Http?.LatencyMilliseconds ?? TotalDurationMilliseconds} ms.",
             _ =>
-                $"HTTP probe to {Endpoint} failed: {Http?.FailureMessage ?? Tcp.FailureMessage ?? ResolutionError ?? "Unknown error"}."
+                $"HTTP probe to {Endpoint} failed: {Http?.FailureMessage ?? Tcp?.FailureMessage ?? ResolutionError ?? "Unknown error"}."
         };
 }
+
+/// <summary>
+/// Captures the outcome of the ICMP echo request.
+/// </summary>
+public sealed record ConnectivityPingProbeResult(
+    bool Succeeded,
+    long? LatencyMilliseconds,
+    string? ReplyAddress,
+    string? Status,
+    string? FailureMessage);
 
 /// <summary>
 /// Captures the outcome of the raw TCP connection attempt.

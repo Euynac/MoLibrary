@@ -20,7 +20,7 @@ public sealed class ConnectivityProbeFacade
     /// <summary>
     /// Creates the connectivity probe facade.
     /// </summary>
-    /// <param name="connectivityProbeService">Service that executes DNS, TCP, and HTTP probe logic.</param>
+    /// <param name="connectivityProbeService">Service that executes DNS, ICMP, TCP, and HTTP probe logic.</param>
     /// <param name="localizer">Localizer used for developer-facing result messages.</param>
     /// <param name="logger">Logger used to record unexpected failures.</param>
     public ConnectivityProbeFacade(
@@ -37,7 +37,7 @@ public sealed class ConnectivityProbeFacade
     /// Runs a connectivity probe and wraps the structured result in Monica's result envelope.
     /// Expected network failures remain part of the returned result data instead of being converted into a failed envelope.
     /// </summary>
-    /// <param name="request">Probe request describing the target and transport kind.</param>
+    /// <param name="request">Probe request describing the target and protocol kind.</param>
     /// <param name="cancellationToken">Cancellation token that aborts the probe.</param>
     /// <returns>A result envelope containing the probe result.</returns>
     public async Task<Res<ConnectivityProbeResult>> ProbeAsync(
