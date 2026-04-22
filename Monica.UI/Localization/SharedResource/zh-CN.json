@@ -18,6 +18,10 @@
         "Name": "默认主题",
         "Description": "基于白底、极简边框和柔和投影的现代 SaaS 设计风格"
       },
+      "hermes-teal": {
+        "Name": "Hermes Teal",
+        "Description": "参考 Hermes Agent Web UI 的深青色编辑感控制台风格"
+      },
       "classic-material": {
         "Name": "经典 Material",
         "Description": "经典的 Material 风格"

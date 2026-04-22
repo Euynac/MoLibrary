@@ -18,6 +18,10 @@
         "Name": "Default",
         "Description": "Modern SaaS design with minimal borders and diffuse shadows"
       },
+      "hermes-teal": {
+        "Name": "Hermes Teal",
+        "Description": "Editorial dark teal dashboard inspired by the Hermes Agent web UI"
+      },
       "classic-material": {
         "Name": "Classic Material",
         "Description": "Classic Material look"

@@ -1,0 +1,16 @@
+:root[data-theme="hermes-teal-light"] .mo-markdown-style-default,
+:root[data-theme="hermes-teal-dark"] .mo-markdown-style-default,
+.mo-theme-hermes-teal-light .mo-markdown-style-default,
+.mo-theme-hermes-teal-dark .mo-markdown-style-default {
+    --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-background));
+    --mo-markdown-panel-border: color-mix(in srgb, var(--mud-palette-primary) 18%, var(--mud-palette-lines-default));
+    --mo-markdown-accent: var(--mud-palette-primary);
+    --mo-markdown-inline-code-background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+}
+
+:root[data-theme="hermes-teal-light"] .mo-markdown-style-default .mud-markdown-body,
+:root[data-theme="hermes-teal-dark"] .mo-markdown-style-default .mud-markdown-body,
+.mo-theme-hermes-teal-light .mo-markdown-style-default .mud-markdown-body,
+.mo-theme-hermes-teal-dark .mo-markdown-style-default .mud-markdown-body {
+    font-family: 'Mondwest', 'Noto Serif SC', Georgia, serif;
+}
