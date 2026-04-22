@@ -17,7 +17,8 @@ public class ThemeDisplayTextProviderTests
         var options = ThemeDisplayTextProvider.GetThemeOptions(_localizer);
 
         options.Should().Contain(option => option.Name == "default" && option.DisplayName == "Theme:Options:default:Name" && option.Description == "Theme:Options:default:Description");
-        options.Should().Contain(option => option.Name == "aurora-flow" && option.DisplayName == "Theme:Options:aurora-flow:Name" && option.Description == "Theme:Options:aurora-flow:Description");
+        options.Should().Contain(option => option.Name == "classic-material" && option.DisplayName == "Theme:Options:classic-material:Name" && option.Description == "Theme:Options:classic-material:Description");
+        options.Should().NotContain(option => option.Name == "clean-saas");
     }
 
     [Fact]

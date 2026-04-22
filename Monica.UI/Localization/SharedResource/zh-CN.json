@@ -16,6 +16,10 @@
       },
       "default": {
         "Name": "默认主题",
+        "Description": "基于白底、极简边框和柔和投影的现代 SaaS 设计风格"
+      },
+      "classic-material": {
+        "Name": "经典 Material",
         "Description": "经典的 Material 风格"
       },
       "glassmorphic": {
@@ -29,10 +33,6 @@
       "fresh": {
         "Name": "小清新",
         "Description": "薄荷浅色调，清爽安静"
-      },
-      "clean-saas": {
-        "Name": "现代克制",
-        "Description": "基于白底、极简边框和柔和投影的现代SaaS设计风格"
       },
       "aurora-flow": {
         "Name": "极光流彩",

@@ -2,8 +2,8 @@
 /* This is the main CSS file that pulls in all theme-related CSS */
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
-/* 1. Introduce default theme styles (including day and night modes) */
-@import url('./themes/mo-theme-default.css');
+/* 1. Introduce classic Material theme styles */
+@import url('./themes/mo-theme-classic-material.css');
 
 /* 2. Introducing a modern frosted glass theme */
 @import url('./themes/mo-theme-glassmorphic.css');
@@ -14,15 +14,15 @@
 /* 4. Introduce a fresh theme */
 @import url('./themes/mo-theme-fresh.css');
 
-/* 4.5 Introduce Clean SaaS theme */
-@import url('./themes/mo-theme-clean-saas.css');
+/* 4.5 Introduce the default Clean SaaS theme */
+@import url('./themes/mo-theme-default.css');
 
-/* 5. Introduce new exquisite themes */
-@import url('./themes/mo-theme-aurora-flow.css');        /* 极光流彩主题 */
-@import url('./themes/mo-theme-ink-landscape.css');      /* 墨韵山水主题 */
-@import url('./themes/mo-theme-macaron-sweet.css');      /* 马卡龙甜心主题 */
-@import url('./themes/mo-theme-deep-ocean.css');         /* 深海静谧主题 */
-@import url('./themes/mo-theme-vintage-press.css');      /* 复古印刷主题 */
+/* 5. Introduce additional theme styles */
+@import url('./themes/mo-theme-aurora-flow.css');        /* Aurora Flow theme */
+@import url('./themes/mo-theme-ink-landscape.css');      /* Ink Landscape theme */
+@import url('./themes/mo-theme-macaron-sweet.css');      /* Macaron Sweet theme */
+@import url('./themes/mo-theme-deep-ocean.css');         /* Deep Ocean theme */
+@import url('./themes/mo-theme-vintage-press.css');      /* Vintage Press theme */
 
 @import url('./markdown/mo-markdown-default.css');
 @import url('./markdown/mo-markdown-glassmorphic.css');

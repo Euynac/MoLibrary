@@ -37,10 +37,12 @@ public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
         get => _currentThemeName;
         set
         {
-            if (_currentThemeName != value)
+            var resolvedThemeName = ResolveThemeName(value);
+
+            if (_currentThemeName != resolvedThemeName)
             {
-                _currentThemeName = value;
-                _currentTheme = CreateThemeByName(value);
+                _currentThemeName = resolvedThemeName;
+                _currentTheme = CreateThemeByName(resolvedThemeName);
                 OnThemeChanged?.Invoke();
             }
         }
@@ -53,7 +55,17 @@ public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
         => ThemeCatalog.GetAvailableThemes();
 
     /// <summary>
-    /// Create a topic based on topic name
+    /// Resolve the requested theme name to an available theme.
+    /// </summary>
+    private static string ResolveThemeName(string themeName)
+    {
+        return ThemeCatalog.ThemeExists(themeName)
+            ? themeName
+            : "default";
+    }
+
+    /// <summary>
+    /// Create a theme based on its theme name.
     /// </summary>
     private MudTheme CreateThemeByName(string themeName)
     {

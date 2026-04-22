@@ -3,13 +3,13 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// Monica default theme - classic Material Design style
+/// Monica classic theme with a traditional Material Design style.
 /// </summary>
-public class MonicaDefaultTheme : ThemeDefinitionBase
+public class ClassicMaterialTheme : ThemeDefinitionBase
 {
-    public override string Name => "default";
-    public override string DisplayName => "默认主题";
-    public override string Description => "经典的Material Design风格";
+    public override string Name => "classic-material";
+    public override string DisplayName => "经典 Material";
+    public override string Description => "经典的 Material Design 风格";
     
     // Use the default CodeBlockTheme of the base class (Github/GithubDark)
     public override MudTheme CreateTheme()

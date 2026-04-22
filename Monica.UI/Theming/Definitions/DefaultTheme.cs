@@ -3,13 +3,13 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// A modern, SaaS-like clean theme with soft borders, high contrast, and a diffuse shadow system.
+/// The default Monica theme with a modern SaaS look, soft borders, and a diffuse shadow system.
 /// </summary>
-public class CleanSaaSTheme : ThemeDefinitionBase
+public class DefaultTheme : ThemeDefinitionBase
 {
-    public override string Name => "clean-saas";
-    public override string DisplayName => "现代克制 (Clean SaaS)";
-    public override string Description => "基于白底、极简边框和柔和投影的现代SaaS设计风格";
+    public override string Name => "default";
+    public override string DisplayName => "默认主题";
+    public override string Description => "基于白底、极简边框和柔和投影的现代 SaaS 设计风格";
     
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.GithubDark;

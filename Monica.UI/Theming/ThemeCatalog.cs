@@ -20,11 +20,11 @@ public static class ThemeCatalog
     private static void RegisterDefaultThemes()
     {
         RegisterTheme(new MudBlazorDefaultTheme());
-        RegisterTheme(new MonicaDefaultTheme());
+        RegisterTheme(new DefaultTheme());
+        RegisterTheme(new ClassicMaterialTheme());
         RegisterTheme(new GlassmorphicTheme());
         RegisterTheme(new NeonPulseTheme());
         RegisterTheme(new FreshTheme());
-        RegisterTheme(new CleanSaaSTheme());
         
         // Register new themes.
         RegisterTheme(new AuroraFlowTheme());
