@@ -175,8 +175,8 @@
     text-transform: uppercase;
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     background: var(--mo-vibe-panel);
     border: 1px solid var(--mo-vibe-ghost);
     border-radius: 0;
@@ -185,15 +185,19 @@
     position: relative;
 }
 
-:root[data-theme="vibeusage-matrix-light"] :is(.mud-popover:not(.mud-tooltip), .mud-menu),
-:root[data-theme="vibeusage-matrix-dark"] :is(.mud-popover:not(.mud-tooltip), .mud-menu),
-.mo-theme-vibeusage-matrix-light :is(.mud-popover:not(.mud-tooltip), .mud-menu),
-.mo-theme-vibeusage-matrix-dark :is(.mud-popover:not(.mud-tooltip), .mud-menu) {
+:root[data-theme="vibeusage-matrix-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="vibeusage-matrix-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-vibeusage-matrix-light .mud-popover:not(.mud-tooltip),
+.mo-theme-vibeusage-matrix-dark .mud-popover:not(.mud-tooltip) {
     background: var(--mo-vibe-panel);
     border: 1px solid var(--mo-vibe-ghost);
     border-radius: 0;
     box-shadow: var(--mo-vibe-panel-shadow);
     backdrop-filter: blur(var(--mo-vibe-panel-blur));
+    position: absolute;
+    width: fit-content;
+    max-width: min(24rem, calc(100vw - 32px));
+    overflow: visible;
 }
 
 .mo-theme-vibeusage-matrix-light :is(.mud-dialog, .mud-snackbar),
@@ -465,13 +469,13 @@
     color: var(--mo-vibe-ink-bright);
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     overflow: hidden;
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"], .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
+.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
+.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -493,6 +497,17 @@
         bottom 8px right 8px,
         bottom 8px right 8px;
     opacity: 0.78;
+}
+
+.mo-theme-vibeusage-matrix-light .mud-table-container,
+.mo-theme-vibeusage-matrix-dark .mud-table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.mo-theme-vibeusage-matrix-light .mud-data-grid,
+.mo-theme-vibeusage-matrix-dark .mud-data-grid {
+    overflow: visible;
 }
 
 .mo-theme-vibeusage-matrix-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover),
