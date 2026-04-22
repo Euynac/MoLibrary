@@ -451,12 +451,15 @@ internal static class HandlerCandidateExtractor
     {
         var namespaces = new HashSet<string>();
 
-        // Extract namespaces from response type
+        // Extract namespaces from the handler base type arguments.
+        // ApplicationService<TRequest, TResponse> has two arguments, while custom handler bases may add more.
         var baseTypeSyntax = classDeclaration.BaseList?.Types.First().Type as GenericNameSyntax;
-        if (baseTypeSyntax?.TypeArgumentList.Arguments.Count >= 3)
+        if (baseTypeSyntax != null)
         {
-            var responseTypeSyntax = baseTypeSyntax.TypeArgumentList.Arguments.Last();
-            CollectNamespacesFromType(responseTypeSyntax, semanticModel, namespaces);
+            foreach (var typeArgument in baseTypeSyntax.TypeArgumentList.Arguments)
+            {
+                CollectNamespacesFromType(typeArgument, semanticModel, namespaces);
+            }
         }
 
         // Extract namespaces from request type

@@ -54,6 +54,7 @@ internal static class GeneratorConstants
 
     public static class Transports
     {
+        public const string Local = "Local";
         public const string Http = "Http";
         public const string Grpc = "Grpc";
     }

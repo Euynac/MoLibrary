@@ -12,6 +12,12 @@ public class RpcClientConfigAttribute : Attribute
     /// Whether to generate gRPC implementations.
     /// </summary>
     public bool AddGrpcImplementations { get; set; } = false;
+
+    /// <summary>
+    /// Whether to generate in-process local implementations.
+    /// </summary>
+    public bool AddLocalImplementations { get; set; } = false;
+
     /// <summary>
     /// Whether to generate HTTP implementations.
     /// </summary>
@@ -23,4 +29,11 @@ public class RpcClientConfigAttribute : Attribute
     /// Custom implementations must inherit from <see cref="HttpRpcApi"/> and must not introduce extra constructor parameters.
     /// </summary>
     public Type? HttpImplementationType { get; set; }
+
+    /// <summary>
+    /// Local implementation base type. Defaults to <see cref="LocalRpcApi"/> when not specified.
+    /// This type is used as the generated base class and to resolve the required namespaces.
+    /// Custom implementations must inherit from <see cref="LocalRpcApi"/> and must not introduce extra constructor parameters.
+    /// </summary>
+    public Type? LocalImplementationType { get; set; }
 }

@@ -57,18 +57,17 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(combinedProvider, (spc, data) =>
         {
             var (configInfo, metadataFiles) = data;
-            var (hasClientConfig, httpImplType, addGrpc, addHttp, errorMessage) = configInfo;
 
             // Report configuration error if any
-            if (errorMessage != null)
+            if (configInfo.ErrorMessage != null)
             {
                 ReportDiagnostic(spc, DiagnosticSeverity.Error, "RPC_CLIENT_001",
-                    "Configuration Error", errorMessage, Location.None);
+                    "Configuration Error", configInfo.ErrorMessage, Location.None);
                 return;
             }
 
             // Skip if no client config attribute found
-            if (!hasClientConfig)
+            if (!configInfo.HasClientConfig)
             {
                 ReportDiagnostic(spc, DiagnosticSeverity.Info, "RPC_CLIENT_002",
                     "No Client Config",
@@ -80,7 +79,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             // Log configuration
             ReportDiagnostic(spc, DiagnosticSeverity.Info, "RPC_CLIENT_003",
                 "Client Config Found",
-                $"Found RpcClientConfigAttribute. AddHttp={addHttp}, AddGrpc={addGrpc}, HttpImplType={httpImplType ?? "default"}",
+                $"Found RpcClientConfigAttribute. AddHttp={configInfo.AddHttp}, AddLocal={configInfo.AddLocal}, AddGrpc={configInfo.AddGrpc}, HttpImplType={configInfo.HttpImplType ?? "default"}, LocalImplType={configInfo.LocalImplType ?? "default"}",
                 Location.None);
 
             // Process metadata files
@@ -123,13 +122,18 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
                 return;
             }
 
-            // Generate client code for each domain
-            if (addHttp)
+            if (!configInfo.AddHttp && !configInfo.AddLocal && !configInfo.AddGrpc)
             {
-                GenerateHttpClients(spc, validMetadata, httpImplType!);
+                ReportDiagnostic(spc, DiagnosticSeverity.Info, "RPC_CLIENT_011",
+                    "No Transport Enabled",
+                    "RPC client generation is enabled, but no transport implementation was requested.",
+                    Location.None);
+                return;
             }
 
-            if (addGrpc)
+            GenerateClients(spc, validMetadata, configInfo);
+
+            if (configInfo.AddGrpc)
             {
                 // TODO: Implement gRPC client generation
                 ReportDiagnostic(spc, DiagnosticSeverity.Warning, "RPC_CLIENT_008",
@@ -141,12 +145,12 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Generates HTTP client interfaces and implementations for all domains.
+    /// Generates RPC client interfaces and implementations for all domains.
     /// </summary>
-    private static void GenerateHttpClients(
+    private static void GenerateClients(
         SourceProductionContext context,
         List<RpcMetadata> metadataList,
-        string httpImplType)
+        RpcClientGenerationConfiguration configInfo)
     {
         foreach (var metadata in metadataList)
         {
@@ -154,7 +158,10 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             {
                 var generatedFiles = RpcClientCodeGenerator.GenerateClientForDomain(
                     metadata,
-                    httpImplType);
+                    configInfo.AddHttp,
+                    configInfo.HttpImplType,
+                    configInfo.AddLocal,
+                    configInfo.LocalImplType);
 
                 var domainName = metadata.DomainName ?? metadata.AssemblyName.Replace(".API", "").Replace("Service", "");
 
@@ -354,7 +361,7 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
     /// <summary>
     /// Extracts the client configuration from assembly-level attributes.
     /// </summary>
-    private static (bool HasClientConfig, string? HttpImplType, bool AddGrpc, bool AddHttp, string? ErrorMessage)
+    private static RpcClientGenerationConfiguration
         ExtractClientConfiguration(Compilation compilation)
     {
         try
@@ -374,13 +381,15 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
 
             if (clientConfigAttribute == null)
             {
-                return (false, null, false, false, null);
+                return new RpcClientGenerationConfiguration();
             }
 
             // Extract configuration values
             bool addGrpc = false;
             bool addHttp = true;
-            var httpImplType = ResolveDefaultHttpImplementationType(compilation);
+            bool addLocal = false;
+            string? httpImplType = null;
+            string? localImplType = null;
 
             foreach (var namedArgument in clientConfigAttribute.NamedArguments)
             {
@@ -394,18 +403,44 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
                         if (namedArgument.Value.Value is bool httpValue)
                             addHttp = httpValue;
                         break;
+                    case "AddLocalImplementations":
+                        if (namedArgument.Value.Value is bool localValue)
+                            addLocal = localValue;
+                        break;
                     case "HttpImplementationType":
                         if (namedArgument.Value.Value is INamedTypeSymbol typeSymbol)
                             httpImplType = typeSymbol.ToDisplayString();
                         break;
+                    case "LocalImplementationType":
+                        if (namedArgument.Value.Value is INamedTypeSymbol localTypeSymbol)
+                            localImplType = localTypeSymbol.ToDisplayString();
+                        break;
                 }
             }
 
-            return (true, httpImplType, addGrpc, addHttp, null);
+            if (addHttp)
+            {
+                httpImplType ??= ResolveDefaultHttpImplementationType(compilation);
+            }
+
+            if (addLocal)
+            {
+                localImplType ??= ResolveDefaultLocalImplementationType(compilation);
+            }
+
+            return new RpcClientGenerationConfiguration(
+                hasClientConfig: true,
+                httpImplType: httpImplType,
+                localImplType: localImplType,
+                addGrpc: addGrpc,
+                addHttp: addHttp,
+                addLocal: addLocal,
+                errorMessage: null);
         }
         catch (Exception ex)
         {
-            return (false, null, false, false, $"Failed to extract client configuration: {ex.Message}");
+            return new RpcClientGenerationConfiguration(
+                errorMessage: $"Failed to extract client configuration: {ex.Message}");
         }
     }
 
@@ -419,6 +454,18 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
         }
 
         return httpRpcApiSymbol.ToDisplayString();
+    }
+
+    private static string ResolveDefaultLocalImplementationType(Compilation compilation)
+    {
+        var localRpcApiSymbol = compilation.GetTypeByMetadataName("Monica.WebApi.RpcClient.Abstractions.LocalRpcApi");
+        if (localRpcApiSymbol == null)
+        {
+            throw new InvalidOperationException(
+                "Unable to resolve Monica.WebApi.RpcClient.Abstractions.LocalRpcApi from the current compilation.");
+        }
+
+        return localRpcApiSymbol.ToDisplayString();
     }
 
     /// <summary>
@@ -441,5 +488,40 @@ public class RpcClientSourceGenerator : IIncrementalGenerator
             isEnabledByDefault: true);
 
         context.ReportDiagnostic(Diagnostic.Create(descriptor, location));
+    }
+
+    private readonly struct RpcClientGenerationConfiguration
+    {
+        public RpcClientGenerationConfiguration(
+            bool hasClientConfig = false,
+            string? httpImplType = null,
+            string? localImplType = null,
+            bool addGrpc = false,
+            bool addHttp = false,
+            bool addLocal = false,
+            string? errorMessage = null)
+        {
+            HasClientConfig = hasClientConfig;
+            HttpImplType = httpImplType;
+            LocalImplType = localImplType;
+            AddGrpc = addGrpc;
+            AddHttp = addHttp;
+            AddLocal = addLocal;
+            ErrorMessage = errorMessage;
+        }
+
+        public bool HasClientConfig { get; }
+
+        public string? HttpImplType { get; }
+
+        public string? LocalImplType { get; }
+
+        public bool AddGrpc { get; }
+
+        public bool AddHttp { get; }
+
+        public bool AddLocal { get; }
+
+        public string? ErrorMessage { get; }
     }
 }

@@ -19,7 +19,10 @@ internal static class RpcClientCodeGenerator
     /// </summary>
     public static List<(string FileName, string Content)> GenerateClientForDomain(
         RpcMetadata metadata,
-        string httpImplType)
+        bool addHttpImplementations,
+        string? httpImplType,
+        bool addLocalImplementations,
+        string? localImplType)
     {
         var domainName = metadata.DomainName ?? metadata.AssemblyName.Replace(".API", "").Replace("Service", "");
         var contractNamespaceRoot = ResolveContractNamespaceRoot(metadata);
@@ -33,35 +36,107 @@ internal static class RpcClientCodeGenerator
         if (commandHandlers.Count > 0)
         {
             var commandInterfaceName = $"ICommand{domainName}";
-            var commandImplName = NamingHelper.GenerateRpcClientImplementationName(
-                domainName,
-                GeneratorConstants.Transports.Http,
-                GeneratorConstants.HandlerTypes.Command);
-
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, commandInterfaceName, commandHandlers);
-            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, domainName, commandInterfaceName, commandImplName, commandHandlers, httpImplType);
-
             result.Add(($"{commandInterfaceName}.g.cs", interfaceCode));
-            result.Add(($"{commandImplName}.g.cs", implCode));
+
+            AppendImplementations(
+                result,
+                metadata,
+                contractNamespaceRoot,
+                domainName,
+                commandInterfaceName,
+                commandHandlers,
+                GeneratorConstants.HandlerTypes.Command,
+                addHttpImplementations,
+                httpImplType,
+                addLocalImplementations,
+                localImplType);
         }
 
         // Generate Query interface and implementation if there are query handlers
         if (queryHandlers.Count > 0)
         {
             var queryInterfaceName = $"IQuery{domainName}";
-            var queryImplName = NamingHelper.GenerateRpcClientImplementationName(
-                domainName,
-                GeneratorConstants.Transports.Http,
-                GeneratorConstants.HandlerTypes.Query);
-
             var interfaceCode = GenerateClientInterface(metadata, contractNamespaceRoot, queryInterfaceName, queryHandlers);
-            var implCode = GenerateClientImplementation(metadata, contractNamespaceRoot, domainName, queryInterfaceName, queryImplName, queryHandlers, httpImplType);
-
             result.Add(($"{queryInterfaceName}.g.cs", interfaceCode));
-            result.Add(($"{queryImplName}.g.cs", implCode));
+
+            AppendImplementations(
+                result,
+                metadata,
+                contractNamespaceRoot,
+                domainName,
+                queryInterfaceName,
+                queryHandlers,
+                GeneratorConstants.HandlerTypes.Query,
+                addHttpImplementations,
+                httpImplType,
+                addLocalImplementations,
+                localImplType);
         }
 
         return result;
+    }
+
+    private static void AppendImplementations(
+        List<(string FileName, string Content)> result,
+        RpcMetadata metadata,
+        string contractNamespaceRoot,
+        string domainName,
+        string interfaceName,
+        List<HandlerMetadata> handlers,
+        string handlerType,
+        bool addHttpImplementations,
+        string? httpImplType,
+        bool addLocalImplementations,
+        string? localImplType)
+    {
+        if (addHttpImplementations)
+        {
+            if (string.IsNullOrWhiteSpace(httpImplType))
+            {
+                throw new InvalidOperationException("HTTP RPC implementation type is required when HTTP generation is enabled.");
+            }
+
+            var implementationName = NamingHelper.GenerateRpcClientImplementationName(
+                domainName,
+                GeneratorConstants.Transports.Http,
+                handlerType);
+            var implementationCode = GenerateClientImplementation(
+                metadata,
+                contractNamespaceRoot,
+                domainName,
+                interfaceName,
+                implementationName,
+                handlers,
+                GeneratorConstants.Transports.Http,
+                httpImplType);
+
+            result.Add(($"{implementationName}.g.cs", implementationCode));
+        }
+
+        if (addLocalImplementations)
+        {
+            if (string.IsNullOrWhiteSpace(localImplType))
+            {
+                throw new InvalidOperationException("Local RPC implementation type is required when local generation is enabled.");
+            }
+
+            var implementationName = NamingHelper.GenerateRpcClientImplementationName(
+                domainName,
+                GeneratorConstants.Transports.Local,
+                handlerType);
+            var implementationCode = GenerateClientImplementation(
+                metadata,
+                contractNamespaceRoot,
+                domainName,
+                interfaceName,
+                implementationName,
+                handlers,
+                GeneratorConstants.Transports.Local,
+                localImplType);
+
+            result.Add(($"{implementationName}.g.cs", implementationCode));
+        }
     }
 
     /// <summary>
@@ -146,16 +221,17 @@ internal static class RpcClientCodeGenerator
         string interfaceName,
         string implementationName,
         List<HandlerMetadata> handlers,
-        string httpImplType)
+        string transport,
+        string implementationBaseType)
     {
         var sb = new StringBuilder();
 
-        // Extract base type name and namespace from httpImplType (e.g., "Monica.WebApi.RpcClient.Abstractions.HttpRpcApi")
-        var baseTypeName = httpImplType.Contains(".")
-            ? httpImplType.Substring(httpImplType.LastIndexOf('.') + 1)
-            : httpImplType;
-        var baseTypeNamespace = httpImplType.Contains(".")
-            ? httpImplType.Substring(0, httpImplType.LastIndexOf('.'))
+        // Extract base type name and namespace from implementationBaseType (e.g., "Monica.WebApi.RpcClient.Abstractions.HttpRpcApi")
+        var baseTypeName = implementationBaseType.Contains(".")
+            ? implementationBaseType.Substring(implementationBaseType.LastIndexOf('.') + 1)
+            : implementationBaseType;
+        var baseTypeNamespace = implementationBaseType.Contains(".")
+            ? implementationBaseType.Substring(0, implementationBaseType.LastIndexOf('.'))
             : string.Empty;
 
         // File header
@@ -166,15 +242,19 @@ internal static class RpcClientCodeGenerator
         var interfaceNamespace = $"{contractNamespaceRoot}.Contracts";
         var usingDirectives = new List<string>
         {
-            "System.Net.Http",
-            "System.Net.Http.Json",
             "System.Threading.Tasks",
             "Monica.DependencyInjection.Abstractions",
             "Monica.Core.Results",
-            "Monica.Framework.Extensions",
             "Monica.WebApi.RpcClient.Annotations",
             interfaceNamespace
         };
+
+        if (string.Equals(transport, GeneratorConstants.Transports.Http, StringComparison.Ordinal))
+        {
+            usingDirectives.Add("System.Net.Http");
+            usingDirectives.Add("System.Net.Http.Json");
+            usingDirectives.Add("Monica.Framework.Extensions");
+        }
 
         if (!string.IsNullOrEmpty(baseTypeNamespace))
         {
@@ -185,20 +265,20 @@ internal static class RpcClientCodeGenerator
         AppendUsingDirectives(sb, usingDirectives);
 
         // Namespace
-        var clientNamespace = $"{contractNamespaceRoot}.Implementations.Http";
+        var clientNamespace = $"{contractNamespaceRoot}.Implementations.{transport}";
         sb.AppendLine($"namespace {clientNamespace};");
         sb.AppendLine();
 
         // Implementation declaration
         sb.AppendLine($"[RpcClientDomain(\"{EscapeCSharpStringLiteral(domainName)}\")]");
-        sb.AppendLine($"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}");
+        sb.AppendLine(GetImplementationDeclaration(implementationName, baseTypeName, interfaceName, transport));
         sb.AppendLine("{");
 
         // Generate implementation methods
         for (int i = 0; i < handlers.Count; i++)
         {
             var handler = handlers[i];
-            GenerateClientMethod(sb, handler);
+            GenerateClientMethod(sb, handler, transport);
 
             // Add blank line between methods except for the last one
             if (i < handlers.Count - 1)
@@ -244,10 +324,26 @@ internal static class RpcClientCodeGenerator
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    private static string GetImplementationDeclaration(
+        string implementationName,
+        string baseTypeName,
+        string interfaceName,
+        string transport)
+    {
+        return transport switch
+        {
+            GeneratorConstants.Transports.Http
+                => $"public class {implementationName}(HttpClient httpClient, ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider, httpClient), {interfaceName}",
+            GeneratorConstants.Transports.Local
+                => $"public class {implementationName}(ICachedServiceProvider serviceProvider) : {baseTypeName}(serviceProvider), {interfaceName}",
+            _ => throw new InvalidOperationException($"Unsupported RPC client transport '{transport}'.")
+        };
+    }
+
     /// <summary>
     /// Generates a single client method implementation.
     /// </summary>
-    private static void GenerateClientMethod(StringBuilder sb, HandlerMetadata handler)
+    private static void GenerateClientMethod(StringBuilder sb, HandlerMetadata handler, string transport)
     {
         var paramName = "request";
         // var paramName = GetParameterName(handler.RequestType);
@@ -257,6 +353,21 @@ internal static class RpcClientCodeGenerator
         sb.AppendLine($"    public virtual async Task<{handler.ResponseType}> {handler.ClientMethodName}({handler.RequestType} {paramName})");
         sb.AppendLine("    {");
 
+        if (string.Equals(transport, GeneratorConstants.Transports.Local, StringComparison.Ordinal))
+        {
+            sb.AppendLine($"        return await Mediator.Send({paramName});");
+            sb.AppendLine("    }");
+            return;
+        }
+
+        if (!string.Equals(transport, GeneratorConstants.Transports.Http, StringComparison.Ordinal))
+        {
+            sb.AppendLine($"        throw new System.NotSupportedException(\"RPC transport '{EscapeCSharpStringLiteral(transport)}' is not supported by the generator.\");");
+            sb.AppendLine("    }");
+            return;
+        }
+
+        // Generate HTTP call based on method type
         // Special handling for object return type - throw exception for user to implement
         if (handler.ResponseType == "object")
         {
@@ -265,7 +376,6 @@ internal static class RpcClientCodeGenerator
             return;
         }
 
-        // Generate HTTP call based on method type
         var httpMethod = handler.HttpMethod.ToUpperInvariant();
         var route = handler.Route;
 

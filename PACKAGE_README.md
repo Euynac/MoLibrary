@@ -67,8 +67,7 @@ using Monica.Core;
 - **Monica.Resilience** - Resilience patterns
 ### Code Generation
 - **Monica.Framework.Generators** - Framework source generators
-- **Monica.Generators.AutoController** - RPC controller generation
-- **Monica.Generators.AutoController.Tool** - RPC metadata tool
+- **Monica.Generators.AutoController** - AutoController plus build-integrated RPC metadata and client generation
 
 ### Meta Package
 - **Monica.Framework** - Complete framework bundle
