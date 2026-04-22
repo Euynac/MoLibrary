@@ -189,8 +189,19 @@ public class ModuleMarkdownOption : ModuleOptions<ModuleMarkdown>
 
     /// <summary>
     /// Whether to parse YAML front matter from markdown files.
+    /// This must remain enabled for document titles, sidebar labels,
+    /// sidebar positions, tags, dates, and folder metadata files to take effect.
     /// </summary>
     public bool ParseFrontMatter { get; set; } = true;
+
+    /// <summary>
+    /// Markdown file names reserved for folder-level navigation metadata.
+    /// Matching is case-insensitive. These files are excluded from the document
+    /// list and are read only for front matter such as <c>title</c>,
+    /// <c>sidebar_label</c>, <c>sidebar_position</c>, <c>name</c>, and
+    /// <c>position</c>.
+    /// </summary>
+    public string[] FolderMetadataFileNames { get; set; } = ["_category_.md"];
 
     /// <summary>
     /// Selects the matching strategy used by markdown document search.

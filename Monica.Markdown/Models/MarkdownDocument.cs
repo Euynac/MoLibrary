@@ -16,6 +16,19 @@ public class MarkdownDocument
     public required string Title { get; init; }
 
     /// <summary>
+    /// Resolved label used when this document appears in navigation trees.
+    /// This may differ from <see cref="Title"/> when front matter supplies a
+    /// shorter <c>sidebar_label</c>.
+    /// </summary>
+    public required string NavigationTitle { get; init; }
+
+    /// <summary>
+    /// Optional order used by navigation tree generation.
+    /// Lower values appear before higher values within the same folder.
+    /// </summary>
+    public int? NavigationOrder { get; init; }
+
+    /// <summary>
     /// Absolute file path of this document.
     /// </summary>
     public required string FilePath { get; init; }

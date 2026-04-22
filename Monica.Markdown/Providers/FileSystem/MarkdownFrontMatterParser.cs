@@ -1,4 +1,5 @@
 using Monica.Markdown.Models;
+using System.Globalization;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -128,12 +129,17 @@ public static class MarkdownFrontMatterParser
 
             frontMatter.RawMetadata = caseInsensitive;
 
-            // Extract well-known typed fields
-            if (caseInsensitive.TryGetValue("title", out var titleObj)
-                && titleObj is string title)
-            {
-                frontMatter.Title = title;
-            }
+            frontMatter.Title = TryGetString(caseInsensitive, "title");
+            frontMatter.SidebarLabel = TryGetString(
+                caseInsensitive,
+                "sidebar_label",
+                "sidebarLabel");
+            frontMatter.SidebarPosition = TryGetInt32(
+                caseInsensitive,
+                "sidebar_position",
+                "sidebarPosition",
+                "position",
+                "order");
 
             if (caseInsensitive.TryGetValue("date", out var dateObj))
             {
@@ -161,6 +167,76 @@ public static class MarkdownFrontMatterParser
             return frontMatter;
         }
         catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryGetString(
+        IReadOnlyDictionary<string, object?> metadata,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!metadata.TryGetValue(key, out var rawValue))
+            {
+                continue;
+            }
+
+            var value = rawValue?.ToString()?.Trim();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? TryGetInt32(
+        IReadOnlyDictionary<string, object?> metadata,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!metadata.TryGetValue(key, out var rawValue))
+            {
+                continue;
+            }
+
+            var value = ConvertToInt32(rawValue);
+            if (value.HasValue)
+            {
+                return value.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? ConvertToInt32(object? rawValue)
+    {
+        try
+        {
+            return rawValue switch
+            {
+                int intValue => intValue,
+                long longValue when longValue is >= int.MinValue and <= int.MaxValue => (int)longValue,
+                short shortValue => shortValue,
+                byte byteValue => byteValue,
+                decimal decimalValue
+                    when decimalValue == decimal.Truncate(decimalValue)
+                         && decimalValue is >= int.MinValue and <= int.MaxValue => (int)decimalValue,
+                string stringValue
+                    when int.TryParse(
+                        stringValue,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out var parsedValue) => parsedValue,
+                _ => null
+            };
+        }
+        catch (OverflowException)
         {
             return null;
         }

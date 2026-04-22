@@ -4,7 +4,8 @@ namespace Monica.Markdown.Abstractions;
 
 /// <summary>
 /// Provides title resolution for markdown documents.
-/// Default implementation uses the file name without extension.
+/// Default implementation prefers front matter <c>title</c> and falls back to
+/// the file name without extension.
 /// </summary>
 public interface IMarkdownDocumentTitleResolver
 {

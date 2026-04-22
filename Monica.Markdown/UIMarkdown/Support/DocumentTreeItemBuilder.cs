@@ -66,7 +66,7 @@ public static class DocumentTreeItemBuilder
 
             items.Add(new DocumentTreeItem(
                 child.Data,
-                child.Data.Name,
+                child.Data.ResolvedDisplayName,
                 childPath,
                 childItems,
                 shouldExpand));
@@ -142,13 +142,19 @@ public static class DocumentTreeItemBuilder
             return true;
         }
 
+        if (node.Data.ResolvedDisplayName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         if (currentPath.Contains(searchText, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
         return node.Data.Document is not null
-               && (node.Data.Document.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+               && (node.Data.Document.NavigationTitle.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                   || node.Data.Document.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                    || node.Data.Document.RelativePath.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 
