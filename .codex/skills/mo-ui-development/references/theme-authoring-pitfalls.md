@@ -75,6 +75,13 @@ mo:theme:data
 
 - In application code, pass `theme:data` to `IBrowserStorage`
 - In Playwright, DevTools, or raw `localStorage` debugging, write `mo:theme:data`
+- The serialized payload must match Monica's camelCase JSON shape:
+
+```json
+{"themeName":"your-theme","isDarkMode":true}
+```
+
+- If a page is already mounted, it can write its current in-memory theme state back to storage. For manual mode switches, prefer a fresh browser session or write the storage value and reload immediately.
 
 If you write only `theme:data` during manual verification, the theme will appear to ignore persisted state.
 
@@ -98,3 +105,143 @@ Minimum verification for a new theme:
 1. Check both light and dark modes.
 2. Check at least two routes that reuse the same MudBlazor component type.
 3. Re-verify after removing any temporary page-specific hooks added during diagnosis.
+
+## 6. Auth-gated third-party themes need a source-first fallback
+
+### What happens
+
+When replicating a theme from a live third-party site, the most interesting surfaces can sit behind authentication.
+
+Sometimes the provided cookie data is incomplete, for example a CSRF cookie without a real authenticated session cookie. In that case:
+
+- public landing pages remain accessible
+- authenticated dashboard routes redirect or render public fallback content
+- direct live inspection of the real target UI is not possible
+
+### Preferred fix
+
+Verify access explicitly instead of assuming the provided cookies are sufficient.
+
+If authenticated access is unavailable:
+
+1. continue from the public site's computed styles, snapshots, and screenshots
+2. inspect the source repo for the private dashboard shells, tokens, typography, and component structure
+3. base Monica theme work on shared design tokens and shared component patterns, not on inaccessible pages
+
+Do not block theme authoring waiting for a live authenticated view if the source tree already exposes the design system.
+
+## 7. Exact font vendoring matters for theme fidelity
+
+### What happens
+
+A third-party theme can look structurally correct while still feeling wrong because the original UI uses a specific local font package such as `@fontsource/geist-mono`.
+
+Substituting a different monospace font can change:
+
+- width and wrapping
+- heading density
+- button label balance
+- tab and table header rhythm
+
+### Preferred fix
+
+When the source repo clearly declares a runtime font dependency:
+
+1. vendor the same font locally into `Monica.UI/wwwroot/fonts`
+2. add explicit `@font-face` declarations in the theme CSS
+3. keep runtime assets local and avoid CDN font dependencies
+
+If the exact font cannot be vendored, call out the fallback because visual fidelity will be lower.
+
+## 8. Tooltip styling can escape theme wrappers
+
+### What happens
+
+MudBlazor tooltips are popover-based overlays. They can render outside the main page wrapper that carries classes such as:
+
+- `.mo-theme-your-theme-light`
+- `.mo-theme-your-theme-dark`
+
+If a theme only styles tooltips through wrapper-descendant selectors, the live tooltip can keep partial Mud defaults or mix with the wrong contrast colors.
+
+The common failure mode is:
+
+- custom tooltip background applies inconsistently
+- tooltip text color stays on a near-default contrast token
+- the final tooltip becomes unreadable in light mode, dark mode, or both
+
+### What to inspect
+
+- Live `.mud-tooltip` computed `color`
+- Live `.mud-tooltip` computed `background-color`
+- Live `.mud-tooltip.mud-tooltip-arrow::after` arrow color
+- MudBlazor source:
+  - `Styles/components/_tooltip.scss`
+  - Popover service/provider files when render location is uncertain
+
+### Preferred fix
+
+For theme-owned tooltip styling:
+
+1. include `:root[data-theme=\"...\"] .mud-tooltip` selectors, not only `.mo-theme-... .mud-tooltip`
+2. set tooltip `color` explicitly, not just `background`
+3. set `.mud-tooltip-arrow::after` `border-top-color` explicitly; MudBlazor already applies `border-top-color: inherit`, so a `border-color` shorthand can still lose
+4. verify the tooltip on a real hover path in both light and dark modes
+
+Do not assume screenshot-only checks will catch this. The tooltip can look acceptable in one mode while the computed text color is still wrong in another.
+
+## 9. Do not treat Mud popovers like normal panels
+
+### What happens
+
+It is tempting to put all shell-like components into one shared selector such as:
+
+- `.mud-card`
+- `.mud-dialog`
+- `.mud-popover`
+- `.mud-tooltip`
+- `.mud-snackbar`
+
+and then apply panel visuals plus layout helpers like `position: relative`.
+
+That breaks MudBlazor overlays because popovers and tooltips already depend on their own positioning model.
+
+The common failure mode is:
+
+- a tooltip stretches to viewport width instead of shrinking to content
+- popovers appear offset, clipped, or detached from the trigger
+- dense pages look "broken" only after entering tabs or opening overlay-driven UI
+
+### What to inspect
+
+- Live tooltip or popover computed `position`
+- Live tooltip or popover computed `width`
+- `getBoundingClientRect()` for both the trigger and the overlay
+- Shared theme selectors that include `.mud-popover`, `.mud-tooltip`, or `.mud-snackbar`
+
+### Preferred fix
+
+1. keep generic panel selectors limited to real surfaces such as cards, tables, drawers, dialogs, tabs, and papers
+2. style `.mud-popover`, `.mud-menu`, `.mud-tooltip`, and `.mud-snackbar` in separate overlay-specific selectors
+3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
+4. verify overlay size and placement on a real hover or click path, not only by reading CSS
+
+## 10. Decorative textures can overwhelm data-heavy pages
+
+### What happens
+
+A texture that looks subtle on a landing page can become visually dominant on Monica dashboards, especially pages with:
+
+- many stat cards
+- tabs
+- tables or data grids
+- nested diagnostic panels
+
+Applying scanlines both globally and again inside every card compounds the effect and can make the whole page feel broken.
+
+### Preferred fix
+
+1. avoid repeating stripe or scanline textures on shared content surfaces by default
+2. if a theme needs texture, keep it to restrained accents such as corner marks, borders, or hover glints
+3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
+4. if a texture draws attention before the content does, remove it

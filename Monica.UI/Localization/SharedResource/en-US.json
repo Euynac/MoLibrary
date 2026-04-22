@@ -22,6 +22,10 @@
         "Name": "Hermes Teal",
         "Description": "Editorial dark teal dashboard inspired by the Hermes Agent web UI"
       },
+      "vibeusage-matrix": {
+        "Name": "Hacker Matrix",
+        "Description": "Terminal-green hacker console inspired by the VibeUsage dashboard"
+      },
       "classic-material": {
         "Name": "Classic Material",
         "Description": "Classic Material look"

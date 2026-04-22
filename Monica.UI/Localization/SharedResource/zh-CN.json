@@ -22,6 +22,10 @@
         "Name": "Hermes Teal",
         "Description": "参考 Hermes Agent Web UI 的深青色编辑感控制台风格"
       },
+      "vibeusage-matrix": {
+        "Name": "黑客矩阵",
+        "Description": "参考 VibeUsage 控制台的终端绿黑客矩阵风格"
+      },
       "classic-material": {
         "Name": "经典 Material",
         "Description": "经典的 Material 风格"

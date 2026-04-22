@@ -250,6 +250,33 @@
     color: var(--mud-palette-error);
 }
 
+:root[data-theme="hermes-teal-light"] .mud-tooltip,
+:root[data-theme="hermes-teal-dark"] .mud-tooltip,
+.mo-theme-hermes-teal-light .mud-tooltip,
+.mo-theme-hermes-teal-dark .mud-tooltip {
+    background: var(--mo-hermes-panel-strong);
+    border: 1px solid var(--mo-hermes-border);
+    color: var(--mo-hermes-text);
+    box-shadow: var(--mo-hermes-shadow);
+    position: absolute;
+    width: fit-content;
+    max-width: min(28rem, calc(100vw - 32px));
+    font-family: var(--mo-hermes-content-font);
+    font-size: 0.76rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 1.45;
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="hermes-teal-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="hermes-teal-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-hermes-teal-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-hermes-teal-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-hermes-panel-strong);
+}
+
 .mo-theme-hermes-teal-light .mud-button,
 .mo-theme-hermes-teal-dark .mud-button {
     border-radius: 0;

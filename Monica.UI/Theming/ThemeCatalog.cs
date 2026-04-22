@@ -22,6 +22,7 @@ public static class ThemeCatalog
         RegisterTheme(new MudBlazorDefaultTheme());
         RegisterTheme(new DefaultTheme());
         RegisterTheme(new HermesTealTheme());
+        RegisterTheme(new VibeUsageMatrixTheme());
         RegisterTheme(new ClassicMaterialTheme());
         RegisterTheme(new FreshTheme());
         RegisterTheme(new InkLandscapeTheme());
