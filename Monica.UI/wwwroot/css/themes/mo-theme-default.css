@@ -26,6 +26,11 @@
     
     --mo-chip-border-radius: 9999px;
     --mo-chip-padding: 4px 12px;
+
+    --mo-tooltip-bg: rgba(15, 23, 42, 0.96);
+    --mo-tooltip-text: #f8fafc;
+    --mo-tooltip-border: rgba(148, 163, 184, 0.36);
+    --mo-tooltip-shadow: 0 20px 40px -18px rgba(15, 23, 42, 0.35);
     
     /* Clean SaaS hover effects */
     --mo-clean-hover-scale: 1.01;
@@ -55,6 +60,11 @@
     
     --mo-chip-border-radius: 9999px;
     --mo-chip-padding: 4px 12px;
+
+    --mo-tooltip-bg: rgba(24, 24, 27, 0.98);
+    --mo-tooltip-text: #f4f4f5;
+    --mo-tooltip-border: rgba(82, 82, 91, 0.82);
+    --mo-tooltip-shadow: 0 22px 44px -18px rgba(0, 0, 0, 0.6);
     
     /* Clean SaaS hover effects for dark mode */
     --mo-clean-hover-scale: 1.01;
@@ -152,6 +162,33 @@
     border-radius: var(--mo-dialog-border-radius) !important;
     border: 1px solid var(--mud-palette-lines-default) !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Tooltips */
+:root[data-theme="default-light"] .mud-tooltip,
+:root[data-theme="default-dark"] .mud-tooltip,
+.mo-theme-default-light .mud-tooltip,
+.mo-theme-default-dark .mud-tooltip {
+    background: var(--mo-tooltip-bg);
+    border: 1px solid var(--mo-tooltip-border);
+    border-radius: 10px;
+    color: var(--mo-tooltip-text);
+    box-shadow: var(--mo-tooltip-shadow);
+    position: absolute;
+    width: fit-content;
+    max-width: min(28rem, calc(100vw - 32px));
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="default-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="default-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-default-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-default-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-tooltip-bg);
 }
 
 /* App Bar & Drawer - ensure no harsh shadows */

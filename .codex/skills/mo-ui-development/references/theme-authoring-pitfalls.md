@@ -211,6 +211,7 @@ The common failure mode is:
 - a tooltip stretches to viewport width instead of shrinking to content
 - popovers appear offset, clipped, or detached from the trigger
 - dense pages look "broken" only after entering tabs or opening overlay-driven UI
+- broad `.mud-paper` selectors accidentally catch `mud-popover mud-paper` overlays and silently break MudBlazor positioning
 
 ### What to inspect
 
@@ -245,3 +246,28 @@ Applying scanlines both globally and again inside every card compounds the effec
 2. if a theme needs texture, keep it to restrained accents such as corner marks, borders, or hover glints
 3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
 4. if a texture draws attention before the content does, remove it
+
+## 11. Scrollable data surfaces cannot inherit decorative clipping
+
+### What happens
+
+Shared panel styling often adds `overflow: hidden` so borders, corner marks, and hover treatments stay tidy.
+
+That is unsafe for:
+
+- `.mud-table-container`
+- `.mud-data-grid`
+- any other scroll host that must expose horizontal overflow for wide content
+
+The common failure mode is:
+
+- long columns cannot scroll horizontally
+- data-grid header actions feel broken because nearby overlays or affordances get clipped
+- the page looks correct at a glance, but dense data views lose core usability
+
+### Preferred fix
+
+1. treat table and grid containers as scroll surfaces, not decorative shells
+2. do not apply `overflow: hidden` to shared table or grid hosts in a theme
+3. verify `scrollWidth > clientWidth` cases on real pages such as `module-system-dashboard` and `程序集分析`
+4. keep decorative pseudo-elements off scroll hosts unless you have confirmed they do not interfere with scrolling or clipping
