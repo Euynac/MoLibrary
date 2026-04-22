@@ -32,11 +32,11 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
-    margin-top: 2px;
+    margin-top: 8px;
 }
 
 .brand-name {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--mud-palette-text-primary);
     line-height: 1;
