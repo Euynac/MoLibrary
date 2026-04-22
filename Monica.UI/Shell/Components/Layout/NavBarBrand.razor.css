@@ -29,15 +29,35 @@
 
 .brand-text {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
 }
 
 .brand-name {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--mud-palette-text-primary);
     line-height: 1;
+}
+
+.brand-version-container {
+    display: flex;
+    align-items: center;
+    background-color: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    overflow: hidden;
+    line-height: 1;
+}
+
+.brand-appid {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-surface);
+    padding: 2px 6px;
+    border-right: 1px solid var(--mud-palette-lines-default);
 }
 
 .brand-version {
@@ -45,9 +65,5 @@
     font-family: var(--mud-typography-default-family), monospace;
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
-    background-color: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-lines-default);
     padding: 2px 6px;
-    border-radius: 6px;
-    line-height: 1;
 }

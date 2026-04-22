@@ -220,6 +220,11 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     public string UIAppBarName { get; set; } = nameof(Monica);
 
     /// <summary>
+    /// Application ID (Optional, used as a prefix to the version badge)
+    /// </summary>
+    public string? UIAppId { get; set; }
+
+    /// <summary>
     /// Application version number
     /// </summary>
     public string UIAppVersion { get; set; } = "v1.0";
