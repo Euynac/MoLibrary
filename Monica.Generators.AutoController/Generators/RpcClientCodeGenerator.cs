@@ -92,10 +92,9 @@ internal static class RpcClientCodeGenerator
     {
         if (addHttpImplementations)
         {
-            if (string.IsNullOrWhiteSpace(httpImplType))
-            {
-                throw new InvalidOperationException("HTTP RPC implementation type is required when HTTP generation is enabled.");
-            }
+            var resolvedHttpImplType = RequireImplementationBaseType(
+                httpImplType,
+                "HTTP RPC implementation type is required when HTTP generation is enabled.");
 
             var implementationName = NamingHelper.GenerateRpcClientImplementationName(
                 domainName,
@@ -109,17 +108,16 @@ internal static class RpcClientCodeGenerator
                 implementationName,
                 handlers,
                 GeneratorConstants.Transports.Http,
-                httpImplType);
+                resolvedHttpImplType);
 
             result.Add(($"{implementationName}.g.cs", implementationCode));
         }
 
         if (addLocalImplementations)
         {
-            if (string.IsNullOrWhiteSpace(localImplType))
-            {
-                throw new InvalidOperationException("Local RPC implementation type is required when local generation is enabled.");
-            }
+            var resolvedLocalImplType = RequireImplementationBaseType(
+                localImplType,
+                "Local RPC implementation type is required when local generation is enabled.");
 
             var implementationName = NamingHelper.GenerateRpcClientImplementationName(
                 domainName,
@@ -133,10 +131,20 @@ internal static class RpcClientCodeGenerator
                 implementationName,
                 handlers,
                 GeneratorConstants.Transports.Local,
-                localImplType);
+                resolvedLocalImplType);
 
             result.Add(($"{implementationName}.g.cs", implementationCode));
         }
+    }
+
+    private static string RequireImplementationBaseType(string? implementationBaseType, string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(implementationBaseType))
+        {
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        return implementationBaseType!;
     }
 
     /// <summary>

@@ -14,7 +14,6 @@
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<IncludeSymbols>false</IncludeSymbols>
 		<Version>0.1.0-preview.3</Version>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBuildTaskAssets</TargetsForTfmSpecificContentInPackage>
 		<PackageDescription>Source generator for automatic RPC controller generation in Monica framework, enabling seamless API endpoint creation from service interfaces.</PackageDescription>
 	</PropertyGroup>
@@ -34,7 +33,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="build\Monica.Generators.AutoController.props" Pack="true" PackagePath="build\Monica.Generators.AutoController.props" />
 		<None Include="build\Monica.Generators.AutoController.targets" Pack="true" PackagePath="build\Monica.Generators.AutoController.targets" />
 		<None Include="buildTransitive\Monica.Generators.AutoController.props" Pack="true" PackagePath="buildTransitive\Monica.Generators.AutoController.props" />
