@@ -104,81 +104,81 @@ public class CleanSaaSTheme : ThemeDefinitionBase
             },
             PaletteDark = new PaletteDark()
             {
-                Primary = "#a78bfa", // Violet-400
-                PrimaryLighten = "#c4b5fd",
-                PrimaryDarken = "#8b5cf6",
+                Primary = "#6366f1", // Indigo 500
+                PrimaryLighten = "#818cf8", // Indigo 400
+                PrimaryDarken = "#4f46e5", // Indigo 600
                 PrimaryContrastText = "#ffffff",
 
-                Secondary = "#94a3b8", // Slate-400
-                SecondaryLighten = "#cbd5e1",
-                SecondaryDarken = "#64748b",
-                SecondaryContrastText = "#0f172a",
+                Secondary = "#a1a1aa", // Zinc 400
+                SecondaryLighten = "#d4d4d8", // Zinc 300
+                SecondaryDarken = "#71717a", // Zinc 500
+                SecondaryContrastText = "#18181b",
 
-                Tertiary = "#1e293b", // Slate-800
-                TertiaryContrastText = "#e2e8f0",
+                Tertiary = "#27272a", // Zinc 800
+                TertiaryContrastText = "#f4f4f5", // Zinc 50
 
-                Info = "#60a5fa",
-                InfoLighten = "#93c5fd",
-                InfoDarken = "#3b82f6",
-                InfoContrastText = "#0f172a",
+                Info = "#3b82f6", // Blue 500
+                InfoLighten = "#60a5fa",
+                InfoDarken = "#2563eb",
+                InfoContrastText = "#ffffff",
 
-                Success = "#34d399",
-                SuccessLighten = "#6ee7b7",
-                SuccessDarken = "#10b981",
-                SuccessContrastText = "#0f172a",
+                Success = "#10b981", // Emerald 500
+                SuccessLighten = "#34d399",
+                SuccessDarken = "#059669",
+                SuccessContrastText = "#ffffff",
 
-                Warning = "#fbbf24",
-                WarningLighten = "#fcd34d",
-                WarningDarken = "#f59e0b",
-                WarningContrastText = "#0f172a",
+                Warning = "#f59e0b", // Amber 500
+                WarningLighten = "#fbbf24",
+                WarningDarken = "#d97706",
+                WarningContrastText = "#18181b",
 
-                Error = "#f87171",
-                ErrorLighten = "#fca5a5",
-                ErrorDarken = "#ef4444",
-                ErrorContrastText = "#0f172a",
+                Error = "#ef4444", // Red 500
+                ErrorLighten = "#f87171",
+                ErrorDarken = "#dc2626",
+                ErrorContrastText = "#ffffff",
 
-                Dark = "#f8fafc",
+                Dark = "#f4f4f5", // Zinc 50
                 DarkLighten = "#ffffff",
-                DarkDarken = "#e2e8f0",
-                DarkContrastText = "#0f172a",
+                DarkDarken = "#d4d4d8",
+                DarkContrastText = "#09090b", // Zinc 950
 
-                Background = "#020617", // Slate-950
-                BackgroundGray = "#0f172a", // Slate-900
-                Surface = "#0f172a", // Slate-900
+                Background = "#09090b", // Zinc 950
+                BackgroundGray = "#18181b", // Zinc 900
+                Surface = "#18181b", // Zinc 900
                 
-                DrawerBackground = "#0f172a",
-                DrawerText = "#cbd5e1",
-                DrawerIcon = "#94a3b8",
+                DrawerBackground = "#18181b",
+                DrawerText = "#e4e4e7", // Zinc 200
+                DrawerIcon = "#a1a1aa", // Zinc 400
 
-                AppbarBackground = "rgba(2, 6, 23, 0.85)",
-                AppbarText = "#f8fafc",
+                AppbarBackground = "rgba(9, 9, 11, 0.85)", // Translucent Zinc 950
+                AppbarText = "#f4f4f5",
 
-                TextPrimary = "#f8fafc", // Slate-50
-                TextSecondary = "#94a3b8", // Slate-400
-                TextDisabled = "#475569", // Slate-600
+                TextPrimary = "#f4f4f5", // Zinc 50
+                TextSecondary = "#a1a1aa", // Zinc 400
+                TextDisabled = "#52525b", // Zinc 600
 
-                ActionDefault = "#94a3b8",
-                ActionDisabled = "#334155",
-                ActionDisabledBackground = "#1e293b",
+                ActionDefault = "#a1a1aa",
+                ActionDisabled = "#3f3f46", // Zinc 700
+                ActionDisabledBackground = "#27272a", // Zinc 800
 
-                Divider = "#1e293b", // Slate-800
-                DividerLight = "#0f172a", // Slate-900
-                LinesDefault = "#1e293b", // Slate-800
-                LinesInputs = "#334155", // Slate-700
+                Divider = "#27272a", // Zinc 800
+                DividerLight = "#18181b", // Zinc 900
+                LinesDefault = "#27272a", // Zinc 800
+                LinesInputs = "#3f3f46", // Zinc 700
 
-                TableStriped = "#020617",
-                TableHover = "#1e293b",
+                TableStriped = "#09090b",
+                TableHover = "#27272a",
 
-                OverlayDark = "rgba(0, 0, 0, 0.7)",
-                OverlayLight = "rgba(15, 23, 42, 0.5)",
+                OverlayDark = "rgba(0, 0, 0, 0.8)",
+                OverlayLight = "rgba(24, 24, 27, 0.5)",
 
-                HoverOpacity = 0.06,
+                HoverOpacity = 0.08,
 
-                GrayDefault = "#64748b",
-                GrayLight = "#94a3b8",
-                GrayLighter = "#cbd5e1",
-                GrayDark = "#475569",
-                GrayDarker = "#334155"
+                GrayDefault = "#71717a",
+                GrayLight = "#a1a1aa",
+                GrayLighter = "#d4d4d8",
+                GrayDark = "#52525b",
+                GrayDarker = "#3f3f46"
             },
            
             LayoutProperties = new LayoutProperties()
