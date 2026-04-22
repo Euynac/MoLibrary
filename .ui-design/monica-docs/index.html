@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monica - High-Performance .NET Infrastructure</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="relative min-h-screen flex flex-col">
+
+  <!-- Background Effects -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow-sphere" style="top: -20vw; left: 50%; transform: translateX(-50%);"></div>
+
+  <!-- Navigation -->
+  <nav class="sticky top-0 z-50 glass-panel border-x-0 border-t-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <!-- Logo Placeholder -->
+          <div class="w-8 h-8 rounded bg-gradient-to-br from-[#7c5cff] to-[#5a32fa] flex items-center justify-center font-heading font-bold text-white shadow-[0_0_15px_rgba(90,50,250,0.5)]">
+            M
+          </div>
+          <span class="font-heading font-bold text-xl tracking-tight text-white">Monica</span>
+        </div>
+        <div class="hidden md:block">
+          <div class="ml-10 flex items-baseline space-x-8">
+            <a href="#" class="text-zinc-100 hover:text-[#7c5cff] px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
+            <a href="docs.html" class="text-zinc-400 hover:text-zinc-100 px-3 py-2 rounded-md text-sm font-medium transition-colors">Documentation</a>
+            <a href="#" class="text-zinc-400 hover:text-zinc-100 px-3 py-2 rounded-md text-sm font-medium transition-colors">Modules</a>
+            <a href="#" class="text-zinc-400 hover:text-zinc-100 px-3 py-2 rounded-md text-sm font-medium transition-colors">GitHub</a>
+          </div>
+        </div>
+        <div class="hidden md:flex gap-4">
+          <a href="docs.html" class="btn-primary px-4 py-2 rounded-md text-sm font-medium">
+            Get Started
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <main class="flex-grow flex items-center relative z-10 pt-20 pb-32">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div class="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
+        
+        <!-- Left Text -->
+        <div class="lg:col-span-6 text-center lg:text-left mb-16 lg:mb-0">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-panel border-[#5a32fa]/30 text-sm text-[#7c5cff] mb-8">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#7c5cff] opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-[#7c5cff]"></span>
+            </span>
+            v1.0.0 is now available
+          </div>
+          
+          <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
+            Build <span class="text-gradient-violet">Robust</span> <br />
+            .NET Systems.
+          </h1>
+          
+          <p class="mt-4 text-lg sm:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto lg:mx-0 font-light">
+            A high-performance, modular infrastructure library designed for flexibility. 
+            Embrace Domain-Driven Design without the boilerplate.
+          </p>
+          
+          <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <a href="docs.html" class="btn-primary px-8 py-3 rounded-lg text-base font-medium flex items-center justify-center gap-2">
+              Read Documentation <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+            <a href="#" class="btn-secondary px-8 py-3 rounded-lg text-base font-medium flex items-center justify-center gap-2">
+              <i data-lucide="github" class="w-5 h-5"></i> View on GitHub
+            </a>
+          </div>
+        </div>
+        
+        <!-- Right Terminal -->
+        <div class="lg:col-span-6">
+          <div class="hero-terminal">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <div class="terminal-dot dot-red"></div>
+                <div class="terminal-dot dot-yellow"></div>
+                <div class="terminal-dot dot-green"></div>
+              </div>
+              <div class="mx-auto text-xs text-zinc-500 font-mono">Program.cs</div>
+            </div>
+            <div class="terminal-body font-mono">
+<pre><code><span class="keyword">var</span> builder = WebApplication.<span class="method">CreateBuilder</span>(args);
+
+<span class="comment">// 1. Add Monica Core</span>
+builder.Services.<span class="method">AddMonica</span>(mo =>
+{
+    mo.<span class="method">AddModule</span>&lt;<span class="type">RAGModule</span>&gt;()
+      .<span class="method">AddModule</span>&lt;<span class="type">EventBusModule</span>&gt;();
+});
+
+<span class="keyword">var</span> app = builder.<span class="method">Build</span>();
+
+<span class="comment">// 2. Initialize Infrastructure</span>
+<span class="keyword">await</span> app.<span class="method">UseMonicaAsync</span>();
+
+app.<span class="method">Run</span>();</code></pre>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </main>
+
+  <!-- Features Section -->
+  <section class="py-24 relative z-10 glass-panel border-x-0">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold font-heading mb-4">Why choose Monica?</h2>
+        <p class="text-zinc-400 max-w-2xl mx-auto">Designed for enterprise-grade applications, focusing on clean architecture, high cohesion, and low coupling.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        
+        <!-- Feature 1 -->
+        <div class="glass-panel p-8 rounded-xl feature-card">
+          <div class="w-12 h-12 rounded-lg feature-icon-box flex items-center justify-center mb-6">
+            <i data-lucide="blocks" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">True Modularity</h3>
+          <p class="text-zinc-400 text-sm leading-relaxed">
+            Every feature is a module. Use what you need, leave what you don't. Completely independent without requiring the entire framework.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="glass-panel p-8 rounded-xl feature-card">
+          <div class="w-12 h-12 rounded-lg feature-icon-box flex items-center justify-center mb-6">
+            <i data-lucide="layers" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">Domain-Driven Design</h3>
+          <p class="text-zinc-400 text-sm leading-relaxed">
+            Built-in support for rich models, ensuring behavior stays on the object that owns the data. High cohesion out of the box.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="glass-panel p-8 rounded-xl feature-card">
+          <div class="w-12 h-12 rounded-lg feature-icon-box flex items-center justify-center mb-6">
+            <i data-lucide="shield-check" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">Res Pattern</h3>
+          <p class="text-zinc-400 text-sm leading-relaxed">
+            Unified result model for public Facades. Cleanly separate infrastructure entry points from internal exception-throwing services.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 border-t border-[#27272a] mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2 opacity-50">
+        <div class="w-5 h-5 rounded bg-[#5a32fa] flex items-center justify-center font-heading font-bold text-white text-xs">M</div>
+        <span class="text-sm font-medium">© 2026 Monica Framework.</span>
+      </div>
+      <div class="flex gap-6 text-sm text-zinc-500">
+        <a href="#" class="hover:text-zinc-300 transition-colors">GitHub</a>
+        <a href="#" class="hover:text-zinc-300 transition-colors">NuGet</a>
+        <a href="#" class="hover:text-zinc-300 transition-colors">License</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

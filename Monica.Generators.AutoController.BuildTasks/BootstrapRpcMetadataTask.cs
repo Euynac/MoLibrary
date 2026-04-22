@@ -25,7 +25,6 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
             var projectDirectory = ResolvePath(ProjectDirectory);
             var consumeDirectory = ResolvePath(projectDirectory, ConsumeDirectory);
             Directory.CreateDirectory(consumeDirectory);
-            var contractTypeIndex = BuildContractTypeIndex(projectDirectory);
 
             var repositoryRoot = DiscoverRepositoryRoot(projectDirectory);
             var producers = DiscoverProducerProjects(repositoryRoot, consumeDirectory);
@@ -38,15 +37,25 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
                 return true;
             }
 
-            var generatedFileCount = 0;
-            foreach (var producer in producers)
-            {
-                var outputFilePath = Path.Combine(consumeDirectory, $"{producer.AssemblyName}.rpc-metadata.json");
-                if (File.Exists(outputFilePath))
-                {
-                    continue;
-                }
+            var missingProducers = producers
+                .Where(producer => !File.Exists(Path.Combine(consumeDirectory, $"{producer.AssemblyName}.rpc-metadata.json")))
+                .ToList();
 
+            if (missingProducers.Count == 0)
+            {
+                Log.LogMessage(
+                    MessageImportance.Low,
+                    "No missing Monica RPC metadata files were detected for consume directory '{0}'.",
+                    consumeDirectory);
+                return true;
+            }
+
+            var contractTypeIndex = BuildContractTypeIndex(projectDirectory);
+            var generatedFileCount = 0;
+            foreach (var producerDescriptor in missingProducers)
+            {
+                var producer = LoadProducerProjectInfo(producerDescriptor);
+                var outputFilePath = Path.Combine(consumeDirectory, $"{producer.AssemblyName}.rpc-metadata.json");
                 var document = CreateBootstrapMetadata(producer, contractTypeIndex);
                 if (document.Handlers.Count == 0)
                 {
@@ -374,7 +383,7 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildContractTypeIndex(string projectDirectory)
     {
         var result = new Dictionary<string, HashSet<string>>(PathComparer);
-        foreach (var sourceFilePath in EnumerateSourceFiles(projectDirectory))
+        foreach (var sourceFilePath in EnumerateContractSourceFiles(projectDirectory))
         {
             var content = File.ReadAllText(sourceFilePath);
             var namespaceMatch = NamespaceRegex().Match(content);
@@ -406,6 +415,21 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
             static pair => pair.Key,
             static pair => (IReadOnlyList<string>)pair.Value.OrderBy(static ns => ns, StringComparer.Ordinal).ToArray(),
             PathComparer);
+    }
+
+    private static IReadOnlyList<string> EnumerateContractSourceFiles(string projectDirectory)
+    {
+        var contractDirectory = Path.Combine(projectDirectory, "PublishedLanguages");
+        if (!Directory.Exists(contractDirectory))
+        {
+            return EnumerateSourceFiles(projectDirectory);
+        }
+
+        return Directory
+            .EnumerateFiles(contractDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(static path => !IsUnderExcludedDirectory(path))
+            .OrderBy(static path => path, StringComparer.Ordinal)
+            .ToList();
     }
 
     private static bool IsContractNamespace(string namespaceValue)
@@ -551,9 +575,9 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
         return currentIndex;
     }
 
-    private static List<ProducerProjectInfo> DiscoverProducerProjects(string repositoryRoot, string consumeDirectory)
+    private static List<ProducerProjectDescriptor> DiscoverProducerProjects(string repositoryRoot, string consumeDirectory)
     {
-        var projects = new List<ProducerProjectInfo>();
+        var projects = new List<ProducerProjectDescriptor>();
 
         foreach (var projectFilePath in Directory.EnumerateFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories))
         {
@@ -562,7 +586,7 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
                 continue;
             }
 
-            var producer = TryCreateProducerProjectInfo(projectFilePath, consumeDirectory);
+            var producer = TryCreateProducerProjectDescriptor(projectFilePath, consumeDirectory);
             if (producer != null)
             {
                 projects.Add(producer);
@@ -573,7 +597,7 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
         return projects;
     }
 
-    private static ProducerProjectInfo? TryCreateProducerProjectInfo(string projectFilePath, string consumeDirectory)
+    private static ProducerProjectDescriptor? TryCreateProducerProjectDescriptor(string projectFilePath, string consumeDirectory)
     {
         var document = XDocument.Load(projectFilePath);
         var projectDirectory = Path.GetDirectoryName(projectFilePath)
@@ -600,20 +624,30 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
             assemblyName = Path.GetFileNameWithoutExtension(projectFilePath);
         }
 
-        var configuration = ParseAutoControllerConfiguration(projectDirectory, assemblyName!);
-        return new ProducerProjectInfo(
+        return new ProducerProjectDescriptor(
             assemblyName!,
-            projectDirectory,
-            configuration,
-            EnumerateSourceFiles(projectDirectory));
+            projectDirectory);
     }
 
-    private static AutoControllerConfigInfo ParseAutoControllerConfiguration(string projectDirectory, string assemblyName)
+    private static ProducerProjectInfo LoadProducerProjectInfo(ProducerProjectDescriptor producer)
+    {
+        var sourceFiles = EnumerateSourceFiles(producer.ProjectDirectory);
+        var configuration = ParseAutoControllerConfiguration(sourceFiles, producer.AssemblyName);
+        return new ProducerProjectInfo(
+            producer.AssemblyName,
+            producer.ProjectDirectory,
+            configuration,
+            sourceFiles);
+    }
+
+    private static AutoControllerConfigInfo ParseAutoControllerConfiguration(
+        IReadOnlyList<string> sourceFiles,
+        string assemblyName)
     {
         string? routePrefix = null;
         string? domainName = null;
 
-        foreach (var sourceFilePath in EnumerateSourceFiles(projectDirectory))
+        foreach (var sourceFilePath in sourceFiles)
         {
             var content = File.ReadAllText(sourceFilePath);
             var configMatch = AutoControllerConfigRegex().Match(content);
@@ -789,6 +823,10 @@ public sealed partial class BootstrapRpcMetadataTask : Microsoft.Build.Utilities
         string ProjectDirectory,
         AutoControllerConfigInfo Configuration,
         IReadOnlyList<string> SourceFiles);
+
+    private sealed record ProducerProjectDescriptor(
+        string AssemblyName,
+        string ProjectDirectory);
 
     private sealed record AutoControllerConfigInfo(
         string? DefaultRoutePrefix,

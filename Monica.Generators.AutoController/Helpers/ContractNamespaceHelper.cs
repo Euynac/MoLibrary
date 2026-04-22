@@ -15,9 +15,7 @@ internal static class ContractNamespaceHelper
         "Models",
         "Events",
         "Contracts",
-        "Implementations",
-        "AppInterfaces",
-        "Implements"
+        "Implementations"
     };
 
     /// <summary>
