@@ -22,14 +22,8 @@ public static class ThemeCatalog
         RegisterTheme(new MudBlazorDefaultTheme());
         RegisterTheme(new DefaultTheme());
         RegisterTheme(new ClassicMaterialTheme());
-        RegisterTheme(new GlassmorphicTheme());
-        RegisterTheme(new NeonPulseTheme());
         RegisterTheme(new FreshTheme());
-        
-        // Register new themes.
-        RegisterTheme(new AuroraFlowTheme());
         RegisterTheme(new InkLandscapeTheme());
-        RegisterTheme(new MacaronSweetTheme());
         RegisterTheme(new DeepOceanTheme());
         RegisterTheme(new VintagePressTheme());
     }

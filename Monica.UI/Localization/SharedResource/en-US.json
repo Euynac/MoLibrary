@@ -22,29 +22,13 @@
         "Name": "Classic Material",
         "Description": "Classic Material look"
       },
-      "glassmorphic": {
-        "Name": "Glassmorphic",
-        "Description": "Soft glass panels with blur"
-      },
-      "neonpulse": {
-        "Name": "Neon Pulse",
-        "Description": "Bright neon accents with energy"
-      },
       "fresh": {
         "Name": "Fresh",
         "Description": "Light mint colors and a calm feel"
       },
-      "aurora-flow": {
-        "Name": "Aurora Flow",
-        "Description": "Aurora gradients with a glass feel"
-      },
       "ink-landscape": {
         "Name": "Ink Landscape",
         "Description": "Ink-wash style with quiet contrast"
-      },
-      "macaron-sweet": {
-        "Name": "Macaron Sweet",
-        "Description": "Pastel colors with a playful tone"
       },
       "deep-ocean": {
         "Name": "Deep Ocean",

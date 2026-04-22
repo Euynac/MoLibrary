@@ -32,8 +32,6 @@ Monica.UI/wwwroot/css/
 ├── mo-theme-main.css
 └── markdown/
     ├── mo-markdown-default.css
-    ├── mo-markdown-glassmorphic.css
-    ├── mo-markdown-neonpulse.css
     ├── mo-markdown-deep-ocean.css
     └── mo-markdown-vintage-press.css
 
@@ -94,8 +92,6 @@ StyleKey="Editorial" -> .mo-markdown-style-editorial
 
 例如：
 
-- `mo-markdown-glassmorphic.css`
-- `mo-markdown-neonpulse.css`
 - `mo-markdown-deep-ocean.css`
 - `mo-markdown-vintage-press.css`
 
@@ -126,8 +122,6 @@ Markdown 样式最终由 `Monica.UI/wwwroot/css/mo-theme-main.css` 统一引入�
 
 ```css
 @import url('./markdown/mo-markdown-default.css');
-@import url('./markdown/mo-markdown-glassmorphic.css');
-@import url('./markdown/mo-markdown-neonpulse.css');
 @import url('./markdown/mo-markdown-deep-ocean.css');
 @import url('./markdown/mo-markdown-vintage-press.css');
 ```
