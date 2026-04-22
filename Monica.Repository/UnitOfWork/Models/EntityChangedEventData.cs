@@ -9,12 +9,19 @@ namespace Monica.Repository.UnitOfWork.Models;
 /// </summary>
 /// <typeparam name="TEntity">Entity type</typeparam>
 /// <remarks>
-/// Constructor.
+/// This base type is only a shared payload abstraction. Monica dispatches entity change
+/// events by the exact concrete event type, so a handler registered for
+/// <see cref="EntityChangedEventData{TEntity}"/> will not receive create, update, or delete
+/// events. Use exact handlers or the WebApi entity-change local handler base for local
+/// "any change" reactions.
 /// </remarks>
 /// <param name="entity">Changed entity in this event</param>
 [Serializable]
 public class EntityChangedEventData<TEntity>(TEntity entity)
 {
+    /// <summary>
+    /// Gets the entity instance that changed.
+    /// </summary>
     public TEntity Entity { get; } = entity;
 }
 /// <summary>

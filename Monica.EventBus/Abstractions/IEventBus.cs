@@ -13,6 +13,10 @@ public interface IEventBus
     /// <summary>
     /// Publishes an event to the event bus.
     /// </summary>
+    /// <remarks>
+    /// Subscriptions are matched by the exact published event type and topic. Do not subscribe
+    /// to a base event type expecting handlers to receive derived event instances.
+    /// </remarks>
     /// <typeparam name="TEvent">Event type</typeparam>
     /// <param name="eventData">Event data</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
@@ -23,6 +27,10 @@ public interface IEventBus
     /// <summary>
     /// Publishes multiple events in bulk for optimized throughput.
     /// </summary>
+    /// <remarks>
+    /// Subscriptions are matched by the exact published event type and topic. Do not subscribe
+    /// to a base event type expecting handlers to receive derived event instances.
+    /// </remarks>
     /// <typeparam name="TEvent">Event type</typeparam>
     /// <param name="eventDataList">Collection of event data</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
@@ -42,6 +50,10 @@ public interface IEventBus
     /// <summary>
     /// Simple subscription helper - subscribes to an event with a handler type.
     /// </summary>
+    /// <remarks>
+    /// Register handlers for the exact event type they should receive. Base event type
+    /// subscriptions are not used as catch-all listeners for derived events.
+    /// </remarks>
     /// <typeparam name="TEvent">Event type</typeparam>
     /// <typeparam name="THandler">Handler type</typeparam>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
@@ -53,6 +65,10 @@ public interface IEventBus
     /// <summary>
     /// Simple subscription helper - subscribes to an event with an action.
     /// </summary>
+    /// <remarks>
+    /// Register handlers for the exact event type they should receive. Base event type
+    /// subscriptions are not used as catch-all listeners for derived events.
+    /// </remarks>
     /// <typeparam name="TEvent">Event type</typeparam>
     /// <param name="handler">Handler action</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
@@ -70,6 +86,10 @@ public interface IEventBus
     /// This is an advanced method for scenarios where the event type is only known at runtime.
     /// Prefer using the generic PublishAsync{TEvent} method when possible.
     /// </summary>
+    /// <remarks>
+    /// The supplied <paramref name="eventType"/> is the exact dispatch key. Passing a derived
+    /// type will not trigger handlers registered for a base event type.
+    /// </remarks>
     /// <param name="eventType">Event type</param>
     /// <param name="eventData">Event data</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>
@@ -81,6 +101,10 @@ public interface IEventBus
     /// This is an advanced method for scenarios where the event type is only known at runtime.
     /// Prefer using the generic BulkPublishAsync{TEvent} method when possible.
     /// </summary>
+    /// <remarks>
+    /// The supplied <paramref name="eventType"/> is the exact dispatch key. Passing a derived
+    /// type will not trigger handlers registered for a base event type.
+    /// </remarks>
     /// <param name="eventType">Event type</param>
     /// <param name="eventDataList">Collection of event data</param>
     /// <param name="topicName">Optional custom topic name (overrides EventNameAttribute)</param>

@@ -29,20 +29,25 @@
 
 .brand-text {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 8px;
 }
 
 .brand-name {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--mud-palette-text-primary);
     line-height: 1;
 }
 
 .brand-version {
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 10px;
+    font-family: var(--mud-typography-default-family), monospace;
+    font-weight: 600;
     color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-lines-default);
+    padding: 2px 6px;
+    border-radius: 6px;
     line-height: 1;
 }

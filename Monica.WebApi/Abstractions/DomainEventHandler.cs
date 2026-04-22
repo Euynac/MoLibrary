@@ -42,6 +42,10 @@ public abstract class EventHandlerBase :
 /// <summary>
 /// Base class for distributed domain event handlers.
 /// </summary>
+/// <remarks>
+/// Monica matches distributed handlers by exact event type and topic. Do not use a base
+/// event type as a catch-all listener for derived events.
+/// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
 public abstract class DomainEventHandler<TEvent> :
     EventHandlerBase,
@@ -57,6 +61,10 @@ public abstract class DomainEventHandler<TEvent> :
 /// <summary>
 /// Base class for local event handlers.
 /// </summary>
+/// <remarks>
+/// Monica matches local handlers by exact event type and topic. Do not use a base event
+/// type as a catch-all listener for derived events.
+/// </remarks>
 /// <typeparam name="TEvent">The event payload type.</typeparam>
 public abstract class LocalEventHandler<TEvent> :
     EventHandlerBase,
