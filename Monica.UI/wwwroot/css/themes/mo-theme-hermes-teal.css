@@ -293,6 +293,52 @@
     text-transform: uppercase;
 }
 
+.mo-theme-hermes-teal-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-hermes-teal-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mo-hermes-panel-strong);
+    border: 1px solid var(--mo-hermes-border);
+    box-shadow: var(--mo-hermes-shadow);
+    overflow: hidden;
+}
+
+.mo-theme-hermes-teal-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-hermes-teal-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-hermes-panel-strong);
+    border-bottom: 1px solid var(--mo-hermes-border);
+}
+
+.mo-theme-hermes-teal-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-hermes-teal-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: var(--mo-hermes-panel);
+}
+
+.mo-theme-hermes-teal-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-hermes-teal-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-hermes-teal-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header .column-options .drag-icon-options {
+    opacity: 0.72;
+    color: var(--mo-hermes-muted);
+}
+
+.mo-theme-hermes-teal-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    opacity: 1;
+    color: var(--mo-hermes-muted);
+}
+
+.mo-theme-hermes-teal-light .mud-data-grid .column-header:hover .column-options .sort-direction-icon,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header:hover .column-options .sort-direction-icon,
+.mo-theme-hermes-teal-light .mud-data-grid .column-header:hover .column-options .column-options-icon,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header:hover .column-options .column-options-icon,
+.mo-theme-hermes-teal-light .mud-data-grid .column-header:hover .column-options .drag-icon-options,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header:hover .column-options .drag-icon-options,
+.mo-theme-hermes-teal-light .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-hermes-teal-dark .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label {
+    color: var(--mud-palette-text-primary);
+}
+
 .mo-theme-hermes-teal-light .mud-input-outlined,
 .mo-theme-hermes-teal-dark .mud-input-outlined,
 .mo-theme-hermes-teal-light .mud-select,
