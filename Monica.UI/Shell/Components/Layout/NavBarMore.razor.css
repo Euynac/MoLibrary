@@ -56,7 +56,7 @@
     right: 0;
     min-width: 220px;
     background-color: var(--mud-palette-surface);
-    border-radius: 8px;
+    border-radius: var(--mo-nav-menu-border-radius, var(--mo-card-border-radius, var(--mud-default-borderradius)));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     border: 1px solid var(--mud-palette-divider);
     padding: 8px 0;
@@ -110,7 +110,7 @@
     min-width: 240px;
     margin-left: 0;
     background-color: var(--mud-palette-surface);
-    border-radius: 8px;
+    border-radius: var(--mo-nav-menu-border-radius, var(--mo-card-border-radius, var(--mud-default-borderradius)));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     border: 1px solid var(--mud-palette-divider);
     padding: 8px 0;

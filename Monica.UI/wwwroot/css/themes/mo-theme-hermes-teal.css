@@ -28,6 +28,7 @@
     --mo-hermes-content-font: 'Mondwest', 'Noto Serif SC', Georgia, serif;
     --mo-hermes-compressed-font: 'RulesCompressed', 'Noto Serif SC', 'Arial Narrow', sans-serif;
     --mo-hermes-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+    --mo-nav-menu-border-radius: 0px;
 }
 
 :root[data-theme="hermes-teal-light"],

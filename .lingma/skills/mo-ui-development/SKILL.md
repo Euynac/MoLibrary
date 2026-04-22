@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IMoBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.7.0
+description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
+version: 2.8.0
 ---
 
 # Monica UI Development Guide
@@ -169,6 +169,14 @@ Always specify `T` for generic MudBlazor components:
 - When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
 - If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
 
+### 10. Theme Authoring and Verification
+
+- Put theme visuals in shared theme CSS under `Monica.UI/wwwroot/css/themes/`. Do not solve theme regressions by adding new page-specific `.razor.css` overrides unless the page truly owns unique layout behavior.
+- Prefer shared MudBlazor selectors over page-only hooks. If you add a temporary page-specific class during diagnosis, remove it after the shared theme rule is in place.
+- For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
+- `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
+- Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
+
 ## MudBlazor CSS Variable Workflow (Required)
 
 ### A. Initialize or Update Variable List
@@ -213,11 +221,12 @@ python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary --fix
 
 Safe auto-fix scope is intentionally limited. Remaining unknown variables require manual review.
 
-## Browser Storage (`IMoBrowserStorage`)
+## Browser Storage (`IBrowserStorage`)
 
-- Use `IMoBrowserStorage` instead of raw `IJSRuntime` for local/session storage access.
+- Use `IBrowserStorage` instead of raw `IJSRuntime` for local/session storage access.
 - Load persisted UI state in `OnAfterRenderAsync(firstRender)` to avoid flash/reset issues.
 - Use `BrowserStorageExtensions` for table state patterns.
+- When you manually verify persisted theme behavior in Playwright or browser DevTools, remember that the runtime storage key is `mo:theme:data` because `IBrowserStorage` auto-prefixes keys with `mo:`.
 
 See:
 
@@ -257,9 +266,10 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/migration-guide-v9.md`
 - `references/css-isolation-fix-workflow.md`
 - `references/theme-css-guide.md`
-- `references/offline-requirements.md`
+- `references/theme-authoring-pitfalls.md`
 - `references/browser-storage-guide.md`
 - `references/localization-guide.md`
+- `references/offline-requirements.md`
 - `.tmp/mo-ui-development/mudblazor-css-variables.json` (real available CSS variable list, generated)
 - `references/mudblazor-css-variables.md` (semantic usage guide, manually maintained)
 - `.tmp/third-party-source-catalog/state/catalog.json` (shared source catalog consumed by the MudBlazor source check)
@@ -281,7 +291,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Use MudBlazor v9 async APIs
 - [ ] Use valid MudBlazor CSS variables only
 - [ ] Run CSS variable validation when styling changes
-- [ ] Use `IMoBrowserStorage` for browser persistence
+- [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
 - [ ] Use localization for all user-facing text
 - [ ] Add AppBar/navigation keys to `UIRegistryResource` when using `RegisterLocalizedComponent`

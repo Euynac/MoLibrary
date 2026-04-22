@@ -1,8 +1,8 @@
-# Browser Storage Guide (`IMoBrowserStorage`)
+# Browser Storage Guide (`IBrowserStorage`)
 
 ## Overview
 
-`IMoBrowserStorage` is a unified service for persisting UI state in browser `localStorage` or `sessionStorage`. It provides a type-safe, JSON-serialized API with automatic key prefixing to avoid collisions.
+`IBrowserStorage` is the Monica UI service for persisting UI state in browser `localStorage` or `sessionStorage`. It provides a type-safe, JSON-serialized API with automatic key prefixing to avoid collisions.
 
 **Service lifetime**: Scoped (one instance per Blazor circuit)
 
@@ -21,7 +21,7 @@ All keys are auto-prefixed with `mo:` by the service. Use the format `{category}
 ## Core API
 
 ```csharp
-public interface IMoBrowserStorage : IAsyncDisposable
+public interface IBrowserStorage : IAsyncDisposable
 {
     // Get a value (returns defaultValue if key missing or on error)
     Task<T> GetAsync<T>(string key, T defaultValue,
@@ -73,7 +73,7 @@ Task<int> ClearAllTableStatesAsync()
 ### Complete Usage Example
 
 ```razor
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 
 @* Deferred rendering: only render table after state is loaded *@
 @if (_stateLoaded)
@@ -146,7 +146,7 @@ Task<int> ClearAllTableStatesAsync()
 ## Theme Persistence Pattern
 
 ```razor
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 
 @code {
     private record ThemeData(string ThemeName, bool IsDarkMode);
@@ -198,7 +198,7 @@ public static class BrowserStorageExtensions
     private const string SidebarCategory = "sidebar";
 
     public static Task<SidebarPersistenceState> GetSidebarStateAsync(
-        this IMoBrowserStorage storage, string sidebarId)
+        this IBrowserStorage storage, string sidebarId)
     {
         return storage.GetAsync(
             $"{SidebarCategory}:{sidebarId}",
@@ -206,7 +206,7 @@ public static class BrowserStorageExtensions
     }
 
     public static Task SaveSidebarStateAsync(
-        this IMoBrowserStorage storage, string sidebarId, SidebarPersistenceState state)
+        this IBrowserStorage storage, string sidebarId, SidebarPersistenceState state)
     {
         return storage.SetAsync($"{SidebarCategory}:{sidebarId}", state);
     }
@@ -219,9 +219,10 @@ Follow the same deferred rendering pattern as table state persistence.
 
 ## Critical Rules
 
-1. **Always use `IMoBrowserStorage`** — never use raw `IJSRuntime` calls for localStorage/sessionStorage
+1. **Always use `IBrowserStorage`** — never use raw `IJSRuntime` calls for localStorage/sessionStorage
 2. **Always load state in `OnAfterRenderAsync`** — JS interop is not available during static rendering
 3. **Use deferred rendering** — wrap state-dependent UI in `@if (_stateLoaded)` to prevent flash of default values
 4. **Handle `JSDisconnectedException`** — the service handles this internally, but if you use `OnThemeChanged`-style `async void` handlers, wrap calls in try/catch
 5. **Use category-based keys** — follow the `{category}:{id}` convention for organized storage
-6. **`MoThemeService` is Scoped** — not Singleton, because it needs per-circuit state in Blazor Server
+6. **Manual debugging uses prefixed keys** — application code passes `theme:data`, but Playwright or DevTools must write `mo:theme:data` because the service adds the prefix automatically
+7. **`ThemeState` is Scoped** — not Singleton, because it needs per-circuit state in Blazor Server

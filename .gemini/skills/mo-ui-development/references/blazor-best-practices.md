@@ -522,12 +522,12 @@ public override void ConfigureServices(IServiceCollection services)
 
 ## 14. Browser Storage Best Practices
 
-### 14.1 Use `IMoBrowserStorage` for All Browser Storage
+### 14.1 Use `IBrowserStorage` for All Browser Storage
 
-Never use raw `IJSRuntime` calls for localStorage/sessionStorage. Always inject and use `IMoBrowserStorage`:
+Never use raw `IJSRuntime` calls for localStorage/sessionStorage. Always inject and use `IBrowserStorage`:
 
 ```csharp
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 ```
 
 ### 14.2 Key Naming Convention
@@ -547,7 +547,7 @@ await BrowserStorage.GetAsync<ThemeData?>("theme:data", null);
 Always load persisted state in `OnAfterRenderAsync` and use a `_stateLoaded` flag to defer rendering of state-dependent UI:
 
 ```csharp
-@inject IMoBrowserStorage BrowserStorage
+@inject IBrowserStorage BrowserStorage
 
 @if (_stateLoaded)
 {
@@ -587,8 +587,8 @@ Always load persisted state in `OnAfterRenderAsync` and use a `_stateLoaded` fla
 
 ### 14.4 Service Lifetime
 
-- `IMoBrowserStorage` is **Scoped** (one per Blazor circuit)
-- `MoThemeService` is **Scoped** (not Singleton, needs per-circuit state)
+- `IBrowserStorage` is **Scoped** (one per Blazor circuit)
+- `ThemeState` is **Scoped** (not Singleton, needs per-circuit state)
 
 For complete API reference and patterns, see `references/browser-storage-guide.md`.
 
