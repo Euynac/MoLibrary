@@ -30,6 +30,10 @@
         "Name": "小清新",
         "Description": "薄荷浅色调，清爽安静"
       },
+      "clean-saas": {
+        "Name": "现代克制",
+        "Description": "基于白底、极简边框和柔和投影的现代SaaS设计风格"
+      },
       "aurora-flow": {
         "Name": "极光流彩",
         "Description": "极光渐变配合轻盈玻璃感"

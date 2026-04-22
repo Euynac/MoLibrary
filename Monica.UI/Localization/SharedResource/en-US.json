@@ -30,6 +30,10 @@
         "Name": "Fresh",
         "Description": "Light mint colors and a calm feel"
       },
+      "clean-saas": {
+        "Name": "Clean SaaS",
+        "Description": "Modern SaaS design with minimal borders and diffuse shadows"
+      },
       "aurora-flow": {
         "Name": "Aurora Flow",
         "Description": "Aurora gradients with a glass feel"

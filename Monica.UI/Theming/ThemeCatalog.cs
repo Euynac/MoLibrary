@@ -24,6 +24,7 @@ public static class ThemeCatalog
         RegisterTheme(new GlassmorphicTheme());
         RegisterTheme(new NeonPulseTheme());
         RegisterTheme(new FreshTheme());
+        RegisterTheme(new CleanSaaSTheme());
         
         // Register new themes.
         RegisterTheme(new AuroraFlowTheme());
