@@ -1,22 +1,11 @@
-@using Microsoft.Extensions.Options
-@using Monica.UI.Localization
-@using Microsoft.Extensions.Localization
-@using Monica.UI.Shell.Support
-@using Monica.UI.Shell.Models
-@using Monica.Modules
-@inject IPageRegistry UIRegistry
-@inject IOptions<ModuleShellUIOption> Options
-@inject IStringLocalizer<SharedResource> L
-@inject IStringLocalizer<UIRegistryResource> RegistryL
-
 <nav class="mo-navbar">
     <NavBarBrand />
 
-    <div class="navbar-nav navbar-nav-desktop">
+    <div class="navbar-nav navbar-nav-desktop" @ref="_desktopNavRef">
         @foreach (var category in VisibleCategories)
         {
-            <NavBarDropdown Category="@category"
-                            Items="@GetItemsInCategory(category)" />
+            <NavBarDropdown Category="@category.Key"
+                            Items="@category.Value" />
         }
 
         @if (HasMoreCategories)
@@ -33,51 +22,27 @@
     </div>
 
     <NavBarActions />
-</nav>
 
-@code {
-    private Dictionary<string, List<NavigationItem>> _categorizedNavItems = new();
-
-    private int MaxVisibleCategories => Options.Value.MaxVisibleCategories;
-
-    protected override void OnInitialized()
-    {
-        var allNavItems = UIRegistry.GetNavItems();
-        _categorizedNavItems = allNavItems
-            .GroupBy(item => {
-                var category = item.Category ?? L["ModuleSystem:Common:Labels:Uncategorized"];
-                return GetLocalizedText(category, item.CategoryKey);
-            })
-            .OrderBy(g => g.Key)
-            .ToDictionary(g => g.Key, g => g.ToList());
-    }
-
-    private string GetLocalizedText(string text, string? key)
-    {
-        if (!string.IsNullOrEmpty(key))
+    <div class="navbar-measurements" @ref="_measurementRailRef" aria-hidden="true">
+        @foreach (var category in OrderedCategories)
         {
-            return RegistryL[key];
+            <div class="navbar-measure-item" data-nav-measure="category">
+                <button class="navbar-measure-link" type="button">
+                    <span>@category.Key</span>
+                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                             Size="Size.Small"
+                             Class="navbar-measure-icon" />
+                </button>
+            </div>
         }
-        return text;  // Fallback to plain text
-    }
 
-    private IEnumerable<string> VisibleCategories =>
-        _categorizedNavItems.Keys.Take(MaxVisibleCategories);
-
-    private bool HasMoreCategories =>
-        _categorizedNavItems.Count > MaxVisibleCategories;
-
-    private bool HasAnyCategories =>
-        _categorizedNavItems.Count > 0;
-
-    private Dictionary<string, List<NavigationItem>> AllCategories =>
-        _categorizedNavItems;
-
-    private Dictionary<string, List<NavigationItem>> MoreCategories =>
-        _categorizedNavItems
-            .Skip(MaxVisibleCategories)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-    private List<NavigationItem> GetItemsInCategory(string category) =>
-        _categorizedNavItems.TryGetValue(category, out var items) ? items : new();
-}
+        <div class="navbar-measure-item" data-nav-measure="more">
+            <button class="navbar-measure-link" type="button">
+                <span>@L["NavBar:More"]</span>
+                <MudIcon Icon="@Icons.Material.Filled.MoreHoriz"
+                         Size="Size.Small"
+                         Class="navbar-measure-icon" />
+            </button>
+        </div>
+    </div>
+</nav>

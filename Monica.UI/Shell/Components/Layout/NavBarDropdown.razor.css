@@ -72,8 +72,6 @@
     color: var(--mud-palette-text-primary);
     text-decoration: none;
     transition: background-color 0.15s ease, color 0.15s ease;
-    position: relative;
-    overflow: hidden;
 }
 
 .dropdown-menu ::deep .dropdown-item .mud-nav-link:not(:hover):not(.active) {
@@ -108,24 +106,6 @@
 .dropdown-menu ::deep .dropdown-item .mud-nav-link:hover .item-icon,
 .dropdown-menu ::deep .dropdown-item .mud-nav-link.active .item-icon {
     color: var(--mud-palette-primary);
-}
-
-/* Left accent line */
-.dropdown-menu ::deep .dropdown-item .mud-nav-link::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 3px;
-    background: var(--mud-palette-primary);
-    transform: translateX(-100%);
-    transition: transform 0.15s ease;
-}
-
-.dropdown-menu ::deep .dropdown-item .mud-nav-link:hover::before,
-.dropdown-menu ::deep .dropdown-item .mud-nav-link.active::before {
-    transform: translateX(0);
 }
 
 /* Dark mode dropdown styling */
