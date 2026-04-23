@@ -48,20 +48,6 @@
     --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 200, 150, 0.2);
     --mo-fresh-gradient: linear-gradient(135deg, var(--mud-palette-primary) 0%, #00e5a0 100%);
     --mo-fresh-gradient-secondary: linear-gradient(135deg, var(--mud-palette-secondary) 0%, #ffb3ba 100%);
-    --mo-nav-link-height: 100%;
-    --mo-nav-link-border-radius: 0;
-    --mo-nav-link-hover-background: rgba(0, 200, 150, 0.10);
-    --mo-nav-link-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-popover-background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(240, 255, 249, 0.96));
-    --mo-nav-menu-popover-border: 1px solid rgba(0, 200, 150, 0.14);
-    --mo-nav-menu-popover-border-radius: var(--mo-card-border-radius);
-    --mo-nav-menu-popover-shadow: 0 2px 8px rgba(0, 150, 120, 0.18);
-    --mo-nav-menu-item-border-radius: 8px;
-    --mo-nav-menu-item-hover-background: rgba(0, 200, 150, 0.10);
-    --mo-nav-menu-item-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-background: rgba(0, 200, 150, 0.16);
-    --mo-nav-menu-item-active-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-icon-color: var(--mud-palette-primary);
 }
 
 :root[data-theme="fresh-dark"],
@@ -108,20 +94,6 @@
     --mo-fresh-focus-shadow: 0 0 0 3px rgba(0, 229, 160, 0.3);
     --mo-fresh-gradient: linear-gradient(135deg, var(--mud-palette-primary) 0%, #00ffa8 100%);
     --mo-fresh-gradient-secondary: linear-gradient(135deg, var(--mud-palette-secondary) 0%, #ffc4ca 100%);
-    --mo-nav-link-height: 100%;
-    --mo-nav-link-border-radius: 0;
-    --mo-nav-link-hover-background: rgba(0, 229, 160, 0.14);
-    --mo-nav-link-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-popover-background: linear-gradient(145deg, rgba(24, 32, 40, 0.96), rgba(10, 42, 34, 0.94));
-    --mo-nav-menu-popover-border: 1px solid rgba(0, 229, 160, 0.22);
-    --mo-nav-menu-popover-border-radius: var(--mo-card-border-radius);
-    --mo-nav-menu-popover-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    --mo-nav-menu-item-border-radius: 8px;
-    --mo-nav-menu-item-hover-background: rgba(0, 229, 160, 0.14);
-    --mo-nav-menu-item-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-background: rgba(0, 229, 160, 0.20);
-    --mo-nav-menu-item-active-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-icon-color: var(--mud-palette-primary);
 }
 
 /* Common styles (shared between light and dark modes) */

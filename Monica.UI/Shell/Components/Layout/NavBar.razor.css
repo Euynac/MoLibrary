@@ -4,16 +4,19 @@
     left: 0;
     right: 0;
     height: var(--mo-appbar-height);
-    background: var(--mo-navbar-background);
-    border-bottom: var(--mo-navbar-border);
-    box-shadow: var(--mo-navbar-box-shadow);
+    background: linear-gradient(
+        135deg,
+        var(--mud-palette-surface) 0%,
+        var(--mud-palette-background-gray) 100%
+    );
+    border-bottom: 1px solid var(--mud-palette-divider);
     display: flex;
     align-items: center;
-    padding: var(--mo-navbar-padding);
-    gap: var(--mo-navbar-gap);
+    padding: 0 24px;
+    gap: 32px;
     min-width: 0;
     z-index: 1000;
-    backdrop-filter: var(--mo-navbar-backdrop-filter);
+    backdrop-filter: blur(10px);
 }
 
 .navbar-nav {
@@ -43,6 +46,21 @@
     display: inline-flex;
 }
 
+.navbar-measure-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    background: transparent;
+    border: none;
+    color: var(--mud-palette-text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
 .navbar-measure-icon {
     flex-shrink: 0;
 }
@@ -58,9 +76,6 @@
 
 .navbar-nav > ::deep .navbar-item,
 .navbar-nav > ::deep .navbar-more {
-    display: flex;
-    align-items: center;
-    height: 100%;
     flex-shrink: 0;
     min-width: 0;
 }
@@ -78,23 +93,68 @@
         display: flex;
     }
 
-
+    .navbar-nav-compact > ::deep .navbar-more > .navbar-link {
+        white-space: nowrap;
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+    }
 }
 
 @media (max-width: 1280px) {
     .mo-navbar {
-        padding: var(--mo-navbar-padding-md);
-        gap: var(--mo-navbar-gap-md);
+        padding: 0 16px;
+        gap: 20px;
+    }
+
+    .navbar-measure-link {
+        padding: 0 14px;
+        gap: 6px;
     }
 }
 
 @media (max-width: 1080px) {
     .mo-navbar {
-        padding: var(--mo-navbar-padding-sm);
-        gap: var(--mo-navbar-gap-sm);
+        padding: 0 12px;
+        gap: 12px;
+    }
+
+    .navbar-measure-link {
+        padding: 0 10px;
+        font-size: 13px;
     }
 
     .navbar-nav {
         gap: 2px;
+    }
+}
+
+[data-theme*="dark"] .mo-navbar {
+    background: linear-gradient(
+        135deg,
+        var(--mud-palette-surface) 0%,
+        var(--mud-palette-background) 100%
+    );
+}
+
+/* Animation keyframes */
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes flyoutSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }

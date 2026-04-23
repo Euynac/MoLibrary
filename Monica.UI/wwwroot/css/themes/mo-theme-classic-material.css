@@ -49,20 +49,6 @@
     --mo-transition-fast: 150ms;
     --mo-transition-normal: 300ms;
     --mo-transition-slow: 450ms;
-    --mo-nav-link-height: 100%;
-    --mo-nav-link-border-radius: 0;
-    --mo-nav-link-hover-background: var(--mud-palette-action-default-hover);
-    --mo-nav-link-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-popover-background: var(--mud-palette-surface);
-    --mo-nav-menu-popover-border: var(--mo-card-border, 1px solid var(--mud-palette-lines-default));
-    --mo-nav-menu-popover-border-radius: var(--mo-nav-menu-border-radius, 12px);
-    --mo-nav-menu-popover-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    --mo-nav-menu-item-border-radius: var(--mo-nav-menu-border-radius, 8px);
-    --mo-nav-menu-item-hover-background: var(--mud-palette-action-default-hover);
-    --mo-nav-menu-item-hover-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-background: var(--mud-palette-action-default-hover);
-    --mo-nav-menu-item-active-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-icon-color: var(--mud-palette-primary);
 }
 
 /* Classic Material Light Theme Variables */
@@ -78,8 +64,6 @@
     --mo-glow-primary: 0 0 20px rgba(183, 148, 246, 0.3);
     --mo-glow-secondary: 0 0 15px rgba(237, 100, 166, 0.25);
     --mo-shadow-mystical: 0 8px 32px rgba(15, 15, 26, 0.6), 0 0 0 1px rgba(138, 126, 169, 0.1);
-    --mo-nav-menu-popover-background: linear-gradient(145deg, rgba(37, 37, 72, 0.96), rgba(31, 31, 58, 0.96));
-    --mo-nav-menu-popover-shadow: var(--mo-shadow-mystical);
 }
 
 /* Classic Material Theme Styles */

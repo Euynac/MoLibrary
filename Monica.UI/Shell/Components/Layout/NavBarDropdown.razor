@@ -1,39 +1,60 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
 @using Monica.UI.Shell.Models
-@using Monica.UI.Shell.Support
 @inject IStringLocalizer<UIRegistryResource> RegistryL
-@inject NavigationManager NavigationManager
 
-<div class="navbar-item">
-    <MudMenu ActivationEvent="MudBlazor.MouseEvent.MouseOver"
-             AnchorOrigin="Origin.BottomLeft"
-             TransformOrigin="Origin.TopLeft"
-             PopoverClass="mo-nav-menu-popover"
-             ListClass="mo-nav-menu-list">
-        <ActivatorContent Context="menu">
-            <button class="navbar-link"
-                    type="button"
-                    @onclick="menu.ToggleAsync">
-                @Category
-                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
-            </button>
-        </ActivatorContent>
+<div class="navbar-item"
+     @onmouseenter="OnMouseEnter"
+     @onmouseleave="OnMouseLeave">
 
-        <ChildContent>
+    <button class="navbar-link">
+        @Category
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" />
+    </button>
+
+    @if (_isHovered)
+    {
+        <div class="dropdown-menu">
             @foreach (var item in Items.OrderBy(i => i.Order))
             {
-                <MudMenuItem Href="@item.Href"
-                             Icon="@item.Icon"
-                             Class="@NavigationRouteMatcher.GetActiveClass(NavigationManager, item)">
-                    @item.ResolveDisplayText(RegistryL)
-                </MudMenuItem>
+                <MudNavLink Href="@item.Href"
+                           Class="dropdown-item"
+                           Match="@item.NavLinkMatch">
+                    @if (!string.IsNullOrEmpty(item.Icon))
+                    {
+                        <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
+                    }
+                    <span>@GetItemText(item)</span>
+                </MudNavLink>
             }
-        </ChildContent>
-    </MudMenu>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public string Category { get; set; } = string.Empty;
     [Parameter] public List<NavigationItem> Items { get; set; } = new();
+
+    private bool _isHovered = false;
+
+    private string GetItemText(NavigationItem item)
+    {
+        if (!string.IsNullOrEmpty(item.TextKey))
+        {
+            return RegistryL[item.TextKey];
+        }
+        return item.Text;
+    }
+
+    private void OnMouseEnter()
+    {
+        _isHovered = true;
+        StateHasChanged();
+    }
+
+    private void OnMouseLeave()
+    {
+        _isHovered = false;
+        StateHasChanged();
+    }
 }

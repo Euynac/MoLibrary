@@ -41,38 +41,6 @@
     --mo-nav-menu-border-radius: 0px;
     --mo-vibe-corner-size: 10px;
     --mo-vibe-surface-line-step: 12px;
-    --mo-nav-link-height: 100%;
-    --mo-nav-link-padding-inline: 20px;
-    --mo-nav-link-border-radius: 0px;
-    --mo-nav-link-color: var(--mo-vibe-ink-muted);
-    --mo-nav-link-font-size: 0.72rem;
-    --mo-nav-link-font-weight: 700;
-    --mo-nav-link-letter-spacing: 0.14em;
-    --mo-nav-link-text-transform: uppercase;
-    --mo-nav-link-hover-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-    --mo-nav-link-hover-color: var(--mo-vibe-ink-bright);
-    --mo-nav-link-indicator-height: 1px;
-    --mo-nav-link-indicator-background: var(--mud-palette-primary);
-    --mo-nav-link-indicator-shadow: 0 0 10px rgba(0, 255, 65, 0.28);
-    --mo-nav-menu-popover-background: var(--mo-vibe-panel);
-    --mo-nav-menu-popover-border: 1px solid var(--mo-vibe-ghost);
-    --mo-nav-menu-popover-border-radius: 0px;
-    --mo-nav-menu-popover-shadow: var(--mo-vibe-panel-shadow);
-    --mo-nav-menu-list-padding: 8px 0;
-    --mo-nav-menu-item-margin: 0;
-    --mo-nav-menu-item-width: 100%;
-    --mo-nav-menu-item-border-radius: 0px;
-    --mo-nav-menu-item-hover-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-    --mo-nav-menu-item-hover-color: var(--mo-vibe-ink-bright);
-    --mo-nav-menu-item-active-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-    --mo-nav-menu-item-active-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-active-icon-color: var(--mud-palette-primary);
-    --mo-nav-menu-item-min-height: 44px;
-    --mo-nav-menu-item-padding: 10px 16px;
-    --mo-navbar-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-    --mo-navbar-border: 1px solid var(--mo-vibe-ghost);
-    --mo-navbar-box-shadow: inset 0 -1px 0 rgba(0, 255, 65, 0.06);
-    --mo-navbar-backdrop-filter: blur(12px);
 }
 
 :root[data-theme="vibeusage-matrix-light"],
@@ -152,9 +120,59 @@
 
 .mo-theme-vibeusage-matrix-light :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
 .mo-theme-vibeusage-matrix-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
-.mo-theme-vibeusage-matrix-light :is(.navbar-link, .navbar-measure-link),
-.mo-theme-vibeusage-matrix-dark :is(.navbar-link, .navbar-measure-link) {
+.mo-theme-vibeusage-matrix-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
+.mo-theme-vibeusage-matrix-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
     font-family: var(--mo-vibe-font);
+}
+
+.mo-theme-vibeusage-matrix-light .mo-navbar,
+.mo-theme-vibeusage-matrix-dark .mo-navbar {
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+    border-bottom: 1px solid var(--mo-vibe-ghost);
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 -1px 0 rgba(0, 255, 65, 0.06);
+}
+
+.mo-theme-vibeusage-matrix-light .navbar-link,
+.mo-theme-vibeusage-matrix-dark .navbar-link,
+.mo-theme-vibeusage-matrix-light .navbar-measure-link,
+.mo-theme-vibeusage-matrix-dark .navbar-measure-link {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.mo-theme-vibeusage-matrix-light .navbar-link:hover,
+.mo-theme-vibeusage-matrix-dark .navbar-link:hover {
+    color: var(--mo-vibe-ink-bright);
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+}
+
+.mo-theme-vibeusage-matrix-light .navbar-link::before,
+.mo-theme-vibeusage-matrix-dark .navbar-link::before {
+    height: 1px;
+    background: var(--mud-palette-primary);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.28);
+}
+
+.mo-theme-vibeusage-matrix-light :is(.more-menu, .flyout-menu, .dropdown-menu),
+.mo-theme-vibeusage-matrix-dark :is(.more-menu, .flyout-menu, .dropdown-menu) {
+    background: var(--mo-vibe-panel-strong);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: var(--mo-vibe-panel-shadow);
+    backdrop-filter: blur(12px);
+}
+
+.mo-theme-vibeusage-matrix-light :is(.more-menu-header, .flyout-menu-header),
+.mo-theme-vibeusage-matrix-dark :is(.more-menu-header, .flyout-menu-header) {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
 }
 
 .mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),

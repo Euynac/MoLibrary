@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components.Routing;
-using Microsoft.Extensions.Localization;
 
 namespace Monica.UI.Shell.Models;
 
@@ -107,10 +106,4 @@ public class NavigationItem
     /// Classification localization key
     /// </summary>
     public string? CategoryKey { get; init; }
-
-    /// <summary>
-    /// Resolves the display text using <see cref="TextKey"/> if available, otherwise returns <see cref="Text"/>.
-    /// </summary>
-    public string ResolveDisplayText(IStringLocalizer localizer) =>
-        !string.IsNullOrEmpty(TextKey) ? localizer[TextKey] : Text;
-}
+} 
