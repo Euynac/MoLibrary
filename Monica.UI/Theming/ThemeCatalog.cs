@@ -26,8 +26,6 @@ public static class ThemeCatalog
         RegisterTheme(new ClassicMaterialTheme());
         RegisterTheme(new FreshTheme());
         RegisterTheme(new InkLandscapeTheme());
-        RegisterTheme(new DeepOceanTheme());
-        RegisterTheme(new VintagePressTheme());
     }
 
     /// <summary>

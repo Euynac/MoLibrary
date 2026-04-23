@@ -37,14 +37,6 @@
       "ink-landscape": {
         "Name": "墨韵山水",
         "Description": "水墨留白风格，沉静克制"
-      },
-      "deep-ocean": {
-        "Name": "深海静谧",
-        "Description": "深海蓝绿色调，安静发光"
-      },
-      "vintage-press": {
-        "Name": "复古印刷",
-        "Description": "暖纸张色调，复古排印感"
       }
     }
   },

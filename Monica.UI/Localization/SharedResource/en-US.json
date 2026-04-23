@@ -37,14 +37,6 @@
       "ink-landscape": {
         "Name": "Ink Landscape",
         "Description": "Ink-wash style with quiet contrast"
-      },
-      "deep-ocean": {
-        "Name": "Deep Ocean",
-        "Description": "Deep sea blues with a calm glow"
-      },
-      "vintage-press": {
-        "Name": "Vintage Press",
-        "Description": "Warm paper tones and retro print"
       }
     }
   },

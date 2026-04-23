@@ -34,9 +34,9 @@ public class ThemeDisplayTextProviderTests
     {
         var localizer = new MissingThemeNameLocalizer();
 
-        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(localizer, "deep-ocean", isDarkMode: false);
+        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(localizer, "ink-landscape", isDarkMode: false);
 
-        summary.Should().Be("Deep Ocean - Theme:Light");
+        summary.Should().Be("Ink Landscape - Theme:Light");
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ThemeDisplayTextProviderTests
     private sealed class MissingThemeNameLocalizer : FoundStringLocalizer
     {
         public override LocalizedString this[string name]
-            => name == "Theme:Options:deep-ocean:Name"
+            => name == "Theme:Options:ink-landscape:Name"
                 ? new LocalizedString(name, name, resourceNotFound: true)
                 : base[name];
     }

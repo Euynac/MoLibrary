@@ -15,14 +15,10 @@
 
 /* 4. Introduce additional theme styles */
 @import url('./themes/mo-theme-ink-landscape.css');      /* Ink Landscape theme */
-@import url('./themes/mo-theme-deep-ocean.css');         /* Deep Ocean theme */
-@import url('./themes/mo-theme-vintage-press.css');      /* Vintage Press theme */
 
 @import url('./markdown/mo-markdown-default.css');
 @import url('./markdown/mo-markdown-hermes-teal.css');
 @import url('./markdown/mo-markdown-vibeusage-matrix.css');
-@import url('./markdown/mo-markdown-deep-ocean.css');
-@import url('./markdown/mo-markdown-vintage-press.css');
 /* 5. Custom theme style example */
 /* If you want to create a new theme, you can create a new CSS file and introduce it here */
 /* @import url('./themes/mo-theme-custom.css'); */

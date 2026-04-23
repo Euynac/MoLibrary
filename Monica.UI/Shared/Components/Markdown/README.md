@@ -32,8 +32,8 @@ Monica.UI/wwwroot/css/
 ├── mo-theme-main.css
 └── markdown/
     ├── mo-markdown-default.css
-    ├── mo-markdown-deep-ocean.css
-    └── mo-markdown-vintage-press.css
+    ├── mo-markdown-hermes-teal.css
+    └── mo-markdown-vibeusage-matrix.css
 
 Monica.UI/wwwroot/js/
 └── mo-markdown-mermaid.js
@@ -92,26 +92,26 @@ StyleKey="Editorial" -> .mo-markdown-style-editorial
 
 例如：
 
-- `mo-markdown-deep-ocean.css`
-- `mo-markdown-vintage-press.css`
+- `mo-markdown-hermes-teal.css`
+- `mo-markdown-vibeusage-matrix.css`
 
 它们依赖 `MoThemeProvider` 输出的主题标记：
 
-- `data-theme="deep-ocean-light"`
-- `.mo-theme-deep-ocean-light`
+- `data-theme="hermes-teal-light"`
+- `.mo-theme-hermes-teal-light`
 
 典型写法：
 
 ```css
-:root[data-theme="deep-ocean-light"] .mo-markdown-style-default,
-.mo-theme-deep-ocean-light .mo-markdown-style-default {
+:root[data-theme="hermes-teal-light"] .mo-markdown-style-default,
+.mo-theme-hermes-teal-light .mo-markdown-style-default {
     --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 88%, var(--mud-palette-info));
 }
 ```
 
 这里要特别注意：
 
-- `deep-ocean` 是应用主题名，不是 `StyleKey`
+- `hermes-teal` 是应用主题名，不是 `StyleKey`
 - `default` 是 Markdown 样式包名，不是应用主题名
 - 一个应用主题可以覆盖多个 Markdown 样式包
 - 一个 Markdown 样式包也可以在多个应用主题下表现不同
@@ -122,8 +122,8 @@ Markdown 样式最终由 `Monica.UI/wwwroot/css/mo-theme-main.css` 统一引入�
 
 ```css
 @import url('./markdown/mo-markdown-default.css');
-@import url('./markdown/mo-markdown-deep-ocean.css');
-@import url('./markdown/mo-markdown-vintage-press.css');
+@import url('./markdown/mo-markdown-hermes-teal.css');
+@import url('./markdown/mo-markdown-vibeusage-matrix.css');
 ```
 
 `MoApp.razor` 会加载 `mo-theme-main.css`，所以正常情况下不需要额外手工添加 Markdown CSS 引用。
@@ -269,13 +269,13 @@ Markdown 样式最终由 `Monica.UI/wwwroot/css/mo-theme-main.css` 统一引入�
 
 如果你要的不是新样式包，而是“同一套 Markdown 样式在不同 Monica 主题下有不同表现”，应该在主题覆盖文件里处理。
 
-例如要让 `deep-ocean` 主题下的 `editorial` 样式更冷色：
+例如要让 `hermes-teal` 主题下的 `editorial` 样式更冷色：
 
 ```css
-:root[data-theme="deep-ocean-light"] .mo-markdown-style-editorial,
-:root[data-theme="deep-ocean-dark"] .mo-markdown-style-editorial,
-.mo-theme-deep-ocean-light .mo-markdown-style-editorial,
-.mo-theme-deep-ocean-dark .mo-markdown-style-editorial {
+:root[data-theme="hermes-teal-light"] .mo-markdown-style-editorial,
+:root[data-theme="hermes-teal-dark"] .mo-markdown-style-editorial,
+.mo-theme-hermes-teal-light .mo-markdown-style-editorial,
+.mo-theme-hermes-teal-dark .mo-markdown-style-editorial {
     --mo-markdown-panel-background: color-mix(in srgb, var(--mud-palette-surface) 86%, var(--mud-palette-info));
     --mo-markdown-panel-border: color-mix(in srgb, var(--mud-palette-info) 35%, var(--mud-palette-lines-default));
 }
@@ -283,7 +283,7 @@ Markdown 样式最终由 `Monica.UI/wwwroot/css/mo-theme-main.css` 统一引入�
 
 这种写法建议放到：
 
-- `Monica.UI/wwwroot/css/markdown/mo-markdown-deep-ocean.css`
+- `Monica.UI/wwwroot/css/markdown/mo-markdown-hermes-teal.css`
 
 ## 如何在消费页面局部覆盖样式
 
