@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.8.1
+version: 2.9.0
 ---
 
 # Monica UI Development Guide
@@ -160,7 +160,7 @@ Always specify `T` for generic MudBlazor components:
 - Loading, empty, and placeholder states should consume available space with flex/grid alignment when the parent height is available, instead of using large fixed top/bottom padding for visual centering.
 - Keep scrolling in `.mo-body-content` or the page's own scroll containers; do not move scrolling back to `body`.
 
-### 9. Theme-First Visual Simplicity
+### 9. Theme-First Visual Simplicity and Component Responsibility
 
 - Prefer simple, quiet layouts that mostly rely on the active MudBlazor theme.
 - Do not introduce gradients, glow effects, decorative shadows, or custom multi-color surfaces unless the user explicitly asks for a branded visual treatment.
@@ -169,7 +169,30 @@ Always specify `T` for generic MudBlazor components:
 - When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
 - If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
 
-### 10. Theme Authoring and Verification
+**Component CSS responsibility model:**
+
+| Layer | Owns | Does NOT own |
+|-------|------|----|
+| MudTheme (C#) | Palette tokens, typography | Component-specific visuals |
+| Theme CSS (`themes/*.css`) | Visual language on **standard MudBlazor selectors** | Layout, positioning |
+| Shared layout CSS (`mo-theme-main.css`) | Layout hooks via `mo-*` classes | Visual styling |
+| Component CSS (`.razor.css`) | Layout, sizing, positioning, responsive rules | Colors, shadows, hover effects |
+
+Key rules:
+- **Never** create private component classes (e.g., `.dropdown-menu`, `.flyout-menu`) that themes must discover and target. This creates an ever-growing compatibility burden on every theme.
+- **Always** use MudBlazor primitives for interactive patterns (menus, dialogs, overlays). See Rule #10.
+- When MudBlazor component parameters are insufficient, inject layout-only hooks via `PopoverClass`/`ListClass` (e.g., `mo-nav-menu-popover`). These hooks live in `mo-theme-main.css` and own only sizing, scrolling, and positioning.
+- Component CSS may provide functional defaults using CSS variables (e.g., `.navbar-link` hover using `var(--mud-palette-primary)`); themes override these via higher specificity on shared selectors.
+
+### 10. Use MudBlazor Primitives for Interactive UI
+
+- All menu and dropdown patterns must use `MudMenu` + `MudMenuItem`. Do not build custom dropdown markup with manual hover tracking, delayed-close state machines, or pointer event handlers.
+- All overlay patterns must use `MudDialog`, `MudDrawer`, or `MudPopover`. Do not build custom flyout panels.
+- Active route state in menus: apply an `.active` CSS class via `NavigationRouteMatcher.IsActive()` and let theme CSS style `.mud-menu-item.active`. Do not paint active state in component CSS.
+- When `MudMenu` built-in parameters are insufficient for layout, pass sizing/scrolling classes through `PopoverClass` or `ListClass`. These layout-only hooks live in `mo-theme-main.css`, not in theme files or component CSS. Example: `PopoverClass="mo-nav-menu-popover mo-nav-menu-popover-scrollable"`.
+- Reference implementation: `NavBarDropdown.razor` and `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`.
+
+### 11. Theme Authoring and Verification
 
 - Put theme visuals in shared theme CSS under `Monica.UI/wwwroot/css/themes/`. Do not solve theme regressions by adding new page-specific `.razor.css` overrides unless the page truly owns unique layout behavior.
 - Prefer shared MudBlazor selectors over page-only hooks. If you add a temporary page-specific class during diagnosis, remove it after the shared theme rule is in place.

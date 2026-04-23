@@ -163,6 +163,35 @@ mo:theme:data
 
 not just `theme:data`.
 
+## Layout Hooks (`mo-theme-main.css`)
+
+Some components need sizing, scrolling, or positioning that MudBlazor's built-in parameters cannot express. These are handled through **layout hooks**: lightweight CSS classes injected via component parameters like `PopoverClass` or `ListClass`.
+
+Layout hooks live in `mo-theme-main.css`, not in theme files or component CSS. They own only sizing, positioning, and scroll behavior. They never define colors, shadows, borders, or other visual styling.
+
+### Current layout hooks
+
+| Class | Purpose | Used by |
+|-------|---------|---------|
+| `mo-nav-menu-popover` | min-width for category menus (240px) | NavBarDropdown |
+| `mo-nav-menu-popover-more` | min-width for overflow menu (220px) | NavBarMore |
+| `mo-nav-menu-popover-compact` | fixed width for compact/mobile mode | NavBarMore (compact) |
+| `mo-nav-menu-popover-scrollable` | max-height with viewport offset, scroll behavior | NavBarMore, NavBarDropdown submenus |
+| `mo-nav-menu-popover-submenu` | max-height variant for nested submenus | NavBarMore submenus |
+| `mo-nav-menu-list` | white-space nowrap for menu item text | All NavBar menus |
+
+### When to add layout hooks
+
+1. MudBlazor component parameters (`MaxHeight`, `MinWidth`, etc.) cannot express the required constraint.
+2. The constraint is shared across multiple components or themes (not page-specific).
+3. The hook defines only layout properties (`min-width`, `max-height`, `overflow`, `width`).
+
+If the need is visual rather than layout, it belongs in theme CSS targeting standard MudBlazor selectors.
+
+### Naming convention
+
+Prefix with `mo-` to indicate Monica infrastructure. Use descriptive segments: `mo-{area}-{purpose}`.
+
 ## Related References
 
 - `references/theme-authoring-pitfalls.md`
