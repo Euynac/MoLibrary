@@ -4,6 +4,7 @@
 
 /* 1. Introduce classic Material theme styles */
 @import url('./themes/mo-theme-classic-material.css');
+@import url('./themes/mo-theme-material-design-3.css');
 
 /* 2. Introduce a fresh theme */
 @import url('./themes/mo-theme-fresh.css');

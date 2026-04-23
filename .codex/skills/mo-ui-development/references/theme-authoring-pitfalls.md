@@ -46,14 +46,46 @@ Relevant elements include:
 
 - Live header DOM on the target page
 - Computed `opacity` and `color`
+- The control wrapper, label container, and rendered icon path separately
 - MudBlazor source:
   - `Styles/components/_datagrid.scss`
+
+In practice, inspect all of these because the effective color and opacity can differ:
+
+- `.column-options .mud-menu .mud-button-root`
+- `.column-options .mud-menu .mud-icon-button-label`
+- the inner `svg`
 
 ### Preferred fix
 
 If the theme needs persistent affordances, define a visible default state with muted color and a stronger hover state.
 
 Do this at the theme level for shared `MudDataGrid` structure, not with page-local selectors.
+
+### Completion rule
+
+Do not treat this pitfall as resolved when it is only diagnosed.
+
+Track these states separately:
+
+- `diagnosed`: MudBlazor default hover-hidden behavior or theme CSS regression has been confirmed
+- `patched`: the shared theme selector has been changed
+- `verified`: the live page has been re-checked after the patch
+
+A handoff note that only records the root cause is still an open bug.
+
+### Verification rule
+
+Close the issue only after verifying the live computed styles in the affected state set:
+
+1. resting state
+2. interactive state such as hover, sorted, focus, or open menu
+
+If the theme owns persistent affordances, the resting state must already be visible before hover.
+
+### Bridge verification fallback
+
+If the originally requested bridge route is unavailable because a module or facade is not registered, verify on another live bridge route that renders the same `MudDataGrid` header pattern instead of stopping at the missing route.
 
 ## 3. Manual theme verification must use the real storage key
 

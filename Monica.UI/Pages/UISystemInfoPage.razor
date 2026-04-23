@@ -19,7 +19,7 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <!-- Header -->
-    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #6A1B9A 30%, #9C27B0 90%); color: white;">
+    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-system-info-hero-background, linear-gradient(45deg, #6A1B9A 30%, #9C27B0 90%)); color: var(--mo-system-info-hero-text, white);">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
@@ -34,7 +34,7 @@
                                OnClick="RequestSelfRestartAsync"
                                Size="Size.Medium"
                                Disabled="_restartRequested"
-                               Style="border-color: white; color: white;">
+                               Style="border-color: var(--mo-system-info-hero-action, white); color: var(--mo-system-info-hero-action, white);">
                         @L["Page:Header:Restart"]
                     </MudButton>
                 }
@@ -43,7 +43,7 @@
                            Variant="Variant.Outlined"
                            OnClick="RefreshSystemInfo"
                            Size="Size.Medium"
-                           Style="border-color: white; color: white;">
+                           Style="border-color: var(--mo-system-info-hero-action, white); color: var(--mo-system-info-hero-action, white);">
                     @L["Page:Header:Refresh"]
                 </MudButton>
             </MudStack>
@@ -84,19 +84,19 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Success" />
                                 <MudText><strong>@L["Page:BasicInfo:BuildTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.BuildTime)</MudText>
+                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.BuildTime)</MudText>
 
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Info" />
                                 <MudText><strong>@L["Page:BasicInfo:LocalTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.LocalTime)</MudText>
+                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.LocalTime)</MudText>
 
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Color="Color.Warning" />
                                 <MudText><strong>@L["Page:BasicInfo:UtcTime"]:</strong></MudText>
                             </MudStack>
-                            <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.UtcTime)</MudText>
+                            <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.UtcTime)</MudText>
 
                             @if (!string.IsNullOrEmpty(_systemInfo.ProductVersion))
                             {
@@ -104,7 +104,7 @@
                                     <MudIcon Icon="@Icons.Material.Filled.Label" Size="Size.Small" Color="Color.Secondary" />
                                     <MudText><strong>@L["Page:BasicInfo:ProductVersion"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.ProductVersion</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.ProductVersion</MudText>
                             }
 
                             @if (_systemInfo.ProcessStartTime.HasValue)
@@ -113,8 +113,8 @@
                                     <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Color="Color.Success" />
                                     <MudText><strong>@L["Page:BasicInfo:ProcessStartTime"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatDateTime(_systemInfo.ProcessStartTime.Value)</MudText>
-                                <MudText Class="ml-6" Style="color: #888; font-size: 0.875rem;">
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatDateTime(_systemInfo.ProcessStartTime.Value)</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-disabled); font-size: 0.875rem;">
                                     @L["Page:BasicInfo:RunningFor", FormatUptime(_systemInfo.ProcessStartTime.Value)]
                                 </MudText>
                             }
@@ -142,31 +142,31 @@
                                     <MudIcon Icon="@Icons.Material.Filled.DeviceHub" Size="Size.Small" Color="Color.Success" />
                                     <MudText><strong>@L["Page:EnvironmentInfo:MachineName"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.MachineName</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.MachineName</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Info" />
                                     <MudText><strong>@L["Page:EnvironmentInfo:UserName"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.UserName</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.UserName</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Warning" />
                                     <MudText><strong>@L["Page:EnvironmentInfo:ProcessId"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.ProcessId</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Architecture" Size="Size.Small" Color="Color.Secondary" />
                                     <MudText><strong>@L["Page:EnvironmentInfo:Is64BitOperatingSystem"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatBoolean(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem)</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatBoolean(_systemInfo.EnvironmentInfo.Is64BitOperatingSystem)</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Color="Color.Tertiary" />
                                     <MudText><strong>@L["Page:EnvironmentInfo:WorkingSet"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatScaledBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatScaledBytes(_systemInfo.EnvironmentInfo.WorkingSet)</MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>
@@ -191,31 +191,31 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Apps" Size="Size.Small" Color="Color.Success" />
                                         <MudText><strong>@L["Page:FileInfo:ProductName"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductName</MudText>
+                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.ProductName</MudText>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
                                         <MudText><strong>@L["Page:FileInfo:ProductVersion"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.ProductVersion</MudText>
+                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.ProductVersion</MudText>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />
                                         <MudText><strong>@L["Page:FileInfo:FileVersion"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.FileVersion</MudText>
+                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.FileVersion</MudText>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Color="Color.Secondary" />
                                         <MudText><strong>@L["Page:FileInfo:CompanyName"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.CompanyName</MudText>
+                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.CompanyName</MudText>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Copyright" Size="Size.Small" Color="Color.Tertiary" />
                                         <MudText><strong>@L["Page:FileInfo:Copyright"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: #666;">@_systemInfo.FileInfo.LegalCopyright</MudText>
+                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.LegalCopyright</MudText>
                                 </MudStack>
                             </MudCardContent>
                         </MudCard>
@@ -239,31 +239,31 @@
                                     <MudIcon Icon="@Icons.Material.Filled.DeveloperMode" Size="Size.Small" Color="Color.Success" />
                                     <MudText><strong>@L["Page:SystemDetails:DotNetVersion"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.Version?.ToString()</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.Version?.ToString()</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.DesktopWindows" Size="Size.Small" Color="Color.Info" />
                                     <MudText><strong>@L["Page:SystemDetails:OperatingSystem"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@_systemInfo.EnvironmentInfo.OSVersion?.ToString()</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.EnvironmentInfo.OSVersion?.ToString()</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" Color="Color.Warning" />
                                     <MudText><strong>@L["Page:SystemDetails:CurrentDirectory"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666; word-break: break-all;">@_systemInfo.EnvironmentInfo.CurrentDirectory</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary); word-break: break-all;">@_systemInfo.EnvironmentInfo.CurrentDirectory</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Color="Color.Secondary" />
                                     <MudText><strong>@L["Page:SystemDetails:SystemPageSize"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatByteCount(_systemInfo.EnvironmentInfo.SystemPageSize)</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatByteCount(_systemInfo.EnvironmentInfo.SystemPageSize)</MudText>
 
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.TouchApp" Size="Size.Small" Color="Color.Tertiary" />
                                     <MudText><strong>@L["Page:SystemDetails:UserInteractive"]:</strong></MudText>
                                 </MudStack>
-                                <MudText Class="ml-6" Style="color: #666;">@FormatBoolean(_systemInfo.EnvironmentInfo.UserInteractive)</MudText>
+                                <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@FormatBoolean(_systemInfo.EnvironmentInfo.UserInteractive)</MudText>
                             </MudStack>
                         </MudCardContent>
                     </MudCard>

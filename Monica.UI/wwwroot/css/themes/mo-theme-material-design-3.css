@@ -1,0 +1,543 @@
+/* Monica Material Design 3 Theme - Material Web token-inspired styling */
+
+@font-face {
+    font-family: 'MoM3Text';
+    src: url('../../fonts/Roboto-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoM3Text';
+    src: url('../../fonts/Roboto-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoM3Display';
+    src: url('../../fonts/Roboto-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'MoM3Mono';
+    src: url('../../fonts/GeistMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+:root[data-theme="material-design-3-light"],
+:root[data-theme="material-design-3-dark"],
+.mo-theme-material-design-3-light,
+.mo-theme-material-design-3-dark {
+    --mo-m3-font-text: 'MoM3Text', Roboto, sans-serif;
+    --mo-m3-font-display: 'MoM3Display', 'MoM3Text', Roboto, sans-serif;
+    --mo-m3-font-mono: 'MoM3Mono', 'Geist Mono', monospace;
+
+    --mo-m3-shape-extra-small: 4px;
+    --mo-m3-shape-small: 8px;
+    --mo-m3-shape-medium: 12px;
+    --mo-m3-shape-large: 16px;
+    --mo-m3-shape-extra-large: 28px;
+    --mo-m3-shape-expressive: 24px;
+    --mo-m3-shape-full: 9999px;
+
+    --mo-m3-button-height: 40px;
+    --mo-m3-button-padding-x: 24px;
+    --mo-m3-icon-button-size: 40px;
+    --mo-m3-state-hover-opacity: 0.08;
+    --mo-m3-state-focus-opacity: 0.12;
+    --mo-m3-motion-standard: 180ms cubic-bezier(0.2, 0, 0, 1);
+    --mo-nav-menu-border-radius: var(--mo-m3-shape-large);
+    --mo-card-border-radius: var(--mo-m3-shape-expressive);
+    --mo-dialog-border-radius: var(--mo-m3-shape-extra-large);
+    --mo-system-info-hero-background: var(--mo-m3-primary-container);
+    --mo-system-info-hero-text: var(--mo-m3-on-primary-container);
+    --mo-system-info-hero-action: var(--mo-m3-on-primary-container);
+}
+
+:root[data-theme="material-design-3-light"],
+.mo-theme-material-design-3-light {
+    --mo-m3-surface: #fef7ff;
+    --mo-m3-surface-bright: #fef7ff;
+    --mo-m3-surface-container-lowest: #ffffff;
+    --mo-m3-surface-container-low: #f7f2fa;
+    --mo-m3-surface-container: #f3edf7;
+    --mo-m3-surface-container-high: #ece6f0;
+    --mo-m3-surface-container-highest: #e6e0e9;
+    --mo-m3-on-surface: #1d1b20;
+    --mo-m3-on-surface-variant: #49454f;
+    --mo-m3-outline: #79747e;
+    --mo-m3-outline-variant: #cac4d0;
+    --mo-m3-primary: #6750a4;
+    --mo-m3-on-primary: #ffffff;
+    --mo-m3-primary-container: #eaddff;
+    --mo-m3-on-primary-container: #21005d;
+    --mo-m3-secondary-container: #e8def8;
+    --mo-m3-on-secondary-container: #1d192b;
+    --mo-m3-inverse-surface: #322f35;
+    --mo-m3-inverse-on-surface: #f5eff7;
+    --mo-m3-card-hover: #f3edf7;
+    --mo-m3-nav-hover: rgba(29, 27, 32, 0.08);
+}
+
+:root[data-theme="material-design-3-dark"],
+.mo-theme-material-design-3-dark {
+    --mo-m3-surface: #141218;
+    --mo-m3-surface-bright: #3b383e;
+    --mo-m3-surface-container-lowest: #0f0d13;
+    --mo-m3-surface-container-low: #1d1b20;
+    --mo-m3-surface-container: #211f26;
+    --mo-m3-surface-container-high: #2b2930;
+    --mo-m3-surface-container-highest: #36343b;
+    --mo-m3-on-surface: #e6e0e9;
+    --mo-m3-on-surface-variant: #cac4d0;
+    --mo-m3-outline: #938f99;
+    --mo-m3-outline-variant: #49454f;
+    --mo-m3-primary: #d0bcff;
+    --mo-m3-on-primary: #381e72;
+    --mo-m3-primary-container: #4f378b;
+    --mo-m3-on-primary-container: #eaddff;
+    --mo-m3-secondary-container: #4a4458;
+    --mo-m3-on-secondary-container: #e8def8;
+    --mo-m3-inverse-surface: #e6e0e9;
+    --mo-m3-inverse-on-surface: #322f35;
+    --mo-m3-card-hover: #2b2930;
+    --mo-m3-nav-hover: rgba(230, 224, 233, 0.08);
+}
+
+.mo-theme-material-design-3-light,
+.mo-theme-material-design-3-dark {
+    background: var(--mo-m3-surface);
+    color: var(--mo-m3-on-surface);
+    font-family: var(--mo-m3-font-text);
+    letter-spacing: 0.015625rem;
+}
+
+.mo-theme-material-design-3-light .mo-layout,
+.mo-theme-material-design-3-dark .mo-layout,
+.mo-theme-material-design-3-light .mo-main-content,
+.mo-theme-material-design-3-dark .mo-main-content,
+.mo-theme-material-design-3-light .mo-body-content,
+.mo-theme-material-design-3-dark .mo-body-content {
+    background: var(--mo-m3-surface);
+}
+
+.mo-theme-material-design-3-light .mo-navbar,
+.mo-theme-material-design-3-dark .mo-navbar {
+    background: color-mix(in srgb, var(--mo-m3-surface) 94%, transparent) !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+    gap: 24px;
+    backdrop-filter: blur(16px);
+}
+
+.mo-theme-material-design-3-light .navbar-brand,
+.mo-theme-material-design-3-dark .navbar-brand {
+    border-radius: var(--mo-m3-shape-large);
+    padding: 6px 10px 6px 6px;
+    transition: background-color var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light .navbar-brand:hover,
+.mo-theme-material-design-3-dark .navbar-brand:hover {
+    background: var(--mo-m3-nav-hover);
+    opacity: 1;
+}
+
+.mo-theme-material-design-3-light .brand-logo,
+.mo-theme-material-design-3-dark .brand-logo,
+.mo-theme-material-design-3-light .brand-logo-image,
+.mo-theme-material-design-3-dark .brand-logo-image {
+    border-radius: 0;
+}
+
+.mo-theme-material-design-3-light .brand-name,
+.mo-theme-material-design-3-dark .brand-name {
+    font-family: var(--mo-m3-font-display);
+    font-size: 1.375rem;
+    font-weight: 400;
+    line-height: 1.75rem;
+    letter-spacing: 0;
+}
+
+.mo-theme-material-design-3-light .brand-version,
+.mo-theme-material-design-3-dark .brand-version {
+    background: var(--mo-m3-surface-container);
+    border-color: transparent;
+    border-radius: var(--mo-m3-shape-small);
+    font-family: var(--mo-m3-font-mono);
+}
+
+.mo-theme-material-design-3-light .navbar-link,
+.mo-theme-material-design-3-dark .navbar-link,
+.mo-theme-material-design-3-light .navbar-measure-link,
+.mo-theme-material-design-3-dark .navbar-measure-link {
+    height: 40px;
+    align-self: center;
+    border-radius: var(--mo-m3-shape-full);
+    color: var(--mo-m3-on-surface-variant);
+    font-family: var(--mo-m3-font-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.00625rem;
+    line-height: 1.25rem;
+    padding: 0 16px;
+    transition:
+        background-color var(--mo-m3-motion-standard),
+        color var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light .navbar-link:hover,
+.mo-theme-material-design-3-dark .navbar-link:hover,
+.mo-theme-material-design-3-light .navbar-link:focus-visible,
+.mo-theme-material-design-3-dark .navbar-link:focus-visible {
+    background: var(--mo-m3-secondary-container);
+    color: var(--mo-m3-on-secondary-container);
+}
+
+.mo-theme-material-design-3-light .navbar-link::before,
+.mo-theme-material-design-3-dark .navbar-link::before {
+    display: none;
+}
+
+.mo-theme-material-design-3-light .action-button,
+.mo-theme-material-design-3-dark .action-button,
+.mo-theme-material-design-3-light .mud-icon-button,
+.mo-theme-material-design-3-dark .mud-icon-button,
+.mo-theme-material-design-3-light .navbar-actions .user-button,
+.mo-theme-material-design-3-dark .navbar-actions .user-button {
+    border-radius: var(--mo-m3-shape-full) !important;
+    color: var(--mo-m3-on-surface-variant) !important;
+    transition:
+        background-color var(--mo-m3-motion-standard),
+        color var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light .action-button:hover,
+.mo-theme-material-design-3-dark .action-button:hover,
+.mo-theme-material-design-3-light .mud-icon-button:hover,
+.mo-theme-material-design-3-dark .mud-icon-button:hover {
+    background: var(--mo-m3-nav-hover) !important;
+    color: var(--mo-m3-on-surface) !important;
+}
+
+.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu),
+.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu) {
+    background: var(--mo-m3-surface-container);
+    border: 1px solid var(--mo-m3-outline-variant);
+    border-radius: var(--mo-m3-shape-large);
+    box-shadow: var(--mud-elevation-2);
+    overflow: hidden;
+}
+
+.mo-theme-material-design-3-light :is(.more-menu-header, .flyout-menu-header),
+.mo-theme-material-design-3-dark :is(.more-menu-header, .flyout-menu-header) {
+    border-bottom-color: var(--mo-m3-outline-variant);
+    color: var(--mo-m3-on-surface-variant);
+    font-size: 0.75rem;
+    letter-spacing: 0.03125rem;
+    text-transform: none;
+}
+
+.mo-theme-material-design-3-light :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover),
+.mo-theme-material-design-3-dark :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover) {
+    background: var(--mo-m3-nav-hover) !important;
+    color: var(--mo-m3-on-surface) !important;
+}
+
+.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link),
+.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link) {
+    border-radius: var(--mo-m3-shape-full);
+    box-sizing: border-box;
+    margin: 2px 8px;
+    width: calc(100% - 16px);
+}
+
+.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active),
+.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active) {
+    border-radius: var(--mo-m3-shape-full);
+}
+
+.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item,
+.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item {
+    border-radius: var(--mo-m3-shape-full);
+    box-sizing: border-box;
+    margin: 2px 8px;
+    transition:
+        background-color var(--mo-m3-motion-standard),
+        color var(--mo-m3-motion-standard);
+    width: calc(100% - 16px);
+}
+
+.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:hover,
+.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:focus,
+.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:active,
+.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
+.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
+.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:active {
+    background: var(--mo-m3-nav-hover);
+    color: var(--mo-m3-on-surface);
+}
+
+.mo-theme-material-design-3-light :is(.mud-card, .theme-card),
+.mo-theme-material-design-3-dark :is(.mud-card, .theme-card) {
+    background: var(--mo-m3-surface-container-low);
+    border: 0 !important;
+    border-radius: var(--mo-m3-shape-expressive) !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    transition:
+        background-color var(--mo-m3-motion-standard),
+        box-shadow var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light :is(.mud-card, .theme-card):hover,
+.mo-theme-material-design-3-dark :is(.mud-card, .theme-card):hover {
+    background: var(--mo-m3-card-hover);
+    box-shadow: var(--mud-elevation-1) !important;
+    transform: none;
+}
+
+.mo-theme-material-design-3-light .theme-card.selected,
+.mo-theme-material-design-3-dark .theme-card.selected {
+    background: var(--mo-m3-primary-container);
+    border: 2px solid var(--mo-m3-primary) !important;
+    color: var(--mo-m3-on-primary-container);
+}
+
+.mo-theme-material-design-3-light :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs),
+.mo-theme-material-design-3-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs) {
+    background: var(--mo-m3-surface-container-low);
+    border-color: transparent;
+    border-radius: var(--mo-m3-shape-expressive);
+    box-shadow: none !important;
+}
+
+.mo-theme-material-design-3-light :is(.mud-dialog, .mud-snackbar),
+.mo-theme-material-design-3-dark :is(.mud-dialog, .mud-snackbar) {
+    border-radius: var(--mo-m3-shape-extra-large) !important;
+    box-shadow: var(--mud-elevation-3) !important;
+}
+
+.mo-theme-material-design-3-light .mud-dialog,
+.mo-theme-material-design-3-dark .mud-dialog {
+    background: var(--mo-m3-surface-container-high);
+    border: 0;
+}
+
+.mo-theme-material-design-3-light .mud-button,
+.mo-theme-material-design-3-dark .mud-button {
+    min-height: var(--mo-m3-button-height);
+    border-radius: var(--mo-m3-shape-full) !important;
+    box-shadow: none !important;
+    font-family: var(--mo-m3-font-text);
+    font-size: 0.875rem;
+    font-weight: 500 !important;
+    letter-spacing: 0.00625rem !important;
+    line-height: 1.25rem;
+    padding: 0 var(--mo-m3-button-padding-x) !important;
+    text-transform: none !important;
+    transition:
+        background-color var(--mo-m3-motion-standard),
+        box-shadow var(--mo-m3-motion-standard),
+        color var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light .mud-button-filled-primary,
+.mo-theme-material-design-3-dark .mud-button-filled-primary {
+    background: var(--mo-m3-primary) !important;
+    color: var(--mo-m3-on-primary) !important;
+}
+
+.mo-theme-material-design-3-light .mud-button-filled-primary:hover,
+.mo-theme-material-design-3-dark .mud-button-filled-primary:hover {
+    background: color-mix(in srgb, var(--mo-m3-primary) 92%, var(--mo-m3-on-primary)) !important;
+    box-shadow: var(--mud-elevation-1) !important;
+}
+
+.mo-theme-material-design-3-light .mud-button-outlined,
+.mo-theme-material-design-3-dark .mud-button-outlined {
+    border-color: var(--mo-m3-outline) !important;
+}
+
+.mo-theme-material-design-3-light :is(.mud-button-text:hover, .mud-button-outlined:hover),
+.mo-theme-material-design-3-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
+    background: color-mix(in srgb, var(--mo-m3-primary) 8%, transparent) !important;
+}
+
+.mo-theme-material-design-3-light :is(.mud-chip, .mud-alert),
+.mo-theme-material-design-3-dark :is(.mud-chip, .mud-alert) {
+    border-radius: var(--mo-m3-shape-small) !important;
+    font-family: var(--mo-m3-font-text);
+}
+
+.mo-theme-material-design-3-light .mud-chip,
+.mo-theme-material-design-3-dark .mud-chip {
+    min-height: 32px;
+    padding-inline: 12px !important;
+}
+
+.mo-theme-material-design-3-light .mud-input-outlined,
+.mo-theme-material-design-3-dark .mud-input-outlined {
+    border-radius: var(--mo-m3-shape-extra-small) !important;
+    background: transparent;
+}
+
+.mo-theme-material-design-3-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-material-design-3-dark .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-m3-outline);
+    border-radius: var(--mo-m3-shape-extra-small) !important;
+    transition:
+        border-color var(--mo-m3-motion-standard),
+        border-width var(--mo-m3-motion-standard);
+}
+
+.mo-theme-material-design-3-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border),
+.mo-theme-material-design-3-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border) {
+    border-color: var(--mo-m3-primary) !important;
+}
+
+.mo-theme-material-design-3-light .mud-input-label,
+.mo-theme-material-design-3-dark .mud-input-label {
+    color: var(--mo-m3-on-surface-variant);
+    font-family: var(--mo-m3-font-text);
+}
+
+.mo-theme-material-design-3-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-material-design-3-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mo-m3-surface-container-low);
+    border: 0;
+    border-radius: var(--mo-m3-shape-expressive);
+    overflow: hidden;
+}
+
+.mo-theme-material-design-3-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-material-design-3-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-m3-surface-container);
+    border-bottom: 0;
+}
+
+.mo-theme-material-design-3-light .mud-tab,
+.mo-theme-material-design-3-dark .mud-tab {
+    border-radius: var(--mo-m3-shape-full);
+    color: var(--mo-m3-on-surface-variant);
+    font-family: var(--mo-m3-font-text);
+    font-weight: 500;
+    margin: 8px 4px;
+    min-height: 40px;
+}
+
+.mo-theme-material-design-3-light .mud-tab.mud-tab-active,
+.mo-theme-material-design-3-dark .mud-tab.mud-tab-active {
+    background: var(--mo-m3-secondary-container);
+    color: var(--mo-m3-on-secondary-container);
+}
+
+.mo-theme-material-design-3-light .mud-tab-slider,
+.mo-theme-material-design-3-dark .mud-tab-slider {
+    display: none;
+}
+
+.mo-theme-material-design-3-light :is(.mud-table, .mud-data-grid),
+.mo-theme-material-design-3-dark :is(.mud-table, .mud-data-grid) {
+    background: var(--mo-m3-surface-container-low);
+}
+
+.mo-theme-material-design-3-light :is(.mud-table-head th, .mud-data-grid-header-cell),
+.mo-theme-material-design-3-dark :is(.mud-table-head th, .mud-data-grid-header-cell) {
+    background: var(--mo-m3-surface-container);
+    color: var(--mo-m3-on-surface-variant);
+    font-family: var(--mo-m3-font-text);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.03125rem;
+}
+
+.mo-theme-material-design-3-light :is(.mud-table-row:hover, .mud-data-grid-row:hover),
+.mo-theme-material-design-3-dark :is(.mud-table-row:hover, .mud-data-grid-row:hover) {
+    background: var(--mo-m3-card-hover) !important;
+}
+
+.mo-theme-material-design-3-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-material-design-3-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-material-design-3-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-material-design-3-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-material-design-3-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-material-design-3-dark .mud-data-grid .column-header .column-options .drag-icon-options {
+    opacity: 0.72;
+    color: var(--mo-m3-on-surface-variant);
+}
+
+.mo-theme-material-design-3-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-material-design-3-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    opacity: 1;
+    color: var(--mo-m3-on-surface-variant);
+}
+
+.mo-theme-material-design-3-light :is(.mud-data-grid .column-header:hover .column-options .sort-direction-icon, .mud-data-grid .column-header:hover .column-options .column-options-icon, .mud-data-grid .column-header:hover .column-options .drag-icon-options, .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label),
+.mo-theme-material-design-3-dark :is(.mud-data-grid .column-header:hover .column-options .sort-direction-icon, .mud-data-grid .column-header:hover .column-options .column-options-icon, .mud-data-grid .column-header:hover .column-options .drag-icon-options, .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label) {
+    color: var(--mo-m3-on-surface);
+}
+
+.mo-theme-material-design-3-light :is(.mud-data-grid .sort-direction-icon.mud-direction-asc, .mud-data-grid .sort-direction-icon.mud-direction-desc),
+.mo-theme-material-design-3-dark :is(.mud-data-grid .sort-direction-icon.mud-direction-asc, .mud-data-grid .sort-direction-icon.mud-direction-desc) {
+    opacity: 1;
+    color: var(--mo-m3-on-surface);
+}
+
+:root[data-theme="material-design-3-light"] .mud-tooltip,
+:root[data-theme="material-design-3-dark"] .mud-tooltip,
+.mo-theme-material-design-3-light .mud-tooltip,
+.mo-theme-material-design-3-dark .mud-tooltip {
+    background: var(--mo-m3-inverse-surface);
+    border-radius: var(--mo-m3-shape-extra-small);
+    color: var(--mo-m3-inverse-on-surface);
+    font-family: var(--mo-m3-font-text);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1rem;
+    max-width: min(28rem, calc(100vw - 32px));
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="material-design-3-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="material-design-3-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-material-design-3-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-material-design-3-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-m3-inverse-surface);
+}
+
+.mo-theme-material-design-3-light .mud-snackbar,
+.mo-theme-material-design-3-dark .mud-snackbar {
+    background: var(--mo-m3-inverse-surface);
+    color: var(--mo-m3-inverse-on-surface);
+}
+
+.mo-theme-material-design-3-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
+.mo-theme-material-design-3-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root) {
+    color: inherit;
+}
+
+.mo-theme-material-design-3-light ::-webkit-scrollbar-thumb,
+.mo-theme-material-design-3-dark ::-webkit-scrollbar-thumb {
+    background: var(--mo-m3-outline-variant);
+    border-radius: var(--mo-m3-shape-full);
+}
+
+.mo-theme-material-design-3-light ::-webkit-scrollbar-thumb:hover,
+.mo-theme-material-design-3-dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--mo-m3-outline);
+}
+
+@media (max-width: 1080px) {
+    .mo-theme-material-design-3-light .navbar-link,
+    .mo-theme-material-design-3-dark .navbar-link,
+    .mo-theme-material-design-3-light .navbar-measure-link,
+    .mo-theme-material-design-3-dark .navbar-measure-link {
+        padding: 0 12px;
+    }
+}

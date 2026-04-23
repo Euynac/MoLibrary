@@ -30,6 +30,10 @@
         "Name": "经典 Material",
         "Description": "经典的 Material 风格"
       },
+      "material-design-3": {
+        "Name": "Material Design 3",
+        "Description": "基于 Material Design 3 token 的柔和表面、圆角形状和表现型排版"
+      },
       "fresh": {
         "Name": "小清新",
         "Description": "薄荷浅色调，清爽安静"
