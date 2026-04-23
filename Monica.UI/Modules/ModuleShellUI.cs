@@ -88,9 +88,9 @@ public class ModuleShellUI(ModuleShellUIOption option)
 
         // Add Razor component and interactive server component services
         services.AddRazorComponents()
-            .AddInteractiveServerComponents(o =>
+            .AddInteractiveServerComponents(circuitOptions =>
             {
-                o.DetailedErrors = Option.EnableDebug;
+                circuitOptions.DetailedErrors = Option.EnableDebug;
             }).AddHubOptions(options =>
             {
                 options.EnableDetailedErrors = Option.EnableDebug;
@@ -214,6 +214,12 @@ public class ModuleShellUIGuide : WebModuleGuide<ModuleShellUI, ModuleShellUIOpt
 /// </summary>
 public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
 {
+#if DEBUG
+    private const bool EnableDebugDefault = true;
+#else
+    private const bool EnableDebugDefault = false;
+#endif
+
     /// <summary>
     /// App bar name
     /// </summary>
@@ -230,9 +236,13 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     public string UIAppVersion { get; set; } = "v1.0";
 
     /// <summary>
-    /// Turn on Debug mode
+    /// Enables UI debug diagnostics, including Blazor circuit detailed errors and SignalR hub detailed errors.
     /// </summary>
-    public bool EnableDebug { get; set; }
+    /// <remarks>
+    /// Defaults to <see langword="true"/> in DEBUG builds and <see langword="false"/> otherwise.
+    /// Keep this disabled for production because detailed errors can expose sensitive information to clients.
+    /// </remarks>
+    public bool EnableDebug { get; set; } = EnableDebugDefault;
 
     /// <summary>
     /// Enable Markdown support
