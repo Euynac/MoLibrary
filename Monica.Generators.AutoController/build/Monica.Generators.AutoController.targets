@@ -1,11 +1,33 @@
 <Project>
+  <!--
+    Visual Studio and msbuild.exe still host MSBuild on .NET Framework.
+    .NET 10 tasks must use the .NET task host there, while dotnet CLI can load them in-process.
+  -->
   <UsingTask
     TaskName="Monica.Generators.AutoController.BuildTasks.BootstrapRpcMetadataTask"
-    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)" />
+    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
+    Runtime="NET"
+    TaskFactory="TaskHostFactory"
+    Condition="'$(MSBuildRuntimeType)' != 'Core'" />
+
+  <UsingTask
+    TaskName="Monica.Generators.AutoController.BuildTasks.BootstrapRpcMetadataTask"
+    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
+    Runtime="NET"
+    Condition="'$(MSBuildRuntimeType)' == 'Core'" />
 
   <UsingTask
     TaskName="Monica.Generators.AutoController.BuildTasks.ExportRpcMetadataTask"
-    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)" />
+    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
+    Runtime="NET"
+    TaskFactory="TaskHostFactory"
+    Condition="'$(MSBuildRuntimeType)' != 'Core'" />
+
+  <UsingTask
+    TaskName="Monica.Generators.AutoController.BuildTasks.ExportRpcMetadataTask"
+    AssemblyFile="$(MonicaRpcMetadataBuildTasksAssembly)"
+    Runtime="NET"
+    Condition="'$(MSBuildRuntimeType)' == 'Core'" />
 
   <PropertyGroup Condition="'$(MonicaRpcMetadataExportDirectory)' != ''">
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
