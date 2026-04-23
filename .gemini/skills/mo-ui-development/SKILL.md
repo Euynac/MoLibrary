@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.8.0
+version: 2.8.1
 ---
 
 # Monica UI Development Guide
@@ -176,6 +176,7 @@ Always specify `T` for generic MudBlazor components:
 - For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
 - Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
+- Read `references/theme-authoring-pitfalls.md` when working on shared theme regressions or resuming a theme-debugging thread. That file carries the concrete regression patterns and verification traps.
 
 ## MudBlazor CSS Variable Workflow (Required)
 

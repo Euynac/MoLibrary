@@ -46,14 +46,46 @@ Relevant elements include:
 
 - Live header DOM on the target page
 - Computed `opacity` and `color`
+- The control wrapper, label container, and rendered icon path separately
 - MudBlazor source:
   - `Styles/components/_datagrid.scss`
+
+In practice, inspect all of these because the effective color and opacity can differ:
+
+- `.column-options .mud-menu .mud-button-root`
+- `.column-options .mud-menu .mud-icon-button-label`
+- the inner `svg`
 
 ### Preferred fix
 
 If the theme needs persistent affordances, define a visible default state with muted color and a stronger hover state.
 
 Do this at the theme level for shared `MudDataGrid` structure, not with page-local selectors.
+
+### Completion rule
+
+Do not treat this pitfall as resolved when it is only diagnosed.
+
+Track these states separately:
+
+- `diagnosed`: MudBlazor default hover-hidden behavior or theme CSS regression has been confirmed
+- `patched`: the shared theme selector has been changed
+- `verified`: the live page has been re-checked after the patch
+
+A handoff note that only records the root cause is still an open bug.
+
+### Verification rule
+
+Close the issue only after verifying the live computed styles in the affected state set:
+
+1. resting state
+2. interactive state such as hover, sorted, focus, or open menu
+
+If the theme owns persistent affordances, the resting state must already be visible before hover.
+
+### Bridge verification fallback
+
+If the originally requested bridge route is unavailable because a module or facade is not registered, verify on another live bridge route that renders the same `MudDataGrid` header pattern instead of stopping at the missing route.
 
 ## 3. Manual theme verification must use the real storage key
 
@@ -75,6 +107,13 @@ mo:theme:data
 
 - In application code, pass `theme:data` to `IBrowserStorage`
 - In Playwright, DevTools, or raw `localStorage` debugging, write `mo:theme:data`
+- The serialized payload must match Monica's camelCase JSON shape:
+
+```json
+{"themeName":"your-theme","isDarkMode":true}
+```
+
+- If a page is already mounted, it can write its current in-memory theme state back to storage. For manual mode switches, prefer a fresh browser session or write the storage value and reload immediately.
 
 If you write only `theme:data` during manual verification, the theme will appear to ignore persisted state.
 
@@ -98,3 +137,208 @@ Minimum verification for a new theme:
 1. Check both light and dark modes.
 2. Check at least two routes that reuse the same MudBlazor component type.
 3. Re-verify after removing any temporary page-specific hooks added during diagnosis.
+
+## 6. Auth-gated third-party themes need a source-first fallback
+
+### What happens
+
+When replicating a theme from a live third-party site, the most interesting surfaces can sit behind authentication.
+
+Sometimes the provided cookie data is incomplete, for example a CSRF cookie without a real authenticated session cookie. In that case:
+
+- public landing pages remain accessible
+- authenticated dashboard routes redirect or render public fallback content
+- direct live inspection of the real target UI is not possible
+
+### Preferred fix
+
+Verify access explicitly instead of assuming the provided cookies are sufficient.
+
+If authenticated access is unavailable:
+
+1. continue from the public site's computed styles, snapshots, and screenshots
+2. inspect the source repo for the private dashboard shells, tokens, typography, and component structure
+3. base Monica theme work on shared design tokens and shared component patterns, not on inaccessible pages
+
+Do not block theme authoring waiting for a live authenticated view if the source tree already exposes the design system.
+
+## 7. Exact font vendoring matters for theme fidelity
+
+### What happens
+
+A third-party theme can look structurally correct while still feeling wrong because the original UI uses a specific local font package such as `@fontsource/geist-mono`.
+
+Substituting a different monospace font can change:
+
+- width and wrapping
+- heading density
+- button label balance
+- tab and table header rhythm
+
+### Preferred fix
+
+When the source repo clearly declares a runtime font dependency:
+
+1. vendor the same font locally into `Monica.UI/wwwroot/fonts`
+2. add explicit `@font-face` declarations in the theme CSS
+3. keep runtime assets local and avoid CDN font dependencies
+
+If the exact font cannot be vendored, call out the fallback because visual fidelity will be lower.
+
+## 8. Tooltip styling can escape theme wrappers
+
+### What happens
+
+MudBlazor tooltips are popover-based overlays. They can render outside the main page wrapper that carries classes such as:
+
+- `.mo-theme-your-theme-light`
+- `.mo-theme-your-theme-dark`
+
+If a theme only styles tooltips through wrapper-descendant selectors, the live tooltip can keep partial Mud defaults or mix with the wrong contrast colors.
+
+The common failure mode is:
+
+- custom tooltip background applies inconsistently
+- tooltip text color stays on a near-default contrast token
+- the final tooltip becomes unreadable in light mode, dark mode, or both
+
+### What to inspect
+
+- Live `.mud-tooltip` computed `color`
+- Live `.mud-tooltip` computed `background-color`
+- Live `.mud-tooltip.mud-tooltip-arrow::after` arrow color
+- MudBlazor source:
+  - `Styles/components/_tooltip.scss`
+  - Popover service/provider files when render location is uncertain
+
+### Preferred fix
+
+For theme-owned tooltip styling:
+
+1. include `:root[data-theme=\"...\"] .mud-tooltip` selectors, not only `.mo-theme-... .mud-tooltip`
+2. set tooltip `color` explicitly, not just `background`
+3. set `.mud-tooltip-arrow::after` `border-top-color` explicitly; MudBlazor already applies `border-top-color: inherit`, so a `border-color` shorthand can still lose
+4. verify the tooltip on a real hover path in both light and dark modes
+
+Do not assume screenshot-only checks will catch this. The tooltip can look acceptable in one mode while the computed text color is still wrong in another.
+
+## 9. AppBar dropdowns can mix custom links and `MudMenuItem`
+
+### What happens
+
+The Monica AppBar does not use a single menu row structure.
+
+Common combinations include:
+
+- custom dropdown and flyout panels that render `.dropdown-menu .mud-nav-link` or `.flyout-menu .mud-nav-link`
+- MudBlazor menus that render `.mud-popover .mud-menu-list .mud-menu-item` for language, user, and similar action menus
+
+If a theme styles only one of those structures, the AppBar becomes inconsistent:
+
+- category dropdowns can look correct
+- language or user menus can stay square with full-width hover blocks
+- one theme can appear "partially fixed" even though the AppBar still mixes row shapes
+
+### What to inspect
+
+- Live `.dropdown-menu .mud-nav-link`
+- Live `.flyout-menu .mud-nav-link`
+- Live `.mud-popover .mud-menu-list .mud-menu-item`
+- Computed `border-radius`, `margin`, `width`, and hover `background-color`
+
+### Preferred fix
+
+When a theme defines pill-style AppBar dropdown rows, style both structures explicitly.
+
+Do not assume custom dropdown link selectors will also reach MudBlazor `MudMenuItem` rows.
+
+### Verification rule
+
+Verify at least:
+
+1. one custom AppBar dropdown or flyout
+2. one MudBlazor action menu such as language or user menu
+
+Check the resting row shape and the hover state on both.
+
+## 10. Do not treat Mud popovers like normal panels
+
+### What happens
+
+It is tempting to put all shell-like components into one shared selector such as:
+
+- `.mud-card`
+- `.mud-dialog`
+- `.mud-popover`
+- `.mud-tooltip`
+- `.mud-snackbar`
+
+and then apply panel visuals plus layout helpers like `position: relative`.
+
+That breaks MudBlazor overlays because popovers and tooltips already depend on their own positioning model.
+
+The common failure mode is:
+
+- a tooltip stretches to viewport width instead of shrinking to content
+- popovers appear offset, clipped, or detached from the trigger
+- dense pages look "broken" only after entering tabs or opening overlay-driven UI
+- broad `.mud-paper` selectors accidentally catch `mud-popover mud-paper` overlays and silently break MudBlazor positioning
+
+### What to inspect
+
+- Live tooltip or popover computed `position`
+- Live tooltip or popover computed `width`
+- `getBoundingClientRect()` for both the trigger and the overlay
+- Shared theme selectors that include `.mud-popover`, `.mud-tooltip`, or `.mud-snackbar`
+
+### Preferred fix
+
+1. keep generic panel selectors limited to real surfaces such as cards, tables, drawers, dialogs, tabs, and papers
+2. style `.mud-popover`, `.mud-menu`, `.mud-tooltip`, and `.mud-snackbar` in separate overlay-specific selectors
+3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
+4. verify overlay size and placement on a real hover or click path, not only by reading CSS
+
+## 11. Decorative textures can overwhelm data-heavy pages
+
+### What happens
+
+A texture that looks subtle on a landing page can become visually dominant on Monica dashboards, especially pages with:
+
+- many stat cards
+- tabs
+- tables or data grids
+- nested diagnostic panels
+
+Applying scanlines both globally and again inside every card compounds the effect and can make the whole page feel broken.
+
+### Preferred fix
+
+1. avoid repeating stripe or scanline textures on shared content surfaces by default
+2. if a theme needs texture, keep it to restrained accents such as corner marks, borders, or hover glints
+3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
+4. if a texture draws attention before the content does, remove it
+
+## 12. Scrollable data surfaces cannot inherit decorative clipping
+
+### What happens
+
+Shared panel styling often adds `overflow: hidden` so borders, corner marks, and hover treatments stay tidy.
+
+That is unsafe for:
+
+- `.mud-table-container`
+- `.mud-data-grid`
+- any other scroll host that must expose horizontal overflow for wide content
+
+The common failure mode is:
+
+- long columns cannot scroll horizontally
+- data-grid header actions feel broken because nearby overlays or affordances get clipped
+- the page looks correct at a glance, but dense data views lose core usability
+
+### Preferred fix
+
+1. treat table and grid containers as scroll surfaces, not decorative shells
+2. do not apply `overflow: hidden` to shared table or grid hosts in a theme
+3. verify `scrollWidth > clientWidth` cases on real pages such as `module-system-dashboard` and `程序集分析`
+4. keep decorative pseudo-elements off scroll hosts unless you have confirmed they do not interfere with scrolling or clipping
