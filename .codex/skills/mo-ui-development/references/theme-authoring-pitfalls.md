@@ -222,7 +222,46 @@ For theme-owned tooltip styling:
 
 Do not assume screenshot-only checks will catch this. The tooltip can look acceptable in one mode while the computed text color is still wrong in another.
 
-## 9. Do not treat Mud popovers like normal panels
+## 9. AppBar dropdowns can mix custom links and `MudMenuItem`
+
+### What happens
+
+The Monica AppBar does not use a single menu row structure.
+
+Common combinations include:
+
+- custom dropdown and flyout panels that render `.dropdown-menu .mud-nav-link` or `.flyout-menu .mud-nav-link`
+- MudBlazor menus that render `.mud-popover .mud-menu-list .mud-menu-item` for language, user, and similar action menus
+
+If a theme styles only one of those structures, the AppBar becomes inconsistent:
+
+- category dropdowns can look correct
+- language or user menus can stay square with full-width hover blocks
+- one theme can appear "partially fixed" even though the AppBar still mixes row shapes
+
+### What to inspect
+
+- Live `.dropdown-menu .mud-nav-link`
+- Live `.flyout-menu .mud-nav-link`
+- Live `.mud-popover .mud-menu-list .mud-menu-item`
+- Computed `border-radius`, `margin`, `width`, and hover `background-color`
+
+### Preferred fix
+
+When a theme defines pill-style AppBar dropdown rows, style both structures explicitly.
+
+Do not assume custom dropdown link selectors will also reach MudBlazor `MudMenuItem` rows.
+
+### Verification rule
+
+Verify at least:
+
+1. one custom AppBar dropdown or flyout
+2. one MudBlazor action menu such as language or user menu
+
+Check the resting row shape and the hover state on both.
+
+## 10. Do not treat Mud popovers like normal panels
 
 ### What happens
 
@@ -259,7 +298,7 @@ The common failure mode is:
 3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
 4. verify overlay size and placement on a real hover or click path, not only by reading CSS
 
-## 10. Decorative textures can overwhelm data-heavy pages
+## 11. Decorative textures can overwhelm data-heavy pages
 
 ### What happens
 
@@ -279,7 +318,7 @@ Applying scanlines both globally and again inside every card compounds the effec
 3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
 4. if a texture draws attention before the content does, remove it
 
-## 11. Scrollable data surfaces cannot inherit decorative clipping
+## 12. Scrollable data surfaces cannot inherit decorative clipping
 
 ### What happens
 
