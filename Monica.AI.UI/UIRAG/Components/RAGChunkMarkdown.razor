@@ -102,7 +102,7 @@
     }
 
     private string? ResolveUrl(LinkInline link, string? originalUrl)
-        => AssetResolver.ResolveUrl(originalUrl, link.IsImage, ScopeKey, DocumentRelativePath);
+        => AssetResolver.ResolveUrl(originalUrl, link.IsImage, ScopeKey, DocumentRelativePath, documentCulture: null);
 
     private static string NormalizeCssSegment(string? value)
     {

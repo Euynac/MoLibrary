@@ -23,7 +23,7 @@
                 </span>
             </span>
 
-            @if (CurrentGroup is { IsValid: false })
+            @if (CurrentGroup is { HasConfigurationError: true })
             {
                 <MudIcon Icon="@Icons.Material.Filled.Warning"
                          Size="Size.Small"
@@ -69,6 +69,9 @@
     public TreeNode<MarkdownDocumentNodeData>? CurrentTree { get; set; }
 
     [Parameter]
+    public string? CurrentCulture { get; set; }
+
+    [Parameter]
     public MarkdownDocument? SelectedDocument { get; set; }
 
     [Parameter]
@@ -96,10 +99,20 @@
     private string GetCurrentGroupSummary() =>
         CurrentGroup is null
             ? L["MarkdownViewer:Navbar:OpenKnowledgeBaseSwitcher"].Value
-            : L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", CurrentGroup.DocumentCount].Value;
+            : L["MarkdownViewer:Navbar:KnowledgeBaseDocumentCount", ResolveVisibleDocumentCount()].Value;
 
     private string GetFooterValue() =>
         !string.IsNullOrWhiteSpace(CurrentGroup?.Key)
             ? CurrentGroup.Key
             : GetCurrentGroupTitle();
+
+    private int ResolveVisibleDocumentCount()
+    {
+        if (CurrentGroup is null)
+        {
+            return 0;
+        }
+
+        return CurrentGroup.GetDocuments(CurrentCulture).Count;
+    }
 }

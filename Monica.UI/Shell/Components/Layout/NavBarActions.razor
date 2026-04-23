@@ -33,10 +33,11 @@
     <MudMenu AnchorOrigin="Origin.BottomRight"
              TransformOrigin="Origin.TopRight"
              Class="user-menu">
-        <ActivatorContent>
+        <ActivatorContent Context="menu">
             <MudButton Variant="Variant.Text"
-                      Class="user-button"
-                      StartIcon="@Icons.Material.Filled.AccountCircle">
+                       Class="user-button"
+                       StartIcon="@Icons.Material.Filled.AccountCircle"
+                       OnClick="@(() => menu.ToggleAsync())">
                 <span class="user-name">@UserContext.UserName</span>
             </MudButton>
         </ActivatorContent>

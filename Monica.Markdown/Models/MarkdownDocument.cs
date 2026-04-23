@@ -39,6 +39,20 @@ public class MarkdownDocument
     public required string RelativePath { get; init; }
 
     /// <summary>
+    /// Relative path used by the built-in markdown viewer.
+    /// When multilingual documents are enabled, this path omits the culture
+    /// root segment and becomes relative to the active language folder.
+    /// Otherwise it matches <see cref="RelativePath"/>.
+    /// </summary>
+    public required string NavigationRelativePath { get; init; }
+
+    /// <summary>
+    /// Resolved document culture when the document belongs to a multilingual
+    /// language root. This is <see langword="null"/> for single-language groups.
+    /// </summary>
+    public string? Culture { get; init; }
+
+    /// <summary>
     /// Depth in the folder hierarchy (0 = root level of the group).
     /// </summary>
     public required int Level { get; init; }

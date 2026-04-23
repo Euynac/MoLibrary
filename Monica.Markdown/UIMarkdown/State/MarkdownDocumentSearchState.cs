@@ -27,6 +27,11 @@ public sealed class MarkdownDocumentSearchState(
     public MarkdownDocumentGroup? CurrentGroup { get; private set; }
 
     /// <summary>
+    /// The active document culture when the dialog opens.
+    /// </summary>
+    public string? CurrentCulture { get; private set; }
+
+    /// <summary>
     /// The current raw query text.
     /// </summary>
     public string Query { get; private set; } = string.Empty;
@@ -77,9 +82,11 @@ public sealed class MarkdownDocumentSearchState(
     /// </summary>
     public void Attach(
         MarkdownDocumentGroup? currentGroup,
+        string? currentCulture,
         Func<Task> notifyChangedAsync)
     {
         CurrentGroup = currentGroup;
+        CurrentCulture = currentCulture;
         _notifyChangedAsync = notifyChangedAsync;
     }
 
@@ -152,7 +159,8 @@ public sealed class MarkdownDocumentSearchState(
                 new MarkdownDocumentSearchRequest(
                     Query.Trim(),
                     CurrentGroup?.Key,
-                    IncludeAllKnowledgeBases),
+                    IncludeAllKnowledgeBases,
+                    CurrentCulture),
                 searchCts.Token);
 
             if (searchCts.IsCancellationRequested)

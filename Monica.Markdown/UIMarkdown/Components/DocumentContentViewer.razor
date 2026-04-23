@@ -32,6 +32,43 @@
         </div>
 
         <div class="toolbar-trailing">
+            @if (ShowLanguageSwitcher)
+            {
+                <MudMenu AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         Dense="true"
+                         Class="language-switcher-menu">
+                    <ActivatorContent Context="menu">
+                        <button type="button"
+                                class="language-toggle"
+                                @onclick="@(() => menu.ToggleAsync())"
+                                title="@L["MarkdownViewer:Toolbar:SwitchLanguage"]">
+                            <MudIcon Icon="@Icons.Material.Filled.Language"
+                                     Size="Size.Small"
+                                     Class="language-toggle-icon" />
+                            <span class="language-toggle-label">@GetCurrentLanguageLabel()</span>
+                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                                     Size="Size.Small"
+                                     Class="language-toggle-chevron" />
+                        </button>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @foreach (var language in Languages)
+                        {
+                            var isSelected = string.Equals(
+                                language.Culture,
+                                CurrentCulture,
+                                StringComparison.OrdinalIgnoreCase);
+
+                            <MudMenuItem OnClick="@(() => SelectLanguageAsync(language.Culture))"
+                                         Icon="@(isSelected ? Icons.Material.Filled.Check : null)">
+                                @language.DisplayName
+                            </MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
+            }
+
             <button type="button"
                     class="@GetOutlineToggleClass()"
                     @onclick="ToggleTableOfContentsAsync"
@@ -108,6 +145,35 @@
             </MudStack>
         </div>
     }
+    else if (CurrentGroup is { MultilingualLayoutError: not null } layoutErrorGroup)
+    {
+        <div class="center-state">
+            <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                <MudIcon Icon="@Icons.Material.Filled.RuleFolder"
+                         Size="Size.Large"
+                         Color="Color.Warning"
+                         Class="state-icon state-icon-warning" />
+                <MudText Typo="Typo.h6" Color="Color.Warning">
+                    @L["MarkdownViewer:States:MultilingualLayoutInvalid"]
+                </MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="state-copy">
+                    @L["MarkdownViewer:States:MultilingualLayoutInvalidDescription"]
+                </MudText>
+
+                @if (layoutErrorGroup.MultilingualLayoutErrorPaths.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        <MudText Typo="Typo.caption" Class="state-path-list-caption">
+                            @L["MarkdownViewer:States:InvalidLanguageLayoutPaths"]
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="state-path state-path-list">
+                            @BuildMultilingualLayoutPathPreview()
+                        </MudText>
+                    </MudAlert>
+                }
+            </MudStack>
+        </div>
+    }
     else if (IsLoading)
     {
         <div class="center-state">
@@ -117,6 +183,23 @@
                                      Indeterminate="true" />
                 <MudText Typo="Typo.body1" Color="Color.Primary">
                     @L["MarkdownViewer:States:LoadingDocument"]
+                </MudText>
+            </MudStack>
+        </div>
+    }
+    else if (MissingTranslation is not null)
+    {
+        <div class="center-state">
+            <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                <MudIcon Icon="@Icons.Material.Filled.Translate"
+                         Size="Size.Large"
+                         Color="Color.Warning"
+                         Class="state-icon state-icon-warning" />
+                <MudText Typo="Typo.h6" Color="Color.Warning">
+                    @L["MarkdownViewer:States:DocumentLanguageMissing", GetMissingTranslationLanguageLabel()]
+                </MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="state-copy">
+                    @L["MarkdownViewer:States:DocumentLanguageMissingDescription"]
                 </MudText>
             </MudStack>
         </div>
@@ -153,6 +236,7 @@
                     <MoMarkdown Value="@_strippedContent"
                                 ScopeKey="@Document.GroupKey"
                                 DocumentRelativePath="@Document.RelativePath"
+                                DocumentCulture="@Document.Culture"
                                 HasTableOfContents="false"
                                 HeadingsChanged="OnHeadingsChanged" />
                 </div>
@@ -175,6 +259,21 @@
     public string? CurrentAnchorId { get; set; }
 
     [Parameter]
+    public string? CurrentCulture { get; set; }
+
+    [Parameter]
+    public MarkdownDocumentLanguage? CurrentLanguage { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<MarkdownDocumentLanguage> Languages { get; set; } = [];
+
+    [Parameter]
+    public bool ShowLanguageSwitcher { get; set; }
+
+    [Parameter]
+    public MarkdownMissingTranslationState? MissingTranslation { get; set; }
+
+    [Parameter]
     public bool IsLoading { get; set; }
 
     [Parameter]
@@ -191,6 +290,9 @@
 
     [Parameter]
     public EventCallback OnOpenDocumentSearch { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnLanguageChanged { get; set; }
 
     [Parameter]
     public EventCallback<IReadOnlyList<MoMarkdownHeading>> HeadingsChanged { get; set; }
@@ -217,7 +319,7 @@
         {
             var groupHref = string.IsNullOrWhiteSpace(currentGroup.Key)
                 ? null
-                : new MarkdownViewerLocation(currentGroup.Key).ToRelativeUri();
+                : new MarkdownViewerLocation(currentGroup.Key, Culture: CurrentCulture).ToRelativeUri();
 
             _breadcrumbs.Add(CreateBreadcrumbItem(currentGroup.Title, groupHref, disabled: Document is null));
         }
@@ -227,7 +329,7 @@
             return;
         }
 
-        var segments = Document.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var segments = Document.NavigationRelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i < segments.Length - 1; i++)
         {
             _breadcrumbs.Add(CreateBreadcrumbItem(segments[i]));
@@ -360,11 +462,11 @@
 
     private string? RewriteHtmlDocumentLinks(string? content)
     {
-        // Raw HTML anchors bypass the markdown link override pipeline, so they need a source-level rewrite.
         return MarkdownHtmlDocumentLinkRewriter.Rewrite(
             content,
             Document?.GroupKey,
-            Document?.RelativePath);
+            Document?.RelativePath,
+            Document?.Culture);
     }
 
     private Task OnHeadingsChanged(IReadOnlyList<MoMarkdownHeading> headings)
@@ -429,7 +531,54 @@
             return null;
         }
 
-        return new MarkdownViewerLocation(Document.GroupKey, Document.RelativePath, anchorId).ToRelativeUri();
+        return new MarkdownViewerLocation(
+            Document.GroupKey,
+            Document.NavigationRelativePath,
+            anchorId,
+            CurrentCulture).ToRelativeUri();
+    }
+
+    private string GetCurrentLanguageLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentLanguage?.DisplayName))
+        {
+            return CurrentLanguage.DisplayName;
+        }
+
+        return string.IsNullOrWhiteSpace(CurrentCulture)
+            ? L["MarkdownViewer:Toolbar:SwitchLanguage"].Value
+            : CurrentCulture;
+    }
+
+    private string GetMissingTranslationLanguageLabel()
+    {
+        if (MissingTranslation is null)
+        {
+            return GetCurrentLanguageLabel();
+        }
+
+        var matchedLanguage = Languages.FirstOrDefault(language =>
+            string.Equals(language.Culture, MissingTranslation.TargetCulture, StringComparison.OrdinalIgnoreCase));
+
+        return string.IsNullOrWhiteSpace(matchedLanguage?.DisplayName)
+            ? MissingTranslation.TargetCulture
+            : matchedLanguage.DisplayName;
+    }
+
+    private string BuildMultilingualLayoutPathPreview()
+    {
+        if (CurrentGroup is null || CurrentGroup.MultilingualLayoutErrorPaths.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var previewPaths = CurrentGroup.MultilingualLayoutErrorPaths.Take(6).ToList();
+        if (CurrentGroup.MultilingualLayoutErrorPaths.Count > previewPaths.Count)
+        {
+            previewPaths.Add("...");
+        }
+
+        return string.Join(Environment.NewLine, previewPaths);
     }
 
     private static BreadcrumbItem CreateBreadcrumbItem(
@@ -460,5 +609,10 @@
     private Task OpenDocumentSearchAsync()
     {
         return OnOpenDocumentSearch.InvokeAsync();
+    }
+
+    private Task SelectLanguageAsync(string culture)
+    {
+        return OnLanguageChanged.InvokeAsync(culture);
     }
 }

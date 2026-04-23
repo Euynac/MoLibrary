@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Net;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using MudBlazor;
 using Monica.Core.Results;
@@ -10,8 +12,9 @@ using Monica.Markdown.Localization;
 using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.Dialogs;
 using Monica.Markdown.UIMarkdown.Models;
-using Monica.Tool.Algorithms.Trees;
+using Monica.Modules;
 using Monica.UI.Shared.Components.Markdown;
+using Monica.Tool.Algorithms.Trees;
 
 namespace Monica.Markdown.UIMarkdown.State;
 
@@ -24,9 +27,11 @@ public sealed class MarkdownViewerPageState(
     NavigationManager navigationManager,
     ISnackbar snackbar,
     IJSRuntime jsRuntime,
-    IStringLocalizer<MarkdownResource> localizer)
+    IStringLocalizer<MarkdownResource> localizer,
+    IOptions<ModuleLocalizationOption> localizationOptions)
     : IAsyncDisposable
 {
+    private readonly ModuleLocalizationOption _localizationOption = localizationOptions.Value;
     private readonly DialogOptions _groupSwitcherDialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
@@ -51,6 +56,7 @@ public sealed class MarkdownViewerPageState(
     private bool _pendingHeadingTrackerRefresh;
     private PendingSearchNavigation? _pendingSearchNavigation;
     private bool _pendingSearchHighlightClear;
+    private string? _currentTreeCulture;
 
     /// <summary>
     /// Whether the page is loading its document groups.
@@ -83,6 +89,11 @@ public sealed class MarkdownViewerPageState(
     public string? SelectedGroupKey { get; private set; }
 
     /// <summary>
+    /// The currently selected document culture.
+    /// </summary>
+    public string? SelectedCulture { get; private set; }
+
+    /// <summary>
     /// The loaded tree for the active group.
     /// </summary>
     public TreeNode<MarkdownDocumentNodeData>? CurrentTree { get; private set; }
@@ -108,10 +119,33 @@ public sealed class MarkdownViewerPageState(
     public string? CurrentAnchorId { get; private set; }
 
     /// <summary>
+    /// Persistent state describing a document missing from the selected language.
+    /// </summary>
+    public MarkdownMissingTranslationState? MissingTranslation { get; private set; }
+
+    /// <summary>
     /// The active group resolved from the current selection.
     /// </summary>
     public MarkdownDocumentGroup? CurrentGroup =>
         Groups?.FirstOrDefault(group => string.Equals(group.Key, SelectedGroupKey, StringComparison.Ordinal));
+
+    /// <summary>
+    /// The resolved active language within the current group.
+    /// </summary>
+    public MarkdownDocumentLanguage? CurrentLanguage =>
+        CurrentGroup?.ResolveLanguage(SelectedCulture);
+
+    /// <summary>
+    /// Languages available for the current group.
+    /// </summary>
+    public IReadOnlyList<MarkdownDocumentLanguage> CurrentLanguages =>
+        CurrentGroup?.Languages ?? Array.Empty<MarkdownDocumentLanguage>();
+
+    /// <summary>
+    /// Whether the current group should expose the language switcher.
+    /// </summary>
+    public bool ShowLanguageSwitcher =>
+        CurrentGroup is { IsMultilingual: true } group && group.Languages.Count > 1;
 
     /// <summary>
     /// CSS class applied to the main workspace.
@@ -219,7 +253,8 @@ public sealed class MarkdownViewerPageState(
 
         var parameters = new DialogParameters<DocumentSearchDialog>
         {
-            { x => x.CurrentGroup, CurrentGroup }
+            { x => x.CurrentGroup, CurrentGroup },
+            { x => x.CurrentCulture, SelectedCulture }
         };
 
         var dialog = await dialogService.ShowAsync<DocumentSearchDialog>(
@@ -242,11 +277,19 @@ public sealed class MarkdownViewerPageState(
     public async Task OnGroupSelectedAsync(string groupKey)
     {
         ResetSearchHighlight();
+        ClearMissingTranslation();
         CurrentAnchorId = null;
         DocumentHeadings = [];
         _pendingHeadingTrackerRefresh = true;
-        await LoadGroupTreeAsync(groupKey);
-        NavigateToLocation(new MarkdownViewerLocation(groupKey));
+        var targetGroup = ResolveTargetGroup(groupKey);
+        var targetCulture = ResolveGroupCulture(targetGroup, SelectedCulture);
+        if (targetGroup?.IsMultilingual == true)
+        {
+            SelectedCulture = targetCulture;
+        }
+
+        await LoadGroupTreeAsync(groupKey, targetCulture);
+        NavigateToLocation(new MarkdownViewerLocation(groupKey, Culture: SelectedCulture));
     }
 
     /// <summary>
@@ -255,11 +298,46 @@ public sealed class MarkdownViewerPageState(
     public async Task OnDocumentSelectedAsync(MarkdownDocument? document)
     {
         ResetSearchHighlight();
+        ClearMissingTranslation();
         CurrentAnchorId = null;
         DocumentHeadings = [];
         _pendingHeadingTrackerRefresh = true;
         await LoadDocumentAsync(document);
-        NavigateToLocation(new MarkdownViewerLocation(SelectedGroupKey, document?.RelativePath));
+        NavigateToLocation(new MarkdownViewerLocation(
+            SelectedGroupKey,
+            document?.NavigationRelativePath,
+            Culture: SelectedCulture));
+    }
+
+    /// <summary>
+    /// Handles switching to another document language within the current group.
+    /// </summary>
+    public Task OnLanguageSelectedAsync(string culture)
+    {
+        if (CurrentGroup is not { IsMultilingual: true }
+            || string.IsNullOrWhiteSpace(culture)
+            || string.Equals(SelectedCulture, culture, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.CompletedTask;
+        }
+
+        ResetSearchHighlight();
+        var targetAnchorId = SelectedDocument is not null ? CurrentAnchorId : null;
+        CurrentAnchorId = null;
+        DocumentHeadings = [];
+        _pendingHeadingTrackerRefresh = true;
+
+        var targetDocumentRelativePath =
+            SelectedDocument?.NavigationRelativePath
+            ?? MissingTranslation?.DocumentRelativePath;
+
+        NavigateToLocation(new MarkdownViewerLocation(
+            SelectedGroupKey,
+            targetDocumentRelativePath,
+            targetAnchorId,
+            culture));
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -309,7 +387,11 @@ public sealed class MarkdownViewerPageState(
         }
 
         CurrentAnchorId = anchorId;
-        NavigateToLocation(new MarkdownViewerLocation(SelectedGroupKey, SelectedDocument.RelativePath, anchorId));
+        NavigateToLocation(new MarkdownViewerLocation(
+            SelectedGroupKey,
+            SelectedDocument.NavigationRelativePath,
+            anchorId,
+            SelectedCulture));
         return NotifyStateChangedAsync();
     }
 
@@ -427,7 +509,8 @@ public sealed class MarkdownViewerPageState(
         var location = new MarkdownViewerLocation(
             result.GroupKey,
             result.DocumentRelativePath,
-            result.AnchorId);
+            result.AnchorId,
+            SelectedCulture);
         var targetUri = location.ToRelativeUri();
         var currentUri = "/" + navigationManager.ToBaseRelativePath(navigationManager.Uri);
 
@@ -444,6 +527,7 @@ public sealed class MarkdownViewerPageState(
     {
         var requestedAnchorId = ResolveCurrentAnchorId(location.AnchorId);
         CurrentAnchorId = requestedAnchorId;
+        SelectedCulture = ResolveGlobalCulturePreference(location.Culture);
 
         if (Groups is not { Count: > 0 })
         {
@@ -454,38 +538,67 @@ public sealed class MarkdownViewerPageState(
         if (targetGroup is null)
         {
             ResetSearchHighlight();
+            ClearMissingTranslation();
             ClearDocumentSelection();
             await NotifyStateChangedAsync();
             return;
         }
 
-        if (!string.Equals(SelectedGroupKey, targetGroup.Key, StringComparison.Ordinal)
-            || (CurrentTree is null && targetGroup.IsValid))
+        var activeCulture = ResolveGroupCulture(targetGroup, location.Culture);
+        if (targetGroup.IsMultilingual)
         {
-            await LoadGroupTreeAsync(targetGroup.Key, requestedAnchorId);
+            SelectedCulture = activeCulture;
+        }
+
+        if (!string.Equals(SelectedGroupKey, targetGroup.Key, StringComparison.Ordinal)
+            || CurrentTree is null
+            || !string.Equals(_currentTreeCulture, activeCulture, StringComparison.OrdinalIgnoreCase))
+        {
+            await LoadGroupTreeAsync(targetGroup.Key, activeCulture, requestedAnchorId);
+        }
+
+        if (targetGroup.HasConfigurationError)
+        {
+            ClearMissingTranslation();
+            ClearDocumentSelection();
+            await NotifyStateChangedAsync();
+            return;
         }
 
         if (string.IsNullOrWhiteSpace(location.DocumentRelativePath))
         {
             ResetSearchHighlight();
+            ClearMissingTranslation();
             ClearDocumentSelection();
             await NotifyStateChangedAsync();
             return;
         }
 
-        var targetDocument = FindDocumentByRelativePath(CurrentTree, location.DocumentRelativePath);
+        var targetDocument = targetGroup.FindDocument(location.DocumentRelativePath, activeCulture);
         if (targetDocument is null)
         {
             ResetSearchHighlight();
             ClearDocumentSelection();
+
+            if (targetGroup.IsMultilingual && !string.IsNullOrWhiteSpace(activeCulture))
+            {
+                SetMissingTranslation(location.DocumentRelativePath, activeCulture);
+            }
+            else
+            {
+                ClearMissingTranslation();
+            }
+
             await NotifyStateChangedAsync();
             return;
         }
 
+        ClearMissingTranslation();
+
         var isCurrentDocument = SelectedDocument is not null
                                 && string.Equals(
-                                    SelectedDocument.RelativePath,
-                                    targetDocument.RelativePath,
+                                    SelectedDocument.FilePath,
+                                    targetDocument.FilePath,
                                     StringComparison.OrdinalIgnoreCase);
 
         if (!isCurrentDocument || DocumentContent is null)
@@ -499,21 +612,26 @@ public sealed class MarkdownViewerPageState(
         await NotifyStateChangedAsync();
     }
 
-    private async Task LoadGroupTreeAsync(string groupKey, string? requestedAnchorId = null)
+    private async Task LoadGroupTreeAsync(
+        string groupKey,
+        string? culture,
+        string? requestedAnchorId = null)
     {
         SelectedGroupKey = groupKey;
         ClearDocumentSelection();
+        ClearMissingTranslation();
         CurrentAnchorId = requestedAnchorId;
         CurrentTree = null;
+        _currentTreeCulture = null;
 
         var group = CurrentGroup;
-        if (group is null || !group.IsValid)
+        if (group is null || group.HasConfigurationError)
         {
             await NotifyStateChangedAsync();
             return;
         }
 
-        if ((await markdownFacade.GetDocumentTreeAsync(groupKey))
+        if ((await markdownFacade.GetDocumentTreeAsync(groupKey, culture))
             .IsFailed(out var error, out var tree))
         {
             snackbar.Add(error, Severity.Error);
@@ -521,6 +639,7 @@ public sealed class MarkdownViewerPageState(
         }
 
         CurrentTree = tree;
+        _currentTreeCulture = group.IsMultilingual ? culture : null;
         await NotifyStateChangedAsync();
     }
 
@@ -580,37 +699,66 @@ public sealed class MarkdownViewerPageState(
             return CurrentGroup;
         }
 
-        return Groups.FirstOrDefault(static group => group.IsValid) ?? Groups[0];
+        return Groups.FirstOrDefault(static group => !group.HasConfigurationError)
+               ?? Groups.FirstOrDefault(static group => group.IsValid)
+               ?? Groups[0];
     }
 
-    private static MarkdownDocument? FindDocumentByRelativePath(
-        TreeNode<MarkdownDocumentNodeData>? node,
-        string? relativePath)
+    private string? ResolveGroupCulture(MarkdownDocumentGroup? group, string? requestedCulture)
     {
-        if (node is null || string.IsNullOrWhiteSpace(relativePath))
+        if (group is not { IsMultilingual: true })
+        {
+            return SelectedCulture;
+        }
+
+        return group.ResolvePreferredLanguage(
+            requestedCulture,
+            SelectedCulture,
+            CultureInfo.CurrentUICulture.Name,
+            _localizationOption.DefaultCulture);
+    }
+
+    private string? ResolveGlobalCulturePreference(string? requestedCulture)
+    {
+        var supportedCultures = _localizationOption.SupportedCultures
+            .Where(static culture => !string.IsNullOrWhiteSpace(culture))
+            .Select(static culture => culture.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (supportedCultures.Length == 0)
         {
             return null;
         }
 
-        foreach (var child in node.Children)
-        {
-            if (child.Data.Document is not null
-                && string.Equals(
-                    child.Data.Document.RelativePath,
-                    relativePath,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return child.Data.Document;
-            }
+        return TryResolveSupportedCulture(supportedCultures, requestedCulture)
+               ?? TryResolveSupportedCulture(supportedCultures, SelectedCulture)
+               ?? TryResolveSupportedCulture(supportedCultures, CultureInfo.CurrentUICulture.Name)
+               ?? TryResolveSupportedCulture(supportedCultures, _localizationOption.DefaultCulture)
+               ?? supportedCultures[0];
+    }
 
-            var nestedDocument = FindDocumentByRelativePath(child, relativePath);
-            if (nestedDocument is not null)
-            {
-                return nestedDocument;
-            }
+    private static string? TryResolveSupportedCulture(
+        IReadOnlyList<string> supportedCultures,
+        string? candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return null;
         }
 
-        return null;
+        return supportedCultures.FirstOrDefault(supportedCulture =>
+            string.Equals(supportedCulture, candidate, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetMissingTranslation(string documentRelativePath, string targetCulture)
+    {
+        MissingTranslation = new MarkdownMissingTranslationState(documentRelativePath, targetCulture);
+    }
+
+    private void ClearMissingTranslation()
+    {
+        MissingTranslation = null;
     }
 
     private void ClearDocumentSelection()
@@ -659,7 +807,7 @@ public sealed class MarkdownViewerPageState(
                && DocumentContent is not null
                && string.Equals(SelectedDocument.GroupKey, navigation.Result.GroupKey, StringComparison.Ordinal)
                && string.Equals(
-                   SelectedDocument.RelativePath,
+                   SelectedDocument.NavigationRelativePath,
                    navigation.Result.DocumentRelativePath,
                    StringComparison.OrdinalIgnoreCase);
     }

@@ -14,7 +14,8 @@ internal static partial class MarkdownHtmlDocumentLinkRewriter
     public static string? Rewrite(
         string? content,
         string? groupKey,
-        string? currentDocumentRelativePath)
+        string? currentDocumentRelativePath,
+        string? currentCulture)
     {
         if (string.IsNullOrWhiteSpace(content)
             || string.IsNullOrWhiteSpace(groupKey)
@@ -30,6 +31,7 @@ internal static partial class MarkdownHtmlDocumentLinkRewriter
             var rewrittenUrl = MarkdownViewerLocation.TryResolveDocumentLink(
                 groupKey,
                 currentDocumentRelativePath,
+                currentCulture,
                 originalUrl);
 
             return string.IsNullOrWhiteSpace(rewrittenUrl)

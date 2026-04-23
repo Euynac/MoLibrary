@@ -48,7 +48,8 @@
 }
 
 .search-trigger,
-.outline-toggle {
+.outline-toggle,
+.language-toggle {
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -95,12 +96,14 @@
     opacity: 0.58;
 }
 
-.outline-toggle {
+.outline-toggle,
+.language-toggle {
     cursor: pointer;
 }
 
 .outline-toggle:hover,
-.search-trigger:hover {
+.search-trigger:hover,
+.language-toggle:hover {
     transform: translateY(-1px);
     border-color: rgba(var(--mud-palette-primary-rgb), 0.22);
     background-color: rgba(var(--mud-palette-primary-rgb), 0.04);
@@ -115,6 +118,20 @@
     border-color: rgba(var(--mud-palette-primary-rgb), 0.35);
     background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
     color: var(--mud-palette-primary);
+}
+
+.language-toggle-label {
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+::deep .language-toggle-icon,
+::deep .language-toggle-chevron {
+    font-size: 1rem !important;
 }
 
 .content-breadcrumb-bar {
@@ -228,6 +245,16 @@
 
 .state-path {
     font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+.state-path-list-caption {
+    display: block;
+    margin-bottom: 6px;
+    opacity: 0.8;
+}
+
+.state-path-list {
+    white-space: pre-wrap;
 }
 
 .markdown-body ::deep .mud-markdown-toc-content {

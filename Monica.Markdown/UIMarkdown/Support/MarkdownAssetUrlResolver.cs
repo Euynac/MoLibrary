@@ -16,13 +16,15 @@ public class MarkdownAssetUrlResolver(
         string? originalUrl,
         bool isImage,
         string? scopeKey,
-        string? documentRelativePath)
+        string? documentRelativePath,
+        string? documentCulture)
     {
         if (!isImage)
         {
             return MarkdownViewerLocation.TryResolveDocumentLink(
                        scopeKey,
                        documentRelativePath,
+                       documentCulture,
                        originalUrl)
                    ?? originalUrl;
         }

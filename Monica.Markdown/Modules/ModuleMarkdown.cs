@@ -11,7 +11,6 @@ using Monica.Markdown.Facades;
 using Monica.Markdown.Models;
 using Monica.Markdown.Providers.FileSystem;
 using Monica.Markdown.Services;
-using Monica.Markdown.UIMarkdown.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -35,7 +34,16 @@ public static class ModuleMarkdownBuilderExtensions
 public class ModuleMarkdown(ModuleMarkdownOption option)
     : ModuleBase<ModuleMarkdown, ModuleMarkdownOption, ModuleMarkdownGuide>(option)
 {
+    /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        if (Option.EnableMultilingualDocuments)
+        {
+            DependsOnModule<ModuleLocalizationGuide>().Register();
+        }
+    }
 
+    /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddSingleton<IMarkdownDocumentTitleResolver,
@@ -119,6 +127,22 @@ public class ModuleMarkdownGuide
             var existing = option.ExcludedFolders ?? Array.Empty<string>();
             option.ExcludedFolders = existing.Concat(folderNames).Distinct(
                 StringComparer.OrdinalIgnoreCase).ToArray();
+        });
+
+        return this;
+    }
+
+    /// <summary>
+    /// Enables multilingual markdown document discovery driven by the
+    /// configured localization cultures. When enabled, top-level folders whose
+    /// names match supported culture keys such as <c>zh-CN</c> or <c>en-US</c>
+    /// become language roots for the built-in viewer.
+    /// </summary>
+    public ModuleMarkdownGuide EnableMultilingualDocuments()
+    {
+        ConfigureModuleOption(option =>
+        {
+            option.EnableMultilingualDocuments = true;
         });
 
         return this;
@@ -209,6 +233,15 @@ public class ModuleMarkdownOption : ModuleOptions<ModuleMarkdown>
     /// </summary>
     public MarkdownSearchAlgorithm DocumentSearchAlgorithm { get; set; } =
         MarkdownSearchAlgorithm.KeywordFuzzy;
+
+    /// <summary>
+    /// Enables multilingual document discovery based on the configured
+    /// localization culture keys. When this is enabled and the scanner detects
+    /// top-level culture folders, the markdown viewer treats those folders as
+    /// hidden language roots and expects every markdown file to live under a
+    /// supported culture root.
+    /// </summary>
+    public bool EnableMultilingualDocuments { get; set; }
 
     /// <summary>
     /// Minimum normalized query length required before a search executes.

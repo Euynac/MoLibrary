@@ -74,13 +74,17 @@ public class MarkdownDocumentCatalogService(
                 continue;
             }
 
-            // Build flat path index from tree leaves
-            foreach (var node in group.RootNode.GetLeaves())
+            if (group.MultilingualLayoutError is not null)
             {
-                if (node.Data is { IsDocument: true, Document: not null })
-                {
-                    newPathIndex[node.Data.Document.FilePath] = node.Data.Document;
-                }
+                logger.LogWarning(
+                    "Document group '{Key}' requires multilingual layout migration. Offending files: {Paths}",
+                    group.Key,
+                    string.Join(", ", group.MultilingualLayoutErrorPaths));
+            }
+
+            foreach (var document in group.Documents)
+            {
+                newPathIndex[document.FilePath] = document;
             }
 
             logger.LogInformation(
@@ -109,27 +113,24 @@ public class MarkdownDocumentCatalogService(
         return group;
     }
 
-    public async Task<List<MarkdownDocument>> GetDocumentsAsync(string groupKey)
+    public async Task<List<MarkdownDocument>> GetDocumentsAsync(string groupKey, string? culture = null)
     {
         await EnsureInitializedAsync();
         if (!_groups.TryGetValue(groupKey, out var group))
             throw new KeyNotFoundException(
                 $"Document group '{groupKey}' not found.");
 
-        return group.RootNode.GetLeaves()
-            .Where(n => n.Data is { IsDocument: true, Document: not null })
-            .Select(n => n.Data.Document!)
-            .ToList();
+        return group.GetDocuments(culture).ToList();
     }
 
     public async Task<TreeNode<MarkdownDocumentNodeData>>
-        GetDocumentTreeAsync(string groupKey)
+        GetDocumentTreeAsync(string groupKey, string? culture = null)
     {
         await EnsureInitializedAsync();
         if (!_groups.TryGetValue(groupKey, out var group))
             throw new KeyNotFoundException(
                 $"Document group '{groupKey}' not found.");
-        return group.RootNode;
+        return group.GetDocumentTree(culture);
     }
 
     public async Task<MarkdownDocument> GetDocumentByPathAsync(string filePath)
@@ -144,14 +145,11 @@ public class MarkdownDocumentCatalogService(
         // Try matching by relative path across all groups
         foreach (var group in _groups.Values)
         {
-            var candidate = group.RootNode.GetLeaves()
-                .FirstOrDefault(n =>
-                    n.Data is { IsDocument: true, Document: not null }
-                    && string.Equals(n.Data.Document.RelativePath, filePath,
-                        StringComparison.OrdinalIgnoreCase));
+            var candidate = group.Documents.FirstOrDefault(document =>
+                string.Equals(document.RelativePath, filePath, StringComparison.OrdinalIgnoreCase));
 
-            if (candidate?.Data.Document is not null)
-                return candidate.Data.Document;
+            if (candidate is not null)
+                return candidate;
         }
 
         throw new KeyNotFoundException(
@@ -177,13 +175,12 @@ public class MarkdownDocumentCatalogService(
 
         foreach (var group in targetGroups)
         {
-            foreach (var node in group.RootNode.GetLeaves())
+            foreach (var doc in group.Documents)
             {
-                if (node.Data is not { IsDocument: true, Document.FrontMatter: not null })
+                if (doc.FrontMatter is null)
                     continue;
 
-                var doc = node.Data.Document!;
-                if (MatchesMetadata(doc.FrontMatter!, key, value))
+                if (MatchesMetadata(doc.FrontMatter, key, value))
                     results.Add(doc);
             }
         }
@@ -200,14 +197,13 @@ public class MarkdownDocumentCatalogService(
 
         foreach (var group in targetGroups)
         {
-            foreach (var node in group.RootNode.GetLeaves())
+            foreach (var doc in group.Documents)
             {
-                if (node.Data is not { IsDocument: true, Document.FrontMatter: not null })
+                if (doc.FrontMatter is null)
                     continue;
 
-                var doc = node.Data.Document!;
                 var allMatch = criteria.All(kvp =>
-                    MatchesMetadata(doc.FrontMatter!, kvp.Key, kvp.Value));
+                    MatchesMetadata(doc.FrontMatter, kvp.Key, kvp.Value));
 
                 if (allMatch)
                     results.Add(doc);
@@ -305,10 +301,9 @@ public class MarkdownDocumentCatalogService(
 
         foreach (var group in _groups.Values)
         {
-            foreach (var node in group.RootNode.GetLeaves())
+            foreach (var document in group.Documents)
             {
-                if (node.Data is { IsDocument: true, Document: not null })
-                    newIndex[node.Data.Document.FilePath] = node.Data.Document;
+                newIndex[document.FilePath] = document;
             }
         }
 

@@ -24,13 +24,15 @@ public interface IMarkdownDocumentCatalog
     /// Gets a flat list of all documents in a group.
     /// </summary>
     /// <exception cref="KeyNotFoundException">Thrown when the group key is not found.</exception>
-    Task<List<MarkdownDocument>> GetDocumentsAsync(string groupKey);
+    Task<List<MarkdownDocument>> GetDocumentsAsync(string groupKey, string? culture = null);
 
     /// <summary>
     /// Gets the hierarchical tree structure for a document group.
+    /// For multilingual groups, providing a culture returns the visible
+    /// language-relative tree for that language.
     /// </summary>
     /// <exception cref="KeyNotFoundException">Thrown when the group key is not found.</exception>
-    Task<TreeNode<MarkdownDocumentNodeData>> GetDocumentTreeAsync(string groupKey);
+    Task<TreeNode<MarkdownDocumentNodeData>> GetDocumentTreeAsync(string groupKey, string? culture = null);
 
     /// <summary>
     /// Looks up a document by its absolute or relative file path.

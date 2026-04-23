@@ -160,9 +160,12 @@
     [Parameter]
     public MarkdownDocumentGroup? CurrentGroup { get; set; }
 
+    [Parameter]
+    public string? CurrentCulture { get; set; }
+
     protected override void OnParametersSet()
     {
-        SearchState.Attach(CurrentGroup, () => InvokeAsync(StateHasChanged));
+        SearchState.Attach(CurrentGroup, CurrentCulture, () => InvokeAsync(StateHasChanged));
     }
 
     private void SelectResult(MarkdownDocumentSearchResult result)

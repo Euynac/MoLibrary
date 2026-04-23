@@ -26,7 +26,12 @@
       "NoDocumentsFound": "No documents found",
       "NoMatchingDocuments": "No matching documents",
       "GroupUnavailable": "Knowledge base unavailable",
-      "GroupUnavailableDescription": "The configured path does not exist or is not accessible."
+      "GroupUnavailableDescription": "The configured path does not exist or is not accessible.",
+      "MultilingualLayoutInvalid": "Knowledge base layout needs migration",
+      "MultilingualLayoutInvalidDescription": "Multilingual documents are enabled, but markdown files were found outside supported language folders. Move every markdown file under a culture root such as zh-CN or en-US.",
+      "InvalidLanguageLayoutPaths": "Markdown files outside language folders:",
+      "DocumentLanguageMissing": "This document is not available in {0}",
+      "DocumentLanguageMissingDescription": "Choose another document from the current tree or switch back to a language that contains this page."
     },
     "Navbar": {
       "ShowSidebar": "Show sidebar",
@@ -39,6 +44,7 @@
     },
     "Toolbar": {
       "SearchPlaceholder": "Search documents",
+      "SwitchLanguage": "Switch language",
       "DocumentTree": "Document tree",
       "ShowOutline": "Show outline",
       "HideOutline": "Hide outline",

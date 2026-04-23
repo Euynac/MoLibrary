@@ -9,12 +9,14 @@ namespace Monica.Markdown.UIMarkdown.Models;
 public sealed record MarkdownViewerLocation(
     string? GroupKey = null,
     string? DocumentRelativePath = null,
-    string? AnchorId = null)
+    string? AnchorId = null,
+    string? Culture = null)
 {
     public const string PageUrl = "/markdown-docs";
 
     private const string GroupQueryKey = "group";
     private const string DocumentQueryKey = "document";
+    private const string CultureQueryKey = "culture";
 
     /// <summary>
     /// Creates the markdown viewer state from an absolute URI.
@@ -27,7 +29,8 @@ public sealed record MarkdownViewerLocation(
         return new MarkdownViewerLocation(
             GetQueryValue(query, GroupQueryKey),
             GetQueryValue(query, DocumentQueryKey),
-            NormalizeAnchorId(uri.Fragment));
+            NormalizeAnchorId(uri.Fragment),
+            GetQueryValue(query, CultureQueryKey));
     }
 
     /// <summary>
@@ -47,6 +50,11 @@ public sealed record MarkdownViewerLocation(
             query[DocumentQueryKey] = DocumentRelativePath;
         }
 
+        if (!string.IsNullOrWhiteSpace(Culture))
+        {
+            query[CultureQueryKey] = Culture;
+        }
+
         var uri = query.Count == 0
             ? PageUrl
             : QueryHelpers.AddQueryString(PageUrl, query);
@@ -61,6 +69,10 @@ public sealed record MarkdownViewerLocation(
     /// </summary>
     /// <param name="groupKey">The current document group key.</param>
     /// <param name="currentDocumentRelativePath">The current document path relative to the group root.</param>
+    /// <param name="currentCulture">
+    /// The culture root that owns the current document when the document is
+    /// rendered from a multilingual markdown group.
+    /// </param>
     /// <param name="originalUrl">The markdown link URL as authored in the document.</param>
     /// <returns>
     /// A markdown viewer route when the link targets another local markdown document; otherwise <see langword="null" />.
@@ -68,6 +80,7 @@ public sealed record MarkdownViewerLocation(
     public static string? TryResolveDocumentLink(
         string? groupKey,
         string? currentDocumentRelativePath,
+        string? currentCulture,
         string? originalUrl)
     {
         if (string.IsNullOrWhiteSpace(groupKey)
@@ -86,7 +99,17 @@ public sealed record MarkdownViewerLocation(
             return null;
         }
 
-        return new MarkdownViewerLocation(groupKey, resolvedDocumentRelativePath, anchorId).ToRelativeUri();
+        var viewerRelativePath = StripLanguageRoot(resolvedDocumentRelativePath, currentCulture);
+        if (string.IsNullOrWhiteSpace(viewerRelativePath))
+        {
+            return null;
+        }
+
+        return new MarkdownViewerLocation(
+            groupKey,
+            viewerRelativePath,
+            anchorId,
+            currentCulture).ToRelativeUri();
     }
 
     private static string? GetQueryValue(IReadOnlyDictionary<string, Microsoft.Extensions.Primitives.StringValues> query, string key)
@@ -179,6 +202,23 @@ public sealed record MarkdownViewerLocation(
         return resolvedSegments.Count == 0
             ? null
             : string.Join('/', resolvedSegments);
+    }
+
+    private static string? StripLanguageRoot(string resolvedRelativePath, string? culture)
+    {
+        if (string.IsNullOrWhiteSpace(culture))
+        {
+            return resolvedRelativePath;
+        }
+
+        var segments = SplitAndNormalizeSegments(resolvedRelativePath);
+        if (segments.Count < 2
+            || !string.Equals(segments[0], culture, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return string.Join('/', segments.Skip(1));
     }
 
     private static List<string> SplitAndNormalizeSegments(string relativePath)

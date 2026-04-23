@@ -52,12 +52,16 @@ public class MarkdownFacade(
 
     /// <summary>
     /// Gets the hierarchical tree structure for a document group.
+    /// For multilingual groups, providing a culture returns the visible tree
+    /// rooted at that language folder.
     /// </summary>
-    public async Task<Res<TreeNode<MarkdownDocumentNodeData>>> GetDocumentTreeAsync(string groupKey)
+    public async Task<Res<TreeNode<MarkdownDocumentNodeData>>> GetDocumentTreeAsync(
+        string groupKey,
+        string? culture = null)
     {
         try
         {
-            var tree = await markdownCatalog.GetDocumentTreeAsync(groupKey);
+            var tree = await markdownCatalog.GetDocumentTreeAsync(groupKey, culture);
             return Res.Ok(tree);
         }
         catch (Exception ex)

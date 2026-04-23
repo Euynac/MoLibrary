@@ -6,4 +6,5 @@ namespace Monica.Markdown.Models;
 public sealed record MarkdownDocumentSearchRequest(
     string Query,
     string? CurrentGroupKey = null,
-    bool IncludeAllKnowledgeBases = false);
+    bool IncludeAllKnowledgeBases = false,
+    string? CurrentCulture = null);

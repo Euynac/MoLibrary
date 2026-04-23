@@ -8,7 +8,7 @@
                 class="group-item @(isActive ? "active" : "")"
                 @onclick="() => OnGroupClicked(group.Key)"
                 title="@GetItemTitle(group)">
-            <span class="group-dot @(group.IsValid ? string.Empty : "invalid")"></span>
+            <span class="group-dot @(group.HasConfigurationError ? "invalid" : string.Empty)"></span>
 
             <div class="group-content">
                 <div class="group-title-row">
@@ -17,7 +17,7 @@
                     <div class="group-meta">
                         <span class="group-count">@group.DocumentCount</span>
 
-                        @if (!group.IsValid)
+                        @if (group.HasConfigurationError)
                         {
                             <MudIcon Icon="@Icons.Material.Filled.Warning"
                                      Size="Size.Small"

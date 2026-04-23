@@ -47,6 +47,7 @@
                 <aside class="doc-sidebar-rail">
                     <DocumentSidebar CurrentGroup="PageState.CurrentGroup"
                                      CurrentTree="PageState.CurrentTree"
+                                     CurrentCulture="PageState.SelectedCulture"
                                      SelectedDocument="PageState.SelectedDocument"
                                      SelectedDocumentChanged="PageState.OnDocumentSelectedAsync"
                                      OnCollapseRequested="PageState.ToggleSidebar"
@@ -60,11 +61,17 @@
                                            Document="PageState.SelectedDocument"
                                            Content="@PageState.DocumentContent"
                                            CurrentAnchorId="@PageState.CurrentAnchorId"
+                                           CurrentCulture="PageState.SelectedCulture"
+                                           CurrentLanguage="PageState.CurrentLanguage"
+                                           Languages="PageState.CurrentLanguages"
+                                           ShowLanguageSwitcher="PageState.ShowLanguageSwitcher"
+                                           MissingTranslation="PageState.MissingTranslation"
                                            IsLoading="PageState.IsContentLoading"
                                            ShowSidebarToggle="!PageState.ShowSidebar"
                                            IsTableOfContentsVisible="PageState.ShowTableOfContents"
                                            OnToggleSidebar="PageState.ToggleSidebar"
                                            OnOpenDocumentSearch="PageState.OpenDocumentSearchAsync"
+                                           OnLanguageChanged="PageState.OnLanguageSelectedAsync"
                                            OnToggleTableOfContents="PageState.ToggleTableOfContents"
                                            HeadingsChanged="PageState.OnDocumentHeadingsChangedAsync" />
                 </main>

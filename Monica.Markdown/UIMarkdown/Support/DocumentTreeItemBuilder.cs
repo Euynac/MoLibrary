@@ -155,7 +155,7 @@ public static class DocumentTreeItemBuilder
         return node.Data.Document is not null
                && (node.Data.Document.NavigationTitle.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                    || node.Data.Document.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase)
-                   || node.Data.Document.RelativePath.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+                   || node.Data.Document.NavigationRelativePath.Contains(searchText, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

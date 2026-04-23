@@ -4,7 +4,6 @@ using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
 using Monica.Markdown.Services.Support;
 using Monica.Modules;
-using Monica.Tool.Algorithms.Trees;
 
 namespace Monica.Markdown.Services;
 
@@ -51,7 +50,7 @@ public class MarkdownDocumentSearchService(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var index = await GetOrBuildGroupIndexAsync(group, cancellationToken);
+            var index = await GetOrBuildGroupIndexAsync(group, request.CurrentCulture, cancellationToken);
             candidates.AddRange(matcher.Search(index, normalizedQuery, cancellationToken));
         }
 
@@ -59,7 +58,7 @@ public class MarkdownDocumentSearchService(
             .GroupBy(static candidate => candidate.Entry.Document.FilePath, StringComparer.OrdinalIgnoreCase)
             .Select(static group => group
                 .OrderByDescending(static candidate => candidate.Score)
-                .ThenBy(static candidate => candidate.Entry.Document.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(static candidate => candidate.Entry.Document.NavigationRelativePath, StringComparer.OrdinalIgnoreCase)
                 .First())
             .OrderByDescending(static candidate => candidate.Score)
             .ThenBy(static candidate => candidate.Entry.Document.Title, StringComparer.OrdinalIgnoreCase)
@@ -82,7 +81,7 @@ public class MarkdownDocumentSearchService(
 
         var groups = await markdownService.GetAllDocumentGroupsAsync();
         var validGroups = groups
-            .Where(static group => group.IsValid)
+            .Where(static group => !group.HasConfigurationError)
             .ToList();
 
         if (request.IncludeAllKnowledgeBases || string.IsNullOrWhiteSpace(request.CurrentGroupKey))
@@ -98,10 +97,13 @@ public class MarkdownDocumentSearchService(
 
     private async Task<MarkdownDocumentSearchGroupIndex> GetOrBuildGroupIndexAsync(
         MarkdownDocumentGroup group,
+        string? culture,
         CancellationToken cancellationToken)
     {
-        var fingerprint = BuildFingerprint(group);
-        if (_groupIndexes.TryGetValue(group.Key, out var cachedIndex)
+        var effectiveCulture = ResolveEffectiveCulture(group, culture);
+        var indexKey = BuildIndexKey(group, effectiveCulture);
+        var fingerprint = BuildFingerprint(group, effectiveCulture);
+        if (_groupIndexes.TryGetValue(indexKey, out var cachedIndex)
             && string.Equals(cachedIndex.Fingerprint, fingerprint, StringComparison.Ordinal))
         {
             return cachedIndex;
@@ -110,14 +112,14 @@ public class MarkdownDocumentSearchService(
         await _indexLock.WaitAsync(cancellationToken);
         try
         {
-            if (_groupIndexes.TryGetValue(group.Key, out cachedIndex)
+            if (_groupIndexes.TryGetValue(indexKey, out cachedIndex)
                 && string.Equals(cachedIndex.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return cachedIndex;
             }
 
-            var builtIndex = await BuildGroupIndexAsync(group, fingerprint, cancellationToken);
-            _groupIndexes[group.Key] = builtIndex;
+            var builtIndex = await BuildGroupIndexAsync(group, effectiveCulture, fingerprint, cancellationToken);
+            _groupIndexes[indexKey] = builtIndex;
             return builtIndex;
         }
         finally
@@ -128,11 +130,12 @@ public class MarkdownDocumentSearchService(
 
     private async Task<MarkdownDocumentSearchGroupIndex> BuildGroupIndexAsync(
         MarkdownDocumentGroup group,
+        string? culture,
         string fingerprint,
         CancellationToken cancellationToken)
     {
-        var documents = EnumerateDocuments(group)
-            .OrderBy(static document => document.RelativePath, StringComparer.OrdinalIgnoreCase)
+        var documents = EnumerateDocuments(group, culture)
+            .OrderBy(static document => document.NavigationRelativePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var entries = new List<MarkdownDocumentSearchEntry>(documents.Length);
 
@@ -142,13 +145,13 @@ public class MarkdownDocumentSearchService(
 
             var content = await markdownService.GetDocumentContentAsync(document);
             var sections = MarkdownDocumentSearchContentParser.ParseSections(document, content);
-            var pathTrail = BuildPathTrail(document.RelativePath);
+            var pathTrail = BuildPathTrail(document.NavigationRelativePath);
 
             entries.Add(new MarkdownDocumentSearchEntry(
                 group.Title,
                 document,
                 MarkdownDocumentSearchText.Normalize(document.Title),
-                MarkdownDocumentSearchText.Normalize(document.RelativePath),
+                MarkdownDocumentSearchText.Normalize(document.NavigationRelativePath),
                 pathTrail,
                 MarkdownDocumentSearchText.Normalize(pathTrail),
                 sections));
@@ -157,19 +160,25 @@ public class MarkdownDocumentSearchService(
         return new MarkdownDocumentSearchGroupIndex(group.Key, group.Title, fingerprint, entries);
     }
 
-    private static IEnumerable<MarkdownDocument> EnumerateDocuments(MarkdownDocumentGroup group)
+    private static IEnumerable<MarkdownDocument> EnumerateDocuments(
+        MarkdownDocumentGroup group,
+        string? culture)
     {
-        return group.RootNode
-            .GetLeaves()
-            .Where(static node => node.Data is { IsDocument: true, Document: not null })
-            .Select(static node => node.Data.Document!);
+        return group.GetDocuments(culture);
     }
 
-    private static string BuildFingerprint(MarkdownDocumentGroup group)
+    private static string BuildIndexKey(MarkdownDocumentGroup group, string? culture)
+    {
+        return string.IsNullOrWhiteSpace(culture)
+            ? group.Key
+            : $"{group.Key}::{culture}";
+    }
+
+    private static string BuildFingerprint(MarkdownDocumentGroup group, string? culture)
     {
         var builder = new StringBuilder();
 
-        foreach (var document in EnumerateDocuments(group)
+        foreach (var document in EnumerateDocuments(group, culture)
                      .OrderBy(static document => document.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
             builder.Append(document.RelativePath)
@@ -181,6 +190,13 @@ public class MarkdownDocumentSearchService(
         }
 
         return builder.ToString();
+    }
+
+    private static string? ResolveEffectiveCulture(MarkdownDocumentGroup group, string? culture)
+    {
+        return group.IsMultilingual
+            ? group.ResolvePreferredLanguage(culture)
+            : null;
     }
 
     private static string? BuildPathTrail(string relativePath)
@@ -206,7 +222,7 @@ public class MarkdownDocumentSearchService(
         return new MarkdownDocumentSearchResult(
             candidate.Entry.Document.GroupKey,
             candidate.Entry.GroupTitle,
-            candidate.Entry.Document.RelativePath,
+            candidate.Entry.Document.NavigationRelativePath,
             candidate.Entry.Document.Title,
             candidate.Entry.DocumentPathTrail,
             candidate.Section.IsDocumentSection ? null : candidate.Section.HeadingTrailText,

@@ -28,6 +28,9 @@
     public string? DocumentRelativePath { get; set; }
 
     [Parameter]
+    public string? DocumentCulture { get; set; }
+
+    [Parameter]
     public string StyleKey { get; set; } = "default";
 
     [Parameter]
@@ -105,7 +108,12 @@
 
     private string? ResolveUrl(LinkInline link, string? originalUrl)
     {
-        return AssetResolver.ResolveUrl(originalUrl, link.IsImage, ScopeKey, DocumentRelativePath);
+        return AssetResolver.ResolveUrl(
+            originalUrl,
+            link.IsImage,
+            ScopeKey,
+            DocumentRelativePath,
+            DocumentCulture);
     }
 
     private static string NormalizeCssSegment(string? value)
