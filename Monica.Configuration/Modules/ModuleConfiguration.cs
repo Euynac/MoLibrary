@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Configuration;
 using Monica.Configuration.Abstractions;
@@ -48,11 +49,16 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBa
     private IServiceCollection _services = null!;
     private MethodInfo _method = null!;
 
+    public override void ConfigureBuilder(IHostApplicationBuilder builder)
+    {
+        Option.AppConfiguration ??= builder.Configuration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
         ConfigurationRuntime.Setting = Option;
-        ConfigurationRuntime.AppConfiguration = Option.AppConfiguration;
+        ConfigurationRuntime.AppConfiguration = GetAppConfiguration();
 
         services.AddOptions();
         services.AddSingleton<IConfigurationCatalog, ConfigurationCatalogService>();
@@ -96,7 +102,7 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBa
     {
         // Important behavior: when option properties are List/Array and multiple configuration sources exist,
         // .NET appends elements instead of replacing them. This is by design. See dotnet/runtime #36384.
-        ConfigurationRuntime.Setting.SetOtherSourceAction?.Invoke((ConfigurationManager) ConfigurationRuntime.AppConfiguration);
+        ConfigurationRuntime.Setting.SetOtherSourceAction?.Invoke(ConfigurationRuntime.AppConfiguration);
         ConfigurationRegistration.RefreshProviders();
     }
 
@@ -139,17 +145,23 @@ public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBa
         if (configAttr.Section is { } section)
         {
             Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
-            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration.GetSection(section),
+            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, GetAppConfiguration().GetSection(section),
                 configAction);
         }
         else
         {
             Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
-            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, Option.AppConfiguration,
+            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, GetAppConfiguration(),
                 configAction);
         }
 
         OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionsBuilder);
+    }
+
+    private IConfigurationManager GetAppConfiguration()
+    {
+        return Option.AppConfiguration ?? throw new InvalidOperationException(
+            $"{nameof(ModuleConfigurationOption.AppConfiguration)} is not initialized. Register Monica with an IHostApplicationBuilder so the Configuration module can use builder.Configuration, or set a custom configuration manager explicitly.");
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -252,9 +264,12 @@ public class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfigura
     public bool EnableConfigRegisterLogging { get; set; }
 
     /// <summary>
-    /// Application configuration root.
+    /// Gets or sets the application configuration manager used to bind discovered configuration types
+    /// and append generated configuration sources.
+    /// When not configured, the module uses <see cref="IHostApplicationBuilder.Configuration"/>.
+    /// Set this only when the module should bind against a custom configuration manager.
     /// </summary>
-    public IConfiguration AppConfiguration { get; set; } = null!;
+    public IConfigurationManager? AppConfiguration { get; set; }
 
     /// <summary>
     /// Allows logging option values even when <see cref="OptionSettingAttribute"/> is missing.
@@ -290,5 +305,5 @@ public class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfigura
     /// <para></para>  AllowTrailingCommas = true
     /// <para></para>};
     /// </summary>
-    public Action<ConfigurationManager>? SetOtherSourceAction { get; set; }
+    public Action<IConfigurationManager>? SetOtherSourceAction { get; set; }
 }

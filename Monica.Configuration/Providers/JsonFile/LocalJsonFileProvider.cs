@@ -94,7 +94,7 @@ public class LocalJsonFileProvider(ConfigurationRegistration card)
             UpdateConfigFile(path, ConfigurationRuntime.Setting.RemovedPropertyHandling);
         }
 
-        ((ConfigurationManager)ConfigurationRuntime.AppConfiguration).AddJsonFile(path, false, true);
+        ConfigurationRuntime.AppConfiguration.AddJsonFile(path, false, true);
     }
     
     /// <summary>

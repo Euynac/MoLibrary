@@ -15,14 +15,14 @@ namespace Monica.Configuration.Services.Support;
 /// </remarks>
 public static class ConfigurationRuntime
 {
-    private static IConfiguration? _appConfiguration;
+    private static IConfigurationManager? _appConfiguration;
     private static ModuleConfigurationOption? _setting;
 
     /// <summary>
-    /// Gets or sets the application configuration.
+    /// Gets or sets the application configuration manager.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the application configuration is not initialized.</exception>
-    internal static IConfiguration AppConfiguration
+    internal static IConfigurationManager AppConfiguration
     {
         get
         {
