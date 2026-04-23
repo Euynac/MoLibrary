@@ -42,6 +42,20 @@
     --mo-button-font-weight: 400;
     --mo-button-text-transform: none;
     --mo-button-transition: all 0.3s ease;
+    --mo-nav-link-height: 100%;
+    --mo-nav-link-border-radius: 0;
+    --mo-nav-link-hover-background: rgba(15, 23, 42, 0.06);
+    --mo-nav-link-hover-color: var(--mud-palette-primary);
+    --mo-nav-menu-popover-background: linear-gradient(180deg, var(--mud-palette-surface), color-mix(in srgb, var(--mud-palette-surface) 94%, var(--mud-palette-primary) 6%));
+    --mo-nav-menu-popover-border: 1px solid color-mix(in srgb, var(--mud-palette-lines-default) 72%, var(--mud-palette-primary) 28%);
+    --mo-nav-menu-popover-border-radius: var(--mo-card-border-radius);
+    --mo-nav-menu-popover-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+    --mo-nav-menu-item-border-radius: var(--mo-button-border-radius);
+    --mo-nav-menu-item-hover-background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    --mo-nav-menu-item-hover-color: var(--mud-palette-text-primary);
+    --mo-nav-menu-item-active-background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    --mo-nav-menu-item-active-color: var(--mud-palette-primary);
+    --mo-nav-menu-item-active-icon-color: var(--mud-palette-primary);
     
     /* card style */
     --mo-card-border-radius: 4px;

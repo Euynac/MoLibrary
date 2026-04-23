@@ -56,6 +56,26 @@
     --mo-system-info-hero-background: var(--mo-m3-primary-container);
     --mo-system-info-hero-text: var(--mo-m3-on-primary-container);
     --mo-system-info-hero-action: var(--mo-m3-on-primary-container);
+    --mo-nav-link-height: 40px;
+    --mo-nav-link-padding-inline: 16px;
+    --mo-nav-link-border-radius: var(--mo-m3-shape-full);
+    --mo-nav-link-color: var(--mo-m3-on-surface-variant);
+    --mo-nav-link-font-size: 0.875rem;
+    --mo-nav-link-font-weight: 500;
+    --mo-nav-link-letter-spacing: 0.00625rem;
+    --mo-nav-link-hover-background: var(--mo-m3-secondary-container);
+    --mo-nav-link-hover-color: var(--mo-m3-on-secondary-container);
+    --mo-nav-link-indicator-display: none;
+    --mo-nav-menu-popover-background: var(--mo-m3-surface-container);
+    --mo-nav-menu-popover-border: 1px solid var(--mo-m3-outline-variant);
+    --mo-nav-menu-popover-border-radius: var(--mo-m3-shape-large);
+    --mo-nav-menu-popover-shadow: var(--mud-elevation-2);
+    --mo-nav-menu-item-border-radius: var(--mo-m3-shape-full);
+    --mo-nav-menu-item-hover-background: var(--mo-m3-nav-hover);
+    --mo-nav-menu-item-hover-color: var(--mo-m3-on-surface);
+    --mo-nav-menu-item-active-background: var(--mo-m3-nav-hover);
+    --mo-nav-menu-item-active-color: var(--mo-m3-on-surface);
+    --mo-nav-menu-item-active-icon-color: var(--mo-m3-on-surface);
 }
 
 :root[data-theme="material-design-3-light"],
@@ -171,38 +191,6 @@
     font-family: var(--mo-m3-font-mono);
 }
 
-.mo-theme-material-design-3-light .navbar-link,
-.mo-theme-material-design-3-dark .navbar-link,
-.mo-theme-material-design-3-light .navbar-measure-link,
-.mo-theme-material-design-3-dark .navbar-measure-link {
-    height: 40px;
-    align-self: center;
-    border-radius: var(--mo-m3-shape-full);
-    color: var(--mo-m3-on-surface-variant);
-    font-family: var(--mo-m3-font-text);
-    font-size: 0.875rem;
-    font-weight: 500;
-    letter-spacing: 0.00625rem;
-    line-height: 1.25rem;
-    padding: 0 16px;
-    transition:
-        background-color var(--mo-m3-motion-standard),
-        color var(--mo-m3-motion-standard);
-}
-
-.mo-theme-material-design-3-light .navbar-link:hover,
-.mo-theme-material-design-3-dark .navbar-link:hover,
-.mo-theme-material-design-3-light .navbar-link:focus-visible,
-.mo-theme-material-design-3-dark .navbar-link:focus-visible {
-    background: var(--mo-m3-secondary-container);
-    color: var(--mo-m3-on-secondary-container);
-}
-
-.mo-theme-material-design-3-light .navbar-link::before,
-.mo-theme-material-design-3-dark .navbar-link::before {
-    display: none;
-}
-
 .mo-theme-material-design-3-light .action-button,
 .mo-theme-material-design-3-dark .action-button,
 .mo-theme-material-design-3-light .mud-icon-button,
@@ -222,64 +210,6 @@
 .mo-theme-material-design-3-dark .mud-icon-button:hover {
     background: var(--mo-m3-nav-hover) !important;
     color: var(--mo-m3-on-surface) !important;
-}
-
-.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu),
-.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu) {
-    background: var(--mo-m3-surface-container);
-    border: 1px solid var(--mo-m3-outline-variant);
-    border-radius: var(--mo-m3-shape-large);
-    box-shadow: var(--mud-elevation-2);
-    overflow: hidden;
-}
-
-.mo-theme-material-design-3-light :is(.more-menu-header, .flyout-menu-header),
-.mo-theme-material-design-3-dark :is(.more-menu-header, .flyout-menu-header) {
-    border-bottom-color: var(--mo-m3-outline-variant);
-    color: var(--mo-m3-on-surface-variant);
-    font-size: 0.75rem;
-    letter-spacing: 0.03125rem;
-    text-transform: none;
-}
-
-.mo-theme-material-design-3-light :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover),
-.mo-theme-material-design-3-dark :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover) {
-    background: var(--mo-m3-nav-hover) !important;
-    color: var(--mo-m3-on-surface) !important;
-}
-
-.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link),
-.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link) {
-    border-radius: var(--mo-m3-shape-full);
-    box-sizing: border-box;
-    margin: 2px 8px;
-    width: calc(100% - 16px);
-}
-
-.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active),
-.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active) {
-    border-radius: var(--mo-m3-shape-full);
-}
-
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item {
-    border-radius: var(--mo-m3-shape-full);
-    box-sizing: border-box;
-    margin: 2px 8px;
-    transition:
-        background-color var(--mo-m3-motion-standard),
-        color var(--mo-m3-motion-standard);
-    width: calc(100% - 16px);
-}
-
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:active,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:active {
-    background: var(--mo-m3-nav-hover);
-    color: var(--mo-m3-on-surface);
 }
 
 .mo-theme-material-design-3-light :is(.mud-card, .theme-card),

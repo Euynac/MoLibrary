@@ -213,24 +213,6 @@
     transition: background-color 150ms ease-out !important;
 }
 
-.mo-theme-default-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item),
-.mo-theme-default-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item) {
-    border-radius: 8px !important;
-    box-sizing: border-box;
-    margin: 2px 8px !important;
-    transition: background-color 150ms ease-out !important;
-    width: calc(100% - 16px);
-}
-
-.mo-theme-default-light .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-default-light .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-default-light .mud-popover .mud-menu-list .mud-menu-item:active,
-.mo-theme-default-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-default-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-default-dark .mud-popover .mud-menu-list .mud-menu-item:active {
-    background-color: var(--mud-palette-action-default-hover) !important;
-}
-
 .mo-theme-default-light .mud-nav-item .mud-nav-link.active,
 .mo-theme-default-dark .mud-nav-item .mud-nav-link.active {
     background-color: var(--mud-palette-primary-hover) !important;

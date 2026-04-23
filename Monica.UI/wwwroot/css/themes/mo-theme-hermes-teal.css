@@ -29,6 +29,42 @@
     --mo-hermes-compressed-font: 'RulesCompressed', 'Noto Serif SC', 'Arial Narrow', sans-serif;
     --mo-hermes-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
     --mo-nav-menu-border-radius: 0px;
+    --mo-nav-link-height: 100%;
+    --mo-nav-link-padding-inline: 20px;
+    --mo-nav-link-border-radius: 0px;
+    --mo-nav-link-color: var(--mo-hermes-muted);
+    --mo-nav-link-font-size: 0.8rem;
+    --mo-nav-link-font-weight: 500;
+    --mo-nav-link-letter-spacing: 0.12em;
+    --mo-nav-link-text-transform: uppercase;
+    --mo-nav-link-hover-background: var(--mo-hermes-hover);
+    --mo-nav-link-hover-color: var(--mo-hermes-accent);
+    --mo-nav-link-indicator-height: 1px;
+    --mo-nav-link-indicator-background: currentColor;
+    --mo-nav-menu-popover-background: var(--mo-hermes-panel);
+    --mo-nav-menu-popover-border: 1px solid var(--mo-hermes-border);
+    --mo-nav-menu-popover-border-radius: 0px;
+    --mo-nav-menu-popover-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --mo-nav-menu-list-padding: 8px 0;
+    --mo-nav-menu-item-margin: 0;
+    --mo-nav-menu-item-width: 100%;
+    --mo-nav-menu-item-border-radius: 0px;
+    --mo-nav-menu-item-hover-background: var(--mo-hermes-hover);
+    --mo-nav-menu-item-hover-color: var(--mo-hermes-accent);
+    --mo-nav-menu-item-active-background: var(--mo-hermes-hover);
+    --mo-nav-menu-item-active-color: var(--mo-hermes-accent);
+    --mo-nav-menu-item-active-icon-color: var(--mo-hermes-accent);
+    --mo-nav-menu-item-min-height: 46px;
+    --mo-nav-menu-item-padding: 10px 16px;
+    --mo-navbar-background: linear-gradient(
+        135deg,
+        var(--mo-hermes-panel) 0%,
+        var(--mo-hermes-panel-strong) 100%
+    );
+    --mo-navbar-border: 1px solid var(--mo-hermes-border);
+    --mo-navbar-backdrop-filter: blur(10px);
+    --mo-navbar-gap: 20px;
+    --mo-navbar-gap-md: 20px;
 }
 
 :root[data-theme="hermes-teal-light"],
@@ -105,60 +141,6 @@
     background: transparent;
 }
 
-.mo-theme-hermes-teal-light .mo-navbar,
-.mo-theme-hermes-teal-dark .mo-navbar {
-    background: color-mix(in srgb, var(--mo-hermes-bg) 92%, transparent);
-    border-bottom: 1px solid var(--mo-hermes-border);
-    backdrop-filter: blur(12px);
-    gap: 20px;
-}
-
-.mo-theme-hermes-teal-light .navbar-link,
-.mo-theme-hermes-teal-dark .navbar-link,
-.mo-theme-hermes-teal-light .navbar-measure-link,
-.mo-theme-hermes-teal-dark .navbar-measure-link {
-    color: var(--mo-hermes-muted);
-    font-family: var(--mo-hermes-content-font);
-    font-size: 0.8rem;
-    font-weight: 400;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.mo-theme-hermes-teal-light .navbar-link:hover,
-.mo-theme-hermes-teal-dark .navbar-link:hover {
-    color: var(--mud-palette-text-primary);
-    background-color: var(--mo-hermes-hover);
-}
-
-.mo-theme-hermes-teal-light .navbar-link::before,
-.mo-theme-hermes-teal-dark .navbar-link::before {
-    height: 1px;
-    background: currentColor;
-}
-
-.mo-theme-hermes-teal-light .more-menu,
-.mo-theme-hermes-teal-dark .more-menu,
-.mo-theme-hermes-teal-light .flyout-menu,
-.mo-theme-hermes-teal-dark .flyout-menu,
-.mo-theme-hermes-teal-light .dropdown-menu,
-.mo-theme-hermes-teal-dark .dropdown-menu {
-    background: var(--mo-hermes-panel-strong);
-    border: 1px solid var(--mo-hermes-border);
-    border-radius: 0;
-    box-shadow: var(--mo-hermes-shadow);
-    backdrop-filter: blur(14px);
-}
-
-.mo-theme-hermes-teal-light .more-menu-header,
-.mo-theme-hermes-teal-dark .more-menu-header,
-.mo-theme-hermes-teal-light .flyout-menu-header,
-.mo-theme-hermes-teal-dark .flyout-menu-header {
-    color: var(--mo-hermes-muted);
-    font-family: var(--mo-hermes-compressed-font);
-    letter-spacing: 0.14em;
-}
-
 .mo-theme-hermes-teal-light .mud-card,
 .mo-theme-hermes-teal-dark .mud-card,
 .mo-theme-hermes-teal-light .mud-paper[class*="mud-elevation-"],
@@ -171,8 +153,12 @@
 .mo-theme-hermes-teal-dark .mud-dialog,
 .mo-theme-hermes-teal-light .mud-drawer,
 .mo-theme-hermes-teal-dark .mud-drawer,
+:root[data-theme="hermes-teal-light"] .mud-popover,
+:root[data-theme="hermes-teal-dark"] .mud-popover,
 .mo-theme-hermes-teal-light .mud-popover,
 .mo-theme-hermes-teal-dark .mud-popover,
+:root[data-theme="hermes-teal-light"] .mud-menu,
+:root[data-theme="hermes-teal-dark"] .mud-menu,
 .mo-theme-hermes-teal-light .mud-menu,
 .mo-theme-hermes-teal-dark .mud-menu,
 .mo-theme-hermes-teal-light .mud-tooltip,
@@ -185,10 +171,16 @@
     box-shadow: none;
 }
 
+:root[data-theme="hermes-teal-light"] .mud-dialog,
+:root[data-theme="hermes-teal-dark"] .mud-dialog,
 .mo-theme-hermes-teal-light .mud-dialog,
 .mo-theme-hermes-teal-dark .mud-dialog,
+:root[data-theme="hermes-teal-light"] .mud-popover,
+:root[data-theme="hermes-teal-dark"] .mud-popover,
 .mo-theme-hermes-teal-light .mud-popover,
 .mo-theme-hermes-teal-dark .mud-popover,
+:root[data-theme="hermes-teal-light"] .mud-snackbar,
+:root[data-theme="hermes-teal-dark"] .mud-snackbar,
 .mo-theme-hermes-teal-light .mud-snackbar,
 .mo-theme-hermes-teal-dark .mud-snackbar {
     box-shadow: var(--mo-hermes-shadow);

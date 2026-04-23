@@ -1,56 +1,53 @@
 @using Microsoft.Extensions.Localization
 @using Monica.UI.Localization
+@using Monica.UI.Shell.Models
+@using Monica.UI.Shell.Support
 @inject IStringLocalizer<SharedResource> L
 @inject IStringLocalizer<UIRegistryResource> RegistryL
 
-<div class="@RootCssClass"
-     @onmouseenter="OnMouseEnter"
-     @onmouseleave="OnMouseLeave">
+@{
+    var orderedCategories = GetOrderedCategories();
+}
 
-    <button class="navbar-link">
-        @L["NavBar:More"]
-        <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
-    </button>
+<div class="@RootCssClass">
+    <MudMenu ActivationEvent="MudBlazor.MouseEvent.MouseOver"
+             AnchorOrigin="Origin.BottomRight"
+             TransformOrigin="Origin.TopRight"
+             PopoverClass="@GetMorePopoverClass()"
+             ListClass="mo-nav-menu-list">
+        <ActivatorContent Context="menu">
+            <button class="navbar-link"
+                    type="button"
+                    @onclick="menu.ToggleAsync">
+                @L["NavBar:More"]
+                <MudIcon Icon="@Icons.Material.Filled.MoreHoriz" Size="Size.Small" />
+            </button>
+        </ActivatorContent>
 
-    @if (_isDropdownOpen)
-    {
-        <div class="@MoreMenuCssClass">
-            <div class="more-menu-header">
-                <span>@L["NavBar:MoreModules"]</span>
-            </div>
-            @foreach (var category in Categories.OrderBy(c => c.Key))
+        <ChildContent>
+            @for (var categoryIndex = 0; categoryIndex < orderedCategories.Count; categoryIndex++)
             {
-                <div class="more-category-item"
-                     @onmouseenter="() => OnCategoryHover(category.Key)"
-                     @onmouseleave="OnCategoryLeave">
+                var category = orderedCategories[categoryIndex];
+                var openSubmenuToLeft = CompactMode || categoryIndex == orderedCategories.Count - 1;
 
-                    <div class="category-header">
-                        <span>@category.Key</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
-                    </div>
-
-                    @if (_activeFlyoutCategory == category.Key)
-                    {
-                        <div class="flyout-menu">
-                            <div class="flyout-menu-header">
-                                <span>@category.Key</span>
-                            </div>
-                            @foreach (var item in category.Value.OrderBy(i => i.Order))
-                            {
-                                <MudNavLink Href="@item.Href"
-                                           Class="flyout-item"
-                                           Match="@item.NavLinkMatch">
-                                    @if (!string.IsNullOrEmpty(item.Icon))
-                                    {
-                                        <MudIcon Icon="@item.Icon" Size="Size.Small" Class="item-icon" />
-                                    }
-                                    <span>@GetItemText(item)</span>
-                                </MudNavLink>
-                            }
-                        </div>
-                    }
-                </div>
+                <MudMenu ActivationEvent="MudBlazor.MouseEvent.MouseOver"
+                         Label="@category.Key"
+                         AnchorOrigin="@(openSubmenuToLeft ? Origin.TopLeft : Origin.TopRight)"
+                         TransformOrigin="@(openSubmenuToLeft ? Origin.TopRight : Origin.TopLeft)"
+                         PopoverClass="@GetCategoryPopoverClass()"
+                         ListClass="mo-nav-menu-list">
+                    <ChildContent>
+                        @foreach (var item in category.Value.OrderBy(i => i.Order))
+                        {
+                            <MudMenuItem Href="@item.Href"
+                                         Icon="@item.Icon"
+                                         Class="@NavigationRouteMatcher.GetActiveClass(NavigationManager, item)">
+                                @item.ResolveDisplayText(RegistryL)
+                            </MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
             }
-        </div>
-    }
+        </ChildContent>
+    </MudMenu>
 </div>
