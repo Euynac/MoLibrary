@@ -347,6 +347,18 @@ def normalize_process_match_value(value: str) -> str:
     return value.replace("\\", "/").strip().lower()
 
 
+def extract_command_runner_name(command_line: str) -> str:
+    normalized_command = command_line.strip()
+    if not normalized_command:
+        return ""
+    if normalized_command.startswith('"'):
+        closing_quote = normalized_command.find('"', 1)
+        first_token = normalized_command[1:closing_quote] if closing_quote != -1 else normalized_command[1:]
+    else:
+        first_token = normalized_command.split(None, 1)[0]
+    return Path(first_token).name.lower() if first_token else ""
+
+
 def is_bridge_process_command_line(command_line: str | None, context: BridgeContext, image_name: str | None = None) -> bool:
     normalized_command = normalize_process_match_value(command_line or "")
     normalized_project_file = normalize_process_match_value(str(context.project_file))
@@ -355,17 +367,15 @@ def is_bridge_process_command_line(command_line: str | None, context: BridgeCont
     project_executable_name = context.project_name.lower()
     project_executable_name_windows = f"{context.project_name}.exe".lower()
     normalized_image_name = (image_name or "").strip().lower()
-    first_token = normalized_command.split(None, 1)[0] if normalized_command else ""
-    runner_name = Path(first_token).name.lower() if first_token else ""
+    runner_name = extract_command_runner_name(normalized_command)
 
-    runner_matches = runner_name in {
+    runner_names = {
         "dotnet",
-        project_executable_name,
-        project_executable_name_windows,
-    } or normalized_image_name in {
+        "dotnet.exe",
         project_executable_name,
         project_executable_name_windows,
     }
+    runner_matches = runner_name in runner_names or normalized_image_name in runner_names
 
     project_matches = any(
         token and token in normalized_command
@@ -635,39 +645,50 @@ def locate_windows_powershell() -> str | None:
     return None
 
 
-def get_windows_process_command_line(pid: int) -> str | None:
+def collect_windows_process_details(pids: Iterable[int], cmd_exe: str) -> dict[int, dict[str, str | None]]:
+    normalized_pids = sorted({pid for pid in pids if pid > 0 and pid != os.getpid()})
+    if not normalized_pids:
+        return {}
+
+    details: dict[int, dict[str, str | None]] = {pid: {"image_name": None, "command_line": None} for pid in normalized_pids}
+
+    result = run_command([cmd_exe, "/c", "tasklist /FO CSV /NH"])
+    if result.returncode == 0:
+        for row in parse_tasklist_rows(result.stdout):
+            parsed_pid = safe_parse_pid(row.get("pid"))
+            if parsed_pid in details:
+                details[parsed_pid]["image_name"] = row.get("image_name")
+
     powershell = locate_windows_powershell()
     if not powershell:
-        return None
+        return details
+
+    pid_csv = ",".join(str(pid) for pid in normalized_pids)
     script = (
-        f'$p = Get-CimInstance Win32_Process -Filter "ProcessId = {pid}" -ErrorAction SilentlyContinue; '
-        'if ($null -ne $p) { $p.CommandLine }'
+        f"$ids = @({pid_csv}); "
+        '$procs = Get-CimInstance Win32_Process | Where-Object { $ids -contains $_.ProcessId }; '
+        'foreach ($proc in $procs) { Write-Output ("{0}|{1}" -f $proc.ProcessId, ($proc.CommandLine -replace "\\r|\\n", " ")) }'
     )
     result = run_command([powershell, "-NoProfile", "-Command", script])
     if result.returncode != 0:
-        return None
-    command_line = result.stdout.strip()
-    return command_line or None
+        return details
 
-
-def get_windows_image_name(pid: int, cmd_exe: str) -> str | None:
-    result = run_command([cmd_exe, "/c", f'tasklist /FI "PID eq {pid}" /FO CSV /NH'])
-    if result.returncode != 0:
-        return None
-    rows = parse_tasklist_rows(result.stdout)
-    if not rows:
-        return None
-    return rows[0]["image_name"] or None
+    for line in result.stdout.splitlines():
+        pid_text, _, command_line = line.partition("|")
+        pid = safe_parse_pid(pid_text.strip())
+        if pid in details:
+            details[pid]["command_line"] = command_line.strip() or None
+    return details
 
 
 def collect_windows_owned_project_processes(context: BridgeContext, cmd_exe: str) -> dict[int, dict[str, str | None]]:
-    pids = sorted(collect_windows_named_pids(context.project_name, cmd_exe))
+    pids = sorted(set(collect_windows_named_pids(context.project_name, cmd_exe) | collect_windows_port_pids(context.port, cmd_exe)))
+    details_by_pid = collect_windows_process_details(pids, cmd_exe)
     processes: dict[int, dict[str, str | None]] = {}
     for pid in pids:
-        if pid == os.getpid():
-            continue
-        image_name = get_windows_image_name(pid, cmd_exe)
-        command_line = get_windows_process_command_line(pid)
+        details = details_by_pid.get(pid, {"command_line": None, "image_name": None})
+        image_name = details.get("image_name")
+        command_line = details.get("command_line")
         if is_bridge_process_command_line(command_line, context, image_name=image_name):
             processes[pid] = {"command_line": command_line, "image_name": image_name}
     return processes
@@ -676,12 +697,14 @@ def collect_windows_owned_project_processes(context: BridgeContext, cmd_exe: str
 def classify_windows_port_processes(context: BridgeContext, cmd_exe: str) -> tuple[dict[int, dict[str, str | None]], dict[int, dict[str, str | None]]]:
     owned: dict[int, dict[str, str | None]] = {}
     conflicts: dict[int, dict[str, str | None]] = {}
-    for pid in sorted(collect_windows_port_pids(context.port, cmd_exe)):
+    pids = sorted(collect_windows_port_pids(context.port, cmd_exe))
+    details_by_pid = collect_windows_process_details(pids, cmd_exe)
+    for pid in pids:
         if pid == os.getpid():
             continue
-        image_name = get_windows_image_name(pid, cmd_exe)
-        command_line = get_windows_process_command_line(pid)
-        details = {"command_line": command_line, "image_name": image_name}
+        details = details_by_pid.get(pid, {"command_line": None, "image_name": None})
+        image_name = details.get("image_name")
+        command_line = details.get("command_line")
         if is_bridge_process_command_line(command_line, context, image_name=image_name):
             owned[pid] = details
         else:
