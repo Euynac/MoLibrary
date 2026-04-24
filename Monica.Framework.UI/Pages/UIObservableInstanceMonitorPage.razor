@@ -59,31 +59,33 @@
                                 </MudChip>
                             </MudStack>
 
-                            <MudTable T="ObservableInstanceViewModel"
-                                     Items="@_exceptionsPreview.Take(10)"
-                                     Dense="true"
-                                     Hover="true"
-                                     OnRowClick="HandleExceptionPreviewRowClickAsync"
-                                     Style="cursor: pointer;">
-                                <HeaderContent>
-                                    <MudTh>实例ID</MudTh>
-                                    <MudTh>名称</MudTh>
-                                    <MudTh>异常数</MudTh>
-                                    <MudTh>最后更新</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    <MudTd>
-                                        <MudText Typo="Typo.body2" Style="font-family: monospace;">
-                                            @(context.InstanceId.Length > 12 ? context.InstanceId[..12] + "..." : context.InstanceId)
-                                        </MudText>
-                                    </MudTd>
-                                    <MudTd>@context.InstanceName</MudTd>
-                                    <MudTd>
-                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
-                                    </MudTd>
-                                    <MudTd>@context.StateChangedAtDisplay</MudTd>
-                                </RowTemplate>
-                            </MudTable>
+                            <div class="exception-preview-table">
+                                <MudTable T="ObservableInstanceViewModel"
+                                          Items="@_exceptionsPreview.Take(10)"
+                                          Dense="true"
+                                          Hover="true"
+                                          OnRowClick="HandleExceptionPreviewRowClickAsync"
+                                          Style="cursor: pointer;">
+                                    <HeaderContent>
+                                        <MudTh Class="observable-instance-id-header">实例ID</MudTh>
+                                        <MudTh>名称</MudTh>
+                                        <MudTh>异常数</MudTh>
+                                        <MudTh>最后更新</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="实例ID" Class="observable-instance-id-cell">
+                                            <MudTooltip Text="@context.InstanceId" RootClass="observable-instance-id-tooltip">
+                                                <span class="observable-instance-id-text">@context.InstanceId</span>
+                                            </MudTooltip>
+                                        </MudTd>
+                                        <MudTd>@context.InstanceName</MudTd>
+                                        <MudTd>
+                                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
+                                        </MudTd>
+                                        <MudTd>@context.StateChangedAtDisplay</MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </div>
                         </MudStack>
                     </MudPaper>
                 }
@@ -97,41 +99,6 @@
                                         Loading="_loading"
                                         OnRowClick="ShowInstanceDetail"
                                         OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
-            </MudTabPanel>
-
-            <!-- By Type Tab -->
-            <MudTabPanel Text="按类型" Icon="@Icons.Material.Filled.Category">
-                @if (_instancesByType.Any())
-                {
-                    <MudStack Spacing="3">
-                        @foreach (var typeGroup in _instancesByType)
-                        {
-                            <MudPaper Class="pa-3" Elevation="2">
-                                <MudStack Spacing="2">
-                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Secondary" />
-                                            <MudTooltip Text="@typeGroup.Key">
-                                                <MudText Typo="Typo.h6">@(typeGroup.Value.FirstOrDefault()?.InstanceTypeDisplay ?? "Unknown")</MudText>
-                                            </MudTooltip>
-                                        </MudStack>
-                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small">
-                                            @typeGroup.Value.Count 个实例
-                                        </MudChip>
-                                    </MudStack>
-                                    <ObservableInstanceTable Instances="typeGroup.Value"
-                                                            Compact="true"
-                                                            OnRowClick="ShowInstanceDetail"
-                                                            OnClearHistory="ClearInstanceHistoryWithConfirmAsync" />
-                                </MudStack>
-                            </MudPaper>
-                        }
-                    </MudStack>
-                }
-                else
-                {
-                    <MudAlert Severity="Severity.Info">暂无实例</MudAlert>
-                }
             </MudTabPanel>
 
             <!-- By Group Tab -->
@@ -190,7 +157,6 @@
     private ObservableInstanceStatistics? _statistics;
 
     // Grouping
-    private Dictionary<string, List<ObservableInstanceViewModel>> _instancesByType = new();
     private Dictionary<string, List<ObservableInstanceViewModel>> _instancesByGroup = new();
 
     // Filter
@@ -277,9 +243,6 @@
                         return false;
                 }
 
-                if (_filter.InstanceType != null && instance.InstanceType != _filter.InstanceType)
-                    return false;
-
                 if (!string.IsNullOrWhiteSpace(_filter.GroupId) && instance.GroupId != _filter.GroupId)
                     return false;
 
@@ -315,12 +278,6 @@
 
     private void GroupInstances()
     {
-        // Group by type
-        _instancesByType = _allInstances
-            .Where(i => i.InstanceType != null)
-            .GroupBy(i => i.InstanceTypeFullName)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
         // Group by GroupId
         _instancesByGroup = _allInstances
             .Where(i => i.HasGroup)

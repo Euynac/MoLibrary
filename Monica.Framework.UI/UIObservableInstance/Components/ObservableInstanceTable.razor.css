@@ -1,0 +1,113 @@
+.instance-table-wrapper ::deep .mud-table-root {
+    table-layout: auto;
+    width: 100%;
+}
+
+.instance-table-wrapper ::deep .observable-instance-id-header,
+.instance-table-wrapper ::deep .observable-instance-id-cell {
+    min-width: 12rem;
+    max-width: 0;
+}
+
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(2),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(2) {
+    min-width: 8rem;
+    max-width: 0;
+}
+
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(3),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(3) {
+    min-width: 10rem;
+    max-width: 0;
+}
+
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(4),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(4),
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(6),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(6),
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(7),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(7),
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(8),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(8) {
+    min-width: 6rem;
+}
+
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(5),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(5) {
+    min-width: 8rem;
+    max-width: 0;
+}
+
+.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(9),
+.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(9) {
+    min-width: 10rem;
+}
+
+.instance-table-wrapper:not(.compact) ::deep .mud-table-head .mud-table-cell:nth-child(10),
+.instance-table-wrapper:not(.compact) ::deep .mud-table-body .mud-table-cell:nth-child(10) {
+    min-width: 4rem;
+}
+
+.instance-table-wrapper ::deep .observable-instance-id-tooltip {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.instance-table-wrapper ::deep .observable-instance-id-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: monospace;
+}
+
+.instance-table-wrapper ::deep .observable-instance-cell-tooltip {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.instance-table-wrapper ::deep .observable-instance-type-cell {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.instance-table-wrapper ::deep .observable-instance-type-cell .mud-icon-root {
+    flex: 0 0 auto;
+}
+
+.instance-table-wrapper ::deep .observable-instance-cell-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.instance-table-wrapper ::deep .observable-instance-type-cell .observable-instance-cell-text {
+    flex: 1 1 auto;
+}
+
+.instance-table-wrapper ::deep .observable-instance-secondary-text {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-family: var(--mud-typography-caption-family);
+    font-weight: var(--mud-typography-caption-weight);
+    line-height: var(--mud-typography-caption-lineheight);
+    letter-spacing: var(--mud-typography-caption-letterspacing);
+}
+
+.instance-table-wrapper ::deep .observable-instance-cell-tooltip .mud-chip {
+    max-width: 100%;
+}
+
+.instance-table-wrapper ::deep .observable-instance-cell-tooltip .mud-chip-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

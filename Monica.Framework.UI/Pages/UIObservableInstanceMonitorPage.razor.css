@@ -1,0 +1,30 @@
+.exception-preview-table ::deep .mud-table-root {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.exception-preview-table ::deep .observable-instance-id-header,
+.exception-preview-table ::deep .observable-instance-id-cell {
+    width: clamp(10rem, 24vw, 22rem);
+    max-width: clamp(10rem, 24vw, 22rem);
+}
+
+.exception-preview-table ::deep .observable-instance-id-cell {
+    min-width: 0;
+}
+
+.exception-preview-table ::deep .observable-instance-id-tooltip {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.exception-preview-table ::deep .observable-instance-id-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+}

@@ -13,11 +13,6 @@ public class ObservableInstanceFilter
     public string? SearchText { get; set; }
 
     /// <summary>
-    /// Filter by instance type
-    /// </summary>
-    public Type? InstanceType { get; set; }
-
-    /// <summary>
     /// Filter by group ID
     /// </summary>
     public string? GroupId { get; set; }
@@ -57,7 +52,6 @@ public class ObservableInstanceFilter
     /// </summary>
     public bool HasAnyFilter =>
         !string.IsNullOrWhiteSpace(SearchText) ||
-        InstanceType != null ||
         !string.IsNullOrWhiteSpace(GroupId) ||
         HealthStateFilter.HasValue ||
         LogLevels?.Any() == true ||
@@ -75,7 +69,6 @@ public class ObservableInstanceFilter
         {
             var count = 0;
             if (!string.IsNullOrWhiteSpace(SearchText)) count++;
-            if (InstanceType != null) count++;
             if (!string.IsNullOrWhiteSpace(GroupId)) count++;
             if (HealthStateFilter.HasValue) count++;
             if (LogLevels?.Any() == true) count++;
@@ -92,7 +85,6 @@ public class ObservableInstanceFilter
     public void Clear()
     {
         SearchText = null;
-        InstanceType = null;
         GroupId = null;
         HealthStateFilter = null;
         LogLevels = null;

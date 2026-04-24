@@ -114,11 +114,6 @@ public sealed class ObservableInstanceMonitorService(
                 vm.InstanceName.ToLowerInvariant().Contains(searchText));
         }
 
-        if (filter.InstanceType != null)
-        {
-            query = query.Where(vm => vm.InstanceType == filter.InstanceType);
-        }
-
         if (!string.IsNullOrWhiteSpace(filter.GroupId))
         {
             query = query.Where(vm => vm.GroupId == filter.GroupId);
