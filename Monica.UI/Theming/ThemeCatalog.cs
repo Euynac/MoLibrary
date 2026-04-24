@@ -23,7 +23,6 @@ public static class ThemeCatalog
         RegisterTheme(new DefaultTheme());
         RegisterTheme(new HermesTealTheme());
         RegisterTheme(new VibeUsageMatrixTheme());
-        RegisterTheme(new ClassicMaterialTheme());
         RegisterTheme(new MaterialDesign3Theme());
         RegisterTheme(new FreshTheme());
         RegisterTheme(new InkLandscapeTheme());

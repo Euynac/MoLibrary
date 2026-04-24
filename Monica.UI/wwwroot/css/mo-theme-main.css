@@ -2,8 +2,7 @@
 /* This is the main CSS file that pulls in all theme-related CSS */
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
-/* 1. Introduce classic Material theme styles */
-@import url('./themes/mo-theme-classic-material.css');
+/* 1. Introduce Material Design theme styles */
 @import url('./themes/mo-theme-material-design-3.css');
 
 /* 2. Introduce a fresh theme */

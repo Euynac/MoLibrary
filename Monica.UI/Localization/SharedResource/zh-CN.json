@@ -26,10 +26,6 @@
         "Name": "黑客矩阵",
         "Description": "参考 VibeUsage 控制台的终端绿黑客矩阵风格"
       },
-      "classic-material": {
-        "Name": "经典 Material",
-        "Description": "经典的 Material 风格"
-      },
       "material-design-3": {
         "Name": "Material Design 3",
         "Description": "基于 Material Design 3 token 的柔和表面、圆角形状和表现型排版"

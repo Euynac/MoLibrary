@@ -26,10 +26,6 @@
         "Name": "Hacker Matrix",
         "Description": "Terminal-green hacker console inspired by the VibeUsage dashboard"
       },
-      "classic-material": {
-        "Name": "Classic Material",
-        "Description": "Classic Material look"
-      },
       "material-design-3": {
         "Name": "Material Design 3",
         "Description": "Material Design 3 tokens with soft surfaces, rounded shapes, and expressive typography"
