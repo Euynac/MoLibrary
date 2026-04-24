@@ -1,5 +1,5 @@
-@page "/job-scheduler"
-@page "/job-scheduler/dashboard"
+@attribute [Route(PAGE_URL)]
+@attribute [Route(DASHBOARD_URL)]
 
 @using Monica.JobScheduler.UI.Components.Dashboard
 @using Monica.JobScheduler.UI.Localization
@@ -76,6 +76,7 @@
 
 @code {
     public const string PAGE_URL = "/job-scheduler";
+    public const string DASHBOARD_URL = "/job-scheduler/dashboard";
 
     private bool _isLoading = true;
     private bool _isRefreshing;
