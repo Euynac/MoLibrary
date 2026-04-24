@@ -1,6 +1,6 @@
 @using Monica.Framework.UI.UIObservableInstance.Models
 
-<div class="instance-table-wrapper @(Compact ? "compact" : null)">
+<div class="instance-table @(Compact ? "compact" : null)">
     <MudTable T="ObservableInstanceViewModel"
              Items="@Instances"
              Dense="@Compact"
@@ -10,7 +10,7 @@
              LoadingProgressColor="Color.Info"
              RowsPerPage="@(Compact ? 10 : 20)">
         <HeaderContent>
-            <MudTh Class="observable-instance-id-header">实例ID</MudTh>
+            <MudTh Class="id-header">实例ID</MudTh>
             <MudTh>实例名称</MudTh>
             <MudTh>类型</MudTh>
             <MudTh>组</MudTh>
@@ -25,28 +25,28 @@
             }
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="实例ID" Class="observable-instance-id-cell">
-                <MudTooltip Text="@context.InstanceId" RootClass="observable-instance-id-tooltip">
-                    <span class="observable-instance-id-text" @onclick="() => OnRowClick.InvokeAsync(context)">
+            <MudTd DataLabel="实例ID" Class="id-cell">
+                <MudTooltip Text="@context.InstanceId" RootClass="id-tooltip">
+                    <span class="id-text" @onclick="() => OnRowClick.InvokeAsync(context)">
                         @context.InstanceId
                     </span>
                 </MudTooltip>
             </MudTd>
             <MudTd DataLabel="实例名称">
-                <span class="observable-instance-cell-text">@context.InstanceName</span>
+                <span class="cell-text">@context.InstanceName</span>
             </MudTd>
             <MudTd DataLabel="类型">
-                <MudTooltip Text="@context.InstanceTypeFullName" RootClass="observable-instance-cell-tooltip">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="observable-instance-type-cell">
+                <MudTooltip Text="@context.InstanceTypeFullName" RootClass="cell-tooltip">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="type-cell">
                         <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Default" />
-                        <span class="observable-instance-cell-text">@context.InstanceTypeDisplay</span>
+                        <span class="cell-text">@context.InstanceTypeDisplay</span>
                     </MudStack>
                 </MudTooltip>
             </MudTd>
             <MudTd DataLabel="组">
                 @if (context.HasGroup)
                 {
-                    <MudTooltip Text="@context.GroupIdDisplay" RootClass="observable-instance-cell-tooltip">
+                    <MudTooltip Text="@context.GroupIdDisplay" RootClass="cell-tooltip">
                         <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
                             @context.GroupIdDisplay
                         </MudChip>
@@ -54,19 +54,21 @@
                 }
                 else
                 {
-                    <span class="observable-instance-cell-text observable-instance-secondary-text">@context.GroupIdDisplay</span>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="cell-text">
+                        @context.GroupIdDisplay
+                    </MudText>
                 }
             </MudTd>
             <MudTd DataLabel="当前状态">
-                <MudTooltip Text="@($"类型: {context.StateTypeDisplay}")" RootClass="observable-instance-cell-tooltip">
-                    <span class="observable-instance-cell-text">
+                <MudTooltip Text="@($"类型: {context.StateTypeDisplay}")" RootClass="cell-tooltip">
+                    <span class="cell-text">
                         @context.StateDisplayText
                     </span>
                 </MudTooltip>
             </MudTd>
             <MudTd DataLabel="健康状态">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: @context.HealthStateDotColor;"></div>
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@context.HealthStateColor" />
                     <MudText Typo="Typo.body2" Color="@context.HealthStateColor">
                         @context.HealthStateText
                     </MudText>
@@ -76,16 +78,15 @@
                 @if (context.CurrentLogLevel.HasValue)
                 {
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        <div style="width: 8px; height: 8px; border-radius: 50%; background: @context.LogLevelDotColor;"></div>
                         <MudIcon Icon="@context.LogLevelIcon" Size="Size.Small" Color="@context.LogLevelColor" />
-                        <MudText Typo="Typo.body2" Color="@context.LogLevelColor" Class="observable-instance-cell-text">
+                        <MudText Typo="Typo.body2" Color="@context.LogLevelColor" Class="cell-text">
                             @context.LogLevelText
                         </MudText>
                     </MudStack>
                 }
                 else
                 {
-                    <span class="observable-instance-cell-text observable-instance-secondary-text">-</span>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="cell-text">-</MudText>
                 }
             </MudTd>
             <MudTd DataLabel="异常">
@@ -95,7 +96,7 @@
             </MudTd>
             <MudTd DataLabel="注册时间">
                 <MudStack Spacing="0">
-                    <span class="observable-instance-cell-text">@context.RegisteredAtDisplay</span>
+                    <span class="cell-text">@context.RegisteredAtDisplay</span>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         运行 @context.RunningDurationDisplay
                     </MudText>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
+using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
 using MudBlazor;
 
@@ -143,17 +144,12 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Log level color
     /// </summary>
-    public Color LogLevelColor => MapLogLevelToColor(LogLevel);
-
-    /// <summary>
-    /// Log level dot color (CSS variable)
-    /// </summary>
-    public string LogLevelDotColor => MapLogLevelToCssColor(LogLevel);
+    public Color LogLevelColor => ObservableInstanceDisplayMapping.GetLogLevelColor(LogLevel);
 
     /// <summary>
     /// Log level icon
     /// </summary>
-    public string LogLevelIcon => MapLogLevelToIcon(LogLevel);
+    public string LogLevelIcon => ObservableInstanceDisplayMapping.GetLogLevelIcon(LogLevel);
 
     #endregion
 
@@ -168,7 +164,7 @@ public class ObservableStateHistoryViewModel
         {
             // Prefer log level color if available
             if (LogLevel.HasValue)
-                return MapLogLevelToColor(LogLevel);
+                return ObservableInstanceDisplayMapping.GetLogLevelColor(LogLevel);
 
             // Fallback to exception/transition logic
             return (IsException, IsStateTransition) switch
@@ -237,51 +233,6 @@ public class ObservableStateHistoryViewModel
             return state.GetType().GetCleanName();  // Fallback to type name
         }
     }
-
-    /// <summary>
-    /// Maps log level to MudBlazor color
-    /// </summary>
-    private static Color MapLogLevelToColor(LogLevel? level) =>
-        level switch
-        {
-            Microsoft.Extensions.Logging.LogLevel.Trace => Color.Default,
-            Microsoft.Extensions.Logging.LogLevel.Debug => Color.Default,
-            Microsoft.Extensions.Logging.LogLevel.Information => Color.Info,
-            Microsoft.Extensions.Logging.LogLevel.Warning => Color.Warning,
-            Microsoft.Extensions.Logging.LogLevel.Error => Color.Error,
-            Microsoft.Extensions.Logging.LogLevel.Critical => Color.Error,
-            _ => Color.Default
-        };
-
-    /// <summary>
-    /// Maps log level to CSS variable color
-    /// </summary>
-    private static string MapLogLevelToCssColor(LogLevel? level) =>
-        level switch
-        {
-            Microsoft.Extensions.Logging.LogLevel.Trace => "var(--mud-palette-text-secondary)",
-            Microsoft.Extensions.Logging.LogLevel.Debug => "var(--mud-palette-text-secondary)",
-            Microsoft.Extensions.Logging.LogLevel.Information => "var(--mud-palette-info)",
-            Microsoft.Extensions.Logging.LogLevel.Warning => "var(--mud-palette-warning)",
-            Microsoft.Extensions.Logging.LogLevel.Error => "var(--mud-palette-error)",
-            Microsoft.Extensions.Logging.LogLevel.Critical => "var(--mud-palette-error-darken)",
-            _ => "var(--mud-palette-text-disabled)"
-        };
-
-    /// <summary>
-    /// Maps log level to icon
-    /// </summary>
-    private static string MapLogLevelToIcon(LogLevel? level) =>
-        level switch
-        {
-            Microsoft.Extensions.Logging.LogLevel.Trace => Icons.Material.Filled.Code,
-            Microsoft.Extensions.Logging.LogLevel.Debug => Icons.Material.Filled.BugReport,
-            Microsoft.Extensions.Logging.LogLevel.Information => Icons.Material.Filled.Info,
-            Microsoft.Extensions.Logging.LogLevel.Warning => Icons.Material.Filled.Warning,
-            Microsoft.Extensions.Logging.LogLevel.Error => Icons.Material.Filled.Error,
-            Microsoft.Extensions.Logging.LogLevel.Critical => Icons.Material.Filled.ErrorOutline,
-            _ => Icons.Material.Filled.HelpOutline
-        };
 
     #endregion
 }

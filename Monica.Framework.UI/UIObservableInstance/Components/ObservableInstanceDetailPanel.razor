@@ -4,13 +4,14 @@
 @inject ObservableInstanceMonitorService MonitorService
 @inject ISnackbar Snackbar
 
-@if (Instance == null)
-{
-    <MudAlert Severity="Severity.Info">未选择实例</MudAlert>
-}
-else
-{
-    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+<div class="detail-panel">
+    @if (Instance == null)
+    {
+        <MudAlert Severity="Severity.Info">未选择实例</MudAlert>
+    }
+    else
+    {
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
         <!-- Overview Tab -->
         <MudTabPanel Text="概览" Icon="@Icons.Material.Filled.Dashboard">
             <MudStack Spacing="3" Class="pa-4">
@@ -20,7 +21,7 @@ else
                     <MudGrid>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">实例ID</MudText>
-                            <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">@Instance.InstanceId</MudText>
+                            <MudText Typo="Typo.body2" Class="break-anywhere">@Instance.InstanceId</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">实例名称</MudText>
@@ -40,7 +41,7 @@ else
                         {
                             <MudItem xs="12">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">实例键</MudText>
-                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@Instance.InstanceKey</MudText>
+                                <MudText Typo="Typo.body2">@Instance.InstanceKey</MudText>
                             </MudItem>
                         }
                     </MudGrid>
@@ -52,9 +53,9 @@ else
                     <MudStack Spacing="2">
                         <!-- Health State -->
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudText Typo="Typo.subtitle1" Style="min-width: 100px;">总体健康:</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="detail-label">总体健康:</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <div style="width: 12px; height: 12px; border-radius: 50%; background: @Instance.HealthStateDotColor;"></div>
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@Instance.HealthStateColor" />
                                 <MudChip T="string" Color="@Instance.HealthStateColor" Icon="@Instance.HealthStateIcon">
                                     @Instance.HealthStateText
                                 </MudChip>
@@ -65,9 +66,8 @@ else
                         @if (Instance.CurrentLogLevel.HasValue)
                         {
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudText Typo="Typo.subtitle1" Style="min-width: 100px;">日志级别:</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="detail-label">日志级别:</MudText>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                    <div style="width: 12px; height: 12px; border-radius: 50%; background: @Instance.LogLevelDotColor;"></div>
                                     <MudIcon Icon="@Instance.LogLevelIcon" Size="Size.Small" Color="@Instance.LogLevelColor" />
                                     <MudChip T="string" Color="@Instance.LogLevelColor">
                                         @Instance.LogLevelText
@@ -84,13 +84,13 @@ else
                     <MudGrid>
                         <MudItem xs="12">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">状态值</MudText>
-                            <MudPaper Class="pa-2 mt-1" Elevation="0" Style="background: var(--mud-palette-background-gray);">
-                                <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">@Instance.StateDisplayText</MudText>
+                            <MudPaper Class="pa-2 mt-1" Elevation="0" Outlined="true">
+                                <MudText Typo="Typo.body2" Class="break-anywhere">@Instance.StateDisplayText</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">状态类型</MudText>
-                            <MudText Typo="Typo.body2" Style="font-family: monospace;">@Instance.StateTypeDisplay</MudText>
+                            <MudText Typo="Typo.body2">@Instance.StateTypeDisplay</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">状态变更时间</MudText>
@@ -167,8 +167,9 @@ else
                 }
             </MudStack>
         </MudTabPanel>
-    </MudTabs>
-}
+        </MudTabs>
+    }
+</div>
 
 @code {
     [Parameter]

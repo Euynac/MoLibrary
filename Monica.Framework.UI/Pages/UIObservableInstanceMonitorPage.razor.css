@@ -1,3 +1,11 @@
+.exception-preview-table {
+    --table-columns:
+        minmax(10rem, 1.4fr)
+        minmax(7rem, 1fr)
+        minmax(5.5rem, 0.65fr)
+        minmax(9rem, 1fr);
+}
+
 .exception-preview-table ::deep .mud-table-root {
     width: 100%;
 }
@@ -6,18 +14,10 @@
     overflow-x: auto;
 }
 
-.exception-preview-table {
-    --exception-preview-table-columns:
-        minmax(10rem, 1.4fr)
-        minmax(7rem, 1fr)
-        minmax(5.5rem, 0.65fr)
-        minmax(9rem, 1fr);
-}
-
 @media (min-width: 961px) {
     .exception-preview-table ::deep .mud-table-root {
         display: grid;
-        grid-template-columns: var(--exception-preview-table-columns);
+        grid-template-columns: var(--table-columns);
     }
 
     .exception-preview-table ::deep .mud-table-head,
@@ -30,6 +30,11 @@
         display: block;
         min-width: 0;
         overflow: hidden;
+    }
+
+    .exception-preview-table ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .exception-preview-table ::deep .mud-table-loading,
@@ -59,27 +64,22 @@
     }
 }
 
-.exception-preview-table ::deep .observable-instance-id-tooltip {
+.exception-preview-table ::deep .id-tooltip {
     display: block;
     min-width: 0;
     max-width: 100%;
 }
 
-.exception-preview-table ::deep .observable-instance-id-text {
+.exception-preview-table ::deep .id-text,
+.exception-preview-table ::deep .cell-text {
     display: block;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: monospace;
 }
 
-.exception-preview-table ::deep .mud-table-cell > .observable-instance-cell-text {
-    display: block;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.exception-preview-table ::deep .id-text {
+    cursor: pointer;
 }

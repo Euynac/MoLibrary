@@ -65,19 +65,19 @@
                         <MudSelectItem T="HealthState?" Value="@(null)">全部</MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Healthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--mud-palette-success);"></div>
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Success" />
                                 <span>健康</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unhealthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--mud-palette-error);"></div>
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Error" />
                                 <span>不健康</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unknown">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--mud-palette-text-disabled);"></div>
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Default" />
                                 <span>未知</span>
                             </MudStack>
                         </MudSelectItem>

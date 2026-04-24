@@ -1,0 +1,8 @@
+.detail-panel ::deep .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.detail-panel ::deep .detail-label {
+    min-width: 100px;
+}

@@ -1,0 +1,4 @@
+.state-history ::deep .scroll-panel-sm {
+    max-height: 300px;
+    overflow-y: auto;
+}

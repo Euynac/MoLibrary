@@ -11,19 +11,18 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <!-- Header -->
-    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #667eea 30%, #764ba2 90%); color: white;">
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">Observable Instance 监控</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h4">Observable Instance 监控</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh"
-                          Color="Color.Inherit"
+                          Color="Color.Primary"
                           Variant="Variant.Outlined"
                           OnClick="RefreshAsync"
-                          Size="Size.Medium"
-                          Style="border-color: white; color: white;">
+                          Size="Size.Medium">
                     刷新
                 </MudButton>
             </MudStack>
@@ -64,28 +63,27 @@
                                           Items="@_exceptionsPreview.Take(10)"
                                           Dense="true"
                                           Hover="true"
-                                          OnRowClick="HandleExceptionPreviewRowClickAsync"
-                                          Style="cursor: pointer;">
+                                          OnRowClick="HandleExceptionPreviewRowClickAsync">
                                     <HeaderContent>
-                                        <MudTh Class="observable-instance-id-header">实例ID</MudTh>
+                                        <MudTh Class="id-header">实例ID</MudTh>
                                         <MudTh>名称</MudTh>
                                         <MudTh>异常数</MudTh>
                                         <MudTh>最后更新</MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
-                                        <MudTd DataLabel="实例ID" Class="observable-instance-id-cell">
-                                            <MudTooltip Text="@context.InstanceId" RootClass="observable-instance-id-tooltip">
-                                                <span class="observable-instance-id-text">@context.InstanceId</span>
+                                        <MudTd DataLabel="实例ID" Class="id-cell">
+                                            <MudTooltip Text="@context.InstanceId" RootClass="id-tooltip">
+                                                <span class="id-text">@context.InstanceId</span>
                                             </MudTooltip>
                                         </MudTd>
                                         <MudTd DataLabel="名称">
-                                            <span class="observable-instance-cell-text">@context.InstanceName</span>
+                                            <span class="cell-text">@context.InstanceName</span>
                                         </MudTd>
                                         <MudTd>
                                             <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
                                         </MudTd>
                                         <MudTd DataLabel="最后更新">
-                                            <span class="observable-instance-cell-text">@context.StateChangedAtDisplay</span>
+                                            <span class="cell-text">@context.StateChangedAtDisplay</span>
                                         </MudTd>
                                     </RowTemplate>
                                 </MudTable>

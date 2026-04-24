@@ -1,0 +1,15 @@
+.exception-list ::deep .full-width {
+    width: 100%;
+}
+
+.exception-list ::deep .truncate {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.exception-list ::deep .scroll-panel-lg {
+    max-height: 500px;
+    overflow-y: auto;
+}

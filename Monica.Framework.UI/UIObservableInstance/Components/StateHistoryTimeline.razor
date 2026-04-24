@@ -1,13 +1,14 @@
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.UI.UIStackTrace.Components
 
-@if (History == null || !History.Any())
-{
-    <MudAlert Severity="Severity.Info">暂无状态变更记录</MudAlert>
-}
-else
-{
-    <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+<div class="state-history">
+    @if (History == null || !History.Any())
+    {
+        <MudAlert Severity="Severity.Info">暂无状态变更记录</MudAlert>
+    }
+    else
+    {
+        <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
         @foreach (var entry in History.Take(DisplayLimit))
         {
             <MudTimelineItem Color="@entry.HistoryEntryColor"
@@ -25,7 +26,6 @@ else
                                 {
                                     <MudTooltip Text="@($"日志级别: {entry.LogLevelText}")">
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
-                                            <div style="width: 6px; height: 6px; border-radius: 50%; background: @entry.LogLevelDotColor; margin-right: 4px;"></div>
                                             <MudIcon Icon="@entry.LogLevelIcon" Size="Size.Small" Color="@entry.LogLevelColor" />
                                         </MudStack>
                                     </MudTooltip>
@@ -40,21 +40,21 @@ else
                         <!-- Message -->
                         @if (!string.IsNullOrEmpty(entry.Message))
                         {
-                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@entry.Message</MudText>
+                            <MudText Typo="Typo.body2">@entry.Message</MudText>
                         }
 
                         <!-- State Transition -->
                         @if (entry.IsStateTransition)
                         {
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-gray); flex: 1;">
+                                <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">之前:</MudText>
-                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@entry.PreviousStateDisplay</MudText>
+                                    <MudText Typo="Typo.body2">@entry.PreviousStateDisplay</MudText>
                                 </MudPaper>
                                 <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Default" />
-                                <MudPaper Class="pa-2" Elevation="0" Style="background: var(--mud-palette-background-gray); flex: 1;">
+                                <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">之后:</MudText>
-                                    <MudText Typo="Typo.body2" Style="font-family: monospace;">@entry.CurrentStateDisplay</MudText>
+                                    <MudText Typo="Typo.body2">@entry.CurrentStateDisplay</MudText>
                                 </MudPaper>
                             </MudStack>
                         }
@@ -80,7 +80,7 @@ else
                                             {
                                                 <div>
                                                     <MudText Typo="Typo.caption" Color="Color.Secondary">堆栈跟踪:</MudText>
-                                                    <MudPaper Class="pa-2 mt-1" Elevation="0" Style="max-height: 300px; overflow-y: auto;">
+                                                    <MudPaper Class="pa-2 mt-1 scroll-panel-sm" Elevation="0" Outlined="true">
                                                         <StackTraceViewer Message="@entry.ExceptionStackTrace" />
                                                     </MudPaper>
                                                 </div>
@@ -106,8 +106,9 @@ else
                 加载更多 (剩余 @(History.Count - DisplayLimit) 条)
             </MudButton>
         </MudStack>
+        }
     }
-}
+</div>
 
 @code {
     [Parameter]
