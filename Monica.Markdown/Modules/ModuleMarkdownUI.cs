@@ -52,7 +52,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
                 .AddResource<MarkdownResource>();
 
             uiCoreGuide.RegisterUIComponents(p => p.RegisterLocalizedComponent<UIMarkdownPage>(
-                MarkdownViewerLocation.PageUrl,
+                MarkdownViewerLocation.PAGE_URL,
                 "Pages:MarkdownDocuments:Title",
                 Icons.Material.Filled.MenuBook,
                 "Categories:Documentation",

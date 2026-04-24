@@ -12,11 +12,11 @@ public sealed record MarkdownViewerLocation(
     string? AnchorId = null,
     string? Culture = null)
 {
-    public const string PageUrl = "/markdown-docs";
+    public const string PAGE_URL = "/markdown-docs";
 
-    private const string GroupQueryKey = "group";
-    private const string DocumentQueryKey = "document";
-    private const string CultureQueryKey = "culture";
+    private const string GROUP_QUERY_KEY = "group";
+    private const string DOCUMENT_QUERY_KEY = "document";
+    private const string CULTURE_QUERY_KEY = "culture";
 
     /// <summary>
     /// Creates the markdown viewer state from an absolute URI.
@@ -27,10 +27,10 @@ public sealed record MarkdownViewerLocation(
         var query = QueryHelpers.ParseQuery(uri.Query);
 
         return new MarkdownViewerLocation(
-            GetQueryValue(query, GroupQueryKey),
-            GetQueryValue(query, DocumentQueryKey),
+            GetQueryValue(query, GROUP_QUERY_KEY),
+            GetQueryValue(query, DOCUMENT_QUERY_KEY),
             NormalizeAnchorId(uri.Fragment),
-            GetQueryValue(query, CultureQueryKey));
+            GetQueryValue(query, CULTURE_QUERY_KEY));
     }
 
     /// <summary>
@@ -42,22 +42,22 @@ public sealed record MarkdownViewerLocation(
 
         if (!string.IsNullOrWhiteSpace(GroupKey))
         {
-            query[GroupQueryKey] = GroupKey;
+            query[GROUP_QUERY_KEY] = GroupKey;
         }
 
         if (!string.IsNullOrWhiteSpace(DocumentRelativePath))
         {
-            query[DocumentQueryKey] = DocumentRelativePath;
+            query[DOCUMENT_QUERY_KEY] = DocumentRelativePath;
         }
 
         if (!string.IsNullOrWhiteSpace(Culture))
         {
-            query[CultureQueryKey] = Culture;
+            query[CULTURE_QUERY_KEY] = Culture;
         }
 
         var uri = query.Count == 0
-            ? PageUrl
-            : QueryHelpers.AddQueryString(PageUrl, query);
+            ? PAGE_URL
+            : QueryHelpers.AddQueryString(PAGE_URL, query);
 
         return string.IsNullOrWhiteSpace(AnchorId)
             ? uri
