@@ -25,7 +25,7 @@
     {
         <!-- Title and action buttons -->
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-            <MudText Typo="Typo.h4">@_jobDefinition.JobName</MudText>
+            <MudText Typo="Typo.h4" Style="overflow-wrap: anywhere;" title="@_jobDefinition.JobName">@_jobDefinition.JobName</MudText>
             <MudStack Row="true" Spacing="2">
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Default"
@@ -78,7 +78,7 @@
             <MudGrid>
                 <MudItem xs="12" sm="6" md="3">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:JobKey"]</MudText>
-                    <MudText Typo="Typo.body1">@_jobDefinition.JobKey</MudText>
+                    <MudText Typo="Typo.body1" Style="overflow-wrap: anywhere;" title="@_jobDefinition.JobKey">@_jobDefinition.JobKey</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:SourceProject"]</MudText>
@@ -308,8 +308,8 @@
                 {
                     <MudItem xs="12">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["JobDetail:BasicInfo:Description"]</MudText>
-                        <MudText Typo="Typo.body1">@_jobDefinition.Description</MudText>
-                    </MudItem>
+                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap; overflow-wrap: anywhere;">@_jobDefinition.Description</MudText>
+                </MudItem>
                 }
             </MudGrid>
         </MudPaper>
