@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Monica.Configuration.Abstractions;
+using Monica.ServiceDiscovery.Abstractions;
 
 namespace Monica.Configuration.Providers.ProjectCatalog;
 
@@ -10,21 +12,23 @@ public class LocalConfigurationProjectCatalog : IConfigurationProjectCatalog
 {
     private readonly Lazy<string> _currentProjectName = new(ResolveCurrentProjectName);
     private readonly Lazy<string> _currentDomainName;
+    private readonly Lazy<string> _currentAppId;
 
     /// <summary>
     /// Initializes the local catalog using the current entry assembly information.
     /// </summary>
-    public LocalConfigurationProjectCatalog()
+    public LocalConfigurationProjectCatalog(IServiceProvider serviceProvider)
     {
         _currentDomainName = new Lazy<string>(() =>
             ConfigurationProjectCatalogConventions.GetDomainName(_currentProjectName.Value));
+        _currentAppId = new Lazy<string>(() => ResolveCurrentAppId(serviceProvider));
     }
 
     /// <inheritdoc />
     public string CurrentDomainName => _currentDomainName.Value;
 
     /// <inheritdoc />
-    public string CurrentAppId => _currentProjectName.Value;
+    public string CurrentAppId => _currentAppId.Value;
 
     /// <inheritdoc />
     public string GetDomainName(string projectName)
@@ -63,5 +67,12 @@ public class LocalConfigurationProjectCatalog : IConfigurationProjectCatalog
         return friendlyName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
             ? friendlyName[..^4]
             : friendlyName;
+    }
+
+    private string ResolveCurrentAppId(IServiceProvider serviceProvider)
+    {
+        var clientInfo = serviceProvider.GetService<IServiceDiscoveryClientInfo>();
+        var serviceName = clientInfo?.GetServiceStatus().ServiceName;
+        return string.IsNullOrWhiteSpace(serviceName) ? _currentProjectName.Value : serviceName;
     }
 }
