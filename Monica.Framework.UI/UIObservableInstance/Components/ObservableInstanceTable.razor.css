@@ -1,51 +1,185 @@
 .instance-table-wrapper ::deep .mud-table-root {
-    table-layout: auto;
     width: 100%;
 }
 
-.instance-table-wrapper ::deep .observable-instance-id-header,
-.instance-table-wrapper ::deep .observable-instance-id-cell {
-    min-width: 12rem;
-    max-width: 0;
+.instance-table-wrapper ::deep .mud-table-container {
+    overflow-x: auto;
 }
 
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(2),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(2) {
-    min-width: 8rem;
-    max-width: 0;
+.instance-table-wrapper {
+    --observable-instance-table-columns:
+        minmax(10rem, 1.4fr)
+        minmax(7rem, 1fr)
+        minmax(9rem, 1.25fr)
+        minmax(5.5rem, 0.75fr)
+        minmax(7rem, 1fr)
+        minmax(6rem, 0.8fr)
+        minmax(7rem, 0.9fr)
+        minmax(5.5rem, 0.75fr)
+        minmax(9rem, 1fr)
+        minmax(4rem, 0.55fr);
 }
 
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(3),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(3) {
-    min-width: 10rem;
-    max-width: 0;
+.instance-table-wrapper.compact {
+    --observable-instance-table-columns:
+        minmax(10rem, 1.4fr)
+        minmax(7rem, 1fr)
+        minmax(9rem, 1.25fr)
+        minmax(5.5rem, 0.75fr)
+        minmax(7rem, 1fr)
+        minmax(6rem, 0.8fr)
+        minmax(7rem, 0.9fr)
+        minmax(5.5rem, 0.75fr)
+        minmax(9rem, 1fr);
 }
 
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(4),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(4),
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(6),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(6),
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(7),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(7),
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(8),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(8) {
-    min-width: 6rem;
+@media (min-width: 961px) {
+    .instance-table-wrapper ::deep .mud-table-root {
+        display: grid;
+        grid-template-columns: var(--observable-instance-table-columns);
+    }
+
+    .instance-table-wrapper ::deep .mud-table-head,
+    .instance-table-wrapper ::deep .mud-table-body,
+    .instance-table-wrapper ::deep .mud-table-row {
+        display: contents;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-cell {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-loading,
+    .instance-table-wrapper ::deep .mud-table-empty-row {
+        grid-column: 1 / -1;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) {
+        display: table;
+        table-layout: auto;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head {
+        display: table-header-group;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body {
+        display: table-row-group;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-row,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-row {
+        display: table-row;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-cell,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-cell {
+        display: table-cell;
+        overflow: visible;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-loading,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-empty-row {
+        display: table-cell;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .observable-instance-id-header,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .observable-instance-id-cell,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .observable-instance-id-header,
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .observable-instance-id-cell {
+        min-width: 10rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(2),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(2),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(2),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(2) {
+        min-width: 7rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(3),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(3),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(3),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(3) {
+        min-width: 9rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(4),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(4),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(4),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(4),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(8),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(8),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(8),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(8) {
+        min-width: 5.5rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(5),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(5),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(5),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(5),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(7),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(7),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(7),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(7) {
+        min-width: 7rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(6),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(6),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(6),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(6) {
+        min-width: 6rem;
+    }
+
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(9),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(9),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(9),
+    .instance-table-wrapper ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(9) {
+        min-width: 9rem;
+    }
+
+    .instance-table-wrapper:not(.compact) ::deep .mud-table-root:has(.mud-table-loading) .mud-table-head .mud-table-cell:nth-child(10),
+    .instance-table-wrapper:not(.compact) ::deep .mud-table-root:has(.mud-table-loading) .mud-table-body .mud-table-cell:nth-child(10),
+    .instance-table-wrapper:not(.compact) ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-head .mud-table-cell:nth-child(10),
+    .instance-table-wrapper:not(.compact) ::deep .mud-table-root:has(.mud-table-empty-row) .mud-table-body .mud-table-cell:nth-child(10) {
+        min-width: 4rem;
+    }
 }
 
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(5),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(5) {
-    min-width: 8rem;
-    max-width: 0;
-}
+@media (max-width: 960px) {
+    .instance-table-wrapper ::deep .mud-table-root,
+    .instance-table-wrapper ::deep .mud-table-body,
+    .instance-table-wrapper ::deep .mud-table-row {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
 
-.instance-table-wrapper ::deep .mud-table-head .mud-table-cell:nth-child(9),
-.instance-table-wrapper ::deep .mud-table-body .mud-table-cell:nth-child(9) {
-    min-width: 10rem;
-}
+    .instance-table-wrapper ::deep .mud-table-cell {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
 
-.instance-table-wrapper:not(.compact) ::deep .mud-table-head .mud-table-cell:nth-child(10),
-.instance-table-wrapper:not(.compact) ::deep .mud-table-body .mud-table-cell:nth-child(10) {
-    min-width: 4rem;
+    .instance-table-wrapper ::deep .mud-table-container {
+        overflow-x: hidden;
+    }
 }
 
 .instance-table-wrapper ::deep .observable-instance-id-tooltip {
@@ -89,8 +223,13 @@
     white-space: nowrap;
 }
 
+.instance-table-wrapper ::deep .mud-table-cell > .observable-instance-cell-text {
+    max-width: 100%;
+}
+
 .instance-table-wrapper ::deep .observable-instance-type-cell .observable-instance-cell-text {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .instance-table-wrapper ::deep .observable-instance-secondary-text {

@@ -1,16 +1,62 @@
 .exception-preview-table ::deep .mud-table-root {
-    table-layout: fixed;
     width: 100%;
 }
 
-.exception-preview-table ::deep .observable-instance-id-header,
-.exception-preview-table ::deep .observable-instance-id-cell {
-    width: clamp(10rem, 24vw, 22rem);
-    max-width: clamp(10rem, 24vw, 22rem);
+.exception-preview-table ::deep .mud-table-container {
+    overflow-x: auto;
 }
 
-.exception-preview-table ::deep .observable-instance-id-cell {
-    min-width: 0;
+.exception-preview-table {
+    --exception-preview-table-columns:
+        minmax(10rem, 1.4fr)
+        minmax(7rem, 1fr)
+        minmax(5.5rem, 0.65fr)
+        minmax(9rem, 1fr);
+}
+
+@media (min-width: 961px) {
+    .exception-preview-table ::deep .mud-table-root {
+        display: grid;
+        grid-template-columns: var(--exception-preview-table-columns);
+    }
+
+    .exception-preview-table ::deep .mud-table-head,
+    .exception-preview-table ::deep .mud-table-body,
+    .exception-preview-table ::deep .mud-table-row {
+        display: contents;
+    }
+
+    .exception-preview-table ::deep .mud-table-cell {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .exception-preview-table ::deep .mud-table-loading,
+    .exception-preview-table ::deep .mud-table-empty-row {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 960px) {
+    .exception-preview-table ::deep .mud-table-root,
+    .exception-preview-table ::deep .mud-table-body,
+    .exception-preview-table ::deep .mud-table-row {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .exception-preview-table ::deep .mud-table-cell {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .exception-preview-table ::deep .mud-table-container {
+        overflow-x: hidden;
+    }
 }
 
 .exception-preview-table ::deep .observable-instance-id-tooltip {
@@ -27,4 +73,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-family: monospace;
+}
+
+.exception-preview-table ::deep .mud-table-cell > .observable-instance-cell-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

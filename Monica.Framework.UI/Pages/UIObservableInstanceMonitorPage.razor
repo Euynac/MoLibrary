@@ -78,11 +78,15 @@
                                                 <span class="observable-instance-id-text">@context.InstanceId</span>
                                             </MudTooltip>
                                         </MudTd>
-                                        <MudTd>@context.InstanceName</MudTd>
+                                        <MudTd DataLabel="名称">
+                                            <span class="observable-instance-cell-text">@context.InstanceName</span>
+                                        </MudTd>
                                         <MudTd>
                                             <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
                                         </MudTd>
-                                        <MudTd>@context.StateChangedAtDisplay</MudTd>
+                                        <MudTd DataLabel="最后更新">
+                                            <span class="observable-instance-cell-text">@context.StateChangedAtDisplay</span>
+                                        </MudTd>
                                     </RowTemplate>
                                 </MudTable>
                             </div>
