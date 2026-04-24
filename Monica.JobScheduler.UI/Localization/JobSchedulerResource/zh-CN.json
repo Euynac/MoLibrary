@@ -140,7 +140,8 @@
       "PauseSuccess": "作业 {0} 已暂停",
       "PauseFailed": "暂停失败",
       "ResumeSuccess": "作业 {0} 已继续",
-      "ResumeFailed": "继续失败"
+      "ResumeFailed": "继续失败",
+      "JobKeyCopied": "作业键已复制"
     }
   },
   "JobInstances": {
@@ -421,7 +422,8 @@
       "CancelConfirmTitle": "确认取消",
       "CancelConfirmMessage": "确定要取消作业实例 {0} 吗？",
       "CancelSuccess": "作业已取消",
-      "CancelFailed": "取消失败"
+      "CancelFailed": "取消失败",
+      "InstanceIdCopied": "实例ID已复制"
     },
     "JobExecute": {
       "Title": "执行作业",
