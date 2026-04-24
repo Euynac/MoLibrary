@@ -6,7 +6,9 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IBrowserStorage BrowserStorage
+@inject IJSRuntime JSRuntime
 @inject IStringLocalizer<JobSchedulerResource> L
+@using Microsoft.JSInterop
 @using Monica.JobScheduler.UI.Localization
 @using Monica.JobScheduler.UI.UIJobScheduler.Shared.Support
 
@@ -143,8 +145,8 @@
                     <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">
                         <MudTooltip Text="@context.Definition.JobKey">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap;"
-                                     OnClick="() => NavigateToDetail(context.Definition.JobKey)">
+                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     OnClick="() => CopyJobKeyAsync(context.Definition.JobKey)">
                                 @context.Definition.JobKey
                             </MudLink>
                         </MudTooltip>
@@ -221,6 +223,12 @@
                                                Size="Size.Small"
                                                OnClick="() => ExecuteJobAsync(context.Definition.JobKey)" />
                             </MudTooltip>
+                            <MudTooltip Text="@L["JobDefinitions:Actions:ViewDetails"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
+                            </MudTooltip>
                         </MudStack>
                     </MudTd>
                 </RowTemplate>
@@ -263,8 +271,8 @@
                     <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">
                         <MudTooltip Text="@context.Definition.JobKey">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap;"
-                                     OnClick="() => NavigateToDetail(context.Definition.JobKey)">
+                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     OnClick="() => CopyJobKeyAsync(context.Definition.JobKey)">
                                 @context.Definition.JobKey
                             </MudLink>
                         </MudTooltip>
@@ -303,6 +311,12 @@
                                                Color="Color.Primary"
                                                Size="Size.Small"
                                                OnClick="() => ExecuteJobAsync(context.Definition.JobKey)" />
+                            </MudTooltip>
+                            <MudTooltip Text="@L["JobDefinitions:Actions:ViewDetails"]">
+                                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                               Color="Color.Info"
+                                               Size="Size.Small"
+                                               OnClick="() => NavigateToDetail(context.Definition.JobKey)" />
                             </MudTooltip>
                         </MudStack>
                     </MudTd>
@@ -629,6 +643,12 @@
                 await RefreshTriggerJobsAsync();
             }
         }
+    }
+
+    private async Task CopyJobKeyAsync(string jobKey)
+    {
+        await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", jobKey);
+        Snackbar.Add(L["JobDefinitions:Messages:JobKeyCopied"], Severity.Success);
     }
 
     private void NavigateToDetail(string jobKey)

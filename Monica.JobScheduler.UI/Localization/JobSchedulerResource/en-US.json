@@ -140,7 +140,8 @@
       "PauseSuccess": "Job {0} paused",
       "PauseFailed": "Pause failed",
       "ResumeSuccess": "Job {0} resumed",
-      "ResumeFailed": "Resume failed"
+      "ResumeFailed": "Resume failed",
+      "JobKeyCopied": "Job key copied"
     }
   },
   "JobInstances": {
@@ -421,7 +422,8 @@
       "CancelConfirmTitle": "Confirm Cancel",
       "CancelConfirmMessage": "Are you sure you want to cancel job instance {0}?",
       "CancelSuccess": "Job cancelled",
-      "CancelFailed": "Cancel failed"
+      "CancelFailed": "Cancel failed",
+      "InstanceIdCopied": "Instance ID copied"
     },
     "JobExecute": {
       "Title": "Execute Job",

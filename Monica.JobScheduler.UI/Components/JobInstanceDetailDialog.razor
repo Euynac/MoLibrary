@@ -1,3 +1,4 @@
+@using Microsoft.JSInterop
 @using System.Text.Encodings.Web
 @using System.Text.Json
 @using Monica.JobScheduler.UI.Localization
@@ -8,6 +9,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 @inject IStringLocalizer<JobSchedulerResource> L
 
 <MudDialog>
@@ -63,7 +65,13 @@
                 <MudGrid>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
-                        <MudText Typo="Typo.body1" Style="font-family: monospace; overflow-wrap: anywhere;" title="@_jobInstance.InstanceId">@_jobInstance.InstanceId</MudText>
+                        <MudTooltip Text="@_jobInstance.InstanceId">
+                            <MudLink Typo="Typo.body1"
+                                     Style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; cursor: pointer;"
+                                     OnClick="CopyInstanceIdAsync">
+                                @_jobInstance.InstanceId
+                            </MudLink>
+                        </MudTooltip>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:JobKey"]</MudText>
@@ -195,6 +203,17 @@
     {
         await LoadJobInstanceAsync();
         StateHasChanged();
+    }
+
+    private async Task CopyInstanceIdAsync()
+    {
+        if (_jobInstance == null)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", _jobInstance.InstanceId);
+        Snackbar.Add(L["Dialogs:JobInstanceDetail:InstanceIdCopied"], Severity.Success);
     }
 
     private void NavigateToJobDefinition()
