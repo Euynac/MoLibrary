@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Extensions;
 using Monica.Tool.Extensions;
 using MudBlazor;
 
@@ -105,7 +106,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Exception message (if exception exists)
     /// </summary>
-    public string ExceptionMessage => Exception?.Message ?? string.Empty;
+    public string ExceptionMessage => Exception?.GetMessageRecursively() ?? string.Empty;
 
     /// <summary>
     /// Exception type name (if exception exists)
@@ -113,9 +114,9 @@ public class ObservableStateHistoryViewModel
     public string ExceptionType => Exception?.GetType().GetCleanName() ?? string.Empty;
 
     /// <summary>
-    /// Exception stack trace (if exception exists)
+    /// Full exception details including inner exceptions and stack traces (if exception exists)
     /// </summary>
-    public string ExceptionStackTrace => Exception?.StackTrace ?? string.Empty;
+    public string ExceptionStackTrace => Exception?.ToString() ?? string.Empty;
 
     /// <summary>
     /// Exception summary for display (type + message)
@@ -126,7 +127,7 @@ public class ObservableStateHistoryViewModel
         {
             if (Exception == null) return string.Empty;
 
-            var message = Exception.Message;
+            var message = Exception.GetMessageRecursively();
             if (message.Length > 100)
                 message = message[..100] + "...";
 
