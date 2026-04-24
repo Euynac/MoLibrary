@@ -1,4 +1,5 @@
 using Cronos;
+using System.Globalization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
@@ -51,7 +52,7 @@ public class CronExpressionSupport(
                 : Cronos.CronFormat.Standard;
 
             CronExpression.Parse(expression, cronFormat);
-            return true; // 隐式转换为 Res<bool>(true)
+            return true; // Implicitly converted to Res<bool>(true).
         }
         catch (Exception ex)
         {
@@ -96,7 +97,7 @@ public class CronExpressionSupport(
                 currentTime = next.Value;
             }
 
-            return results; // 隐式转换为 Res<List<DateTime>>(results)
+            return results; // Implicitly converted to Res<List<DateTime>>(results).
         }
         catch (Exception ex)
         {
@@ -105,7 +106,7 @@ public class CronExpressionSupport(
     }
 
     /// <summary>
-    /// Parse expressions into readable Chinese descriptions (using JavaScript cronstrue library)
+    /// Parse expressions into readable localized descriptions using the JavaScript cronstrue library.
     /// </summary>
     /// <param name="jsModule">JS module reference provided by the component</param>
     /// <param name="expression">Cron expression</param>
@@ -124,11 +125,11 @@ public class CronExpressionSupport(
 
         try
         {
-            // Call JavaScript function
             var result = await jsModule.InvokeAsync<CronParseResult>(
                 "parseCronExpression",
                 expression,
-                format == CronFormat.Quartz ? "quartz" : "standard");
+                format == CronFormat.Quartz ? "quartz" : "standard",
+                CultureInfo.CurrentUICulture.Name);
 
             return result.Success
                 ? Res.Ok<string>(result.Description ?? "")

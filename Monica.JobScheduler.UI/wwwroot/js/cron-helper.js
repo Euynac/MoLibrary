@@ -100,35 +100,59 @@ async function ensureCronstrueLoaded() {
 }
 
 /**
- * Use the cronstrue library to convert Cron expressions into Chinese descriptions
+ * Map Monica/BCP-47 culture names to cronstrue locale identifiers.
+ * @param {string} cultureName - UI culture name, for example "zh-CN" or "en-US"
+ * @returns {string}
+ */
+function mapCultureToCronstrueLocale(cultureName) {
+    if (!cultureName || typeof cultureName !== 'string') {
+        return 'en';
+    }
+
+    const normalized = cultureName.replace('_', '-').toLowerCase();
+    const localeMap = {
+        'zh-cn': 'zh_CN',
+        'zh-tw': 'zh_TW',
+        'pt-br': 'pt_BR',
+        'pt-pt': 'pt_PT',
+        'en': 'en',
+        'en-us': 'en'
+    };
+
+    return localeMap[normalized] || 'en';
+}
+
+/**
+ * Use the cronstrue library to convert Cron expressions into localized descriptions.
  * @param {string} expression - Cron expression
  * @param {string} format - format type: "standard" (5 paragraphs) or "quartz" (6 paragraphs)
+ * @param {string} cultureName - Monica UI culture name
  * @returns {Promise<object>} { success: boolean, description?: string, error?: string }
  */
-export async function parseCronExpression(expression, format) {
+export async function parseCronExpression(expression, format, cultureName) {
     try {
         const loaded = await ensureCronstrueLoaded();
         if (!loaded) {
             return {
                 success: false,
-                error: 'cronstrue 库未加载'
+                error: 'cronstrue library is not loaded'
             };
         }
 
         if (!expression || typeof expression !== 'string') {
             return {
                 success: false,
-                error: '表达式不能为空'
+                error: 'Expression cannot be empty'
             };
         }
 
         // cronstrue configuration options
         const options = {
-            locale: 'zh_CN',              // 默认中文
-            use24HourTimeFormat: true,    // 24 小时制
+            locale: mapCultureToCronstrueLocale(cultureName),
+            use24HourTimeFormat: true,
             throwExceptionOnParseError: true,
             verbose: false,
-            dayOfWeekStartIndexZero: true // 周日为 0
+            dayOfWeekStartIndexZero: true
         };
 
         // cronstrue will automatically detect 5-segment or 6-segment format
@@ -141,7 +165,7 @@ export async function parseCronExpression(expression, format) {
     } catch (error) {
         return {
             success: false,
-            error: `解析失败: ${error.message || error}`
+            error: `Parse failed: ${error.message || error}`
         };
     }
 }
