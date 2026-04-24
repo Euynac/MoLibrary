@@ -56,7 +56,8 @@ Run the cleanup logic without launching the service.
 Cleanup checks:
 
 - recorded bridge state in `bridge-process.json`
-- service process names and bound ports
+- project-owned bridge processes whose command line clearly matches the selected project
+- same-port listeners are classified as owned bridge processes vs unrelated conflicts
 - Windows-side cleanup when available
 
 ### `wait-ready`
