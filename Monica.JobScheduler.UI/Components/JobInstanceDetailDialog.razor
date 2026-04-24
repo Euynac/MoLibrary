@@ -63,15 +63,15 @@
                 <MudGrid>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
-                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_jobInstance.InstanceId</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace; overflow-wrap: anywhere;" title="@_jobInstance.InstanceId">@_jobInstance.InstanceId</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:JobKey"]</MudText>
-                        <MudText Typo="Typo.body1">@_jobInstance.JobKey</MudText>
+                        <MudText Typo="Typo.body1" Style="overflow-wrap: anywhere;" title="@_jobInstance.JobKey">@_jobInstance.JobKey</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:RunningClient"]</MudText>
-                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@(_jobInstance.RunningClientId ?? "-")</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace; overflow-wrap: anywhere;" title="@_jobInstance.RunningClientId">@(_jobInstance.RunningClientId ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:State"]</MudText>
@@ -131,7 +131,7 @@
                                   Variant="Variant.Outlined"
                                   Lines="10"
                                   Sizing="InputSizing.Auto"
-                                  Style="font-family: monospace;" />
+                                  Style="font-family: monospace; overflow-x: auto;" />
                 </MudPaper>
             }
 

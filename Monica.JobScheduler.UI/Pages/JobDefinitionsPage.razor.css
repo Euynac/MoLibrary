@@ -12,10 +12,6 @@
     transform: translateY(0);
 }
 
-.font-monospace {
-    font-family: 'Courier New', Courier, monospace;
-}
-
 /* Batch operation toolbar animation */
 .batch-toolbar {
     animation: slideDown 0.2s ease-out;

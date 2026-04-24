@@ -80,7 +80,7 @@ public class JobInstance
     /// <summary>
     /// Gets the state change history.
     /// Uses line-prefix format where each entry starts with ">>> " followed by metadata:
-    /// >>> [yyyy-MM-dd HH:mm:ss] [previous-state-label->newstate] optional message
+    /// >>> [yyyy-MM-dd HH:mm:ss.fff] [previous-state-label->newstate] optional message
     /// Multi-line messages (like stack traces) continue on following lines without the ">>> " prefix.
     /// </summary>
     public string? StateHistory { get; private set; }
@@ -196,7 +196,7 @@ public class JobInstance
     /// <param name="sourceClientId">Optional source client identifier that performed the state change.</param>
     internal void AppendStateHistory(string oldState, JobState newState, string? message, DateTime timestamp, string? sourceClientId = null)
     {
-        var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss}] [{oldState}->{newState}]";
+        var header = $">>> [{timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{oldState}->{newState}]";
         if (!string.IsNullOrWhiteSpace(sourceClientId))
         {
             header += $" [client:{sourceClientId}]";
@@ -337,7 +337,7 @@ public class JobInstance
         }
 
         var timestampStr = firstLine[1..timestampEnd];
-        if (!DateTime.TryParseExact(timestampStr, "yyyy-MM-dd HH:mm:ss",
+        if (!DateTime.TryParseExact(timestampStr, ["yyyy-MM-dd HH:mm:ss.fff", "yyyy-MM-dd HH:mm:ss"],
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None,
                 out var timestamp))
