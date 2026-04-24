@@ -175,13 +175,13 @@ Always specify `T` for generic MudBlazor components:
 |-------|------|----|
 | MudTheme (C#) | Palette tokens, typography | Component-specific visuals |
 | Theme CSS (`themes/*.css`) | Visual language on **standard MudBlazor selectors** | Layout, positioning |
-| Shared layout CSS (`mo-theme-main.css`) | Layout hooks via `mo-*` classes | Visual styling |
-| Component CSS (`.razor.css`) | Layout, sizing, positioning, responsive rules | Colors, shadows, hover effects |
+| Shared layout CSS (`mo-theme-main.css`) | Cross-module utilities and app-shell/global layout contracts | Component-specific layout or presentation |
+| Component CSS (`.razor.css`) | Component-specific layout, sizing, positioning, responsive rules, truncation, localized token-based presentation | Hardcoded colors, theme variants, global MudBlazor behavior |
 
 Key rules:
-- **Never** create private component classes (e.g., `.dropdown-menu`, `.flyout-menu`) that themes must discover and target. This creates an ever-growing compatibility burden on every theme.
+- **Never** create private component classes (e.g., `.dropdown-menu`, `.flyout-menu`) that themes must discover and target. Private component classes are acceptable when they stay inside the owning `.razor` and `.razor.css` files.
 - **Always** use MudBlazor primitives for interactive patterns (menus, dialogs, overlays). See Rule #10.
-- When MudBlazor component parameters are insufficient, inject layout-only hooks via `PopoverClass`/`ListClass` (e.g., `mo-nav-menu-popover`). These hooks live in `mo-theme-main.css` and own only sizing, scrolling, and positioning.
+- When MudBlazor component parameters are insufficient, use component isolation CSS for the owning component's layout. Promote hooks to `mo-theme-main.css` only for shared layout utilities used across multiple modules.
 - Component CSS may provide functional defaults using CSS variables (e.g., `.navbar-link` hover using `var(--mud-palette-primary)`); themes override these via higher specificity on shared selectors.
 
 ### 10. Use MudBlazor Primitives for Interactive UI
@@ -189,12 +189,12 @@ Key rules:
 - All menu and dropdown patterns must use `MudMenu` + `MudMenuItem`. Do not build custom dropdown markup with manual hover tracking, delayed-close state machines, or pointer event handlers.
 - All overlay patterns must use `MudDialog`, `MudDrawer`, or `MudPopover`. Do not build custom flyout panels.
 - Active route state in menus: apply an `.active` CSS class via `NavigationRouteMatcher.IsActive()` and let theme CSS style `.mud-menu-item.active`. Do not paint active state in component CSS.
-- When `MudMenu` built-in parameters are insufficient for layout, pass sizing/scrolling classes through `PopoverClass` or `ListClass`. These layout-only hooks live in `mo-theme-main.css`, not in theme files or component CSS. Example: `PopoverClass="mo-nav-menu-popover mo-nav-menu-popover-scrollable"`.
+- When `MudMenu` built-in parameters are insufficient for layout, pass sizing/scrolling classes through `PopoverClass` or `ListClass`. Keep component-specific hooks in the owning `.razor.css`; use `mo-theme-main.css` only for shared layout utilities used by multiple modules.
 - Reference implementation: `NavBarDropdown.razor` and `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`.
 
 ### 11. Theme Authoring and Verification
 
-- Put theme visuals in shared theme CSS under `Monica.UI/wwwroot/css/themes/`. Do not solve theme regressions by adding new page-specific `.razor.css` overrides unless the page truly owns unique layout behavior.
+- Put global theme visuals in shared theme CSS under `Monica.UI/wwwroot/css/themes/`. Keep component-specific layout and localized token-based presentation in `.razor.css`.
 - Prefer shared MudBlazor selectors over page-only hooks. If you add a temporary page-specific class during diagnosis, remove it after the shared theme rule is in place.
 - For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
