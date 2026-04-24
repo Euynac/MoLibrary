@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
@@ -33,6 +34,7 @@ public class JobWorkerManagerHostedService(
     private SemaphoreSlim? _workerThreadSemaphore;
 
     public override string ServiceName => "JobWorkerManager";
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     /// <summary>
     /// Stops the worker manager by unsubscribing from events and waiting for in-flight jobs.

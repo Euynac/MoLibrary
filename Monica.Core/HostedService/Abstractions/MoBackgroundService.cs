@@ -44,6 +44,12 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
     public virtual string ServiceName => GetType().Name;
 
     /// <summary>
+    /// Gets the observable group identifier used to group related hosted services.
+    /// Return null to leave the service ungrouped.
+    /// </summary>
+    public virtual string? ServiceGroupId => null;
+
+    /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
     public virtual int MaxHistorySize => _options.DefaultMaxHistorySize;
@@ -69,6 +75,7 @@ public abstract class MoBackgroundService : BackgroundService, IMoHostedService
             opt.MaxHistorySize = MaxHistorySize;
             opt.InstanceName = ServiceName;
             opt.InstanceType = GetType();
+            opt.GroupId = ServiceGroupId;
             opt.Logger = Logger;
         });
 

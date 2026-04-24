@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
@@ -34,6 +35,7 @@ public class JobZombieDetectorHostedService(
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = options.Value;
 
     public override string ServiceName => nameof(JobZombieDetectorHostedService);
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     /// <summary>
     /// Result of zombie detection check.

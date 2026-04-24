@@ -40,6 +40,15 @@ public class ModuleTypeAllocation(ModuleTypeAllocationOption option)
     : ModuleBase<ModuleTypeAllocation, ModuleTypeAllocationOption, ModuleTypeAllocationGuide>(option)
 {
     /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        if (Option.AutoStartCollection)
+        {
+            DependsOnModule<ModuleHostedServiceGuide>().Register();
+        }
+    }
+
+    /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton(sp =>

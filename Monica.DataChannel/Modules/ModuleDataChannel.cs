@@ -115,7 +115,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
 
     public override void ClaimDependencies()
     {
-        DependsOnModule<ModuleObservableInstanceGuide>().Register();
+        DependsOnModule<ModuleHostedServiceGuide>().Register();
     }
 }
 

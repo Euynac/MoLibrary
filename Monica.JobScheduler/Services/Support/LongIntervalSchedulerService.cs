@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.JobScheduler.Abstractions;
 using Monica.JobScheduler.Models;
@@ -29,6 +30,7 @@ public class LongIntervalSchedulerService(
     private readonly ModuleJobSchedulerOption _options = options.Value;
 
     public override string ServiceName => nameof(LongIntervalSchedulerService);
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     protected override async Task ExecuteBackgroundAsync(CancellationToken stoppingToken)
     {

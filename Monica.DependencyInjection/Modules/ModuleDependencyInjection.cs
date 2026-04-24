@@ -57,6 +57,15 @@ public class ModuleDependencyInjection(ModuleDependencyInjectionOption option)
         _services = services;
     }
 
+    /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        if (Option.EnableAutoRegistrationDiagnostics)
+        {
+            DependsOnModule<ModuleHostedServiceGuide>().Register();
+        }
+    }
+
     /// <summary>
     /// Iterates through business types and registers them with the dependency injection container.
     /// </summary>

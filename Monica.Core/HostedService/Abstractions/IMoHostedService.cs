@@ -14,6 +14,12 @@ public interface IMoHostedService
     string ServiceName { get; }
 
     /// <summary>
+    /// Gets the observable group identifier used to group related hosted services.
+    /// A null value leaves the service ungrouped.
+    /// </summary>
+    string? ServiceGroupId { get; }
+
+    /// <summary>
     /// Gets the maximum number of state history entries to retain
     /// </summary>
     int MaxHistorySize { get; }

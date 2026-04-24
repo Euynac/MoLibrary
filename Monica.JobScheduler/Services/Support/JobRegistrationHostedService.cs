@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Events;
@@ -36,6 +37,7 @@ public class JobRegistrationHostedService(
     private readonly ModuleJobSchedulerOption _jobSchedulerOptions = option.Value;
 
     public override string ServiceName => nameof(JobRegistrationHostedService);
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     /// <summary>
     /// Logs when leader status is lost. Job registration is a one-time operation per leader election,

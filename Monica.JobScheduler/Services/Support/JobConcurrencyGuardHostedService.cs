@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.EventBus.Abstractions;
 using Monica.JobScheduler.Abstractions;
@@ -41,6 +42,7 @@ public class JobConcurrencyGuardHostedService(
     private List<IAsyncDisposable> _eventSubscriptions = [];
 
     public override string ServiceName => nameof(JobConcurrencyGuardHostedService);
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.JobScheduler);
 
     protected override async Task OnBecameLeaderAsync(CancellationToken cancellationToken)
     {

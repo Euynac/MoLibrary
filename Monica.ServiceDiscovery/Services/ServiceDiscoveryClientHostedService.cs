@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Models;
+using Monica.Core.Modularity.Models;
 using Monica.Core.ObservableInstance.Abstractions;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
@@ -34,6 +35,7 @@ public class ServiceDiscoveryClientHostedService(
     private int _consecutiveFailures;
 
     public override string ServiceName => "ServiceDiscoveryClient";
+    public override string? ServiceGroupId => nameof(BuiltInModuleKey.ServiceDiscovery);
     public override TimeSpan? HeartbeatInterval => null;
 
     public bool IsRegistered => RuntimeInfo.CurrentState == HostedServiceState.Running;
