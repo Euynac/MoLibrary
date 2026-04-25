@@ -8,9 +8,7 @@
     overflow: hidden;
     padding: 16px;
     position: relative;
-    background:
-        radial-gradient(circle at top left, rgba(var(--mud-palette-primary-rgb), 0.08), transparent 34%),
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.5), var(--mud-palette-background));
+    background: var(--mud-palette-background);
 }
 
 .doc-center-state {
@@ -20,10 +18,7 @@
     align-items: center;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 28px;
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.76)),
-        rgba(var(--mud-palette-primary-rgb), 0.02);
-    box-shadow: 0 24px 72px rgba(var(--mud-palette-dark-rgb), 0.08);
+    background: var(--mud-palette-surface);
 }
 
 .doc-workspace {
@@ -61,17 +56,13 @@
     overflow: hidden;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 24px;
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.94), rgba(var(--mud-palette-surface-rgb), 0.82)),
-        rgba(var(--mud-palette-primary-rgb), 0.02);
-    box-shadow: 0 24px 72px rgba(var(--mud-palette-dark-rgb), 0.08);
+    background: var(--mud-palette-surface);
+   
     backdrop-filter: blur(12px);
 }
 
 .doc-toc-rail {
-    background:
-        linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.78)),
-        rgba(var(--mud-palette-primary-rgb), 0.01);
+    background: var(--mud-palette-surface);
 }
 
 .doc-sidebar-backdrop {
@@ -107,7 +98,6 @@
         max-width: 100%;
         z-index: 30;
         height: 100%;
-        box-shadow: 0 28px 60px rgba(var(--mud-palette-dark-rgb), 0.24);
     }
 
     .doc-sidebar-backdrop {
