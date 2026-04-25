@@ -1,3 +1,148 @@
+.recurring-job-definitions-table {
+    --table-columns:
+        minmax(3rem, 0.25fr)
+        minmax(8rem, 0.9fr)
+        minmax(9rem, 1.25fr)
+        minmax(10rem, 1.45fr)
+        minmax(9rem, 0.95fr)
+        minmax(11rem, 1.1fr)
+        minmax(11rem, 1.1fr)
+        minmax(6.5rem, 0.65fr)
+        minmax(8.5rem, 0.75fr);
+}
+
+.trigger-job-definitions-table {
+    --table-columns:
+        minmax(8rem, 0.9fr)
+        minmax(10rem, 1.45fr)
+        minmax(12rem, 1.75fr)
+        minmax(11rem, 1.1fr)
+        minmax(8.5rem, 0.75fr);
+}
+
+.job-definitions-table-wrapper ::deep .mud-table-root {
+    width: 100%;
+}
+
+.job-definitions-table-wrapper ::deep .mud-table-container {
+    overflow-x: auto;
+}
+
+@media (min-width: 961px) {
+    .job-definitions-table-wrapper ::deep .mud-table-root {
+        display: grid;
+        grid-template-columns: var(--table-columns);
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-head,
+    .job-definitions-table-wrapper ::deep .mud-table-body,
+    .job-definitions-table-wrapper ::deep .mud-table-row {
+        display: contents;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-cell {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-loading,
+    .job-definitions-table-wrapper ::deep .mud-table-empty-row {
+        grid-column: 1 / -1;
+        display: block;
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-body tr:has(.mud-table-empty-row) {
+        display: contents;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-empty-row > * {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-body .job-cron-column,
+    .job-definitions-table-wrapper ::deep .mud-table-body .job-last-column:has(.last-execution-wrapper),
+    .job-definitions-table-wrapper ::deep .mud-table-body .job-status-column {
+        padding-left: 8px;
+    }
+}
+
+@media (max-width: 960px) {
+    .job-definitions-table-wrapper ::deep .mud-table-root,
+    .job-definitions-table-wrapper ::deep .mud-table-body,
+    .job-definitions-table-wrapper ::deep .mud-table-row {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-cell {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .job-definitions-table-wrapper ::deep .mud-table-container {
+        overflow-x: hidden;
+    }
+}
+
+.job-definitions-table-wrapper ::deep .job-cell-text,
+.job-definitions-table-wrapper ::deep .job-cell-link,
+.job-definitions-table-wrapper ::deep .job-time-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-definitions-table-wrapper ::deep .job-cell-tooltip {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.job-definitions-table-wrapper ::deep .job-cell-link {
+    color: inherit;
+    cursor: pointer;
+}
+
+.job-definitions-table-wrapper ::deep .job-cell-link:hover,
+.job-definitions-table-wrapper ::deep .job-cell-link:focus-visible {
+    color: inherit;
+}
+
+.job-definitions-table-wrapper ::deep .job-name-link {
+    font-weight: 700;
+}
+
+.job-definitions-table-wrapper ::deep .job-actions-stack {
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.last-execution-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
 .last-execution-wrapper ::deep .clickable-execution-time {
     cursor: pointer;
     transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
