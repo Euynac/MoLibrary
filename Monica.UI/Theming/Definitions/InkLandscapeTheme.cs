@@ -3,272 +3,43 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// Moyun Landscape Theme - Chinese Ink Painting Style Theme
+/// Restrained ink-wash theme with warm paper surfaces, charcoal night surfaces, and serif typography.
 /// </summary>
-public class InkLandscapeTheme : ThemeDefinitionBase
+public sealed class InkLandscapeTheme : ThemeDefinitionBase
 {
+    private static readonly string[] SerifFontFamily = ["Noto Serif SC", "Source Han Serif SC", "serif"];
+
     public override string Name => "ink-landscape";
+
     public override string DisplayName => "墨韵山水";
-    public override string Description => "中国水墨画风格主题。以黑白灰为主调，点缀淡雅的青绿或赭石色。使用留白设计，配合毛笔笔触效果的分割线和按钮。适合文化类、阅读类应用。";
-    
+
+    public override string Description => "水墨留白风格，沉静克制";
+
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Ascetic;
+
     public override CodeBlockTheme DarkCodeBlockTheme => CodeBlockTheme.AtomOneDark;
 
     public override MudTheme CreateTheme()
     {
-        return new MudTheme()
+        return new MudTheme
         {
-            PaletteLight = new PaletteLight()
+            PaletteLight = CreateLightPalette(),
+            PaletteDark = CreateDarkPalette(),
+            LayoutProperties = new LayoutProperties
             {
-                Primary = "#1a1d23",           // 浓墨（更深邃的主色）
-                Secondary = "#374151",         // 深灰墨（更有层次）
-                Tertiary = "#6b7280",          // 中灰墨（平衡过渡）
-                Info = "#0f766e",              // 墨绿（传统青绿，更沉稳）
-                Success = "#059669",           // 竹绿（象征生机）
-                Warning = "#ca8a04",           // 赭黄（传统矿物色）
-                Error = "#dc2626",             // 朱砂红（传统颜料色）
-                Dark = "#0f172a",              // 极浓墨
-                
-                Background = "#faf9f7",        // 宣纸白（微黄调，更自然）
-                BackgroundGray = "#f3f4f6",    // 淡灰（更柔和）
-                Surface = "#ffffff",           // 纯白
-                AppbarBackground = "#1a1d23",  // 浓墨导航
-                AppbarText = "#f9fafb",        // 素白文字
-                DrawerBackground = "#faf9f7",  // 宣纸白抽屉
-                DrawerText = "#1a1d23",        // 浓墨文字
-                DrawerIcon = "#374151",        // 深灰墨图标
-                
-                TextPrimary = "#0f172a",       // 极浓墨文字（增强对比）
-                TextSecondary = "#374151",     // 深灰墨文字
-                TextDisabled = "#9ca3af",      // 浅灰墨文字（更柔和）
-                
-                ActionDefault = "#f3f4f6",     // 淡灰（更适合默认行为）
-                ActionDisabled = "#e5e7eb",    // 极浅灰
-                ActionDisabledBackground = "#f9fafb", // 淡背景
-                
-                Divider = "#d1d5db",           // 淡墨线（更自然）
-                DividerLight = "#e5e7eb",      // 极淡墨线
-                
-                TableLines = "#d1d5db",        // 表格墨线
-                TableStriped = "#f9fafb",      // 表格条纹（更淡雅）
-                TableHover = "#f3f4f6",        // 表格悬停
-                
-                LinesDefault = "#d1d5db",      // 默认墨线
-                LinesInputs = "#9ca3af",       // 输入框墨线（更清晰）
-                
-                GrayDefault = "#6b7280",       // 默认灰墨
-                GrayLight = "#9ca3af",         // 浅灰墨
-                GrayLighter = "#d1d5db",       // 更浅灰墨
-                GrayDark = "#374151",          // 深灰墨
-                GrayDarker = "#1a1d23",        // 更深灰墨
-                
-                OverlayDark = "rgba(15,23,42,0.4)",    // 深墨遮罩（更柔和）
-                OverlayLight = "rgba(255,255,255,0.85)"  // 浅色遮罩
+                DefaultBorderRadius = "6px",
+                AppbarHeight = "56px",
+                DrawerWidthLeft = "272px",
+                DrawerWidthRight = "272px",
+                DrawerMiniWidthLeft = "72px",
+                DrawerMiniWidthRight = "72px"
             },
-            PaletteDark = new PaletteDark()
+            Typography = CreateTypography(),
+            Shadows = new Shadow
             {
-                Primary = "#06b6d4",           // 青蓝（传统青绿色调，暗色下有足够对比度）
-                Secondary = "#64748b",         // 中灰墨（更有层次）
-                Tertiary = "#475569",          // 深灰墨
-                Info = "#14b8a6",              // 青绿（暗色下更亮）
-                Success = "#10b981",           // 翠绿（保持生机）
-                Warning = "#f59e0b",           // 赭黄（暗色下更温暖）
-                Error = "#ef4444",             // 朱红（暗色下保持警示）
-                Dark = "#f9fafb",              // 素白
-                
-                Background = "#0f172a",        // 极深墨背景（更深邃）
-                BackgroundGray = "#1e293b",    // 深墨背景
-                Surface = "#1e293b",           // 深墨表面
-                AppbarBackground = "#0f172a",  // 极深墨导航
-                AppbarText = "#f1f5f9",        // 素白文字
-                DrawerBackground = "#1e293b",  // 深墨抽屉
-                DrawerText = "#f1f5f9",        // 素白文字
-                DrawerIcon = "#94a3b8",        // 中灰图标
-                
-                TextPrimary = "#f8fafc",       // 纯白文字（增强对比）
-                TextSecondary = "#cbd5e1",     // 淡灰文字
-                TextDisabled = "#64748b",      // 中灰墨文字
-                
-                ActionDefault = "#475569",     // 中灰（适合暗色默认行为）
-                ActionDisabled = "#64748b",    // 浅灰
-                ActionDisabledBackground = "#1e293b", // 深背景
-                
-                Divider = "#475569",           // 深灰墨分隔线（更清晰）
-                DividerLight = "#64748b",      // 中灰墨分隔线
-                
-                TableLines = "#475569",        // 表格墨线
-                TableStriped = "#1e293b",      // 表格条纹
-                TableHover = "#334155",        // 表格悬停（更明显）
-                
-                LinesDefault = "#475569",      // 默认墨线
-                LinesInputs = "#64748b",       // 输入框墨线（更清晰）
-                
-                GrayDefault = "#64748b",       // 默认灰墨
-                GrayLight = "#94a3b8",         // 浅灰墨
-                GrayLighter = "#cbd5e1",       // 更浅灰墨
-                GrayDark = "#475569",          // 深灰墨
-                GrayDarker = "#334155",        // 更深灰墨
-                
-                OverlayDark = "rgba(15,23,42,0.8)",    // 极深墨遮罩
-                OverlayLight = "rgba(30,41,59,0.6)"    // 深墨遮罩
+                Elevation = CreateShadows()
             },
-            LayoutProperties = new LayoutProperties()
-            {
-                DefaultBorderRadius = "2px",
-                AppbarHeight = "64px",
-                DrawerWidthLeft = "280px",
-                DrawerWidthRight = "280px"
-            },
-            Typography = new Typography()
-            {
-                Default = new DefaultTypography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.875rem",
-                    FontWeight = "400",
-                    LineHeight = "1.6",
-                    LetterSpacing = "0.01071em"
-                },
-                H1 = new H1Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "3rem",
-                    FontWeight = "300",
-                    LineHeight = "1.3",
-                    LetterSpacing = "-0.01562em"
-                },
-                H2 = new H2Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "2.5rem",
-                    FontWeight = "300",
-                    LineHeight = "1.35",
-                    LetterSpacing = "-0.00833em"
-                },
-                H3 = new H3Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "2rem",
-                    FontWeight = "400",
-                    LineHeight = "1.4",
-                    LetterSpacing = "0em"
-                },
-                H4 = new H4Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "1.5rem",
-                    FontWeight = "400",
-                    LineHeight = "1.45",
-                    LetterSpacing = "0.00735em"
-                },
-                H5 = new H5Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "1.25rem",
-                    FontWeight = "400",
-                    LineHeight = "1.5",
-                    LetterSpacing = "0em"
-                },
-                H6 = new H6Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "1.125rem",
-                    FontWeight = "500",
-                    LineHeight = "1.55",
-                    LetterSpacing = "0.0075em"
-                },
-                Button = new ButtonTypography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.875rem",
-                    FontWeight = "400",
-                    LineHeight = "1.6",
-                    LetterSpacing = "0.02857em",
-                    TextTransform = "none"
-                },
-                Body1 = new Body1Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "1rem",
-                    FontWeight = "400",
-                    LineHeight = "1.7",
-                    LetterSpacing = "0.00938em"
-                },
-                Body2 = new Body2Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.875rem",
-                    FontWeight = "400",
-                    LineHeight = "1.65",
-                    LetterSpacing = "0.01071em"
-                },
-                Caption = new CaptionTypography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.75rem",
-                    FontWeight = "400",
-                    LineHeight = "1.8",
-                    LetterSpacing = "0.03333em"
-                },
-                Subtitle1 = new Subtitle1Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "1rem",
-                    FontWeight = "400",
-                    LineHeight = "1.75",
-                    LetterSpacing = "0.00938em"
-                },
-                Subtitle2 = new Subtitle2Typography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.875rem",
-                    FontWeight = "500",
-                    LineHeight = "1.6",
-                    LetterSpacing = "0.00714em"
-                },
-                Overline = new OverlineTypography()
-                {
-                    FontFamily = new[] { "Noto Serif SC", "Source Han Serif SC", "serif" },
-                    FontSize = "0.75rem",
-                    FontWeight = "400",
-                    LineHeight = "2.5",
-                    LetterSpacing = "0.08333em",
-                    TextTransform = "none"
-                }
-            },
-            Shadows = new Shadow()
-            {
-                Elevation = new string[]
-                {
-                    "none",                                                    // 0: 无阴影
-                    "0 1px 2px rgba(15, 23, 42, 0.08)",                      // 1: 微妙墨迹
-                    "0 1px 3px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06)", // 2: 轻微层次
-                    "0 2px 4px rgba(15, 23, 42, 0.1), 0 2px 3px rgba(15, 23, 42, 0.06)", // 3: 淡墨阴影
-                    "0 2px 6px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08)", // 4: 标准墨影
-                    "0 4px 8px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08)", // 5: 明显层次
-                    "0 6px 12px rgba(15, 23, 42, 0.15), 0 2px 4px rgba(15, 23, 42, 0.08)", // 6: 卡片阴影
-                    "0 8px 16px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.08)", // 7: 浮起效果
-                    "0 10px 20px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 8: 对话框
-                    "0 12px 24px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 9: 深度层次
-                    "0 16px 32px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 10: 重要内容
-                    "0 20px 40px rgba(15, 23, 42, 0.15), 0 4px 8px rgba(15, 23, 42, 0.08)", // 11: 抽屉效果
-                    "0 24px 48px rgba(15, 23, 42, 0.15), 0 6px 12px rgba(15, 23, 42, 0.08)", // 12: 模态框
-                    "0 28px 56px rgba(15, 23, 42, 0.15), 0 6px 12px rgba(15, 23, 42, 0.08)", // 13: 悬浮面板
-                    "0 32px 64px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 14: 最高层级
-                    "0 36px 72px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 15: 极高层级
-                    "0 40px 80px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 16: 特殊效果
-                    "0 44px 88px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 17: 超高层级
-                    "0 48px 96px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 18: 最大层级
-                    "0 52px 104px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 19: 扩展层级
-                    "0 56px 112px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 20: 特殊用途
-                    "0 60px 120px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 21: 自定义1
-                    "0 64px 128px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 22: 自定义2
-                    "0 68px 136px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 23: 自定义3
-                    "0 72px 144px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)", // 24: 自定义4
-                    "0 76px 152px rgba(15, 23, 42, 0.15), 0 8px 16px rgba(15, 23, 42, 0.08)"  // 25: 自定义5
-                }
-            },
-            ZIndex = new ZIndex()
+            ZIndex = new ZIndex
             {
                 Drawer = 1200,
                 AppBar = 1100,
@@ -278,5 +49,271 @@ public class InkLandscapeTheme : ThemeDefinitionBase
                 Tooltip = 1600
             }
         };
+    }
+
+    private static PaletteLight CreateLightPalette()
+    {
+        return new PaletteLight
+        {
+            Primary = "#2f3a34",
+            PrimaryLighten = "#526158",
+            PrimaryDarken = "#1d2722",
+            PrimaryContrastText = "#fffdf8",
+
+            Secondary = "#756853",
+            SecondaryLighten = "#9a8a70",
+            SecondaryDarken = "#514737",
+            SecondaryContrastText = "#fffdf8",
+
+            Tertiary = "#eadfcd",
+            TertiaryLighten = "#f6efe4",
+            TertiaryDarken = "#d5c5ab",
+            TertiaryContrastText = "#2f332e",
+
+            Info = "#4f7771",
+            InfoLighten = "#719790",
+            InfoDarken = "#385d58",
+            InfoContrastText = "#fffdf8",
+
+            Success = "#53745a",
+            SuccessLighten = "#749478",
+            SuccessDarken = "#3c5b43",
+            SuccessContrastText = "#fffdf8",
+
+            Warning = "#a06f2b",
+            WarningLighten = "#bd8a44",
+            WarningDarken = "#7d531f",
+            WarningContrastText = "#fffdf8",
+
+            Error = "#a33e35",
+            ErrorLighten = "#bf5b52",
+            ErrorDarken = "#7e2e27",
+            ErrorContrastText = "#fffdf8",
+
+            Dark = "#20241f",
+            DarkLighten = "#373d35",
+            DarkDarken = "#111511",
+            DarkContrastText = "#fffdf8",
+
+            Background = "#f7f2e8",
+            BackgroundGray = "#eee6d8",
+            Surface = "#fffaf1",
+
+            DrawerBackground = "#f5efe3",
+            DrawerText = "#2f332e",
+            DrawerIcon = "#756853",
+
+            AppbarBackground = "rgba(247, 242, 232, 0.94)",
+            AppbarText = "#2f332e",
+
+            TextPrimary = "#252922",
+            TextSecondary = "#676150",
+            TextDisabled = "#9e9685",
+
+            ActionDefault = "#676150",
+            ActionDisabled = "#b8af9e",
+            ActionDisabledBackground = "#eee6d8",
+
+            Divider = "rgba(47, 51, 46, 0.16)",
+            DividerLight = "rgba(47, 51, 46, 0.08)",
+            LinesDefault = "rgba(47, 51, 46, 0.16)",
+            LinesInputs = "rgba(47, 51, 46, 0.24)",
+
+            TableLines = "rgba(47, 51, 46, 0.14)",
+            TableStriped = "#f2eadc",
+            TableHover = "#ebe0cf",
+
+            OverlayDark = "rgba(32, 36, 31, 0.42)",
+            OverlayLight = "rgba(255, 250, 241, 0.72)",
+
+            HoverOpacity = 0.05,
+
+            GrayDefault = "#8c8474",
+            GrayLight = "#beb5a4",
+            GrayLighter = "#e7dece",
+            GrayDark = "#676150",
+            GrayDarker = "#3f4239"
+        };
+    }
+
+    private static PaletteDark CreateDarkPalette()
+    {
+        return new PaletteDark
+        {
+            Primary = "#c5d0bd",
+            PrimaryLighten = "#dce4d6",
+            PrimaryDarken = "#aab8a1",
+            PrimaryContrastText = "#171b17",
+
+            Secondary = "#bda982",
+            SecondaryLighten = "#d4c29d",
+            SecondaryDarken = "#9e875f",
+            SecondaryContrastText = "#171b17",
+
+            Tertiary = "#2a3029",
+            TertiaryLighten = "#363d35",
+            TertiaryDarken = "#1f251f",
+            TertiaryContrastText = "#efe7d7",
+
+            Info = "#8fb8b0",
+            InfoLighten = "#afd0c9",
+            InfoDarken = "#6f9b92",
+            InfoContrastText = "#111716",
+
+            Success = "#91b893",
+            SuccessLighten = "#afd0b0",
+            SuccessDarken = "#739c77",
+            SuccessContrastText = "#111711",
+
+            Warning = "#d1a85a",
+            WarningLighten = "#e0bf7d",
+            WarningDarken = "#b68b39",
+            WarningContrastText = "#1b1509",
+
+            Error = "#d27a72",
+            ErrorLighten = "#e49a94",
+            ErrorDarken = "#b75d55",
+            ErrorContrastText = "#1c0d0b",
+
+            Dark = "#efe7d7",
+            DarkLighten = "#fff8eb",
+            DarkDarken = "#d7ccb9",
+            DarkContrastText = "#171b17",
+
+            Background = "#171b17",
+            BackgroundGray = "#1f241f",
+            Surface = "#242a23",
+
+            DrawerBackground = "#1b201b",
+            DrawerText = "#ede5d5",
+            DrawerIcon = "#b0aa9a",
+
+            AppbarBackground = "rgba(23, 27, 23, 0.94)",
+            AppbarText = "#ede5d5",
+
+            TextPrimary = "#f0e8d8",
+            TextSecondary = "#b8b09e",
+            TextDisabled = "#746f62",
+
+            ActionDefault = "#b8b09e",
+            ActionDisabled = "#555146",
+            ActionDisabledBackground = "#2a3029",
+
+            Divider = "rgba(240, 232, 216, 0.14)",
+            DividerLight = "rgba(240, 232, 216, 0.08)",
+            LinesDefault = "rgba(240, 232, 216, 0.14)",
+            LinesInputs = "rgba(240, 232, 216, 0.24)",
+
+            TableLines = "rgba(240, 232, 216, 0.12)",
+            TableStriped = "#1d221d",
+            TableHover = "#2f372f",
+
+            OverlayDark = "rgba(5, 7, 5, 0.76)",
+            OverlayLight = "rgba(240, 232, 216, 0.10)",
+
+            HoverOpacity = 0.07,
+
+            GrayDefault = "#8d8879",
+            GrayLight = "#b8b09e",
+            GrayLighter = "#d8cfbd",
+            GrayDark = "#676256",
+            GrayDarker = "#3f433b"
+        };
+    }
+
+    private static Typography CreateTypography()
+    {
+        return new Typography
+        {
+            Default = CreateTypography<DefaultTypography>("0.875rem", "400", "1.6"),
+            H1 = CreateTypography<H1Typography>("2.75rem", "500", "1.25"),
+            H2 = CreateTypography<H2Typography>("2.25rem", "500", "1.3"),
+            H3 = CreateTypography<H3Typography>("1.875rem", "500", "1.35"),
+            H4 = CreateTypography<H4Typography>("1.5rem", "500", "1.4"),
+            H5 = CreateTypography<H5Typography>("1.25rem", "500", "1.45"),
+            H6 = CreateTypography<H6Typography>("1.125rem", "600", "1.5"),
+            Subtitle1 = CreateTypography<Subtitle1Typography>("1rem", "500", "1.65"),
+            Subtitle2 = CreateTypography<Subtitle2Typography>("0.875rem", "500", "1.6"),
+            Body1 = CreateTypography<Body1Typography>("1rem", "400", "1.7"),
+            Body2 = CreateTypography<Body2Typography>("0.875rem", "400", "1.65"),
+            Button = CreateButtonTypography(),
+            Caption = CreateTypography<CaptionTypography>("0.75rem", "400", "1.6"),
+            Overline = CreateOverlineTypography()
+        };
+    }
+
+    private static TTypography CreateTypography<TTypography>(
+        string fontSize,
+        string fontWeight,
+        string lineHeight)
+        where TTypography : BaseTypography, new()
+    {
+        return new TTypography
+        {
+            FontFamily = SerifFontFamily,
+            FontSize = fontSize,
+            FontWeight = fontWeight,
+            LineHeight = lineHeight,
+            LetterSpacing = "0"
+        };
+    }
+
+    private static ButtonTypography CreateButtonTypography()
+    {
+        return new ButtonTypography
+        {
+            FontFamily = SerifFontFamily,
+            FontSize = "0.875rem",
+            FontWeight = "500",
+            LineHeight = "1.5",
+            LetterSpacing = "0",
+            TextTransform = "none"
+        };
+    }
+
+    private static OverlineTypography CreateOverlineTypography()
+    {
+        return new OverlineTypography
+        {
+            FontFamily = SerifFontFamily,
+            FontSize = "0.75rem",
+            FontWeight = "500",
+            LineHeight = "1.6",
+            LetterSpacing = "0",
+            TextTransform = "none"
+        };
+    }
+
+    private static string[] CreateShadows()
+    {
+        return
+        [
+            "none",
+            "0 1px 2px rgba(32, 36, 31, 0.05)",
+            "0 2px 6px rgba(32, 36, 31, 0.07)",
+            "0 4px 12px rgba(32, 36, 31, 0.08)",
+            "0 8px 20px rgba(32, 36, 31, 0.10)",
+            "0 12px 28px rgba(32, 36, 31, 0.12)",
+            "0 16px 36px rgba(32, 36, 31, 0.14)",
+            "0 18px 42px rgba(32, 36, 31, 0.14)",
+            "0 20px 48px rgba(32, 36, 31, 0.15)",
+            "0 22px 52px rgba(32, 36, 31, 0.15)",
+            "0 24px 56px rgba(32, 36, 31, 0.16)",
+            "0 26px 60px rgba(32, 36, 31, 0.16)",
+            "0 28px 64px rgba(32, 36, 31, 0.17)",
+            "0 30px 68px rgba(32, 36, 31, 0.17)",
+            "0 32px 72px rgba(32, 36, 31, 0.18)",
+            "0 34px 76px rgba(32, 36, 31, 0.18)",
+            "0 36px 80px rgba(32, 36, 31, 0.19)",
+            "0 38px 84px rgba(32, 36, 31, 0.19)",
+            "0 40px 88px rgba(32, 36, 31, 0.20)",
+            "0 42px 92px rgba(32, 36, 31, 0.20)",
+            "0 44px 96px rgba(32, 36, 31, 0.21)",
+            "0 46px 100px rgba(32, 36, 31, 0.21)",
+            "0 48px 104px rgba(32, 36, 31, 0.22)",
+            "0 50px 108px rgba(32, 36, 31, 0.22)",
+            "0 52px 112px rgba(32, 36, 31, 0.23)",
+            "0 54px 116px rgba(32, 36, 31, 0.23)"
+        ];
     }
 }
