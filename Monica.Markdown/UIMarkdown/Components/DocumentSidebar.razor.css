@@ -35,7 +35,7 @@
     min-width: 0;
     padding: 14px 16px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 18px;
+    border-radius: var(--mud-default-borderradius);
     background:
         linear-gradient(180deg, rgba(var(--mud-palette-surface-rgb), 0.92), rgba(var(--mud-palette-surface-rgb), 0.72)),
         rgba(var(--mud-palette-primary-rgb), 0.04);
@@ -133,7 +133,7 @@
 
 ::deep .sidebar-collapse-button {
     border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.2);
-    border-radius: 12px;
+    border-radius: var(--mud-default-borderradius);
     background-color: var(--mud-palette-surface);
 }
 

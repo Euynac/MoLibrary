@@ -70,7 +70,7 @@
     width: 100%;
     padding: 9px 12px 9px 26px;
     border: 0;
-    border-radius: 14px;
+    border-radius: var(--mud-default-borderradius);
     background: transparent;
     color: var(--mud-palette-text-secondary);
     text-align: left;

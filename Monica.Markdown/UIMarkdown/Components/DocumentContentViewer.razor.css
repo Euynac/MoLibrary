@@ -43,7 +43,7 @@
 ::deep .sidebar-toggle-btn {
     flex-shrink: 0;
     border: 1px solid rgba(var(--mud-palette-primary-rgb), 0.18);
-    border-radius: 12px;
+    border-radius: var(--mud-default-borderradius);
     background-color: rgba(var(--mud-palette-surface-rgb), 0.85);
 }
 
@@ -55,7 +55,7 @@
     gap: 10px;
     min-height: 40px;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 999px;
+    border-radius: var(--mud-default-borderradius);
     background-color: rgba(var(--mud-palette-surface-rgb), 0.88);
     color: var(--mud-palette-text-primary);
     padding: 0 14px;
@@ -321,4 +321,3 @@
         padding: 24px 24px 40px 24px;
     }
 }
-
