@@ -236,8 +236,8 @@
     color: var(--mo-m3-on-surface) !important;
 }
 
-.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu),
-.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu) {
+.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip)),
+.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip)) {
     background: var(--mo-m3-surface-container);
     border: 1px solid var(--mo-m3-outline-variant);
     border-radius: var(--mo-m3-shape-large);

@@ -75,7 +75,7 @@
     --mo-vibe-ink-dim: rgba(0, 179, 54, 0.42);
     --mo-vibe-ghost: rgba(0, 179, 54, 0.18);
     --mo-vibe-glow: rgba(0, 179, 54, 0.10);
-    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 179, 54, 0.08), 0 18px 40px rgba(6, 43, 18, 0.10);
+    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 179, 54, 0.06), 0 8px 20px rgba(6, 43, 18, 0.06);
     --mo-vibe-scanline-opacity: 0.06;
     --mo-vibe-selection-text: #041206;
     --mo-vibe-corner-ink: rgba(0, 179, 54, 0.34);
@@ -105,7 +105,7 @@
     --mo-vibe-ink-dim: rgba(0, 255, 65, 0.38);
     --mo-vibe-ghost: rgba(0, 255, 65, 0.18);
     --mo-vibe-glow: rgba(0, 255, 65, 0.18);
-    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 255, 65, 0.08), 0 18px 40px rgba(0, 0, 0, 0.45);
+    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 255, 65, 0.06), 0 8px 20px rgba(0, 0, 0, 0.22);
     --mo-vibe-scanline-opacity: 0.12;
     --mo-vibe-selection-text: #050505;
     --mo-vibe-corner-ink: rgba(0, 255, 65, 0.40);
