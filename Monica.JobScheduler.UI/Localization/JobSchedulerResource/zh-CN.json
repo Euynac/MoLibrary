@@ -134,6 +134,17 @@
       "PartialSuccess": "批量操作完成: {0} 成功, {1} 失败",
       "AllFailed": "批量操作失败: 所有操作均失败"
     },
+    "NextExecutionTimeTooltip": {
+      "Future": "将在 {0} 后执行",
+      "Past": "已到期 {0}",
+      "Now": "现在到期"
+    },
+    "RelativeTime": {
+      "DaysHours": "{0}天 {1}小时",
+      "HoursMinutes": "{0}小时 {1}分钟",
+      "MinutesSeconds": "{0}分钟 {1}秒",
+      "Seconds": "{0}秒"
+    },
     "Messages": {
       "NoRecurringJobs": "没有找到匹配的周期性作业",
       "NoTriggerJobs": "没有找到匹配的触发型作业",
