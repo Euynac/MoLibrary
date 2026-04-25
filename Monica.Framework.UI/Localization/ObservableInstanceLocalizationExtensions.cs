@@ -37,7 +37,7 @@ public static class ObservableInstanceLocalizationExtensions
             LogLevel.Critical => localizer["Shared:LogLevels:Critical"].Value,
             LogLevel.None => localizer["Shared:LogLevels:None"].Value,
             null => localizer["Shared:LogLevels:Unknown"].Value,
-            _ => level.Value.ToString()
+            _ => localizer["Shared:LogLevels:Unknown"].Value
         };
     }
 
@@ -80,6 +80,10 @@ public static class ObservableInstanceLocalizationExtensions
     public static string FormatRelativeTime(this IStringLocalizer localizer, DateTime timestamp)
     {
         var elapsed = DateTime.UtcNow - timestamp;
+        if (elapsed < TimeSpan.Zero)
+        {
+            elapsed = TimeSpan.Zero;
+        }
 
         if (elapsed.TotalSeconds < 60)
             return localizer["Shared:RelativeTime:SecondsAgo", Math.Max(0, (int)elapsed.TotalSeconds)].Value;
@@ -106,21 +110,5 @@ public static class ObservableInstanceLocalizationExtensions
             return localizer["Shared:Duration:MinutesSeconds", (int)duration.TotalMinutes, duration.Seconds].Value;
 
         return localizer["Shared:Duration:Seconds", Math.Max(0, (int)duration.TotalSeconds)].Value;
-    }
-
-    /// <summary>
-    /// Gets localized group display text, preserving configured group identifiers.
-    /// </summary>
-    public static string GetGroupDisplayText(this IStringLocalizer localizer, ObservableInstanceViewModel instance)
-    {
-        return instance.HasGroup ? instance.GroupId! : localizer["Shared:Labels:Ungrouped"].Value;
-    }
-
-    /// <summary>
-    /// Gets localized type display text for nullable types.
-    /// </summary>
-    public static string GetNullableTypeDisplayText(this IStringLocalizer localizer, string value)
-    {
-        return value == "Unknown" ? localizer["Shared:Labels:Unknown"].Value : value;
     }
 }

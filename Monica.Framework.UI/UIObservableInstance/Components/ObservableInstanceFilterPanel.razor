@@ -91,7 +91,8 @@
                     <MudSelect T="Microsoft.Extensions.Logging.LogLevel"
                               Label="@L["Filter:Fields:LogLevel"]"
                               MultiSelection="true"
-                              @bind-SelectedValues="_selectedLogLevels"
+                              SelectedValues="@SelectedLogLevels"
+                              SelectedValuesChanged="HandleLogLevelsChanged"
                               AnchorOrigin="Origin.BottomCenter"
                               Clearable="true"
                               OnClearButtonClick="HandleLogLevelClear">
@@ -136,18 +137,8 @@
     [Parameter]
     public EventCallback OnFilterChanged { get; set; }
 
-    private IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel> _selectedLogLevels
-    {
-        get => Filter?.LogLevels?.ToList() ?? (IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel>)Array.Empty<Microsoft.Extensions.Logging.LogLevel>();
-        set
-        {
-            if (Filter != null)
-            {
-                Filter.LogLevels = value?.ToHashSet();
-                _ = OnFilterChanged.InvokeAsync();
-            }
-        }
-    }
+    private IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel> SelectedLogLevels =>
+        Filter?.LogLevels?.ToArray() ?? Array.Empty<Microsoft.Extensions.Logging.LogLevel>();
 
     private static Microsoft.Extensions.Logging.LogLevel[] OrderedLogLevels { get; } =
     [
@@ -188,6 +179,15 @@
         if (Filter != null)
         {
             Filter.LogLevels = null;
+            await OnFilterChanged.InvokeAsync();
+        }
+    }
+
+    private async Task HandleLogLevelsChanged(IEnumerable<Microsoft.Extensions.Logging.LogLevel>? values)
+    {
+        if (Filter != null)
+        {
+            Filter.LogLevels = values?.ToHashSet();
             await OnFilterChanged.InvokeAsync();
         }
     }

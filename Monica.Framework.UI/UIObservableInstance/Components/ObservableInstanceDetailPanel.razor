@@ -32,12 +32,12 @@
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Type"]</MudText>
                             <MudTooltip Text="@Instance.InstanceTypeFullName">
-                                <MudText Typo="Typo.body2">@L.GetNullableTypeDisplayText(Instance.InstanceTypeDisplay)</MudText>
+                                <MudText Typo="Typo.body2">@Instance.InstanceTypeDisplay</MudText>
                             </MudTooltip>
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:GroupId"]</MudText>
-                            <MudText Typo="Typo.body2">@L.GetGroupDisplayText(Instance)</MudText>
+                            <MudText Typo="Typo.body2">@Instance.GroupIdDisplay</MudText>
                         </MudItem>
                         @if (!string.IsNullOrEmpty(Instance.InstanceKey))
                         {
