@@ -32,15 +32,15 @@
 }
 
 .trend-chart-wrapper ::deep .legend-dot.success {
-    background-color: #4caf50;
+    background-color: var(--mud-palette-success);
 }
 
 .trend-chart-wrapper ::deep .legend-dot.failed {
-    background-color: #f44336;
+    background-color: var(--mud-palette-error);
 }
 
 .trend-chart-wrapper ::deep .legend-dot.skipped {
-    background-color: #ff9800;
+    background-color: var(--mud-palette-warning);
 }
 
 .trend-chart-wrapper ::deep .chart-container {

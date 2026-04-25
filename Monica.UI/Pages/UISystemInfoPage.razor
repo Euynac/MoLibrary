@@ -19,7 +19,7 @@
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <!-- Header -->
-    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-system-info-hero-background, linear-gradient(45deg, #6A1B9A 30%, #9C27B0 90%)); color: var(--mo-system-info-hero-text, white);">
+    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-color-page-hero-background); color: var(--mo-color-page-hero-text); overflow: hidden;">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
@@ -34,7 +34,7 @@
                                OnClick="RequestSelfRestartAsync"
                                Size="Size.Medium"
                                Disabled="_restartRequested"
-                               Style="border-color: var(--mo-system-info-hero-action, white); color: var(--mo-system-info-hero-action, white);">
+                               Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
                         @L["Page:Header:Restart"]
                     </MudButton>
                 }
@@ -43,7 +43,7 @@
                            Variant="Variant.Outlined"
                            OnClick="RefreshSystemInfo"
                            Size="Size.Medium"
-                           Style="border-color: var(--mo-system-info-hero-action, white); color: var(--mo-system-info-hero-action, white);">
+                           Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
                     @L["Page:Header:Refresh"]
                 </MudButton>
             </MudStack>

@@ -2,6 +2,9 @@
 /* This is the main CSS file that pulls in all theme-related CSS */
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
+/* 0. Introduce the baseline MudBlazor-compatible theme hook */
+@import url('./themes/mo-theme-mudblazor.css');
+
 /* 1. Introduce Material Design theme styles */
 @import url('./themes/mo-theme-material-design-3.css');
 
@@ -23,6 +26,46 @@
 /* 5. Custom theme style example */
 /* If you want to create a new theme, you can create a new CSS file and introduce it here */
 /* @import url('./themes/mo-theme-custom.css'); */
+
+/*
+ * Shared semantic color contract for first-party Monica UI.
+ * Use these only when --mud-palette-* does not express the scenario.
+ * Theme files may override this small contract for their own visual language.
+ */
+:root {
+    --mo-color-page-hero-background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-primary) 0%,
+            color-mix(in srgb, var(--mud-palette-primary) 72%, var(--mud-palette-surface)) 100%);
+    --mo-color-page-hero-text: var(--mud-palette-primary-text);
+    --mo-color-page-hero-action: var(--mud-palette-primary-text);
+
+    --mo-color-highlight-background: rgba(var(--mud-palette-warning-rgb), 0.26);
+    --mo-color-highlight-text: var(--mud-palette-text-primary);
+
+    --mo-color-code-key: var(--mud-palette-primary);
+    --mo-color-code-string: var(--mud-palette-success);
+    --mo-color-code-number: var(--mud-palette-info);
+    --mo-color-code-boolean: var(--mud-palette-secondary);
+    --mo-color-code-null: var(--mud-palette-text-secondary);
+
+    --mo-color-state-info-soft-background: rgba(var(--mud-palette-info-rgb), 0.12);
+    --mo-color-state-info-soft-text: var(--mud-palette-info);
+    --mo-color-state-info-soft-border: rgba(var(--mud-palette-info-rgb), 0.26);
+
+    --mo-color-state-success-soft-background: rgba(var(--mud-palette-success-rgb), 0.12);
+    --mo-color-state-success-soft-text: var(--mud-palette-success);
+    --mo-color-state-success-soft-border: rgba(var(--mud-palette-success-rgb), 0.26);
+
+    --mo-color-state-warning-soft-background: rgba(var(--mud-palette-warning-rgb), 0.16);
+    --mo-color-state-warning-soft-text: var(--mud-palette-warning);
+    --mo-color-state-warning-soft-border: rgba(var(--mud-palette-warning-rgb), 0.28);
+
+    --mo-color-state-error-soft-background: rgba(var(--mud-palette-error-rgb), 0.12);
+    --mo-color-state-error-soft-text: var(--mud-palette-error);
+    --mo-color-state-error-soft-border: rgba(var(--mud-palette-error-rgb), 0.26);
+}
 
 /* Prevent transition animations from affecting performance of elements */
 .mud-table *,

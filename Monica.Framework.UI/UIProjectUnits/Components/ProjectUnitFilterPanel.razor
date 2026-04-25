@@ -37,13 +37,11 @@
                         SelectedValuesChanged="OnSelectedUnitTypesChanged">
                 @foreach (var unitType in AllUnitTypes)
                 {
-                    var color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
                     var isSelected = SelectedUnitTypes.Contains(unitType);
                     <MudChip T="EProjectUnitType"
                              Value="unitType"
-                             Style="@(isSelected
-                                 ? $"background-color: {color}; border-color: {color}; color: white"
-                                 : $"background-color: {color}20; border-color: {color}; color: {color}")"
+                             Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(unitType)"
+                             Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
                              Size="Size.Small">
                         @L.GetProjectUnitTypeText(unitType)
                     </MudChip>

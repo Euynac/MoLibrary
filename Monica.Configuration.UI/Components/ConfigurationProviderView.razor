@@ -228,7 +228,7 @@
         var highlighted = System.Text.RegularExpressions.Regex.Replace(
             escapedText,
             System.Text.RegularExpressions.Regex.Escape(escapedKeyword),
-            match => $"<mark style='background-color: #ffeb3b; padding: 0 2px;'>{match.Value}</mark>",
+            match => $"<mark style='background: var(--mo-color-highlight-background); color: var(--mo-color-highlight-text); padding: 0 2px; border-radius: 4px;'>{match.Value}</mark>",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         return new MarkupString(highlighted);

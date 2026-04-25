@@ -13,6 +13,28 @@ import { NodeInteractionHandler, createStaticDragBehavior } from '../../Monica.U
 let graphInstance = null;
 const DOMAIN_NODE_RADIUS = 30;
 
+const ROLE_COLOR_MAP = {
+    primary: 'var(--mud-palette-primary)',
+    secondary: 'var(--mud-palette-secondary)',
+    tertiary: 'var(--mud-palette-tertiary)',
+    info: 'var(--mud-palette-info)',
+    success: 'var(--mud-palette-success)',
+    warning: 'var(--mud-palette-warning)',
+    default: 'var(--mud-palette-text-secondary)'
+};
+
+const STATUS_COLOR_MAP = {
+    Running: 'var(--mud-palette-success)',
+    Error: 'var(--mud-palette-error)',
+    Updating: 'var(--mud-palette-warning)',
+    Offline: 'var(--mud-palette-dark)',
+    Unknown: 'var(--mud-palette-text-secondary)'
+};
+
+function resolveRoleColor(role) {
+    return ROLE_COLOR_MAP[role] || ROLE_COLOR_MAP.default;
+}
+
 /**
  * Initialize domain dependency graph
  * @param {string} containerId - container ID
@@ -318,10 +340,10 @@ class DomainDependencyGraph extends GraphBase {
             .transition()
             .duration(500)
             .attr('r', DOMAIN_NODE_RADIUS)
-            .attr('fill', d => d.color)
+            .attr('fill', d => resolveRoleColor(d.colorRole))
             .attr('stroke', getModernNodeStyle(this.isDarkMode).strokeColor)
             .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
+            .style('filter', 'drop-shadow(0 2px 8px rgba(var(--mud-palette-dark-rgb),0.15))');
 
         // Update text
         this.nodeElements.select('.node-text')
@@ -329,7 +351,7 @@ class DomainDependencyGraph extends GraphBase {
             .duration(500)
             .style('font-size', '14px')
             .style('font-weight', '500')
-            .style('text-shadow', '0 1px 3px rgba(0,0,0,0.3)')
+            .style('text-shadow', '0 1px 3px rgba(var(--mud-palette-dark-rgb),0.3)')
             .attr('fill', getModernNodeStyle(this.isDarkMode).textColor)
             .text(d => this.truncateText(d.name, 15));
 
@@ -395,8 +417,9 @@ class DomainDependencyGraph extends GraphBase {
                 .append('div')
                 .attr('class', 'domain-tooltip')
                 .style('position', 'absolute')
-                .style('background', 'rgba(0,0,0,0.8)')
-                .style('color', 'white')
+                .style('background', 'rgba(var(--mud-palette-surface-rgb),0.98)')
+                .style('color', 'var(--mud-palette-text-primary)')
+                .style('border', '1px solid var(--mud-palette-lines-default)')
                 .style('padding', '8px 12px')
                 .style('border-radius', '6px')
                 .style('font-size', '12px')
@@ -472,7 +495,7 @@ class DomainDependencyGraph extends GraphBase {
         let content = `<strong>${domain.name}</strong>`;
         
         if (domain.description) {
-            content += `<br/><span style="color: #ccc;">${domain.description}</span>`;
+            content += `<br/><span style="color: var(--mud-palette-text-secondary);">${domain.description}</span>`;
         }
 
         // Display related microservice information
@@ -490,7 +513,7 @@ class DomainDependencyGraph extends GraphBase {
                 // Show first 3 service names
                 if (services.length > 0) {
                     const serviceNames = services.slice(0, 3).map(s => s.name || s.appName).join(', ');
-                    content += `<br/><span style="font-size: 11px; color: #aaa; margin-left: 12px;">${serviceNames}`;
+                    content += `<br/><span style="font-size: 11px; color: var(--mud-palette-text-secondary); margin-left: 12px;">${serviceNames}`;
                     if (services.length > 3) {
                         content += ` ${this.formatText(this.texts.labels.andMore, services.length)}`;
                     }
@@ -498,10 +521,10 @@ class DomainDependencyGraph extends GraphBase {
                 }
             });
         } else {
-            content += `<br/><span style="color: #999;">${this.texts.labels.noRelatedServices}</span>`;
+            content += `<br/><span style="color: var(--mud-palette-text-secondary);">${this.texts.labels.noRelatedServices}</span>`;
         }
 
-        content += `<br/><br/><span style="font-size: 11px; color: #888;">${this.texts.labels.clickToViewDetails}</span>`;
+        content += `<br/><br/><span style="font-size: 11px; color: var(--mud-palette-text-secondary);">${this.texts.labels.clickToViewDetails}</span>`;
         return content;
     }
 
@@ -547,13 +570,7 @@ class DomainDependencyGraph extends GraphBase {
      * @returns {string} status color
      */
     getServiceStatusColor(status) {
-        switch (status) {
-            case 'Running': return '#4caf50';
-            case 'Error': return '#f44336';
-            case 'Updating': return '#ff9800';
-            case 'Offline': return '#9e9e9e';
-            default: return '#757575';
-        }
+        return STATUS_COLOR_MAP[status] || STATUS_COLOR_MAP.Unknown;
     }
 
     handleResize() {

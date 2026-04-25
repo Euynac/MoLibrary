@@ -190,7 +190,7 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
     
     if (isHighlight) {
         return {
-            stroke: isDarkMode ? 'var(--mud-palette-primary-lighten, #9d7df7)' : 'var(--mud-palette-primary, #594ae2)',
+            stroke: isDarkMode ? 'var(--mud-palette-primary-lighten)' : 'var(--mud-palette-primary)',
             strokeWidth: 3,
             strokeOpacity: 0.9,
             filter: null,
@@ -200,9 +200,9 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
         };
     } else {
         return {
-            stroke: isDarkMode 
-                ? 'var(--mud-palette-divider, rgba(255,255,255,0.12))' 
-                : 'var(--mud-palette-divider, rgba(224,224,224,1))',
+            stroke: isDarkMode
+                ? 'var(--mud-palette-divider)'
+                : 'var(--mud-palette-divider)',
             strokeWidth: 2,
             strokeOpacity: isDarkMode ? 0.7 : 0.8,
             filter: null,
@@ -222,19 +222,19 @@ export function getModernLinkStyle(isDarkMode, isHighlight = false, markerIds = 
 export function getModernNodeStyle(isDarkMode, nodeType = 'simple') {
     const baseStyle = {
         // Text Color - Use theme text color
-        textColor: isDarkMode 
-            ? 'var(--mud-palette-text-primary, rgba(255,255,255,0.7))' 
-            : 'var(--mud-palette-text-primary, rgba(66,66,66,1))',
+        textColor: isDarkMode
+            ? 'var(--mud-palette-text-primary)'
+            : 'var(--mud-palette-text-primary)',
         
         // border color
-        strokeColor: isDarkMode 
-            ? 'var(--mud-palette-lines-default, rgba(255,255,255,0.12))' 
-            : 'var(--mud-palette-lines-default, rgba(0,0,0,0.12))',
+        strokeColor: isDarkMode
+            ? 'var(--mud-palette-lines-default)'
+            : 'var(--mud-palette-lines-default)',
             
         strokeWidth: 2,
         
         // shadow effect
-        filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
+        filter: 'drop-shadow(0 2px 8px rgba(var(--mud-palette-dark-rgb),0.1))'
     };
     
     if (nodeType === 'complex') {

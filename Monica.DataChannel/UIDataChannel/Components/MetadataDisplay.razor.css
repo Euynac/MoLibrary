@@ -140,24 +140,24 @@
 
 /* Syntax highlighting colors */
 .metadata-code .json-key {
-    color: #0451a5;
+    color: var(--mo-color-code-key);
     font-weight: bold;
 }
 
 .metadata-code .json-string {
-    color: #a31515;
+    color: var(--mo-color-code-string);
 }
 
 .metadata-code .json-number {
-    color: #098658;
+    color: var(--mo-color-code-number);
 }
 
 .metadata-code .json-boolean {
-    color: #0000ff;
+    color: var(--mo-color-code-boolean);
 }
 
 .metadata-code .json-null {
-    color: #808080;
+    color: var(--mo-color-code-null);
 }
 
 /* Hover state */

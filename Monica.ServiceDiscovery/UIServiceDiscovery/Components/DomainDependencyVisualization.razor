@@ -535,7 +535,7 @@
             id = domain.Name,
             name = domain.DisplayName ?? domain.Name,
             description = domain.Description,
-            color = DomainColorResolver.GetDomainColor(domain.Name),
+            colorRole = DomainColorResolver.GetDomainColorRole(domain.Name),
             services = _domainServicesMap.GetValueOrDefault(domain.Name, new List<RegisteredServiceStatus>())
                 .Select(s => new
                 {
@@ -551,7 +551,7 @@
             source = dep.SourceDomain,
             target = dep.TargetDomain,
             serviceCount = dep.ServiceCount,
-            color = DomainColorResolver.GetDomainColor(dep.SourceDomain)
+            colorRole = DomainColorResolver.GetDomainColorRole(dep.SourceDomain)
         }).ToList();
 
         return new { nodes, links };

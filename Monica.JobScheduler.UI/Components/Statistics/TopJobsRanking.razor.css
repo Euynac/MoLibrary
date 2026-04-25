@@ -50,21 +50,33 @@
 }
 
 .ranking-wrapper ::deep .rank-badge.gold {
-    background: linear-gradient(135deg, #ffd700, #ffb300);
-    color: #fff;
-    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+    background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-warning) 0%,
+            color-mix(in srgb, var(--mud-palette-warning) 72%, var(--mud-palette-surface)) 100%);
+    color: var(--mud-palette-warning-text);
+    box-shadow: 0 2px 4px rgba(var(--mud-palette-warning-rgb), 0.3);
 }
 
 .ranking-wrapper ::deep .rank-badge.silver {
-    background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
-    color: #fff;
-    box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+    background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-dark) 0%,
+            color-mix(in srgb, var(--mud-palette-dark) 68%, var(--mud-palette-surface)) 100%);
+    color: var(--mud-palette-dark-text);
+    box-shadow: 0 2px 4px rgba(var(--mud-palette-dark-rgb), 0.24);
 }
 
 .ranking-wrapper ::deep .rank-badge.bronze {
-    background: linear-gradient(135deg, #cd7f32, #b87333);
-    color: #fff;
-    box-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+    background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-tertiary) 0%,
+            color-mix(in srgb, var(--mud-palette-tertiary) 72%, var(--mud-palette-surface)) 100%);
+    color: var(--mud-palette-tertiary-text);
+    box-shadow: 0 2px 4px rgba(var(--mud-palette-tertiary-rgb), 0.24);
 }
 
 .ranking-wrapper ::deep .job-info {

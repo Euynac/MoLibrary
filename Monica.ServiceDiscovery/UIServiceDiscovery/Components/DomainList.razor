@@ -39,8 +39,11 @@
         <MudGrid>
             @foreach (var domain in _domains)
             {
+                var colorRole = GetDomainColorRole(domain.Name);
                 <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="4" Class="cursor-pointer domain-card" @onclick="() => HandleDomainClick(domain)" Style="@GetDomainCardStyle(domain.Name)">
+                    <MudCard Elevation="4"
+                             Class="@($"cursor-pointer domain-card domain-card--{colorRole}")"
+                             @onclick="() => HandleDomainClick(domain)">
                         <MudCardContent>
                             <MudStack Spacing="2">
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -140,11 +143,7 @@
         }
     }
 
-    private string GetDomainCardStyle(string domainName)
-    {
-        var color = DomainColorResolver.GetDomainColor(domainName);
-        return $"background: linear-gradient(135deg, {color} 0%, {color}dd 100%); border: none;";
-    }
+    private string GetDomainColorRole(string domainName) => DomainColorResolver.GetDomainColorRole(domainName);
 
     private int GetOwnedServiceCount(string domainName)
         => _allServices.Count(s => string.Equals(s.DomainName, domainName, StringComparison.OrdinalIgnoreCase));

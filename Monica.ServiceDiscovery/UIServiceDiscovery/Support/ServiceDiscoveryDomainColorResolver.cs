@@ -4,7 +4,17 @@ namespace Monica.ServiceDiscovery.UIServiceDiscovery.Support;
 
 public sealed class ServiceDiscoveryDomainColorResolver
 {
-    private const string DefaultColor = "#666666";
+    private static readonly string[] DomainRoles =
+    [
+        "primary",
+        "secondary",
+        "tertiary",
+        "info",
+        "success",
+        "warning"
+    ];
+
+    private const string DefaultColorRole = "default";
     private readonly object _syncRoot = new();
     private readonly Dictionary<string, string> _domainColors = new(StringComparer.OrdinalIgnoreCase);
     private List<string> _cachedDomainNames = [];
@@ -25,10 +35,9 @@ public sealed class ServiceDiscoveryDomainColorResolver
                 _cachedDomainNames = domainNames;
                 _domainColors.Clear();
 
-                var colors = GenerateDistinctColors(domainNames.Count);
                 for (var i = 0; i < domainNames.Count; i++)
                 {
-                    _domainColors[domainNames[i]] = colors[i];
+                    _domainColors[domainNames[i]] = DomainRoles[i % DomainRoles.Length];
                 }
             }
 
@@ -36,37 +45,16 @@ public sealed class ServiceDiscoveryDomainColorResolver
         }
     }
 
-    public string GetDomainColor(string? domainName)
+    public string GetDomainColorRole(string? domainName)
     {
         if (string.IsNullOrWhiteSpace(domainName))
         {
-            return DefaultColor;
+            return DefaultColorRole;
         }
 
         lock (_syncRoot)
         {
-            return _domainColors.GetValueOrDefault(domainName, DefaultColor);
+            return _domainColors.GetValueOrDefault(domainName, DefaultColorRole);
         }
-    }
-
-    private static List<string> GenerateDistinctColors(int count)
-    {
-        if (count <= 0)
-        {
-            return [];
-        }
-
-        var colors = new List<string>(count);
-        var hueStep = 360d / count;
-
-        for (var i = 0; i < count; i++)
-        {
-            var hue = (i * hueStep) % 360;
-            var saturation = 65 + (i % 3) * 15;
-            var lightness = 50 + (i % 2) * 10;
-            colors.Add($"hsl({hue:F0}, {saturation}%, {lightness}%)");
-        }
-
-        return colors;
     }
 }

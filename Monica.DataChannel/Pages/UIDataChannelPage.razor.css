@@ -2,8 +2,8 @@
 
 /* Header bar styles */
 .title-header {
-    background: linear-gradient(45deg, #1976D2 30%, #42A5F5 90%);
-    color: white;
+    background: var(--mo-color-page-hero-background);
+    color: var(--mo-color-page-hero-text);
 }
 
 .title-text {
@@ -12,8 +12,8 @@
 }
 
 .header-button {
-    border-color: white;
-    color: white;
+    border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent);
+    color: var(--mo-color-page-hero-action);
 }
 
 /* Statistic card styles */
@@ -49,12 +49,12 @@
 
 /* Custom MudBlazor overrides */
 ::deep .mud-paper.title-header .mud-button-root {
-    border-color: white !important;
-    color: white !important;
+    border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent) !important;
+    color: var(--mo-color-page-hero-action) !important;
 }
 
 ::deep .mud-paper.title-header .mud-button-root:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: color-mix(in srgb, var(--mo-color-page-hero-action) 12%, transparent);
 }
 
 /* Statistic grid spacing tweaks */

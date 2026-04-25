@@ -38,11 +38,11 @@
 
 
 .modified-input {
-    background-color: rgba(255, 193, 7, 0.1);
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .modified-input ::deep .mud-input-control {
-    background-color: rgba(255, 193, 7, 0.1);
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .original-value-tooltip {

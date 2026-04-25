@@ -19,7 +19,7 @@
                     </MudButton>
                     <MudDivider Vertical="true" FlexItem="false" />
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudAvatar Style="@GetDomainAvatarStyle()">
+                        <MudAvatar Class="@GetDomainAvatarClass()">
                             <MudIcon Icon="@Icons.Material.Filled.Domain" />
                         </MudAvatar>
                         <MudStack Spacing="0">
@@ -211,11 +211,8 @@ else
         Snackbar.Add(L["DomainDetail:Messages:Refreshed"].Value, Severity.Success);
     }
 
-    private string GetDomainAvatarStyle()
-    {
-        var color = DomainColorResolver.GetDomainColor(_domainDetail?.Domain.Name);
-        return $"background-color: {color}; color: white;";
-    }
+    private string GetDomainAvatarClass()
+        => $"domain-avatar domain-avatar--{DomainColorResolver.GetDomainColorRole(_domainDetail?.Domain.Name)}";
 
     private int GetOwnedServicesCount()
     {

@@ -52,42 +52,42 @@
 
 /* Row-level diff styles */
 .line-added {
-    background-color: rgba(22, 163, 74, 0.1);
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .line-added .line-marker {
     color: var(--mud-palette-success);
-    background-color: rgba(22, 163, 74, 0.15);
+    background-color: rgba(var(--mud-palette-success-rgb), 0.15);
 }
 
 .line-added .line-content {
-    background-color: rgba(22, 163, 74, 0.05);
+    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
 }
 
 .line-deleted {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .line-deleted .line-marker {
     color: var(--mud-palette-error);
-    background-color: rgba(239, 68, 68, 0.15);
+    background-color: rgba(var(--mud-palette-error-rgb), 0.15);
 }
 
 .line-deleted .line-content {
-    background-color: rgba(239, 68, 68, 0.05);
+    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
 }
 
 .line-modified {
-    background-color: rgba(245, 158, 11, 0.1);
+    background-color: var(--mo-color-state-warning-soft-background);
 }
 
 .line-modified .line-marker {
     color: var(--mud-palette-warning);
-    background-color: rgba(245, 158, 11, 0.15);
+    background-color: rgba(var(--mud-palette-warning-rgb), 0.15);
 }
 
 .line-modified .line-content {
-    background-color: rgba(245, 158, 11, 0.05);
+    background-color: rgba(var(--mud-palette-warning-rgb), 0.05);
 }
 
 /* Character-level diff styles */
@@ -97,7 +97,7 @@
     padding: 1px 2px;
     border-radius: 2px;
     font-weight: bold;
-    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
+    box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.3);
 }
 
 ::deep .char-deleted {
@@ -108,7 +108,7 @@
     font-weight: bold;
     text-decoration: line-through;
     text-decoration-thickness: 2px;
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.3);
 }
 
 /* split view container */
@@ -177,35 +177,35 @@
 
 /* Split view row state style */
 .split-line-added {
-    background-color: rgba(22, 163, 74, 0.1);
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .split-line-added .split-line-content {
-    background-color: rgba(22, 163, 74, 0.05);
+    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
 }
 
 .split-line-deleted {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .split-line-deleted .split-line-content {
-    background-color: rgba(239, 68, 68, 0.05);
+    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
 }
 
 .split-line-modified-old {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: var(--mo-color-state-error-soft-background);
 }
 
 .split-line-modified-old .split-line-content {
-    background-color: rgba(239, 68, 68, 0.05);
+    background-color: rgba(var(--mud-palette-error-rgb), 0.05);
 }
 
 .split-line-modified-new {
-    background-color: rgba(22, 163, 74, 0.1);
+    background-color: var(--mo-color-state-success-soft-background);
 }
 
 .split-line-modified-new .split-line-content {
-    background-color: rgba(22, 163, 74, 0.05);
+    background-color: rgba(var(--mud-palette-success-rgb), 0.05);
 }
 
 .split-line-unchanged {
@@ -214,23 +214,23 @@
 
 /* Split view character level diff style */
 ::deep .char-modified-old {
-    background-color: rgba(239, 68, 68, 0.2);
+    background-color: rgba(var(--mud-palette-error-rgb), 0.2);
     color: var(--mud-palette-error-text);
     padding: 1px 2px;
     border-radius: 2px;
     font-weight: bold;
-    border: 1px solid rgba(239, 68, 68, 0.5);
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+    border: 1px solid rgba(var(--mud-palette-error-rgb), 0.5);
+    box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.3);
 }
 
 ::deep .char-modified-new {
-    background-color: rgba(22, 163, 74, 0.2);
+    background-color: rgba(var(--mud-palette-success-rgb), 0.2);
     color: var(--mud-palette-success-text);
     padding: 1px 2px;
     border-radius: 2px;
     font-weight: bold;
-    border: 1px solid rgba(22, 163, 74, 0.5);
-    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.3);
+    border: 1px solid rgba(var(--mud-palette-success-rgb), 0.5);
+    box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.3);
 }
 
 /* Responsive Design - Split View */
@@ -288,25 +288,25 @@
 /* Dark theme adaptation - split view */
 @media (prefers-color-scheme: dark) {
     ::deep .char-added {
-        background-color: rgba(22, 163, 74, 0.8);
-        box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.6);
+        background-color: rgba(var(--mud-palette-success-rgb), 0.8);
+        box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.6);
     }
     
     ::deep .char-deleted {
-        background-color: rgba(239, 68, 68, 0.8);
-        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.6);
+        background-color: rgba(var(--mud-palette-error-rgb), 0.8);
+        box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.6);
     }
 
     ::deep .char-modified-old {
-        background-color: rgba(239, 68, 68, 0.8);
-        border-color: rgba(239, 68, 68, 0.8);
-        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.6);
+        background-color: rgba(var(--mud-palette-error-rgb), 0.8);
+        border-color: rgba(var(--mud-palette-error-rgb), 0.8);
+        box-shadow: 0 0 0 1px rgba(var(--mud-palette-error-rgb), 0.6);
     }
     
     ::deep .char-modified-new {
-        background-color: rgba(22, 163, 74, 0.8);
-        border-color: rgba(22, 163, 74, 0.8);
-        box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.6);
+        background-color: rgba(var(--mud-palette-success-rgb), 0.8);
+        border-color: rgba(var(--mud-palette-success-rgb), 0.8);
+        box-shadow: 0 0 0 1px rgba(var(--mud-palette-success-rgb), 0.6);
     }
 }
 

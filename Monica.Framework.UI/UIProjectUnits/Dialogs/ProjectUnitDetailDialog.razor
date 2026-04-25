@@ -54,7 +54,7 @@
                         <td><MudText Typo="Typo.subtitle2">@L["ProjectUnitDetailDialog:Fields:Type"]</MudText></td>
                         <td>
                             <MudChip T="string" Size="Size.Small"
-                                     Style="@($"background-color: {GetUnitTypeColor(SelectedUnit.UnitType)}; color: white;")">
+                                     Color="@GetUnitTypeColor(SelectedUnit.UnitType)">
                                 @L.GetProjectUnitTypeText(SelectedUnit.UnitType)
                             </MudChip>
                         </td>
@@ -131,7 +131,7 @@
                                     @foreach (var dep in SelectedUnit.DependencyUnits)
                                     {
                                         <MudChip T="string" Size="Size.Small" 
-                                                 Style="@($"background-color: {GetUnitTypeColor(dep.UnitType)}; color: white;")"
+                                                 Color="@GetUnitTypeColor(dep.UnitType)"
                                                  OnClick="@(() => OnChipClick(dep.Key))">
                                             @dep.Title
                                         </MudChip>
@@ -205,7 +205,7 @@
                                                         <div class="d-flex align-center justify-space-between">
                                                             <div class="d-flex align-center">
                                                                 <MudChip T="string" Size="Size.Small" 
-                                                                         Style="@($"background-color: {GetUnitTypeColor(unit.UnitType)}; color: white;")"
+                                                                         Color="@GetUnitTypeColor(unit.UnitType)"
                                                                          OnClick="@(() => OnChipClick(unit.Key))">
                                                                     @unit.Title
                                                                 </MudChip>
@@ -269,7 +269,7 @@
                                     @foreach (var dep in DependedByUnits)
                                     {
                                         <MudChip T="string" Size="Size.Small"
-                                                 Style="@($"background-color: {GetUnitTypeColor(dep.UnitType)}; color: white;")"
+                                                 Color="@GetUnitTypeColor(dep.UnitType)"
                                                  OnClick="@(() => OnChipClick(dep.Key))">
                                             @dep.Title
                                         </MudChip>
@@ -493,9 +493,9 @@
         await VisibleChanged.InvokeAsync(false);
     }
     
-    private string GetUnitTypeColor(EProjectUnitType unitType)
+    private Color GetUnitTypeColor(EProjectUnitType unitType)
     {
-        return ProjectUnitVisualizationConfig.GetUnitTypeColor(unitType);
+        return ProjectUnitVisualizationConfig.GetUnitTypeMudColor(unitType);
     }
     
     private bool IsAsyncMethod(MethodInfo method)

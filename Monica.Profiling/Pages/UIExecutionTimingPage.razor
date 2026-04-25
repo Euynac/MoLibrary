@@ -7,7 +7,7 @@
 <PageTitle>执行耗时</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #FF6F00 30%, #FF9800 90%); color: white;">
+    <MudPaper Class="pa-4 mb-4" Style="background: var(--mo-color-page-hero-background); color: var(--mo-color-page-hero-text); overflow: hidden;">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Large" />
@@ -25,7 +25,7 @@
                            OnClick="RefreshDataAsync"
                            Disabled="PageState.IsLoading"
                            Size="Size.Medium"
-                           Style="border-color: white; color: white;">
+                           Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
                     刷新数据
                 </MudButton>
             </MudStack>

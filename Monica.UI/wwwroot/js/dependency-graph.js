@@ -55,18 +55,18 @@ function getThemeColors() {
     const isDark = isDarkMode();
     return {
         nodeColors: {
-            normal: isDark ? '#64B5F6' : '#2196F3',
-            disabled: isDark ? '#FFB74D' : '#FF9800',
-            cycle: isDark ? '#E57373' : '#F44336',
-            text: isDark ? '#FFFFFF' : '#333333'
+            normal: 'var(--mud-palette-primary)',
+            disabled: 'var(--mud-palette-warning)',
+            cycle: 'var(--mud-palette-error)',
+            text: 'var(--mud-palette-text-primary)'
         },
         edgeColors: {
-            direct: isDark ? '#81C784' : '#4CAF50',
-            transitive: isDark ? '#BA68C8' : '#9C27B0',
-            circular: isDark ? '#FF8A65' : '#FF5722',
-            default: isDark ? '#BDBDBD' : '#999999'
+            direct: 'var(--mud-palette-success)',
+            transitive: 'var(--mud-palette-secondary)',
+            circular: 'var(--mud-palette-error)',
+            default: 'var(--mud-palette-text-secondary)'
         },
-        background: isDark ? '#1E1E1E' : '#FFFFFF'
+        background: 'var(--mud-palette-surface)'
     };
 }
 
@@ -632,4 +632,4 @@ export function refreshTheme() {
 }
 
 // The D3.js library will be dynamically loaded when used
-console.log('Enhanced dependency graph module loaded. D3.js will be loaded dynamically when needed.'); 
+console.log('Enhanced dependency graph module loaded. D3.js will be loaded dynamically when needed.');

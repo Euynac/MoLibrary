@@ -112,8 +112,8 @@ export class NodeHighlightManager {
                 // Using MudBlazor color system variables
                 // The outgoing edge uses the Info color system and the incoming edge uses the Success color system.
                 const strokeColor = isOutgoing ? 
-                    (self.isDarkMode ? 'var(--mud-palette-info-lighten, #29B6F6)' : 'var(--mud-palette-info, #1976D2)') : // 出边：Info色
-                    (self.isDarkMode ? 'var(--mud-palette-success-lighten, #66BB6A)' : 'var(--mud-palette-success, #43A047)');  // 入边：Success色
+                    (self.isDarkMode ? 'var(--mud-palette-info-lighten)' : 'var(--mud-palette-info)') :
+                    (self.isDarkMode ? 'var(--mud-palette-success-lighten)' : 'var(--mud-palette-success)');
                 
                 link.transition()
                     .duration(200)

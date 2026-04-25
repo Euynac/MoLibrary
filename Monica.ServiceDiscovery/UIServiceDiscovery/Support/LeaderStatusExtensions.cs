@@ -12,16 +12,16 @@ public static class LeaderStatusExtensions
 {
     private static readonly Dictionary<LeaderStatus, StatusDisplayInfo> Map = new()
     {
-        [LeaderStatus.Leader] = new(Color.Warning, "#ff9800", "Shared:LeaderStatuses:Leader", Icons.Material.Filled.Star),
-        [LeaderStatus.Follower] = new(Color.Default, "#9e9e9e", "Shared:LeaderStatuses:Follower", Icons.Material.Filled.Circle),
-        [LeaderStatus.Looking] = new(Color.Info, "#2196f3", "Shared:LeaderStatuses:Looking", Icons.Material.Filled.Search),
+        [LeaderStatus.Leader] = new(Color.Warning, "Shared:LeaderStatuses:Leader", Icons.Material.Filled.Star),
+        [LeaderStatus.Follower] = new(Color.Default, "Shared:LeaderStatuses:Follower", Icons.Material.Filled.Circle),
+        [LeaderStatus.Looking] = new(Color.Info, "Shared:LeaderStatuses:Looking", Icons.Material.Filled.Search),
     };
 
     /// <summary>
     /// Default display metadata for unmapped status values.
     /// </summary>
     private static readonly StatusDisplayInfo DefaultInfo =
-        new(Color.Default, "#757575", "Shared:LeaderStatuses:Unknown", Icons.Material.Filled.Help);
+        new(Color.Default, "Shared:LeaderStatuses:Unknown", Icons.Material.Filled.Help);
 
     /// <summary>
     /// Gets the display metadata for the status.
@@ -33,11 +33,6 @@ public static class LeaderStatusExtensions
     /// Gets the MudBlazor color.
     /// </summary>
     public static Color GetColor(this LeaderStatus status) => status.GetDisplayInfo().Color;
-
-    /// <summary>
-    /// Gets the hex color.
-    /// </summary>
-    public static string GetHexColor(this LeaderStatus status) => status.GetDisplayInfo().HexColor;
 
     /// <summary>
     /// Gets the localized display text.

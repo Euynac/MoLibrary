@@ -53,9 +53,12 @@
     --mo-nav-menu-border-radius: var(--mo-m3-shape-large);
     --mo-card-border-radius: var(--mo-m3-shape-expressive);
     --mo-dialog-border-radius: var(--mo-m3-shape-extra-large);
-    --mo-system-info-hero-background: var(--mo-m3-primary-container);
-    --mo-system-info-hero-text: var(--mo-m3-on-primary-container);
-    --mo-system-info-hero-action: var(--mo-m3-on-primary-container);
+    --mo-color-page-hero-background: var(--mo-m3-primary-container);
+    --mo-color-page-hero-text: var(--mo-m3-on-primary-container);
+    --mo-color-page-hero-action: var(--mo-m3-on-primary-container);
+    --mo-color-highlight-background:
+        color-mix(in srgb, var(--mo-m3-secondary-container) 70%, transparent);
+    --mo-color-highlight-text: var(--mo-m3-on-secondary-container);
 }
 
 :root[data-theme="material-design-3-light"],

@@ -1,5 +1,24 @@
 /* Using MudBlazor CSS variables */
 
+.event-bus-page-hero {
+    background: var(--mo-color-page-hero-background);
+    color: var(--mo-color-page-hero-text);
+    overflow: hidden;
+}
+
+.event-bus-page-hero ::deep :is(.mud-typography, .mud-icon) {
+    color: inherit;
+}
+
+.event-bus-page-hero ::deep .event-bus-page-hero-action {
+    border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent) !important;
+    color: var(--mo-color-page-hero-action) !important;
+}
+
+.event-bus-page-hero ::deep .event-bus-page-hero-action:hover {
+    background-color: color-mix(in srgb, var(--mo-color-page-hero-action) 12%, transparent);
+}
+
 .ui-event-bus-tabs ::deep .ui-event-bus-tab-panels {
     padding: 24px;
 }

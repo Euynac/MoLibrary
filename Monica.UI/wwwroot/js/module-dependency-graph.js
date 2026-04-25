@@ -649,7 +649,7 @@ class ModuleDependencyGraph {
         const context = canvas.getContext('2d');
         const image = new Image();
         const exportName = filename || 'dependency-graph.png';
-        const backgroundColor = getComputedStyle(this.container).backgroundColor || '#ffffff';
+        const backgroundColor = getComputedStyle(this.container).backgroundColor || 'var(--mud-palette-surface)';
 
         image.onload = () => {
             const width = clonedSvg.width.baseVal.value || this.graphBase.width;

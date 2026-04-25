@@ -14,13 +14,18 @@
 
 /* Individual Button */
 .mo-swagger-nav-btn {
+    --mo-swagger-button-background: #49cc90;
+    --mo-swagger-button-background-hover: #3cb878;
+    --mo-swagger-button-background-dark: #4a9d76;
+    --mo-swagger-button-background-dark-hover: #3f8863;
+    --mo-swagger-button-text: #fff;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
     border-radius: 4px;
-    background-color: #49cc90; /* Swagger green */
-    color: #fff;
+    background-color: var(--mo-swagger-button-background);
+    color: var(--mo-swagger-button-text);
     text-decoration: none;
     font-family: sans-serif;
     font-size: 14px;
@@ -35,7 +40,7 @@
 
 /* Button Hover State */
 .mo-swagger-nav-btn:hover {
-    background-color: #3cb878; /* Darker green */
+    background-color: var(--mo-swagger-button-background-hover);
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -53,7 +58,7 @@
 
 /* Focus state for accessibility */
 .mo-swagger-nav-btn:focus {
-    outline: 2px solid #49cc90;
+    outline: 2px solid var(--mo-swagger-button-background);
     outline-offset: 2px;
 }
 
@@ -62,7 +67,7 @@
 }
 
 .mo-swagger-nav-btn:focus-visible {
-    outline: 2px solid #49cc90;
+    outline: 2px solid var(--mo-swagger-button-background);
     outline-offset: 2px;
 }
 
@@ -90,10 +95,10 @@
 /* Dark mode support (if Swagger UI has dark theme) */
 @media (prefers-color-scheme: dark) {
     .mo-swagger-nav-btn {
-        background-color: #4a9d76; /* Adjusted for dark backgrounds */
+        background-color: var(--mo-swagger-button-background-dark);
     }
 
     .mo-swagger-nav-btn:hover {
-        background-color: #3f8863;
+        background-color: var(--mo-swagger-button-background-dark-hover);
     }
 }

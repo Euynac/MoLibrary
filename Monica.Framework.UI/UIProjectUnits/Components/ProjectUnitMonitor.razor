@@ -37,7 +37,7 @@
                     <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]">
                         <CellTemplate>
                             <MudChip T="string" Size="Size.Small"
-                                     Style="@($"background-color: {ProjectUnitVisualizationConfig.GetUnitTypeColor(context.Item.UnitType)}; color: white;")">
+                                     Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(context.Item.UnitType)">
                                 @L.GetProjectUnitTypeText(context.Item.UnitType)
                             </MudChip>
                         </CellTemplate>

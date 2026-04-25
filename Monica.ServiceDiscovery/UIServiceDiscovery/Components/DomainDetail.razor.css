@@ -1,3 +1,16 @@
+.domain-avatar {
+    background: var(--domain-avatar-color);
+    color: var(--mud-palette-primary-text);
+}
+
+.domain-avatar--primary { --domain-avatar-color: var(--mud-palette-primary); }
+.domain-avatar--secondary { --domain-avatar-color: var(--mud-palette-secondary); }
+.domain-avatar--tertiary { --domain-avatar-color: var(--mud-palette-tertiary); }
+.domain-avatar--info { --domain-avatar-color: var(--mud-palette-info); }
+.domain-avatar--success { --domain-avatar-color: var(--mud-palette-success); }
+.domain-avatar--warning { --domain-avatar-color: var(--mud-palette-warning); }
+.domain-avatar--default { --domain-avatar-color: var(--mud-palette-text-secondary); }
+
 ::deep .service-card {
     transition: transform 0.1s, box-shadow 0.1s;
 }

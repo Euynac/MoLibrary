@@ -7,6 +7,54 @@
 
 import { getModernNodeStyle } from '../../Monica.UI/js/d3js/d3-graph-base.js';
 
+const CHIP_COLOR_MAP = {
+    primary: {
+        background: 'var(--mo-color-state-info-soft-background)',
+        border: 'var(--mud-palette-primary)',
+        text: 'var(--mud-palette-primary)'
+    },
+    info: {
+        background: 'var(--mo-color-state-info-soft-background)',
+        border: 'var(--mud-palette-info)',
+        text: 'var(--mud-palette-info)'
+    },
+    secondary: {
+        background: 'rgba(var(--mud-palette-secondary-rgb), 0.12)',
+        border: 'var(--mud-palette-secondary)',
+        text: 'var(--mud-palette-secondary)'
+    },
+    tertiary: {
+        background: 'rgba(var(--mud-palette-tertiary-rgb), 0.12)',
+        border: 'var(--mud-palette-tertiary)',
+        text: 'var(--mud-palette-tertiary)'
+    },
+    success: {
+        background: 'var(--mo-color-state-success-soft-background)',
+        border: 'var(--mud-palette-success)',
+        text: 'var(--mud-palette-success)'
+    },
+    warning: {
+        background: 'var(--mo-color-state-warning-soft-background)',
+        border: 'var(--mud-palette-warning)',
+        text: 'var(--mud-palette-warning)'
+    },
+    error: {
+        background: 'var(--mo-color-state-error-soft-background)',
+        border: 'var(--mud-palette-error)',
+        text: 'var(--mud-palette-error)'
+    },
+    dark: {
+        background: 'rgba(var(--mud-palette-dark-rgb), 0.12)',
+        border: 'var(--mud-palette-dark)',
+        text: 'var(--mud-palette-dark)'
+    },
+    default: {
+        background: 'rgba(var(--mud-palette-text-secondary-rgb), 0.10)',
+        border: 'var(--mud-palette-text-secondary)',
+        text: 'var(--mud-palette-text-secondary)'
+    }
+};
+
 /**
  * Project unit card renderer class
  * Provides modern card-style node drawing with three-layer layout
@@ -456,55 +504,7 @@ export class ProjectUnitCardRenderer {
      * Get chip color configuration
      */
     getChipColors(colorName) {
-        const isDark = this.isDarkMode;
-        
-        if (colorName && colorName.startsWith('#')) {
-            return {
-                background: colorName + '20',
-                border: colorName,
-                text: colorName
-            };
-        }
-        
-        // MudBlazor color mapping
-        const colorMap = {
-            'primary': {
-                background: isDark ? 'var(--mud-palette-primary-darken, #4a44bc)' : 'var(--mud-palette-primary-lighten, #a394f7)',
-                border: 'var(--mud-palette-primary, #594ae2)',
-                text: 'var(--mud-palette-primary-text, #ffffff)'
-            },
-            'info': {
-                background: isDark ? 'var(--mud-palette-info-darken, #0c80df)' : 'var(--mud-palette-info-lighten, #47a7f5)',
-                border: 'var(--mud-palette-info, #2196f3)',
-                text: 'var(--mud-palette-info-text, #ffffff)'
-            },
-            'secondary': {
-                background: isDark ? 'var(--mud-palette-secondary-darken, #ff1f69)' : 'var(--mud-palette-secondary-lighten, #ff66a1)',
-                border: 'var(--mud-palette-secondary, #ff4081)',
-                text: 'var(--mud-palette-secondary-text, #ffffff)'
-            },
-            'success': {
-                background: isDark ? 'var(--mud-palette-success-darken, #00a343)' : 'var(--mud-palette-success-lighten, #00eb62)',
-                border: 'var(--mud-palette-success, #00c853)',
-                text: 'var(--mud-palette-success-text, #ffffff)'
-            },
-            'warning': {
-                background: isDark ? 'var(--mud-palette-warning-darken, #d68100)' : 'var(--mud-palette-warning-lighten, #ffa724)',
-                border: 'var(--mud-palette-warning, #ff9800)',
-                text: 'var(--mud-palette-warning-text, #ffffff)'
-            },
-            'error': {
-                background: isDark ? 'var(--mud-palette-error-darken, #f21c0d)' : 'var(--mud-palette-error-lighten, #f66055)',
-                border: 'var(--mud-palette-error, #f44336)',
-                text: 'var(--mud-palette-error-text, #ffffff)'
-            }
-        };
-        
-        return colorMap[colorName] || {
-            background: isDark ? 'var(--mud-palette-dark-darken, #2e2e38)' : 'var(--mud-palette-dark-lighten, #575743)',
-            border: 'var(--mud-palette-dark, #424242)',
-            text: 'var(--mud-palette-dark-text, #ffffff)'
-        };
+        return CHIP_COLOR_MAP[colorName] || CHIP_COLOR_MAP.default;
     }
     
     /**

@@ -236,7 +236,7 @@
             methodCount = unit.Methods.Count,
             hasMethod = unit.Methods.Any(),
             isComplex = ProjectUnitVisualizationConfig.IsComplexUnitType(unit.UnitType),
-            color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),
+            colorRole = ProjectUnitVisualizationConfig.GetUnitTypeColorRole(unit.UnitType),
             icon = ProjectUnitVisualizationConfig.GetUnitTypeIcon(unit.UnitType),
             chips = L.BuildProjectUnitGraphChips(unit),
             metadata = L.BuildProjectUnitGraphMetadata(unit),

@@ -184,7 +184,7 @@ public static class ProjectUnitsLocalizationExtensions
             new
             {
                 text = localizer.GetProjectUnitTypeText(unit.UnitType),
-                color = ProjectUnitVisualizationConfig.GetUnitTypeColor(unit.UnitType),
+                color = ProjectUnitVisualizationConfig.GetUnitTypeColorRole(unit.UnitType),
                 icon = string.Empty
             }
         };

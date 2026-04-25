@@ -5,6 +5,31 @@ namespace Monica.Framework.UI.UIProjectUnits.Models;
 
 public static class ProjectUnitVisualizationConfig
 {
+    public static Color GetUnitTypeMudColor(EProjectUnitType unitType)
+    {
+        return unitType switch
+        {
+            EProjectUnitType.ApplicationService => Color.Primary,
+            EProjectUnitType.DomainService => Color.Success,
+            EProjectUnitType.Repository => Color.Warning,
+            EProjectUnitType.DomainEvent => Color.Secondary,
+            EProjectUnitType.DomainEventHandler => Color.Tertiary,
+            EProjectUnitType.LocalEventHandler => Color.Info,
+            EProjectUnitType.RecurringJob => Color.Info,
+            EProjectUnitType.TriggeredJob => Color.Success,
+            EProjectUnitType.HttpApi => Color.Error,
+            EProjectUnitType.GrpcApi => Color.Secondary,
+            EProjectUnitType.Entity => Color.Dark,
+            EProjectUnitType.RequestDto => Color.Default,
+            EProjectUnitType.Configuration => Color.Warning,
+            EProjectUnitType.Seeder => Color.Success,
+            EProjectUnitType.StateStore => Color.Error,
+            EProjectUnitType.EventBus => Color.Info,
+            EProjectUnitType.Actor => Color.Tertiary,
+            _ => Color.Default
+        };
+    }
+
     public static bool IsComplexUnitType(EProjectUnitType unitType)
     {
         return unitType is EProjectUnitType.ApplicationService
@@ -15,28 +40,28 @@ public static class ProjectUnitVisualizationConfig
             or EProjectUnitType.GrpcApi;
     }
 
-    public static string GetUnitTypeColor(EProjectUnitType unitType)
+    public static string GetUnitTypeColorRole(EProjectUnitType unitType)
     {
         return unitType switch
         {
-            EProjectUnitType.ApplicationService => "#2196F3",
-            EProjectUnitType.DomainService => "#4CAF50",
-            EProjectUnitType.Repository => "#FF9800",
-            EProjectUnitType.DomainEvent => "#9C27B0",
-            EProjectUnitType.DomainEventHandler => "#673AB7",
-            EProjectUnitType.LocalEventHandler => "#3F51B5",
-            EProjectUnitType.RecurringJob => "#00BCD4",
-            EProjectUnitType.TriggeredJob => "#009688",
-            EProjectUnitType.HttpApi => "#F44336",
-            EProjectUnitType.GrpcApi => "#E91E63",
-            EProjectUnitType.Entity => "#795548",
-            EProjectUnitType.RequestDto => "#607D8B",
-            EProjectUnitType.Configuration => "#FFD54F",
-            EProjectUnitType.Seeder => "#8BC34A",
-            EProjectUnitType.StateStore => "#FF5722",
-            EProjectUnitType.EventBus => "#3F51B5",
-            EProjectUnitType.Actor => "#00ACC1",
-            _ => "#9E9E9E"
+            EProjectUnitType.ApplicationService => "primary",
+            EProjectUnitType.DomainService => "success",
+            EProjectUnitType.Repository => "warning",
+            EProjectUnitType.DomainEvent => "secondary",
+            EProjectUnitType.DomainEventHandler => "tertiary",
+            EProjectUnitType.LocalEventHandler => "info",
+            EProjectUnitType.RecurringJob => "info",
+            EProjectUnitType.TriggeredJob => "success",
+            EProjectUnitType.HttpApi => "error",
+            EProjectUnitType.GrpcApi => "secondary",
+            EProjectUnitType.Entity => "dark",
+            EProjectUnitType.RequestDto => "default",
+            EProjectUnitType.Configuration => "warning",
+            EProjectUnitType.Seeder => "success",
+            EProjectUnitType.StateStore => "error",
+            EProjectUnitType.EventBus => "info",
+            EProjectUnitType.Actor => "tertiary",
+            _ => "default"
         };
     }
 

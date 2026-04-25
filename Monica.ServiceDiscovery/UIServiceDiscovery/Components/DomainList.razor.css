@@ -1,4 +1,10 @@
 .domain-card {
+    background:
+        linear-gradient(
+            135deg,
+            var(--domain-card-color) 0%,
+            color-mix(in srgb, var(--domain-card-color) 72%, var(--mud-palette-surface)) 100%);
+    border: none;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -6,6 +12,14 @@
     transform: translateY(-2px);
     box-shadow: var(--mud-elevation-8) !important;
 }
+
+.domain-card--primary { --domain-card-color: var(--mud-palette-primary); }
+.domain-card--secondary { --domain-card-color: var(--mud-palette-secondary); }
+.domain-card--tertiary { --domain-card-color: var(--mud-palette-tertiary); }
+.domain-card--info { --domain-card-color: var(--mud-palette-info); }
+.domain-card--success { --domain-card-color: var(--mud-palette-success); }
+.domain-card--warning { --domain-card-color: var(--mud-palette-warning); }
+.domain-card--default { --domain-card-color: var(--mud-palette-text-secondary); }
 
 .cursor-pointer {
     cursor: pointer;

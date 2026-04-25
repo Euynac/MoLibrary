@@ -12,6 +12,30 @@ import { createStaticDragBehavior } from '../../Monica.UI/js/d3js/d3-node-intera
 
 let graphInstance = null;
 
+const ROLE_COLOR_MAP = {
+    primary: 'var(--mud-palette-primary)',
+    secondary: 'var(--mud-palette-secondary)',
+    tertiary: 'var(--mud-palette-tertiary)',
+    info: 'var(--mud-palette-info)',
+    success: 'var(--mud-palette-success)',
+    warning: 'var(--mud-palette-warning)',
+    error: 'var(--mud-palette-error)',
+    dark: 'var(--mud-palette-dark)',
+    default: 'var(--mud-palette-text-secondary)'
+};
+
+const STATUS_COLOR_MAP = {
+    Running: 'var(--mud-palette-success)',
+    Updating: 'var(--mud-palette-warning)',
+    Offline: 'var(--mud-palette-dark)',
+    Error: 'var(--mud-palette-error)',
+    Unknown: 'var(--mud-palette-text-secondary)'
+};
+
+function resolveRoleColor(role) {
+    return ROLE_COLOR_MAP[role] || ROLE_COLOR_MAP.default;
+}
+
 /**
  * Initialization microservice architecture diagram
  * @param {string} containerId - container ID
@@ -332,10 +356,10 @@ class ServiceGraph extends GraphBase {
             .transition()
             .duration(500)
             .attr('r', 25)
-            .attr('fill', d => d.color)
+            .attr('fill', d => resolveRoleColor(d.colorRole))
             .attr('stroke', getModernNodeStyle(this.isDarkMode).strokeColor)
             .attr('stroke-width', 2)
-            .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
+            .style('filter', 'drop-shadow(0 2px 8px rgba(var(--mud-palette-dark-rgb),0.15))');
 
         // Update outer ring
         this.nodeElements.select('.node-ring')
@@ -407,18 +431,7 @@ class ServiceGraph extends GraphBase {
     }
 
     getStatusColor(status) {
-        switch (status) {
-            case 'Running':
-                return '#4CAF50'; // 绿色
-            case 'Updating':
-                return '#FF9800'; // 橙色/黄色
-            case 'Offline':
-                return '#424242'; // 深灰色/黑色
-            case 'Error':
-                return '#F44336'; // 红色
-            default:
-                return '#9E9E9E'; // 灰色
-        }
+        return STATUS_COLOR_MAP[status] || STATUS_COLOR_MAP.Unknown;
     }
 
     startStatusAnimation(nodeData) {
@@ -437,18 +450,15 @@ class ServiceGraph extends GraphBase {
                 break;
 
             case 'Error':
-                // Flashing red
-                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#F44336', 500);
+                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, STATUS_COLOR_MAP.Error, 500);
                 break;
 
             case 'Offline':
-                // black flash
-                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#424242', 800);
+                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, STATUS_COLOR_MAP.Offline, 800);
                 break;
 
             case 'Updating':
-                // yellow flashing
-                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, '#FF9800', 600);
+                this.startBlinkAnimation(nodeData.id, ring, statusIndicator, STATUS_COLOR_MAP.Updating, 600);
                 break;
 
             default:
@@ -495,13 +505,13 @@ class ServiceGraph extends GraphBase {
                 .transition()
                 .duration(200)
                 .attr('r', 30)
-                .style('filter', 'drop-shadow(0 4px 12px rgba(0,0,0,0.25))');
+                .style('filter', 'drop-shadow(0 4px 12px rgba(var(--mud-palette-dark-rgb),0.25))');
         } else {
             circle
                 .transition()
                 .duration(200)
                 .attr('r', 25)
-                .style('filter', 'drop-shadow(0 2px 8px rgba(0,0,0,0.15))');
+                .style('filter', 'drop-shadow(0 2px 8px rgba(var(--mud-palette-dark-rgb),0.15))');
         }
     }
 
@@ -539,15 +549,16 @@ class ServiceGraph extends GraphBase {
                 .append('div')
                 .attr('class', 'service-tooltip')
                 .style('position', 'absolute')
-                .style('background', 'rgba(0,0,0,0.9)')
-                .style('color', 'white')
+                .style('background', 'rgba(var(--mud-palette-surface-rgb),0.98)')
+                .style('color', 'var(--mud-palette-text-primary)')
+                .style('border', '1px solid var(--mud-palette-lines-default)')
                 .style('padding', '10px 15px')
                 .style('border-radius', '8px')
                 .style('font-size', '12px')
                 .style('line-height', '1.4')
                 .style('pointer-events', 'none')
                 .style('z-index', '10000')
-                .style('box-shadow', '0 4px 12px rgba(0,0,0,0.3)')
+                .style('box-shadow', '0 4px 12px rgba(var(--mud-palette-dark-rgb),0.18)')
                 .style('max-width', '250px')
                 .style('opacity', 0);
         }

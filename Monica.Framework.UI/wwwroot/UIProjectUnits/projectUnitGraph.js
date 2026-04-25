@@ -45,6 +45,28 @@ const LAYOUT_TYPES = {
 
 const DEFAULT_ARROW_SIZE = 12;
 
+const ROLE_COLOR_MAP = {
+    primary: 'var(--mud-palette-primary)',
+    secondary: 'var(--mud-palette-secondary)',
+    tertiary: 'var(--mud-palette-tertiary)',
+    info: 'var(--mud-palette-info)',
+    success: 'var(--mud-palette-success)',
+    warning: 'var(--mud-palette-warning)',
+    error: 'var(--mud-palette-error)',
+    dark: 'var(--mud-palette-dark)',
+    default: 'var(--mud-palette-text-secondary)'
+};
+
+const ALERT_GLOW_COLOR_MAP = {
+    error: 'var(--mud-palette-error)',
+    warning: 'var(--mud-palette-warning)',
+    info: 'var(--mud-palette-info)'
+};
+
+function resolveRoleColor(role, fallback = ROLE_COLOR_MAP.default) {
+    return ROLE_COLOR_MAP[role] || fallback;
+}
+
 // ==================== Main class ====================
 
 /**
@@ -200,8 +222,7 @@ class ProjectUnitGraph {
      */
     drawSimpleNode(nodeElement, nodeData) {
         const { radius, textOffset } = NODE_SIZE.circle;
-        // Use color configuration from C# layer
-        const color = nodeData.color || '#9E9E9E';
+        const color = resolveRoleColor(nodeData.colorRole);
         
         // Draw a circle
         nodeElement.append('circle')
@@ -267,17 +288,17 @@ class ProjectUnitGraph {
         
         switch (nodeData.alertLevel) {
             case 'error':
-                glowColor = '#ff0000';
+                glowColor = ALERT_GLOW_COLOR_MAP.error;
                 glowStdDeviation = 8;
                 animationClass = 'alert-glow-error';
                 break;
             case 'warning':
-                glowColor = '#ffaa00';
+                glowColor = ALERT_GLOW_COLOR_MAP.warning;
                 glowStdDeviation = 6;
                 animationClass = 'alert-glow-warning';
                 break;
             case 'info':
-                glowColor = '#0088ff';
+                glowColor = ALERT_GLOW_COLOR_MAP.info;
                 glowStdDeviation = 4;
                 animationClass = 'alert-glow-info';
                 break;

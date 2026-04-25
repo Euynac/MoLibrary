@@ -15,8 +15,7 @@
 <PageTitle>事件总线监控</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
-    <!-- Gradient Header -->
-    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(45deg, #1976D2 30%, #2196F3 90%); color: white;">
+    <MudPaper Class="pa-4 mb-4 event-bus-page-hero">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" />
@@ -28,7 +27,7 @@
                           Variant="Variant.Outlined"
                           OnClick="RefreshAsync"
                           Size="Size.Medium"
-                          Style="border-color: white; color: white;">
+                          Class="event-bus-page-hero-action">
                     刷新
                 </MudButton>
             </MudStack>

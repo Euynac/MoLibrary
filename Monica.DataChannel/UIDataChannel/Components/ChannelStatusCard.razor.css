@@ -82,11 +82,11 @@
 /* Exception info section */
 .exception-section-title {
     font-weight: 500;
-    color: #f44336;
+    color: var(--mud-palette-error);
 }
 
 .exception-text {
-    color: #666;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Responsive adjustments */
@@ -170,7 +170,7 @@
 
 /* Card hover shadow */
 .channel-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 8px rgba(var(--mud-palette-dark-rgb), 0.12);
     transition: box-shadow 0.3s ease;
 }
 

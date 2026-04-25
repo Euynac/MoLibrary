@@ -1,7 +1,7 @@
 ---
 name: mo-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.9.0
+version: 2.10.0
 ---
 
 # Monica UI Development Guide
@@ -195,11 +195,22 @@ Key rules:
 ### 11. Theme Authoring and Verification
 
 - Put global theme visuals in shared theme CSS under `Monica.UI/wwwroot/css/themes/`. Keep component-specific layout and localized token-based presentation in `.razor.css`.
+- First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract from `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.
+- Do not consume private theme namespaces such as `--mo-m3-*`, `--mo-ink-*`, `--mo-hermes-*`, `--mo-fresh-*`, `--mo-vibe-*`, or `--mo-zen-*` from component/page code.
+- Do not introduce shared component styling in `mo-theme-main.css` just because a color token exists; component layout and presentation selectors stay in the owning component/page CSS unless there is a separate shared-layout requirement.
+- Do not create page-specific color aliases when an approved semantic token already covers the scenario.
+- Runtime visualization payloads from C#, Razor, or JS must emit `var(--mud-palette-*)` or approved `var(--mo-color-*)` values instead of raw hex, rgb, or hsl strings.
 - Prefer shared MudBlazor selectors over page-only hooks. If you add a temporary page-specific class during diagnosis, remove it after the shared theme rule is in place.
 - For `MudTabs` with `ApplyEffectsToContainer="true"`, the root `.mud-tabs` element receives the rounded, outlined, and elevation classes. When a theme needs a visible shell, inspect and style the root container, `.mud-tabs-tabbar`, and `.mud-tabs-panels` together.
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
 - Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
 - Read `references/theme-authoring-pitfalls.md` when working on shared theme regressions or resuming a theme-debugging thread. That file carries the concrete regression patterns and verification traps.
+
+Validate semantic theme-token compliance with:
+
+```bash
+python /mnt/d/Code/MoLibrary/scripts/validate_ui_theme_tokens.py
+```
 
 ## MudBlazor CSS Variable Workflow (Required)
 

@@ -352,7 +352,7 @@
             status = service.OverallStatus.ToString(),
             runningInstances = service.RunningInstanceCount,
             totalInstances = service.TotalInstanceCount,
-            color = DomainColorResolver.GetDomainColor(GetServiceDomainName(service)),
+            colorRole = DomainColorResolver.GetDomainColorRole(GetServiceDomainName(service)),
             instanceInfo = service.GetValidInstanceInfo()
         }).ToList();
 
