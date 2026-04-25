@@ -1,4 +1,6 @@
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <div class="instance-table @(Compact ? "compact" : null)">
     <MudTable T="ObservableInstanceViewModel"
@@ -10,77 +12,77 @@
              LoadingProgressColor="Color.Info"
              RowsPerPage="@(Compact ? 10 : 20)">
         <HeaderContent>
-            <MudTh Class="id-header">实例ID</MudTh>
-            <MudTh>实例名称</MudTh>
-            <MudTh>类型</MudTh>
-            <MudTh>组</MudTh>
-            <MudTh>当前状态</MudTh>
-            <MudTh>健康状态</MudTh>
-            <MudTh>日志级别</MudTh>
-            <MudTh>异常</MudTh>
-            <MudTh>注册时间</MudTh>
+            <MudTh Class="id-header">@L["Shared:Fields:InstanceId"]</MudTh>
+            <MudTh>@L["Shared:Fields:Name"]</MudTh>
+            <MudTh>@L["Shared:Fields:Type"]</MudTh>
+            <MudTh>@L["Shared:Fields:Group"]</MudTh>
+            <MudTh>@L["Shared:Fields:CurrentState"]</MudTh>
+            <MudTh>@L["Shared:Fields:HealthState"]</MudTh>
+            <MudTh>@L["Shared:Fields:LogLevel"]</MudTh>
+            <MudTh>@L["Shared:Fields:Exceptions"]</MudTh>
+            <MudTh>@L["Shared:Fields:RegisteredAt"]</MudTh>
             @if (!Compact)
             {
-                <MudTh>操作</MudTh>
+                <MudTh>@L["Shared:Fields:Actions"]</MudTh>
             }
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="实例ID" Class="id-cell">
+            <MudTd DataLabel="@L["Shared:Fields:InstanceId"]" Class="id-cell">
                 <MudTooltip Text="@context.InstanceId" RootClass="id-tooltip">
                     <span class="id-text" @onclick="() => OnRowClick.InvokeAsync(context)">
                         @context.InstanceId
                     </span>
                 </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="实例名称">
+            <MudTd DataLabel="@L["Shared:Fields:Name"]">
                 <span class="cell-text">@context.InstanceName</span>
             </MudTd>
-            <MudTd DataLabel="类型">
+            <MudTd DataLabel="@L["Shared:Fields:Type"]">
                 <MudTooltip Text="@context.InstanceTypeFullName" RootClass="cell-tooltip">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="type-cell">
                         <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Default" />
-                        <span class="cell-text">@context.InstanceTypeDisplay</span>
+                        <span class="cell-text">@L.GetNullableTypeDisplayText(context.InstanceTypeDisplay)</span>
                     </MudStack>
                 </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="组">
+            <MudTd DataLabel="@L["Shared:Fields:Group"]">
                 @if (context.HasGroup)
                 {
-                    <MudTooltip Text="@context.GroupIdDisplay" RootClass="cell-tooltip">
+                    <MudTooltip Text="@context.GroupId" RootClass="cell-tooltip">
                         <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
-                            @context.GroupIdDisplay
+                            @L.GetGroupDisplayText(context)
                         </MudChip>
                     </MudTooltip>
                 }
                 else
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="cell-text">
-                        @context.GroupIdDisplay
+                        @L.GetGroupDisplayText(context)
                     </MudText>
                 }
             </MudTd>
-            <MudTd DataLabel="当前状态">
-                <MudTooltip Text="@($"类型: {context.StateTypeDisplay}")" RootClass="cell-tooltip">
+            <MudTd DataLabel="@L["Shared:Fields:CurrentState"]">
+                <MudTooltip Text="@L["Shared:Labels:StateType", context.StateTypeDisplay]" RootClass="cell-tooltip">
                     <span class="cell-text">
                         @context.StateDisplayText
                     </span>
                 </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="健康状态">
+            <MudTd DataLabel="@L["Shared:Fields:HealthState"]">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@context.HealthStateColor" />
                     <MudText Typo="Typo.body2" Color="@context.HealthStateColor">
-                        @context.HealthStateText
+                        @L.GetHealthStateText(context.HealthState)
                     </MudText>
                 </MudStack>
             </MudTd>
-            <MudTd DataLabel="日志级别">
+            <MudTd DataLabel="@L["Shared:Fields:LogLevel"]">
                 @if (context.CurrentLogLevel.HasValue)
                 {
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <MudIcon Icon="@context.LogLevelIcon" Size="Size.Small" Color="@context.LogLevelColor" />
                         <MudText Typo="Typo.body2" Color="@context.LogLevelColor" Class="cell-text">
-                            @context.LogLevelText
+                            @L.GetLogLevelText(context.CurrentLogLevel)
                         </MudText>
                     </MudStack>
                 }
@@ -89,34 +91,34 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="cell-text">-</MudText>
                 }
             </MudTd>
-            <MudTd DataLabel="异常">
+            <MudTd DataLabel="@L["Shared:Fields:Exceptions"]">
                 <MudChip T="string" Color="@context.ExceptionStatusColor" Size="Size.Small" Icon="@(context.HasExceptions ? Icons.Material.Filled.Error : Icons.Material.Filled.CheckCircle)">
-                    @context.ExceptionStatusText
+                    @L.GetExceptionStatusText(context)
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="注册时间">
+            <MudTd DataLabel="@L["Shared:Fields:RegisteredAt"]">
                 <MudStack Spacing="0">
                     <span class="cell-text">@context.RegisteredAtDisplay</span>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        运行 @context.RunningDurationDisplay
+                        @L["Shared:Labels:RunningDuration", L.FormatDuration(DateTime.UtcNow - context.RegisteredAt)]
                     </MudText>
                 </MudStack>
             </MudTd>
             @if (!Compact)
             {
-                <MudTd DataLabel="操作">
+                <MudTd DataLabel="@L["Shared:Fields:Actions"]">
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                   Size="Size.Small"
                                   Color="Color.Info"
                                   OnClick="() => OnRowClick.InvokeAsync(context)"
-                                  title="查看详情"
-                                  aria-label="查看详情" />
+                                  title="@L["Shared:Actions:ViewDetails"]"
+                                  aria-label="@L["Shared:Actions:ViewDetails"]" />
                     <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep"
                                   Size="Size.Small"
                                   Color="Color.Warning"
                                   OnClick="() => OnClearHistory.InvokeAsync(context)"
-                                  title="清除历史"
-                                  aria-label="清除历史" />
+                                  title="@L["Shared:Actions:ClearHistory"]"
+                                  aria-label="@L["Shared:Actions:ClearHistory"]" />
                 </MudTd>
             }
         </RowTemplate>
@@ -126,7 +128,7 @@
         <NoRecordsContent>
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary">暂无实例数据</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Shared:States:NoInstances"]</MudText>
             </MudStack>
         </NoRecordsContent>
     </MudTable>

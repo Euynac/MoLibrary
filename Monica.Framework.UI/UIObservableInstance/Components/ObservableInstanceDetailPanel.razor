@@ -1,46 +1,48 @@
-@using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Core.Results;
+@using Monica.Framework.UI.Localization
+@using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Framework.UI.UIObservableInstance.Support
 @inject ObservableInstanceMonitorService MonitorService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <div class="detail-panel">
     @if (Instance == null)
     {
-        <MudAlert Severity="Severity.Info">未选择实例</MudAlert>
+        <MudAlert Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
     }
     else
     {
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
         <!-- Overview Tab -->
-        <MudTabPanel Text="概览" Icon="@Icons.Material.Filled.Dashboard">
+        <MudTabPanel Text="@L["Detail:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
             <MudStack Spacing="3" Class="pa-4">
                 <!-- Identity Information -->
                 <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">身份信息</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["Detail:Sections:Identity"]</MudText>
                     <MudGrid>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">实例ID</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:InstanceId"]</MudText>
                             <MudText Typo="Typo.body2" Class="break-anywhere">@Instance.InstanceId</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">实例名称</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:InstanceName"]</MudText>
                             <MudText Typo="Typo.body2">@Instance.InstanceName</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">类型</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Type"]</MudText>
                             <MudTooltip Text="@Instance.InstanceTypeFullName">
-                                <MudText Typo="Typo.body2">@Instance.InstanceTypeDisplay</MudText>
+                                <MudText Typo="Typo.body2">@L.GetNullableTypeDisplayText(Instance.InstanceTypeDisplay)</MudText>
                             </MudTooltip>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">组ID</MudText>
-                            <MudText Typo="Typo.body2">@Instance.GroupIdDisplay</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:GroupId"]</MudText>
+                            <MudText Typo="Typo.body2">@L.GetGroupDisplayText(Instance)</MudText>
                         </MudItem>
                         @if (!string.IsNullOrEmpty(Instance.InstanceKey))
                         {
                             <MudItem xs="12">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">实例键</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:InstanceKey"]</MudText>
                                 <MudText Typo="Typo.body2">@Instance.InstanceKey</MudText>
                             </MudItem>
                         }
@@ -49,15 +51,15 @@
 
                 <!-- Health State -->
                 <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">健康状态</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["Detail:Sections:Health"]</MudText>
                     <MudStack Spacing="2">
                         <!-- Health State -->
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudText Typo="Typo.subtitle1" Class="detail-label">总体健康:</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="detail-label">@L["Shared:Fields:OverallHealth"]:</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="@Instance.HealthStateColor" />
                                 <MudChip T="string" Color="@Instance.HealthStateColor" Icon="@Instance.HealthStateIcon">
-                                    @Instance.HealthStateText
+                                    @L.GetHealthStateText(Instance.HealthState)
                                 </MudChip>
                             </MudStack>
                         </MudStack>
@@ -66,11 +68,11 @@
                         @if (Instance.CurrentLogLevel.HasValue)
                         {
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudText Typo="Typo.subtitle1" Class="detail-label">日志级别:</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="detail-label">@L["Shared:Fields:LogLevel"]:</MudText>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                     <MudIcon Icon="@Instance.LogLevelIcon" Size="Size.Small" Color="@Instance.LogLevelColor" />
                                     <MudChip T="string" Color="@Instance.LogLevelColor">
-                                        @Instance.LogLevelText
+                                        @L.GetLogLevelText(Instance.CurrentLogLevel)
                                     </MudChip>
                                 </MudStack>
                             </MudStack>
@@ -80,20 +82,20 @@
 
                 <!-- Current State -->
                 <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">当前状态</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["Detail:Sections:CurrentState"]</MudText>
                     <MudGrid>
                         <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">状态值</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:StateValue"]</MudText>
                             <MudPaper Class="pa-2 mt-1" Elevation="0" Outlined="true">
                                 <MudText Typo="Typo.body2" Class="break-anywhere">@Instance.StateDisplayText</MudText>
                             </MudPaper>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">状态类型</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:StateType"]</MudText>
                             <MudText Typo="Typo.body2">@Instance.StateTypeDisplay</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">状态变更时间</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:StateChangedAt"]</MudText>
                             <MudText Typo="Typo.body2">@Instance.StateChangedAtDisplay</MudText>
                         </MudItem>
                     </MudGrid>
@@ -101,29 +103,29 @@
 
                 <!-- Statistics -->
                 <MudPaper Class="pa-3" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">统计信息</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@L["Detail:Sections:Statistics"]</MudText>
                     <MudGrid>
                         <MudItem xs="6" md="3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">总状态变更</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalStateChanges"]</MudText>
                             <MudText Typo="Typo.h6">@Instance.TotalStateChanges</MudText>
                         </MudItem>
                         <MudItem xs="6" md="3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">总异常数</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalExceptions"]</MudText>
                             <MudText Typo="Typo.h6" Color="@(Instance.TotalExceptions > 0 ? Color.Error : Color.Success)">
                                 @Instance.TotalExceptions
                             </MudText>
                         </MudItem>
                         <MudItem xs="6" md="3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">历史记录数</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:HistoryEntries"]</MudText>
                             <MudText Typo="Typo.h6">@Instance.HistoryCount</MudText>
                         </MudItem>
                         <MudItem xs="6" md="3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">注册时间</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:RegisteredAt"]</MudText>
                             <MudText Typo="Typo.body2">@Instance.RegisteredAtDisplay</MudText>
                         </MudItem>
                         <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">运行时长</MudText>
-                            <MudText Typo="Typo.body1">@Instance.RunningDurationDisplay</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:RunningDuration"]</MudText>
+                            <MudText Typo="Typo.body1">@L.FormatDuration(DateTime.UtcNow - Instance.RegisteredAt)</MudText>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>
@@ -131,9 +133,9 @@
                 <!-- Status Badge -->
                 <MudPaper Class="pa-3" Elevation="1">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudText Typo="Typo.subtitle1">异常状态:</MudText>
+                        <MudText Typo="Typo.subtitle1">@L["Shared:Fields:ExceptionStatus"]:</MudText>
                         <MudChip T="string" Color="@Instance.ExceptionStatusColor" Icon="@(Instance.HasExceptions ? Icons.Material.Filled.Error : Icons.Material.Filled.CheckCircle)">
-                            @Instance.ExceptionStatusText
+                            @L.GetExceptionStatusText(Instance)
                         </MudChip>
                     </MudStack>
                 </MudPaper>
@@ -141,7 +143,7 @@
         </MudTabPanel>
 
         <!-- State History Tab -->
-        <MudTabPanel Text="状态历史" Icon="@Icons.Material.Filled.History">
+        <MudTabPanel Text="@L["Detail:Tabs:StateHistory"]" Icon="@Icons.Material.Filled.History">
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingHistory)
                 {
@@ -155,7 +157,7 @@
         </MudTabPanel>
 
         <!-- Exceptions Tab -->
-        <MudTabPanel Text="异常" Icon="@Icons.Material.Filled.Error" BadgeData="@Instance.ExceptionCount" BadgeColor="@(Instance.HasExceptions ? Color.Error : Color.Default)">
+        <MudTabPanel Text="@L["Detail:Tabs:Exceptions"]" Icon="@Icons.Material.Filled.Error" BadgeData="@Instance.ExceptionCount" BadgeColor="@(Instance.HasExceptions ? Color.Error : Color.Default)">
             <MudStack Spacing="2" Class="pa-4">
                 @if (_loadingExceptions)
                 {
@@ -200,7 +202,7 @@
         {
             if ((await MonitorService.GetInstanceHistoryAsync(Instance.InstanceId, 100)).IsFailed(out var error, out var history))
             {
-                Snackbar.Add($"加载历史失败: {error}", Severity.Error);
+                Snackbar.Add(L["Detail:Messages:LoadHistoryFailed", error], Severity.Error);
                 return;
             }
 
@@ -224,7 +226,7 @@
         {
             if ((await MonitorService.GetInstanceExceptionsAsync(Instance.InstanceId)).IsFailed(out var error, out var exceptions))
             {
-                Snackbar.Add($"加载异常失败: {error}", Severity.Error);
+                Snackbar.Add(L["Detail:Messages:LoadExceptionsFailed", error], Severity.Error);
                 return;
             }
 

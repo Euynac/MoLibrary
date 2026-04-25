@@ -1,0 +1,223 @@
+{
+  "Page": {
+    "PageTitle": "可观测实例监控",
+    "Header": {
+      "Title": "可观测实例监控"
+    },
+    "Tabs": {
+      "Overview": "总览",
+      "AllInstances": "全部实例",
+      "ByGroup": "按组",
+      "ExceptionsOnly": "仅异常"
+    },
+    "RecentExceptions": {
+      "Title": "最近异常",
+      "Count": "{0} 个实例有异常"
+    },
+    "Group": {
+      "Count": "{0} 个实例",
+      "Empty": "暂无分组实例"
+    },
+    "States": {
+      "LoadingInstances": "正在加载实例信息..."
+    },
+    "Messages": {
+      "LoadInstancesFailed": "加载实例失败: {0}",
+      "LoadStatisticsFailed": "加载统计信息失败: {0}",
+      "LoadExceptionInstancesFailed": "加载异常实例失败: {0}",
+      "LoadDataException": "加载数据时发生错误: {0}",
+      "RefreshSucceeded": "数据已刷新",
+      "ClearHistoryFailed": "清除历史失败: {0}",
+      "ClearHistorySucceeded": "历史记录已清除"
+    },
+    "Dialog": {
+      "DetailTitle": "实例详情 - {0}",
+      "ConfirmTitle": "确认",
+      "ClearHistoryMessage": "确定要清除实例 '{0}' 的历史记录吗？",
+      "Confirm": "确定",
+      "Cancel": "取消"
+    }
+  },
+  "Shared": {
+    "Actions": {
+      "Refresh": "刷新",
+      "ViewDetails": "查看详情",
+      "ClearHistory": "清除历史",
+      "Close": "关闭",
+      "ClearFilters": "清除筛选",
+      "LoadMore": "加载更多 (剩余 {0} 条)"
+    },
+    "Fields": {
+      "InstanceId": "实例ID",
+      "Name": "名称",
+      "Type": "类型",
+      "Group": "组",
+      "CurrentState": "当前状态",
+      "HealthState": "健康状态",
+      "LogLevel": "日志级别",
+      "Exceptions": "异常",
+      "ExceptionCount": "异常数",
+      "RegisteredAt": "注册时间",
+      "LastUpdated": "最后更新",
+      "Actions": "操作",
+      "StateType": "状态类型",
+      "Message": "消息",
+      "StackTrace": "堆栈跟踪",
+      "Context": "上下文信息",
+      "StateChange": "状态变更",
+      "Previous": "之前",
+      "After": "之后",
+      "ExceptionDetails": "异常详情",
+      "ExceptionType": "类型",
+      "ExceptionMessage": "消息",
+      "ExceptionTime": "时间",
+      "InstanceKey": "实例键",
+      "CurrentLogLevel": "当前日志级别",
+      "NoLogLevel": "无日志级别",
+      "CurrentStateType": "当前状态类型",
+      "StateChanges": "状态变更",
+      "HistoryEntries": "历史记录",
+      "ExceptionStatus": "异常状态",
+      "StateHistory": "状态历史",
+      "ExceptionRecords": "异常记录",
+      "InstanceName": "实例名称",
+      "GroupId": "组ID",
+      "OverallHealth": "总体健康",
+      "StateValue": "状态值",
+      "StateChangedAt": "状态变更时间",
+      "RunningDuration": "运行时长",
+      "LogLevelDistribution": "日志级别分布",
+      "AverageHistory": "平均历史记录",
+      "HealthRate": "健康率",
+      "HealthyInstanceRatio": "无异常实例占比",
+      "TopTypeDistribution": "Top 类型分布",
+      "TopGroupDistribution": "Top 组分布",
+      "PerInstance": "{0} 条/实例"
+    },
+    "Labels": {
+      "Unknown": "未知",
+      "Ungrouped": "未分组",
+      "None": "无",
+      "RunningDuration": "运行 {0}",
+      "LogLevel": "日志级别: {0}",
+      "StateType": "类型: {0}"
+    },
+    "HealthStates": {
+      "Healthy": "健康",
+      "Unhealthy": "不健康",
+      "Unknown": "未知"
+    },
+    "ExceptionStatus": {
+      "Normal": "正常",
+      "Count": "{0} 异常"
+    },
+    "EntryTypes": {
+      "StateChangeWithException": "状态变更（异常）",
+      "Exception": "异常",
+      "StateChange": "状态变更",
+      "Message": "消息"
+    },
+    "RelativeTime": {
+      "SecondsAgo": "{0}秒前",
+      "MinutesAgo": "{0}分钟前",
+      "HoursAgo": "{0}小时前",
+      "DaysAgo": "{0}天前"
+    },
+    "Duration": {
+      "DaysHours": "{0}天 {1}小时",
+      "HoursMinutes": "{0}小时 {1}分钟",
+      "MinutesSeconds": "{0}分钟 {1}秒",
+      "Seconds": "{0}秒"
+    },
+    "LogLevels": {
+      "Trace": "Trace",
+      "Debug": "Debug",
+      "Information": "Information",
+      "Warning": "Warning",
+      "Error": "Error",
+      "Critical": "Critical",
+      "None": "None",
+      "Unknown": "未知"
+    },
+    "States": {
+      "LoadingStatistics": "加载统计信息...",
+      "NoInstances": "暂无实例数据",
+      "NoExceptions": "无异常记录",
+      "NoStateHistory": "暂无状态变更记录",
+      "NoInstanceSelected": "未选择实例"
+    },
+    "Counts": {
+      "ExceptionRecords": "共 {0} 个异常记录"
+    }
+  },
+  "Statistics": {
+    "Title": "实例统计",
+    "Cards": {
+      "TotalInstances": "总实例数",
+      "HealthyInstances": "健康实例",
+      "UnhealthyInstances": "不健康实例",
+      "UnknownHealth": "未知状态",
+      "TotalStateChanges": "总状态变更",
+      "TotalExceptions": "总异常数",
+      "ExceptionRate": "异常率",
+      "GroupedInstances": "分组实例",
+      "AverageHistoryLength": "平均历史长度",
+      "CriticalErrors": "严重错误"
+    },
+    "Sections": {
+      "LogLevelDistribution": "日志级别分布",
+      "AdditionalMetrics": "附加指标",
+      "TopTypes": "Top 类型分布",
+      "TopGroups": "Top 组分布"
+    }
+  },
+  "Filter": {
+    "Title": "筛选条件",
+    "ActiveCount": "{0} 个激活",
+    "Fields": {
+      "Search": "搜索",
+      "SearchPlaceholder": "搜索 ID 或名称",
+      "Group": "组",
+      "GroupPlaceholder": "按组 ID 筛选",
+      "HealthState": "健康状态",
+      "LogLevel": "日志级别",
+      "RegisteredFrom": "注册开始时间",
+      "RegisteredTo": "注册结束时间"
+    },
+    "Options": {
+      "All": "全部",
+      "AllHealthStates": "所有健康状态",
+      "AllLogLevels": "所有日志级别",
+      "CriticalErrorOnly": "仅严重/错误",
+      "UnhealthyOnly": "仅不健康",
+      "QuickFilters": "快速筛选:"
+    }
+  },
+  "Detail": {
+    "Title": "实例详情",
+    "Sections": {
+      "BasicInfo": "基本信息",
+      "StateInfo": "状态信息",
+      "RuntimeStatistics": "运行统计",
+      "StateHistory": "状态历史",
+      "Exceptions": "异常记录",
+      "Identity": "身份信息",
+      "Health": "健康状态",
+      "CurrentState": "当前状态",
+      "Statistics": "统计信息"
+    },
+    "Actions": {
+      "LoadHistory": "加载历史",
+      "LoadExceptions": "加载异常"
+    },
+    "Messages": {
+      "LoadHistoryFailed": "加载历史失败: {0}",
+      "LoadExceptionsFailed": "加载异常失败: {0}"
+    },
+    "Tabs": {
+      "Overview": "概览",
+      "StateHistory": "状态历史",
+      "Exceptions": "异常"
+    }
+  }
+}

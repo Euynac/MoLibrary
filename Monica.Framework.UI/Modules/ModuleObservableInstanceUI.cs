@@ -8,6 +8,7 @@ using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using MudBlazor;
@@ -51,6 +52,9 @@ public class ModuleObservableInstanceUI(ModuleObservableInstanceUIOption option)
         // Register UI page
         if (!Option.DisablePage)
         {
+            DependsOnModule<ModuleLocalizationGuide>().Register()
+                .AddResource<ObservableInstanceResource>();
+
             DependsOnModule<ModuleShellUIGuide>().Register()
                 .RegisterUIComponents(p => p.RegisterLocalizedComponent<UIObservableInstanceMonitorPage>(
                     UIObservableInstanceMonitorPage.PAGE_URL,

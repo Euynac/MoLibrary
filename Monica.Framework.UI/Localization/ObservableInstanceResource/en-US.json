@@ -1,0 +1,223 @@
+{
+  "Page": {
+    "PageTitle": "Observable Instance Monitor",
+    "Header": {
+      "Title": "Observable Instance Monitor"
+    },
+    "Tabs": {
+      "Overview": "Overview",
+      "AllInstances": "All Instances",
+      "ByGroup": "By Group",
+      "ExceptionsOnly": "Exceptions Only"
+    },
+    "RecentExceptions": {
+      "Title": "Recent Exceptions",
+      "Count": "{0} instances with exceptions"
+    },
+    "Group": {
+      "Count": "{0} instances",
+      "Empty": "No grouped instances"
+    },
+    "States": {
+      "LoadingInstances": "Loading instance information..."
+    },
+    "Messages": {
+      "LoadInstancesFailed": "Failed to load instances: {0}",
+      "LoadStatisticsFailed": "Failed to load statistics: {0}",
+      "LoadExceptionInstancesFailed": "Failed to load exception instances: {0}",
+      "LoadDataException": "An error occurred while loading data: {0}",
+      "RefreshSucceeded": "Data refreshed",
+      "ClearHistoryFailed": "Failed to clear history: {0}",
+      "ClearHistorySucceeded": "History cleared"
+    },
+    "Dialog": {
+      "DetailTitle": "Instance Details - {0}",
+      "ConfirmTitle": "Confirm",
+      "ClearHistoryMessage": "Clear history for instance '{0}'?",
+      "Confirm": "OK",
+      "Cancel": "Cancel"
+    }
+  },
+  "Shared": {
+    "Actions": {
+      "Refresh": "Refresh",
+      "ViewDetails": "View details",
+      "ClearHistory": "Clear history",
+      "Close": "Close",
+      "ClearFilters": "Clear filters",
+      "LoadMore": "Load more ({0} remaining)"
+    },
+    "Fields": {
+      "InstanceId": "Instance ID",
+      "Name": "Name",
+      "Type": "Type",
+      "Group": "Group",
+      "CurrentState": "Current State",
+      "HealthState": "Health State",
+      "LogLevel": "Log Level",
+      "Exceptions": "Exceptions",
+      "ExceptionCount": "Exception Count",
+      "RegisteredAt": "Registered At",
+      "LastUpdated": "Last Updated",
+      "Actions": "Actions",
+      "StateType": "State type",
+      "Message": "Message",
+      "StackTrace": "Stack Trace",
+      "Context": "Context Information",
+      "StateChange": "State Change",
+      "Previous": "Before",
+      "After": "After",
+      "ExceptionDetails": "Exception Details",
+      "ExceptionType": "Type",
+      "ExceptionMessage": "Message",
+      "ExceptionTime": "Time",
+      "InstanceKey": "Instance Key",
+      "CurrentLogLevel": "Current Log Level",
+      "NoLogLevel": "No log level",
+      "CurrentStateType": "Current State Type",
+      "StateChanges": "State Changes",
+      "HistoryEntries": "History Entries",
+      "ExceptionStatus": "Exception Status",
+      "StateHistory": "State History",
+      "ExceptionRecords": "Exception Records",
+      "InstanceName": "Instance Name",
+      "GroupId": "Group ID",
+      "OverallHealth": "Overall Health",
+      "StateValue": "State Value",
+      "StateChangedAt": "State Changed At",
+      "RunningDuration": "Running Duration",
+      "LogLevelDistribution": "Log Level Distribution",
+      "AverageHistory": "Average History",
+      "HealthRate": "Health Rate",
+      "HealthyInstanceRatio": "Ratio of instances without exceptions",
+      "TopTypeDistribution": "Top Type Distribution",
+      "TopGroupDistribution": "Top Group Distribution",
+      "PerInstance": "{0} entries/instance"
+    },
+    "Labels": {
+      "Unknown": "Unknown",
+      "Ungrouped": "Ungrouped",
+      "None": "None",
+      "RunningDuration": "Running {0}",
+      "LogLevel": "Log level: {0}",
+      "StateType": "Type: {0}"
+    },
+    "HealthStates": {
+      "Healthy": "Healthy",
+      "Unhealthy": "Unhealthy",
+      "Unknown": "Unknown"
+    },
+    "ExceptionStatus": {
+      "Normal": "Normal",
+      "Count": "{0} exceptions"
+    },
+    "EntryTypes": {
+      "StateChangeWithException": "State Change (Exception)",
+      "Exception": "Exception",
+      "StateChange": "State Change",
+      "Message": "Message"
+    },
+    "RelativeTime": {
+      "SecondsAgo": "{0} seconds ago",
+      "MinutesAgo": "{0} minutes ago",
+      "HoursAgo": "{0} hours ago",
+      "DaysAgo": "{0} days ago"
+    },
+    "Duration": {
+      "DaysHours": "{0} days {1} hours",
+      "HoursMinutes": "{0} hours {1} minutes",
+      "MinutesSeconds": "{0} minutes {1} seconds",
+      "Seconds": "{0} seconds"
+    },
+    "LogLevels": {
+      "Trace": "Trace",
+      "Debug": "Debug",
+      "Information": "Information",
+      "Warning": "Warning",
+      "Error": "Error",
+      "Critical": "Critical",
+      "None": "None",
+      "Unknown": "Unknown"
+    },
+    "States": {
+      "LoadingStatistics": "Loading statistics...",
+      "NoInstances": "No instance data",
+      "NoExceptions": "No exception records",
+      "NoStateHistory": "No state change records",
+      "NoInstanceSelected": "No instance selected"
+    },
+    "Counts": {
+      "ExceptionRecords": "{0} exception records"
+    }
+  },
+  "Statistics": {
+    "Title": "Instance Statistics",
+    "Cards": {
+      "TotalInstances": "Total Instances",
+      "HealthyInstances": "Healthy Instances",
+      "UnhealthyInstances": "Unhealthy Instances",
+      "UnknownHealth": "Unknown State",
+      "TotalStateChanges": "Total State Changes",
+      "TotalExceptions": "Total Exceptions",
+      "ExceptionRate": "Exception Rate",
+      "GroupedInstances": "Grouped Instances",
+      "AverageHistoryLength": "Average History Length",
+      "CriticalErrors": "Critical Errors"
+    },
+    "Sections": {
+      "LogLevelDistribution": "Log Level Distribution",
+      "AdditionalMetrics": "Additional Metrics",
+      "TopTypes": "Top Type Distribution",
+      "TopGroups": "Top Group Distribution"
+    }
+  },
+  "Filter": {
+    "Title": "Filter Conditions",
+    "ActiveCount": "{0} active",
+    "Fields": {
+      "Search": "Search",
+      "SearchPlaceholder": "Search by ID or name",
+      "Group": "Group",
+      "GroupPlaceholder": "Filter by group ID",
+      "HealthState": "Health State",
+      "LogLevel": "Log Level",
+      "RegisteredFrom": "Registered From",
+      "RegisteredTo": "Registered To"
+    },
+    "Options": {
+      "All": "All",
+      "AllHealthStates": "All health states",
+      "AllLogLevels": "All log levels",
+      "CriticalErrorOnly": "Critical/Error Only",
+      "UnhealthyOnly": "Unhealthy Only",
+      "QuickFilters": "Quick Filters:"
+    }
+  },
+  "Detail": {
+    "Title": "Instance Details",
+    "Sections": {
+      "BasicInfo": "Basic Information",
+      "StateInfo": "State Information",
+      "RuntimeStatistics": "Runtime Statistics",
+      "StateHistory": "State History",
+      "Exceptions": "Exceptions",
+      "Identity": "Identity Information",
+      "Health": "Health State",
+      "CurrentState": "Current State",
+      "Statistics": "Statistics"
+    },
+    "Actions": {
+      "LoadHistory": "Load History",
+      "LoadExceptions": "Load Exceptions"
+    },
+    "Messages": {
+      "LoadHistoryFailed": "Failed to load history: {0}",
+      "LoadExceptionsFailed": "Failed to load exceptions: {0}"
+    },
+    "Tabs": {
+      "Overview": "Overview",
+      "StateHistory": "State History",
+      "Exceptions": "Exceptions"
+    }
+  }
+}

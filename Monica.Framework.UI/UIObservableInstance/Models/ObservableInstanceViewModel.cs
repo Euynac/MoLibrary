@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Localization.Services;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
 using MudBlazor;
@@ -129,7 +131,7 @@ public class ObservableInstanceViewModel
     /// <summary>
     /// Short type name using GetCleanName()
     /// </summary>
-    public string InstanceTypeDisplay => InstanceType?.GetCleanName() ?? "Unknown";
+    public string InstanceTypeDisplay => InstanceType?.GetCleanName() ?? LocalizationManager.Get<ObservableInstanceResource>("Shared:Labels:Unknown");
 
     /// <summary>
     /// Full type name using GetCleanFullName()
@@ -139,7 +141,7 @@ public class ObservableInstanceViewModel
     /// <summary>
     /// Handles null/empty GroupId gracefully
     /// </summary>
-    public string GroupIdDisplay => string.IsNullOrEmpty(GroupId) ? "Ungrouped" : GroupId;
+    public string GroupIdDisplay => string.IsNullOrEmpty(GroupId) ? LocalizationManager.Get<ObservableInstanceResource>("Shared:Labels:Ungrouped") : GroupId;
 
     /// <summary>
     /// Formatted registered timestamp
@@ -166,7 +168,7 @@ public class ObservableInstanceViewModel
     /// <summary>
     /// Log level text for display
     /// </summary>
-    public string LogLevelText => CurrentLogLevel?.ToString() ?? "Unknown";
+    public string LogLevelText => LocalizationManager.For<ObservableInstanceResource>().GetLogLevelText(CurrentLogLevel);
 
     /// <summary>
     /// MudBlazor color for log level
@@ -181,12 +183,7 @@ public class ObservableInstanceViewModel
     /// <summary>
     /// Health state text
     /// </summary>
-    public string HealthStateText => HealthState switch
-    {
-        HealthState.Healthy => "健康",
-        HealthState.Unhealthy => "不健康",
-        _ => "未知"
-    };
+    public string HealthStateText => LocalizationManager.For<ObservableInstanceResource>().GetHealthStateText(HealthState);
 
     /// <summary>
     /// MudBlazor color for health state
@@ -210,7 +207,7 @@ public class ObservableInstanceViewModel
     /// <summary>
     /// Exception status badge text
     /// </summary>
-    public string ExceptionStatusText => HasExceptions ? $"{ExceptionCount} 异常" : "正常";
+    public string ExceptionStatusText => LocalizationManager.For<ObservableInstanceResource>().GetExceptionStatusText(HasExceptions, ExceptionCount);
 
     #endregion
 
@@ -261,13 +258,7 @@ public class ObservableInstanceViewModel
     /// </summary>
     private static string FormatDuration(TimeSpan duration)
     {
-        if (duration.TotalDays >= 1)
-            return $"{(int)duration.TotalDays}天 {duration.Hours}小时";
-        if (duration.TotalHours >= 1)
-            return $"{(int)duration.TotalHours}小时 {duration.Minutes}分钟";
-        if (duration.TotalMinutes >= 1)
-            return $"{(int)duration.TotalMinutes}分钟 {duration.Seconds}秒";
-        return $"{(int)duration.TotalSeconds}秒";
+        return LocalizationManager.For<ObservableInstanceResource>().FormatDuration(duration);
     }
 
     #endregion
