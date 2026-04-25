@@ -138,9 +138,11 @@
             </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="@L["JobInstances:Columns:InstanceId"]">
-                <MudText Typo="Typo.body2" Style="font-family: monospace;">
-                    @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
-                </MudText>
+                <MudTooltip Text="@context.InstanceId">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
+                    </MudText>
+                </MudTooltip>
             </MudTd>
             <MudTd DataLabel="@L["JobInstances:Columns:JobKey"]">@context.JobKey</MudTd>
             <MudTd DataLabel="@L["JobInstances:Columns:State"]">
