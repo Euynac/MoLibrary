@@ -10,6 +10,7 @@
 
 /* 2. Introduce a fresh theme */
 @import url('./themes/mo-theme-fresh.css');
+@import url('./themes/mo-theme-macaron-sweetheart.css'); /* Macaron Sweetheart theme */
 
 /* 3. Introduce the default Clean SaaS theme */
 @import url('./themes/mo-theme-default.css');
@@ -33,6 +34,22 @@
  * Theme files may override this small contract for their own visual language.
  */
 :root {
+    --mo-appbar-background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-surface) 0%,
+            var(--mud-palette-background-gray) 100%);
+    --mo-appbar-dark-background:
+        linear-gradient(
+            135deg,
+            var(--mud-palette-surface) 0%,
+            var(--mud-palette-background) 100%);
+    --mo-appbar-border-bottom: 1px solid var(--mud-palette-divider);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(10px);
+    --mo-appbar-padding-inline: 24px;
+    --mo-appbar-gap: 32px;
+
     --mo-color-page-hero-background:
         linear-gradient(
             135deg,
@@ -65,6 +82,129 @@
     --mo-color-state-error-soft-background: rgba(var(--mud-palette-error-rgb), 0.12);
     --mo-color-state-error-soft-text: var(--mud-palette-error);
     --mo-color-state-error-soft-border: rgba(var(--mud-palette-error-rgb), 0.26);
+
+    --mo-appbar-menu-item-background: transparent;
+    --mo-appbar-menu-item-border: 1px solid transparent;
+    --mo-appbar-menu-item-border-radius: 8px;
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-padding-block: 10px;
+    --mo-appbar-menu-item-padding-inline: 16px;
+    --mo-appbar-menu-item-min-height: 42px;
+    --mo-appbar-menu-item-gap: 12px;
+    --mo-appbar-menu-item-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-icon: var(--mud-palette-text-secondary);
+    --mo-appbar-menu-item-font-family: inherit;
+    --mo-appbar-menu-item-font-size: 0.875rem;
+    --mo-appbar-menu-item-font-weight: 400;
+    --mo-appbar-menu-item-letter-spacing: 0;
+    --mo-appbar-menu-item-text-transform: none;
+    --mo-appbar-menu-item-shadow: none;
+    --mo-appbar-menu-item-transform: none;
+    --mo-appbar-menu-item-hover-background: var(--mud-palette-action-default-hover);
+    --mo-appbar-menu-item-hover-border: var(--mo-appbar-menu-item-border);
+    --mo-appbar-menu-item-hover-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-hover-icon: var(--mud-palette-primary);
+    --mo-appbar-menu-item-hover-shadow: var(--mo-appbar-menu-item-shadow);
+    --mo-appbar-menu-item-hover-transform: var(--mo-appbar-menu-item-transform);
+    --mo-appbar-menu-item-active-background: rgba(var(--mud-palette-primary-rgb), 0.12);
+    --mo-appbar-menu-item-active-border: var(--mo-appbar-menu-item-border);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-font-weight: 500;
+    --mo-appbar-menu-item-active-shadow: var(--mo-appbar-menu-item-shadow);
+    --mo-appbar-menu-item-active-transform: var(--mo-appbar-menu-item-transform);
+    --mo-appbar-menu-item-transition:
+        background-color 150ms ease-out,
+        border-color 150ms ease-out,
+        box-shadow 150ms ease-out,
+        color 150ms ease-out,
+        transform 150ms ease-out;
+}
+
+:root[data-theme] :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .more-menu .category-header),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item {
+    align-items: center;
+    background: var(--mo-appbar-menu-item-background) !important;
+    border: var(--mo-appbar-menu-item-border) !important;
+    border-radius: var(--mo-appbar-menu-item-border-radius) !important;
+    box-shadow: var(--mo-appbar-menu-item-shadow) !important;
+    box-sizing: border-box;
+    color: var(--mo-appbar-menu-item-text) !important;
+    display: flex !important;
+    font-family: var(--mo-appbar-menu-item-font-family);
+    font-size: var(--mo-appbar-menu-item-font-size);
+    font-weight: var(--mo-appbar-menu-item-font-weight);
+    letter-spacing: var(--mo-appbar-menu-item-letter-spacing);
+    margin: var(--mo-appbar-menu-item-margin-block) var(--mo-appbar-menu-item-margin-inline) !important;
+    min-height: var(--mo-appbar-menu-item-min-height);
+    padding: var(--mo-appbar-menu-item-padding-block) var(--mo-appbar-menu-item-padding-inline) !important;
+    text-decoration: none;
+    text-transform: var(--mo-appbar-menu-item-text-transform);
+    transform: var(--mo-appbar-menu-item-transform);
+    transition: var(--mo-appbar-menu-item-transition) !important;
+    width: calc(100% - (var(--mo-appbar-menu-item-margin-inline) * 2));
+}
+
+:root[data-theme] :is(.dropdown-menu .mud-nav-link-text, .flyout-menu .mud-nav-link-text),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item-text {
+    align-items: center;
+    color: inherit !important;
+    display: flex !important;
+    flex: 1 1 auto;
+    font: inherit;
+    gap: var(--mo-appbar-menu-item-gap);
+    letter-spacing: inherit;
+    min-width: 0;
+    text-transform: inherit;
+}
+
+:root[data-theme] :is(.dropdown-menu .item-icon, .dropdown-menu .mud-nav-link-icon, .flyout-menu .item-icon, .flyout-menu .mud-nav-link-icon),
+:root[data-theme] .mud-popover .mo-appbar-menu-list :is(.mud-menu-item-icon, .mud-menu-submenu-icon) {
+    color: var(--mo-appbar-menu-item-icon) !important;
+    flex-shrink: 0;
+    transition: var(--mo-appbar-menu-item-transition) !important;
+}
+
+:root[data-theme] :is(
+    .dropdown-menu .mud-nav-link:hover,
+    .dropdown-menu .mud-nav-link:focus-visible,
+    .flyout-menu .mud-nav-link:hover,
+    .flyout-menu .mud-nav-link:focus-visible,
+    .more-menu .category-header:hover,
+    .more-menu .category-header:focus-visible
+),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item:is(:hover, :focus, :active) {
+    background: var(--mo-appbar-menu-item-hover-background) !important;
+    border: var(--mo-appbar-menu-item-hover-border) !important;
+    box-shadow: var(--mo-appbar-menu-item-hover-shadow) !important;
+    color: var(--mo-appbar-menu-item-hover-text) !important;
+    transform: var(--mo-appbar-menu-item-hover-transform);
+}
+
+:root[data-theme] :is(
+    .dropdown-menu .mud-nav-link:hover,
+    .dropdown-menu .mud-nav-link:focus-visible,
+    .flyout-menu .mud-nav-link:hover,
+    .flyout-menu .mud-nav-link:focus-visible
+) :is(.item-icon, .mud-nav-link-icon),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item:is(:hover, :focus, :active) :is(.mud-menu-item-icon, .mud-menu-submenu-icon) {
+    color: var(--mo-appbar-menu-item-hover-icon) !important;
+}
+
+:root[data-theme] :is(.dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link.active),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item.active {
+    background: var(--mo-appbar-menu-item-active-background) !important;
+    border: var(--mo-appbar-menu-item-active-border) !important;
+    box-shadow: var(--mo-appbar-menu-item-active-shadow) !important;
+    color: var(--mo-appbar-menu-item-active-text) !important;
+    font-weight: var(--mo-appbar-menu-item-active-font-weight) !important;
+    transform: var(--mo-appbar-menu-item-active-transform);
+}
+
+:root[data-theme] :is(.dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link.active) :is(.item-icon, .mud-nav-link-icon),
+:root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item.active :is(.mud-menu-item-icon, .mud-menu-submenu-icon) {
+    color: var(--mo-appbar-menu-item-active-icon) !important;
 }
 
 /* Prevent transition animations from affecting performance of elements */

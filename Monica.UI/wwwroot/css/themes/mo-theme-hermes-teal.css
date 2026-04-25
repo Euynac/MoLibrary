@@ -29,6 +29,15 @@
     --mo-hermes-compressed-font: 'RulesCompressed', 'Noto Serif SC', 'Arial Narrow', sans-serif;
     --mo-hermes-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
     --mo-nav-menu-border-radius: 0px;
+    --mo-appbar-backdrop-filter: blur(12px);
+    --mo-appbar-gap: 20px;
+    --mo-appbar-menu-item-border-radius: 0px;
+    --mo-appbar-menu-item-font-family: var(--mo-hermes-content-font);
+    --mo-appbar-menu-item-font-size: 0.8rem;
+    --mo-appbar-menu-item-font-weight: 400;
+    --mo-appbar-menu-item-letter-spacing: 0.12em;
+    --mo-appbar-menu-item-text-transform: uppercase;
+    --mo-appbar-menu-item-active-font-weight: 500;
 }
 
 :root[data-theme="hermes-teal-light"],
@@ -44,6 +53,17 @@
     --mo-hermes-accent-soft: rgba(20, 48, 44, 0.08);
     --mo-hermes-glow: rgba(183, 121, 31, 0.18);
     --mo-hermes-noise-opacity: 0.03;
+    --mo-appbar-background: color-mix(in srgb, var(--mo-hermes-bg) 92%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-hermes-border);
+    --mo-appbar-menu-item-text: var(--mo-hermes-text);
+    --mo-appbar-menu-item-icon: var(--mo-hermes-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-hermes-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-hermes-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-hermes-text);
+    --mo-appbar-menu-item-active-background: var(--mo-hermes-accent-soft);
+    --mo-appbar-menu-item-active-text: var(--mo-hermes-accent);
+    --mo-appbar-menu-item-active-icon: var(--mo-hermes-accent);
 }
 
 :root[data-theme="hermes-teal-dark"],
@@ -59,6 +79,17 @@
     --mo-hermes-accent-soft: rgba(255, 230, 203, 0.08);
     --mo-hermes-glow: rgba(255, 189, 56, 0.24);
     --mo-hermes-noise-opacity: 0.05;
+    --mo-appbar-background: color-mix(in srgb, var(--mo-hermes-bg) 92%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-hermes-border);
+    --mo-appbar-menu-item-text: var(--mo-hermes-text);
+    --mo-appbar-menu-item-icon: var(--mo-hermes-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-hermes-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-hermes-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-hermes-text);
+    --mo-appbar-menu-item-active-background: var(--mo-hermes-accent-soft);
+    --mo-appbar-menu-item-active-text: var(--mo-hermes-accent);
+    --mo-appbar-menu-item-active-icon: var(--mo-hermes-accent);
 }
 
 .mo-theme-hermes-teal-light,
@@ -103,14 +134,6 @@
 .mo-theme-hermes-teal-light .mo-body-content,
 .mo-theme-hermes-teal-dark .mo-body-content {
     background: transparent;
-}
-
-.mo-theme-hermes-teal-light .mo-navbar,
-.mo-theme-hermes-teal-dark .mo-navbar {
-    background: color-mix(in srgb, var(--mo-hermes-bg) 92%, transparent);
-    border-bottom: 1px solid var(--mo-hermes-border);
-    backdrop-filter: blur(12px);
-    gap: 20px;
 }
 
 .mo-theme-hermes-teal-light .navbar-link,

@@ -30,6 +30,16 @@
     --mo-ink-radius-sm: 4px;
     --mo-ink-transition: 160ms ease;
     --mo-nav-menu-border-radius: var(--mo-ink-radius);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(10px);
+    --mo-appbar-menu-item-border-radius: var(--mo-ink-radius-sm);
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-font-family: var(--mo-ink-font);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-ink-transition),
+        color var(--mo-ink-transition);
 }
 
 :root[data-theme="ink-landscape-light"],
@@ -46,6 +56,17 @@
     --mo-ink-hover: rgba(47, 58, 52, 0.08);
     --mo-ink-selected: rgba(47, 58, 52, 0.12);
     --mo-ink-shadow: 0 16px 40px -28px rgba(32, 36, 31, 0.34);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-ink-bg) 92%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-ink-border);
+    --mo-appbar-menu-item-text: var(--mo-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-ink-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-ink-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-ink-text);
+    --mo-appbar-menu-item-active-background: var(--mo-ink-selected);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
 }
 
 :root[data-theme="ink-landscape-dark"],
@@ -62,6 +83,17 @@
     --mo-ink-hover: rgba(240, 232, 216, 0.08);
     --mo-ink-selected: rgba(197, 208, 189, 0.13);
     --mo-ink-shadow: 0 18px 44px -24px rgba(0, 0, 0, 0.72);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-ink-bg) 92%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-ink-border);
+    --mo-appbar-menu-item-text: var(--mo-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-ink-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-ink-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-ink-text);
+    --mo-appbar-menu-item-active-background: var(--mo-ink-selected);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
 }
 
 .mo-theme-ink-landscape-light,
@@ -89,14 +121,10 @@
         linear-gradient(180deg, var(--mo-ink-bg) 0%, var(--mo-ink-bg-muted) 100%);
 }
 
-.mo-theme-ink-landscape-light .mo-navbar,
-.mo-theme-ink-landscape-dark .mo-navbar,
 .mo-theme-ink-landscape-light .mud-appbar,
 .mo-theme-ink-landscape-dark .mud-appbar {
-    background: color-mix(in srgb, var(--mo-ink-bg) 92%, transparent);
     border-bottom: 1px solid var(--mo-ink-border);
     box-shadow: none;
-    backdrop-filter: blur(10px);
 }
 
 .mo-theme-ink-landscape-light .navbar-link,
@@ -393,9 +421,7 @@
 }
 
 .mo-theme-ink-landscape-light .mud-navmenu .mud-nav-link,
-.mo-theme-ink-landscape-dark .mud-navmenu .mud-nav-link,
-.mo-theme-ink-landscape-light .mud-popover .mud-menu-list .mud-menu-item,
-.mo-theme-ink-landscape-dark .mud-popover .mud-menu-list .mud-menu-item {
+.mo-theme-ink-landscape-dark .mud-navmenu .mud-nav-link {
     border-radius: var(--mo-ink-radius-sm);
     color: var(--mo-ink-muted);
     font-family: var(--mo-ink-font);
@@ -406,14 +432,14 @@
     width: calc(100% - 16px);
 }
 
-.mo-theme-ink-landscape-light :is(.mud-navmenu .mud-nav-link:hover, .mud-popover .mud-menu-list .mud-menu-item:hover, .mud-popover .mud-menu-list .mud-menu-item:focus),
-.mo-theme-ink-landscape-dark :is(.mud-navmenu .mud-nav-link:hover, .mud-popover .mud-menu-list .mud-menu-item:hover, .mud-popover .mud-menu-list .mud-menu-item:focus) {
+.mo-theme-ink-landscape-light .mud-navmenu .mud-nav-link:hover,
+.mo-theme-ink-landscape-dark .mud-navmenu .mud-nav-link:hover {
     background: var(--mo-ink-hover);
     color: var(--mo-ink-text);
 }
 
-.mo-theme-ink-landscape-light :is(.mud-navmenu .mud-nav-link.active, .mud-popover .mud-menu-list .mud-menu-item.active),
-.mo-theme-ink-landscape-dark :is(.mud-navmenu .mud-nav-link.active, .mud-popover .mud-menu-list .mud-menu-item.active) {
+.mo-theme-ink-landscape-light .mud-navmenu .mud-nav-link.active,
+.mo-theme-ink-landscape-dark .mud-navmenu .mud-nav-link.active {
     background: var(--mo-ink-selected);
     color: var(--mud-palette-primary);
     font-weight: 600;

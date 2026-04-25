@@ -51,6 +51,24 @@
     --mo-m3-state-focus-opacity: 0.12;
     --mo-m3-motion-standard: 180ms cubic-bezier(0.2, 0, 0, 1);
     --mo-nav-menu-border-radius: var(--mo-m3-shape-large);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-m3-surface) 94%, transparent);
+    --mo-appbar-dark-background: color-mix(in srgb, var(--mo-m3-surface) 94%, transparent);
+    --mo-appbar-border-bottom: 0;
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(16px);
+    --mo-appbar-gap: 24px;
+    --mo-appbar-menu-item-border-radius: var(--mo-m3-shape-full);
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-hover-background: var(--mo-m3-nav-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-m3-on-surface);
+    --mo-appbar-menu-item-hover-icon: var(--mo-m3-on-surface);
+    --mo-appbar-menu-item-active-background: var(--mo-m3-primary-container);
+    --mo-appbar-menu-item-active-text: var(--mo-m3-on-primary-container);
+    --mo-appbar-menu-item-active-icon: var(--mo-m3-on-primary-container);
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-m3-motion-standard),
+        color var(--mo-m3-motion-standard);
     --mo-card-border-radius: var(--mo-m3-shape-expressive);
     --mo-dialog-border-radius: var(--mo-m3-shape-extra-large);
     --mo-color-page-hero-background: var(--mo-m3-primary-container);
@@ -126,15 +144,6 @@
 .mo-theme-material-design-3-light .mo-body-content,
 .mo-theme-material-design-3-dark .mo-body-content {
     background: var(--mo-m3-surface);
-}
-
-.mo-theme-material-design-3-light .mo-navbar,
-.mo-theme-material-design-3-dark .mo-navbar {
-    background: color-mix(in srgb, var(--mo-m3-surface) 94%, transparent) !important;
-    border-bottom: 0 !important;
-    box-shadow: none !important;
-    gap: 24px;
-    backdrop-filter: blur(16px);
 }
 
 .mo-theme-material-design-3-light .navbar-brand,
@@ -243,46 +252,6 @@
     font-size: 0.75rem;
     letter-spacing: 0.03125rem;
     text-transform: none;
-}
-
-.mo-theme-material-design-3-light :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover),
-.mo-theme-material-design-3-dark :is(.category-header:hover, .dropdown-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link:hover) {
-    background: var(--mo-m3-nav-hover) !important;
-    color: var(--mo-m3-on-surface) !important;
-}
-
-.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link),
-.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link) {
-    border-radius: var(--mo-m3-shape-full);
-    box-sizing: border-box;
-    margin: 2px 8px;
-    width: calc(100% - 16px);
-}
-
-.mo-theme-material-design-3-light :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active),
-.mo-theme-material-design-3-dark :is(.dropdown-menu .mud-nav-link:hover, .dropdown-menu .mud-nav-link.active, .flyout-menu .mud-nav-link:hover, .flyout-menu .mud-nav-link.active) {
-    border-radius: var(--mo-m3-shape-full);
-}
-
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item {
-    border-radius: var(--mo-m3-shape-full);
-    box-sizing: border-box;
-    margin: 2px 8px;
-    transition:
-        background-color var(--mo-m3-motion-standard),
-        color var(--mo-m3-motion-standard);
-    width: calc(100% - 16px);
-}
-
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-material-design-3-light .mud-popover .mud-menu-list .mud-menu-item:active,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-material-design-3-dark .mud-popover .mud-menu-list .mud-menu-item:active {
-    background: var(--mo-m3-nav-hover);
-    color: var(--mo-m3-on-surface);
 }
 
 .mo-theme-material-design-3-light :is(.mud-card, .theme-card),

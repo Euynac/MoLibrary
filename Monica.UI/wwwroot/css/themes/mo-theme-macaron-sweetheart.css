@@ -1,0 +1,515 @@
+/* Monica Macaron Sweetheart Theme - playful pastel candy UI */
+
+@font-face {
+    font-family: 'Xiaolai';
+    src: url('../../fonts/Xiaolai-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DynaPuff';
+    src: url('../../fonts/DynaPuff-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DynaPuff';
+    src: url('../../fonts/DynaPuff-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DynaPuff';
+    src: url('../../fonts/DynaPuff-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root[data-theme="macaron-sweetheart-light"],
+:root[data-theme="macaron-sweetheart-dark"],
+.mo-theme-macaron-sweetheart-light,
+.mo-theme-macaron-sweetheart-dark {
+    --mo-macaron-font-body: 'Nunito', 'Xiaolai', 'DynaPuff', sans-serif;
+    --mo-macaron-font-display: 'DynaPuff', 'Xiaolai', 'Nunito', sans-serif;
+    --mo-macaron-radius-xs: 14px;
+    --mo-macaron-radius-sm: 18px;
+    --mo-macaron-radius: 24px;
+    --mo-macaron-radius-lg: 32px;
+    --mo-macaron-transition: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    --mo-nav-menu-border-radius: var(--mo-macaron-radius-sm);
+    --mo-appbar-backdrop-filter: blur(14px) saturate(1.08);
+    --mo-appbar-menu-item-border-radius: 999px;
+    --mo-appbar-menu-item-margin-block: 3px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-font-family: var(--mo-macaron-font-body);
+    --mo-appbar-menu-item-active-font-weight: 500;
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-macaron-transition),
+        color var(--mo-macaron-transition);
+}
+
+:root[data-theme="macaron-sweetheart-light"],
+.mo-theme-macaron-sweetheart-light {
+    --mo-macaron-bg: #fff6fa;
+    --mo-macaron-bg-soft: #ffeaf3;
+    --mo-macaron-bg-mint: #f0fff5;
+    --mo-macaron-surface: rgba(255, 255, 255, 0.94);
+    --mo-macaron-surface-strong: #ffffff;
+    --mo-macaron-surface-tint: #fff1f7;
+    --mo-macaron-text: #5d4250;
+    --mo-macaron-muted: #8a6676;
+    --mo-macaron-border: rgba(var(--mud-palette-primary-rgb), 0.24);
+    --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.38);
+    --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.10);
+    --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.16);
+    --mo-macaron-shadow: 0 10px 24px -18px rgba(244, 143, 177, 0.40);
+    --mo-macaron-shadow-strong: 0 14px 34px -22px rgba(244, 143, 177, 0.52);
+    --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.22);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-macaron-surface-strong) 84%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-macaron-border);
+    --mo-appbar-box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+    --mo-appbar-menu-item-text: var(--mo-macaron-muted);
+    --mo-appbar-menu-item-icon: var(--mo-macaron-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-macaron-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-macaron-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-macaron-text);
+    --mo-appbar-menu-item-active-background: var(--mo-macaron-selected);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+}
+
+:root[data-theme="macaron-sweetheart-dark"],
+.mo-theme-macaron-sweetheart-dark {
+    --mo-macaron-bg: #3b2835;
+    --mo-macaron-bg-soft: #46303f;
+    --mo-macaron-bg-mint: #364439;
+    --mo-macaron-surface: rgba(74, 52, 68, 0.96);
+    --mo-macaron-surface-strong: #51394a;
+    --mo-macaron-surface-tint: #533a4b;
+    --mo-macaron-text: #fff1f7;
+    --mo-macaron-muted: #e8c6d4;
+    --mo-macaron-border: rgba(var(--mud-palette-primary-rgb), 0.24);
+    --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.42);
+    --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.12);
+    --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.18);
+    --mo-macaron-shadow: 0 10px 24px -18px rgba(18, 10, 16, 0.44);
+    --mo-macaron-shadow-strong: 0 16px 36px -22px rgba(18, 10, 16, 0.58);
+    --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.26);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-macaron-surface-strong) 84%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-macaron-border);
+    --mo-appbar-box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+    --mo-appbar-menu-item-text: var(--mo-macaron-muted);
+    --mo-appbar-menu-item-icon: var(--mo-macaron-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-macaron-hover);
+    --mo-appbar-menu-item-hover-text: var(--mo-macaron-text);
+    --mo-appbar-menu-item-hover-icon: var(--mo-macaron-text);
+    --mo-appbar-menu-item-active-background: var(--mo-macaron-selected);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+}
+
+.mo-theme-macaron-sweetheart-light,
+.mo-theme-macaron-sweetheart-dark {
+    background: var(--mo-macaron-bg);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-macaron-font-body);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-macaron-sweetheart-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-alert, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-macaron-sweetheart-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
+.mo-theme-macaron-sweetheart-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+    font-family: var(--mo-macaron-font-body);
+    letter-spacing: 0;
+}
+
+.mo-theme-macaron-sweetheart-light :is(h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-h3, .mud-typography-h4, .mud-typography-h5, .mud-typography-h6, .mud-button),
+.mo-theme-macaron-sweetheart-dark :is(h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-h3, .mud-typography-h4, .mud-typography-h5, .mud-typography-h6, .mud-button) {
+    font-family: var(--mo-macaron-font-display);
+    letter-spacing: 0;
+}
+
+.mo-theme-macaron-sweetheart-light .mo-layout,
+.mo-theme-macaron-sweetheart-dark .mo-layout,
+.mo-theme-macaron-sweetheart-light .mo-main-content,
+.mo-theme-macaron-sweetheart-dark .mo-main-content,
+.mo-theme-macaron-sweetheart-light .mo-body-content,
+.mo-theme-macaron-sweetheart-dark .mo-body-content {
+    background: var(--mo-macaron-bg);
+}
+
+.mo-theme-macaron-sweetheart-light .mo-body-content {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 92%, var(--mud-palette-secondary)) 0%, var(--mo-macaron-bg) 16rem);
+}
+
+.mo-theme-macaron-sweetheart-dark .mo-body-content {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 86%, var(--mud-palette-primary)) 0%, var(--mo-macaron-bg) 14rem);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-appbar,
+.mo-theme-macaron-sweetheart-dark .mud-appbar {
+    border-bottom: 1px solid var(--mo-macaron-border);
+    box-shadow: 0 10px 30px -24px rgba(var(--mud-palette-primary-rgb), 0.60);
+}
+
+.mo-theme-macaron-sweetheart-light .navbar-link,
+.mo-theme-macaron-sweetheart-dark .navbar-link,
+.mo-theme-macaron-sweetheart-light .navbar-measure-link,
+.mo-theme-macaron-sweetheart-dark .navbar-measure-link {
+    border-radius: 999px;
+    color: var(--mo-macaron-muted);
+    font-weight: 500;
+}
+
+.mo-theme-macaron-sweetheart-light .navbar-link:hover,
+.mo-theme-macaron-sweetheart-dark .navbar-link:hover,
+.mo-theme-macaron-sweetheart-light .navbar-link.active,
+.mo-theme-macaron-sweetheart-dark .navbar-link.active {
+    background: var(--mo-macaron-hover);
+    color: var(--mo-macaron-text);
+}
+
+.mo-theme-macaron-sweetheart-light .navbar-link::before,
+.mo-theme-macaron-sweetheart-dark .navbar-link::before {
+    height: 3px;
+    background: var(--mud-palette-primary);
+    border-radius: 999px;
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+    background: var(--mo-macaron-surface);
+    border: 1px solid var(--mo-macaron-border);
+    border-radius: var(--mo-macaron-radius);
+    box-shadow: var(--mo-macaron-shadow);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+    transition:
+        background-color var(--mo-macaron-transition),
+        border-color var(--mo-macaron-transition),
+        box-shadow var(--mo-macaron-transition),
+        transform var(--mo-macaron-transition);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+    border-color: var(--mo-macaron-border-strong);
+    box-shadow: var(--mo-macaron-shadow-strong);
+    transform: translateY(-1px);
+}
+
+:root[data-theme="macaron-sweetheart-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="macaron-sweetheart-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-macaron-sweetheart-light .mud-popover:not(.mud-tooltip),
+.mo-theme-macaron-sweetheart-dark .mud-popover:not(.mud-tooltip) {
+    background: var(--mo-macaron-surface-strong);
+    border: 1px solid var(--mo-macaron-border);
+    border-radius: var(--mo-macaron-radius);
+    box-shadow: var(--mo-macaron-shadow-strong);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-dialog, .mud-snackbar),
+.mo-theme-macaron-sweetheart-dark :is(.mud-dialog, .mud-snackbar) {
+    border-radius: var(--mo-macaron-radius-lg);
+    box-shadow: var(--mo-macaron-shadow-strong);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-drawer,
+.mo-theme-macaron-sweetheart-dark .mud-drawer {
+    border-inline-end: 1px solid var(--mo-macaron-border);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-button,
+.mo-theme-macaron-sweetheart-dark .mud-button {
+    border-radius: 999px;
+    box-shadow: none;
+    font-weight: 500;
+    min-height: 38px;
+    text-transform: none;
+    transition:
+        background-color var(--mo-macaron-transition),
+        border-color var(--mo-macaron-transition),
+        box-shadow var(--mo-macaron-transition),
+        color var(--mo-macaron-transition),
+        transform var(--mo-macaron-transition);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-button:not(.mud-button-disabled):hover,
+.mo-theme-macaron-sweetheart-dark .mud-button:not(.mud-button-disabled):hover {
+    transform: translateY(-1px);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-button-filled, .mud-button-outlined),
+.mo-theme-macaron-sweetheart-dark :is(.mud-button-filled, .mud-button-outlined) {
+    border: 1px solid var(--mo-macaron-border);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-button-filled-primary,
+.mo-theme-macaron-sweetheart-dark .mud-button-filled-primary {
+    background: var(--mud-palette-primary);
+    box-shadow: 0 12px 26px -18px rgba(var(--mud-palette-primary-rgb), 0.82);
+    color: var(--mud-palette-primary-text);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-button-text:hover, .mud-button-outlined:hover),
+.mo-theme-macaron-sweetheart-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
+    background: var(--mo-macaron-hover);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-chip, .mud-alert),
+.mo-theme-macaron-sweetheart-dark :is(.mud-chip, .mud-alert) {
+    border-radius: 999px;
+}
+
+.mo-theme-macaron-sweetheart-light .mud-chip,
+.mo-theme-macaron-sweetheart-dark .mud-chip {
+    border: 1px solid var(--mo-macaron-border);
+    font-weight: 500;
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar {
+    background: var(--mo-macaron-surface-strong);
+    border: 1px solid var(--mo-macaron-border);
+    color: var(--mo-macaron-text);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar .mud-snackbar-content-message,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar .mud-snackbar-content-message,
+.mo-theme-macaron-sweetheart-light .mud-snackbar .mud-snackbar-content-action,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar .mud-snackbar-content-action,
+.mo-theme-macaron-sweetheart-light .mud-snackbar .mud-button-root,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar .mud-button-root,
+.mo-theme-macaron-sweetheart-light .mud-snackbar .mud-icon-root,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar .mud-icon-root {
+    color: inherit;
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar.mud-alert-filled-success,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar.mud-alert-filled-success {
+    border-inline-start: 6px solid var(--mud-palette-success);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar.mud-alert-filled-info,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar.mud-alert-filled-info {
+    border-inline-start: 6px solid var(--mud-palette-info);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar.mud-alert-filled-warning,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar.mud-alert-filled-warning {
+    border-inline-start: 6px solid var(--mud-palette-warning);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-snackbar.mud-alert-filled-error,
+.mo-theme-macaron-sweetheart-dark .mud-snackbar.mud-alert-filled-error {
+    border-inline-start: 6px solid var(--mud-palette-error);
+}
+
+:root[data-theme="macaron-sweetheart-light"] .mud-tooltip,
+:root[data-theme="macaron-sweetheart-dark"] .mud-tooltip,
+.mo-theme-macaron-sweetheart-light .mud-tooltip,
+.mo-theme-macaron-sweetheart-dark .mud-tooltip {
+    background: var(--mo-macaron-surface-strong);
+    border: 1px solid var(--mo-macaron-border);
+    border-radius: var(--mo-macaron-radius-xs);
+    box-shadow: var(--mo-macaron-shadow);
+    color: var(--mo-macaron-text);
+    font-family: var(--mo-macaron-font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.45;
+    max-width: min(28rem, calc(100vw - 32px));
+    position: absolute;
+    text-align: start;
+    white-space: normal;
+    width: fit-content;
+}
+
+:root[data-theme="macaron-sweetheart-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="macaron-sweetheart-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-macaron-sweetheart-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-macaron-sweetheart-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-macaron-surface-strong);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-macaron-sweetheart-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mo-macaron-surface);
+    border: 1px solid var(--mo-macaron-border);
+    border-radius: var(--mo-macaron-radius);
+    overflow: hidden;
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-macaron-sweetheart-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-macaron-surface-tint);
+    border-bottom: 1px solid var(--mo-macaron-border);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-macaron-sweetheart-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: var(--mo-macaron-surface);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-tab,
+.mo-theme-macaron-sweetheart-dark .mud-tab {
+    border-radius: 999px;
+    color: var(--mo-macaron-muted);
+    font-family: var(--mo-macaron-font-display);
+    font-weight: 500;
+    margin: 6px 3px;
+    transition:
+        background-color var(--mo-macaron-transition),
+        color var(--mo-macaron-transition);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-tab:hover,
+.mo-theme-macaron-sweetheart-dark .mud-tab:hover {
+    background: var(--mo-macaron-hover);
+    color: var(--mo-macaron-text);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-tab.mud-tab-active,
+.mo-theme-macaron-sweetheart-dark .mud-tab.mud-tab-active {
+    color: var(--mud-palette-primary);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-tab-slider,
+.mo-theme-macaron-sweetheart-dark .mud-tab-slider {
+    background: var(--mud-palette-primary);
+    border-radius: 999px;
+    height: 4px;
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-input-outlined, .mud-select),
+.mo-theme-macaron-sweetheart-dark :is(.mud-input-outlined, .mud-select) {
+    border-radius: var(--mo-macaron-radius-sm);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-macaron-sweetheart-dark .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-macaron-border-strong);
+    border-radius: var(--mo-macaron-radius-sm);
+    border-width: 1px;
+    transition:
+        border-color var(--mo-macaron-transition),
+        box-shadow var(--mo-macaron-transition);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-input-label,
+.mo-theme-macaron-sweetheart-dark .mud-input-label {
+    color: var(--mo-macaron-muted);
+    font-family: var(--mo-macaron-font-body);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border),
+.mo-theme-macaron-sweetheart-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border) {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 0 0 4px var(--mo-macaron-focus);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-table, .mud-data-grid),
+.mo-theme-macaron-sweetheart-dark :is(.mud-table, .mud-data-grid) {
+    background: transparent;
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-table-head th, .mud-data-grid-header-cell),
+.mo-theme-macaron-sweetheart-dark :is(.mud-table-head th, .mud-data-grid-header-cell) {
+    background: var(--mo-macaron-surface-tint);
+    border-bottom-color: var(--mo-macaron-border);
+    color: var(--mo-macaron-muted);
+    font-family: var(--mo-macaron-font-display);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-table-cell, .mud-data-grid-cell),
+.mo-theme-macaron-sweetheart-dark :is(.mud-table-cell, .mud-data-grid-cell) {
+    border-bottom-color: var(--mo-macaron-border);
+}
+
+.mo-theme-macaron-sweetheart-light :is(.mud-table-row:hover, .mud-data-grid-row:hover),
+.mo-theme-macaron-sweetheart-dark :is(.mud-table-row:hover, .mud-data-grid-row:hover) {
+    background: var(--mo-macaron-hover);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    color: var(--mo-macaron-muted);
+    opacity: 0.76;
+}
+
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header:hover .column-options .sort-direction-icon,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header:hover .column-options .sort-direction-icon,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header:hover .column-options .column-options-icon,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header:hover .column-options .column-options-icon,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header:hover .column-options .drag-icon-options,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header:hover .column-options .drag-icon-options,
+.mo-theme-macaron-sweetheart-light .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-macaron-sweetheart-dark .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label {
+    color: var(--mo-macaron-text);
+    opacity: 1;
+}
+
+.mo-theme-macaron-sweetheart-light .mud-navmenu .mud-nav-link,
+.mo-theme-macaron-sweetheart-dark .mud-navmenu .mud-nav-link {
+    border-radius: 999px;
+    color: var(--mo-macaron-muted);
+    font-family: var(--mo-macaron-font-body);
+    margin: 3px 8px;
+    transition:
+        background-color var(--mo-macaron-transition),
+        color var(--mo-macaron-transition);
+    width: calc(100% - 16px);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-navmenu .mud-nav-link:hover,
+.mo-theme-macaron-sweetheart-dark .mud-navmenu .mud-nav-link:hover {
+    background: var(--mo-macaron-hover);
+    color: var(--mo-macaron-text);
+}
+
+.mo-theme-macaron-sweetheart-light .mud-navmenu .mud-nav-link.active,
+.mo-theme-macaron-sweetheart-dark .mud-navmenu .mud-nav-link.active {
+    background: var(--mo-macaron-selected);
+    color: var(--mud-palette-primary);
+    font-weight: 500;
+}
+
+.mo-theme-macaron-sweetheart-light .theme-card,
+.mo-theme-macaron-sweetheart-dark .theme-card {
+    background: var(--mo-macaron-surface);
+}
+
+.mo-theme-macaron-sweetheart-light .theme-card.selected,
+.mo-theme-macaron-sweetheart-dark .theme-card.selected {
+    background: var(--mo-macaron-selected);
+    border-color: var(--mud-palette-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-macaron-sweetheart-light *,
+    .mo-theme-macaron-sweetheart-dark * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
