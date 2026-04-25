@@ -4,19 +4,16 @@
     left: 0;
     right: 0;
     height: var(--mo-appbar-height);
-    background: linear-gradient(
-        135deg,
-        var(--mud-palette-surface) 0%,
-        var(--mud-palette-background-gray) 100%
-    );
-    border-bottom: 1px solid var(--mud-palette-divider);
+    background: var(--mo-appbar-background);
+    border-bottom: var(--mo-appbar-border-bottom);
+    box-shadow: var(--mo-appbar-box-shadow);
     display: flex;
     align-items: center;
-    padding: 0 24px;
-    gap: 32px;
+    padding: 0 var(--mo-appbar-padding-inline);
+    gap: var(--mo-appbar-gap);
     min-width: 0;
     z-index: 1000;
-    backdrop-filter: blur(10px);
+    backdrop-filter: var(--mo-appbar-backdrop-filter);
 }
 
 .navbar-nav {
@@ -102,8 +99,8 @@
 
 @media (max-width: 1280px) {
     .mo-navbar {
-        padding: 0 16px;
-        gap: 20px;
+        padding: 0 min(var(--mo-appbar-padding-inline), 16px);
+        gap: min(var(--mo-appbar-gap), 20px);
     }
 
     .navbar-measure-link {
@@ -114,8 +111,8 @@
 
 @media (max-width: 1080px) {
     .mo-navbar {
-        padding: 0 12px;
-        gap: 12px;
+        padding: 0 min(var(--mo-appbar-padding-inline), 12px);
+        gap: min(var(--mo-appbar-gap), 12px);
     }
 
     .navbar-measure-link {
@@ -129,11 +126,7 @@
 }
 
 [data-theme*="dark"] .mo-navbar {
-    background: linear-gradient(
-        135deg,
-        var(--mud-palette-surface) 0%,
-        var(--mud-palette-background) 100%
-    );
+    background: var(--mo-appbar-dark-background, var(--mo-appbar-background));
 }
 
 /* Animation keyframes */

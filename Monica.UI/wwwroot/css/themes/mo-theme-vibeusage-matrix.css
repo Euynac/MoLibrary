@@ -39,6 +39,27 @@
     --mo-input-border-radius: 0px;
     --mo-button-border-radius: 0px;
     --mo-nav-menu-border-radius: 0px;
+    --mo-appbar-backdrop-filter: blur(12px);
+    --mo-appbar-box-shadow: inset 0 -1px 0 rgba(0, 255, 65, 0.06);
+    --mo-appbar-menu-item-border-radius: 0px;
+    --mo-appbar-menu-item-border: 1px solid transparent;
+    --mo-appbar-menu-item-hover-border: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-active-border: 1px solid var(--mud-palette-primary);
+    --mo-appbar-menu-item-font-family: var(--mo-vibe-font);
+    --mo-appbar-menu-item-font-size: 0.72rem;
+    --mo-appbar-menu-item-font-weight: 700;
+    --mo-appbar-menu-item-letter-spacing: 0.14em;
+    --mo-appbar-menu-item-text-transform: uppercase;
+    --mo-appbar-menu-item-active-font-weight: 700;
+    --mo-appbar-menu-item-hover-shadow: 0 0 16px rgba(0, 255, 65, 0.12);
+    --mo-appbar-menu-item-hover-transform: translateX(1px);
+    --mo-appbar-menu-item-active-shadow: inset 2px 0 0 var(--mud-palette-primary);
+    --mo-appbar-menu-item-transition:
+        border-color 180ms ease,
+        background-color 180ms ease,
+        box-shadow 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
     --mo-vibe-corner-size: 10px;
     --mo-vibe-surface-line-step: 12px;
 }
@@ -60,6 +81,17 @@
     --mo-vibe-corner-ink: rgba(0, 179, 54, 0.34);
     --mo-vibe-surface-pattern: rgba(0, 179, 54, 0.06);
     --mo-vibe-sweep: rgba(0, 179, 54, 0.12);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-text: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-hover-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-hover-icon: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-active-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-icon: var(--mo-vibe-ink-bright);
 }
 
 :root[data-theme="vibeusage-matrix-dark"],
@@ -79,6 +111,17 @@
     --mo-vibe-corner-ink: rgba(0, 255, 65, 0.40);
     --mo-vibe-surface-pattern: rgba(0, 255, 65, 0.08);
     --mo-vibe-sweep: rgba(0, 255, 65, 0.16);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-text: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-hover-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-hover-icon: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-active-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-icon: var(--mo-vibe-ink-bright);
 }
 
 .mo-theme-vibeusage-matrix-light,
@@ -123,14 +166,6 @@
 .mo-theme-vibeusage-matrix-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
 .mo-theme-vibeusage-matrix-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
     font-family: var(--mo-vibe-font);
-}
-
-.mo-theme-vibeusage-matrix-light .mo-navbar,
-.mo-theme-vibeusage-matrix-dark .mo-navbar {
-    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
-    border-bottom: 1px solid var(--mo-vibe-ghost);
-    backdrop-filter: blur(12px);
-    box-shadow: inset 0 -1px 0 rgba(0, 255, 65, 0.06);
 }
 
 .mo-theme-vibeusage-matrix-light .navbar-link,

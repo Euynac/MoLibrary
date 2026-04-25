@@ -1,7 +1,3 @@
-.dashboard-page-shell {
-    padding: 16px;
-    box-sizing: border-box;
-}
 
 .tab-content-panel {
     padding: 24px;
@@ -9,10 +5,7 @@
 }
 
 @media (max-width: 960px) {
-    .dashboard-page-shell {
-        padding: 8px;
-    }
-
+    
     .tab-content-panel {
         min-height: auto;
         padding: 16px;

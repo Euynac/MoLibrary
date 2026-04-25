@@ -31,6 +31,20 @@
     --mo-tooltip-text: #F9F8F6;
     --mo-tooltip-border: rgba(107, 114, 128, 0.2);
     --mo-tooltip-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+    --mo-appbar-background: rgba(255, 255, 255, 0.85);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mud-palette-lines-default);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(12px);
+    --mo-appbar-menu-item-border-radius: 10px;
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-active-background: rgba(102, 203, 163, 0.15);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary-darken);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary-darken);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition: background-color 200ms ease-out, color 200ms ease-out;
     
     /* Fresh hover effects */
     --mo-clean-hover-shadow: 0 12px 30px -6px rgba(102, 203, 163, 0.15);
@@ -64,6 +78,20 @@
     --mo-tooltip-text: #F3F4F6;
     --mo-tooltip-border: rgba(55, 65, 81, 0.5);
     --mo-tooltip-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.4);
+
+    --mo-appbar-background: rgba(33, 37, 36, 0.85);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mud-palette-lines-default);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(12px);
+    --mo-appbar-menu-item-border-radius: 10px;
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 8px;
+    --mo-appbar-menu-item-active-background: rgba(124, 227, 185, 0.15);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-primary-lighten);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary-lighten);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition: background-color 200ms ease-out, color 200ms ease-out;
     
     /* Dark mode hover effects */
     --mo-clean-hover-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.3);
@@ -243,24 +271,6 @@
     margin: 4px 12px !important;
     padding: 10px 16px !important;
     transition: all 200ms ease-out !important;
-}
-
-.mo-theme-fresh-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item),
-.mo-theme-fresh-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item) {
-    border-radius: 10px !important;
-    box-sizing: border-box;
-    margin: 2px 8px !important;
-    transition: background-color 200ms ease-out !important;
-    width: calc(100% - 16px);
-}
-
-.mo-theme-fresh-light .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-fresh-light .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-fresh-light .mud-popover .mud-menu-list .mud-menu-item:active,
-.mo-theme-fresh-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
-.mo-theme-fresh-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
-.mo-theme-fresh-dark .mud-popover .mud-menu-list .mud-menu-item:active {
-    background-color: var(--mud-palette-action-default-hover) !important;
 }
 
 .mo-theme-fresh-light .mud-nav-item .mud-nav-link.active,

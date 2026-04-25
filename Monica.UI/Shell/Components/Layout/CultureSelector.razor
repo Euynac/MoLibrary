@@ -16,6 +16,7 @@
          Size="Size.Medium"
          AnchorOrigin="Origin.BottomCenter"
          TransformOrigin="Origin.TopCenter"
+         ListClass="mo-appbar-menu-list"
          Class="action-button"
          title="@L["Layout:LanguageTooltip"]">
     @foreach (var culture in LocalizationOptions.Value.SupportedCultures)
@@ -26,6 +27,7 @@
         var isCurrentCulture = CultureInfo.CurrentUICulture.Name == culture;
 
         <MudMenuItem OnClick="@(() => ChangeCultureAsync(culture))"
+                     Class="@(isCurrentCulture ? "active" : null)"
                      Icon="@(isCurrentCulture ? Icons.Material.Filled.Check : null)">
             @displayName
         </MudMenuItem>
