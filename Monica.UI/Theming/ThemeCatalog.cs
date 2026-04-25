@@ -25,6 +25,7 @@ public static class ThemeCatalog
         RegisterTheme(new VibeUsageMatrixTheme());
         RegisterTheme(new MaterialDesign3Theme());
         RegisterTheme(new FreshTheme());
+        RegisterTheme(new FreshMintTheme());
         RegisterTheme(new InkLandscapeTheme());
         RegisterTheme(new ZenInkTheme());
     }

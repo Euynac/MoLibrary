@@ -10,6 +10,7 @@
 
 /* 2. Introduce a fresh theme */
 @import url('./themes/mo-theme-fresh.css');
+@import url('./themes/mo-theme-fresh_mint.css');
 
 /* 3. Introduce the default Clean SaaS theme */
 @import url('./themes/mo-theme-default.css');

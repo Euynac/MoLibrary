@@ -1,0 +1,278 @@
+/* ============================================
+   Monica Fresh Mint Theme Style Sheet
+   Comfortable, quiet, and stress-free atmosphere.
+   ============================================ */
+
+/* Global and Light Mode */
+:root[data-theme="fresh_mint-light"],
+.mo-theme-fresh_mint-light {
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 400ms;
+    
+    --mo-button-border-radius: 12px;
+    --mo-button-padding-x: 18px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    
+    --mo-card-border-radius: 16px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 12px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 1px;
+    
+    --mo-dialog-border-radius: 20px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 9999px;
+    --mo-chip-padding: 6px 14px;
+
+    --mo-tooltip-bg: rgba(75, 85, 99, 0.95);
+    --mo-tooltip-text: #F9F8F6;
+    --mo-tooltip-border: rgba(107, 114, 128, 0.2);
+    --mo-tooltip-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* Fresh hover effects */
+    --mo-clean-hover-scale: 1.015;
+    --mo-clean-hover-shadow: 0 12px 30px -6px rgba(102, 203, 163, 0.15);
+}
+
+/* Dark Mode */
+:root[data-theme="fresh_mint-dark"],
+.mo-theme-fresh_mint-dark {
+    --mo-transition-fast: 200ms;
+    --mo-transition-normal: 400ms;
+    
+    --mo-button-border-radius: 12px;
+    --mo-button-padding-x: 18px;
+    --mo-button-padding-y: 10px;
+    --mo-button-font-weight: 500;
+    
+    --mo-card-border-radius: 16px;
+    --mo-card-padding: 24px;
+    
+    --mo-input-border-radius: 12px;
+    --mo-input-padding: 12px 16px;
+    --mo-input-border-width: 1px;
+    
+    --mo-dialog-border-radius: 20px;
+    --mo-dialog-padding: 32px;
+    
+    --mo-chip-border-radius: 9999px;
+    --mo-chip-padding: 6px 14px;
+
+    --mo-tooltip-bg: rgba(26, 29, 28, 0.98);
+    --mo-tooltip-text: #F3F4F6;
+    --mo-tooltip-border: rgba(55, 65, 81, 0.5);
+    --mo-tooltip-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.4);
+    
+    /* Dark mode hover effects */
+    --mo-clean-hover-scale: 1.015;
+    --mo-clean-hover-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.3);
+}
+
+/* Base resets */
+.mo-theme-fresh_mint-light,
+.mo-theme-fresh_mint-dark {
+    transition: background-color var(--mo-transition-normal) ease,
+                color var(--mo-transition-normal) ease;
+}
+
+/* Buttons */
+.mo-theme-fresh_mint-light .mud-button,
+.mo-theme-fresh_mint-dark .mud-button {
+    border-radius: var(--mo-button-border-radius) !important;
+    padding: var(--mo-button-padding-y) var(--mo-button-padding-x) !important;
+    font-weight: var(--mo-button-font-weight) !important;
+    text-transform: none !important;
+    letter-spacing: 0.3px !important;
+    transition: all var(--mo-transition-fast) cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+}
+
+.mo-theme-fresh_mint-light .mud-button-filled-primary {
+    box-shadow: 0 4px 12px -2px rgba(102, 203, 163, 0.25) !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-button-filled-primary {
+    box-shadow: 0 4px 12px -2px rgba(124, 227, 185, 0.15) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-button:not(.mud-button-disabled):hover,
+.mo-theme-fresh_mint-dark .mud-button:not(.mud-button-disabled):hover {
+    transform: translateY(-2px);
+}
+
+.mo-theme-fresh_mint-light .mud-button-filled:not(.mud-button-disabled):hover {
+    box-shadow: 0 6px 16px -3px rgba(102, 203, 163, 0.35) !important;
+}
+
+/* Cards - Quiet and airy */
+.mo-theme-fresh_mint-light .mud-card,
+.mo-theme-fresh_mint-dark .mud-card {
+    border-radius: var(--mo-card-border-radius) !important;
+    transition: all var(--mo-transition-normal) cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden;
+    border: 1px solid transparent !important;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-card {
+    background-color: var(--mud-palette-surface) !important;
+    border-color: rgba(102, 203, 163, 0.08) !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-card {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-card:hover,
+.mo-theme-fresh_mint-dark .mud-card:hover {
+    transform: scale(var(--mo-clean-hover-scale));
+    box-shadow: var(--mo-clean-hover-shadow) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-card-content,
+.mo-theme-fresh_mint-dark .mud-card-content {
+    padding: var(--mo-card-padding) !important;
+}
+
+/* Tabs Container */
+.mo-theme-fresh_mint-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-fresh_mint-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mo-card-border-radius);
+    overflow: hidden;
+}
+
+.mo-theme-fresh_mint-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-fresh_mint-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mud-palette-surface);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.mo-theme-fresh_mint-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-fresh_mint-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: var(--mud-palette-surface);
+}
+
+/* Inputs - Soft focus */
+.mo-theme-fresh_mint-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-fresh_mint-dark .mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--mo-input-border-radius) !important;
+    border-width: var(--mo-input-border-width) !important;
+    transition: all var(--mo-transition-fast) ease-out !important;
+}
+
+.mo-theme-fresh_mint-light .mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-width: 1px !important;
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 0 0 4px rgba(102, 203, 163, 0.15) !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-width: 1px !important;
+    border-color: var(--mud-palette-primary) !important;
+    box-shadow: 0 0 0 4px rgba(124, 227, 185, 0.15) !important;
+}
+
+/* Dialogs - Float softly */
+.mo-theme-fresh_mint-light .mud-dialog,
+.mo-theme-fresh_mint-dark .mud-dialog {
+    border-radius: var(--mo-dialog-border-radius) !important;
+    border: 1px solid var(--mud-palette-lines-default) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-dialog {
+    box-shadow: 0 30px 60px -15px rgba(102, 203, 163, 0.15), 0 20px 40px -10px rgba(0, 0, 0, 0.05) !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-dialog {
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Tooltips */
+:root[data-theme="fresh_mint-light"] .mud-tooltip,
+:root[data-theme="fresh_mint-dark"] .mud-tooltip,
+.mo-theme-fresh_mint-light .mud-tooltip,
+.mo-theme-fresh_mint-dark .mud-tooltip {
+    background: var(--mo-tooltip-bg);
+    border: 1px solid var(--mo-tooltip-border);
+    border-radius: 12px;
+    color: var(--mo-tooltip-text);
+    box-shadow: var(--mo-tooltip-shadow);
+    position: absolute;
+    width: fit-content;
+    max-width: min(28rem, calc(100vw - 32px));
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.5;
+    padding: 8px 12px;
+}
+
+:root[data-theme="fresh_mint-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="fresh_mint-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-fresh_mint-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-fresh_mint-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-tooltip-bg);
+}
+
+/* App Bar & Drawer - Seamless integration */
+.mo-theme-fresh_mint-light .mud-appbar,
+.mo-theme-fresh_mint-dark .mud-appbar {
+    border-bottom: 1px solid var(--mud-palette-lines-default) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-appbar {
+    background-color: rgba(33, 37, 36, 0.85) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-drawer,
+.mo-theme-fresh_mint-dark .mud-drawer {
+    border-right: 1px solid var(--mud-palette-lines-default) !important;
+    box-shadow: none !important;
+}
+
+/* Nav Menu Items (Pill style hover) */
+.mo-theme-fresh_mint-light .mud-nav-item .mud-nav-link,
+.mo-theme-fresh_mint-dark .mud-nav-item .mud-nav-link {
+    border-radius: 10px !important;
+    margin: 4px 12px !important;
+    padding: 10px 16px !important;
+    transition: all 200ms ease-out !important;
+}
+
+.mo-theme-fresh_mint-light :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item),
+.mo-theme-fresh_mint-dark :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .mud-popover .mud-menu-list .mud-menu-item) {
+    border-radius: 10px !important;
+    box-sizing: border-box;
+    margin: 2px 8px !important;
+    transition: background-color 200ms ease-out !important;
+    width: calc(100% - 16px);
+}
+
+.mo-theme-fresh_mint-light .mud-popover .mud-menu-list .mud-menu-item:hover,
+.mo-theme-fresh_mint-light .mud-popover .mud-menu-list .mud-menu-item:focus,
+.mo-theme-fresh_mint-light .mud-popover .mud-menu-list .mud-menu-item:active,
+.mo-theme-fresh_mint-dark .mud-popover .mud-menu-list .mud-menu-item:hover,
+.mo-theme-fresh_mint-dark .mud-popover .mud-menu-list .mud-menu-item:focus,
+.mo-theme-fresh_mint-dark .mud-popover .mud-menu-list .mud-menu-item:active {
+    background-color: var(--mud-palette-action-default-hover) !important;
+}
+
+.mo-theme-fresh_mint-light .mud-nav-item .mud-nav-link.active,
+.mo-theme-fresh_mint-dark .mud-nav-item .mud-nav-link.active {
+    background-color: rgba(102, 203, 163, 0.15) !important;
+    color: var(--mud-palette-primary-darken) !important;
+    font-weight: 600 !important;
+}
+
+.mo-theme-fresh_mint-dark .mud-nav-item .mud-nav-link.active {
+    background-color: rgba(124, 227, 185, 0.15) !important;
+    color: var(--mud-palette-primary-lighten) !important;
+}
