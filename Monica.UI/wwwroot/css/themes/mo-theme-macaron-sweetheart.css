@@ -36,7 +36,7 @@
 :root[data-theme="macaron-sweetheart-dark"],
 .mo-theme-macaron-sweetheart-light,
 .mo-theme-macaron-sweetheart-dark {
-    --mo-macaron-font-body: 'Xiaolai', 'DynaPuff', 'Nunito', sans-serif;
+    --mo-macaron-font-body: 'Nunito', 'Xiaolai', 'DynaPuff', sans-serif;
     --mo-macaron-font-display: 'DynaPuff', 'Xiaolai', 'Nunito', sans-serif;
     --mo-macaron-radius-xs: 14px;
     --mo-macaron-radius-sm: 18px;
@@ -60,36 +60,33 @@
     --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.38);
     --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.10);
     --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.16);
-    --mo-macaron-shadow: 0 18px 42px -24px rgba(244, 143, 177, 0.62);
-    --mo-macaron-shadow-strong: 0 24px 58px -28px rgba(244, 143, 177, 0.78);
+    --mo-macaron-shadow: 0 10px 24px -18px rgba(244, 143, 177, 0.40);
+    --mo-macaron-shadow-strong: 0 14px 34px -22px rgba(244, 143, 177, 0.52);
     --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.22);
 }
 
 :root[data-theme="macaron-sweetheart-dark"],
 .mo-theme-macaron-sweetheart-dark {
-    --mo-macaron-bg: #241821;
-    --mo-macaron-bg-soft: #2b1c28;
-    --mo-macaron-bg-mint: #1f2a25;
-    --mo-macaron-surface: rgba(48, 32, 44, 0.96);
-    --mo-macaron-surface-strong: #352331;
-    --mo-macaron-surface-tint: #3a2734;
+    --mo-macaron-bg: #3b2835;
+    --mo-macaron-bg-soft: #46303f;
+    --mo-macaron-bg-mint: #364439;
+    --mo-macaron-surface: rgba(74, 52, 68, 0.96);
+    --mo-macaron-surface-strong: #51394a;
+    --mo-macaron-surface-tint: #533a4b;
     --mo-macaron-text: #fff1f7;
     --mo-macaron-muted: #e8c6d4;
     --mo-macaron-border: rgba(var(--mud-palette-primary-rgb), 0.24);
     --mo-macaron-border-strong: rgba(var(--mud-palette-primary-rgb), 0.42);
     --mo-macaron-hover: rgba(var(--mud-palette-primary-rgb), 0.12);
     --mo-macaron-selected: rgba(var(--mud-palette-primary-rgb), 0.18);
-    --mo-macaron-shadow: 0 20px 48px -24px rgba(10, 6, 9, 0.74);
-    --mo-macaron-shadow-strong: 0 28px 68px -28px rgba(10, 6, 9, 0.88);
+    --mo-macaron-shadow: 0 10px 24px -18px rgba(18, 10, 16, 0.44);
+    --mo-macaron-shadow-strong: 0 16px 36px -22px rgba(18, 10, 16, 0.58);
     --mo-macaron-focus: rgba(var(--mud-palette-primary-rgb), 0.26);
 }
 
 .mo-theme-macaron-sweetheart-light,
 .mo-theme-macaron-sweetheart-dark {
-    background:
-        radial-gradient(circle at top left, rgba(var(--mud-palette-secondary-rgb), 0.30), transparent 32rem),
-        radial-gradient(circle at top right, rgba(var(--mud-palette-tertiary-rgb), 0.26), transparent 28rem),
-        linear-gradient(180deg, var(--mo-macaron-bg) 0%, var(--mo-macaron-bg-soft) 100%);
+    background: var(--mo-macaron-bg);
     color: var(--mud-palette-text-primary);
     font-family: var(--mo-macaron-font-body);
 }
@@ -114,10 +111,17 @@
 .mo-theme-macaron-sweetheart-dark .mo-main-content,
 .mo-theme-macaron-sweetheart-light .mo-body-content,
 .mo-theme-macaron-sweetheart-dark .mo-body-content {
+    background: var(--mo-macaron-bg);
+}
+
+.mo-theme-macaron-sweetheart-light .mo-body-content {
     background:
-        radial-gradient(circle at 12% 6%, rgba(var(--mud-palette-secondary-rgb), 0.24), transparent 20rem),
-        radial-gradient(circle at 88% 2%, rgba(var(--mud-palette-tertiary-rgb), 0.22), transparent 22rem),
-        linear-gradient(180deg, var(--mo-macaron-bg) 0%, var(--mo-macaron-bg-soft) 100%);
+        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 92%, var(--mud-palette-secondary)) 0%, var(--mo-macaron-bg) 16rem);
+}
+
+.mo-theme-macaron-sweetheart-dark .mo-body-content {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--mo-macaron-bg) 86%, var(--mud-palette-primary)) 0%, var(--mo-macaron-bg) 14rem);
 }
 
 .mo-theme-macaron-sweetheart-light .mo-navbar,
@@ -175,7 +179,7 @@
 .mo-theme-macaron-sweetheart-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
     border-color: var(--mo-macaron-border-strong);
     box-shadow: var(--mo-macaron-shadow-strong);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 :root[data-theme="macaron-sweetheart-light"] .mud-popover:not(.mud-tooltip),

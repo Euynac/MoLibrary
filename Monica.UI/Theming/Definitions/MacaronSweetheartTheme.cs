@@ -9,9 +9,9 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
 {
     private static readonly string[] HandwrittenFontFamily =
     [
+        "Nunito",
         "Xiaolai",
         "DynaPuff",
-        "Nunito",
         "sans-serif"
     ];
 
@@ -194,15 +194,15 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
             DarkDarken = "#EBD0DB",
             DarkContrastText = "#241821",
 
-            Background = "#241821",
-            BackgroundGray = "#2B1C28",
-            Surface = "#30202C",
+            Background = "#3B2835",
+            BackgroundGray = "#46303F",
+            Surface = "#4A3444",
 
-            DrawerBackground = "#2A1A26",
+            DrawerBackground = "#432D3B",
             DrawerText = "#FFF1F7",
             DrawerIcon = "#F2B5CC",
 
-            AppbarBackground = "rgba(36, 24, 33, 0.94)",
+            AppbarBackground = "rgba(59, 40, 53, 0.94)",
             AppbarText = "#FFF1F7",
 
             TextPrimary = "#FFF1F7",
@@ -211,7 +211,7 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
 
             ActionDefault = "#F2B5CC",
             ActionDisabled = "#785665",
-            ActionDisabledBackground = "#3A2734",
+            ActionDisabledBackground = "#533A4B",
 
             Divider = "rgba(255, 177, 202, 0.22)",
             DividerLight = "rgba(255, 177, 202, 0.12)",
@@ -219,8 +219,8 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
             LinesInputs = "rgba(255, 177, 202, 0.34)",
 
             TableLines = "rgba(255, 177, 202, 0.16)",
-            TableStriped = "#2A1A26",
-            TableHover = "#3A2734",
+            TableStriped = "#432D3B",
+            TableHover = "#533A4B",
 
             OverlayDark = "rgba(12, 7, 11, 0.72)",
             OverlayLight = "rgba(255, 241, 247, 0.12)",
@@ -231,7 +231,7 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
             GrayLight = "#C8A6B5",
             GrayLighter = "#E8C6D4",
             GrayDark = "#785665",
-            GrayDarker = "#4D3442"
+            GrayDarker = "#604357"
         };
     }
 
@@ -304,31 +304,31 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
         return
         [
             "none",
-            "0 2px 4px rgba(93, 66, 80, 0.06)",
-            "0 4px 10px rgba(244, 143, 177, 0.12)",
-            "0 6px 16px rgba(244, 143, 177, 0.14)",
-            "0 8px 22px rgba(244, 143, 177, 0.16)",
-            "0 10px 28px rgba(244, 143, 177, 0.18)",
-            "0 12px 34px rgba(244, 143, 177, 0.20)",
-            "0 14px 40px rgba(244, 143, 177, 0.21)",
-            "0 16px 46px rgba(244, 143, 177, 0.22)",
-            "0 18px 52px rgba(244, 143, 177, 0.23)",
-            "0 20px 58px rgba(244, 143, 177, 0.24)",
-            "0 22px 64px rgba(244, 143, 177, 0.25)",
-            "0 24px 70px rgba(244, 143, 177, 0.26)",
-            "0 26px 76px rgba(244, 143, 177, 0.27)",
-            "0 28px 82px rgba(244, 143, 177, 0.28)",
-            "0 30px 88px rgba(244, 143, 177, 0.29)",
-            "0 32px 94px rgba(244, 143, 177, 0.30)",
-            "0 34px 100px rgba(244, 143, 177, 0.31)",
-            "0 36px 106px rgba(244, 143, 177, 0.32)",
-            "0 38px 112px rgba(244, 143, 177, 0.33)",
-            "0 40px 118px rgba(244, 143, 177, 0.34)",
-            "0 42px 124px rgba(244, 143, 177, 0.35)",
-            "0 44px 130px rgba(244, 143, 177, 0.36)",
-            "0 46px 136px rgba(244, 143, 177, 0.37)",
-            "0 48px 142px rgba(244, 143, 177, 0.38)",
-            "0 50px 148px rgba(244, 143, 177, 0.39)"
+            "0 1px 2px rgba(93, 66, 80, 0.04)",
+            "0 2px 6px rgba(244, 143, 177, 0.07)",
+            "0 4px 10px rgba(244, 143, 177, 0.08)",
+            "0 6px 14px rgba(244, 143, 177, 0.09)",
+            "0 8px 18px rgba(244, 143, 177, 0.10)",
+            "0 10px 22px rgba(244, 143, 177, 0.11)",
+            "0 12px 26px rgba(244, 143, 177, 0.12)",
+            "0 14px 30px rgba(244, 143, 177, 0.13)",
+            "0 16px 34px rgba(244, 143, 177, 0.14)",
+            "0 18px 38px rgba(244, 143, 177, 0.15)",
+            "0 20px 42px rgba(244, 143, 177, 0.16)",
+            "0 22px 46px rgba(244, 143, 177, 0.17)",
+            "0 24px 50px rgba(244, 143, 177, 0.18)",
+            "0 26px 54px rgba(244, 143, 177, 0.19)",
+            "0 28px 58px rgba(244, 143, 177, 0.20)",
+            "0 30px 62px rgba(244, 143, 177, 0.21)",
+            "0 32px 66px rgba(244, 143, 177, 0.22)",
+            "0 34px 70px rgba(244, 143, 177, 0.23)",
+            "0 36px 74px rgba(244, 143, 177, 0.24)",
+            "0 38px 78px rgba(244, 143, 177, 0.25)",
+            "0 40px 82px rgba(244, 143, 177, 0.26)",
+            "0 42px 86px rgba(244, 143, 177, 0.27)",
+            "0 44px 90px rgba(244, 143, 177, 0.28)",
+            "0 46px 94px rgba(244, 143, 177, 0.29)",
+            "0 48px 98px rgba(244, 143, 177, 0.30)"
         ];
     }
 }
