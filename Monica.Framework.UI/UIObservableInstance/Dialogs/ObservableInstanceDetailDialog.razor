@@ -1,10 +1,12 @@
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <MudDialog>
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudIcon Icon="@Icons.Material.Filled.Info" />
-            <MudText Typo="Typo.h6">实例详情</MudText>
+            <MudText Typo="Typo.h6">@L["Detail:Title"]</MudText>
         </MudStack>
     </TitleContent>
     <DialogContent>
@@ -14,11 +16,11 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info">未选择实例</MudAlert>
+            <MudAlert Severity="Severity.Info">@L["Shared:States:NoInstanceSelected"]</MudAlert>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+        <MudButton OnClick="Close" Color="Color.Primary">@L["Shared:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 

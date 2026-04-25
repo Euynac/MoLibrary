@@ -2,12 +2,14 @@
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Framework.UI.UIObservableInstance.Components
 @using Monica.Core.Results;
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Support
 @inject ObservableInstanceMonitorService MonitorService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IStringLocalizer<ObservableInstanceResource> L
 
-<PageTitle>Observable Instance 监控</PageTitle>
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <!-- Header -->
@@ -15,7 +17,7 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Primary" />
-                <MudText Typo="Typo.h4">Observable Instance 监控</MudText>
+                <MudText Typo="Typo.h4">@L["Page:Header:Title"]</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh"
@@ -23,7 +25,7 @@
                           Variant="Variant.Outlined"
                           OnClick="RefreshAsync"
                           Size="Size.Medium">
-                    刷新
+                    @L["Shared:Actions:Refresh"]
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -33,7 +35,7 @@
     {
         <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载实例信息...</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Primary">@L["Page:States:LoadingInstances"]</MudText>
         </MudStack>
     }
     else
@@ -41,7 +43,7 @@
         <!-- Tabs -->
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-4">
             <!-- Overview Tab -->
-            <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
+            <MudTabPanel Text="@L["Page:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
                 <ObservableInstanceStatisticsCard Statistics="_statistics" />
 
                 @if (_exceptionsPreview.Any())
@@ -51,10 +53,10 @@
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" />
-                                    <MudText Typo="Typo.h6">最近异常</MudText>
+                                    <MudText Typo="Typo.h6">@L["Page:RecentExceptions:Title"]</MudText>
                                 </MudStack>
                                 <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                                    @_exceptionsPreview.Count 个实例有异常
+                                    @L["Page:RecentExceptions:Count", _exceptionsPreview.Count]
                                 </MudChip>
                             </MudStack>
 
@@ -65,24 +67,24 @@
                                           Hover="true"
                                           OnRowClick="HandleExceptionPreviewRowClickAsync">
                                     <HeaderContent>
-                                        <MudTh Class="id-header">实例ID</MudTh>
-                                        <MudTh>名称</MudTh>
-                                        <MudTh>异常数</MudTh>
-                                        <MudTh>最后更新</MudTh>
+                                        <MudTh Class="id-header">@L["Shared:Fields:InstanceId"]</MudTh>
+                                        <MudTh>@L["Shared:Fields:Name"]</MudTh>
+                                        <MudTh>@L["Shared:Fields:ExceptionCount"]</MudTh>
+                                        <MudTh>@L["Shared:Fields:LastUpdated"]</MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
-                                        <MudTd DataLabel="实例ID" Class="id-cell">
+                                        <MudTd DataLabel="@L["Shared:Fields:InstanceId"]" Class="id-cell">
                                             <MudTooltip Text="@context.InstanceId" RootClass="id-tooltip">
                                                 <span class="id-text">@context.InstanceId</span>
                                             </MudTooltip>
                                         </MudTd>
-                                        <MudTd DataLabel="名称">
+                                        <MudTd DataLabel="@L["Shared:Fields:Name"]">
                                             <span class="cell-text">@context.InstanceName</span>
                                         </MudTd>
                                         <MudTd>
                                             <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.ExceptionCount</MudChip>
                                         </MudTd>
-                                        <MudTd DataLabel="最后更新">
+                                        <MudTd DataLabel="@L["Shared:Fields:LastUpdated"]">
                                             <span class="cell-text">@context.StateChangedAtDisplay</span>
                                         </MudTd>
                                     </RowTemplate>
@@ -94,7 +96,7 @@
             </MudTabPanel>
 
             <!-- All Instances Tab -->
-            <MudTabPanel Text="全部实例" Icon="@Icons.Material.Filled.List">
+            <MudTabPanel Text="@L["Page:Tabs:AllInstances"]" Icon="@Icons.Material.Filled.List">
                 <ObservableInstanceFilterPanel Filter="_filter" OnFilterChanged="ApplyFilterAsync" />
 
                 <ObservableInstanceTable Instances="_displayedInstances"
@@ -104,7 +106,7 @@
             </MudTabPanel>
 
             <!-- By Group Tab -->
-            <MudTabPanel Text="按组" Icon="@Icons.Material.Filled.Group">
+            <MudTabPanel Text="@L["Page:Tabs:ByGroup"]" Icon="@Icons.Material.Filled.Group">
                 @if (_instancesByGroup.Any())
                 {
                     <MudStack Spacing="3">
@@ -115,10 +117,10 @@
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                             <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Tertiary" />
-                                            <MudText Typo="Typo.h6">@groupPair.Key</MudText>
+                                            <MudText Typo="Typo.h6">@(string.IsNullOrEmpty(groupPair.Key) ? L["Shared:Labels:Ungrouped"] : groupPair.Key)</MudText>
                                         </MudStack>
                                         <MudChip T="string" Color="Color.Tertiary" Size="Size.Small">
-                                            @groupPair.Value.Count 个实例
+                                        @L["Page:Group:Count", groupPair.Value.Count]
                                         </MudChip>
                                     </MudStack>
                                     <ObservableInstanceTable Instances="groupPair.Value"
@@ -132,12 +134,12 @@
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info">暂无分组实例</MudAlert>
+                    <MudAlert Severity="Severity.Info">@L["Page:Group:Empty"]</MudAlert>
                 }
             </MudTabPanel>
 
             <!-- Exceptions Only Tab -->
-            <MudTabPanel Text="仅异常" Icon="@Icons.Material.Filled.Error" BadgeData="@_exceptionsPreview.Count" BadgeColor="@(_exceptionsPreview.Any() ? Color.Error : Color.Default)">
+            <MudTabPanel Text="@L["Page:Tabs:ExceptionsOnly"]" Icon="@Icons.Material.Filled.Error" BadgeData="@_exceptionsPreview.Count" BadgeColor="@(_exceptionsPreview.Any() ? Color.Error : Color.Default)">
                 <ObservableInstanceTable Instances="_exceptionsPreview"
                                         Loading="_loading"
                                         OnRowClick="ShowInstanceDetail"
@@ -183,7 +185,7 @@
             // Load instances
             if ((await MonitorService.GetAllInstancesAsync()).IsFailed(out var error, out var instances))
             {
-                Snackbar.Add("加载实例列表失败: " + error, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadInstancesFailed", error], Severity.Error);
             }
             else
             {
@@ -194,7 +196,7 @@
             // Load statistics
             if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
             {
-                Snackbar.Add("加载统计信息失败: " + statsError, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadStatisticsFailed", statsError], Severity.Error);
             }
             else
             {
@@ -204,7 +206,7 @@
             // Load exceptions preview
             if ((await MonitorService.GetInstancesWithExceptionsAsync()).IsFailed(out var excError, out var exceptions))
             {
-                Snackbar.Add("加载异常实例失败: " + excError, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadExceptionInstancesFailed", excError], Severity.Error);
             }
             else
             {
@@ -216,7 +218,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载数据时发生错误: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Messages:LoadDataException", ex.Message], Severity.Error);
         }
         finally
         {
@@ -228,7 +230,7 @@
     private async Task RefreshAsync()
     {
         await LoadDataAsync();
-        Snackbar.Add("数据已刷新", Severity.Success);
+        Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
     }
 
     private Task ApplyFilterAsync()
@@ -283,14 +285,14 @@
         // Group by GroupId
         _instancesByGroup = _allInstances
             .Where(i => i.HasGroup)
-            .GroupBy(i => i.GroupIdDisplay)
+            .GroupBy(i => i.GroupId ?? string.Empty)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // Add ungrouped instances as separate group
         var ungrouped = _allInstances.Where(i => !i.HasGroup).ToList();
         if (ungrouped.Any())
         {
-            _instancesByGroup["Ungrouped"] = ungrouped;
+            _instancesByGroup[string.Empty] = ungrouped;
         }
     }
 
@@ -314,25 +316,25 @@
             FullWidth = true
         };
 
-        await DialogService.ShowAsync<ObservableInstanceDetailDialog>($"实例详情 - {instance.InstanceName}", parameters, options);
+        await DialogService.ShowAsync<ObservableInstanceDetailDialog>(L["Page:Dialog:DetailTitle", instance.InstanceName], parameters, options);
     }
 
     private async Task ClearInstanceHistoryWithConfirmAsync(ObservableInstanceViewModel instance)
     {
         bool? result = await DialogService.ShowMessageBoxAsync(
-            "确认",
-            $"确定要清除实例 '{instance.InstanceName}' 的历史记录吗？",
-            yesText: "确定", cancelText: "取消");
+            L["Page:Dialog:ConfirmTitle"],
+            L["Page:Dialog:ClearHistoryMessage", instance.InstanceName],
+            yesText: L["Page:Dialog:Confirm"], cancelText: L["Page:Dialog:Cancel"]);
 
         if (result == true)
         {
             if ((await MonitorService.ClearInstanceHistoryAsync(instance.InstanceId)).IsFailed(out var error))
             {
-                Snackbar.Add("清除历史失败: " + error, Severity.Error);
+                Snackbar.Add(L["Page:Messages:ClearHistoryFailed", error], Severity.Error);
                 return;
             }
 
-            Snackbar.Add("历史记录已清除", Severity.Success);
+            Snackbar.Add(L["Page:Messages:ClearHistorySucceeded"], Severity.Success);
             await RefreshAsync();
         }
     }

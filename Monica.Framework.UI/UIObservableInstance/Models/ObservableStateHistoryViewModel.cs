@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Localization.Services;
+using Monica.Framework.UI.Localization;
 using Monica.Core.Extensions;
 using Monica.Framework.UI.UIObservableInstance.Support;
 using Monica.Tool.Extensions;
@@ -85,24 +87,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Relative time display ("2 minutes ago" format)
     /// </summary>
-    public string RelativeTimeDisplay
-    {
-        get
-        {
-            var elapsed = DateTime.UtcNow - Timestamp;
-
-            if (elapsed.TotalSeconds < 60)
-                return $"{(int)elapsed.TotalSeconds}秒前";
-            if (elapsed.TotalMinutes < 60)
-                return $"{(int)elapsed.TotalMinutes}分钟前";
-            if (elapsed.TotalHours < 24)
-                return $"{(int)elapsed.TotalHours}小时前";
-            if (elapsed.TotalDays < 7)
-                return $"{(int)elapsed.TotalDays}天前";
-
-            return TimestampDisplay;
-        }
-    }
+    public string RelativeTimeDisplay => LocalizationManager.For<ObservableInstanceResource>().FormatRelativeTime(Timestamp);
 
     /// <summary>
     /// Exception message (if exception exists)
@@ -139,7 +124,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Log level text for display
     /// </summary>
-    public string LogLevelText => LogLevel?.ToString() ?? "Unknown";
+    public string LogLevelText => LocalizationManager.For<ObservableInstanceResource>().GetLogLevelText(LogLevel);
 
     /// <summary>
     /// Log level color
@@ -191,13 +176,7 @@ public class ObservableStateHistoryViewModel
     /// <summary>
     /// Entry type description
     /// </summary>
-    public string EntryTypeDescription => (IsException, IsStateTransition) switch
-    {
-        (true, true) => "状态变更（异常）",
-        (true, false) => "异常",
-        (false, true) => "状态变更",
-        (false, false) => "消息"
-    };
+    public string EntryTypeDescription => LocalizationManager.For<ObservableInstanceResource>().GetEntryTypeDescription(this);
 
     #endregion
 

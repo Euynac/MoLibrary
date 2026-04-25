@@ -1,16 +1,18 @@
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.UI.UIStackTrace.Components
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <div class="exception-list">
     @if (Exceptions == null || !Exceptions.Any())
     {
-        <MudAlert Severity="Severity.Success">无异常记录</MudAlert>
+        <MudAlert Severity="Severity.Success">@L["Shared:States:NoExceptions"]</MudAlert>
     }
     else
     {
         <MudStack Spacing="2">
         <MudText Typo="Typo.body1">
-            共 @Exceptions.Count 个异常记录
+            @L["Shared:Counts:ExceptionRecords", Exceptions.Count]
         </MudText>
 
         <MudStack Spacing="3">
@@ -28,7 +30,7 @@
                                     @exception.ExceptionMessage
                                 </MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @exception.RelativeTimeDisplay
+                                    @L.FormatRelativeTime(exception.Timestamp)
                                 </MudText>
                             </MudStack>
                         </TitleContent>
@@ -37,19 +39,19 @@
                                 <MudStack Spacing="3">
                                     <!-- Exception Details -->
                                     <div>
-                                        <MudText Typo="Typo.subtitle2">异常详情</MudText>
+                                        <MudText Typo="Typo.subtitle2">@L["Shared:Fields:ExceptionDetails"]</MudText>
                                         <MudStack Spacing="2" Class="mt-2">
                                             <div>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">类型:</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:ExceptionType"]:</MudText>
                                                 <MudText Typo="Typo.body2">@exception.ExceptionType</MudText>
                                             </div>
                                             <div>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">消息:</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:ExceptionMessage"]:</MudText>
                                                 <MudText Typo="Typo.body2">@exception.ExceptionMessage</MudText>
                                             </div>
                                             <div>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">时间:</MudText>
-                                                <MudText Typo="Typo.body2">@exception.TimestampDisplay (@exception.RelativeTimeDisplay)</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:ExceptionTime"]:</MudText>
+                                                <MudText Typo="Typo.body2">@exception.TimestampDisplay (@L.FormatRelativeTime(exception.Timestamp))</MudText>
                                             </div>
                                         </MudStack>
                                     </div>
@@ -58,7 +60,7 @@
                                     @if (!string.IsNullOrEmpty(exception.ExceptionStackTrace))
                                     {
                                         <div>
-                                            <MudText Typo="Typo.subtitle2" Class="mb-2">堆栈跟踪</MudText>
+                                            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Shared:Fields:StackTrace"]</MudText>
                                             <MudPaper Class="pa-3 scroll-panel-lg" Elevation="0" Outlined="true">
                                                 <StackTraceViewer Message="@exception.ExceptionStackTrace" />
                                             </MudPaper>
@@ -69,7 +71,7 @@
                                     @if (!string.IsNullOrEmpty(exception.Message))
                                     {
                                         <div>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">上下文信息:</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Context"]:</MudText>
                                             <MudText Typo="Typo.body2">@exception.Message</MudText>
                                         </div>
                                     }
@@ -78,15 +80,15 @@
                                     @if (exception.IsStateTransition)
                                     {
                                         <div>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">状态变更:</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">@L["Shared:Fields:StateChange"]:</MudText>
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                                 <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">之前:</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:Previous"]:</MudText>
                                                     <MudText Typo="Typo.caption">@exception.PreviousStateDisplay</MudText>
                                                 </MudPaper>
                                                 <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
                                                 <MudPaper Class="pa-2 flex-grow-1" Elevation="0" Outlined="true">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">之后:</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Shared:Fields:After"]:</MudText>
                                                     <MudText Typo="Typo.caption">@exception.CurrentStateDisplay</MudText>
                                                 </MudPaper>
                                             </MudStack>
