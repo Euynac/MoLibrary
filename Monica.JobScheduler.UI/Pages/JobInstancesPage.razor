@@ -140,7 +140,7 @@
             <MudTd DataLabel="@L["JobInstances:Columns:InstanceId"]">
                 <MudTooltip Text="@context.InstanceId">
                     <MudText Typo="Typo.body2" Style="font-family: monospace;">
-                        @context.InstanceId.Substring(0, Math.Min(8, context.InstanceId.Length))...
+                        @(context.InstanceId.Length > 8 ? context.InstanceId[..8] + "..." : context.InstanceId)
                     </MudText>
                 </MudTooltip>
             </MudTd>
