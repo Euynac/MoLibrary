@@ -64,14 +64,16 @@
                 <MudText Typo="Typo.h6" Class="mb-3">@L["Dialogs:JobInstanceDetail:BasicInfo"]</MudText>
                 <MudGrid>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
-                        <MudTooltip Text="@_jobInstance.InstanceId">
-                            <MudLink Typo="Typo.body1"
-                                     Style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; cursor: pointer;"
-                                     OnClick="CopyInstanceIdAsync">
-                                @_jobInstance.InstanceId
-                            </MudLink>
-                        </MudTooltip>
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:InstanceId"]</MudText>
+                            <MudTooltip Text="@_jobInstance.InstanceId">
+                                <MudLink Typo="Typo.body1"
+                                         Style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; cursor: pointer;"
+                                         OnClick="CopyInstanceIdAsync">
+                                    @_jobInstance.InstanceId
+                                </MudLink>
+                            </MudTooltip>
+                        </MudStack>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:JobKey"]</MudText>
@@ -82,10 +84,12 @@
                         <MudText Typo="Typo.body1" Style="font-family: monospace; overflow-wrap: anywhere;" title="@_jobInstance.RunningClientId">@(_jobInstance.RunningClientId ?? "-")</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:State"]</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
-                            @_jobInstance.State
-                        </MudChip>
+                        <MudStack Spacing="1" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:State"]</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(_jobInstance.State)">
+                                @_jobInstance.State
+                            </MudChip>
+                        </MudStack>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:JobInstanceDetail:RetryCount"]</MudText>
