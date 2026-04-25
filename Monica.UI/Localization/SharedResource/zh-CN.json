@@ -37,6 +37,10 @@
       "ink-landscape": {
         "Name": "墨韵山水",
         "Description": "水墨留白风格，沉静克制"
+      },
+      "zen-ink": {
+        "Name": "禅墨",
+        "Description": "极简中国水墨画风格，大面积留白与笔触之美"
       }
     }
   },

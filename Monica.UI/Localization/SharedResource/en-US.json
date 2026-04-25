@@ -37,6 +37,10 @@
       "ink-landscape": {
         "Name": "Ink Landscape",
         "Description": "Ink-wash style with quiet contrast"
+      },
+      "zen-ink": {
+        "Name": "Zen Sumi-e",
+        "Description": "Minimalist Chinese ink wash painting style with ample white space"
       }
     }
   },

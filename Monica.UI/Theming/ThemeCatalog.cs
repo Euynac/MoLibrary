@@ -26,6 +26,7 @@ public static class ThemeCatalog
         RegisterTheme(new MaterialDesign3Theme());
         RegisterTheme(new FreshTheme());
         RegisterTheme(new InkLandscapeTheme());
+        RegisterTheme(new ZenInkTheme());
     }
 
     /// <summary>

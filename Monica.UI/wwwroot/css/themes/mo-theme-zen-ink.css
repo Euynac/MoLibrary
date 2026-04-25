@@ -1,0 +1,303 @@
+/* Monica Zen Ink Theme - Minimalist Chinese ink wash UI */
+
+:root[data-theme="zen-ink-light"],
+:root[data-theme="zen-ink-dark"],
+.mo-theme-zen-ink-light,
+.mo-theme-zen-ink-dark {
+    /* Fonts: traditional serif with elegant spacing */
+    --mo-zen-font: 'Noto Serif SC', 'Source Han Serif SC', STZhongsong, serif;
+    
+    /* Brush stroke irregularity for buttons/cards */
+    --mo-zen-radius-irregular: 2px 8px 3px 6px / 4px 3px 6px 4px;
+    --mo-zen-radius-sm: 2px;
+    --mo-zen-transition: 200ms ease-out;
+    
+    --mo-nav-menu-border-radius: var(--mo-zen-radius-sm);
+}
+
+/* Light Mode Variables */
+:root[data-theme="zen-ink-light"],
+.mo-theme-zen-ink-light {
+    --mo-zen-bg: #ffffff;
+    --mo-zen-surface: #fdfdfd;
+    --mo-zen-surface-strong: #ffffff;
+    --mo-zen-surface-muted: #f5f5f5;
+    
+    --mo-zen-text: #1a1a1a;
+    --mo-zen-muted: #595959;
+    
+    --mo-zen-border: rgba(0, 0, 0, 0.12);
+    --mo-zen-border-strong: rgba(0, 0, 0, 0.26);
+    
+    --mo-zen-hover: rgba(0, 0, 0, 0.04);
+    --mo-zen-selected: rgba(63, 95, 80, 0.08); /* Primary cyan-green low opacity */
+    
+    --mo-zen-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.15);
+    
+    /* Ink fade gradient for dividers */
+    --mo-zen-ink-fade: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.4) 20%, rgba(0, 0, 0, 0.4) 80%, transparent);
+}
+
+/* Dark Mode Variables */
+:root[data-theme="zen-ink-dark"],
+.mo-theme-zen-ink-dark {
+    --mo-zen-bg: #121212;
+    --mo-zen-surface: #1c1c1c;
+    --mo-zen-surface-strong: #1a1a1a;
+    --mo-zen-surface-muted: #262626;
+    
+    --mo-zen-text: #e0e0e0;
+    --mo-zen-muted: #a6a6a6;
+    
+    --mo-zen-border: rgba(255, 255, 255, 0.12);
+    --mo-zen-border-strong: rgba(255, 255, 255, 0.24);
+    
+    --mo-zen-hover: rgba(255, 255, 255, 0.08);
+    --mo-zen-selected: rgba(106, 156, 134, 0.15);
+    
+    --mo-zen-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+    
+    /* Ink fade gradient for dividers */
+    --mo-zen-ink-fade: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3) 20%, rgba(255, 255, 255, 0.3) 80%, transparent);
+}
+
+/* Base Styles */
+.mo-theme-zen-ink-light,
+.mo-theme-zen-ink-dark {
+    background: var(--mo-zen-bg);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-zen-font);
+}
+
+/* Typography Overrides */
+.mo-theme-zen-ink-light :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-zen-ink-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-zen-ink-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
+.mo-theme-zen-ink-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+    font-family: var(--mo-zen-font);
+}
+
+/* High White Space Layout */
+.mo-theme-zen-ink-light .mo-layout,
+.mo-theme-zen-ink-dark .mo-layout,
+.mo-theme-zen-ink-light .mo-main-content,
+.mo-theme-zen-ink-dark .mo-main-content {
+    background: var(--mo-zen-bg);
+}
+
+/* Navigation & Appbar */
+.mo-theme-zen-ink-light .mo-navbar,
+.mo-theme-zen-ink-dark .mo-navbar,
+.mo-theme-zen-ink-light .mud-appbar,
+.mo-theme-zen-ink-dark .mud-appbar {
+    background: color-mix(in srgb, var(--mo-zen-bg) 95%, transparent);
+    border-bottom: 1px solid transparent;
+    border-image: var(--mo-zen-ink-fade) 1;
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+}
+
+.mo-theme-zen-ink-light .navbar-link,
+.mo-theme-zen-ink-dark .navbar-link,
+.mo-theme-zen-ink-light .navbar-measure-link,
+.mo-theme-zen-ink-dark .navbar-measure-link {
+    color: var(--mo-zen-muted);
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+    border-radius: var(--mo-zen-radius-irregular);
+    transition: all var(--mo-zen-transition);
+}
+
+.mo-theme-zen-ink-light .navbar-link:hover,
+.mo-theme-zen-ink-dark .navbar-link:hover {
+    color: var(--mo-zen-text);
+    background: transparent;
+    text-shadow: 0 0 1px rgba(0,0,0,0.2);
+}
+
+.mo-theme-zen-ink-light .navbar-link.active,
+.mo-theme-zen-ink-dark .navbar-link.active {
+    color: var(--mud-palette-primary);
+    background: transparent;
+    font-weight: 600;
+}
+
+/* Active Nav indicator as an ink blot underline */
+.mo-theme-zen-ink-light .navbar-link::before,
+.mo-theme-zen-ink-dark .navbar-link::before {
+    height: 3px;
+    background: var(--mud-palette-primary);
+    opacity: 0;
+    border-radius: 50%;
+    transform: scaleX(0.2);
+    transition: transform var(--mo-zen-transition), opacity var(--mo-zen-transition);
+    bottom: 2px;
+}
+
+.mo-theme-zen-ink-light .navbar-link.active::before,
+.mo-theme-zen-ink-dark .navbar-link.active::before {
+    opacity: 0.8;
+    transform: scaleX(1);
+}
+
+/* Brush stroke buttons */
+.mo-theme-zen-ink-light .mud-button,
+.mo-theme-zen-ink-dark .mud-button {
+    border-radius: var(--mo-zen-radius-irregular);
+    box-shadow: none;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: all var(--mo-zen-transition);
+}
+
+.mo-theme-zen-ink-light :is(.mud-button-filled, .mud-button-outlined),
+.mo-theme-zen-ink-dark :is(.mud-button-filled, .mud-button-outlined) {
+    border: 1px solid var(--mo-zen-border-strong);
+}
+
+.mo-theme-zen-ink-light .mud-button-filled-primary,
+.mo-theme-zen-ink-dark .mud-button-filled-primary {
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+    border: none;
+}
+
+.mo-theme-zen-ink-light .mud-button:hover,
+.mo-theme-zen-ink-dark .mud-button:hover {
+    transform: translateY(-1px);
+}
+
+/* Cards & Surfaces with large white space */
+.mo-theme-zen-ink-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-zen-ink-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+    background: var(--mo-zen-surface);
+    border: 1px solid var(--mo-zen-border);
+    border-radius: var(--mo-zen-radius-sm);
+    box-shadow: none;
+}
+
+.mo-theme-zen-ink-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-zen-ink-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+    transition: border-color var(--mo-zen-transition), box-shadow var(--mo-zen-transition);
+}
+
+.mo-theme-zen-ink-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-zen-ink-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+    border-color: var(--mo-zen-border-strong);
+    box-shadow: var(--mo-zen-shadow);
+}
+
+/* Menus & Popovers */
+:root[data-theme="zen-ink-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="zen-ink-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-zen-ink-light .mud-popover:not(.mud-tooltip),
+.mo-theme-zen-ink-dark .mud-popover:not(.mud-tooltip),
+.mo-theme-zen-ink-light :is(.more-menu, .flyout-menu, .dropdown-menu),
+.mo-theme-zen-ink-dark :is(.more-menu, .flyout-menu, .dropdown-menu) {
+    background: var(--mo-zen-surface-strong);
+    border: 1px solid var(--mo-zen-border);
+    border-radius: var(--mo-zen-radius-sm);
+    box-shadow: var(--mo-zen-shadow);
+}
+
+.mo-theme-zen-ink-light .mud-navmenu .mud-nav-link,
+.mo-theme-zen-ink-dark .mud-navmenu .mud-nav-link,
+.mo-theme-zen-ink-light .mud-popover .mud-menu-list .mud-menu-item,
+.mo-theme-zen-ink-dark .mud-popover .mud-menu-list .mud-menu-item {
+    border-radius: var(--mo-zen-radius-irregular); /* Ink brush feel */
+    color: var(--mo-zen-text);
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin: 4px 12px;
+    width: calc(100% - 24px);
+    transition: all var(--mo-zen-transition);
+}
+
+.mo-theme-zen-ink-light :is(.mud-navmenu .mud-nav-link:hover, .mud-popover .mud-menu-list .mud-menu-item:hover),
+.mo-theme-zen-ink-dark :is(.mud-navmenu .mud-nav-link:hover, .mud-popover .mud-menu-list .mud-menu-item:hover) {
+    background: transparent;
+    transform: translateX(4px); /* Gentle slide like reading a scroll */
+}
+
+.mo-theme-zen-ink-light :is(.mud-navmenu .mud-nav-link.active, .mud-popover .mud-menu-list .mud-menu-item.active),
+.mo-theme-zen-ink-dark :is(.mud-navmenu .mud-nav-link.active, .mud-popover .mud-menu-list .mud-menu-item.active) {
+    background: var(--mo-zen-selected);
+    color: var(--mud-palette-primary);
+    font-weight: 600;
+}
+
+/* Tables */
+.mo-theme-zen-ink-light :is(.mud-table-head th, .mud-data-grid-header-cell),
+.mo-theme-zen-ink-dark :is(.mud-table-head th, .mud-data-grid-header-cell) {
+    background: var(--mo-zen-surface-muted);
+    border-bottom: 1px solid transparent;
+    border-image: var(--mo-zen-ink-fade) 1;
+    color: var(--mo-zen-muted);
+    font-size: 0.85rem;
+    padding-top: 1.2rem;
+    padding-bottom: 1.2rem;
+}
+
+.mo-theme-zen-ink-light :is(.mud-table-cell, .mud-data-grid-cell),
+.mo-theme-zen-ink-dark :is(.mud-table-cell, .mud-data-grid-cell) {
+    border-bottom: 1px dashed var(--mo-zen-border);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* Dividers with ink brush effect */
+.mo-theme-zen-ink-light .mud-divider,
+.mo-theme-zen-ink-dark .mud-divider {
+    border-width: 0 0 1px 0;
+    border-style: solid;
+    border-color: transparent;
+    border-image: var(--mo-zen-ink-fade) 1;
+    opacity: 0.8;
+}
+
+/* Inputs */
+.mo-theme-zen-ink-light :is(.mud-input-outlined, .mud-select),
+.mo-theme-zen-ink-dark :is(.mud-input-outlined, .mud-select) {
+    border-radius: var(--mo-zen-radius-sm);
+}
+
+.mo-theme-zen-ink-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-zen-ink-dark .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-zen-border-strong);
+    border-radius: var(--mo-zen-radius-sm);
+    transition: all var(--mo-zen-transition);
+}
+
+.mo-theme-zen-ink-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border),
+.mo-theme-zen-ink-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border) {
+    border-color: var(--mud-palette-primary);
+    border-width: 2px;
+}
+
+/* Drawer */
+.mo-theme-zen-ink-light .mud-drawer,
+.mo-theme-zen-ink-dark .mud-drawer {
+    border-inline-end: 1px solid transparent;
+    border-image: linear-gradient(to bottom, transparent, var(--mo-zen-border-strong) 20%, var(--mo-zen-border-strong) 80%, transparent) 1;
+}
+
+/* Theme Selection Card */
+.mo-theme-zen-ink-light .theme-card,
+.mo-theme-zen-ink-dark .theme-card {
+    border-radius: var(--mo-zen-radius-irregular);
+}
+.mo-theme-zen-ink-light .theme-card.selected,
+.mo-theme-zen-ink-dark .theme-card.selected {
+    border-color: var(--mud-palette-primary);
+    background: var(--mo-zen-selected);
+    box-shadow: 0 0 0 1px var(--mud-palette-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-zen-ink-light *,
+    .mo-theme-zen-ink-dark * {
+        animation: none !important;
+        transition: none !important;
+    }
+}

@@ -15,6 +15,7 @@
 
 /* 4. Introduce additional theme styles */
 @import url('./themes/mo-theme-ink-landscape.css');      /* Ink Landscape theme */
+@import url('./themes/mo-theme-zen-ink.css');            /* Zen Ink theme */
 
 @import url('./markdown/mo-markdown-default.css');
 @import url('./markdown/mo-markdown-hermes-teal.css');
