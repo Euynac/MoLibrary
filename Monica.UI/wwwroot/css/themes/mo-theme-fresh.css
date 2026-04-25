@@ -33,7 +33,6 @@
     --mo-tooltip-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     
     /* Fresh hover effects */
-    --mo-clean-hover-scale: 1.015;
     --mo-clean-hover-shadow: 0 12px 30px -6px rgba(102, 203, 163, 0.15);
 }
 
@@ -67,7 +66,6 @@
     --mo-tooltip-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.4);
     
     /* Dark mode hover effects */
-    --mo-clean-hover-scale: 1.015;
     --mo-clean-hover-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.3);
 }
 
@@ -129,7 +127,7 @@
 
 .mo-theme-fresh-light .mud-card:hover,
 .mo-theme-fresh-dark .mud-card:hover {
-    transform: scale(var(--mo-clean-hover-scale));
+    transform: translateY(-2px);
     box-shadow: var(--mo-clean-hover-shadow) !important;
 }
 

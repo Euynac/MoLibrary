@@ -118,11 +118,12 @@
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudCardContent Class="pa-0">
-                        <MudDataGrid Items="@(RegistrationInfo.EnabledModules.Concat(RegistrationInfo.DisabledModules))" 
+                        <MudDataGrid Items="@GetAllModules()"
                                    SortMode="SortMode.Multiple" 
                                    Filterable="true" 
                                    Hideable="true"
                                    Dense="true"
+                                   RowsPerPage="@DefaultPageSize"
                                    T="ModuleBasicInfo"
                                    Style="min-height: 500px;">
                             <Columns>
@@ -192,6 +193,9 @@
                                     </CellTemplate>
                                 </TemplateColumn>
                             </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="ModuleBasicInfo" PageSizeOptions="PageSizeOptions" />
+                            </PagerContent>
                         </MudDataGrid>
                     </MudCardContent>
                 </MudCard>
@@ -227,6 +231,9 @@
 
 
 @code {
+    private const int DefaultPageSize = 10;
+    private static readonly int[] PageSizeOptions = [10, 20, 50, 100];
+
     /// <summary>
     /// Module registration information
     /// </summary>
