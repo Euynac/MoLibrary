@@ -1,4 +1,6 @@
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudStack Spacing="3">
@@ -6,11 +8,11 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">筛选条件</MudText>
+                <MudText Typo="Typo.h6">@L["Filter:Title"]</MudText>
                 @if (Filter?.HasAnyFilter == true)
                 {
                     <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                        @Filter.ActiveFilterCount 个筛选
+                        @L["Filter:ActiveCount", Filter.ActiveFilterCount]
                     </MudChip>
                 }
             </MudStack>
@@ -20,7 +22,7 @@
                           Size="Size.Small"
                           Color="Color.Default"
                           OnClick="ClearFilters">
-                    清除全部
+                    @L["Shared:Actions:ClearFilters"]
                 </MudButton>
             }
         </MudStack>
@@ -31,10 +33,10 @@
                 <!-- Search Text -->
                 <MudItem xs="12" md="6" lg="4">
                     <MudTextField T="string"
-                                 Label="搜索"
+                                 Label="@L["Filter:Fields:Search"]"
                                  @bind-Value="Filter.SearchText"
                                  Immediate="true"
-                                 Placeholder="输入实例ID或名称"
+                                 Placeholder="@L["Filter:Fields:SearchPlaceholder"]"
                                  Adornment="Adornment.Start"
                                  AdornmentIcon="@Icons.Material.Filled.Search"
                                  Clearable="true"
@@ -44,10 +46,10 @@
                 <!-- Group ID Filter -->
                 <MudItem xs="12" md="6" lg="4">
                     <MudTextField T="string"
-                                 Label="组ID"
+                                 Label="@L["Filter:Fields:Group"]"
                                  @bind-Value="Filter.GroupId"
                                  Immediate="true"
-                                 Placeholder="筛选指定组"
+                                 Placeholder="@L["Filter:Fields:GroupPlaceholder"]"
                                  Adornment="Adornment.Start"
                                  AdornmentIcon="@Icons.Material.Filled.Group"
                                  Clearable="true"
@@ -57,28 +59,28 @@
                 <!-- Health State Filter -->
                 <MudItem xs="12" md="6" lg="4">
                     <MudSelect T="HealthState?"
-                              Label="健康状态"
+                              Label="@L["Filter:Fields:HealthState"]"
                               @bind-Value="Filter.HealthStateFilter"
                               AnchorOrigin="Origin.BottomCenter"
                               Clearable="true"
                               OnClearButtonClick="OnFilterChanged">
-                        <MudSelectItem T="HealthState?" Value="@(null)">全部</MudSelectItem>
+                        <MudSelectItem T="HealthState?" Value="@(null)">@L["Filter:Options:All"]</MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Healthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Success" />
-                                <span>健康</span>
+                                <span>@L.GetHealthStateText(HealthState.Healthy)</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unhealthy">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Error" />
-                                <span>不健康</span>
+                                <span>@L.GetHealthStateText(HealthState.Unhealthy)</span>
                             </MudStack>
                         </MudSelectItem>
                         <MudSelectItem T="HealthState?" Value="@HealthState.Unknown">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                 <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Default" />
-                                <span>未知</span>
+                                <span>@L.GetHealthStateText(HealthState.Unknown)</span>
                             </MudStack>
                         </MudSelectItem>
                     </MudSelect>
@@ -87,48 +89,43 @@
                 <!-- Log Level Filter -->
                 <MudItem xs="12" md="6" lg="4">
                     <MudSelect T="Microsoft.Extensions.Logging.LogLevel"
-                              Label="日志级别"
+                              Label="@L["Filter:Fields:LogLevel"]"
                               MultiSelection="true"
-                              @bind-SelectedValues="_selectedLogLevels"
+                              SelectedValues="@SelectedLogLevels"
+                              SelectedValuesChanged="HandleLogLevelsChanged"
                               AnchorOrigin="Origin.BottomCenter"
                               Clearable="true"
                               OnClearButtonClick="HandleLogLevelClear">
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Critical">Critical</MudSelectItem>
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Error">Error</MudSelectItem>
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Warning">Warning</MudSelectItem>
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Information">Information</MudSelectItem>
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Debug">Debug</MudSelectItem>
-                        <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@Microsoft.Extensions.Logging.LogLevel.Trace">Trace</MudSelectItem>
+                        @foreach (var level in OrderedLogLevels)
+                        {
+                            <MudSelectItem T="Microsoft.Extensions.Logging.LogLevel" Value="@level">
+                                @L.GetLogLevelText(level)
+                            </MudSelectItem>
+                        }
                     </MudSelect>
                 </MudItem>
+
+                <!-- Quick Filters -->
+                <MudItem xs="12" md="6" lg="8">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="h-100">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Filter:Options:QuickFilters"]</MudText>
+                        <MudChip T="string"
+                                 Icon="@Icons.Material.Filled.Error"
+                                 Color="@(Filter?.ShowCriticalErrorOnly == true ? Color.Error : Color.Default)"
+                                 Variant="@(Filter?.ShowCriticalErrorOnly == true ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="ToggleCriticalErrorFilter">
+                            @L["Filter:Options:CriticalErrorOnly"]
+                        </MudChip>
+                        <MudChip T="string"
+                                 Icon="@Icons.Material.Filled.Warning"
+                                 Color="@(Filter?.ShowUnhealthyOnly == true ? Color.Warning : Color.Default)"
+                                 Variant="@(Filter?.ShowUnhealthyOnly == true ? Variant.Filled : Variant.Outlined)"
+                                 OnClick="ToggleUnhealthyFilter">
+                            @L["Filter:Options:UnhealthyOnly"]
+                        </MudChip>
+                    </MudStack>
+                </MudItem>
             </MudGrid>
-
-            <!-- Quick Filters -->
-            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">快速筛选:</MudText>
-                <MudChip T="string"
-                         Color="@(Filter?.ShowCriticalErrorOnly == true ? Color.Error : Color.Default)"
-                         Variant="@(Filter?.ShowCriticalErrorOnly == true ? Variant.Filled : Variant.Outlined)"
-                         OnClick="ToggleCriticalErrorFilter">
-                    仅显示 Critical/Error
-                </MudChip>
-                <MudChip T="string"
-                         Color="@(Filter?.ShowUnhealthyOnly == true ? Color.Warning : Color.Default)"
-                         Variant="@(Filter?.ShowUnhealthyOnly == true ? Variant.Filled : Variant.Outlined)"
-                         OnClick="ToggleUnhealthyFilter">
-                    仅显示不健康实例
-                </MudChip>
-            </MudStack>
-
-            <!-- Apply Button -->
-            <MudStack Row="true" Justify="Justify.FlexEnd">
-                <MudButton StartIcon="@Icons.Material.Filled.Done"
-                          Variant="Variant.Filled"
-                          Color="Color.Primary"
-                          OnClick="OnFilterChanged">
-                    应用筛选
-                </MudButton>
-            </MudStack>
         }
     </MudStack>
 </MudPaper>
@@ -140,34 +137,23 @@
     [Parameter]
     public EventCallback OnFilterChanged { get; set; }
 
-    private IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel> _selectedLogLevels
-    {
-        get => Filter?.LogLevels?.ToList() ?? (IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel>)Array.Empty<Microsoft.Extensions.Logging.LogLevel>();
-        set
-        {
-            if (Filter != null)
-            {
-                Filter.LogLevels = value?.Any() == true ? value.ToHashSet() : null;
-            }
-        }
-    }
+    private IReadOnlyCollection<Microsoft.Extensions.Logging.LogLevel> SelectedLogLevels =>
+        Filter?.LogLevels?.ToArray() ?? Array.Empty<Microsoft.Extensions.Logging.LogLevel>();
+
+    private static Microsoft.Extensions.Logging.LogLevel[] OrderedLogLevels { get; } =
+    [
+        Microsoft.Extensions.Logging.LogLevel.Critical,
+        Microsoft.Extensions.Logging.LogLevel.Error,
+        Microsoft.Extensions.Logging.LogLevel.Warning,
+        Microsoft.Extensions.Logging.LogLevel.Information,
+        Microsoft.Extensions.Logging.LogLevel.Debug,
+        Microsoft.Extensions.Logging.LogLevel.Trace
+    ];
 
     private async Task ClearFilters()
     {
-        if (Filter != null)
-        {
-            Filter.Clear();
-            await OnFilterChanged.InvokeAsync();
-        }
-    }
-
-    private async Task HandleLogLevelClear()
-    {
-        if (Filter != null)
-        {
-            Filter.LogLevels = null;
-            await OnFilterChanged.InvokeAsync();
-        }
+        Filter?.Clear();
+        await OnFilterChanged.InvokeAsync();
     }
 
     private async Task ToggleCriticalErrorFilter()
@@ -184,6 +170,24 @@
         if (Filter != null)
         {
             Filter.ShowUnhealthyOnly = !Filter.ShowUnhealthyOnly;
+            await OnFilterChanged.InvokeAsync();
+        }
+    }
+
+    private async Task HandleLogLevelClear()
+    {
+        if (Filter != null)
+        {
+            Filter.LogLevels = null;
+            await OnFilterChanged.InvokeAsync();
+        }
+    }
+
+    private async Task HandleLogLevelsChanged(IEnumerable<Microsoft.Extensions.Logging.LogLevel>? values)
+    {
+        if (Filter != null)
+        {
+            Filter.LogLevels = values?.ToHashSet();
             await OnFilterChanged.InvokeAsync();
         }
     }

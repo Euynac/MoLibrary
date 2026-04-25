@@ -1,12 +1,14 @@
+@using Monica.Framework.UI.Localization
 @using Monica.Framework.UI.UIObservableInstance.Models
 @using Monica.Framework.UI.UIObservableInstance.Support
+@inject IStringLocalizer<ObservableInstanceResource> L
 
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     @if (Statistics == null)
     {
         <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
             <MudProgressCircular Color="Color.Info" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">加载统计信息...</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:States:LoadingStatistics"]</MudText>
         </MudStack>
     }
     else
@@ -15,7 +17,7 @@
             <!-- Title -->
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.Dashboard" Color="Color.Info" />
-                <MudText Typo="Typo.h6">实例统计</MudText>
+                <MudText Typo="Typo.h6">@L["Statistics:Title"]</MudText>
             </MudStack>
 
             <!-- Statistics Cards Grid -->
@@ -25,7 +27,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">总实例数</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalInstances"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Primary" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.TotalInstances</MudText>
@@ -38,7 +40,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">健康实例</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:HealthyInstances"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="Color.Success">@Statistics.HealthyCount</MudText>
@@ -51,7 +53,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">不健康实例</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:UnhealthyInstances"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="Color.Error">@Statistics.UnhealthyCount</MudText>
@@ -64,7 +66,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">未知状态</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:UnknownHealth"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Default" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.UnknownHealthCount</MudText>
@@ -77,7 +79,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">总状态变更</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalStateChanges"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" Color="Color.Info" />
                             </MudStack>
                             <MudText Typo="Typo.h4">@Statistics.TotalStateChanges</MudText>
@@ -90,7 +92,7 @@
                     <MudPaper Class="pa-3" Elevation="1" Outlined="true">
                         <MudStack Spacing="1">
                             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">总异常数</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Statistics:Cards:TotalExceptions"]</MudText>
                                 <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" />
                             </MudStack>
                             <MudText Typo="Typo.h4" Color="@(Statistics.TotalExceptions > 0 ? Color.Warning : Color.Default)">@Statistics.TotalExceptions</MudText>
@@ -104,14 +106,14 @@
             {
                 <MudPaper Class="pa-3" Elevation="1">
                     <MudStack Spacing="2">
-                        <MudText Typo="Typo.subtitle1">日志级别分布</MudText>
-                        <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
-                            @foreach (var logLevel in Statistics.LogLevelDistribution.OrderBy(kv => kv.Key))
+                        <MudText Typo="Typo.subtitle1">@L["Statistics:Sections:LogLevelDistribution"]</MudText>
+                        <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                            @foreach (var logLevel in Statistics.LogLevelDistribution.OrderByDescending(kvp => kvp.Key))
                             {
                                 var color = ObservableInstanceDisplayMapping.GetLogLevelColor(logLevel.Key);
                                 var icon = ObservableInstanceDisplayMapping.GetLogLevelIcon(logLevel.Key);
                                 <MudChip T="string" Color="@color" Icon="@icon">
-                                    @logLevel.Key: @logLevel.Value
+                                    @L.GetLogLevelText(logLevel.Key): @logLevel.Value
                                 </MudChip>
                             }
                         </MudStack>
@@ -124,8 +126,8 @@
                 <MudItem xs="12" md="6">
                     <MudPaper Class="pa-3" Elevation="1">
                         <MudStack Spacing="2">
-                            <MudText Typo="Typo.subtitle1">平均历史记录</MudText>
-                            <MudText Typo="Typo.h5">@Statistics.AverageHistoryPerInstance.ToString("F2") 条/实例</MudText>
+                            <MudText Typo="Typo.subtitle1">@L["Shared:Fields:AverageHistory"]</MudText>
+                            <MudText Typo="Typo.h5">@L["Shared:Fields:PerInstance", Statistics.AverageHistoryPerInstance.ToString("F2")]</MudText>
                         </MudStack>
                     </MudPaper>
                 </MudItem>
@@ -133,10 +135,10 @@
                 <MudItem xs="12" md="6">
                     <MudPaper Class="pa-3" Elevation="1">
                         <MudStack Spacing="2">
-                            <MudText Typo="Typo.subtitle1">健康率</MudText>
+                            <MudText Typo="Typo.subtitle1">@L["Shared:Fields:HealthRate"]</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
                                 <MudText Typo="Typo.h5">@GetHealthPercentage()%</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">无异常实例占比</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Shared:Fields:HealthyInstanceRatio"]</MudText>
                             </MudStack>
                         </MudStack>
                     </MudPaper>
@@ -152,7 +154,7 @@
                         <MudItem xs="12" md="6">
                             <MudPaper Class="pa-3" Elevation="1">
                                 <MudStack Spacing="2">
-                                    <MudText Typo="Typo.subtitle1">Top 类型分布</MudText>
+                                    <MudText Typo="Typo.subtitle1">@L["Shared:Fields:TopTypeDistribution"]</MudText>
                                     <MudList T="string" Dense="true">
                                         @foreach (var typeCount in Statistics.TopTypesByCount.Take(5))
                                         {
@@ -176,13 +178,13 @@
                         <MudItem xs="12" md="6">
                             <MudPaper Class="pa-3" Elevation="1">
                                 <MudStack Spacing="2">
-                                    <MudText Typo="Typo.subtitle1">Top 组分布</MudText>
+                                    <MudText Typo="Typo.subtitle1">@L["Shared:Fields:TopGroupDistribution"]</MudText>
                                     <MudList T="string" Dense="true">
                                         @foreach (var groupCount in Statistics.TopGroupsByCount.Take(5))
                                         {
                                             <MudListItem T="string">
                                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                                    <MudText Typo="Typo.body2">@groupCount.GroupId</MudText>
+                                                    <MudText Typo="Typo.body2">@(string.IsNullOrEmpty(groupCount.GroupId) ? L["Shared:Labels:Ungrouped"] : groupCount.GroupId)</MudText>
                                                     <MudChip T="string" Size="Size.Small" Color="Color.Tertiary">@groupCount.Count</MudChip>
                                                 </MudStack>
                                             </MudListItem>

@@ -41,7 +41,7 @@ else
         {
             <div class="loading-text">
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                <MudText Typo="Typo.caption" Color="Color.Secondary">解析中...</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Components:CronExpressionDisplay:Parsing"]</MudText>
             </div>
         }
         else if (!string.IsNullOrEmpty(_description))
@@ -150,7 +150,7 @@ else
 
     private string GetTooltipText()
     {
-        if (_isLoading) return "解析中...";
+        if (_isLoading) return L["Components:CronExpressionDisplay:Parsing"].Value;
         return _description ?? Expression ?? "";
     }
 
