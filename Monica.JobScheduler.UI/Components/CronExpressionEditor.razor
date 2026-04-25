@@ -218,7 +218,7 @@
                     <MudText Typo="Typo.body2" Class="mb-2">
                         <strong>@L["Components:CronExpressionEditor:QuartzSyntaxPrefix"]</strong>@L["Components:CronExpressionEditor:QuartzSyntaxFields"]
                     </MudText>
-                    <MudTable T="CronFieldInfo" Items="@GetQuartzFields()" Hover="false" Dense="true" Breakpoint="Breakpoint.None" Elevation="0">
+                    <MudTable T="CronFieldInfo" Items="@_quartzFields" Hover="false" Dense="true" Breakpoint="Breakpoint.None" Elevation="0">
                         <HeaderContent>
                             <MudTh>@L["Components:CronExpressionEditor:FieldColumn"]</MudTh>
                             <MudTh>@L["Components:CronExpressionEditor:AllowedValuesColumn"]</MudTh>
@@ -236,7 +236,7 @@
                     <MudText Typo="Typo.body2" Class="mb-2">
                         <strong>@L["Components:CronExpressionEditor:StandardSyntaxPrefix"]</strong>@L["Components:CronExpressionEditor:StandardSyntaxFields"]
                     </MudText>
-                    <MudTable T="CronFieldInfo" Items="@GetStandardFields()" Hover="false" Dense="true" Breakpoint="Breakpoint.None" Elevation="0">
+                    <MudTable T="CronFieldInfo" Items="@_standardFields" Hover="false" Dense="true" Breakpoint="Breakpoint.None" Elevation="0">
                         <HeaderContent>
                             <MudTh>@L["Components:CronExpressionEditor:FieldColumn"]</MudTh>
                             <MudTh>@L["Components:CronExpressionEditor:AllowedValuesColumn"]</MudTh>
@@ -365,11 +365,14 @@
     private bool _cronstrueLoaded = false;
     private bool _isLoadingDescription = false;
     private IJSObjectReference? _jsModule;
+    private IReadOnlyList<CronFieldInfo> _quartzFields = [];
+    private IReadOnlyList<CronFieldInfo> _standardFields = [];
 
     protected override void OnInitialized()
     {
         _format = InitialFormat;
         SetFormatHelperText();
+        InitializeSyntaxGuideFields();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -422,7 +425,7 @@
                 var result = CronService.ConvertFormat(Value, oldFormat, _format);
                 if (result.IsFailed(out var error, out var convertedExpr))
                 {
-                    Snackbar.Add(L["Components:CronExpressionEditor:FormatConversionFailed", error.Message ?? string.Empty], Severity.Error);
+                    Snackbar.Add(error.Message ?? L["Components:CronExpressionEditor:FormatConversionFailed"], Severity.Error);
                 }
                 else
                 {
@@ -516,7 +519,7 @@
         {
             _hasError = true;
             _errorText = error.Message ?? L["Components:CronExpressionEditor:BuildExpressionFailed"].Value;
-            Snackbar.Add(L["Components:CronExpressionEditor:BuildExpressionFailedWithMessage", _errorText], Severity.Error);
+            Snackbar.Add(_errorText, Severity.Error);
             StateHasChanged();
         }
         else
@@ -549,9 +552,9 @@
             : L["Components:CronExpressionEditor:ShowToggle", target].Value;
     }
 
-    private List<CronFieldInfo> GetQuartzFields()
+    private void InitializeSyntaxGuideFields()
     {
-        return new List<CronFieldInfo>
+        _quartzFields = new List<CronFieldInfo>
         {
             new() { Field = L["Components:CronExpressionEditor:FieldSecond"].Value, AllowedValues = "0-59", SpecialChars = "* , - /" },
             new() { Field = L["Components:CronExpressionEditor:FieldMinute"].Value, AllowedValues = "0-59", SpecialChars = "* , - /" },
@@ -560,11 +563,8 @@
             new() { Field = L["Components:CronExpressionEditor:FieldMonth"].Value, AllowedValues = L["Components:CronExpressionEditor:QuartzMonthAllowedValues"].Value, SpecialChars = "* , - /" },
             new() { Field = L["Components:CronExpressionEditor:FieldWeek"].Value, AllowedValues = L["Components:CronExpressionEditor:QuartzWeekAllowedValues"].Value, SpecialChars = "* , - / ? L #" }
         };
-    }
 
-    private List<CronFieldInfo> GetStandardFields()
-    {
-        return new List<CronFieldInfo>
+        _standardFields = new List<CronFieldInfo>
         {
             new() { Field = L["Components:CronExpressionEditor:FieldMinute"].Value, AllowedValues = "0-59", SpecialChars = "* , - /" },
             new() { Field = L["Components:CronExpressionEditor:FieldHour"].Value, AllowedValues = "0-23", SpecialChars = "* , - /" },
