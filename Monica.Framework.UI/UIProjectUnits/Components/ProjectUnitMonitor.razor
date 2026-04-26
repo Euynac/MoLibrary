@@ -28,13 +28,32 @@
         }
         else if (_projectUnits.Any())
         {
+            <div class="project-units-monitor-grid">
             <MudDataGrid T="DtoProjectUnit" Items="@_projectUnits" Filterable="true"
                         SortMode="SortMode.Multiple" Groupable="true" GroupExpanded="false"
                         Dense="true" Hover="true" ReadOnly="true">
                 <Columns>
-                    <PropertyColumn Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]" />
-                    <PropertyColumn Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]" />
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]">
+                    <PropertyColumn T="DtoProjectUnit" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
+                                    HeaderClass="project-units-monitor-grid__name-column"
+                                    CellClass="project-units-monitor-grid__name-column">
+                        <CellTemplate>
+                            <MudTooltip Text="@context.Item.Title">
+                                <span class="project-units-monitor-grid__ellipsis">@context.Item.Title</span>
+                            </MudTooltip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    <PropertyColumn T="DtoProjectUnit" TProperty="string" Property="x => x.Key" Title="@L["ProjectUnitMonitor:Columns:FullName"]"
+                                    HeaderClass="project-units-monitor-grid__full-name-column"
+                                    CellClass="project-units-monitor-grid__full-name-column">
+                        <CellTemplate>
+                            <MudTooltip Text="@context.Item.Key">
+                                <span class="project-units-monitor-grid__ellipsis">@context.Item.Key</span>
+                            </MudTooltip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Type"]"
+                                    HeaderClass="project-units-monitor-grid__type-column"
+                                    CellClass="project-units-monitor-grid__type-column">
                         <CellTemplate>
                             <MudChip T="string" Size="Size.Small"
                                      Color="@ProjectUnitVisualizationConfig.GetUnitTypeMudColor(context.Item.UnitType)">
@@ -42,7 +61,9 @@
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false">
+                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Dependencies"]" Sortable="false"
+                                    HeaderClass="project-units-monitor-grid__count-column"
+                                    CellClass="project-units-monitor-grid__count-column">
                         <CellTemplate>
                             <MudChip T="int" Size="Size.Small" Color="Color.Info"
                                      Icon="@Icons.Material.Filled.Link">
@@ -50,7 +71,9 @@
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false">
+                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:DependedBy"]" Sortable="false"
+                                    HeaderClass="project-units-monitor-grid__count-column"
+                                    CellClass="project-units-monitor-grid__count-column">
                         <CellTemplate>
                             <MudChip T="int" Size="Size.Small" Color="Color.Success"
                                      Icon="@Icons.Material.Filled.CallReceived">
@@ -58,7 +81,9 @@
                             </MudChip>
                         </CellTemplate>
                     </TemplateColumn>
-                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false">
+                    <TemplateColumn Title="@L["ProjectUnitMonitor:Columns:Actions"]" Sortable="false"
+                                    HeaderClass="project-units-monitor-grid__actions-column"
+                                    CellClass="project-units-monitor-grid__actions-column">
                         <CellTemplate>
                             <MudButton Size="Size.Small"
                                       Variant="Variant.Text"
@@ -70,6 +95,7 @@
                     </TemplateColumn>
                 </Columns>
             </MudDataGrid>
+            </div>
         }
         else
         {

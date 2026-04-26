@@ -197,7 +197,13 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
                                         <MudText><strong>@L["Page:FileInfo:ProductVersion"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.ProductVersion</MudText>
+                                    <div class="system-info-file-version-value">
+                                        <MudTooltip Text="@_systemInfo.FileInfo.ProductVersion">
+                                            <MudText Class="ml-6" Color="Color.Secondary">
+                                                @_systemInfo.FileInfo.ProductVersion
+                                            </MudText>
+                                        </MudTooltip>
+                                    </div>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />
