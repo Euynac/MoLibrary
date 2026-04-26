@@ -484,7 +484,7 @@
 
         if (instance.StartedAt.HasValue)
         {
-            var duration = DateTime.UtcNow.FromUtcToLocal() - instance.StartedAt.Value.FromUtcToLocal();
+            var duration = DateTime.UtcNow - instance.StartedAt.Value;
             return $"{FormatDuration(duration)} ({L["JobInstances:Messages:Running"]})";
         }
 
