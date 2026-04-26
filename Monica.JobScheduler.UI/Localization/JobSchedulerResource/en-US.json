@@ -134,6 +134,17 @@
       "PartialSuccess": "Batch operation completed: {0} succeeded, {1} failed",
       "AllFailed": "Batch operation failed: All operations failed"
     },
+    "NextExecutionTimeTooltip": {
+      "Future": "Executes in {0}",
+      "Past": "Was due {0} ago",
+      "Now": "Due now"
+    },
+    "RelativeTime": {
+      "DaysHours": "{0}d {1}h",
+      "HoursMinutes": "{0}h {1}m",
+      "MinutesSeconds": "{0}m {1}s",
+      "Seconds": "{0}s"
+    },
     "Messages": {
       "NoRecurringJobs": "No matching recurring jobs found",
       "NoTriggerJobs": "No matching triggered jobs found",

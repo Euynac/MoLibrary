@@ -17,7 +17,7 @@
 
 @using Monica.UI.Shell.State
 
-<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
 
     <!-- filter -->
@@ -113,6 +113,7 @@
                  Rounded="true"
                  ApplyEffectsToContainer="true">
             <MudTabPanel Text="@L["JobDefinitions:Tabs:RecurringJob"]" Icon="@Icons.Material.Filled.Schedule" PanelClass="pa-6">
+            <div class="job-definitions-table-wrapper recurring-job-definitions-table">
             <MudTable @ref="_recurringTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadRecurringJobsAsync"
@@ -131,50 +132,54 @@
                                    OnClick="RefreshRecurringJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:CronExpression"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:NextExecutionTime"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:Status"]</MudTableSortLabel></MudTh>
-                    <MudTh>@L["JobDefinitions:Columns:Actions"]</MudTh>
+                    <MudTh Class="job-source-column"><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-key-column"><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-name-column"><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-cron-column"><MudTableSortLabel SortLabel="CronExpression" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:CronExpression"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-next-column"><MudTableSortLabel SortLabel="NextExecutionTime" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:NextExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-last-column"><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-status-column"><MudTableSortLabel SortLabel="IsDisabled" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:Status"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-actions-column">@L["JobDefinitions:Columns:Actions"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:SourceProject"]">@context.Definition.FromProject</MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">
-                        <MudTooltip Text="@context.Definition.JobKey">
+                    <MudTd Class="job-source-column" DataLabel="@L["JobDefinitions:Columns:SourceProject"]"><span class="job-cell-text">@context.Definition.FromProject</span></MudTd>
+                    <MudTd Class="job-key-column" DataLabel="@L["JobDefinitions:Columns:JobKey"]">
+                        <MudTooltip Text="@context.Definition.JobKey" RootClass="job-cell-tooltip">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     Color="Color.Inherit"
+                                     Class="job-cell-link"
                                      OnClick="() => CopyJobKeyAsync(context.Definition.JobKey)">
                                 @context.Definition.JobKey
                             </MudLink>
                         </MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobName"]">
-                        <MudTooltip Text="@context.Definition.JobName">
+                    <MudTd Class="job-name-column" DataLabel="@L["JobDefinitions:Columns:JobName"]">
+                        <MudTooltip Text="@context.Definition.JobName" RootClass="job-cell-tooltip">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     Color="Color.Inherit"
+                                     Class="job-cell-link job-name-link"
                                      OnClick="() => NavigateToDetail(context.Definition.JobKey)">
                                 @context.Definition.JobName
                             </MudLink>
                         </MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:CronExpression"]">
+                    <MudTd Class="job-cron-column" DataLabel="@L["JobDefinitions:Columns:CronExpression"]">
                         <CronExpressionDisplay Expression="@context.Definition.CronExpression"
                                                DisplayMode="CronDisplayMode.Compact" />
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:NextExecutionTime"]">
+                    <MudTd Class="job-next-column" DataLabel="@L["JobDefinitions:Columns:NextExecutionTime"]">
                         @if (context.NextExecutionTime.HasValue)
                         {
-                            <MudText Typo="Typo.body2">@context.NextExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            <MudTooltip Text="@GetNextExecutionTimeTooltip(context.NextExecutionTime.Value)" RootClass="job-cell-tooltip">
+                                <MudText Typo="Typo.body2" Class="job-time-text">@context.NextExecutionTime.Value.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                            </MudTooltip>
                         }
                         else
                         {
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
+                    <MudTd Class="job-last-column" DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
                         @if (context.LastExecution != null)
                         {
                             <div class="last-execution-wrapper">
@@ -192,13 +197,13 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:Status"]">
+                    <MudTd Class="job-status-column" DataLabel="@L["JobDefinitions:Columns:Status"]">
                         <MudChip T="string" Size="Size.Small" Color="@GetDisabledStateColor(context.Definition.IsDisabled)">
                             @(context.Definition.IsDisabled ? L["JobDefinitions:Status:Disabled"] : L["JobDefinitions:Status:Enabled"])
                         </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:Actions"]">
-                        <MudStack Row="true" Spacing="1">
+                    <MudTd Class="job-actions-column" DataLabel="@L["JobDefinitions:Columns:Actions"]">
+                        <MudStack Row="true" Spacing="1" Class="job-actions-stack">
                             @if (context.Definition.IsDisabled)
                             {
                                 <MudTooltip Text="@L["JobDefinitions:Actions:Resume"]">
@@ -242,9 +247,11 @@
                     <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
                 </PagerContent>
             </MudTable>
+            </div>
         </MudTabPanel>
 
         <MudTabPanel Text="@L["JobDefinitions:Tabs:TriggerJob"]" Icon="@Icons.Material.Filled.TouchApp" PanelClass="pa-6">
+            <div class="job-definitions-table-wrapper trigger-job-definitions-table">
             <MudTable @ref="_triggerTable"
                       T="JobDefinitionWithLastExecution"
                       ServerData="LoadTriggerJobsAsync"
@@ -260,33 +267,35 @@
                                    OnClick="RefreshTriggerJobsAsync" />
                 </ToolBarContent>
                 <HeaderContent>
-                    <MudTh><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
-                    <MudTh>@L["JobDefinitions:Columns:Actions"]</MudTh>
+                    <MudTh Class="job-source-column"><MudTableSortLabel SortLabel="FromProject" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:SourceProject"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-key-column"><MudTableSortLabel SortLabel="JobKey" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-name-column"><MudTableSortLabel SortLabel="JobName" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:JobName"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-last-column"><MudTableSortLabel SortLabel="LastExecution" T="JobDefinitionWithLastExecution">@L["JobDefinitions:Columns:LastExecutionTime"]</MudTableSortLabel></MudTh>
+                    <MudTh Class="job-actions-column">@L["JobDefinitions:Columns:Actions"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:SourceProject"]">@context.Definition.FromProject</MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobKey"]">
-                        <MudTooltip Text="@context.Definition.JobKey">
+                    <MudTd Class="job-source-column" DataLabel="@L["JobDefinitions:Columns:SourceProject"]"><span class="job-cell-text">@context.Definition.FromProject</span></MudTd>
+                    <MudTd Class="job-key-column" DataLabel="@L["JobDefinitions:Columns:JobKey"]">
+                        <MudTooltip Text="@context.Definition.JobKey" RootClass="job-cell-tooltip">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     Color="Color.Inherit"
+                                     Class="job-cell-link"
                                      OnClick="() => CopyJobKeyAsync(context.Definition.JobKey)">
                                 @context.Definition.JobKey
                             </MudLink>
                         </MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:JobName"]">
-                        <MudTooltip Text="@context.Definition.JobName">
+                    <MudTd Class="job-name-column" DataLabel="@L["JobDefinitions:Columns:JobName"]">
+                        <MudTooltip Text="@context.Definition.JobName" RootClass="job-cell-tooltip">
                             <MudLink Typo="Typo.body2"
-                                     Style="display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; cursor: pointer;"
+                                     Color="Color.Inherit"
+                                     Class="job-cell-link job-name-link"
                                      OnClick="() => NavigateToDetail(context.Definition.JobKey)">
                                 @context.Definition.JobName
                             </MudLink>
                         </MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
+                    <MudTd Class="job-last-column" DataLabel="@L["JobDefinitions:Columns:LastExecutionTime"]">
                         @if (context.LastExecution != null)
                         {
                             <div class="last-execution-wrapper">
@@ -304,8 +313,8 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                         }
                     </MudTd>
-                    <MudTd DataLabel="@L["JobDefinitions:Columns:Actions"]">
-                        <MudStack Row="true" Spacing="1">
+                    <MudTd Class="job-actions-column" DataLabel="@L["JobDefinitions:Columns:Actions"]">
+                        <MudStack Row="true" Spacing="1" Class="job-actions-stack">
                             <MudTooltip Text="@L["JobDefinitions:Actions:Execute"]">
                                 <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
                                                Color="Color.Primary"
@@ -331,6 +340,7 @@
                     <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
                 </PagerContent>
             </MudTable>
+            </div>
             </MudTabPanel>
         </MudTabs>
     }
@@ -654,6 +664,42 @@
     private void NavigateToDetail(string jobKey)
     {
         NavigationManager.NavigateTo($"/job-scheduler/definitions/{Uri.EscapeDataString(jobKey)}");
+    }
+
+    private string GetNextExecutionTimeTooltip(DateTime nextExecutionTime)
+    {
+        var distance = nextExecutionTime - DateTime.UtcNow;
+        var absoluteDistance = distance.Duration();
+
+        if (absoluteDistance < TimeSpan.FromSeconds(1))
+        {
+            return L["JobDefinitions:NextExecutionTimeTooltip:Now"];
+        }
+
+        var formattedDistance = FormatRelativeDistance(absoluteDistance);
+        return distance >= TimeSpan.Zero
+            ? L["JobDefinitions:NextExecutionTimeTooltip:Future", formattedDistance]
+            : L["JobDefinitions:NextExecutionTimeTooltip:Past", formattedDistance];
+    }
+
+    private string FormatRelativeDistance(TimeSpan distance)
+    {
+        if (distance.TotalDays >= 1)
+        {
+            return L["JobDefinitions:RelativeTime:DaysHours", (int)distance.TotalDays, distance.Hours];
+        }
+
+        if (distance.TotalHours >= 1)
+        {
+            return L["JobDefinitions:RelativeTime:HoursMinutes", (int)distance.TotalHours, distance.Minutes];
+        }
+
+        if (distance.TotalMinutes >= 1)
+        {
+            return L["JobDefinitions:RelativeTime:MinutesSeconds", (int)distance.TotalMinutes, distance.Seconds];
+        }
+
+        return L["JobDefinitions:RelativeTime:Seconds", Math.Max(1, (int)Math.Ceiling(distance.TotalSeconds))];
     }
 
     private async Task OpenInstanceDetailDialog(string instanceId)
