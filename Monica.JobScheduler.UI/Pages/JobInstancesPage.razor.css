@@ -77,5 +77,5 @@
 }
 
 .job-instances-table__monospace {
-    font-family: var(--mud-typography-default-family), monospace;
+    font-family: monospace;
 }
