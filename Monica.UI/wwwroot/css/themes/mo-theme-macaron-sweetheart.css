@@ -187,16 +187,16 @@
     border-radius: 999px;
 }
 
-.mo-theme-macaron-sweetheart-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     background: var(--mo-macaron-surface);
     border: 1px solid var(--mo-macaron-border);
     border-radius: var(--mo-macaron-radius);
     box-shadow: var(--mo-macaron-shadow);
 }
 
-.mo-theme-macaron-sweetheart-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
     transition:
         background-color var(--mo-macaron-transition),
         border-color var(--mo-macaron-transition),
@@ -204,8 +204,8 @@
         transform var(--mo-macaron-transition);
 }
 
-.mo-theme-macaron-sweetheart-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
-.mo-theme-macaron-sweetheart-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+.mo-theme-macaron-sweetheart-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-macaron-sweetheart-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
     border-color: var(--mo-macaron-border-strong);
     box-shadow: var(--mo-macaron-shadow-strong);
     transform: translateY(-1px);
@@ -274,8 +274,8 @@
     border-radius: 999px;
 }
 
-.mo-theme-macaron-sweetheart-light .mud-chip,
-.mo-theme-macaron-sweetheart-dark .mud-chip {
+.mo-theme-macaron-sweetheart-light .mud-chip:not(.mud-chip-filled),
+.mo-theme-macaron-sweetheart-dark .mud-chip:not(.mud-chip-filled) {
     border: 1px solid var(--mo-macaron-border);
     font-weight: 500;
 }

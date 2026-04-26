@@ -210,8 +210,8 @@
     text-transform: uppercase;
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibeusage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibeusage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     background: var(--mo-vibe-panel);
     border: 1px solid var(--mo-vibe-ghost);
     border-radius: 0;
@@ -515,13 +515,13 @@
     color: var(--mo-vibe-ink-bright);
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-vibeusage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibeusage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     overflow: hidden;
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
-.mo-theme-vibeusage-matrix-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
+.mo-theme-vibeusage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
+.mo-theme-vibeusage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -556,8 +556,8 @@
     overflow: visible;
 }
 
-.mo-theme-vibeusage-matrix-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover),
-.mo-theme-vibeusage-matrix-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not([class*="state-"]):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover) {
+.mo-theme-vibeusage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover),
+.mo-theme-vibeusage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover) {
     border-color: color-mix(in srgb, var(--mud-palette-primary) 58%, var(--mo-vibe-ghost));
     box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.10), 0 0 26px rgba(0, 255, 65, 0.12);
 }

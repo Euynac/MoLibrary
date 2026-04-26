@@ -262,7 +262,74 @@ Layout-only hooks in `mo-theme-main.css`:
 
 Do not reintroduce custom dropdown, flyout, or category-header markup in AppBar menus. If new AppBar menu behavior is needed, extend the existing `MudMenu`-based components. Themes must never target private AppBar classes.
 
-## 10. Do not treat Mud popovers like normal panels
+## 10. Broad theme surface selectors can erase semantic colors
+
+### What happens
+
+Theme CSS can accidentally flatten semantic UI when it assigns `background`, `border`, or `box-shadow` to broad MudBlazor surface selectors such as:
+
+- `.mud-card`
+- `.mud-paper[class*="mud-elevation-"]`
+
+Common symptoms:
+
+- Job health metric cards lose distinct `--mud-palette-*-darken` backgrounds.
+- Performance metric cards lose component-owned gradient backgrounds.
+- Neutral layout cards regain semantic-looking names such as `status-card`, `metric-card`, or `health-card`, but those names are not reliable signals that the card paints itself.
+- Hover states appear to be the bug because the broad theme hover selector only becomes visible during interaction.
+
+The root cause is a collision between broad theme paint and component-owned palette decisions. Themes should target standard MudBlazor selectors; they should not encode component naming conventions such as `state-*`, `status-*`, `health-*`, or `metric-*`.
+
+### What to inspect
+
+- Whether the affected `MudCard` or `MudPaper` paints its own background in component CSS.
+- Computed `background-color`, `color`, `border-color`, and `box-shadow` before and after hover.
+- Whether the losing rule comes from the component's isolated `*.bundle.scp.css` or from a global theme file under `Monica.UI/wwwroot/css/themes/`.
+- MudBlazor's own color classes such as `.mud-chip-color-success`, `.mud-warning-text`, `.mud-info-text`, and `.mud-button-filled-primary`.
+
+### Preferred fix
+
+Keep theme selectors broad only for typography, shape, spacing, and ordinary neutral surfaces. Do not repaint a component that explicitly owns its background.
+
+Use the style-less marker class `mo-self-painted`, defined in `Monica.UI/wwwroot/css/mo-theme-main.css`, for `MudCard` and `MudPaper` instances whose owning component paints the background. Theme broad surface rules must negate only that marker:
+
+```razor
+<MudPaper Class="state-succeeded mo-self-painted" />
+```
+
+```css
+.mo-theme-name-light :is(
+    .mud-card:not(.mo-self-painted),
+    .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar)
+) {
+    background: var(--theme-neutral-surface);
+}
+```
+
+For chips, broad `.mud-chip` rules may set typography, radius, and spacing only. Do not set broad chip backgrounds because filled chips rely on MudBlazor color classes for semantic state.
+
+If a custom neutral chip panel treatment is needed, scope it to the owning component wrapper. The matrix cron chips follow this pattern from commit `229f031b`:
+
+```css
+.mo-theme-name-light .mud-chip {
+    border-radius: var(--theme-chip-radius);
+}
+
+.mo-theme-name-light :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-chip-filled {
+    background: var(--theme-neutral-chip-background);
+    border-color: var(--theme-neutral-chip-border);
+}
+```
+
+### Verification rule
+
+Verify at least one page that has multiple semantic states. Job Scheduler is a good canary:
+
+1. `/job-scheduler/definitions`: status and last-execution `MudChip` colors must differ by semantic `Color`.
+2. `/job-scheduler/definitions/{jobKey}`: health metric cards such as enqueued, succeeded, failed, and cancelled must keep distinct palette backgrounds.
+3. Check both light and dark modes for any theme whose surface CSS was changed.
+
+## 11. Do not treat Mud popovers like normal panels
 
 ### What happens
 
@@ -299,7 +366,7 @@ The common failure mode is:
 3. never add layout-changing properties such as `position`, `inset`, or width rules to overlays through a broad shared selector unless you have verified MudBlazor source and live DOM behavior
 4. verify overlay size and placement on a real hover or click path, not only by reading CSS
 
-## 11. Decorative textures can overwhelm data-heavy pages
+## 12. Decorative textures can overwhelm data-heavy pages
 
 ### What happens
 
@@ -319,7 +386,7 @@ Applying scanlines both globally and again inside every card compounds the effec
 3. validate the theme on dense working pages like `module-system-dashboard` and `project-units`, not only on simpler pages
 4. if a texture draws attention before the content does, remove it
 
-## 12. Scrollable data surfaces cannot inherit decorative clipping
+## 13. Scrollable data surfaces cannot inherit decorative clipping
 
 ### What happens
 

@@ -195,21 +195,21 @@
 }
 
 /* Cards & Surfaces with large white space */
-.mo-theme-zen-ink-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-zen-ink-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     background: var(--mo-zen-surface);
     border: 1px solid var(--mo-zen-border);
     border-radius: var(--mo-zen-radius-sm);
     box-shadow: none;
 }
 
-.mo-theme-zen-ink-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
-.mo-theme-zen-ink-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
     transition: border-color var(--mo-zen-transition), box-shadow var(--mo-zen-transition);
 }
 
-.mo-theme-zen-ink-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
-.mo-theme-zen-ink-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+.mo-theme-zen-ink-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-zen-ink-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
     border-color: var(--mo-zen-border-strong);
     box-shadow: var(--mo-zen-shadow);
 }

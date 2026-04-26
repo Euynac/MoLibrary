@@ -21,7 +21,7 @@
                     <MudCardContent Class="pa-4">
                         <MudGrid Spacing="3">
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Primary">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalInitTime"]</MudText>
@@ -32,7 +32,7 @@
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Info">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalSystemPhaseDuration"]</MudText>
@@ -43,7 +43,7 @@
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Success">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseDuration"]</MudText>
@@ -54,7 +54,7 @@
                                 </MudPaper>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudPaper Class="pa-4 performance-metric-card" Elevation="2">
+                                <MudPaper Class="pa-4 performance-metric-card mo-self-painted" Elevation="2">
                                     <div class="d-flex justify-space-between align-center">
                                         <div>
                                             <MudText Typo="Typo.subtitle1" Color="Color.Warning">@L["ModuleSystem:PerformanceMonitoring:Labels:TotalModulePhaseExecutions"]</MudText>
@@ -85,7 +85,7 @@
                             <MudStack Spacing="3">
                                 @foreach (var (module, index) in SystemPerformance.SlowestModules.Take(5).Select((m, i) => (m, i)))
                                 {
-                                    <MudPaper Class="pa-4 slowest-module-card" Elevation="2">
+                                    <MudPaper Class="pa-4 slowest-module-card mo-self-painted" Elevation="2">
                                         <div class="d-flex align-center justify-space-between">
                                             <div class="d-flex align-center">
                                                 <MudAvatar Color="@GetRankColor(index)" Size="Size.Medium" Class="mr-3">
