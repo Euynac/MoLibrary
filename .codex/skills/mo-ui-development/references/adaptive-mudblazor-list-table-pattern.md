@@ -157,10 +157,10 @@ Before acceptance or PR:
 
 ## Common Pitfalls
 
-- `display: contents` makes layout work but removes the row box; empty rows need explicit spanning.
+- `display: contents` makes layout work but removes the row box; empty rows need explicit spanning, and row-level styles such as hover/background must be re-applied to cells, for example with `tr:hover td`.
 - Ellipsis fails without `min-width: 0` on flex/grid children.
 - Tooltip wrappers can become the real width owner; inspect the DOM if ellipsis does not appear.
 - Inline elements do not reliably truncate; use block-level wrappers.
-- `table-layout: fixed` alone often hides content rather than solving the column contract.
+- `table-layout: fixed` alone often hides content rather than solving the column contract. The CSS-grid pattern can also conflict with `FixedHeader="true"` because sticky header positioning needs stable parent boxes; verify fixed-header behavior before combining the two.
 - Overly small min widths on operational columns cause status/actions to disappear first, which is usually worse than truncating keys/names.
 - CSS isolation will not style MudBlazor internals unless the selector crosses from a real scoped wrapper with `::deep`.
