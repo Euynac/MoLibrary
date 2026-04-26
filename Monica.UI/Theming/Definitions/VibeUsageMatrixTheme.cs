@@ -347,14 +347,34 @@ public sealed class VibeUsageMatrixTheme : ThemeDefinitionBase
 
     private static string[] CreateTerminalShadows()
     {
-        var elevations = new string[26];
-        elevations[0] = "none";
-
-        for (var i = 1; i < elevations.Length; i++)
-        {
-            elevations[i] = "0 0 0 1px rgba(0, 255, 65, 0.08), 0 18px 40px rgba(0, 0, 0, 0.35)";
-        }
-
-        return elevations;
+        return
+        [
+            "none",
+            "0 0 0 1px rgba(0, 255, 65, 0.06), 0 1px 3px rgba(0, 0, 0, 0.10)",
+            "0 0 0 1px rgba(0, 255, 65, 0.07), 0 2px 6px rgba(0, 0, 0, 0.14)",
+            "0 0 0 1px rgba(0, 255, 65, 0.08), 0 4px 10px rgba(0, 0, 0, 0.18)",
+            "0 0 0 1px rgba(0, 255, 65, 0.09), 0 6px 14px rgba(0, 0, 0, 0.22)",
+            "0 0 0 1px rgba(0, 255, 65, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25)",
+            "0 0 0 1px rgba(0, 255, 65, 0.11), 0 10px 22px rgba(0, 0, 0, 0.28)",
+            "0 0 0 1px rgba(0, 255, 65, 0.12), 0 12px 26px rgba(0, 0, 0, 0.30)",
+            "0 0 0 1px rgba(0, 255, 65, 0.13), 0 14px 30px rgba(0, 0, 0, 0.32)",
+            "0 0 0 1px rgba(0, 255, 65, 0.14), 0 16px 34px rgba(0, 0, 0, 0.34)",
+            "0 0 0 1px rgba(0, 255, 65, 0.15), 0 18px 38px rgba(0, 0, 0, 0.36)",
+            "0 0 0 1px rgba(0, 255, 65, 0.16), 0 20px 42px rgba(0, 0, 0, 0.38)",
+            "0 0 0 1px rgba(0, 255, 65, 0.17), 0 22px 46px rgba(0, 0, 0, 0.40)",
+            "0 0 0 1px rgba(0, 255, 65, 0.18), 0 24px 50px rgba(0, 0, 0, 0.42)",
+            "0 0 0 1px rgba(0, 255, 65, 0.19), 0 26px 54px rgba(0, 0, 0, 0.44)",
+            "0 0 0 1px rgba(0, 255, 65, 0.20), 0 28px 58px rgba(0, 0, 0, 0.46)",
+            "0 0 0 1px rgba(0, 255, 65, 0.21), 0 30px 62px rgba(0, 0, 0, 0.48)",
+            "0 0 0 1px rgba(0, 255, 65, 0.22), 0 32px 66px rgba(0, 0, 0, 0.50)",
+            "0 0 0 1px rgba(0, 255, 65, 0.23), 0 34px 70px rgba(0, 0, 0, 0.52)",
+            "0 0 0 1px rgba(0, 255, 65, 0.24), 0 36px 74px rgba(0, 0, 0, 0.54)",
+            "0 0 0 1px rgba(0, 255, 65, 0.25), 0 38px 78px rgba(0, 0, 0, 0.56)",
+            "0 0 0 1px rgba(0, 255, 65, 0.26), 0 40px 82px rgba(0, 0, 0, 0.58)",
+            "0 0 0 1px rgba(0, 255, 65, 0.27), 0 42px 86px rgba(0, 0, 0, 0.60)",
+            "0 0 0 1px rgba(0, 255, 65, 0.28), 0 44px 90px rgba(0, 0, 0, 0.62)",
+            "0 0 0 1px rgba(0, 255, 65, 0.29), 0 46px 94px rgba(0, 0, 0, 0.64)",
+            "0 0 0 1px rgba(0, 255, 65, 0.30), 0 48px 98px rgba(0, 0, 0, 0.66)"
+        ];
     }
 }
