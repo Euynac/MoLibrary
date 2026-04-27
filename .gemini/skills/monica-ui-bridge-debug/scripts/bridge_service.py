@@ -343,14 +343,83 @@ def process_exists(pid: int) -> bool:
     return True
 
 
-def collect_unix_named_pids(project_name: str) -> set[int]:
+def normalize_process_match_value(value: str) -> str:
+    return value.replace("\\", "/").strip().lower()
+
+
+def extract_command_runner_name(command_line: str) -> str:
+    normalized_command = command_line.strip()
+    if not normalized_command:
+        return ""
+    if normalized_command.startswith('"'):
+        closing_quote = normalized_command.find('"', 1)
+        first_token = normalized_command[1:closing_quote] if closing_quote != -1 else normalized_command[1:]
+    else:
+        first_token = normalized_command.split(None, 1)[0]
+    return Path(first_token).name.lower() if first_token else ""
+
+
+def is_bridge_process_command_line(command_line: str | None, context: BridgeContext, image_name: str | None = None) -> bool:
+    normalized_command = normalize_process_match_value(command_line or "")
+    normalized_project_file = normalize_process_match_value(str(context.project_file))
+    normalized_project_dir = normalize_process_match_value(str(context.project_dir))
+    project_file_name = context.project_file.name.lower()
+    project_executable_name = context.project_name.lower()
+    project_executable_name_windows = f"{context.project_name}.exe".lower()
+    normalized_image_name = (image_name or "").strip().lower()
+    runner_name = extract_command_runner_name(normalized_command)
+
+    runner_names = {
+        "dotnet",
+        "dotnet.exe",
+        project_executable_name,
+        project_executable_name_windows,
+    }
+    runner_matches = runner_name in runner_names or normalized_image_name in runner_names
+
+    project_matches = any(
+        token and token in normalized_command
+        for token in (normalized_project_file, normalized_project_dir, project_file_name, project_executable_name)
+    )
+    if normalized_image_name in {project_executable_name, project_executable_name_windows}:
+        project_matches = True
+    return runner_matches and project_matches
+
+
+def build_process_entry(pid: int, command_line: str | None, image_name: str | None = None) -> dict:
+    entry = {"pid": pid}
+    if image_name:
+        entry["image_name"] = image_name
+    if command_line:
+        entry["command_line"] = command_line
+    return entry
+
+
+def get_unix_process_command_line(pid: int) -> str | None:
     if not running_in_posix():
-        return set()
+        return None
+    result = run_command(["ps", "-p", str(pid), "-o", "args="])
+    if result.returncode == 0:
+        command_line = result.stdout.strip()
+        if command_line:
+            return command_line
+    proc_cmdline = Path(f"/proc/{pid}/cmdline")
+    if proc_cmdline.exists():
+        try:
+            raw = proc_cmdline.read_bytes().replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+        except OSError:
+            return None
+        return raw or None
+    return None
+
+
+def collect_unix_owned_project_processes(context: BridgeContext) -> dict[int, str | None]:
+    if not running_in_posix():
+        return {}
     result = run_command(["ps", "-eo", "pid=,args="])
     if result.returncode != 0:
-        return set()
-    target = project_name.lower()
-    pids: set[int] = set()
+        return {}
+    processes: dict[int, str | None] = {}
     for line in result.stdout.splitlines():
         line = line.strip()
         if not line:
@@ -365,9 +434,9 @@ def collect_unix_named_pids(project_name: str) -> set[int]:
             continue
         if pid == os.getpid():
             continue
-        if target in command_line.lower():
-            pids.add(pid)
-    return pids
+        if is_bridge_process_command_line(command_line, context):
+            processes[pid] = command_line
+    return processes
 
 
 def collect_unix_port_pids(port: int) -> set[int]:
@@ -450,6 +519,20 @@ def collect_unix_listening_pids(port: int) -> set[int]:
     return set()
 
 
+def classify_unix_port_processes(context: BridgeContext) -> tuple[dict[int, str | None], dict[int, str | None]]:
+    owned: dict[int, str | None] = {}
+    conflicts: dict[int, str | None] = {}
+    for pid in sorted(collect_unix_port_pids(context.port)):
+        if pid == os.getpid():
+            continue
+        command_line = get_unix_process_command_line(pid)
+        if is_bridge_process_command_line(command_line, context):
+            owned[pid] = command_line
+        else:
+            conflicts[pid] = command_line
+    return owned, conflicts
+
+
 def terminate_posix_pid(pid: int) -> None:
     for signal_name in (signal.SIGTERM, signal.SIGKILL):
         try:
@@ -461,13 +544,27 @@ def terminate_posix_pid(pid: int) -> None:
             return
 
 
-def cleanup_posix_side(project_name: str, port: int) -> dict:
+def cleanup_posix_side(context: BridgeContext) -> dict:
     if not running_in_posix():
         return {"platform": "posix", "killed_pids": []}
-    pids = sorted(collect_unix_named_pids(project_name) | collect_unix_port_pids(port))
+    owned_project_processes = collect_unix_owned_project_processes(context)
+    owned_port_processes, conflicting_port_processes = classify_unix_port_processes(context)
+    pids = sorted(set(owned_project_processes) | set(owned_port_processes))
     for pid in pids:
         terminate_posix_pid(pid)
-    return {"platform": "posix", "killed_pids": pids}
+    return {
+        "platform": "posix",
+        "owned_project_processes": [
+            build_process_entry(pid, owned_project_processes.get(pid)) for pid in sorted(owned_project_processes)
+        ],
+        "owned_same_port_processes": [
+            build_process_entry(pid, owned_port_processes.get(pid)) for pid in sorted(owned_port_processes)
+        ],
+        "conflicting_same_port_processes": [
+            build_process_entry(pid, conflicting_port_processes.get(pid)) for pid in sorted(conflicting_port_processes)
+        ],
+        "killed_pids": pids,
+    }
 
 
 def parse_tasklist_rows(raw_output: str) -> list[dict[str, str]]:
@@ -524,6 +621,97 @@ def collect_windows_listening_pids(port: int, cmd_exe: str) -> set[int]:
     return collect_windows_port_pids(port, cmd_exe, allowed_states={"LISTENING"})
 
 
+def locate_windows_powershell() -> str | None:
+    if is_windows():
+        candidates = [
+            shutil.which("powershell.exe"),
+            shutil.which("powershell"),
+            shutil.which("pwsh.exe"),
+            shutil.which("pwsh"),
+        ]
+    elif is_wsl():
+        candidates = [
+            "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+            shutil.which("powershell.exe"),
+            shutil.which("pwsh.exe"),
+        ]
+    else:
+        return None
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if Path(candidate).exists() or shutil.which(candidate):
+            return candidate
+    return None
+
+
+def collect_windows_process_details(pids: Iterable[int], cmd_exe: str) -> dict[int, dict[str, str | None]]:
+    normalized_pids = sorted({pid for pid in pids if pid > 0 and pid != os.getpid()})
+    if not normalized_pids:
+        return {}
+
+    details: dict[int, dict[str, str | None]] = {pid: {"image_name": None, "command_line": None} for pid in normalized_pids}
+
+    result = run_command([cmd_exe, "/c", "tasklist /FO CSV /NH"])
+    if result.returncode == 0:
+        for row in parse_tasklist_rows(result.stdout):
+            parsed_pid = safe_parse_pid(row.get("pid"))
+            if parsed_pid in details:
+                details[parsed_pid]["image_name"] = row.get("image_name")
+
+    powershell = locate_windows_powershell()
+    if not powershell:
+        return details
+
+    pid_csv = ",".join(str(pid) for pid in normalized_pids)
+    script = (
+        f"$ids = @({pid_csv}); "
+        '$procs = Get-CimInstance Win32_Process | Where-Object { $ids -contains $_.ProcessId }; '
+        'foreach ($proc in $procs) { Write-Output ("{0}|{1}" -f $proc.ProcessId, ($proc.CommandLine -replace "\\r|\\n", " ")) }'
+    )
+    result = run_command([powershell, "-NoProfile", "-Command", script])
+    if result.returncode != 0:
+        return details
+
+    for line in result.stdout.splitlines():
+        pid_text, _, command_line = line.partition("|")
+        pid = safe_parse_pid(pid_text.strip())
+        if pid in details:
+            details[pid]["command_line"] = command_line.strip() or None
+    return details
+
+
+def collect_windows_owned_project_processes(context: BridgeContext, cmd_exe: str) -> dict[int, dict[str, str | None]]:
+    pids = sorted(set(collect_windows_named_pids(context.project_name, cmd_exe) | collect_windows_port_pids(context.port, cmd_exe)))
+    details_by_pid = collect_windows_process_details(pids, cmd_exe)
+    processes: dict[int, dict[str, str | None]] = {}
+    for pid in pids:
+        details = details_by_pid.get(pid, {"command_line": None, "image_name": None})
+        image_name = details.get("image_name")
+        command_line = details.get("command_line")
+        if is_bridge_process_command_line(command_line, context, image_name=image_name):
+            processes[pid] = {"command_line": command_line, "image_name": image_name}
+    return processes
+
+
+def classify_windows_port_processes(context: BridgeContext, cmd_exe: str) -> tuple[dict[int, dict[str, str | None]], dict[int, dict[str, str | None]]]:
+    owned: dict[int, dict[str, str | None]] = {}
+    conflicts: dict[int, dict[str, str | None]] = {}
+    pids = sorted(collect_windows_port_pids(context.port, cmd_exe))
+    details_by_pid = collect_windows_process_details(pids, cmd_exe)
+    for pid in pids:
+        if pid == os.getpid():
+            continue
+        details = details_by_pid.get(pid, {"command_line": None, "image_name": None})
+        image_name = details.get("image_name")
+        command_line = details.get("command_line")
+        if is_bridge_process_command_line(command_line, context, image_name=image_name):
+            owned[pid] = details
+        else:
+            conflicts[pid] = details
+    return owned, conflicts
+
+
 def terminate_windows_pid(pid: int, cmd_exe: str) -> None:
     run_command([cmd_exe, "/c", f"taskkill /PID {pid} /F"])
 
@@ -569,14 +757,43 @@ def cleanup_recorded_state_processes(context: BridgeContext) -> dict:
     }
 
 
-def cleanup_windows_side(project_name: str, port: int) -> dict:
+def cleanup_windows_side(context: BridgeContext) -> dict:
     cmd_exe = locate_windows_cmd()
     if not cmd_exe:
         return {"platform": "windows", "killed_pids": []}
-    pids = sorted(collect_windows_named_pids(project_name, cmd_exe) | collect_windows_port_pids(port, cmd_exe))
+    owned_project_processes = collect_windows_owned_project_processes(context, cmd_exe)
+    owned_port_processes, conflicting_port_processes = classify_windows_port_processes(context, cmd_exe)
+    pids = sorted(set(owned_project_processes) | set(owned_port_processes))
     for pid in pids:
         terminate_windows_pid(pid, cmd_exe)
-    return {"platform": "windows", "killed_pids": pids}
+    return {
+        "platform": "windows",
+        "owned_project_processes": [
+            build_process_entry(
+                pid,
+                owned_project_processes.get(pid, {}).get("command_line"),
+                owned_project_processes.get(pid, {}).get("image_name"),
+            )
+            for pid in sorted(owned_project_processes)
+        ],
+        "owned_same_port_processes": [
+            build_process_entry(
+                pid,
+                owned_port_processes.get(pid, {}).get("command_line"),
+                owned_port_processes.get(pid, {}).get("image_name"),
+            )
+            for pid in sorted(owned_port_processes)
+        ],
+        "conflicting_same_port_processes": [
+            build_process_entry(
+                pid,
+                conflicting_port_processes.get(pid, {}).get("command_line"),
+                conflicting_port_processes.get(pid, {}).get("image_name"),
+            )
+            for pid in sorted(conflicting_port_processes)
+        ],
+        "killed_pids": pids,
+    }
 
 
 def cleanup_bridge_processes(context: BridgeContext) -> dict:
@@ -586,8 +803,8 @@ def cleanup_bridge_processes(context: BridgeContext) -> dict:
         "service_url": context.service_url,
         "port": context.port,
         "recorded_state": cleanup_recorded_state_processes(context),
-        "posix": cleanup_posix_side(context.project_name, context.port) if running_in_posix() else None,
-        "windows": cleanup_windows_side(context.project_name, context.port) if (is_windows() or is_wsl()) else None,
+        "posix": cleanup_posix_side(context) if running_in_posix() else None,
+        "windows": cleanup_windows_side(context) if (is_windows() or is_wsl()) else None,
     }
 
 
