@@ -168,6 +168,7 @@ Always specify `T` for generic MudBlazor components:
 - Use CSS isolation primarily for layout, spacing, centering, sizing, and overflow control. Do not use it to repaint large parts of MudBlazor unless there is a clear product requirement.
 - When list or card UIs become dense, remove redundant metadata first. Prefer a minimal primary view and move secondary details into dialogs, drawers, or detail panes.
 - If centered alignment looks wrong, fix the container layout first (`display`, `align-items`, `justify-content`, `min-height`, `min-width`) before adding margin or padding hacks.
+- Cards that visually belong to the same row should generally align to the same height. Prefer row-level grid/flex stretch plus wrapper-owned `height: 100%` over fixed pixel heights.
 
 **Component CSS responsibility model:**
 
