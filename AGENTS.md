@@ -32,11 +32,8 @@ Invoke when:
 
 - First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract defined in `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.
 - `mo-theme-main.css` defines color variables only; do not add shared component styling there as part of color-token cleanup.
-- Do not introduce page-local color aliases such as `--mo-*-hero-*` when an approved semantic token already exists.
-- Do not consume private theme namespaces such as `--mo-m3-*`, `--mo-ink-*`, `--mo-hermes-*`, `--mo-fresh-*`, `--mo-vibe-*`, or `--mo-zen-*` from component/page code. Those are theme-authoring internals only.
 - Shared semantic color tokens are intentionally small. Add to the contract only when a cross-module scenario cannot be expressed with `--mud-palette-*`.
 - New hardcoded UI colors in Razor, CSS, JS, or C# UI visualization payloads are not allowed; emit `var(--mud-palette-*)` or approved `var(--mo-color-*)` values instead.
-- Validate theme-token compliance with `python scripts/validate_ui_theme_tokens.py` before finishing substantial UI theme refactors.
 
 ### /code-simplifier
 

@@ -28,6 +28,13 @@ Invoke when:
 
 **Current MudBlazor version**: 9.0.0 (migrated from 8.9.0)
 
+## UI Theme Color Contract
+
+- First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract defined in `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.
+- `mo-theme-main.css` defines color variables only; do not add shared component styling there as part of color-token cleanup.
+- Shared semantic color tokens are intentionally small. Add to the contract only when a cross-module scenario cannot be expressed with `--mud-palette-*`.
+- New hardcoded UI colors in Razor, CSS, JS, or C# UI visualization payloads are not allowed; emit `var(--mud-palette-*)` or approved `var(--mo-color-*)` values instead.
+
 ### /code-simplifier
 
 Invoke when:
@@ -55,6 +62,10 @@ When handling questions around how to work with native Microsoft technologies, s
 - Public abstractions must explain the contract clearly, including intended usage, lifecycle/ownership expectations, nullability semantics, and exception/timeout behavior when relevant.
 - Internal code should also include brief comments for non-obvious logic, especially complex branching, concurrency, normalization rules, caching, retries, or cross-module coordination.
 - Do not add comments for obvious code; comments must provide real developer guidance.
+
+## C# Naming Rules
+
+- Private constant fields must use upper snake case, for example `DEFAULT_SEARCH_TOOL_NAME`.
 
 ## Code Quality Principles
 

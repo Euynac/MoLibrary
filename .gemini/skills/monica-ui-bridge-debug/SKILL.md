@@ -106,6 +106,14 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 
 ## Workflow
 
+### Cleanup safety note
+
+The helper must never kill unrelated system listeners just because they share the target port. Before trusting `bridge_service.py cleanup/run`, verify cleanup only terminates:
+- PIDs recorded in the task folder state file, or
+- project-owned bridge processes whose command line clearly references the selected bridge project.
+
+If the target port is occupied by an unrelated listener, the helper should report that conflict instead of force-killing it.
+
 ### 1. Planning and task folder
 
 Create the task folder first with the setup script from `$planning-with-files`.
