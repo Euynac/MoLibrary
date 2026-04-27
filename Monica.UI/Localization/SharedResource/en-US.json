@@ -30,6 +30,10 @@
         "Name": "Material Design 3",
         "Description": "Material Design 3 tokens with soft surfaces, rounded shapes, and expressive typography"
       },
+      "windows-11": {
+        "Name": "Windows 11",
+        "Description": "Fluent Windows 11 styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls"
+      },
       "fresh": {
         "Name": "Fresh",
         "Description": "Light mint colors and a calm feel"

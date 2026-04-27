@@ -30,6 +30,10 @@
         "Name": "Material Design 3",
         "Description": "基于 Material Design 3 token 的柔和表面、圆角形状和表现型排版"
       },
+      "windows-11": {
+        "Name": "Windows 11",
+        "Description": "Fluent Windows 11 风格，包含 Mica 层次、亚克力弹层、Segoe 排版和柔和圆角控件"
+      },
       "fresh": {
         "Name": "小清新",
         "Description": "薄荷浅色调，清爽安静"

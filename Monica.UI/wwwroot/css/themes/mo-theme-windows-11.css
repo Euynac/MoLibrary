@@ -1,0 +1,675 @@
+/* Monica Windows 11 Theme - Fluent-inspired Mica layers, acrylic flyouts, and WinUI-like controls. */
+
+:root[data-theme="windows-11-light"],
+:root[data-theme="windows-11-dark"],
+.mo-theme-windows-11-light,
+.mo-theme-windows-11-dark {
+    --mo-win11-font-text: "Segoe UI Variable", "Segoe UI", Roboto, Arial, sans-serif;
+    --mo-win11-font-mono: "Cascadia Mono", Consolas, "Geist Mono", monospace;
+    --mo-win11-radius-control: 4px;
+    --mo-win11-radius-overlay: 8px;
+    --mo-win11-radius-window: 8px;
+    --mo-win11-control-height: 32px;
+    --mo-win11-motion: 120ms cubic-bezier(0.33, 0, 0.67, 1);
+    --mo-win11-motion-emphasized: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+    --mo-appbar-padding-inline: 12px;
+    --mo-appbar-gap: 16px;
+    --mo-appbar-border-bottom: 1px solid var(--mo-win11-stroke-surface);
+    --mo-appbar-box-shadow: none;
+    --mo-appbar-backdrop-filter: blur(20px) saturate(1.18);
+    --mo-appbar-menu-item-border-radius: var(--mo-win11-radius-control);
+    --mo-appbar-menu-item-margin-block: 2px;
+    --mo-appbar-menu-item-margin-inline: 4px;
+    --mo-appbar-menu-item-padding-block: 6px;
+    --mo-appbar-menu-item-padding-inline: 12px;
+    --mo-appbar-menu-item-min-height: 32px;
+    --mo-appbar-menu-item-gap: 10px;
+    --mo-appbar-menu-item-font-family: var(--mo-win11-font-text);
+    --mo-appbar-menu-item-font-size: 0.875rem;
+    --mo-appbar-menu-item-font-weight: 400;
+    --mo-appbar-menu-item-hover-background: var(--mo-win11-fill-subtle-secondary);
+    --mo-appbar-menu-item-hover-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-hover-icon: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-active-background: var(--mo-win11-fill-subtle-tertiary);
+    --mo-appbar-menu-item-active-text: var(--mud-palette-text-primary);
+    --mo-appbar-menu-item-active-icon: var(--mud-palette-primary);
+    --mo-appbar-menu-item-active-font-weight: 600;
+    --mo-appbar-menu-item-transition:
+        background-color var(--mo-win11-motion),
+        border-color var(--mo-win11-motion),
+        color var(--mo-win11-motion);
+    --mo-nav-menu-border-radius: var(--mo-win11-radius-overlay);
+    --mo-card-border-radius: var(--mo-win11-radius-window);
+    --mo-dialog-border-radius: var(--mo-win11-radius-window);
+    --mo-color-page-hero-background: var(--mo-win11-surface-card);
+    --mo-color-page-hero-text: var(--mud-palette-text-primary);
+    --mo-color-page-hero-action: var(--mud-palette-primary);
+    --mo-color-highlight-background: var(--mo-win11-accent-subtle);
+    --mo-color-highlight-text: var(--mud-palette-text-primary);
+}
+
+:root[data-theme="windows-11-light"],
+.mo-theme-windows-11-light {
+    --mo-win11-mica-base: #f3f3f3;
+    --mo-win11-surface-card: rgba(255, 255, 255, 0.70);
+    --mo-win11-surface-card-strong: rgba(255, 255, 255, 0.86);
+    --mo-win11-acrylic: rgba(252, 252, 252, 0.78);
+    --mo-win11-acrylic-solid: #fbfbfb;
+    --mo-win11-fill-subtle-secondary: rgba(0, 0, 0, 0.037);
+    --mo-win11-fill-subtle-tertiary: rgba(0, 0, 0, 0.024);
+    --mo-win11-fill-control: rgba(255, 255, 255, 0.70);
+    --mo-win11-fill-control-secondary: rgba(249, 249, 249, 0.50);
+    --mo-win11-fill-control-active: rgba(255, 255, 255, 0.00);
+    --mo-win11-fill-accent-hover: #005a9e;
+    --mo-win11-fill-accent-pressed: #004578;
+    --mo-win11-stroke-control: rgba(0, 0, 0, 0.0578);
+    --mo-win11-stroke-control-strong: rgba(0, 0, 0, 0.4458);
+    --mo-win11-stroke-surface: rgba(0, 0, 0, 0.0578);
+    --mo-win11-stroke-card: rgba(0, 0, 0, 0.0578);
+    --mo-win11-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.08);
+    --mo-win11-shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.0578);
+    --mo-win11-shadow-dialog: 0 32px 64px rgba(0, 0, 0, 0.24), 0 2px 21px rgba(0, 0, 0, 0.16);
+    --mo-win11-accent-subtle: rgba(0, 103, 192, 0.12);
+    --mo-win11-scrollbar: rgba(0, 0, 0, 0.36);
+    --mo-win11-scrollbar-hover: rgba(0, 0, 0, 0.54);
+    --mo-appbar-background: rgba(243, 243, 243, 0.78);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+}
+
+:root[data-theme="windows-11-dark"],
+.mo-theme-windows-11-dark {
+    --mo-win11-mica-base: #202020;
+    --mo-win11-surface-card: rgba(48, 48, 48, 0.70);
+    --mo-win11-surface-card-strong: rgba(43, 43, 43, 0.88);
+    --mo-win11-acrylic: rgba(44, 44, 44, 0.76);
+    --mo-win11-acrylic-solid: #2b2b2b;
+    --mo-win11-fill-subtle-secondary: rgba(255, 255, 255, 0.0605);
+    --mo-win11-fill-subtle-tertiary: rgba(255, 255, 255, 0.0419);
+    --mo-win11-fill-control: rgba(255, 255, 255, 0.0605);
+    --mo-win11-fill-control-secondary: rgba(255, 255, 255, 0.0837);
+    --mo-win11-fill-control-active: rgba(30, 30, 30, 0.70);
+    --mo-win11-fill-accent-hover: #8cddff;
+    --mo-win11-fill-accent-pressed: #3aa0d8;
+    --mo-win11-stroke-control: rgba(255, 255, 255, 0.0698);
+    --mo-win11-stroke-control-strong: rgba(255, 255, 255, 0.5442);
+    --mo-win11-stroke-surface: rgba(255, 255, 255, 0.0837);
+    --mo-win11-stroke-card: rgba(255, 255, 255, 0.0837);
+    --mo-win11-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.26);
+    --mo-win11-shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.0837);
+    --mo-win11-shadow-dialog: 0 32px 64px rgba(0, 0, 0, 0.58), 0 2px 21px rgba(0, 0, 0, 0.42);
+    --mo-win11-accent-subtle: rgba(96, 205, 255, 0.14);
+    --mo-win11-scrollbar: rgba(255, 255, 255, 0.36);
+    --mo-win11-scrollbar-hover: rgba(255, 255, 255, 0.56);
+    --mo-appbar-background: rgba(32, 32, 32, 0.80);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+}
+
+.mo-theme-windows-11-light,
+.mo-theme-windows-11-dark {
+    background: var(--mo-win11-mica-base);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-win11-font-text);
+    letter-spacing: 0;
+}
+
+.mo-theme-windows-11-light .mo-layout,
+.mo-theme-windows-11-dark .mo-layout,
+.mo-theme-windows-11-light .mo-main-content,
+.mo-theme-windows-11-dark .mo-main-content,
+.mo-theme-windows-11-light .mo-body-content,
+.mo-theme-windows-11-dark .mo-body-content {
+    background: var(--mo-win11-mica-base);
+}
+
+.mo-theme-windows-11-light .mo-body-content,
+.mo-theme-windows-11-dark .mo-body-content {
+    scrollbar-color: var(--mo-win11-scrollbar) transparent;
+}
+
+.mo-theme-windows-11-light .navbar-brand,
+.mo-theme-windows-11-dark .navbar-brand {
+    border-radius: var(--mo-win11-radius-control);
+    gap: 10px;
+    padding: 4px 8px 4px 4px;
+    transition:
+        background-color var(--mo-win11-motion),
+        opacity var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .navbar-brand:hover,
+.mo-theme-windows-11-dark .navbar-brand:hover {
+    background: var(--mo-win11-fill-subtle-secondary);
+    opacity: 1;
+}
+
+.mo-theme-windows-11-light .brand-logo,
+.mo-theme-windows-11-dark .brand-logo,
+.mo-theme-windows-11-light .brand-logo-image,
+.mo-theme-windows-11-dark .brand-logo-image {
+    width: 32px;
+    height: 32px;
+}
+
+.mo-theme-windows-11-light .brand-name,
+.mo-theme-windows-11-dark .brand-name {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+}
+
+.mo-theme-windows-11-light .brand-appid,
+.mo-theme-windows-11-dark .brand-appid {
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.mo-theme-windows-11-light .brand-version,
+.mo-theme-windows-11-dark .brand-version {
+    background: var(--mo-win11-fill-control-secondary);
+    border-color: var(--mo-win11-stroke-control);
+    border-radius: var(--mo-win11-radius-control);
+    font-family: var(--mo-win11-font-mono);
+    font-weight: 400;
+}
+
+.mo-theme-windows-11-light .navbar-link,
+.mo-theme-windows-11-dark .navbar-link,
+.mo-theme-windows-11-light .navbar-measure-link,
+.mo-theme-windows-11-dark .navbar-measure-link {
+    align-self: center;
+    height: 36px;
+    border-radius: var(--mo-win11-radius-control);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-win11-font-text);
+    font-size: 0.875rem;
+    font-weight: 400;
+    gap: 8px;
+    padding: 0 12px;
+    transition:
+        background-color var(--mo-win11-motion),
+        color var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .navbar-link:hover,
+.mo-theme-windows-11-dark .navbar-link:hover,
+.mo-theme-windows-11-light .navbar-link:focus-visible,
+.mo-theme-windows-11-dark .navbar-link:focus-visible {
+    background: var(--mo-win11-fill-subtle-secondary);
+    color: var(--mud-palette-text-primary);
+}
+
+.mo-theme-windows-11-light .navbar-link.active,
+.mo-theme-windows-11-dark .navbar-link.active {
+    background: var(--mo-win11-fill-subtle-tertiary);
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+.mo-theme-windows-11-light .navbar-link::before,
+.mo-theme-windows-11-dark .navbar-link::before {
+    bottom: 4px;
+    width: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--mud-palette-primary);
+    transition: width var(--mo-win11-motion-emphasized);
+}
+
+.mo-theme-windows-11-light .navbar-link:hover::before,
+.mo-theme-windows-11-dark .navbar-link:hover::before,
+.mo-theme-windows-11-light .navbar-link.active::before,
+.mo-theme-windows-11-dark .navbar-link.active::before {
+    width: 18px;
+}
+
+.mo-theme-windows-11-light .action-button,
+.mo-theme-windows-11-dark .action-button,
+.mo-theme-windows-11-light .mud-icon-button,
+.mo-theme-windows-11-dark .mud-icon-button,
+.mo-theme-windows-11-light .navbar-actions .user-button,
+.mo-theme-windows-11-dark .navbar-actions .user-button {
+    border-radius: var(--mo-win11-radius-control) !important;
+    color: var(--mud-palette-text-secondary) !important;
+    transition:
+        background-color var(--mo-win11-motion),
+        color var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .action-button:hover,
+.mo-theme-windows-11-dark .action-button:hover,
+.mo-theme-windows-11-light .mud-icon-button:hover,
+.mo-theme-windows-11-dark .mud-icon-button:hover,
+.mo-theme-windows-11-light .navbar-actions .user-button:hover,
+.mo-theme-windows-11-dark .navbar-actions .user-button:hover {
+    background: var(--mo-win11-fill-subtle-secondary) !important;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.mo-theme-windows-11-light .navbar-actions::before,
+.mo-theme-windows-11-dark .navbar-actions::before {
+    background: var(--mo-win11-stroke-surface);
+}
+
+:root[data-theme="windows-11-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="windows-11-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-windows-11-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu),
+.mo-theme-windows-11-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu) {
+    background: var(--mo-win11-acrylic);
+    border: 1px solid var(--mo-win11-stroke-surface);
+    border-radius: var(--mo-win11-radius-overlay);
+    box-shadow: var(--mo-win11-shadow-flyout) !important;
+    backdrop-filter: blur(30px) saturate(1.25);
+    overflow: hidden;
+}
+
+.mo-theme-windows-11-light :is(.more-menu-header, .flyout-menu-header),
+.mo-theme-windows-11-dark :is(.more-menu-header, .flyout-menu-header) {
+    border-bottom-color: var(--mo-win11-stroke-surface);
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.mo-theme-windows-11-light :is(.mud-card, .theme-card),
+.mo-theme-windows-11-dark :is(.mud-card, .theme-card),
+.mo-theme-windows-11-light :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs),
+.mo-theme-windows-11-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs) {
+    background: var(--mo-win11-surface-card);
+    border: 1px solid var(--mo-win11-stroke-card);
+    border-radius: var(--mo-win11-radius-window);
+    box-shadow: var(--mo-win11-shadow-card) !important;
+    overflow: hidden;
+    transition:
+        background-color var(--mo-win11-motion),
+        border-color var(--mo-win11-motion),
+        box-shadow var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light :is(.mud-card:hover, .theme-card:hover),
+.mo-theme-windows-11-dark :is(.mud-card:hover, .theme-card:hover) {
+    background: var(--mo-win11-surface-card-strong);
+    border-color: var(--mo-win11-stroke-surface);
+    box-shadow: var(--mud-elevation-2) !important;
+    transform: none;
+}
+
+.mo-theme-windows-11-light .theme-card.selected,
+.mo-theme-windows-11-dark .theme-card.selected {
+    background: var(--mo-win11-accent-subtle);
+    border: 1px solid var(--mud-palette-primary) !important;
+    box-shadow: 0 0 0 1px var(--mud-palette-primary) inset, var(--mo-win11-shadow-card) !important;
+}
+
+.mo-theme-windows-11-light .mud-card-content,
+.mo-theme-windows-11-dark .mud-card-content {
+    padding: 16px !important;
+}
+
+.mo-theme-windows-11-light .mud-appbar,
+.mo-theme-windows-11-dark .mud-appbar,
+.mo-theme-windows-11-light .mo-navbar,
+.mo-theme-windows-11-dark .mo-navbar {
+    background: var(--mo-appbar-background) !important;
+    border-bottom: 1px solid var(--mo-win11-stroke-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: var(--mo-appbar-backdrop-filter);
+}
+
+.mo-theme-windows-11-light .mud-drawer,
+.mo-theme-windows-11-dark .mud-drawer {
+    background: var(--mud-palette-drawer-background);
+    border-color: var(--mo-win11-stroke-surface) !important;
+    box-shadow: none !important;
+}
+
+.mo-theme-windows-11-light .mud-dialog,
+.mo-theme-windows-11-dark .mud-dialog {
+    background: var(--mo-win11-acrylic-solid);
+    border: 1px solid var(--mo-win11-stroke-surface);
+    border-radius: var(--mo-win11-radius-window) !important;
+    box-shadow: var(--mo-win11-shadow-dialog) !important;
+    overflow: hidden;
+}
+
+.mo-theme-windows-11-light .mud-dialog-title,
+.mo-theme-windows-11-dark .mud-dialog-title {
+    font-weight: 600;
+}
+
+.mo-theme-windows-11-light .mud-overlay .mud-overlay-scrim.mud-overlay-dark,
+.mo-theme-windows-11-dark .mud-overlay .mud-overlay-scrim.mud-overlay-dark {
+    background-color: var(--mud-palette-overlay-dark);
+    border-color: var(--mud-palette-overlay-dark);
+}
+
+.mo-theme-windows-11-light .mud-button,
+.mo-theme-windows-11-dark .mud-button {
+    min-height: var(--mo-win11-control-height);
+    border-radius: var(--mo-win11-radius-control) !important;
+    box-shadow: none !important;
+    font-family: var(--mo-win11-font-text);
+    font-size: 0.875rem;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.25rem;
+    padding: 5px 12px !important;
+    text-transform: none !important;
+    transition:
+        background-color var(--mo-win11-motion),
+        border-color var(--mo-win11-motion),
+        color var(--mo-win11-motion),
+        box-shadow var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .mud-button-filled,
+.mo-theme-windows-11-dark .mud-button-filled {
+    background: var(--mo-win11-fill-control) !important;
+    border: 1px solid var(--mo-win11-stroke-control) !important;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-filled:hover,
+.mo-theme-windows-11-dark .mud-button-filled:hover {
+    background: var(--mo-win11-fill-control-secondary) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-filled:active,
+.mo-theme-windows-11-dark .mud-button-filled:active {
+    background: var(--mo-win11-fill-control-active) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-filled-primary,
+.mo-theme-windows-11-dark .mud-button-filled-primary {
+    background: var(--mud-palette-primary) !important;
+    border-color: transparent !important;
+    color: var(--mud-palette-primary-text) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-filled-primary:hover,
+.mo-theme-windows-11-dark .mud-button-filled-primary:hover {
+    background: var(--mo-win11-fill-accent-hover) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-filled-primary:active,
+.mo-theme-windows-11-dark .mud-button-filled-primary:active {
+    background: var(--mo-win11-fill-accent-pressed) !important;
+}
+
+.mo-theme-windows-11-light .mud-button-outlined,
+.mo-theme-windows-11-dark .mud-button-outlined {
+    background: var(--mo-win11-fill-control) !important;
+    border-color: var(--mo-win11-stroke-control) !important;
+    color: var(--mud-palette-text-primary) !important;
+}
+
+.mo-theme-windows-11-light :is(.mud-button-text:hover, .mud-button-outlined:hover),
+.mo-theme-windows-11-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
+    background: var(--mo-win11-fill-subtle-secondary) !important;
+}
+
+.mo-theme-windows-11-light :is(.mud-button:focus-visible, .mud-icon-button:focus-visible, .mud-nav-link:focus-visible, .navbar-link:focus-visible),
+.mo-theme-windows-11-dark :is(.mud-button:focus-visible, .mud-icon-button:focus-visible, .mud-nav-link:focus-visible, .navbar-link:focus-visible) {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 2px;
+}
+
+.mo-theme-windows-11-light .mud-input-outlined,
+.mo-theme-windows-11-dark .mud-input-outlined {
+    background: var(--mo-win11-fill-control);
+    border-radius: var(--mo-win11-radius-control) !important;
+}
+
+.mo-theme-windows-11-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-windows-11-dark .mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--mo-win11-stroke-control);
+    border-radius: var(--mo-win11-radius-control) !important;
+    border-width: 1px !important;
+    transition:
+        border-color var(--mo-win11-motion),
+        box-shadow var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border),
+.mo-theme-windows-11-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border) {
+    border-color: var(--mo-win11-stroke-control-strong) !important;
+}
+
+.mo-theme-windows-11-light :is(.mud-input-outlined:focus-within .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border),
+.mo-theme-windows-11-dark :is(.mud-input-outlined:focus-within .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border) {
+    box-shadow: inset 0 -2px 0 var(--mud-palette-primary);
+}
+
+.mo-theme-windows-11-light .mud-input-label,
+.mo-theme-windows-11-dark .mud-input-label {
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-win11-font-text);
+}
+
+.mo-theme-windows-11-light .mud-switch-span .mud-switch-track,
+.mo-theme-windows-11-dark .mud-switch-span .mud-switch-track {
+    background: var(--mo-win11-fill-control-secondary);
+    border: 1px solid var(--mo-win11-stroke-control-strong);
+    border-radius: 999px;
+    opacity: 1;
+}
+
+.mo-theme-windows-11-light .mud-switch-base.mud-checked + .mud-switch-track,
+.mo-theme-windows-11-dark .mud-switch-base.mud-checked + .mud-switch-track {
+    background: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+    opacity: 1;
+}
+
+.mo-theme-windows-11-light .mud-switch-button .mud-switch-thumb-small,
+.mo-theme-windows-11-dark .mud-switch-button .mud-switch-thumb-small,
+.mo-theme-windows-11-light .mud-switch-button .mud-switch-thumb-medium,
+.mo-theme-windows-11-dark .mud-switch-button .mud-switch-thumb-medium,
+.mo-theme-windows-11-light .mud-switch-button .mud-switch-thumb-large,
+.mo-theme-windows-11-dark .mud-switch-button .mud-switch-thumb-large {
+    box-shadow: none;
+}
+
+.mo-theme-windows-11-light .mud-chip,
+.mo-theme-windows-11-dark .mud-chip,
+.mo-theme-windows-11-light .mud-alert,
+.mo-theme-windows-11-dark .mud-alert {
+    border-radius: var(--mo-win11-radius-control) !important;
+    font-family: var(--mo-win11-font-text);
+}
+
+.mo-theme-windows-11-light .mud-chip,
+.mo-theme-windows-11-dark .mud-chip {
+    min-height: 24px;
+    padding-inline: 8px !important;
+}
+
+.mo-theme-windows-11-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-windows-11-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mo-win11-surface-card);
+    border: 1px solid var(--mo-win11-stroke-card);
+    border-radius: var(--mo-win11-radius-window);
+}
+
+.mo-theme-windows-11-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-windows-11-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-win11-fill-subtle-tertiary);
+    border-bottom: 1px solid var(--mo-win11-stroke-card);
+}
+
+.mo-theme-windows-11-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-windows-11-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: transparent;
+}
+
+.mo-theme-windows-11-light .mud-tab,
+.mo-theme-windows-11-dark .mud-tab {
+    border-radius: var(--mo-win11-radius-control);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-win11-font-text);
+    font-weight: 400;
+    margin: 6px 3px;
+    min-height: 32px;
+    transition:
+        background-color var(--mo-win11-motion),
+        color var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .mud-tab:hover,
+.mo-theme-windows-11-dark .mud-tab:hover {
+    background: var(--mo-win11-fill-subtle-secondary);
+}
+
+.mo-theme-windows-11-light .mud-tab.mud-tab-active,
+.mo-theme-windows-11-dark .mud-tab.mud-tab-active {
+    background: var(--mo-win11-fill-subtle-tertiary);
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+.mo-theme-windows-11-light .mud-tab-slider,
+.mo-theme-windows-11-dark .mud-tab-slider {
+    height: 3px;
+    border-radius: 999px;
+    background: var(--mud-palette-primary);
+}
+
+.mo-theme-windows-11-light :is(.mud-table, .mud-data-grid),
+.mo-theme-windows-11-dark :is(.mud-table, .mud-data-grid) {
+    background: transparent;
+}
+
+.mo-theme-windows-11-light :is(.mud-table-head th, .mud-data-grid-header-cell),
+.mo-theme-windows-11-dark :is(.mud-table-head th, .mud-data-grid-header-cell) {
+    background: var(--mo-win11-fill-subtle-tertiary);
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--mo-win11-font-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.mo-theme-windows-11-light :is(.mud-table-cell, .mud-data-grid-cell),
+.mo-theme-windows-11-dark :is(.mud-table-cell, .mud-data-grid-cell) {
+    border-color: var(--mo-win11-stroke-surface);
+}
+
+.mo-theme-windows-11-light :is(.mud-table-row:hover, .mud-data-grid-row:hover),
+.mo-theme-windows-11-dark :is(.mud-table-row:hover, .mud-data-grid-row:hover) {
+    background: var(--mo-win11-fill-subtle-secondary) !important;
+}
+
+.mo-theme-windows-11-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-windows-11-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-windows-11-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-windows-11-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-windows-11-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-windows-11-dark .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-windows-11-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-windows-11-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    color: var(--mud-palette-text-secondary);
+    opacity: 0.82;
+}
+
+.mo-theme-windows-11-light .mud-data-grid .column-header:hover .column-options :is(.sort-direction-icon, .column-options-icon, .drag-icon-options, .mud-menu .mud-icon-button-label),
+.mo-theme-windows-11-dark .mud-data-grid .column-header:hover .column-options :is(.sort-direction-icon, .column-options-icon, .drag-icon-options, .mud-menu .mud-icon-button-label),
+.mo-theme-windows-11-light .mud-data-grid :is(.sort-direction-icon.mud-direction-asc, .sort-direction-icon.mud-direction-desc),
+.mo-theme-windows-11-dark .mud-data-grid :is(.sort-direction-icon.mud-direction-asc, .sort-direction-icon.mud-direction-desc) {
+    color: var(--mud-palette-text-primary);
+    opacity: 1;
+}
+
+.mo-theme-windows-11-light .mud-navmenu .mud-nav-link,
+.mo-theme-windows-11-dark .mud-navmenu .mud-nav-link {
+    border-radius: var(--mo-win11-radius-control) !important;
+    color: var(--mud-palette-text-primary);
+    margin: 2px 8px !important;
+    padding: 6px 12px !important;
+    transition:
+        background-color var(--mo-win11-motion),
+        color var(--mo-win11-motion);
+}
+
+.mo-theme-windows-11-light .mud-navmenu .mud-nav-link:hover,
+.mo-theme-windows-11-dark .mud-navmenu .mud-nav-link:hover {
+    background: var(--mo-win11-fill-subtle-secondary) !important;
+}
+
+.mo-theme-windows-11-light .mud-navmenu .mud-nav-link.active,
+.mo-theme-windows-11-dark .mud-navmenu .mud-nav-link.active {
+    background: var(--mo-win11-fill-subtle-tertiary) !important;
+    color: var(--mud-palette-text-primary) !important;
+    font-weight: 600;
+}
+
+:root[data-theme="windows-11-light"] .mud-tooltip,
+:root[data-theme="windows-11-dark"] .mud-tooltip,
+.mo-theme-windows-11-light .mud-tooltip,
+.mo-theme-windows-11-dark .mud-tooltip {
+    background: var(--mo-win11-acrylic-solid);
+    border: 1px solid var(--mo-win11-stroke-surface);
+    border-radius: var(--mo-win11-radius-control);
+    box-shadow: var(--mud-elevation-3);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-win11-font-text);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1rem;
+    max-width: min(28rem, calc(100vw - 32px));
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="windows-11-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="windows-11-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-windows-11-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-windows-11-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-win11-acrylic-solid);
+}
+
+.mo-theme-windows-11-light .mud-snackbar,
+.mo-theme-windows-11-dark .mud-snackbar {
+    background: var(--mo-win11-acrylic-solid);
+    border: 1px solid var(--mo-win11-stroke-surface);
+    border-radius: var(--mo-win11-radius-overlay);
+    box-shadow: var(--mo-win11-shadow-flyout);
+    color: var(--mud-palette-text-primary);
+}
+
+.mo-theme-windows-11-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
+.mo-theme-windows-11-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root) {
+    color: inherit;
+}
+
+.mo-theme-windows-11-light ::-webkit-scrollbar-thumb,
+.mo-theme-windows-11-dark ::-webkit-scrollbar-thumb {
+    background: var(--mo-win11-scrollbar);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+}
+
+.mo-theme-windows-11-light ::-webkit-scrollbar-thumb:hover,
+.mo-theme-windows-11-dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--mo-win11-scrollbar-hover);
+    background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mo-theme-windows-11-light *,
+    .mo-theme-windows-11-dark * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 1080px) {
+    .mo-theme-windows-11-light .navbar-link,
+    .mo-theme-windows-11-dark .navbar-link,
+    .mo-theme-windows-11-light .navbar-measure-link,
+    .mo-theme-windows-11-dark .navbar-measure-link {
+        padding: 0 10px;
+    }
+}
