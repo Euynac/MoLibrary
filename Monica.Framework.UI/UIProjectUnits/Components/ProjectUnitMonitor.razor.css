@@ -1,0 +1,87 @@
+.project-units-monitor-grid {
+    --project-units-monitor-columns:
+        minmax(8rem, 1fr)
+        minmax(12rem, 1.6fr)
+        minmax(7rem, 0.7fr)
+        minmax(6.75rem, 0.55fr)
+        minmax(6.75rem, 0.55fr)
+        minmax(6.25rem, 0.45fr);
+}
+
+.project-units-monitor-grid ::deep .mud-table-container {
+    overflow-x: auto;
+}
+
+.project-units-monitor-grid ::deep .mud-table-root {
+    width: 100%;
+}
+
+@media (min-width: 961px) {
+    .project-units-monitor-grid ::deep .mud-table-root {
+        display: grid;
+        grid-template-columns: var(--project-units-monitor-columns);
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-head,
+    .project-units-monitor-grid ::deep .mud-table-body,
+    .project-units-monitor-grid ::deep .mud-table-row {
+        display: contents;
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-cell {
+        align-items: center;
+        display: flex;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-loading,
+    .project-units-monitor-grid ::deep .mud-table-empty-row,
+    .project-units-monitor-grid ::deep .mud-table-child-content,
+    .project-units-monitor-grid ::deep .mud-table-group-row {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-body tr:has(.mud-table-empty-row),
+    .project-units-monitor-grid ::deep .mud-table-body tr:has(.mud-table-child-content),
+    .project-units-monitor-grid ::deep .mud-table-body tr:has(.mud-table-group-row) {
+        display: contents;
+    }
+
+    .project-units-monitor-grid ::deep .mud-table-empty-row > *,
+    .project-units-monitor-grid ::deep .mud-table-child-content > *,
+    .project-units-monitor-grid ::deep .mud-table-group-row > * {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .project-units-monitor-grid ::deep .column-header,
+    .project-units-monitor-grid ::deep .sortable-column-header,
+    .project-units-monitor-grid ::deep .mud-table-cell.project-units-monitor-grid__name-column,
+    .project-units-monitor-grid ::deep .mud-table-cell.project-units-monitor-grid__full-name-column {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .project-units-monitor-grid ::deep .project-units-monitor-grid__type-column,
+    .project-units-monitor-grid ::deep .project-units-monitor-grid__count-column,
+    .project-units-monitor-grid ::deep .project-units-monitor-grid__actions-column {
+        justify-content: center;
+    }
+}
+
+.project-units-monitor-grid__ellipsis {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

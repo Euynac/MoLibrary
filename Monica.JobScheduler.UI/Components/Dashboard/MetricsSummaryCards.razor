@@ -6,7 +6,7 @@
     <MudGrid Spacing="3">
         <MudItem xs="12" sm="6" md="3">
             <div class="metric-card-container">
-                <MudPaper Class="metric-card" Elevation="0">
+                <MudPaper Class="metric-card mo-self-painted" Elevation="0">
                     <div class="metric-icon total">
                         <MudIcon Icon="@Icons.Material.Filled.WorkOutline" />
                     </div>
@@ -25,7 +25,7 @@
 
         <MudItem xs="12" sm="6" md="3">
             <div class="metric-card-container">
-                <MudPaper Class="metric-card running" Elevation="0">
+                <MudPaper Class="metric-card running mo-self-painted" Elevation="0">
                     <div class="metric-icon running">
                         <MudIcon Icon="@Icons.Material.Filled.PlayCircleFilled" />
                     </div>
@@ -59,7 +59,7 @@
 
         <MudItem xs="12" sm="6" md="3">
             <div class="metric-card-container">
-                <MudPaper Class="metric-card" Elevation="0">
+                <MudPaper Class="metric-card mo-self-painted" Elevation="0">
                     <div class="metric-icon throughput">
                         <MudIcon Icon="@Icons.Material.Filled.Speed" />
                     </div>
@@ -103,7 +103,7 @@
 
     private string GetSuccessRateCardClass()
     {
-        var baseClass = "metric-card";
+        var baseClass = "metric-card mo-self-painted";
         if (SuccessRate >= 95)
             return $"{baseClass} success-high";
         if (SuccessRate >= 80)

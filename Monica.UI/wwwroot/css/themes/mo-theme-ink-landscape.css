@@ -151,24 +151,24 @@
     opacity: 0.72;
 }
 
-.mo-theme-ink-landscape-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
-.mo-theme-ink-landscape-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+.mo-theme-ink-landscape-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-ink-landscape-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
     background: var(--mo-ink-surface);
     border: 1px solid var(--mo-ink-border);
     border-radius: var(--mo-ink-radius);
     box-shadow: none;
 }
 
-.mo-theme-ink-landscape-light :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
-.mo-theme-ink-landscape-dark :is(.mud-card, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
+.mo-theme-ink-landscape-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card),
+.mo-theme-ink-landscape-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .theme-card) {
     transition:
         border-color var(--mo-ink-transition),
         background-color var(--mo-ink-transition),
         box-shadow var(--mo-ink-transition);
 }
 
-.mo-theme-ink-landscape-light :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
-.mo-theme-ink-landscape-dark :is(.mud-card:hover, .mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
+.mo-theme-ink-landscape-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover),
+.mo-theme-ink-landscape-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar):hover, .theme-card:hover) {
     border-color: var(--mo-ink-border-strong);
     box-shadow: var(--mo-ink-shadow);
 }
@@ -228,8 +228,8 @@
     border-radius: var(--mo-ink-radius-sm);
 }
 
-.mo-theme-ink-landscape-light .mud-chip,
-.mo-theme-ink-landscape-dark .mud-chip {
+.mo-theme-ink-landscape-light .mud-chip:not(.mud-chip-filled),
+.mo-theme-ink-landscape-dark .mud-chip:not(.mud-chip-filled) {
     border: 1px solid var(--mo-ink-border);
 }
 

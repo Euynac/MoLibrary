@@ -215,29 +215,31 @@
     display: none;
 }
 
-.mo-theme-material-design-3-light .action-button,
-.mo-theme-material-design-3-dark .action-button,
-.mo-theme-material-design-3-light .mud-icon-button,
-.mo-theme-material-design-3-dark .mud-icon-button,
-.mo-theme-material-design-3-light .navbar-actions .user-button,
-.mo-theme-material-design-3-dark .navbar-actions .user-button {
+.mo-theme-material-design-3-light .navbar-actions :is(.action-button, .mud-icon-button, .user-button),
+.mo-theme-material-design-3-dark .navbar-actions :is(.action-button, .mud-icon-button, .user-button) {
     border-radius: var(--mo-m3-shape-full) !important;
-    color: var(--mo-m3-on-surface-variant) !important;
     transition:
         background-color var(--mo-m3-motion-standard),
         color var(--mo-m3-motion-standard);
 }
 
-.mo-theme-material-design-3-light .action-button:hover,
-.mo-theme-material-design-3-dark .action-button:hover,
-.mo-theme-material-design-3-light .mud-icon-button:hover,
-.mo-theme-material-design-3-dark .mud-icon-button:hover {
+.mo-theme-material-design-3-light .navbar-actions :is(.action-button, .mud-icon-button, .user-button):not(:where(.mud-primary-text, .mud-secondary-text, .mud-info-text, .mud-success-text, .mud-warning-text, .mud-error-text)),
+.mo-theme-material-design-3-dark .navbar-actions :is(.action-button, .mud-icon-button, .user-button):not(:where(.mud-primary-text, .mud-secondary-text, .mud-info-text, .mud-success-text, .mud-warning-text, .mud-error-text)) {
+    color: var(--mo-m3-on-surface-variant) !important;
+}
+
+.mo-theme-material-design-3-light .navbar-actions :is(.action-button, .mud-icon-button):hover,
+.mo-theme-material-design-3-dark .navbar-actions :is(.action-button, .mud-icon-button):hover {
     background: var(--mo-m3-nav-hover) !important;
+}
+
+.mo-theme-material-design-3-light .navbar-actions :is(.action-button, .mud-icon-button):not(:where(.mud-primary-text, .mud-secondary-text, .mud-info-text, .mud-success-text, .mud-warning-text, .mud-error-text)):hover,
+.mo-theme-material-design-3-dark .navbar-actions :is(.action-button, .mud-icon-button):not(:where(.mud-primary-text, .mud-secondary-text, .mud-info-text, .mud-success-text, .mud-warning-text, .mud-error-text)):hover {
     color: var(--mo-m3-on-surface) !important;
 }
 
-.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu),
-.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip), .mud-menu) {
+.mo-theme-material-design-3-light :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip)),
+.mo-theme-material-design-3-dark :is(.dropdown-menu, .more-menu, .flyout-menu, .mud-popover:not(.mud-tooltip)) {
     background: var(--mo-m3-surface-container);
     border: 1px solid var(--mo-m3-outline-variant);
     border-radius: var(--mo-m3-shape-large);
@@ -254,8 +256,8 @@
     text-transform: none;
 }
 
-.mo-theme-material-design-3-light :is(.mud-card, .theme-card),
-.mo-theme-material-design-3-dark :is(.mud-card, .theme-card) {
+.mo-theme-material-design-3-light :is(.mud-card:not(.mo-self-painted), .theme-card),
+.mo-theme-material-design-3-dark :is(.mud-card:not(.mo-self-painted), .theme-card) {
     background: var(--mo-m3-surface-container-low);
     border: 0 !important;
     border-radius: var(--mo-m3-shape-expressive) !important;
@@ -266,8 +268,8 @@
         box-shadow var(--mo-m3-motion-standard);
 }
 
-.mo-theme-material-design-3-light :is(.mud-card, .theme-card):hover,
-.mo-theme-material-design-3-dark :is(.mud-card, .theme-card):hover {
+.mo-theme-material-design-3-light :is(.mud-card:not(.mo-self-painted), .theme-card):hover,
+.mo-theme-material-design-3-dark :is(.mud-card:not(.mo-self-painted), .theme-card):hover {
     background: var(--mo-m3-card-hover);
     box-shadow: var(--mud-elevation-1) !important;
     transform: none;
@@ -280,8 +282,8 @@
     color: var(--mo-m3-on-primary-container);
 }
 
-.mo-theme-material-design-3-light :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs),
-.mo-theme-material-design-3-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs) {
+.mo-theme-material-design-3-light :is(.mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs),
+.mo-theme-material-design-3-dark :is(.mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-tabs) {
     background: var(--mo-m3-surface-container-low);
     border-color: transparent;
     border-radius: var(--mo-m3-shape-expressive);

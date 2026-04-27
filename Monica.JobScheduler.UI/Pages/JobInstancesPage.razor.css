@@ -1,0 +1,81 @@
+.job-instances-table-wrapper {
+    --table-columns:
+        minmax(8rem, 1fr)
+        minmax(8rem, 0.95fr)
+        minmax(7rem, 0.65fr)
+        minmax(10rem, 1fr)
+        minmax(10rem, 1fr)
+        minmax(10rem, 1fr)
+        minmax(7rem, 0.65fr)
+        minmax(5.25rem, 0.45fr);
+}
+
+.job-instances-table-wrapper ::deep .mud-table-root {
+    width: 100%;
+}
+
+.job-instances-table-wrapper ::deep .mud-table-container {
+    overflow-x: auto;
+}
+
+@media (min-width: 961px) {
+    .job-instances-table-wrapper ::deep .mud-table-root {
+        display: grid;
+        grid-template-columns: var(--table-columns);
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-head,
+    .job-instances-table-wrapper ::deep .mud-table-body,
+    .job-instances-table-wrapper ::deep .mud-table-row {
+        display: contents;
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-cell {
+        align-items: center;
+        display: flex;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-cell > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-loading,
+    .job-instances-table-wrapper ::deep .mud-table-empty-row {
+        display: block;
+        grid-column: 1 / -1;
+        justify-content: center;
+        min-width: 0;
+        text-align: center;
+        width: 100%;
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-body tr:has(.mud-table-empty-row) {
+        display: contents;
+    }
+
+    .job-instances-table-wrapper ::deep .mud-table-empty-row > * {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .job-instances-table-wrapper ::deep .job-state-column,
+    .job-instances-table-wrapper ::deep .job-actions-column {
+        justify-content: center;
+    }
+}
+
+.job-instances-table__ellipsis {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-instances-table__monospace {
+    font-family: monospace;
+}

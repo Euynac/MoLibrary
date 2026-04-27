@@ -106,6 +106,7 @@
     <!-- data table with deferred rendering -->
     @if (_stateLoaded)
     {
+        <div class="job-instances-table-wrapper">
         <MudTable @ref="_table"
                   T="JobInstance"
                   ServerData="LoadDataAsync"
@@ -127,55 +128,58 @@
                                OnClick="RefreshAsync" />
             </ToolBarContent>
             <HeaderContent>
-                <MudTh><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">@L["JobInstances:Columns:InstanceId"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="JobKey" T="JobInstance">@L["JobInstances:Columns:JobKey"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="State" T="JobInstance">@L["JobInstances:Columns:State"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance" InitialDirection="SortDirection.Descending">@L["JobInstances:Columns:CreatedTime"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">@L["JobInstances:Columns:StartTime"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">@L["JobInstances:Columns:EndTime"]</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortLabel="Duration" T="JobInstance">@L["JobInstances:Columns:Duration"]</MudTableSortLabel></MudTh>
-                <MudTh>@L["JobInstances:Columns:Actions"]</MudTh>
+                <MudTh Class="job-instance-id-column"><MudTableSortLabel SortLabel="InstanceId" T="JobInstance">@L["JobInstances:Columns:InstanceId"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-key-column"><MudTableSortLabel SortLabel="JobKey" T="JobInstance">@L["JobInstances:Columns:JobKey"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-state-column"><MudTableSortLabel SortLabel="State" T="JobInstance">@L["JobInstances:Columns:State"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-created-column"><MudTableSortLabel SortLabel="CreatedAt" T="JobInstance" InitialDirection="SortDirection.Descending">@L["JobInstances:Columns:CreatedTime"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-started-column"><MudTableSortLabel SortLabel="StartedAt" T="JobInstance">@L["JobInstances:Columns:StartTime"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-completed-column"><MudTableSortLabel SortLabel="CompletedAt" T="JobInstance">@L["JobInstances:Columns:EndTime"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-duration-column"><MudTableSortLabel SortLabel="Duration" T="JobInstance">@L["JobInstances:Columns:Duration"]</MudTableSortLabel></MudTh>
+                <MudTh Class="job-actions-column">@L["JobInstances:Columns:Actions"]</MudTh>
             </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="@L["JobInstances:Columns:InstanceId"]">
+            @{
+                var createdAtText = context.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss");
+                var startedAtText = context.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
+                var completedAtText = context.CompletedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-";
+                var durationText = GetDurationText(context);
+            }
+            <MudTd DataLabel="@L["JobInstances:Columns:InstanceId"]" Class="job-instance-id-column">
                 <MudTooltip Text="@context.InstanceId">
-                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
-                        @(context.InstanceId.Length > 8 ? context.InstanceId[..8] + "..." : context.InstanceId)
-                    </MudText>
+                    <span class="job-instances-table__ellipsis job-instances-table__monospace">@context.InstanceId</span>
                 </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:JobKey"]">@context.JobKey</MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:State"]">
+            <MudTd DataLabel="@L["JobInstances:Columns:JobKey"]" Class="job-key-column">
+                <MudTooltip Text="@context.JobKey">
+                    <span class="job-instances-table__ellipsis">@context.JobKey</span>
+                </MudTooltip>
+            </MudTd>
+            <MudTd DataLabel="@L["JobInstances:Columns:State"]" Class="job-state-column">
                 <MudChip T="string" Size="Size.Small" Color="@ColorService.GetStateColor(context.State)">
                     @context.State
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:CreatedTime"]">
-                @context.CreatedAt.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss")
+            <MudTd DataLabel="@L["JobInstances:Columns:CreatedTime"]" Class="job-created-column">
+                <MudTooltip Text="@createdAtText">
+                    <span class="job-instances-table__ellipsis">@createdAtText</span>
+                </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:StartTime"]">
-                @(context.StartedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+            <MudTd DataLabel="@L["JobInstances:Columns:StartTime"]" Class="job-started-column">
+                <MudTooltip Text="@startedAtText">
+                    <span class="job-instances-table__ellipsis">@startedAtText</span>
+                </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:EndTime"]">
-                @(context.CompletedAt?.FromUtcToLocal().ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+            <MudTd DataLabel="@L["JobInstances:Columns:EndTime"]" Class="job-completed-column">
+                <MudTooltip Text="@completedAtText">
+                    <span class="job-instances-table__ellipsis">@completedAtText</span>
+                </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:Duration"]">
-                @if (context.StartedAt.HasValue && context.CompletedAt.HasValue)
-                {
-                    var duration = context.CompletedAt.Value - context.StartedAt.Value;
-                    <text>@FormatDuration(duration)</text>
-                }
-                else if (context.StartedAt.HasValue)
-                {
-                    var duration = DateTime.UtcNow.FromUtcToLocal() - context.StartedAt.Value.FromUtcToLocal();
-                    <text>@FormatDuration(duration) (@L["JobInstances:Messages:Running"])</text>
-                }
-                else
-                {
-                    <text>-</text>
-                }
+            <MudTd DataLabel="@L["JobInstances:Columns:Duration"]" Class="job-duration-column">
+                <MudTooltip Text="@durationText">
+                    <span class="job-instances-table__ellipsis">@durationText</span>
+                </MudTooltip>
             </MudTd>
-            <MudTd DataLabel="@L["JobInstances:Columns:Actions"]">
+            <MudTd DataLabel="@L["JobInstances:Columns:Actions"]" Class="job-actions-column">
                 <MudTooltip Text="@L["JobInstances:Actions:ViewDetails"]">
                     <MudIconButton Icon="@Icons.Material.Filled.Info"
                                    Color="Color.Info"
@@ -194,6 +198,7 @@
                 <MudTablePager PageSizeOptions="new int[] { 10, 20, 50, 100 }" />
             </PagerContent>
         </MudTable>
+        </div>
     }
     else
     {
@@ -468,6 +473,22 @@
         if (duration.TotalSeconds >= 1)
             return $"{duration.TotalSeconds:F2}s";
         return $"{duration.TotalMilliseconds:F0}ms";
+    }
+
+    private string GetDurationText(JobInstance instance)
+    {
+        if (instance.StartedAt.HasValue && instance.CompletedAt.HasValue)
+        {
+            return FormatDuration(instance.CompletedAt.Value - instance.StartedAt.Value);
+        }
+
+        if (instance.StartedAt.HasValue)
+        {
+            var duration = DateTime.UtcNow - instance.StartedAt.Value;
+            return $"{FormatDuration(duration)} ({L["JobInstances:Messages:Running"]})";
+        }
+
+        return "-";
     }
 
     private static string? MapSortLabelToField(string sortLabel)

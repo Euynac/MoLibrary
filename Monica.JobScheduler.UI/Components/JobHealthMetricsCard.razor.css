@@ -10,35 +10,47 @@
     transform: translateY(-2px);
 }
 
+.state-grid-wrapper ::deep .mud-paper .mud-typography {
+    color: inherit;
+}
+
 /* Status statistics card style - in order of JobState enumeration */
 .state-grid-wrapper ::deep .state-scheduled {
     background-color: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
 }
 
 .state-grid-wrapper ::deep .state-enqueued {
     background-color: var(--mud-palette-info-darken);
+    color: var(--mud-palette-info-text);
 }
 
 .state-grid-wrapper ::deep .state-processing {
     background-color: var(--mud-palette-primary-darken);
+    color: var(--mud-palette-primary-text);
 }
 
 .state-grid-wrapper ::deep .state-succeeded {
     background-color: var(--mud-palette-success-darken);
+    color: var(--mud-palette-success-text);
 }
 
 .state-grid-wrapper ::deep .state-failed {
     background-color: var(--mud-palette-error-darken);
+    color: var(--mud-palette-error-text);
 }
 
 .state-grid-wrapper ::deep .state-terminated {
     background-color: var(--mud-palette-error-darken);
+    color: var(--mud-palette-error-text);
 }
 
 .state-grid-wrapper ::deep .state-cancelled {
     background-color: var(--mud-palette-warning-darken);
+    color: var(--mud-palette-warning-text);
 }
 
 .state-grid-wrapper ::deep .state-skipped {
     background-color: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
 }

@@ -34,7 +34,7 @@
                                OnClick="RequestSelfRestartAsync"
                                Size="Size.Medium"
                                Disabled="_restartRequested"
-                               Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
+                               Style="background-color: transparent; border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
                         @L["Page:Header:Restart"]
                     </MudButton>
                 }
@@ -43,7 +43,7 @@
                            Variant="Variant.Outlined"
                            OnClick="RefreshSystemInfo"
                            Size="Size.Medium"
-                           Style="border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
+                           Style="background-color: transparent; border-color: color-mix(in srgb, var(--mo-color-page-hero-action) 72%, transparent); color: var(--mo-color-page-hero-action);">
                     @L["Page:Header:Refresh"]
                 </MudButton>
             </MudStack>
@@ -197,7 +197,13 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" Color="Color.Info" />
                                         <MudText><strong>@L["Page:FileInfo:ProductVersion"]:</strong></MudText>
                                     </MudStack>
-                                    <MudText Class="ml-6" Style="color: var(--mud-palette-text-secondary);">@_systemInfo.FileInfo.ProductVersion</MudText>
+                                    <div class="system-info-file-version-value">
+                                        <MudTooltip Text="@_systemInfo.FileInfo.ProductVersion">
+                                            <MudText Class="ml-6" Color="Color.Secondary">
+                                                @_systemInfo.FileInfo.ProductVersion
+                                            </MudText>
+                                        </MudTooltip>
+                                    </div>
 
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Size="Size.Small" Color="Color.Warning" />

@@ -205,6 +205,7 @@ Key rules:
 - `MudDataGrid` header affordances are hover-hidden by default in MudBlazor. If a custom theme makes headers look blank, inspect and style `.sort-direction-icon`, `.column-options-icon`, `.drag-icon-options`, and `.mud-menu .mud-icon-button-label`.
 - Debug theme regressions with live DOM and computed-style checks before editing CSS. Verify both light and dark modes and inspect MudBlazor source when component behavior is uncertain.
 - Read `references/theme-authoring-pitfalls.md` when working on shared theme regressions or resuming a theme-debugging thread. That file carries the concrete regression patterns and verification traps.
+- Read `references/adaptive-mudblazor-list-table-pattern.md` when fixing dense MudBlazor list/table overflow, adaptive ellipsis, or CSS-grid table alignment issues.
 
 Validate semantic theme-token compliance with:
 

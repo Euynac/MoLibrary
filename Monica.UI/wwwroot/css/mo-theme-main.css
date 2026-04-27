@@ -123,6 +123,16 @@
         transform 150ms ease-out;
 }
 
+/*
+ * Self-paint marker.
+ * Add `mo-self-painted` to any MudCard/MudPaper that paints its own
+ * background (e.g. semantic state cards). Theme broad surface rules
+ * must negate this class via :not(.mo-self-painted) so they stop
+ * overwriting component-level palette decisions.
+ * The class itself is intentionally style-less.
+ */
+.mo-self-painted {}
+
 :root[data-theme] :is(.dropdown-menu .mud-nav-link, .flyout-menu .mud-nav-link, .more-menu .category-header),
 :root[data-theme] .mud-popover .mo-appbar-menu-list .mud-menu-item {
     align-items: center;
