@@ -5,21 +5,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Agents.AI" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.4.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.4.0" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.0" />
-    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.5.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.5.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.73.0-preview" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.73.0-preview" />
-    <PackageReference Include="OpenAI" Version="2.9.1" />
-    <PackageReference Include="Anthropic" Version="12.8.0" />
+    <PackageReference Include="OpenAI" Version="2.10.0" />
+    <PackageReference Include="Anthropic" Version="12.17.0" />
     <PackageReference Include="Qdrant.Client" Version="1.17.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
     <ProjectReference Include="..\Monica.Markdown\Monica.Markdown.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="10.0.203" />
   </ItemGroup>
 
 </Project>
