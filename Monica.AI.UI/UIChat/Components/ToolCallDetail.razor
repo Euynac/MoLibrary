@@ -151,7 +151,7 @@
             return null;
         }
 
-        foreach (var argumentKey in s_previewArgumentKeys)
+        foreach (var argumentKey in _previewArgumentKeys)
         {
             if (call.Arguments.TryGetValue(argumentKey, out var value) && value is not null)
             {
@@ -296,7 +296,7 @@
             });
     }
 
-    private static readonly string[] s_previewArgumentKeys =
+    private static readonly string[] _previewArgumentKeys =
     [
         "searchQuery",
         "userQuestion",

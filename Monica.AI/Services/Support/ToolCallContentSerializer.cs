@@ -9,7 +9,7 @@ namespace Monica.AI.Services.Support;
 /// </summary>
 internal static class ToolCallContentSerializer
 {
-    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -59,7 +59,7 @@ internal static class ToolCallContentSerializer
     {
         try
         {
-            return JsonSerializer.Serialize(value, s_jsonOptions);
+            return JsonSerializer.Serialize(value, _jsonOptions);
         }
         catch
         {
@@ -74,7 +74,7 @@ internal static class ToolCallContentSerializer
             return FormatText(element.GetString());
         }
 
-        return JsonSerializer.Serialize(element, s_jsonOptions);
+        return JsonSerializer.Serialize(element, _jsonOptions);
     }
 
     private static string SerializeUnknownResult(object value)
@@ -98,7 +98,7 @@ internal static class ToolCallContentSerializer
         try
         {
             using var document = JsonDocument.Parse(text);
-            return JsonSerializer.Serialize(document.RootElement, s_jsonOptions);
+            return JsonSerializer.Serialize(document.RootElement, _jsonOptions);
         }
         catch
         {

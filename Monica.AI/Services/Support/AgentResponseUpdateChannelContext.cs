@@ -5,12 +5,12 @@ namespace Monica.AI.Services.Support;
 /// </summary>
 public static class AgentResponseUpdateChannelContext
 {
-    private static readonly AsyncLocal<AgentResponseUpdateChannel?> s_current = new();
+    private static readonly AsyncLocal<AgentResponseUpdateChannel?> _current = new();
 
     /// <summary>
     /// Gets the current channel for the active async flow.
     /// </summary>
-    public static AgentResponseUpdateChannel? Current => s_current.Value;
+    public static AgentResponseUpdateChannel? Current => _current.Value;
 
     /// <summary>
     /// Push a channel into the current async flow and restore the previous value on dispose.
@@ -28,8 +28,8 @@ public static class AgentResponseUpdateChannelContext
 
         public Scope(AgentResponseUpdateChannel channel)
         {
-            _previous = s_current.Value;
-            s_current.Value = channel;
+            _previous = _current.Value;
+            _current.Value = channel;
         }
 
         public void Dispose()
@@ -39,7 +39,7 @@ public static class AgentResponseUpdateChannelContext
                 return;
             }
 
-            s_current.Value = _previous;
+            _current.Value = _previous;
             _disposed = true;
         }
     }
