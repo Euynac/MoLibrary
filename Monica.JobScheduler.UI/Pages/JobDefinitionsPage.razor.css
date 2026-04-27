@@ -3,21 +3,25 @@
 }
 
 .job-filter-wrapper ::deep .job-filter-main {
+    align-items: center;
+    display: grid !important;
+    grid-template-columns: minmax(18rem, 1fr) minmax(16rem, 18rem) auto;
     width: 100%;
 }
 
 .job-filter-wrapper ::deep .job-filter-search {
-    flex: 1 1 24rem;
-    min-width: min(100%, 18rem);
+    max-width: none;
+    min-width: 0;
+    width: 100%;
 }
 
 .job-filter-wrapper ::deep .job-filter-source {
-    flex: 0 1 18rem;
-    min-width: min(100%, 16rem);
+    min-width: 0;
+    width: 100%;
 }
 
 .job-filter-wrapper ::deep .job-filter-actions {
-    margin-left: auto;
+    flex: 0 0 auto;
 }
 
 .job-filter-chip-row {
@@ -219,10 +223,8 @@
         padding: 12px;
     }
 
-    .job-filter-wrapper ::deep .job-filter-search,
-    .job-filter-wrapper ::deep .job-filter-source,
-    .job-filter-wrapper ::deep .job-filter-actions {
-        flex-basis: 100%;
+    .job-filter-wrapper ::deep .job-filter-main {
+        grid-template-columns: 1fr;
     }
 
     .job-filter-wrapper ::deep .job-filter-actions {
