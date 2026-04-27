@@ -23,14 +23,14 @@ public class KnowledgeSearchToolProvider(
     ILoggerFactory loggerFactory)
     : IAIChatToolProvider
 {
-    private const string DefaultSearchToolName = "search_knowledge_base";
-    private const string DefaultBrowseDocumentsToolName = "browse_knowledge_documents";
-    private const string DefaultBrowseTreeToolName = "browse_knowledge_document_tree";
-    private const string DefaultDocumentContentToolName = "get_knowledge_document_content";
-    private const string CitationInstruction =
+    private const string DEFAULT_SEARCH_TOOL_NAME = "search_knowledge_base";
+    private const string DEFAULT_BROWSE_DOCUMENTS_TOOL_NAME = "browse_knowledge_documents";
+    private const string DEFAULT_BROWSE_TREE_TOOL_NAME = "browse_knowledge_document_tree";
+    private const string DEFAULT_DOCUMENT_CONTENT_TOOL_NAME = "get_knowledge_document_content";
+    private const string CITATION_INSTRUCTION =
         "Prefer citing the source name and source link when using these knowledge results.";
 
-    private static readonly JsonSerializerOptions s_toolJsonOptions = new()
+    private static readonly JsonSerializerOptions _toolJsonOptions = new()
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
@@ -71,10 +71,10 @@ public class KnowledgeSearchToolProvider(
 
         if (searchProviderOptions.SearchTime == TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling)
         {
-            var searchToolName = searchProviderOptions.FunctionToolName ?? DefaultSearchToolName;
-            var browseToolName = DefaultBrowseDocumentsToolName;
-            var browseTreeToolName = DefaultBrowseTreeToolName;
-            var documentContentToolName = DefaultDocumentContentToolName;
+            var searchToolName = searchProviderOptions.FunctionToolName ?? DEFAULT_SEARCH_TOOL_NAME;
+            var browseToolName = DEFAULT_BROWSE_DOCUMENTS_TOOL_NAME;
+            var browseTreeToolName = DEFAULT_BROWSE_TREE_TOOL_NAME;
+            var documentContentToolName = DEFAULT_DOCUMENT_CONTENT_TOOL_NAME;
 
             _logger.LogInformation(
                 "Registering knowledge tools '{SearchToolName}', '{BrowseToolName}', '{TreeToolName}', and '{ContentToolName}'.",
@@ -125,7 +125,7 @@ public class KnowledgeSearchToolProvider(
         var searchTime = configuredOptions?.SearchTime
             ?? TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling;
         var toolName = string.IsNullOrWhiteSpace(configuredOptions?.FunctionToolName)
-            ? DefaultSearchToolName
+            ? DEFAULT_SEARCH_TOOL_NAME
             : configuredOptions.FunctionToolName;
         var toolDescription = string.IsNullOrWhiteSpace(configuredOptions?.FunctionToolDescription)
             ? BuildKnowledgeSearchToolDescription(knowledgeBases)
@@ -237,7 +237,7 @@ public class KnowledgeSearchToolProvider(
                 topK,
                 cancellationToken);
 
-            return JsonSerializer.Serialize(payload, s_toolJsonOptions);
+            return JsonSerializer.Serialize(payload, _toolJsonOptions);
         }
 
         return AIFunctionFactory.Create(
@@ -267,7 +267,7 @@ public class KnowledgeSearchToolProvider(
                 maxDocuments,
                 cancellationToken);
 
-            return JsonSerializer.Serialize(payload, s_toolJsonOptions);
+            return JsonSerializer.Serialize(payload, _toolJsonOptions);
         }
 
         return AIFunctionFactory.Create(
@@ -304,7 +304,7 @@ public class KnowledgeSearchToolProvider(
                 startCharacterIndex,
                 cancellationToken);
 
-            return JsonSerializer.Serialize(payload, s_toolJsonOptions);
+            return JsonSerializer.Serialize(payload, _toolJsonOptions);
         }
 
         return AIFunctionFactory.Create(
@@ -339,7 +339,7 @@ public class KnowledgeSearchToolProvider(
                 maxEntries,
                 cancellationToken);
 
-            return JsonSerializer.Serialize(payload, s_toolJsonOptions);
+            return JsonSerializer.Serialize(payload, _toolJsonOptions);
         }
 
         return AIFunctionFactory.Create(
@@ -383,7 +383,7 @@ public class KnowledgeSearchToolProvider(
             NextStepInstruction = results.Count == 0
                 ? "If semantic search found no matches, refine the query or browse documents for candidate titles and contexts. Do not repeat the exact same semantic search query."
                 : "Use the returned knowledge-base results to answer the current question. If you need original document wording, load the document content using the returned DocumentId or SourceLink. If you need to inspect the document hierarchy first, use the document tree tool.",
-            CitationInstruction = CitationInstruction,
+            CitationInstruction = CITATION_INSTRUCTION,
             ResultCount = results.Count,
             ShouldRetrySameQuery = false,
             CanRetryWithRefinedQuery = results.Count == 0,
@@ -396,7 +396,7 @@ public class KnowledgeSearchToolProvider(
             Results = results.Select(result => BuildKnowledgeToolResultItem(result, knowledgeBaseLookup)).ToList()
         };
 
-        return JsonSerializer.Serialize(payload, s_toolJsonOptions);
+        return JsonSerializer.Serialize(payload, _toolJsonOptions);
     }
 
     private static KnowledgeSearchToolResultItem BuildKnowledgeToolResultItem(

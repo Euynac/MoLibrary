@@ -66,6 +66,10 @@ When handling questions around how to work with native Microsoft technologies, s
 - Internal code should also include brief comments for non-obvious logic, especially complex branching, concurrency, normalization rules, caching, retries, or cross-module coordination.
 - Do not add comments for obvious code; comments must provide real developer guidance.
 
+## C# Naming Rules
+
+- Private constant fields must use upper snake case, for example `DEFAULT_SEARCH_TOOL_NAME`.
+
 ## Code Quality Principles
 
 - Write reusable, low-coupling and high-cohesion implementations with multiple abstractions
