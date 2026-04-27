@@ -3,19 +3,19 @@ using MudBlazor;
 namespace Monica.UI.Theming.Definitions;
 
 /// <summary>
-/// Windows 11 inspired theme that maps Fluent neutral layers, sparse accent usage, Segoe typography,
+/// Fluent Design inspired theme that maps Fluent neutral layers, sparse accent usage, Segoe typography,
 /// rounded geometry, and subtle elevation into MudBlazor tokens.
 /// </summary>
-public sealed class Windows11Theme : ThemeDefinitionBase
+public sealed class FluentDesignTheme : ThemeDefinitionBase
 {
     /// <inheritdoc />
-    public override string Name => "windows-11";
+    public override string Name => "fluent-design";
 
     /// <inheritdoc />
-    public override string DisplayName => "Windows 11";
+    public override string DisplayName => "Fluent Design";
 
     /// <inheritdoc />
-    public override string Description => "Fluent Windows 11 styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls.";
+    public override string Description => "Fluent Design styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls.";
 
     /// <inheritdoc />
     public override CodeBlockTheme LightCodeBlockTheme => CodeBlockTheme.Github;

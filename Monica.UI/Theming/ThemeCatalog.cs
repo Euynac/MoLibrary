@@ -24,7 +24,7 @@ public static class ThemeCatalog
         RegisterTheme(new HermesTealTheme());
         RegisterTheme(new VibeUsageMatrixTheme());
         RegisterTheme(new MaterialDesign3Theme());
-        RegisterTheme(new Windows11Theme());
+        RegisterTheme(new FluentDesignTheme());
         RegisterTheme(new FreshTheme());
         RegisterTheme(new MacaronSweetheartTheme());
         RegisterTheme(new InkLandscapeTheme());

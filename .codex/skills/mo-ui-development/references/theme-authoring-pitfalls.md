@@ -222,46 +222,6 @@ For theme-owned tooltip styling:
 
 Do not assume screenshot-only checks will catch this. The tooltip can look acceptable in one mode while the computed text color is still wrong in another.
 
-## 9. AppBar menus must use shared MudBlazor menu primitives (established pattern)
-
-### Background
-
-AppBar category menus were originally built with custom dropdown/flyout markup (`.dropdown-menu`, `.flyout-menu`, `.category-header`), while language and user menus used `MudMenu`. This created two incompatible menu systems and forced themes to add compatibility selectors for private AppBar classes. Each theme fix spread more component-specific CSS into theme files.
-
-This was resolved by migrating all AppBar menus to `MudMenu` + `MudMenuItem`. The custom state machine (hover tracking, CTS-based delayed close, pointer event handlers) was removed in favor of MudMenu's native behavior.
-
-### Current pattern
-
-All AppBar menus now use MudBlazor primitives:
-
-- `MudMenu` with `ActivationEvent="MouseEvent.MouseOver"` for category dropdowns and overflow
-- `MudMenuItem` with `Href` for navigation items
-- Active route feedback via `.active` CSS class applied through `NavigationRouteMatcher.IsActive()`
-- Layout hooks passed through `PopoverClass` (e.g., `mo-nav-menu-popover`, `mo-nav-menu-popover-scrollable`)
-
-Reference implementation: `NavBarDropdown.razor` and `NavBarMore.razor` in `Monica.UI/Shell/Components/Layout/`.
-
-### Theme selectors for menu items
-
-Themes style menu items through standard MudBlazor selectors only:
-
-- `.mud-menu-list .mud-menu-item` for item row visuals (border-radius, margin, padding)
-- `.mud-menu-list .mud-menu-item:hover` / `:focus` / `:active` for interaction states
-- `.mud-menu-list .mud-menu-item.active` for current-route highlight
-- `.mud-popover:has(> .mud-menu-list)` for menu surface visuals (background, border, shadow)
-
-Layout-only hooks in `mo-theme-main.css`:
-
-- `.mo-nav-menu-popover` controls min-width for category menus
-- `.mo-nav-menu-popover-more` controls min-width for the overflow menu
-- `.mo-nav-menu-popover-compact` controls sizing for compact/mobile mode
-- `.mo-nav-menu-popover-scrollable` controls max-height and scroll behavior
-- `.mo-nav-menu-list` controls text wrapping in menu items
-
-### Rule
-
-Do not reintroduce custom dropdown, flyout, or category-header markup in AppBar menus. If new AppBar menu behavior is needed, extend the existing `MudMenu`-based components. Themes must never target private AppBar classes.
-
 ## 10. Do not treat Mud popovers like normal panels
 
 ### What happens
