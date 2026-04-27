@@ -86,10 +86,10 @@
       "Title": "实时监控"
     },
     "JobDefinitions": {
-      "Title": "任务定义"
+      "Title": "作业定义"
     },
     "JobInstances": {
-      "Title": "任务实例"
+      "Title": "作业实例"
     },
     "JobStatistics": {
       "Title": "统计分析"

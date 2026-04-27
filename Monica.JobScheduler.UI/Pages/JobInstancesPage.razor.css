@@ -1,3 +1,49 @@
+.job-filter-wrapper ::deep .job-filter-surface {
+    padding: 16px;
+}
+
+.job-filter-wrapper ::deep .job-filter-main {
+    width: 100%;
+}
+
+.job-filter-wrapper ::deep .job-filter-search {
+    flex: 1 1 22rem;
+    min-width: min(100%, 18rem);
+}
+
+.job-filter-wrapper ::deep .job-filter-time-range {
+    flex: 0 1 13rem;
+    min-width: min(100%, 12rem);
+}
+
+.job-filter-wrapper ::deep .job-filter-date {
+    flex: 0 1 12rem;
+    min-width: min(100%, 11rem);
+}
+
+.job-filter-wrapper ::deep .job-filter-actions {
+    margin-left: auto;
+}
+
+.job-filter-chip-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.job-filter-chip-label {
+    flex: 0 0 auto;
+}
+
+.job-filter-chip-row ::deep .job-filter-chipset {
+    min-width: 0;
+}
+
+.job-filter-chip-row ::deep .job-filter-chipset {
+    gap: 6px;
+}
+
 .job-instances-table-wrapper {
     --table-columns:
         minmax(8rem, 1fr)
@@ -78,4 +124,22 @@
 
 .job-instances-table__monospace {
     font-family: monospace;
+}
+
+@media (max-width: 600px) {
+    .job-filter-wrapper ::deep .job-filter-surface {
+        padding: 12px;
+    }
+
+    .job-filter-wrapper ::deep .job-filter-search,
+    .job-filter-wrapper ::deep .job-filter-time-range,
+    .job-filter-wrapper ::deep .job-filter-date,
+    .job-filter-wrapper ::deep .job-filter-actions {
+        flex-basis: 100%;
+    }
+
+    .job-filter-wrapper ::deep .job-filter-actions {
+        justify-content: flex-end;
+        margin-left: 0;
+    }
 }

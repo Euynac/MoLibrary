@@ -1,3 +1,44 @@
+.job-filter-wrapper ::deep .job-filter-surface {
+    padding: 16px;
+}
+
+.job-filter-wrapper ::deep .job-filter-main {
+    width: 100%;
+}
+
+.job-filter-wrapper ::deep .job-filter-search {
+    flex: 1 1 24rem;
+    min-width: min(100%, 18rem);
+}
+
+.job-filter-wrapper ::deep .job-filter-source {
+    flex: 0 1 18rem;
+    min-width: min(100%, 16rem);
+}
+
+.job-filter-wrapper ::deep .job-filter-actions {
+    margin-left: auto;
+}
+
+.job-filter-chip-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.job-filter-chip-label {
+    flex: 0 0 auto;
+}
+
+.job-filter-chip-row ::deep .job-filter-chipset {
+    min-width: 0;
+}
+
+.job-filter-chip-row ::deep .job-filter-chipset {
+    gap: 6px;
+}
+
 .recurring-job-definitions-table {
     --table-columns:
         minmax(3rem, 0.25fr)
@@ -170,5 +211,22 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@media (max-width: 600px) {
+    .job-filter-wrapper ::deep .job-filter-surface {
+        padding: 12px;
+    }
+
+    .job-filter-wrapper ::deep .job-filter-search,
+    .job-filter-wrapper ::deep .job-filter-source,
+    .job-filter-wrapper ::deep .job-filter-actions {
+        flex-basis: 100%;
+    }
+
+    .job-filter-wrapper ::deep .job-filter-actions {
+        justify-content: flex-end;
+        margin-left: 0;
     }
 }

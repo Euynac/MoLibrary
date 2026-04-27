@@ -96,9 +96,14 @@
   "JobDefinitions": {
     "Title": "作业定义",
     "Filters": {
+      "Search": "搜索",
+      "SearchPlaceholder": "作业键 / 作业名称 / 来源项目",
       "SourceProject": "来源项目",
+      "SourceProjectSelected": "已选 {0} 个来源",
       "JobKey": "作业键",
-      "JobName": "作业名称"
+      "JobName": "作业名称",
+      "Badges": "筛选",
+      "LastExecutionFailed": "上次执行出错"
     },
     "Tabs": {
       "RecurringJob": "周期性作业",
@@ -158,6 +163,8 @@
   "JobInstances": {
     "Title": "作业实例",
     "Filters": {
+      "Search": "搜索",
+      "SearchPlaceholder": "作业键 / 实例ID",
       "JobKey": "作业键",
       "InstanceId": "实例ID",
       "State": "状态",

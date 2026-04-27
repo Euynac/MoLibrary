@@ -40,6 +40,13 @@ public static class JobInstanceEntityQueryExtensions
             queryable = queryable.Where(i => EF.Functions.Like(i.InstanceId, $"%{query.InstanceIdContains}%"));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.SearchText))
+        {
+            queryable = queryable.Where(i =>
+                EF.Functions.Like(i.JobKey, $"%{query.SearchText}%") ||
+                EF.Functions.Like(i.InstanceId, $"%{query.SearchText}%"));
+        }
+
         // States/State filtering (States takes priority)
         if (query.States is { Count: > 0 })
         {

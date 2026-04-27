@@ -20,53 +20,85 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobDefinitions:Title"]</MudText>
 
-    <!-- filter -->
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6" md="4">
-                <MudTextField T="string"
-                              @bind-Value="_filterFromProject"
-                              Label="@L["JobDefinitions:Filters:SourceProject"]"
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <MudTextField T="string"
-                              @bind-Value="_filterJobKey"
-                              Label="@L["JobDefinitions:Filters:JobKey"]"
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="4">
-                <MudTextField T="string"
-                              @bind-Value="_filterJobName"
-                              Label="@L["JobDefinitions:Filters:JobName"]"
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" Class="d-flex justify-end">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           OnClick="HandleFilterChanged"
-                           StartIcon="@Icons.Material.Filled.Search">
-                    @L["Common:Actions:Search"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           OnClick="HandleResetFilters"
-                           StartIcon="@Icons.Material.Filled.Clear"
-                           Class="ml-2">
-                    @L["Common:Actions:Reset"]
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+    <div class="job-filter-wrapper mb-4">
+        <MudPaper Class="job-filter-surface" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="job-filter-main">
+                    <MudTextField T="string"
+                                  @bind-Value="_definitionSearchText"
+                                  Label="@L["JobDefinitions:Filters:Search"]"
+                                  Placeholder="@L["JobDefinitions:Filters:SearchPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Clearable="true"
+                                  Immediate="true"
+                                  DebounceInterval="300"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  OnDebounceIntervalElapsed="HandleFilterChanged"
+                                  OnClearButtonClick="HandleFilterChanged"
+                                  Class="job-filter-search" />
+
+                    <MudSelect T="string"
+                               Label="@L["JobDefinitions:Filters:SourceProject"]"
+                               Variant="Variant.Outlined"
+                               MultiSelection="true"
+                               Clearable="true"
+                               SelectedValues="@_selectedSourceProjects"
+                               SelectedValuesChanged="HandleSourceProjectsChanged"
+                               MultiSelectionTextFunc="GetSourceProjectSelectionText"
+                               OnClearButtonClick="HandleSourceProjectsClear"
+                               AdornmentIcon="@Icons.Material.Filled.Source"
+                               Class="job-filter-source">
+                        @foreach (var option in _sourceProjectOptions)
+                        {
+                            <MudSelectItem T="string" Value="@option.ProjectName">
+                                @option.DisplayText
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="job-filter-actions">
+                        <MudTooltip Text="@L["Common:Actions:Search"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Filled"
+                                           OnClick="HandleFilterChanged" />
+                        </MudTooltip>
+                        <MudTooltip Text="@L["Common:Actions:Reset"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                                           Color="Color.Default"
+                                           Variant="Variant.Outlined"
+                                           OnClick="HandleResetFilters" />
+                        </MudTooltip>
+                    </MudStack>
+                </MudStack>
+
+                <div class="job-filter-chip-row">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="job-filter-chip-label">
+                        @L["JobDefinitions:Filters:Badges"]
+                    </MudText>
+                    <MudChipSet T="JobDefinitionBadgeFilter"
+                                SelectionMode="SelectionMode.MultiSelection"
+                                SelectedValues="@_selectedDefinitionBadges"
+                                SelectedValuesChanged="HandleDefinitionBadgesChanged"
+                                CheckMark="true"
+                                Class="job-filter-chipset">
+                        @foreach (var badge in DefinitionBadgeFilters)
+                        {
+                            var isSelected = _selectedDefinitionBadges.Contains(badge);
+                            <MudChip T="JobDefinitionBadgeFilter"
+                                     Value="@badge"
+                                     Size="Size.Small"
+                                     Color="@GetDefinitionBadgeColor(badge, isSelected)"
+                                     Variant="@(isSelected ? Variant.Filled : Variant.Outlined)">
+                                @GetDefinitionBadgeLabel(badge)
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                </div>
+            </MudStack>
+        </MudPaper>
+    </div>
 
     <!-- Batch Operation Toolbar (only shown when RecurringJob tab is selected) -->
     @if (_selectedRecurringJobs.Any() && _activeTabIndex == 0)
@@ -362,9 +394,17 @@
     private MudTable<JobDefinitionWithLastExecution>? _triggerTable;
     private int _activeTabIndex = 0;
 
-    private string? _filterFromProject;
-    private string? _filterJobKey;
-    private string? _filterJobName;
+    private string? _definitionSearchText;
+    private IReadOnlyCollection<string?> _selectedSourceProjects = Array.Empty<string?>();
+    private IReadOnlyCollection<JobDefinitionBadgeFilter> _selectedDefinitionBadges = Array.Empty<JobDefinitionBadgeFilter>();
+    private List<SourceProjectFilterOption> _sourceProjectOptions = [];
+
+    private static readonly JobDefinitionBadgeFilter[] DefinitionBadgeFilters =
+    [
+        JobDefinitionBadgeFilter.Enabled,
+        JobDefinitionBadgeFilter.Disabled,
+        JobDefinitionBadgeFilter.LastExecutionFailed
+    ];
 
     // Batch operation state
     private HashSet<JobDefinitionWithLastExecution> _selectedRecurringJobs = [];
@@ -382,6 +422,11 @@
 
     // State loading flag - controls conditional rendering of MudTabs
     private bool _stateLoaded = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSourceProjectOptionsAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -429,9 +474,6 @@
         await SaveRecurringTableStateAsync();
         var filter = new JobDefinitionFilterRequest
         {
-            FromProject = _filterFromProject,
-            JobKey = _filterJobKey,
-            JobName = _filterJobName,
             JobType = JobType.Recurring,
             PageNumber = state.Page + 1,
             PageSize = state.PageSize,
@@ -440,9 +482,10 @@
         };
 
         var result = await QueryService.GetJobDefinitionsWithLastExecutionAsync(
-            fromProject: filter.FromProject,
-            jobKey: filter.JobKey,
-            jobName: filter.JobName,
+            searchText: _definitionSearchText,
+            fromProjects: GetSelectedSourceProjects(),
+            isDisabled: GetSelectedDisabledFilter(),
+            onlyLastExecutionFailed: IsDefinitionBadgeSelected(JobDefinitionBadgeFilter.LastExecutionFailed),
             jobType: filter.JobType,
             pageNumber: filter.PageNumber,
             pageSize: filter.PageSize,
@@ -458,12 +501,6 @@
 
         // Apply client-side sorting for computed fields
         var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
-        if (!string.IsNullOrEmpty(state.SortLabel))
-        {
-            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
-        }
-
-       
 
         return new TableData<JobDefinitionWithLastExecution>
         {
@@ -495,9 +532,6 @@
 
         var filter = new JobDefinitionFilterRequest
         {
-            FromProject = _filterFromProject,
-            JobKey = _filterJobKey,
-            JobName = _filterJobName,
             JobType = JobType.Triggered,
             PageNumber = state.Page + 1,
             PageSize = state.PageSize,
@@ -506,9 +540,10 @@
         };
 
         var result = await QueryService.GetJobDefinitionsWithLastExecutionAsync(
-            fromProject: filter.FromProject,
-            jobKey: filter.JobKey,
-            jobName: filter.JobName,
+            searchText: _definitionSearchText,
+            fromProjects: GetSelectedSourceProjects(),
+            isDisabled: GetSelectedDisabledFilter(),
+            onlyLastExecutionFailed: IsDefinitionBadgeSelected(JobDefinitionBadgeFilter.LastExecutionFailed),
             jobType: filter.JobType,
             pageNumber: filter.PageNumber,
             pageSize: filter.PageSize,
@@ -524,12 +559,6 @@
 
         // Apply client-side sorting for computed fields
         var items = data.Items ?? Array.Empty<JobDefinitionWithLastExecution>();
-        if (!string.IsNullOrEmpty(state.SortLabel))
-        {
-            items = ApplyClientSideSorting(items, state.SortLabel, sortDescending).ToArray();
-        }
-
-       
 
         return new TableData<JobDefinitionWithLastExecution>
         {
@@ -558,10 +587,100 @@
 
     private void HandleResetFilters()
     {
-        _filterFromProject = null;
-        _filterJobKey = null;
-        _filterJobName = null;
+        _definitionSearchText = null;
+        _selectedSourceProjects = Array.Empty<string?>();
+        _selectedDefinitionBadges = Array.Empty<JobDefinitionBadgeFilter>();
         _ = HandleFilterChanged();
+    }
+
+    private async Task HandleSourceProjectsChanged(IReadOnlyCollection<string?>? sourceProjects)
+    {
+        _selectedSourceProjects = sourceProjects ?? Array.Empty<string?>();
+        await HandleFilterChanged();
+    }
+
+    private async Task HandleSourceProjectsClear()
+    {
+        _selectedSourceProjects = Array.Empty<string?>();
+        await HandleFilterChanged();
+    }
+
+    private async Task HandleDefinitionBadgesChanged(IReadOnlyCollection<JobDefinitionBadgeFilter>? badges)
+    {
+        _selectedDefinitionBadges = badges ?? Array.Empty<JobDefinitionBadgeFilter>();
+        await HandleFilterChanged();
+    }
+
+    private List<string> GetSelectedSourceProjects()
+    {
+        return _selectedSourceProjects
+            .Where(projectName => !string.IsNullOrWhiteSpace(projectName))
+            .Select(projectName => projectName!)
+            .ToList();
+    }
+
+    private bool? GetSelectedDisabledFilter()
+    {
+        var enabledSelected = IsDefinitionBadgeSelected(JobDefinitionBadgeFilter.Enabled);
+        var disabledSelected = IsDefinitionBadgeSelected(JobDefinitionBadgeFilter.Disabled);
+
+        return (enabledSelected, disabledSelected) switch
+        {
+            (true, false) => false,
+            (false, true) => true,
+            _ => null
+        };
+    }
+
+    private bool IsDefinitionBadgeSelected(JobDefinitionBadgeFilter badge)
+    {
+        return _selectedDefinitionBadges.Contains(badge);
+    }
+
+    private string GetSourceProjectSelectionText(IReadOnlyList<string?>? selectedValues)
+    {
+        var count = selectedValues?.Count(value => !string.IsNullOrWhiteSpace(value)) ?? 0;
+        return count == 0
+            ? string.Empty
+            : L["JobDefinitions:Filters:SourceProjectSelected", count];
+    }
+
+    private string GetDefinitionBadgeLabel(JobDefinitionBadgeFilter badge)
+    {
+        return badge switch
+        {
+            JobDefinitionBadgeFilter.Enabled => L["JobDefinitions:Status:Enabled"],
+            JobDefinitionBadgeFilter.Disabled => L["JobDefinitions:Status:Disabled"],
+            JobDefinitionBadgeFilter.LastExecutionFailed => L["JobDefinitions:Filters:LastExecutionFailed"],
+            _ => badge.ToString()
+        };
+    }
+
+    private static Color GetDefinitionBadgeColor(JobDefinitionBadgeFilter badge, bool isSelected)
+    {
+        return badge switch
+        {
+            JobDefinitionBadgeFilter.Enabled => isSelected ? Color.Success : Color.Default,
+            JobDefinitionBadgeFilter.Disabled => isSelected ? Color.Warning : Color.Default,
+            JobDefinitionBadgeFilter.LastExecutionFailed => isSelected ? Color.Error : Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private async Task LoadSourceProjectOptionsAsync()
+    {
+        var result = await QueryService.GetJobDefinitionsAsync(pageSize: int.MaxValue);
+        if (result.IsFailed(out var error, out var data))
+        {
+            Snackbar.Add($"{L["Common:Messages:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        _sourceProjectOptions = (data.Items ?? Array.Empty<JobDefinition>())
+            .GroupBy(definition => definition.FromProject)
+            .OrderBy(group => group.Key)
+            .Select(group => new SourceProjectFilterOption(group.Key, group.Count()))
+            .ToList();
     }
 
     private async Task RefreshRecurringJobsAsync()
@@ -741,9 +860,8 @@
             "JobName" => "JobName",
             "CronExpression" => "CronExpression",
             "IsDisabled" => "IsDisabled",
-            // NextExecutionTime and LastExecution are client-side sorted
-            "NextExecutionTime" => null,
-            "LastExecution" => null,
+            "NextExecutionTime" => "NextExecutionTime",
+            "LastExecution" => "LastExecution",
             _ => null
         };
     }
@@ -897,5 +1015,17 @@
     private void ClearSelection()
     {
         _selectedRecurringJobs.Clear();
+    }
+
+    private enum JobDefinitionBadgeFilter
+    {
+        Enabled,
+        Disabled,
+        LastExecutionFailed
+    }
+
+    private sealed record SourceProjectFilterOption(string ProjectName, int DefinitionCount)
+    {
+        public string DisplayText => $"{ProjectName}({DefinitionCount})";
     }
 }

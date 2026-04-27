@@ -18,90 +18,95 @@
 <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
     <MudText Typo="Typo.h4" Class="mb-4">@L["JobInstances:Title"]</MudText>
 
-    <!-- filter -->
-    <MudPaper Class="pa-4 mb-4" Elevation="2">
-        <MudGrid Spacing="2">
-            <MudItem xs="12" sm="6" md="3">
-                <MudTextField T="string"
-                              @bind-Value="_filterJobKey"
-                              Label="@L["JobInstances:Filters:JobKey"]"
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudTextField T="string"
-                              @bind-Value="_filterInstanceId"
-                              Label="@L["JobInstances:Filters:InstanceId"]"
-                              Variant="Variant.Outlined"
-                              Clearable="true"
-                              Immediate="true"
-                              OnClearButtonClick="HandleFilterChanged" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="JobState?"
-                           @bind-Value="_filterState"
-                           Label="@L["JobInstances:Filters:State"]"
-                           Variant="Variant.Outlined"
-                           Clearable="true"
-                           OnClearButtonClick="HandleFilterChanged">
-                    <MudSelectItem T="JobState?" Value="@((JobState?)null)">@L["JobInstances:Filters:AllStates"]</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Scheduled">Scheduled</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Enqueued">Enqueued</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Processing">Processing</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Succeeded">Succeeded</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Failed">Failed</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Cancelled">Cancelled</MudSelectItem>
-                    <MudSelectItem T="JobState?" Value="@JobState.Terminated">Terminated</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="string"
-                           @bind-Value="_timeRangePreset"
-                           Label="@L["JobInstances:Filters:TimeRange"]"
-                           Variant="Variant.Outlined"
-                           OnClearButtonClick="HandleTimeRangePresetChanged">
-                    <MudSelectItem T="string" Value="@string.Empty">@L["JobInstances:Filters:Custom"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_hour")">@L["JobInstances:Filters:LastHour"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_24_hours")">@L["JobInstances:Filters:Last24Hours"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_7_days")">@L["JobInstances:Filters:Last7Days"]</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("last_30_days")">@L["JobInstances:Filters:Last30Days"]</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudDatePicker Label="@L["JobInstances:Filters:StartTime"]"
-                               Date="_filterStartDate"
-                               DateChanged="HandleStartDateChanged"
+    <div class="job-filter-wrapper mb-4">
+        <MudPaper Class="job-filter-surface" Elevation="0" Outlined="true">
+            <MudStack Spacing="2">
+                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2" Class="job-filter-main">
+                    <MudTextField T="string"
+                                  @bind-Value="_instanceSearchText"
+                                  Label="@L["JobInstances:Filters:Search"]"
+                                  Placeholder="@L["JobInstances:Filters:SearchPlaceholder"]"
+                                  Variant="Variant.Outlined"
+                                  Clearable="true"
+                                  Immediate="true"
+                                  DebounceInterval="300"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  OnDebounceIntervalElapsed="HandleFilterChanged"
+                                  OnClearButtonClick="HandleFilterChanged"
+                                  Class="job-filter-search" />
+
+                    <MudSelect T="string"
+                               @bind-Value="_timeRangePreset"
+                               Label="@L["JobInstances:Filters:TimeRange"]"
                                Variant="Variant.Outlined"
-                               Clearable="true"
-                               Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))" />
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudDatePicker Label="@L["JobInstances:Filters:EndTime"]"
-                               Date="_filterEndDate"
-                               DateChanged="HandleEndDateChanged"
-                               Variant="Variant.Outlined"
-                               Clearable="true"
-                               Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))" />
-            </MudItem>
-            <MudItem xs="12" Class="d-flex justify-end">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           OnClick="HandleFilterChanged"
-                           StartIcon="@Icons.Material.Filled.Search">
-                    @L["Common:Actions:Search"]
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           OnClick="HandleResetFilters"
-                           StartIcon="@Icons.Material.Filled.Clear"
-                           Class="ml-2">
-                    @L["Common:Actions:Reset"]
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+                               Class="job-filter-time-range"
+                               OnClearButtonClick="HandleTimeRangePresetChanged">
+                        <MudSelectItem T="string" Value="@string.Empty">@L["JobInstances:Filters:Custom"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("last_hour")">@L["JobInstances:Filters:LastHour"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("last_24_hours")">@L["JobInstances:Filters:Last24Hours"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("last_7_days")">@L["JobInstances:Filters:Last7Days"]</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("last_30_days")">@L["JobInstances:Filters:Last30Days"]</MudSelectItem>
+                    </MudSelect>
+
+                    <MudDatePicker Label="@L["JobInstances:Filters:StartTime"]"
+                                   Date="_filterStartDate"
+                                   DateChanged="HandleStartDateChanged"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))"
+                                   Class="job-filter-date" />
+
+                    <MudDatePicker Label="@L["JobInstances:Filters:EndTime"]"
+                                   Date="_filterEndDate"
+                                   DateChanged="HandleEndDateChanged"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   Disabled="@(!string.IsNullOrEmpty(_timeRangePreset))"
+                                   Class="job-filter-date" />
+
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="job-filter-actions">
+                        <MudTooltip Text="@L["Common:Actions:Search"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Search"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Filled"
+                                           OnClick="HandleFilterChanged" />
+                        </MudTooltip>
+                        <MudTooltip Text="@L["Common:Actions:Reset"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                                           Color="Color.Default"
+                                           Variant="Variant.Outlined"
+                                           OnClick="HandleResetFilters" />
+                        </MudTooltip>
+                    </MudStack>
+                </MudStack>
+
+                <div class="job-filter-chip-row">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="job-filter-chip-label">
+                        @L["JobInstances:Filters:State"]
+                    </MudText>
+                    <MudChipSet T="JobState"
+                                SelectionMode="SelectionMode.MultiSelection"
+                                SelectedValues="@_selectedStates"
+                                SelectedValuesChanged="HandleStatesChanged"
+                                CheckMark="true"
+                                Class="job-filter-chipset">
+                        @foreach (var state in JobStateFilters)
+                        {
+                            var isSelected = _selectedStates.Contains(state);
+                            <MudChip T="JobState"
+                                     Value="@state"
+                                     Size="Size.Small"
+                                     Color="@(isSelected ? ColorService.GetStateColor(state) : Color.Default)"
+                                     Variant="@(isSelected ? Variant.Filled : Variant.Outlined)">
+                                @state
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                </div>
+            </MudStack>
+        </MudPaper>
+    </div>
 
     <!-- data table with deferred rendering -->
     @if (_stateLoaded)
@@ -222,12 +227,13 @@
 
     private MudTable<JobInstance>? _table;
 
-    private string? _filterJobKey;
-    private string? _filterInstanceId;
-    private JobState? _filterState;
+    private string? _instanceSearchText;
+    private IReadOnlyCollection<JobState> _selectedStates = Array.Empty<JobState>();
     private DateTime? _filterStartDate;
     private DateTime? _filterEndDate;
     private string _timeRangePreset = string.Empty;
+
+    private static readonly JobState[] JobStateFilters = Enum.GetValues<JobState>();
 
     // Table state persistence
     private string? _sortBy = "CreatedAt";
@@ -254,15 +260,17 @@
 
     protected override void OnInitialized()
     {
-        _filterJobKey = InitialJobKey;
+        _instanceSearchText = InitialJobKey;
 
         if (!string.IsNullOrEmpty(InitialState))
         {
             var states = InitialState.Split(',');
-            if (states.Length > 0 && Enum.TryParse<JobState>(states[0], out var state))
-            {
-                _filterState = state;
-            }
+            _selectedStates = states
+                .Select(stateText => Enum.TryParse<JobState>(stateText, out var state) ? state : (JobState?)null)
+                .Where(state => state.HasValue)
+                .Select(state => state!.Value)
+                .Distinct()
+                .ToArray();
         }
     }
 
@@ -288,9 +296,6 @@
 
         var filter = new JobInstanceFilterRequest
         {
-            JobKey = _filterJobKey,
-            InstanceId = _filterInstanceId,
-            State = _filterState,
             StartTime = startTime,
             EndTime = endTime,
             PageNumber = state.Page + 1,
@@ -300,9 +305,8 @@
         };
 
         var result = await QueryService.GetJobInstancesAsync(
-            jobKey: filter.JobKey,
-            instanceId: filter.InstanceId,
-            state: filter.State,
+            searchText: _instanceSearchText,
+            states: _selectedStates,
             startTime: filter.StartTime,
             endTime: filter.EndTime,
             pageNumber: filter.PageNumber,
@@ -379,13 +383,18 @@
 
     private void HandleResetFilters()
     {
-        _filterJobKey = null;
-        _filterInstanceId = null;
-        _filterState = null;
+        _instanceSearchText = null;
+        _selectedStates = Array.Empty<JobState>();
         _filterStartDate = null;
         _filterEndDate = null;
         _timeRangePreset = string.Empty;
         _ = HandleFilterChanged();
+    }
+
+    private async Task HandleStatesChanged(IReadOnlyCollection<JobState>? states)
+    {
+        _selectedStates = states ?? Array.Empty<JobState>();
+        await HandleFilterChanged();
     }
 
     private async Task RefreshAsync()

@@ -27,6 +27,9 @@ public class JobSchedulerQueryFacade(
         string? fromProject = null,
         string? jobKey = null,
         string? jobName = null,
+        string? searchText = null,
+        IReadOnlyCollection<string>? fromProjects = null,
+        bool? isDisabled = null,
         JobType? jobType = null,
         int pageNumber = 1,
         int pageSize = 20,
@@ -37,27 +40,15 @@ public class JobSchedulerQueryFacade(
         try
         {
             var allDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
-            var filtered = allDefinitions.AsEnumerable();
-
-            if (!string.IsNullOrWhiteSpace(fromProject))
-            {
-                filtered = filtered.Where(d => d.FromProject.Contains(fromProject, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (!string.IsNullOrWhiteSpace(jobKey))
-            {
-                filtered = filtered.Where(d => d.JobKey.Contains(jobKey, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (!string.IsNullOrWhiteSpace(jobName))
-            {
-                filtered = filtered.Where(d => d.JobName.Contains(jobName, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (jobType.HasValue)
-            {
-                filtered = filtered.Where(d => d.JobType == jobType.Value);
-            }
+            var filtered = ApplyDefinitionFilters(
+                allDefinitions,
+                fromProject,
+                jobKey,
+                jobName,
+                searchText,
+                fromProjects,
+                isDisabled,
+                jobType);
 
             if (!string.IsNullOrWhiteSpace(sortBy))
             {
@@ -106,6 +97,10 @@ public class JobSchedulerQueryFacade(
         string? fromProject = null,
         string? jobKey = null,
         string? jobName = null,
+        string? searchText = null,
+        IReadOnlyCollection<string>? fromProjects = null,
+        bool? isDisabled = null,
+        bool onlyLastExecutionFailed = false,
         JobType? jobType = null,
         int pageNumber = 1,
         int pageSize = 20,
@@ -113,25 +108,20 @@ public class JobSchedulerQueryFacade(
         bool sortDescending = false,
         CancellationToken cancellationToken = default)
     {
-        var definitionsResult = await GetJobDefinitionsAsync(
-            fromProject,
-            jobKey,
-            jobName,
-            jobType,
-            pageNumber,
-            pageSize,
-            sortBy,
-            sortDescending,
-            cancellationToken);
-
-        if (definitionsResult.IsFailed(out var error, out var pageData))
-        {
-            return Res.Fail(error.Message ?? "Failed to query job definitions.");
-        }
-
         try
         {
-            var definitions = pageData.Items ?? [];
+            var allDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);
+            var definitions = ApplyDefinitionFilters(
+                    allDefinitions,
+                    fromProject,
+                    jobKey,
+                    jobName,
+                    searchText,
+                    fromProjects,
+                    isDisabled,
+                    jobType)
+                .ToList();
+
             var latestInstances = await metadataRepository.GetLatestInstancesAsync(
                 definitions.Select(d => d.JobKey),
                 cancellationToken);
@@ -147,8 +137,26 @@ public class JobSchedulerQueryFacade(
                 })
                 .ToList();
 
+            if (onlyLastExecutionFailed)
+            {
+                items = items
+                    .Where(item => item.LastExecution?.State is JobState.Failed or JobState.Terminated)
+                    .ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(sortBy))
+            {
+                items = ApplyDefinitionWithLastExecutionSorting(items, sortBy, sortDescending).ToList();
+            }
+
+            var totalCount = items.Count;
+            items = items
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
             return new ResPaged<JobDefinitionWithLastExecution>(
-                pageData.Sum ?? items.Count,
+                totalCount,
                 items,
                 pageNumber,
                 pageSize);
@@ -166,7 +174,9 @@ public class JobSchedulerQueryFacade(
     public async Task<ResPaged<JobInstance>> GetJobInstancesAsync(
         string? jobKey = null,
         string? instanceId = null,
+        string? searchText = null,
         JobState? state = null,
+        IReadOnlyCollection<JobState>? states = null,
         DateTime? startTime = null,
         DateTime? endTime = null,
         int pageNumber = 1,
@@ -181,7 +191,9 @@ public class JobSchedulerQueryFacade(
             {
                 JobKeyContains = jobKey,
                 InstanceIdContains = instanceId,
+                SearchText = searchText,
                 State = state,
+                States = states is { Count: > 0 } ? states.ToList() : null,
                 CreatedAfter = startTime,
                 CreatedBefore = endTime,
                 PageNumber = pageNumber,
@@ -395,6 +407,91 @@ public class JobSchedulerQueryFacade(
             logger.LogWarning(ex, "Failed to calculate next execution time for cron expression {CronExpression}", cronExpression);
             return null;
         }
+    }
+
+    private static IEnumerable<JobDefinition> ApplyDefinitionFilters(
+        IReadOnlyList<JobDefinition> definitions,
+        string? fromProject,
+        string? jobKey,
+        string? jobName,
+        string? searchText,
+        IReadOnlyCollection<string>? fromProjects,
+        bool? isDisabled,
+        JobType? jobType)
+    {
+        var filtered = definitions.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(fromProject))
+        {
+            filtered = filtered.Where(d => d.FromProject.Contains(fromProject, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (fromProjects is { Count: > 0 })
+        {
+            filtered = filtered.Where(d => fromProjects.Contains(d.FromProject));
+        }
+
+        if (!string.IsNullOrWhiteSpace(jobKey))
+        {
+            filtered = filtered.Where(d => d.JobKey.Contains(jobKey, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(jobName))
+        {
+            filtered = filtered.Where(d => d.JobName.Contains(jobName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            filtered = filtered.Where(d =>
+                d.FromProject.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                d.JobKey.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                d.JobName.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (isDisabled.HasValue)
+        {
+            filtered = filtered.Where(d => d.IsDisabled == isDisabled.Value);
+        }
+
+        if (jobType.HasValue)
+        {
+            filtered = filtered.Where(d => d.JobType == jobType.Value);
+        }
+
+        return filtered;
+    }
+
+    private static IEnumerable<JobDefinitionWithLastExecution> ApplyDefinitionWithLastExecutionSorting(
+        IEnumerable<JobDefinitionWithLastExecution> items,
+        string sortBy,
+        bool descending)
+    {
+        return sortBy switch
+        {
+            "FromProject" => descending
+                ? items.OrderByDescending(x => x.Definition.FromProject)
+                : items.OrderBy(x => x.Definition.FromProject),
+            "JobKey" => descending
+                ? items.OrderByDescending(x => x.Definition.JobKey)
+                : items.OrderBy(x => x.Definition.JobKey),
+            "JobName" => descending
+                ? items.OrderByDescending(x => x.Definition.JobName)
+                : items.OrderBy(x => x.Definition.JobName),
+            "CronExpression" => descending
+                ? items.OrderByDescending(x => x.Definition.CronExpression ?? string.Empty)
+                : items.OrderBy(x => x.Definition.CronExpression ?? string.Empty),
+            "IsDisabled" => descending
+                ? items.OrderByDescending(x => x.Definition.IsDisabled)
+                : items.OrderBy(x => x.Definition.IsDisabled),
+            "NextExecutionTime" => descending
+                ? items.OrderByDescending(x => x.NextExecutionTime ?? DateTime.MinValue)
+                : items.OrderBy(x => x.NextExecutionTime ?? DateTime.MinValue),
+            "LastExecution" => descending
+                ? items.OrderByDescending(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue)
+                : items.OrderBy(x => x.LastExecution?.CreatedAt ?? DateTime.MinValue),
+            _ => items
+        };
     }
 
     private static Func<JobDefinition, object> GetSortSelector(string sortBy)

@@ -35,6 +35,13 @@ public static class JobInstanceQueryExtensions
             source = source.Where(i => i.InstanceId.Contains(query.InstanceIdContains, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrWhiteSpace(query.SearchText))
+        {
+            source = source.Where(i =>
+                i.JobKey.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase) ||
+                i.InstanceId.Contains(query.SearchText, StringComparison.OrdinalIgnoreCase));
+        }
+
         // States/State filtering (States takes priority)
         if (query.States is { Count: > 0 })
         {

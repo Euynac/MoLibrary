@@ -26,6 +26,11 @@ public record JobInstanceQuery
     public string? InstanceIdContains { get; init; }
 
     /// <summary>
+    /// Fuzzy matching across JobKey and InstanceId using an OR relationship.
+    /// </summary>
+    public string? SearchText { get; init; }
+
+    /// <summary>
     /// Filter by status (single status)
     /// </summary>
     public JobState? State { get; init; }

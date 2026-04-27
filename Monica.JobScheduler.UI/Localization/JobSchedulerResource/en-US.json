@@ -96,9 +96,14 @@
   "JobDefinitions": {
     "Title": "Job Definitions",
     "Filters": {
+      "Search": "Search",
+      "SearchPlaceholder": "Job key / job name / source project",
       "SourceProject": "Source Project",
+      "SourceProjectSelected": "{0} sources selected",
       "JobKey": "Job Key",
-      "JobName": "Job Name"
+      "JobName": "Job Name",
+      "Badges": "Filters",
+      "LastExecutionFailed": "Last execution failed"
     },
     "Tabs": {
       "RecurringJob": "Recurring Jobs",
@@ -158,6 +163,8 @@
   "JobInstances": {
     "Title": "Job Instances",
     "Filters": {
+      "Search": "Search",
+      "SearchPlaceholder": "Job key / instance ID",
       "JobKey": "Job Key",
       "InstanceId": "Instance ID",
       "State": "State",
