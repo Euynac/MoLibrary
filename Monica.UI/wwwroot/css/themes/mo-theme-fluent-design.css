@@ -263,6 +263,11 @@
     overflow: hidden;
 }
 
+.mo-theme-fluent-design-light .dropdown-menu.more-menu,
+.mo-theme-fluent-design-dark .dropdown-menu.more-menu {
+    overflow: visible !important;
+}
+
 .mo-theme-fluent-design-light :is(.more-menu-header, .flyout-menu-header),
 .mo-theme-fluent-design-dark :is(.more-menu-header, .flyout-menu-header) {
     border-bottom-color: var(--mo-fluent-stroke-surface);
