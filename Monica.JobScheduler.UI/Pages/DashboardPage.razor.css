@@ -33,6 +33,15 @@
     animation: rotate 1s linear infinite;
 }
 
+.dashboard-page ::deep .dashboard-equal-card {
+    display: flex;
+    min-width: 0;
+}
+
+.dashboard-page ::deep .dashboard-equal-card > * {
+    width: 100%;
+}
+
 @keyframes rotate {
     from {
         transform: rotate(0deg);

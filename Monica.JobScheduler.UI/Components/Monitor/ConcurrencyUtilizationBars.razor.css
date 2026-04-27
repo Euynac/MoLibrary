@@ -1,9 +1,18 @@
+.concurrency-card-wrapper {
+    display: flex;
+    height: 100%;
+    min-width: 0;
+}
+
 .concurrency-card-wrapper ::deep .concurrency-card {
     padding: 20px;
     border-radius: 12px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    width: 100%;
 }
 
 .concurrency-card-wrapper ::deep .card-header {

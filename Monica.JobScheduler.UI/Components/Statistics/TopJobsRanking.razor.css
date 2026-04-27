@@ -1,9 +1,18 @@
+.ranking-wrapper {
+    display: flex;
+    height: 100%;
+    min-width: 0;
+}
+
 .ranking-wrapper ::deep .ranking-card {
     padding: 20px;
     border-radius: 12px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    width: 100%;
 }
 
 .ranking-wrapper ::deep .card-header {
@@ -120,6 +129,7 @@
 
 .ranking-wrapper ::deep .empty-state {
     display: flex;
+    flex: 1;
     flex-direction: column;
     align-items: center;
     justify-content: center;

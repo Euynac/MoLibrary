@@ -45,17 +45,19 @@
 
         @* Main Content Grid *@
         <MudGrid Spacing="3">
-            @* Left Column: State Distribution + Problem Jobs *@
-            <MudItem xs="12" md="6">
-                <MudStack Spacing="3">
-                    <JobStateDistributionChart StateDistribution="_summary.StateDistribution"
-                                               TimeWindowText="@GetTimeWindowText()" />
-                    <ProblemJobsPanel Problems="_problemJobs" />
-                </MudStack>
+            @* State Distribution *@
+            <MudItem xs="12">
+                <JobStateDistributionChart StateDistribution="_summary.StateDistribution"
+                                           TimeWindowText="@GetTimeWindowText()" />
+            </MudItem>
+
+            @* Problem Jobs *@
+            <MudItem xs="12" md="6" Class="dashboard-equal-card">
+                <ProblemJobsPanel Problems="_problemJobs" />
             </MudItem>
 
             @* Right Column: Recent Activity Timeline *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="dashboard-equal-card">
                 <RecentActivityTimeline Activities="_recentActivities" />
             </MudItem>
         </MudGrid>

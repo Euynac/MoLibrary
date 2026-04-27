@@ -16,6 +16,15 @@
     margin-bottom: 24px;
 }
 
+.statistics-page ::deep .statistics-equal-card {
+    display: flex;
+    min-width: 0;
+}
+
+.statistics-page ::deep .statistics-equal-card > * {
+    width: 100%;
+}
+
 @media (max-width: 960px) {
     .statistics-page {
         padding: 16px;

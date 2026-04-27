@@ -1,9 +1,18 @@
+.queue-status-wrapper {
+    display: flex;
+    height: 100%;
+    min-width: 0;
+}
+
 .queue-status-wrapper ::deep .queue-card {
     padding: 20px;
     border-radius: 12px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    width: 100%;
 }
 
 .queue-status-wrapper ::deep .card-header {

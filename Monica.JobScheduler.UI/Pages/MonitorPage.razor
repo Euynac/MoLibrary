@@ -46,12 +46,12 @@
             </MudItem>
 
             @* Queue Status *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="monitor-equal-card">
                 <QueueStatusCard Status="@_state.QueueStatus" />
             </MudItem>
 
             @* Concurrency Utilization - New Design *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="monitor-equal-card">
                 <ConcurrencyUtilizationBars Details="@(_concurrencyState?.Details ?? [])"
                                             Consistency="@(_concurrencyState?.Consistency ?? new ConsistencyCheckResult { TotalDeviation = 0, Deviations = [] })"
                                             OnReconcileRequested="@HandleReconcileAsync"

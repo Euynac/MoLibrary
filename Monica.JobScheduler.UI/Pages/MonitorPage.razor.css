@@ -12,6 +12,15 @@
     gap: 16px;
 }
 
+.monitor-page ::deep .monitor-equal-card {
+    display: flex;
+    min-width: 0;
+}
+
+.monitor-page ::deep .monitor-equal-card > * {
+    width: 100%;
+}
+
 @media (max-width: 960px) {
     .monitor-page {
         padding: 16px;

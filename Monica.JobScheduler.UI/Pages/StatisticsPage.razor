@@ -45,22 +45,22 @@
 
         <MudGrid Spacing="3">
             @* Duration Percentiles *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="statistics-equal-card">
                 <DurationPercentilesCard Percentiles="@_percentiles" SlowestInstances="@_slowestInstances" />
             </MudItem>
 
             @* Top Jobs by Execution Count *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="statistics-equal-card">
                 <TopJobsRanking Title="@L["Statistics:TopJobs:ExecutionCount"]" Rankings="@_topByExecution" />
             </MudItem>
 
             @* Top Jobs by Failure Count *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="statistics-equal-card">
                 <TopJobsRanking Title="@L["Statistics:TopJobs:FailureCount"]" Rankings="@_topByFailure" />
             </MudItem>
 
             @* Failure Analysis *@
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="6" Class="statistics-equal-card">
                 <FailureAnalysisPanel Analysis="@_failureAnalysis" />
             </MudItem>
         </MudGrid>
