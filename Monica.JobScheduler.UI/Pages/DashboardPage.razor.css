@@ -33,13 +33,29 @@
     animation: rotate 1s linear infinite;
 }
 
-.dashboard-page ::deep .dashboard-equal-card {
+.dashboard-page ::deep .dashboard-overview-grid {
+    align-items: stretch;
+}
+
+.dashboard-page ::deep .dashboard-overview-column {
     display: flex;
     min-width: 0;
 }
 
-.dashboard-page ::deep .dashboard-equal-card > * {
+.dashboard-page ::deep .dashboard-overview-column > * {
     width: 100%;
+}
+
+.dashboard-left-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    min-width: 0;
+}
+
+.dashboard-activity-column ::deep .activity-timeline-wrapper {
+    height: 100%;
 }
 
 @keyframes rotate {

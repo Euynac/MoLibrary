@@ -31,7 +31,8 @@
             <div class="project-units-monitor-grid">
             <MudDataGrid T="DtoProjectUnit" Items="@_projectUnits" Filterable="true"
                         SortMode="SortMode.Multiple" Groupable="true" GroupExpanded="false"
-                        Dense="true" Hover="true" ReadOnly="true">
+                        Dense="true" Hover="true" ReadOnly="true"
+                        RowsPerPage="@DEFAULT_PAGE_SIZE">
                 <Columns>
                     <PropertyColumn T="DtoProjectUnit" TProperty="string" Property="x => x.Title" Title="@L["ProjectUnitMonitor:Columns:Name"]"
                                     HeaderClass="project-units-monitor-grid__name-column"
@@ -94,6 +95,9 @@
                         </CellTemplate>
                     </TemplateColumn>
                 </Columns>
+                <PagerContent>
+                    <MudDataGridPager T="DtoProjectUnit" PageSizeOptions="@PageSizeOptions" />
+                </PagerContent>
             </MudDataGrid>
             </div>
         }
@@ -111,6 +115,9 @@
                          AllProjectUnits="_projectUnits" />
 
 @code {
+    private const int DEFAULT_PAGE_SIZE = 50;
+    private static readonly int[] PageSizeOptions = [25, 50, 100, 200];
+
     private List<DtoProjectUnit> _projectUnits = [];
     private bool _loading;
     private bool _detailDialogVisible;
