@@ -2,6 +2,21 @@
     width: 100%;
 }
 
+.assembly-analysis-container ::deep .assembly-analysis-equal-card {
+    display: flex;
+    min-width: 0;
+}
+
+.assembly-analysis-container ::deep .assembly-analysis-equal-card > * {
+    width: 100%;
+}
+
+.assembly-analysis-container ::deep .assembly-analysis-equal-card .detail-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 .summary-card {
     height: 100%;
 }

@@ -2,6 +2,21 @@
     width: 100%;
 }
 
+.performance-monitoring-container ::deep .performance-equal-card {
+    display: flex;
+    min-width: 0;
+}
+
+.performance-monitoring-container ::deep .performance-equal-card > * {
+    width: 100%;
+}
+
+.performance-monitoring-container ::deep .performance-equal-card .modern-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 .performance-monitoring-container ::deep .modern-card {
     border-radius: 12px;
     transition: all 0.3s ease;
