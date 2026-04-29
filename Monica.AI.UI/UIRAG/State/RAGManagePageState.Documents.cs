@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Forms;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.UI.UIRAG.Components;
 using Monica.Core.Results;
@@ -92,7 +93,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.RemoveDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
+        if ((await _knowledgeBaseFacade.RemoveDocumentAsync(SelectedKnowledgeBase.Id, document.Id)).IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;

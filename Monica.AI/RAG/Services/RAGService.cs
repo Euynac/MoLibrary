@@ -4,10 +4,13 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
+using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.RAG.Abstractions;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.Modules;
 using AgentTextSearchResult = Microsoft.Agents.AI.TextSearchProvider.TextSearchResult;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;
 
@@ -32,69 +35,6 @@ public sealed partial class RAGService(
     private readonly ModuleRAGOption _options = options.Value;
     private readonly ConcurrentDictionary<string, byte> _activeIndexingDocuments =
         new(StringComparer.OrdinalIgnoreCase);
-
-    public async Task<KnowledgeBase> CreateKnowledgeBaseAsync(
-        string id,
-        string name,
-        string? description = null,
-        string? searchToolDescription = null,
-        CancellationToken ct = default)
-    {
-        var normalizedId = NormalizeKnowledgeBaseId(id);
-        var normalizedName = NormalizeKnowledgeBaseName(name);
-
-        if (await indexStateStore.GetKnowledgeBaseAsync(normalizedId, ct) is not null)
-        {
-            throw new InvalidOperationException($"Knowledge base id '{normalizedId}' already exists.");
-        }
-
-        var kb = new KnowledgeBase
-        {
-            Id = normalizedId,
-            Name = normalizedName,
-            Description = NormalizeOptionalText(description),
-            CreatedAt = DateTimeOffset.UtcNow,
-            SearchToolDescription = NormalizeOptionalText(searchToolDescription)
-        };
-
-        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
-        logger.LogInformation("Created knowledge base '{Name}' (Id: {Id})", kb.Name, kb.Id);
-        return kb;
-    }
-
-    public async Task<KnowledgeBase> UpdateKnowledgeBaseAsync(
-        string knowledgeBaseId,
-        string name,
-        string? description = null,
-        CancellationToken ct = default)
-    {
-        var normalizedKnowledgeBaseId = NormalizeKnowledgeBaseId(knowledgeBaseId);
-        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(normalizedKnowledgeBaseId, ct);
-
-        var updatedKb = kb with
-        {
-            Name = NormalizeKnowledgeBaseName(name),
-            Description = NormalizeOptionalText(description)
-        };
-
-        await indexStateStore.UpsertKnowledgeBaseAsync(updatedKb, ct);
-        logger.LogInformation("Updated knowledge base '{KbId}'", normalizedKnowledgeBaseId);
-        return updatedKb;
-    }
-
-    /// <summary>
-    /// Lists all knowledge bases from the store.
-    /// </summary>
-    public Task<IReadOnlyList<KnowledgeBase>> GetKnowledgeBasesAsync(CancellationToken ct = default)
-        => indexStateStore.GetKnowledgeBasesAsync(ct);
-
-    /// <summary>
-    /// Gets a knowledge base by id.
-    /// </summary>
-    public Task<KnowledgeBase?> GetKnowledgeBaseByIdAsync(
-        string knowledgeBaseId,
-        CancellationToken ct = default)
-        => indexStateStore.GetKnowledgeBaseAsync(knowledgeBaseId, ct);
 
     /// <summary>
     /// Persists the embedding provider/model for a knowledge base and optionally clears index data.
@@ -1125,11 +1065,11 @@ public sealed partial class RAGService(
         return recordKeys;
     }
 
-    private static bool HasEmbeddingBinding(KnowledgeBase kb)
+    private static bool HasEmbeddingBinding(KnowledgeBaseModel kb)
         => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
            && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
 
-    private async Task<bool> HasPersistedIndexedContentAsync(KnowledgeBase kb, CancellationToken ct)
+    private async Task<bool> HasPersistedIndexedContentAsync(KnowledgeBaseModel kb, CancellationToken ct)
     {
         if (kb.DocumentCount > 0 || kb.ChunkCount > 0)
         {
@@ -1238,42 +1178,11 @@ public sealed partial class RAGService(
             : $".{normalized.ToLowerInvariant()}";
     }
 
-    private static string NormalizeKnowledgeBaseId(string knowledgeBaseId)
-    {
-        var normalized = KnowledgeBaseIdPolicy.Normalize(knowledgeBaseId);
-        if (normalized.Length == 0)
-        {
-            throw new ArgumentException("Knowledge base id cannot be empty.", nameof(knowledgeBaseId));
-        }
-
-        if (!KnowledgeBaseIdPolicy.IsValid(normalized))
-        {
-            throw new ArgumentException(
-                "Knowledge base id must use lowercase letters, numbers, and hyphens only, with a maximum length of 64 characters.",
-                nameof(knowledgeBaseId));
-        }
-
-        return normalized;
-    }
-
-    private static string NormalizeKnowledgeBaseName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Knowledge base name cannot be empty.", nameof(name));
-        }
-
-        return name.Trim();
-    }
-
-    private static string? NormalizeOptionalText(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
     [GeneratedRegex(@"\p{L}+", RegexOptions.IgnoreCase)]
     private static partial Regex WordSegmenter();
 
     private readonly record struct AffectedDocument(
-        KnowledgeBase KnowledgeBase,
+        KnowledgeBaseModel KnowledgeBase,
         DocumentIndexState State);
 
     #endregion

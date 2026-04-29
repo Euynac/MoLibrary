@@ -1,9 +1,13 @@
 using Microsoft.Extensions.Localization;
 using Monica.AI.Abstractions;
+using Monica.AI.KnowledgeBase.Facades;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Facades;
 using Monica.AI.RAG.Models;
 using Monica.AI.UI.Localization;
 using MudBlazor;
+using DocumentQueueItemModel = Monica.AI.KnowledgeBase.Models.DocumentQueueItem;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
 
@@ -13,6 +17,7 @@ namespace Monica.AI.UI.UIRAG.State;
 public sealed partial class RAGManagePageState : IDisposable
 {
     private readonly RAGFacade _ragFacade;
+    private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
     private readonly EmbeddingModelFacade _embeddingFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
@@ -31,6 +36,7 @@ public sealed partial class RAGManagePageState : IDisposable
     /// </summary>
     public RAGManagePageState(
         RAGFacade ragFacade,
+        KnowledgeBaseFacade knowledgeBaseFacade,
         EmbeddingModelFacade embeddingFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
@@ -39,6 +45,7 @@ public sealed partial class RAGManagePageState : IDisposable
         RAGQueuePollingState queuePollingState)
     {
         _ragFacade = ragFacade;
+        _knowledgeBaseFacade = knowledgeBaseFacade;
         _embeddingFacade = embeddingFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
@@ -55,12 +62,12 @@ public sealed partial class RAGManagePageState : IDisposable
     /// <summary>
     /// All knowledge bases shown in the sidebar.
     /// </summary>
-    public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; private set; } = [];
+    public IReadOnlyList<KnowledgeBaseModel> KnowledgeBases { get; private set; } = [];
 
     /// <summary>
     /// Current knowledge base selection.
     /// </summary>
-    public KnowledgeBase? SelectedKnowledgeBase { get; private set; }
+    public KnowledgeBaseModel? SelectedKnowledgeBase { get; private set; }
 
     /// <summary>
     /// Current embedding model key selected in the page.
@@ -75,7 +82,7 @@ public sealed partial class RAGManagePageState : IDisposable
     /// <summary>
     /// Current document queue for the selected knowledge base.
     /// </summary>
-    public IReadOnlyList<DocumentQueueItem> DocumentQueue { get; private set; } = [];
+    public IReadOnlyList<DocumentQueueItemModel> DocumentQueue { get; private set; } = [];
 
     /// <summary>
     /// Maximum parallel indexing concurrency requested by the UI.

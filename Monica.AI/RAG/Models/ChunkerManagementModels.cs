@@ -1,3 +1,5 @@
+using Monica.AI.KnowledgeBase.Models;
+
 namespace Monica.AI.RAG.Models;
 
 /// <summary>

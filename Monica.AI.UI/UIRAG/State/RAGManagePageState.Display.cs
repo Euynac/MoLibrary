@@ -1,4 +1,5 @@
 using Monica.AI.RAG.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
 
@@ -7,7 +8,7 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Check whether one knowledge base already has an embedding binding.
     /// </summary>
-    public static bool HasEmbeddingBinding(KnowledgeBase knowledgeBase)
+    public static bool HasEmbeddingBinding(KnowledgeBaseModel knowledgeBase)
         => !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingProviderId)
            && !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingModelName);
 
@@ -57,7 +58,7 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Resolve one knowledge-base embedding display string.
     /// </summary>
-    public string GetKnowledgeBaseModelDisplay(KnowledgeBase knowledgeBase)
+    public string GetKnowledgeBaseModelDisplay(KnowledgeBaseModel knowledgeBase)
     {
         if (!HasEmbeddingBinding(knowledgeBase))
         {
@@ -106,7 +107,7 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Resolve the persisted embedding model key for one knowledge base.
     /// </summary>
-    public string GetKnowledgeBaseModelKey(KnowledgeBase knowledgeBase)
+    public string GetKnowledgeBaseModelKey(KnowledgeBaseModel knowledgeBase)
     {
         if (!HasEmbeddingBinding(knowledgeBase))
         {

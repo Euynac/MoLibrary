@@ -92,7 +92,7 @@ public sealed partial class ChatPageState
         var createResult = await _chatFacade.CreateSessionAsync(
             CurrentProviderId,
             CurrentModelName,
-            knowledgeBaseIds: ChatProviderResolver.GetKnowledgeBaseIds(SelectedKnowledgeBaseIds));
+            runtimeContext: BuildRuntimeContext(SelectedKnowledgeBaseIds));
 
         if (createResult.IsFailed(out var error, out var state))
         {

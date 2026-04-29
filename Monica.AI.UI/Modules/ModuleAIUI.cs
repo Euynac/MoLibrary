@@ -51,6 +51,11 @@ public class ModuleAIUI(ModuleAIUIOption option)
         // Depends on backend AI modules
         DependsOnModule<ModuleAIGuide>().Register();
 
+        if (!Option.DisableAIChatPage)
+        {
+            DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register();
+        }
+
         if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage)
         {
             DependsOnModule<ModuleLocalizationGuide>().Register()

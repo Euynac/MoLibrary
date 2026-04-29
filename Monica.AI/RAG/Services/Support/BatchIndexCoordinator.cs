@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.Markdown.Abstractions;

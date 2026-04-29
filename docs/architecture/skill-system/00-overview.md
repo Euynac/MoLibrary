@@ -27,7 +27,7 @@ The single existing capability provider, `Monica.AI/RAG/Tools/KnowledgeSearchToo
 
 ### 1.3 No XML-doc → tool-description bridge
 
-`Monica.Framework/Modules/ModuleXmlDocumentation.cs` already exists and provides `IXmlDocumentationService.GetMethodDocumentation(MethodInfo)` returning method `<summary>` and per-parameter `<param>` docs. None of the existing tool authoring uses it. Tool descriptions are hand-written strings, often duplicated, and drift from the developer-facing XML docs.
+`Monica.Core/Modules/ModuleXmlDocumentation.cs` already exists and provides `IXmlDocumentationService.GetMethodDocumentation(MethodInfo)` returning method `<summary>` and per-parameter `<param>` docs. None of the existing tool authoring uses it. Tool descriptions are hand-written strings, often duplicated, and drift from the developer-facing XML docs.
 
 ### 1.4 Module dependency direction is unused
 

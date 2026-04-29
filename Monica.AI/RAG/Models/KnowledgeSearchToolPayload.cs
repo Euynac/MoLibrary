@@ -19,6 +19,17 @@ internal sealed class KnowledgeSearchToolPayload
 }
 
 /// <summary>
+/// Shared tool payload for calls that cannot run because no knowledge base is selected.
+/// </summary>
+internal sealed class KnowledgeToolNoSelectionPayload
+{
+    public string ToolName { get; init; } = string.Empty;
+    public string Message { get; init; } = string.Empty;
+    public string NextStepInstruction { get; init; } = string.Empty;
+    public int ResultCount { get; init; }
+}
+
+/// <summary>
 /// Knowledge base metadata included in the search tool output.
 /// </summary>
 internal sealed class KnowledgeSearchToolKnowledgeBase

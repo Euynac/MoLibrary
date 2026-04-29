@@ -1,3 +1,4 @@
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.Core.Results;
 using MudBlazor;
@@ -170,7 +171,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.ClearKnowledgeBaseDocumentsAsync(SelectedKnowledgeBase.Id);
+        var result = await _knowledgeBaseFacade.ClearDocumentsAsync(SelectedKnowledgeBase.Id);
         if (result.IsFailed(out var error, out var removedCount))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
@@ -18,20 +19,6 @@ public class RAGFacade(
     IMarkdownDocumentCatalog markdownService,
     ILogger<RAGFacade> logger)
 {
-    public async Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()
-    {
-        try
-        {
-            var result = await GetRagService().GetKnowledgeBasesAsync();
-            return Res.Ok(result);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get knowledge bases");
-            return Res.Fail($"Failed to load knowledge bases: {ex.GetMessageRecursively()}");
-        }
-    }
-
     public async Task<Res<KnowledgeBaseVectorValidationResult>> GetKnowledgeBaseVectorValidationAsync(string kbId)
     {
         try
@@ -43,54 +30,6 @@ public class RAGFacade(
         {
             logger.LogError(ex, "Failed to validate vectors for KB '{KbId}'", kbId);
             return Res.Fail($"Failed to validate vectors: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    public async Task<Res<KnowledgeBase>> CreateKnowledgeBaseAsync(
-        string id,
-        string name,
-        string? description = null)
-    {
-        try
-        {
-            var kb = await GetRagService().CreateKnowledgeBaseAsync(id, name, description);
-            return kb;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to create knowledge base '{KbId}' ('{Name}')", id, name);
-            return Res.Fail($"Failed to create knowledge base: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    public async Task<Res<KnowledgeBase>> UpdateKnowledgeBaseAsync(
-        string id,
-        string name,
-        string? description = null)
-    {
-        try
-        {
-            var kb = await GetRagService().UpdateKnowledgeBaseAsync(id, name, description);
-            return kb;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to update knowledge base '{Id}'", id);
-            return Res.Fail($"Failed to update knowledge base: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    public async Task<Res> DeleteKnowledgeBaseAsync(string id)
-    {
-        try
-        {
-            await GetRagService().DeleteKnowledgeBaseAsync(id);
-            return Res.Ok();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to delete knowledge base '{Id}'", id);
-            return Res.Fail($"Failed to delete knowledge base: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -208,20 +147,6 @@ public class RAGFacade(
 
     #region Document Queue Management
 
-    public async Task<Res<IReadOnlyList<DocumentQueueItem>>> GetDocumentQueueAsync(string kbId)
-    {
-        try
-        {
-            var queue = await GetRagService().GetDocumentQueueAsync(kbId);
-            return Res.Ok(queue);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get document queue for KB '{KbId}'", kbId);
-            return Res.Fail($"Failed to load document queue: {ex.GetMessageRecursively()}");
-        }
-    }
-
     public async Task<Res> AddDocumentsToQueueAsync(
         string kbId,
         IEnumerable<string> documentIds,
@@ -244,35 +169,6 @@ public class RAGFacade(
         {
             logger.LogError(ex, "Failed to add documents to queue for KB '{KbId}'", kbId);
             return Res.Fail($"Failed to add documents: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    public async Task<Res> RemoveDocumentAsync(string kbId, string documentId)
-    {
-        try
-        {
-            logger.LogInformation("Removing document '{DocumentId}' from KB '{KbId}'", documentId, kbId);
-            await GetRagService().RemoveDocumentAsync(kbId, documentId);
-            return Res.Ok("Document removed successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to remove document '{DocumentId}' from KB '{KbId}'", documentId, kbId);
-            return Res.Fail($"Failed to remove document: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    public async Task<Res<int>> ClearKnowledgeBaseDocumentsAsync(string kbId)
-    {
-        try
-        {
-            var removedCount = await GetRagService().ClearKnowledgeBaseDocumentsAsync(kbId);
-            return Res.Ok(removedCount);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to clear documents for KB '{KbId}'", kbId);
-            return Res.Fail($"Failed to clear documents: {ex.GetMessageRecursively()}");
         }
     }
 

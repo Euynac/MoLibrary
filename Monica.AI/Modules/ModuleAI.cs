@@ -49,6 +49,12 @@ public class ModuleAI(ModuleAIOption option)
     : WebModuleBase<ModuleAI, ModuleAIOption, ModuleAIGuide>(option)
 {
     /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleSkillSystemGuide>().Register();
+    }
+
+    /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         // Register model directory
@@ -67,6 +73,9 @@ public class ModuleAI(ModuleAIOption option)
 
         // Register provider manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
+        services.TryAddSingleton<AIChatRuntimeContextAccessor>();
+        services.TryAddSingleton<IAIChatRuntimeContextAccessor>(sp =>
+            sp.GetRequiredService<AIChatRuntimeContextAccessor>());
         services.AddSingleton<AIProviderRegistry>();
         services.AddSingleton<IAIProviderFactory>(sp => sp.GetRequiredService<AIProviderRegistry>());
         services.AddSingleton<IAIChatAgentFactory, AIChatAgentFactory>();

@@ -1,3 +1,4 @@
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using MudBlazor;
 

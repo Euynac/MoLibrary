@@ -6,14 +6,14 @@ using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Monica.AI.Abstractions;
+using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Providers;
+using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Facades;
 using Monica.AI.Services;
-using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
-using Monica.AI.RAG.Tools;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -48,6 +48,12 @@ public class ModuleRAG(ModuleRAGOption option)
     : ModuleBase<ModuleRAG, ModuleRAGOption, ModuleRAGGuide>(option)
 {
     /// <inheritdoc />
+    public override void ClaimDependencies()
+    {
+        DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
+    }
+
+    /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
@@ -57,8 +63,6 @@ public class ModuleRAG(ModuleRAGOption option)
         services.AddSingleton<RAGVectorCollectionCoordinator>();
         services.AddSingleton<RAGIndexStateCoordinator>();
         services.AddSingleton<ChunkerRegistry>();
-        services.TryAddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
-        services.TryAddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
         services.TryAddSingleton<IChunkerRoutingStore, FileChunkerRoutingStore>();
         services.AddScoped<MarkdownDocumentResolver>();
         services.AddScoped<ChunkViewCoordinator>();
@@ -71,8 +75,6 @@ public class ModuleRAG(ModuleRAGOption option)
             ServiceDescriptor.Singleton<IDocumentChunker, ProductionMarkdownDocumentChunker>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDocumentChunker, SimpleMarkdownDocumentChunker>());
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IAIChatToolProvider, KnowledgeSearchToolProvider>());
     }
 }
 
@@ -83,17 +85,6 @@ public class ModuleRAGOption : ModuleOptions<ModuleRAG>
 {
     public string CollectionNamePrefix { get; set; } = "monica_rag_";
     public int DefaultTopK { get; set; } = 5;
-
-    /// <summary>
-    /// Relative file path for the unified document index state store.
-    /// Resolved relative to the application's running directory.
-    /// </summary>
-    public string DocumentIndexStateStoreFilePath { get; set; } = "monica_data/rag/document_index_state.json";
-
-    /// <summary>
-    /// Relative root path for source document content storage.
-    /// </summary>
-    public string UploadedDocumentSourceRootPath { get; set; } = "monica_data/rag/document_sources";
 
     /// <summary>
     /// Relative file path for extension-to-chunker routing configuration.
@@ -166,7 +157,7 @@ public class ModuleRAGGuide
 
     protected override string[] GetRequestedConfigMethodKeys()
     {
-        return [CONFIG_INDEX_STATE_STORE, CONFIG_SOURCE_STORE, CONFIG_VECTOR_STORE];
+        return [CONFIG_VECTOR_STORE];
     }
 
     /// <summary>
@@ -175,10 +166,9 @@ public class ModuleRAGGuide
     public ModuleRAGGuide UseDocumentIndexStateStore<TStore>()
         where TStore : class, IDocumentIndexStateStore
     {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IDocumentIndexStateStore, TStore>();
-        }, key: CONFIG_INDEX_STATE_STORE);
+        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+            .UseDocumentIndexStateStore<TStore>();
+        ConfigureEmpty(CONFIG_INDEX_STATE_STORE);
         return this;
     }
 
@@ -187,10 +177,9 @@ public class ModuleRAGGuide
     /// </summary>
     public ModuleRAGGuide UseDocumentIndexStateFileProvider()
     {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IDocumentIndexStateStore, FileDocumentIndexStateStore>();
-        }, key: CONFIG_INDEX_STATE_STORE);
+        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+            .UseDocumentIndexStateFileProvider();
+        ConfigureEmpty(CONFIG_INDEX_STATE_STORE);
         return this;
     }
 
@@ -200,10 +189,9 @@ public class ModuleRAGGuide
     public ModuleRAGGuide UseKnowledgeDocumentSourceStore<TStore>()
         where TStore : class, IKnowledgeDocumentSourceStore
     {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, TStore>();
-        }, key: CONFIG_SOURCE_STORE);
+        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+            .UseKnowledgeDocumentSourceStore<TStore>();
+        ConfigureEmpty(CONFIG_SOURCE_STORE);
         return this;
     }
 
@@ -212,10 +200,9 @@ public class ModuleRAGGuide
     /// </summary>
     public ModuleRAGGuide UseKnowledgeDocumentSourceFileProvider()
     {
-        ConfigureServices(ctx =>
-        {
-            ctx.Services.AddSingleton<IKnowledgeDocumentSourceStore, FileKnowledgeDocumentSourceStore>();
-        }, key: CONFIG_SOURCE_STORE);
+        DependsOnModule<ModuleKnowledgeBaseGuide>().Register()
+            .UseKnowledgeDocumentSourceFileProvider();
+        ConfigureEmpty(CONFIG_SOURCE_STORE);
         return this;
     }
 

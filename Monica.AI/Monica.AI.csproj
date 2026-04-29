@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <PackageDescription>AI service integration for Monica framework with support for OpenAI and Anthropic, providing unified interfaces for AI capabilities using Microsoft.Extensions.AI.</PackageDescription>
+    <NoWarn>$(NoWarn);MAAI001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

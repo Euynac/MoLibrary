@@ -114,14 +114,6 @@ public static class ChatProviderResolver
     }
 
     /// <summary>
-    /// Gets knowledge base IDs for session configuration, or null if none selected.
-    /// </summary>
-    public static List<string>? GetKnowledgeBaseIds(List<string> selectedIds)
-    {
-        return selectedIds.Count > 0 ? selectedIds : null;
-    }
-
-    /// <summary>
     /// Finds provider by ID.
     /// </summary>
     public static AIProviderInfo? FindProvider(

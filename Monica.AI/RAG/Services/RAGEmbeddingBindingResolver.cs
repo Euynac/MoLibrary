@@ -3,7 +3,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;
 
@@ -17,7 +19,7 @@ public sealed class RAGEmbeddingBindingResolver(
     private readonly ConcurrentDictionary<string, int> _resolvedEmbeddingDimensions =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<RAGEmbeddingBinding> ResolveAsync(KnowledgeBase kb, CancellationToken ct = default)
+    public async Task<RAGEmbeddingBinding> ResolveAsync(KnowledgeBaseModel kb, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(kb.EmbeddingProviderId) || string.IsNullOrWhiteSpace(kb.EmbeddingModelName))
         {

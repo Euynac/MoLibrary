@@ -1,0 +1,195 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.KnowledgeBase.Models
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+@if (KnowledgeBases is { Count: > 0 })
+{
+    <MudTooltip Text="@GetTooltipText()">
+        <MudBadge Content="@SelectedIds.Count" Color="Color.Info"
+                  Visible="@(SelectedIds.Count > 0)" Overlap="true">
+            <MudIconButton Icon="@Icons.Material.Filled.MenuBook"
+                           Class="@($"kb-selector-button {(SelectedIds.Count > 0 ? "active" : "")}")"
+                           OnClick="@TogglePopover" />
+        </MudBadge>
+    </MudTooltip>
+
+    <MudPopover Open="@_popoverOpen"
+                AnchorOrigin="Origin.TopLeft"
+                TransformOrigin="Origin.BottomLeft"
+                Class="mo-ai-kb-popover"
+                Paper="false">
+        <MudPaper Elevation="6" Class="kb-popover-content">
+            <div class="kb-popover-header">
+                <div class="kb-popover-heading">
+                    <span class="kb-popover-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
+                    </span>
+                    <div class="kb-popover-copy">
+                        <MudText Typo="Typo.subtitle2" Class="kb-popover-title">
+                            @L["RAG:KnowledgeBase:Title"]
+                        </MudText>
+                        <MudText Typo="Typo.caption" Class="kb-popover-subtitle">
+                            @GetSelectedSummaryText()
+                        </MudText>
+                    </div>
+                </div>
+                <div class="kb-popover-actions">
+                    @if (SelectedIds.Count > 0)
+                    {
+                        <MudButton Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   OnClick="@ClearSelectionAsync"
+                                   Class="kb-clear-button">
+                            @L["Chat:KnowledgeBaseSelector:Clear"]
+                        </MudButton>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="@ClosePopover"
+                                   Class="kb-close-button"
+                                   title="@L["Common:Actions:Close"]" />
+                </div>
+            </div>
+
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Placeholder="@L["Chat:KnowledgeBaseSelector:SearchPlaceholder"]"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Class="kb-search" />
+
+            <div class="kb-list">
+                @if (FilteredKnowledgeBases.Count == 0)
+                {
+                    <div class="kb-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff"
+                                 Size="Size.Medium"
+                                 Class="kb-empty-icon" />
+                        <MudText Typo="Typo.body2" Class="kb-empty-text">
+                            @L["Chat:KnowledgeBaseSelector:NoMatching"]
+                        </MudText>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var kb in FilteredKnowledgeBases)
+                    {
+                        var isSelected = SelectedIds.Contains(kb.Id);
+                        <button type="button"
+                                class="kb-item @(isSelected ? "selected" : "")"
+                                @onclick="() => ToggleKbAsync(kb.Id)">
+                            <span class="kb-item-leading">
+                                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
+                            </span>
+                            <span class="kb-item-info">
+                                <MudText Typo="Typo.body2" Class="kb-item-title">@kb.Name</MudText>
+                                <MudText Typo="Typo.caption" Class="kb-item-meta">
+                                    @GetStatsText(kb)
+                                </MudText>
+                                @if (!string.IsNullOrWhiteSpace(kb.Description))
+                                {
+                                    <MudText Typo="Typo.caption" Class="kb-item-description">
+                                        @kb.Description
+                                    </MudText>
+                                }
+                            </span>
+                            <span class="kb-item-trailing">
+                                <MudIcon Icon="@(isSelected
+                                                  ? Icons.Material.Filled.CheckCircle
+                                                  : Icons.Material.Outlined.RadioButtonUnchecked)"
+                                         Size="Size.Small" />
+                            </span>
+                        </button>
+                    }
+                }
+            </div>
+        </MudPaper>
+    </MudPopover>
+
+    <MudOverlay Visible="@_popoverOpen"
+                AutoClose="true"
+                OnClosed="@ClosePopover"
+                LockScroll="false"
+                Modal="false" />
+}
+
+@code {
+    [Parameter] public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; set; } = [];
+    [Parameter] public List<string> SelectedIds { get; set; } = [];
+    [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
+
+    private bool _popoverOpen;
+    private string? _searchText;
+
+    private IReadOnlyList<KnowledgeBase> FilteredKnowledgeBases =>
+        KnowledgeBases.Where(MatchesSearch).ToList();
+
+    private void TogglePopover()
+    {
+        _popoverOpen = !_popoverOpen;
+        if (!_popoverOpen)
+        {
+            _searchText = null;
+        }
+    }
+
+    private void ClosePopover()
+    {
+        _popoverOpen = false;
+        _searchText = null;
+    }
+
+    private async Task ToggleKbAsync(string kbId)
+    {
+        var newList = new List<string>(SelectedIds);
+        if (newList.Contains(kbId))
+        {
+            newList.Remove(kbId);
+        }
+        else
+        {
+            newList.Add(kbId);
+        }
+
+        SelectedIds = newList;
+        await SelectedIdsChanged.InvokeAsync(newList);
+    }
+
+    private async Task ClearSelectionAsync()
+    {
+        var newList = new List<string>();
+        SelectedIds = newList;
+        await SelectedIdsChanged.InvokeAsync(newList);
+    }
+
+    private bool MatchesSearch(KnowledgeBase kb)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        var searchText = _searchText.Trim();
+        return kb.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+               || kb.Id.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+               || (!string.IsNullOrWhiteSpace(kb.Description)
+                   && kb.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string GetTooltipText()
+        => SelectedIds.Count > 0
+            ? L["Chat:KnowledgeBaseSelector:SelectedCount", SelectedIds.Count]
+            : L["Chat:KnowledgeBaseSelector:Tooltip"];
+
+    private string GetSelectedSummaryText()
+        => SelectedIds.Count > 0
+            ? L["Chat:KnowledgeBaseSelector:SelectedCount", SelectedIds.Count]
+            : L["Chat:KnowledgeBaseSelector:NoneSelected"];
+
+    private string GetStatsText(KnowledgeBase kb)
+        => $"{L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount]} · {L["RAG:KnowledgeBase:ChunksCount", kb.ChunkCount]}";
+}

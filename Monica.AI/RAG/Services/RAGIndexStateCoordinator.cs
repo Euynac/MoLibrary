@@ -1,5 +1,7 @@
-using Monica.AI.RAG.Abstractions;
+using Monica.AI.KnowledgeBase.Abstractions;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;
 
@@ -10,7 +12,7 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
 {
     private const int MaxInProgressPercentage = 99;
 
-    public async Task<KnowledgeBase> GetKnowledgeBaseRequiredAsync(string knowledgeBaseId, CancellationToken ct)
+    public async Task<KnowledgeBaseModel> GetKnowledgeBaseRequiredAsync(string knowledgeBaseId, CancellationToken ct)
     {
         return await indexStateStore.GetKnowledgeBaseAsync(knowledgeBaseId, ct)
                ?? throw new KeyNotFoundException($"Knowledge base '{knowledgeBaseId}' not found.");
@@ -270,7 +272,7 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         }
     }
 
-    public async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBase kb, CancellationToken ct)
+    public async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBaseModel kb, CancellationToken ct)
     {
         var indexedStates = await indexStateStore.GetDocumentStatesAsync(kb.Id, ct);
         var doneStates = indexedStates.Where(state => state.Status == DocumentStatus.Done).ToList();

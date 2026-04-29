@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
+using Monica.AI.KnowledgeBase.Services;
 using Monica.AI.Models;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.Core.Extensions;
@@ -15,6 +17,7 @@ namespace Monica.AI.RAG.Facades;
 public class EmbeddingModelFacade(
     IServiceProvider serviceProvider,
     IAIProviderFactory providerFactory,
+    KnowledgeBaseService knowledgeBaseService,
     ILogger<EmbeddingModelFacade> logger)
 {
     public Task<Res<IReadOnlyList<EmbeddingModelOption>>> GetEmbeddingModelsAsync()
@@ -56,7 +59,7 @@ public class EmbeddingModelFacade(
     {
         try
         {
-            var kb = await GetRagService().GetKnowledgeBaseByIdAsync(kbId);
+            var kb = await knowledgeBaseService.GetByIdAsync(kbId);
             if (kb is null)
             {
                 return Res.Fail("Knowledge base not found.");

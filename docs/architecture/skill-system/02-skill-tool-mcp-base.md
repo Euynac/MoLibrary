@@ -49,7 +49,7 @@ Canonical consumer: `Monica.JobScheduler/Modules/ModuleJobScheduler.cs` (lines 5
 
 ### 1.3 `IXmlDocumentationService`
 
-`Monica.Framework/XmlDocumentation/Abstractions/IXmlDocumentationService.cs`:
+`Monica.Core/XmlDocumentation/Abstractions/IXmlDocumentationService.cs`:
 
 ```csharp
 public interface IXmlDocumentationService
@@ -61,7 +61,7 @@ public interface IXmlDocumentationService
 }
 ```
 
-`XmlMethodDocumentation` exposes the method `<summary>` plus a per-parameter dictionary keyed on parameter name. Module: `Monica.Framework/Modules/ModuleXmlDocumentation.cs`. The skill-system depends on this module being loaded; the Skill discovery host registers a hard dependency on `ModuleXmlDocumentationGuide`.
+`XmlMethodDocumentation` exposes the method `<summary>` plus a per-parameter dictionary keyed on parameter name. Module: `Monica.Core/Modules/ModuleXmlDocumentation.cs`. The skill-system depends on this module being loaded; the Skill discovery host registers a hard dependency on `ModuleXmlDocumentationGuide`.
 
 ### 1.4 `ModuleKey`
 

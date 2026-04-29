@@ -3,6 +3,7 @@ using Monica.AI.UI.UIRAG.Components;
 using Monica.AI.UI.UIRAG.Models;
 using Monica.Core.Results;
 using MudBlazor;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
 
@@ -24,7 +25,7 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Delete one knowledge base after confirmation.
     /// </summary>
-    public async Task DeleteKnowledgeBaseAsync(KnowledgeBase knowledgeBase)
+    public async Task DeleteKnowledgeBaseAsync(KnowledgeBaseModel knowledgeBase)
     {
         var confirmed = await _dialogService.ShowMessageBoxAsync(
             _localizer["Common:Confirm"],
@@ -37,7 +38,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.DeleteKnowledgeBaseAsync(knowledgeBase.Id)).IsFailed(out var error))
+        if ((await _knowledgeBaseFacade.DeleteAsync(knowledgeBase.Id)).IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -144,7 +145,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.CreateKnowledgeBaseAsync(data.Id, data.Name, data.Description)).IsFailed(out var error))
+        if ((await _knowledgeBaseFacade.CreateAsync(data.Id, data.Name, data.Description)).IsFailed(out var error))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
@@ -184,7 +185,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.UpdateKnowledgeBaseAsync(
+        if ((await _knowledgeBaseFacade.UpdateAsync(
                 SelectedKnowledgeBase.Id,
                 data.Name,
                 data.Description)).IsFailed(out var error))

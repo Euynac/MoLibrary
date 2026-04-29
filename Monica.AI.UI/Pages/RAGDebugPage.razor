@@ -1,11 +1,14 @@
 @attribute [Route(PAGE_URL)]
 @rendermode InteractiveServer
+@using Monica.AI.KnowledgeBase.Facades
 @using Monica.AI.RAG.Models
 @using Monica.AI.RAG.Facades
 @using Monica.AI.UI.Localization
 @using Monica.Core.Results;
 @using Microsoft.Extensions.Localization
+@using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase
 @inject RAGFacade RagFacade
+@inject KnowledgeBaseFacade KnowledgeBaseFacade
 @inject EmbeddingModelFacade EmbeddingService
 @inject IAIProviderFactory ProviderFactory
 @inject ISnackbar Snackbar
@@ -149,7 +152,7 @@
 @code {
     public const string PAGE_URL = "/ai/rag/debug";
 
-    private IReadOnlyList<KnowledgeBase> _knowledgeBases = [];
+    private IReadOnlyList<KnowledgeBaseModel> _knowledgeBases = [];
     private IReadOnlyList<EmbeddingModelOption> _embeddingModels = [];
     private IReadOnlyList<TextSearchResult> _searchResults = [];
     private HashSet<string> _selectedKbIds = [];
@@ -167,7 +170,7 @@
     {
         if (firstRender)
         {
-            var kbResult = await RagFacade.GetKnowledgeBasesAsync();
+            var kbResult = await KnowledgeBaseFacade.GetAllAsync();
             if (!kbResult.IsFailed(out var error, out var kbs))
             {
                 _knowledgeBases = kbs;
@@ -406,11 +409,11 @@
             options);
     }
 
-    private static bool HasEmbeddingBinding(KnowledgeBase kb)
+    private static bool HasEmbeddingBinding(KnowledgeBaseModel kb)
         => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
            && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
 
-    private static string GetKnowledgeBaseModelKey(KnowledgeBase kb)
+    private static string GetKnowledgeBaseModelKey(KnowledgeBaseModel kb)
     {
         if (!HasEmbeddingBinding(kb))
         {
@@ -420,7 +423,7 @@
         return EmbeddingModelOption.ToModelKey(kb.EmbeddingProviderId!, kb.EmbeddingModelName!);
     }
 
-    private string GetKnowledgeBaseModelDisplay(KnowledgeBase kb)
+    private string GetKnowledgeBaseModelDisplay(KnowledgeBaseModel kb)
     {
         if (!HasEmbeddingBinding(kb))
         {

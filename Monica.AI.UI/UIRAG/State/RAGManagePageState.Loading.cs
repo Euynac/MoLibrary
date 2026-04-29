@@ -1,6 +1,8 @@
-using Monica.AI.RAG.Models;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.Core.Results;
 using MudBlazor;
+using DocumentQueueItemModel = Monica.AI.KnowledgeBase.Models.DocumentQueueItem;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
 
@@ -24,7 +26,7 @@ public sealed partial class RAGManagePageState
     /// <summary>
     /// Change the current knowledge-base selection and load dependent data.
     /// </summary>
-    public async Task SelectKnowledgeBaseAsync(KnowledgeBase? knowledgeBase)
+    public async Task SelectKnowledgeBaseAsync(KnowledgeBaseModel? knowledgeBase)
     {
         if (!string.Equals(
                 _batchStartInFlightKnowledgeBaseId,
@@ -103,7 +105,7 @@ public sealed partial class RAGManagePageState
 
     private async Task<bool> LoadKnowledgeBasesAsync()
     {
-        if ((await _ragFacade.GetKnowledgeBasesAsync()).IsFailed(out var error, out var knowledgeBases))
+        if ((await _knowledgeBaseFacade.GetAllAsync()).IsFailed(out var error, out var knowledgeBases))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return false;
@@ -135,7 +137,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        if ((await _ragFacade.GetDocumentQueueAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var queue))
+        if ((await _knowledgeBaseFacade.GetDocumentInventoryAsync(SelectedKnowledgeBase.Id)).IsFailed(out var error, out var queue))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             DocumentQueue = [];
@@ -153,7 +155,7 @@ public sealed partial class RAGManagePageState
         NotifyStateChanged();
     }
 
-    private bool HasIndexedContent(KnowledgeBase knowledgeBase)
+    private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
     {
         if (knowledgeBase.DocumentCount > 0 || knowledgeBase.ChunkCount > 0)
         {
@@ -264,7 +266,7 @@ public sealed partial class RAGManagePageState
         _ = LoadSelectedKnowledgeBaseVectorValidationAsync(knowledgeBaseId);
     }
 
-    private void OnQueueRefreshed(IReadOnlyList<DocumentQueueItem> queue)
+    private void OnQueueRefreshed(IReadOnlyList<DocumentQueueItemModel> queue)
     {
         DocumentQueue = queue.ToList();
         NotifyStateChanged();

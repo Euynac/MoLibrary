@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using Monica.Modules;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;
 
@@ -37,19 +39,19 @@ public sealed class RAGVectorCollectionCoordinator(
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
 
     public async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetOrCreateCollectionAsync(
-        KnowledgeBase kb,
+        KnowledgeBaseModel kb,
         RAGEmbeddingBinding binding,
         CancellationToken ct)
         => await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: true, ct);
 
     public async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetCollectionAsync(
-        KnowledgeBase kb,
+        KnowledgeBaseModel kb,
         RAGEmbeddingBinding binding,
         CancellationToken ct)
         => await GetCollectionCoreAsync(kb, binding, ensureCollectionExists: false, ct);
 
     public async Task<IReadOnlyList<string>> GetMissingRecordKeysAsync(
-        KnowledgeBase kb,
+        KnowledgeBaseModel kb,
         RAGEmbeddingBinding binding,
         IEnumerable<string> recordKeys,
         CancellationToken ct)
@@ -88,7 +90,7 @@ public sealed class RAGVectorCollectionCoordinator(
     }
 
     private async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetCollectionCoreAsync(
-        KnowledgeBase kb,
+        KnowledgeBaseModel kb,
         RAGEmbeddingBinding binding,
         bool ensureCollectionExists,
         CancellationToken ct)
@@ -119,7 +121,7 @@ public sealed class RAGVectorCollectionCoordinator(
     }
 
     public async Task<int> RemoveIndexedDocumentDataAsync(
-        KnowledgeBase kb,
+        KnowledgeBaseModel kb,
         DocumentIndexState? existingState,
         CancellationToken ct)
     {

@@ -215,7 +215,19 @@ public enum BuiltInModuleKey
     /// </summary>
     UtilitiesUI,
     /// <summary>
-    /// RAG (Retrieval-Augmented Generation) module
+    /// AI skill discovery and agent skill provider module.
+    /// </summary>
+    AISkillSystem,
+    /// <summary>
+    /// Knowledge-base inventory and lookup module.
+    /// </summary>
+    KnowledgeBase,
+    /// <summary>
+    /// Knowledge-base UI module.
+    /// </summary>
+    KnowledgeBaseUI,
+    /// <summary>
+    /// RAG (Retrieval-Augmented Generation) module.
     /// </summary>
     RAG,
     /// <summary>

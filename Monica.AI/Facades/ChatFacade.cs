@@ -39,7 +39,7 @@ public class ChatFacade(
         string? providerId = null,
         string? modelName = null,
         string? systemPrompt = null,
-        List<string>? knowledgeBaseIds = null,
+        AIChatRuntimeContext? runtimeContext = null,
         bool reasoningEnabled = false,
         string? title = null,
         CancellationToken ct = default)
@@ -50,7 +50,7 @@ public class ChatFacade(
                 providerId,
                 modelName,
                 systemPrompt,
-                knowledgeBaseIds,
+                runtimeContext,
                 reasoningEnabled,
                 title,
                 ct);

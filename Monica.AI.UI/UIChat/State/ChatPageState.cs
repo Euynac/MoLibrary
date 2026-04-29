@@ -3,15 +3,15 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Monica.AI.Facades;
+using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.Models;
-using Monica.AI.RAG.Facades;
-using Monica.AI.RAG.Models;
 using Monica.AI.UI.Localization;
 using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Support;
 using Monica.Modules;
 using Monica.UI.Shell.Support;
 using MudBlazor;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIChat.State;
 
@@ -26,7 +26,7 @@ public sealed partial class ChatPageState : IDisposable
     private readonly ModuleAIUIOption _options;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
-    private readonly RAGFacade _ragFacade;
+    private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
     private readonly IStringLocalizer<AIResource> _localizer;
     private readonly IBrowserStorage _browserStorage;
     private bool _isAttached;
@@ -41,7 +41,7 @@ public sealed partial class ChatPageState : IDisposable
         IOptions<ModuleAIUIOption> options,
         ISnackbar snackbar,
         IDialogService dialogService,
-        RAGFacade ragFacade,
+        KnowledgeBaseFacade knowledgeBaseFacade,
         IStringLocalizer<AIResource> localizer,
         IBrowserStorage browserStorage)
     {
@@ -51,7 +51,7 @@ public sealed partial class ChatPageState : IDisposable
         _options = options.Value;
         _snackbar = snackbar;
         _dialogService = dialogService;
-        _ragFacade = ragFacade;
+        _knowledgeBaseFacade = knowledgeBaseFacade;
         _localizer = localizer;
         _browserStorage = browserStorage;
     }
@@ -180,7 +180,7 @@ public sealed partial class ChatPageState : IDisposable
     /// <summary>
     /// Available knowledge bases shown by the chat page.
     /// </summary>
-    public IReadOnlyList<KnowledgeBase> KnowledgeBases { get; private set; } = [];
+    public IReadOnlyList<KnowledgeBaseModel> KnowledgeBases { get; private set; } = [];
 
     /// <summary>
     /// Selected knowledge-base identifiers for the current page session.

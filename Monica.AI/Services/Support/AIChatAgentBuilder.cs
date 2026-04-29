@@ -4,12 +4,11 @@ using Microsoft.Extensions.AI;
 namespace Monica.AI.Services.Support;
 
 /// <summary>
-/// Mutable builder used by tool providers to compose a chat agent configuration.
+/// Mutable builder used to compose chat agent construction options.
 /// </summary>
 public sealed class AIChatAgentBuilder(string? instructions)
 {
     private readonly List<AIContextProvider> _contextProviders = [];
-    private readonly List<AITool> _tools = [];
     private readonly List<string> _instructions = string.IsNullOrWhiteSpace(instructions)
         ? []
         : [instructions];
@@ -31,15 +30,6 @@ public sealed class AIChatAgentBuilder(string? instructions)
     }
 
     /// <summary>
-    /// Add a direct tool to the agent.
-    /// </summary>
-    public void AddTool(AITool tool)
-    {
-        ArgumentNullException.ThrowIfNull(tool);
-        _tools.Add(tool);
-    }
-
-    /// <summary>
     /// Append additional system instructions to the agent.
     /// </summary>
     public void AppendInstructions(string instructionsText)
@@ -50,30 +40,6 @@ public sealed class AIChatAgentBuilder(string? instructions)
         }
 
         _instructions.Add(instructionsText);
-    }
-
-    /// <summary>
-    /// Allow the model to automatically choose and invoke tools.
-    /// </summary>
-    public void EnableAutomaticToolCalling()
-    {
-        ToolMode = ChatToolMode.Auto;
-    }
-
-    /// <summary>
-    /// Allow the model to invoke more than one tool during a single response.
-    /// </summary>
-    public void EnableMultipleToolCalling()
-    {
-        AllowMultipleToolCalls = true;
-    }
-
-    /// <summary>
-    /// Restrict the model to a single tool call at a time for each response.
-    /// </summary>
-    public void DisableMultipleToolCalling()
-    {
-        AllowMultipleToolCalls = false;
     }
 
     /// <summary>
@@ -92,25 +58,4 @@ public sealed class AIChatAgentBuilder(string? instructions)
             AIContextProviders = _contextProviders.Count > 0 ? [.. _contextProviders] : null
         };
     }
-
-    /// <summary>
-    /// Build run-time chat options that must be applied per invocation.
-    /// </summary>
-    public ChatOptions? BuildRuntimeChatOptions()
-    {
-        if (_tools.Count == 0 && ToolMode is null)
-        {
-            return null;
-        }
-
-        return new ChatOptions
-        {
-            Tools = _tools.Count > 0 ? [.. _tools] : null,
-            ToolMode = ToolMode,
-            AllowMultipleToolCalls = AllowMultipleToolCalls
-        };
-    }
-
-    private ChatToolMode? ToolMode { get; set; }
-    private bool? AllowMultipleToolCalls { get; set; }
 }

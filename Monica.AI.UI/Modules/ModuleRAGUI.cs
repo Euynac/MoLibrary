@@ -47,6 +47,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
     {
         // Depends on RAG backend module
         DependsOnModule<ModuleRAGGuide>().Register();
+        DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register();
 
         if (!Option.DisableRAGManagePage || !Option.DisableRAGDebugPage || !Option.DisableRAGChunkersPage)
         {

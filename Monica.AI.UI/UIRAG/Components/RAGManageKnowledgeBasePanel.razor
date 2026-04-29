@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.Localization
+@using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase
 @using Monica.AI.RAG.Models
 @using Monica.AI.UI.Localization
 @using Monica.AI.UI.UIRAG.State
@@ -111,12 +112,12 @@
     [Parameter, EditorRequired]
     public required RAGManagePageState PageState { get; set; }
 
-    private static bool HasEmbeddingBinding(KnowledgeBase knowledgeBase)
+    private static bool HasEmbeddingBinding(KnowledgeBaseModel knowledgeBase)
         => RAGManagePageState.HasEmbeddingBinding(knowledgeBase);
 
-    private string GetKnowledgeBaseModelDisplay(KnowledgeBase knowledgeBase)
+    private string GetKnowledgeBaseModelDisplay(KnowledgeBaseModel knowledgeBase)
         => PageState.GetKnowledgeBaseModelDisplay(knowledgeBase);
 
-    private bool IsSelected(KnowledgeBase knowledgeBase)
+    private bool IsSelected(KnowledgeBaseModel knowledgeBase)
         => string.Equals(PageState.SelectedKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase);
 }

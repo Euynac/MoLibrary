@@ -17,9 +17,11 @@ namespace Monica.AI.Services;
 public class AIChatService(
     IAIProviderFactory providerFactory,
     IOptions<ModuleAIOption> options,
-    IAIChatAgentFactory agentFactory)
+    IAIChatAgentFactory agentFactory,
+    AIChatRuntimeContextAccessor runtimeContextAccessor)
 {
     private readonly ModuleAIOption _options = options.Value;
+    private readonly AIChatRuntimeContextAccessor _runtimeContextAccessor = runtimeContextAccessor;
 
     /// <summary>
     /// Create a new chat session backed by ChatClientAgent.
@@ -29,7 +31,7 @@ public class AIChatService(
         string? providerId = null,
         string? modelName = null,
         string? systemPrompt = null,
-        List<string>? knowledgeBaseIds = null,
+        AIChatRuntimeContext? runtimeContext = null,
         bool reasoningEnabled = false,
         string? title = null,
         CancellationToken ct = default)
@@ -45,14 +47,14 @@ public class AIChatService(
 
         var chatClient = provider.GetChatClient(modelName);
 
-        var agent = await CreateAgentAsync(chatClient, resolvedPrompt, knowledgeBaseIds, ct);
+        var agent = await CreateAgentAsync(chatClient, resolvedPrompt, ct);
         var session = await agent.CreateSessionAsync(ct);
 
         var state = new ChatSession(agent, session, resolvedProviderId)
         {
             Title = title ?? "New Chat",
             SystemPrompt = resolvedPrompt,
-            ActiveKnowledgeBaseIds = knowledgeBaseIds is { Count: > 0 } ? [.. knowledgeBaseIds] : null,
+            RuntimeContext = runtimeContext ?? AIChatRuntimeContext.Empty,
             ModelName = modelName,
             ReasoningEnabled = reasoningEnabled
         };
@@ -75,7 +77,7 @@ public class AIChatService(
                 AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(provider.Info));
 
         var chatClient = provider.GetChatClient(state.ModelName);
-        var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, state.ActiveKnowledgeBaseIds, ct);
+        var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, ct);
         var newSession = await newAgent.CreateSessionAsync(ct);
 
         // Copy chat history from old session to new session
@@ -180,15 +182,13 @@ public class AIChatService(
     private async Task<AIAgent> CreateAgentAsync(
         IChatClient chatClient,
         string? instructions,
-        List<string>? knowledgeBaseIds,
         CancellationToken ct)
     {
         return await agentFactory.CreateAsync(
             chatClient,
             new AIChatAgentCreateContext
             {
-                Instructions = instructions,
-                KnowledgeBaseIds = knowledgeBaseIds is { Count: > 0 } ? [.. knowledgeBaseIds] : []
+                Instructions = instructions
             },
             ct);
     }
@@ -216,7 +216,7 @@ public class AIChatService(
         return runOptions;
     }
 
-    private static async Task ProduceStreamingUpdatesAsync(
+    private async Task ProduceStreamingUpdatesAsync(
         ChatSession state,
         ChatMessage userMessage,
         ChatClientAgentRunOptions runOptions,
@@ -226,6 +226,7 @@ public class AIChatService(
         try
         {
             using (AgentResponseUpdateChannelContext.Push(updateChannel))
+            using (_runtimeContextAccessor.Push(state.RuntimeContext))
             {
                 await foreach (var update in state.Agent.RunStreamingAsync([userMessage], state.Session, runOptions, ct))
                 {

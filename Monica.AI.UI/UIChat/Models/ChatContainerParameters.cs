@@ -1,7 +1,7 @@
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
 using Monica.AI.Models;
-using Monica.AI.RAG.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIChat.Models;
 
@@ -39,7 +39,7 @@ public sealed class ChatContainerParameters
     public bool ToolDebugEnabled { get; init; }
 
     // RAG
-    public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; init; }
+    public IReadOnlyList<KnowledgeBaseModel>? KnowledgeBases { get; init; }
     public List<string> SelectedKnowledgeBaseIds { get; init; } = [];
 
     // Event callbacks

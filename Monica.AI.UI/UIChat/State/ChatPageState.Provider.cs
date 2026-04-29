@@ -190,7 +190,7 @@ public sealed partial class ChatPageState
             return;
         }
 
-        currentSession.ActiveKnowledgeBaseIds = ChatProviderResolver.GetKnowledgeBaseIds(selectedIds);
+        currentSession.RuntimeContext = BuildRuntimeContext(selectedIds);
         UpdateCurrentSession();
         NotifyStateChanged();
     }
@@ -212,7 +212,7 @@ public sealed partial class ChatPageState
             return;
         }
 
-        var knowledgeBaseResult = await _ragFacade.GetKnowledgeBasesAsync();
+        var knowledgeBaseResult = await _knowledgeBaseFacade.GetAllAsync();
         if (knowledgeBaseResult.IsFailed(out var error, out var knowledgeBases))
         {
             SetPageError(error.Message ?? _localizer["Error:Generic"], showSnackbar: false);

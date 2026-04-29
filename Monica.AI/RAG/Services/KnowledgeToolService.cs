@@ -2,11 +2,14 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
+using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.RAG.Abstractions;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.Markdown.Abstractions;
 using Monica.Markdown.Models;
 using Monica.Markdown.UIMarkdown.Models;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;
 
@@ -38,7 +41,7 @@ public sealed class KnowledgeToolService(
 
     internal async Task<KnowledgeSearchToolPayload> SearchKnowledgeAsync(
         string toolName,
-        IReadOnlyList<KnowledgeBase> knowledgeBases,
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases,
         string searchQuery,
         string? userQuestion,
         int? topK,
@@ -96,7 +99,7 @@ public sealed class KnowledgeToolService(
 
     internal async Task<KnowledgeDocumentBrowseToolPayload> BrowseDocumentsAsync(
         string toolName,
-        IReadOnlyList<KnowledgeBase> knowledgeBases,
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases,
         string? query,
         int? maxDocuments,
         CancellationToken ct = default)
@@ -186,7 +189,7 @@ public sealed class KnowledgeToolService(
 
     internal async Task<KnowledgeDocumentTreeToolPayload> BrowseDocumentTreeAsync(
         string toolName,
-        IReadOnlyList<KnowledgeBase> knowledgeBases,
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases,
         string? knowledgeBaseId,
         string? directoryPath,
         int? maxDepth,
@@ -260,7 +263,7 @@ public sealed class KnowledgeToolService(
 
     internal async Task<KnowledgeDocumentContentToolPayload> GetDocumentContentAsync(
         string toolName,
-        IReadOnlyList<KnowledgeBase> knowledgeBases,
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases,
         string? documentId,
         string? sourceLink,
         string? knowledgeBaseId,
@@ -548,7 +551,7 @@ public sealed class KnowledgeToolService(
     }
 
     private async Task<List<KnowledgeDocumentEntry>> LoadDocumentEntriesAsync(
-        IReadOnlyList<KnowledgeBase> knowledgeBases,
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases,
         CancellationToken ct)
     {
         var entries = new List<KnowledgeDocumentEntry>();
@@ -696,7 +699,7 @@ public sealed class KnowledgeToolService(
 
     private static KnowledgeSearchToolResultItem BuildKnowledgeSearchResultItem(
         TextSearchResult result,
-        IReadOnlyList<KnowledgeBase> knowledgeBases)
+        IReadOnlyList<KnowledgeBaseModel> knowledgeBases)
     {
         var knowledgeBase = knowledgeBases.FirstOrDefault(kb =>
             string.Equals(kb.Id, result.KnowledgeBaseId, StringComparison.OrdinalIgnoreCase));
@@ -718,7 +721,7 @@ public sealed class KnowledgeToolService(
     }
 
     private static IReadOnlyList<KnowledgeSearchToolKnowledgeBase> BuildKnowledgeBaseMetadata(
-        IEnumerable<KnowledgeBase> knowledgeBases)
+        IEnumerable<KnowledgeBaseModel> knowledgeBases)
     {
         return knowledgeBases
             .Select(knowledgeBase => new KnowledgeSearchToolKnowledgeBase

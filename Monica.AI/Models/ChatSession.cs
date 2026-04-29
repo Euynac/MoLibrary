@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Monica.AI.Services.Support;
 
 namespace Monica.AI.Models;
 
@@ -96,35 +97,9 @@ public class ChatSession
     }
 
     /// <summary>
-    /// Active knowledge base IDs for this session (for RAG integration).
-    /// Null if RAG is not enabled for this session.
-    /// Setting this property triggers agent recreation on next message send.
+    /// Runtime context visible to skills and tools during the next chat invocation.
     /// </summary>
-    public List<string>? ActiveKnowledgeBaseIds
-    {
-        get;
-        set
-        {
-            // Compare list contents, not reference
-            var needsUpdate = false;
-            if (field == null && value != null)
-                needsUpdate = true;
-            else if (field != null && value == null)
-                needsUpdate = true;
-            else if (field != null && value != null)
-            {
-                if (field.Count != value.Count ||
-                    !field.SequenceEqual(value))
-                    needsUpdate = true;
-            }
-
-            if (needsUpdate)
-            {
-                field = value;
-                NeedsRecreation = true;
-            }
-        }
-    }
+    public AIChatRuntimeContext RuntimeContext { get; set; } = AIChatRuntimeContext.Empty;
 
     /// <summary>
     /// Whether reasoning/thinking mode is enabled for this session.
