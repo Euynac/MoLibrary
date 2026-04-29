@@ -672,7 +672,7 @@ When Phase B (this doc) is implemented, the following must hold:
 ## 13. Cross-doc references
 
 - Doc 01 (`01-knowledge-base-decoupling.md`) — declares `KnowledgeBaseLookupSkill : MoSkill<KnowledgeBaseLookupSkill>` and `RAGKnowledgeSkill : MoSkill<RAGKnowledgeSkill>` as worked examples consuming this doc's contracts.
-- Doc 03 (`03-monica-facade-skill-provider.md`) — uses `MoSkill<TSelf>` (or an internal `AgentClassSkill<TSelf>` subclass via the explicit-override path) to produce per-Facade Skills, and the `[MoAITool]` attribute + description chain unchanged.
+- Doc 03 (`03-monica-facade-skill-provider.md`) — uses `MoSkill<TSelf>` via the explicit-override path to produce one module-level Skill per Monica module, with Facade-derived scripts grouped in the loaded skill content. The `[MoAITool]` attribute + description chain are unchanged.
 - Doc 04 (`04-projectunit-skill-provider.md`) — same pattern as Doc 03 for ProjectUnit ApplicationServices. Reuses everything in this doc; adds CRUD-safety defaults on top.
 
 ---

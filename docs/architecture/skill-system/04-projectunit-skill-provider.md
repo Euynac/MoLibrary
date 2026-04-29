@@ -85,7 +85,7 @@ For each `ProjectUnit pu` in the registry:
 1. Determine the unit's `ApplicationService`-derived members (§3.1).
 2. For each member, run the script-generation pipeline (§3.2 for single-Handle services, §3.3 for `CrudApplicationService`).
 3. Collect resulting `AgentSkillScript`s.
-4. Build a `ProjectUnitSkill` (the `AgentClassSkill<ProjectUnitSkill>` subclass mirroring Doc 03's `FacadeSkill`).
+4. Build a `ProjectUnitSkill` (the `AgentClassSkill<ProjectUnitSkill>` subclass mirroring Doc 03's explicit-override `ModuleFacadeSkill` pattern).
 5. Frontmatter and instructions per §3.4.
 
 ### 3.1 Identifying the ApplicationServices in a ProjectUnit
@@ -232,7 +232,7 @@ internal sealed class ProjectUnitSkill(
 }
 ```
 
-Inherits `MoSkill<ProjectUnitSkill>` (same base as the Facade Provider's `FacadeSkill` from Doc 03 §2.1) for consistency with hand-written Skills.
+Inherits `MoSkill<ProjectUnitSkill>` (same base and explicit-override pattern as the Facade Provider's `ModuleFacadeSkill` from Doc 03 §2.1) for consistency with hand-written Skills.
 
 Frontmatter:
 - **Name.** `unit-{kebab(projectUnit.Title)}`. Example: `unit-orders`, `unit-customer`.
@@ -468,8 +468,8 @@ When Phase D is implemented:
 | Module home | `Monica.Framework/AISkillProviders/Facade/` | `Monica.Framework/AISkillProviders/ProjectUnit/` |
 | Discovery hook | New `IBusinessTypeIterator` filter on `IMonicaFacade` | Reuses `ModuleProjectUnits` registry — no new filter |
 | Marker | `IMonicaFacade` interface | None — `ProjectUnit` registration is the marker |
-| Skill granularity | One Skill per Facade type | One Skill per ProjectUnit |
-| Module Skill aggregator | Yes — one `module-{moduleKey}` Skill referencing per-Facade Skills | No — ProjectUnit is itself the aggregation level |
+| Skill granularity | One module-level Skill per Monica module, with scripts grouped by Facade in loaded content | One Skill per ProjectUnit |
+| Aggregation level | Module Skill is itself the executable skill; there are no nested per-Facade Skills | ProjectUnit is itself the aggregation level |
 | Default exposure | All public methods (deny-list applied) | Custom Handle: all; CRUD: read auto, mutating opt-in |
 | `[MoAITool]` attribute | Same spec, same priority chain | Same spec, same priority chain |
 | `Res<T>` unwrap | Same rule | Same rule (plus `ResPaged<T>` special case) |

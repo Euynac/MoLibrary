@@ -9,7 +9,7 @@
 
 Every Monica module that exposes capabilities to host code does so through a Facade — `Monica.AI.RAG.Facades.RAGFacade`, the `KnowledgeBaseFacade` introduced by Doc 01, `Monica.JobScheduler.Facades.JobSchedulerFacade`, and so on. Today these Facades are invisible to the chat agent. Anyone who wants to expose a Facade method as an agent-callable capability has to write an `IAIChatToolProvider` by hand, marshal each method through `AIFunctionFactory.Create`, and register the provider via `services.TryAddEnumerable(...)`. The single existing example (`KnowledgeSearchToolProvider`, 426 lines for four tools) shows how much friction that has.
 
-This doc specifies a generalized mechanism: a new module `ModuleAIFacadeProvider` in `Monica.Framework` (which already references `Monica.AI`) that auto-projects every Monica module's Facade methods into a two-level Skill hierarchy. One *Module Skill* per Monica module that has Facades, referencing one *Facade Skill* per Facade. Authors get auto-discovery; descriptions come from XML doc comments by default; opt-out is one attribute on a method.
+This doc specifies a generalized mechanism: a new module `ModuleAIFacadeProvider` in `Monica.Framework` (which already references `Monica.AI`) that auto-projects every Monica module's Facade methods into one module-level Skill. Each selected Facade contributes scripts to that module Skill, and the loaded skill content groups those scripts by Facade. Authors get auto-discovery; descriptions come from XML doc comments by default; opt-out is one attribute on a method.
 
 The rule is opt-out, not opt-in: if your module loads `ModuleAIFacadeProvider`, every public method on every Facade marked `IMonicaFacade` is exposed as a script unless you explicitly disable it. This matches the "default-include" ergonomics the user asked for.
 
@@ -28,8 +28,8 @@ Monica.Framework/
         ModuleAIFacadeProviderGuide.cs
         ModuleAIFacadeProviderOption.cs
       Internal/
-        FacadeSkill.cs              // AgentClassSkill subclass per Facade type
-        ModuleAggregatorSkill.cs    // AgentClassSkill subclass per Monica module
+        ModuleFacadeSkill.cs        // AgentClassSkill subclass per Monica module
+        FacadeScriptGroup.cs        // groups generated scripts by Facade for skill content
         FacadeMethodScanner.cs      // reflection + filtering pipeline
         FacadeScriptFactory.cs      // builds AgentSkillScript via CreateScript
 ```
@@ -55,89 +55,112 @@ public override void ClaimDependencies()
 
 The Skill System (Doc 02) hosts the discovery pipeline; the Facade Provider piggybacks on it. XML documentation is required so the description-priority chain has its bottom rung.
 
-## 2. Facade Skill — one per Facade
+## 2. Module Facade Skill — one per Monica module
 
 ### 2.1 Construction approach
 
-The Provider does **not** rely on Microsoft's CRTP-attribute-based script discovery. Facade methods carry no `[MoAITool]` markers in the general case (the Provider's default is opt-out, not opt-in), so attribute-driven discovery would not find them. Instead, the Provider performs reflection-driven projection on the Facade type and **manually constructs** an `AgentSkill` whose `Scripts` collection is pre-built and returned directly through the `MoSkill<TSelf>` override.
+The Provider does **not** rely on Microsoft's CRTP-attribute-based script discovery. Facade methods carry no `[MoAITool]` markers in the general case (the Provider's default is opt-out, not opt-in), so attribute-driven discovery would not find them. Instead, the Provider reflects selected Facades, creates `AgentSkillScript` instances for their public methods, groups those scripts by Facade for the loaded skill content, and registers **one** `AgentSkill` per owning Monica module.
 
-A single internal class:
+This matches the Microsoft Agent Framework shape: `AgentSkillsProvider` advertises a flat list of skills, then exposes the generic `load_skill` and `run_skill_script` tools. There is no nested skill activation level, so Doc 03 does not create per-Facade `AgentSkill`s.
+
+A single internal skill class:
 
 ```csharp
 namespace Monica.Framework.AISkillProviders.Facade.Internal;
 
-internal sealed class FacadeSkill(
-    Type facadeType,
+internal sealed class ModuleFacadeSkill(
+    ModuleKey moduleKey,
     AgentSkillFrontmatter frontmatter,
     string instructions,
+    IReadOnlyList<FacadeScriptGroup> facadeGroups,
     IReadOnlyList<AgentSkillScript> scripts)
-    : MoSkill<FacadeSkill>
+    : MoSkill<ModuleFacadeSkill>
 {
     public override AgentSkillFrontmatter Frontmatter { get; } = frontmatter;
     protected override string Instructions { get; } = instructions;
 
     /// <summary>
-    /// Re-overrides <see cref="MoSkill{TSelf}.Scripts"/> so the pre-built script
-    /// list is returned directly, bypassing the attribute-based discovery on
-    /// <see cref="MoSkill{TSelf}"/>. The Facade Provider builds these scripts
-    /// in <see cref="ProjectUnitScriptFactory.BuildSkill"/> via Microsoft's
-    /// <c>CreateScript(...)</c> factory.
+    /// Pre-built script list supplied by the Facade Provider's reflection pass.
+    /// The override bypasses MoSkill's [MoAITool] discovery because Facade methods
+    /// are opt-out by default and do not require [MoAITool] as a marker.
     /// </summary>
     public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = scripts;
 
-    public Type FacadeType { get; } = facadeType;
+    public ModuleKey ModuleKey { get; } = moduleKey;
+    public IReadOnlyList<FacadeScriptGroup> FacadeGroups { get; } = facadeGroups;
 }
+
+internal sealed record FacadeScriptGroup(
+    Type FacadeType,
+    string FacadeName,
+    string Description,
+    IReadOnlyList<AgentSkillScript> Scripts);
 ```
 
-`FacadeSkill` inherits `MoSkill<FacadeSkill>` for consistency with hand-written Skills (Doc 02 §2). The CRTP type parameter is `FacadeSkill` itself. Authors and reviewers see one base class for all Monica Skills, regardless of whether they were hand-written or Provider-built. The override of `Scripts` short-circuits both `MoSkill<TSelf>`'s `[MoAITool]` discovery and Microsoft's `[AgentSkillScript]` discovery — the constructor-supplied list wins outright.
+`ModuleFacadeSkill` inherits `MoSkill<ModuleFacadeSkill>` for consistency with hand-written Skills (Doc 02 §2). The override of `Scripts` short-circuits both `MoSkill<TSelf>`'s `[MoAITool]` discovery and Microsoft's `[AgentSkillScript]` discovery — the constructor-supplied list wins outright.
 
 `MoSkill<TSelf>`'s `RequiredModules`, `IsEnabled`, and `Priority` virtual hooks remain available; the Provider sets them to defaults (no required modules — implicit gating handled by §7.2; enabled; priority 0).
 
 ### 2.2 Frontmatter
 
-For `Monica.AI.RAG.Facades.RAGFacade`:
+The generated skill frontmatter represents the owning Monica module, not an individual Facade.
 
-- **Name.** `rag-facade` (kebab-case of the type's simple name; trailing `-facade` is preserved because it disambiguates from a module's name).
-- **Description.** Resolved through the priority chain:
-  1. `[MoAITool(Description = ...)]` on the Facade *type* — **not allowed** by `[MoAITool]`'s `AttributeUsage` (Doc 02 §5.1). So this rung is unreachable.
-  2. `[Description("...")]` on the Facade type.
-  3. `IXmlDocumentationService.GetTypeDocumentation(facadeType)` — the type's XML `<summary>`.
-  4. Fallback: `"{ModuleKey}.{FacadeName}"`, e.g., `"Monica.AI.RAG.RAGFacade"`.
+- **Name.** `module-{moduleKey-kebab}`. Examples: `module-rag`, `module-knowledge-base`, `module-job-scheduler`.
+- **Description.** Resolved through:
+  1. Module class XML `<summary>`.
+  2. Fallback: `"The {ModuleKey} module."`
 
 The kebab-case conversion is straightforward but specific:
 
-| Type name | Kebab name |
+| Source | Kebab |
 |---|---|
-| `RAGFacade` | `rag-facade` |
-| `KnowledgeBaseFacade` | `knowledge-base-facade` |
-| `JobSchedulerDashboardFacade` | `job-scheduler-dashboard-facade` |
+| `RAG` | `rag` |
+| `KnowledgeBase` | `knowledge-base` |
+| `JobScheduler` | `job-scheduler` |
 
 Implementation: split on the boundary between a lowercase / digit followed by an uppercase, lowercase the result, hyphenate. Acronyms (RAG, AI) keep their letters but join via hyphen.
 
-### 2.3 Instructions
+### 2.3 Loaded skill content
 
-Generated automatically. Template:
+The `Instructions` string becomes the facade-grouped catalog shown after the agent calls `load_skill`. Template:
 
+```text
+This module exposes scripts grouped by Facade:
+
+{FacadeName}: {facade-description}
+- {script-name-1}: {script-description-1}
+- {script-name-2}: {script-description-2}
+
+{NextFacadeName}: {facade-description}
+- {script-name-3}: {script-description-3}
+
+Use run_skill_script with skillName "{module-skill-name}", the exact scriptName,
+and the script arguments described in the script schema.
 ```
-You can use this skill's scripts to invoke the {FacadeName} surface of the
-{ModuleKey} module. Each script corresponds to one method on the Facade. {summary}
-```
 
-Where `{summary}` is the resolved type description from §2.2. The instructions are short — agents are expected to use script names + descriptions to disambiguate, not the skill's instructions text. Detailed per-script instructions live in each script's description.
+Facade descriptions are resolved through:
+
+1. `[Description("...")]` on the Facade type.
+2. `IXmlDocumentationService.GetTypeDocumentation(facadeType)` — the type's XML `<summary>`.
+3. Fallback: `"{ModuleKey}.{FacadeName}"`, e.g., `"Monica.AI.RAG.RAGFacade"`.
+
+`[MoAITool]` is not allowed on classes by Doc 02 §5.1, so it is not part of type-description resolution.
 
 ### 2.4 Method-to-script projection
 
-For each public instance method on the Facade type:
+For each public instance method on each selected Facade in the module:
 
 1. Apply the **deny-list filter** (§2.5).
 2. Apply the **`[MoAITool(Disabled = true)]` filter** — drop the method if disabled.
-3. Resolve the script **name**: `[MoAITool(Name = "...")]` if present (Doc 02 §5.1); otherwise kebab-case of the method name with the `Async` suffix removed (e.g., `CreateKnowledgeBaseAsync` → `create-knowledge-base`).
+3. Resolve the script **name**: `[MoAITool(Name = "...")]` if present (Doc 02 §5.1); otherwise `{facade-prefix}-{method-kebab}`. The Facade prefix is the Facade type name with trailing `Facade` stripped and kebab-cased. Example: `KnowledgeBaseFacade.CreateAsync` → `knowledge-base-create`.
 4. Resolve the script **description** through the priority chain in Doc 02 §5.2.
 5. Resolve each parameter **description** through the priority chain in Doc 02 §5.2.
-6. Build an `AgentSkillScript` via `AgentClassSkill<FacadeSkill>.CreateScript(name, methodDelegate, description)`.
+6. Build an `AgentSkillScript` via `AgentClassSkill<ModuleFacadeSkill>.CreateScript(name, methodDelegate, description)`.
 7. The method delegate is bound to a per-call-resolved Facade instance (§7.1), with an `IServiceProvider` parameter injected for scoped DI.
 
-Result: one `AgentSkillScript` per surviving public method, packaged into `FacadeSkill.Scripts`.
+Result: one `AgentSkillScript` per surviving public Facade method. The flattened script list goes into `ModuleFacadeSkill.Scripts`; the same scripts are also retained in `FacadeScriptGroup` entries so `Instructions` can present them under their owning Facade.
+
+Name collisions inside one module skill are forbidden. The discovery pipeline detects duplicate script names before registration and throws at startup with a clear message identifying both source methods. Authors fix the collision by setting `[MoAITool(Name = "...")]` explicitly on one or both methods.
 
 ### 2.5 Default deny-list
 
@@ -174,24 +197,23 @@ After projection:
 
 | Property | Value |
 |---|---|
-| Script name | `get-knowledge-bases` |
+| Module skill name | `module-rag` |
+| Script name | `rag-get-knowledge-bases` |
 | Script description | `"Returns all knowledge bases visible to the current user."` (XML `<summary>`, priority 3) |
 | Parameters | `[]` (no parameters; the `IServiceProvider` is implicit) |
 | Return type | `string` (the JSON-serialized `List<KnowledgeBase>` extracted from the `Res<>` envelope per §8) |
 
-Resulting JSON tool schema (as the agent sees it):
+The agent does not see `rag-get-knowledge-bases` as a top-level tool. It first loads the module skill, then invokes the script through Agent Framework's generic `run_skill_script` tool:
 
 ```json
 {
-  "name": "get-knowledge-bases",
-  "description": "Returns all knowledge bases visible to the current user.",
-  "parameters": {
-    "type": "object",
-    "properties": {},
-    "required": []
-  }
+  "skillName": "module-rag",
+  "scriptName": "rag-get-knowledge-bases",
+  "arguments": {}
 }
 ```
+
+The script schema appears inside the loaded `module-rag` skill content, grouped under `RAGFacade`.
 
 ### 2.7 Worked example — `KnowledgeBaseFacade.CreateAsync`
 
@@ -215,29 +237,28 @@ After projection:
 
 | Property | Value |
 |---|---|
-| Script name | `create` |
+| Module skill name | `module-knowledge-base` |
+| Script name | `knowledge-base-create` |
 | Script description | `"Create a knowledge base."` (priority 1, `[MoAITool]`) |
 | Parameter `id` | `"Stable id, kebab-case, e.g. 'company-handbook'."` |
 | Parameter `name` | `"Display name shown to users."` |
 | Parameter `description` | `"Optional human-readable description."` (optional, default `null`) |
 
-Resulting JSON tool schema:
+The agent invokes it through `run_skill_script`:
 
 ```json
 {
-  "name": "create",
-  "description": "Create a knowledge base.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "id":          { "type": "string", "description": "Stable id, kebab-case, e.g. 'company-handbook'." },
-      "name":        { "type": "string", "description": "Display name shown to users." },
-      "description": { "type": ["string","null"], "description": "Optional human-readable description." }
-    },
-    "required": ["id", "name"]
+  "skillName": "module-knowledge-base",
+  "scriptName": "knowledge-base-create",
+  "arguments": {
+    "id": "company-handbook",
+    "name": "Company Handbook",
+    "description": "Internal handbook knowledge base."
   }
 }
 ```
+
+The script schema is emitted in the loaded `module-knowledge-base` skill content, grouped under `KnowledgeBaseFacade`.
 
 ### 2.8 Worked example — disabled method
 
@@ -253,64 +274,9 @@ public Task<Res> AdminPurgeAsync()
 
 After projection: **not surfaced**. The method is excluded from the script list before `CreateScript` is called. XML docs and `[Description]` annotations on the method are ignored.
 
-## 3. Module Skill — one per Monica module that has Facades
+## 3. Future-work slot — hand-written module Skills
 
-### 3.1 Purpose
-
-A *Module Skill* is a single `AgentSkill` that represents the Monica module as a whole. Its frontmatter advertises the module's purpose; its instructions point the agent at the module's Facade Skills. From Microsoft's progressive-disclosure perspective, the agent first picks the Module Skill in L1 ("I want to do something with RAG"), then descends to one or more of the referenced Facade Skills in L2.
-
-This matches the user's design intent: each Monica module surfaces as a single named skill in the system prompt, with its sub-Facades visible only when the module is selected.
-
-### 3.2 Construction
-
-```csharp
-namespace Monica.Framework.AISkillProviders.Facade.Internal;
-
-internal sealed class ModuleAggregatorSkill(
-    ModuleKey moduleKey,
-    AgentSkillFrontmatter frontmatter,
-    string instructions,
-    IReadOnlyList<string> facadeSkillNames)
-    : MoSkill<ModuleAggregatorSkill>
-{
-    public override AgentSkillFrontmatter Frontmatter { get; } = frontmatter;
-    protected override string Instructions { get; } = instructions;
-
-    /// <summary>Aggregator carries no scripts; override returns empty.</summary>
-    public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = [];
-
-    public ModuleKey ModuleKey { get; } = moduleKey;
-    public IReadOnlyList<string> FacadeSkillNames { get; } = facadeSkillNames;
-}
-```
-
-The aggregator inherits `MoSkill<ModuleAggregatorSkill>` (same base as `FacadeSkill`) and carries no scripts of its own. It exists purely to surface one entry per module in L1 discovery and to point at sub-Facade Skills in L2.
-
-### 3.3 Frontmatter
-
-- **Name.** `module-{moduleKey-kebab}`. Examples: `module-rag`, `module-knowledge-base`, `module-job-scheduler`.
-- **Description.** Resolved through:
-  1. Module class XML `<summary>`. Most Monica modules already have one (e.g., `ModuleRAG`'s class has a doc summary); the doc-writer of Phase C verifies coverage and adds missing docs.
-  2. Fallback: `"The {moduleKey} module."`
-
-### 3.4 Instructions template
-
-```
-This module exposes the following capabilities:
-
-- {facade-skill-name-1}: {facade-1-description}
-- {facade-skill-name-2}: {facade-2-description}
-- ...
-
-Activate one of the listed sub-skills when the user wants to invoke a specific
-capability. {extension-slot}
-```
-
-`{extension-slot}` is reserved for a future "module-specific hand-written Skill" extension (see §3.5). In this rev, it is empty.
-
-### 3.5 Future-work slot — module-specific Skills
-
-This rev does not implement, but explicitly reserves space for, hand-written `MoSkill<TSelf>` subclasses that belong to a module without being Facade-derived. A module could register a `RAGAdvancedSearchSkill : MoSkill<RAGAdvancedSearchSkill>` (e.g., a hand-curated multi-step retrieval pattern) and the `ModuleAggregatorSkill` for `module-rag` would list it alongside `rag-facade`. The aggregator's `FacadeSkillNames` collection becomes `ChildSkillNames` to capture the broader set.
+This rev does not implement, but explicitly reserves space for, hand-written `MoSkill<TSelf>` subclasses that belong to a module without being Facade-derived. A module could register a `RAGAdvancedSearchSkill : MoSkill<RAGAdvancedSearchSkill>` (e.g., a hand-curated multi-step retrieval pattern). A future iteration may list those child skills in the `ModuleFacadeSkill` content next to the Facade script groups.
 
 This is explicitly out of scope. The doc declares the slot so future iterations don't re-litigate it.
 
@@ -374,9 +340,9 @@ Collected types are processed in `PostConfigureServices`:
 
 1. Filter by `Option.RegistrationMode` (§5).
 2. Group by owning module (the module that has the Facade in its assembly's `ModuleBase`-rooted graph). The grouping uses `[ModuleKey]`-attributed types in the same assembly as the heuristic.
-3. For each Facade in the surviving set, build a `FacadeSkill` (§2).
-4. For each module that contributed at least one Facade to the surviving set, build a `ModuleAggregatorSkill` (§3).
-5. Register each `FacadeSkill` and `ModuleAggregatorSkill` as singleton `AgentSkill` services. The Skill System hosted service from Doc 02 §6.2 picks them up and adds them to the `AgentSkillsProvider`.
+3. For each surviving Facade, scan eligible public methods and build `AgentSkillScript`s (§2.4).
+4. For each module that contributed at least one script, build one `ModuleFacadeSkill` (§2) with its scripts grouped by Facade in `FacadeScriptGroup` entries.
+5. Register each `ModuleFacadeSkill` as a singleton `AgentSkill` service. The Skill System hosted service from Doc 02 §6.2 picks them up and adds them to the `AgentSkillsProvider`.
 
 ## 5. Selective registration — guide methods
 
@@ -479,11 +445,11 @@ public class RAGFacade : IMonicaFacade
 
 This trades configurability for simplicity: the Facade author owns the surface decision, the host operator just opts in or out at the type level.
 
-### 5.3 Module-Skill aggregation behavior under selective mode
+### 5.3 Module Skill behavior under selective mode
 
-Under `UseFacades(typeof(RAGFacade))`, the Module Skill `module-rag` is built with only `rag-facade` referenced — even though `KnowledgeBaseFacade` also belongs to `module-rag`'s associated module. The aggregator's `Instructions` reflect what's actually registered, not the full theoretical set.
+Under `UseFacades(typeof(RAGFacade))`, the Module Skill `module-rag` is built with only `RAGFacade` scripts — even though `KnowledgeBaseFacade` might also belong to the same associated module. The loaded skill content reflects what's actually registered, not the full theoretical set.
 
-This is intentional: the aggregator's job is to point the agent at *available* sub-skills, not to advertise capabilities the host has chosen to suppress.
+This is intentional: the module skill's job is to advertise *available* scripts, not capabilities the host has chosen to suppress.
 
 ## 6. `[MoAITool]` attribute interaction
 
@@ -509,18 +475,18 @@ public class HypotheticalFacade : IMonicaFacade
 {
     /// <summary>List items.</summary>
     public Task<Res<List<Item>>> ListAsync() => /* ... */;
-    // → script "list", description "List items." (XML, priority 3)
+    // → script "hypothetical-list", description "List items." (XML, priority 3)
 
     [Description("Get one item.")]
     public Task<Res<Item>> GetAsync(string id) => /* ... */;
-    // → script "get", description "Get one item." ([Description], priority 2)
+    // → script "hypothetical-get", description "Get one item." ([Description], priority 2)
 
     [MoAITool(Description = "Create a new item.")]
     public Task<Res<Item>> CreateAsync(
         [Description("XML doc says 'Item id'; this overrides.")]
         [MoAITool(Description = "Stable item id.")]
         string id) => /* ... */;
-    // → script "create", description "Create a new item." (priority 1)
+    // → script "hypothetical-create", description "Create a new item." (priority 1)
     //   parameter id description "Stable item id." (priority 1, beats [Description])
 
     [MoAITool(Disabled = true)]
@@ -533,7 +499,7 @@ public class HypotheticalFacade : IMonicaFacade
 
 ### 7.1 Per-call Facade resolution
 
-A `FacadeSkill` is a singleton, but the underlying Facade instance must be resolved per script invocation so that scoped services injected into the Facade work correctly. The script delegate built in §2.4 step 6 captures the Facade *type* (not instance) and resolves the instance from `IServiceProvider` on each call:
+A `ModuleFacadeSkill` is a singleton, but each underlying Facade instance must be resolved per script invocation so that scoped services injected into the Facade work correctly. The script delegate built in §2.4 step 6 captures the Facade *type* (not instance) and resolves the instance from `IServiceProvider` on each call:
 
 ```csharp
 internal static class FacadeScriptFactory
@@ -554,9 +520,9 @@ The `IServiceProvider` parameter is treated specially by `AIFunctionFactory.Crea
 
 ### 7.2 Module gating
 
-A `FacadeSkill`'s `RequiredModules`-equivalent gate is implicit: the discovery scan only sees Facade types whose owning assemblies are loaded. There is no per-Skill `RequiredModules` because `IMonicaFacade` types aren't `MoSkill<TSelf>` subclasses. If a Facade lives in an assembly that isn't loaded, the type isn't discovered, and the Skill isn't created.
+A `ModuleFacadeSkill`'s `RequiredModules`-equivalent gate is implicit: the discovery scan only sees Facade types whose owning assemblies are loaded. There is no per-Skill `RequiredModules` because `IMonicaFacade` types aren't `MoSkill<TSelf>` subclasses. If a Facade lives in an assembly that isn't loaded, the type isn't discovered, and no script is created for it.
 
-The `ModuleAggregatorSkill` is built only for modules with at least one surviving Facade. If `Mo.AddRAG()` is not called, no `RAGFacade` is registered (today, RAG facades are registered conditionally inside `ModuleRAG`), and `module-rag` doesn't appear.
+The `ModuleFacadeSkill` is built only for modules with at least one surviving Facade script. If `Mo.AddRAG()` is not called, no `RAGFacade` is registered (today, RAG facades are registered conditionally inside `ModuleRAG`), and `module-rag` doesn't appear.
 
 ### 7.3 Async vs sync
 
@@ -653,7 +619,7 @@ public enum FacadeRegistrationMode
 | (b) | Complex DTO parameter handling — recursion depth. | **Recursive XML-doc descent with depth limit 3.** Implemented via `ModuleAIFacadeProviderOption.MaxParameterSchemaDepth`. Beyond depth 3, the parameter is described as `{TypeName}` with no nested doc — agents see the JSON schema name only. Cycles are detected and pruned. |
 | (c) | Per-method permission gates. | **Out of scope this rev.** `[MoAITool]` reserves `RequiredPermissions` as a documented forward-compat slot per Doc 02 §5.1; the property is not shipped until a future security doc owns it. |
 | (d) | What about Facades that aren't yet `IMonicaFacade`-marked? | **Mechanical migration.** Phase C's PR adds the marker to every existing Facade. No Facade is silently exposed without the marker. The PR is reviewable as a checklist (one line per Facade). |
-| (e) | Method-name collisions inside a single Facade (e.g., overloads). | **Forbidden.** Two overloads of `Get` produce two scripts named `get`, which the framework rejects. The discovery pipeline detects this and throws at startup with a clear message. Authors fix the collision by renaming one overload (e.g., `GetById` / `GetByName`) or by setting `[MoAITool(Name = "...")]` explicitly on one of them per Doc 02 §5.1. |
+| (e) | Method-name collisions inside a module Skill (e.g., overloads or explicit name overrides). | **Forbidden.** Two methods that produce the same script name inside one `ModuleFacadeSkill` are rejected at startup with a clear message. Authors fix the collision by renaming one method or by setting `[MoAITool(Name = "...")]` explicitly on one of them per Doc 02 §5.1. |
 | (f) | What if the Facade's owning module key isn't on `BuiltInModuleKey`? | **Use `(ModuleKey)moduleKeyString`.** Third-party modules with custom `ModuleKey`s work transparently — the kebab-case and frontmatter generation use the `ModuleKey.Value` string. |
 
 ## 11. Acceptance criteria for Phase C
@@ -664,10 +630,11 @@ When Phase C is implemented:
 2. `BuiltInModuleKey.AIFacadeProvider` exists.
 3. `Mo.AddAIFacadeSkills().UseAllFacades()` and `Mo.AddAIFacadeSkills().UseFacades(...)` are callable from a host `Program.cs`.
 4. Every existing Monica Facade has been marked `: IMonicaFacade`. The migration PR includes a comprehensive checklist of Facades touched.
-5. End-to-end smoke test: a host registers `Mo.AddAI()`, `Mo.AddRAG()`, `Mo.AddKnowledgeBase()`, and `Mo.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Each module entry references the right sub-Facade Skills. Each Facade Skill's scripts include the right method-derived names with non-fallback descriptions.
-6. The `Res<T>` unwrap rule is verified in the smoke test: a script that calls `RAGFacade.SearchAsync` returns the unwrapped `IReadOnlyList<TextSearchResult>` JSON. A script that calls a method that returns `Res.Fail("...")` results in a tool error with the failure message visible to the agent.
-7. The two worked examples from §2.6 and §2.7 are reproduced verbatim in the integration test fixtures.
-8. Solution builds with **zero new warnings**.
+5. End-to-end smoke test: a host registers `Mo.AddAI()`, `Mo.AddRAG()`, `Mo.AddKnowledgeBase()`, and `Mo.AddAIFacadeSkills().UseAllFacades()`. The chat agent's system prompt contains entries for `module-rag`, `module-knowledge-base`, and `module-ai`. Loading each module skill shows Facade-grouped scripts with method-derived names and non-fallback descriptions.
+6. The smoke test verifies the Agent Framework call shape: Facade methods are invoked through `run_skill_script` using `skillName`, `scriptName`, and `arguments`; individual scripts are not top-level tools.
+7. The `Res<T>` unwrap rule is verified in the smoke test: a script that calls `RAGFacade.SearchAsync` returns the unwrapped `IReadOnlyList<TextSearchResult>` JSON. A script that calls a method that returns `Res.Fail("...")` results in a tool error with the failure message visible to the agent.
+8. The two worked examples from §2.6 and §2.7 are reproduced verbatim in the integration test fixtures.
+9. Solution builds with **zero new warnings**.
 
 ## 12. Cross-doc references
 
