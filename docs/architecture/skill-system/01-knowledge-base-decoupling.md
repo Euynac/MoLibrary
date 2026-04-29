@@ -143,17 +143,17 @@ The new arrows: UIChat depends on UIKnowledgeBase (clean, single-purpose dep). M
 
 ## 3. API classification — every existing `RAGFacade` method
 
-For each public method on `Monica.AI/RAG/Facades/RAGFacade.cs`, the table assigns one of three dispositions: **`MOVE_TO_KB_FACADE`** (move verbatim, possibly with light renaming), **`KEEP_ON_RAG`** (stays — purely RAG-pipeline concern), or **`SHIM_THEN_MOVE`** (`RAGFacade` keeps a thin `[Obsolete]` forwarding shim for one release while consumers migrate).
+For each public method on `Monica.AI/RAG/Facades/RAGFacade.cs`, the table assigns one of two dispositions: **`MOVE_TO_KB_FACADE`** (the method is removed from `RAGFacade` and added to `KnowledgeBaseFacade`, possibly with light renaming) or **`KEEP_ON_RAG`** (stays — purely RAG-pipeline concern). Per the Monica development-stage policy in `CLAUDE.md` ("Backward compatibility is not a concern"), the move is a clean breaking change in a single PR — no `[Obsolete]` shim period, no forwarding wrappers. Callers are migrated atomically in the same PR.
 
 | Current method | Disposition | Target / Rationale |
 |---|---|---|
-| `GetKnowledgeBasesAsync()` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.GetAllAsync()`. Pure KB inventory query. |
-| `CreateKnowledgeBaseAsync(id, name, description)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.CreateAsync(id, name, description)`. Pure KB CRUD. |
-| `UpdateKnowledgeBaseAsync(id, name, description)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.UpdateAsync(id, name, description)`. Pure KB CRUD. |
-| `DeleteKnowledgeBaseAsync(id)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.DeleteAsync(id)`. KB CRUD; impl conditionally clears vectors when `RAGService` is registered. |
-| `GetDocumentQueueAsync(kbId)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.GetDocumentInventoryAsync(kbId)`. The "queue" is really the KB's document inventory; renamed for clarity. |
-| `RemoveDocumentAsync(kbId, documentId)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.RemoveDocumentAsync(kbId, documentId)`. Removes from inventory; impl conditionally clears vectors. |
-| `ClearKnowledgeBaseDocumentsAsync(kbId)` | `SHIM_THEN_MOVE` | → `KnowledgeBaseFacade.ClearDocumentsAsync(kbId)`. |
+| `GetKnowledgeBasesAsync()` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.GetAllAsync()`. Pure KB inventory query. |
+| `CreateKnowledgeBaseAsync(id, name, description)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.CreateAsync(id, name, description)`. Pure KB CRUD. |
+| `UpdateKnowledgeBaseAsync(id, name, description)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.UpdateAsync(id, name, description)`. Pure KB CRUD. |
+| `DeleteKnowledgeBaseAsync(id)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.DeleteAsync(id)`. KB CRUD; impl conditionally clears vectors when `RAGService` is registered. |
+| `GetDocumentQueueAsync(kbId)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.GetDocumentInventoryAsync(kbId)`. The "queue" is really the KB's document inventory; renamed for clarity. |
+| `RemoveDocumentAsync(kbId, documentId)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.RemoveDocumentAsync(kbId, documentId)`. Removes from inventory; impl conditionally clears vectors. |
+| `ClearKnowledgeBaseDocumentsAsync(kbId)` | `MOVE_TO_KB_FACADE` | → `KnowledgeBaseFacade.ClearDocumentsAsync(kbId)`. |
 | `GetKnowledgeBaseVectorValidationAsync(kbId)` | `KEEP_ON_RAG` | Vector validation is purely a RAG concern. |
 | `SearchAsync(query, kbIds, topK, embeddingOverride)` | `KEEP_ON_RAG` | Semantic search — pure RAG pipeline. |
 | `GetDocumentChunksAsync(kbId, documentId)` | `KEEP_ON_RAG` | Chunk viewer; chunks exist only when RAG has indexed. |
@@ -236,22 +236,11 @@ public class KnowledgeBaseFacade(
 
 Internal `IServiceProvider`-based resolution of `RAGService?` (nullable) keeps RAG strictly optional. When RAG isn't loaded, vector-related operations are no-ops and the Facade still works.
 
-### 3.2 The shim period on `RAGFacade`
+### 3.2 Atomic migration on `RAGFacade`
 
-For one release, every `SHIM_THEN_MOVE` method stays on `RAGFacade` as a thin `[Obsolete]` forwarder:
+The seven `MOVE_TO_KB_FACADE` methods are **deleted** from `RAGFacade` in the same PR that adds `KnowledgeBaseFacade`. Callers are migrated atomically — `ChatPageState`, `RAGManagePageState.KnowledgeBase.cs`, and any other in-tree consumer flip to `KnowledgeBaseFacade` references in the same commit.
 
-```csharp
-public class RAGFacade(/* ... */, KnowledgeBaseFacade kbFacade)
-{
-    [Obsolete("Use KnowledgeBaseFacade.GetAllAsync. Will be removed in the next release.")]
-    public Task<Res<IReadOnlyList<KnowledgeBase>>> GetKnowledgeBasesAsync()
-        => kbFacade.GetAllAsync();
-
-    // ... seven more shim forwarders ...
-}
-```
-
-Tracking issue: every shim must carry a `// TODO: remove in <next-release>` comment so the shim deletion is grep-able when the next release is cut.
+There is no shim period, no `[Obsolete]` forwarding, no grace release. Per `CLAUDE.md`'s development-stage policy, breaking changes are preferred over migration ceremony when the consumer set is bounded and known. The PR's diff is reviewable as a single coherent breaking change.
 
 ## 4. The lookup-only Skill
 
@@ -321,21 +310,22 @@ public sealed class KnowledgeBaseLookupSkill(
         "— for that, look for the 'rag-knowledge' skill (only available when RAG " +
         "is configured). Cite sources by document title and source link.";
 
-    // No RequiredModules — the Skill works whenever ModuleKnowledgeBase is loaded.
+    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.KnowledgeBase];
 
-    [AgentSkillScript("list-knowledge-bases")]
-    [MoAITool(Description =
-        "List all knowledge bases the current user can access. Returns id, " +
-        "display name, description, and document count for each.")]
+    [MoAITool(
+        Name = "list-knowledge-bases",
+        Description =
+            "List all knowledge bases the current user can access. Returns id, " +
+            "display name, description, and document count for each.")]
     public async Task<string> ListAsync(CancellationToken ct)
     {
         var result = await lookup.ListAsync(ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
-    [AgentSkillScript("browse-knowledge-documents")]
-    [MoAITool(Description =
-        "List documents in a knowledge base, optionally filtered to a directory.")]
+    [MoAITool(
+        Name = "browse-knowledge-documents",
+        Description = "List documents in a knowledge base, optionally filtered to a directory.")]
     public async Task<string> BrowseDocumentsAsync(
         [MoAITool(Description = "Knowledge base id.")]
         string kbId,
@@ -349,10 +339,11 @@ public sealed class KnowledgeBaseLookupSkill(
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
-    [AgentSkillScript("browse-knowledge-document-tree")]
-    [MoAITool(Description =
-        "Browse the directory tree of a knowledge base. Useful when you only " +
-        "know part of a path.")]
+    [MoAITool(
+        Name = "browse-knowledge-document-tree",
+        Description =
+            "Browse the directory tree of a knowledge base. Useful when you only " +
+            "know part of a path.")]
     public async Task<string> GetDocumentTreeAsync(
         [MoAITool(Description = "Knowledge base id.")] string kbId,
         [MoAITool(Description = "Optional directory path to root the tree at.")]
@@ -365,10 +356,11 @@ public sealed class KnowledgeBaseLookupSkill(
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
-    [AgentSkillScript("get-knowledge-document-content")]
-    [MoAITool(Description =
-        "Read a specific document's source content by id. Use the start " +
-        "character index and max characters to paginate.")]
+    [MoAITool(
+        Name = "get-knowledge-document-content",
+        Description =
+            "Read a specific document's source content by id. Use the start " +
+            "character index and max characters to paginate.")]
     public async Task<string> GetDocumentContentAsync(
         [MoAITool(Description = "Knowledge base id.")] string kbId,
         [MoAITool(Description = "Document id, returned by browse / tree scripts.")]
@@ -438,7 +430,7 @@ Monica.AI/KnowledgeBase/Modules/ModuleKnowledgeBaseOption.cs
 
 ### 5.3 Backend edits to existing files
 
-- `Monica.AI/RAG/Modules/ModuleRAG.cs` — `ClaimDependencies` adds `DependsOnModule<ModuleKnowledgeBaseGuide>().Register()`. The eight `SHIM_THEN_MOVE` methods on `RAGFacade` become `[Obsolete]` forwarders that delegate to `KnowledgeBaseFacade`.
+- `Monica.AI/RAG/Modules/ModuleRAG.cs` — `ClaimDependencies` adds `DependsOnModule<ModuleKnowledgeBaseGuide>().Register()`. The seven `MOVE_TO_KB_FACADE` methods are removed from `RAGFacade` outright; in-tree callers are migrated to `KnowledgeBaseFacade` in the same PR.
 - `Monica.AI/RAG/Services/RAGService.cs` — KB inventory state previously co-managed inside `RAGService` is moved to `KnowledgeBaseService`. `RAGService` becomes a consumer of `IKnowledgeBaseStore` for inventory reads/writes during indexing.
 - `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` — gets `IKnowledgeBaseLookupService` injected for KB metadata reads (replacing `RAGService.GetKnowledgeBaseByIdAsync`). This is incremental decoupling; the full migration to `RAGKnowledgeSkill` happens in Phase B.
 
@@ -479,7 +471,7 @@ Monica.AI.UI/UIKnowledgeBase/Localization/   (mirror UIRAG localization layout)
 | (a) | Standalone `Monica.AI.KnowledgeBase` package vs sub-feature inside `Monica.AI`? | **Sub-feature.** No KB consumer outside `Monica.AI` justifies a separate `.csproj`; the dependency arrow `RAG → KB` stays clean inside one project, and the model and Facade move with no public-API breakage. Revisit only if KB later acquires consumers outside `Monica.AI`. |
 | (b) | `KnowledgeBaseSelector` cross-module home — UIKnowledgeBase or a third "shared AI primitives" UI module? | **UIKnowledgeBase.** It is unambiguously a KB component. UIChat consumes it as a downstream UI module — that is the normal cross-module-component pattern in Monica (e.g., `ModuleStateStoreUI` re-exports components consumed by other UIs). A third "primitives" UI module would be premature abstraction. |
 | (c) | KB persistence backend ownership — stays in current RAG persistence project or moves with the model? | **Moves with the model.** A new `IKnowledgeBaseStore` abstraction lives at `Monica.AI/KnowledgeBase/Abstractions/IKnowledgeBaseStore.cs`. Default implementation `InMemoryKnowledgeBaseStore` lives in `Monica.AI/KnowledgeBase/Services/`. RAG's persistence project keeps the *vector* store (indexed chunks); the KB inventory store is separate, optional, and pluggable. Existing KB persistence code in the RAG project moves with the inventory schema. |
-| (d) | Backwards-compat for existing UI customizers who imported the old component paths? | The shim approach is the same as for `RAGFacade` methods: `Monica.AI.UI/UIRAG/Components/KnowledgeBaseSelector.razor` is replaced with a one-line shim file that does `<KnowledgeBaseSelector />` from the new namespace, marked with a `<!-- Obsolete: import from UIKnowledgeBase -->` comment. Removed in the next release. |
+| (d) | Back-compat for existing component imports? | **Not provided.** Per `CLAUDE.md` development-stage policy, the move is a breaking change. Old `Monica.AI.UI/UIRAG/Components/KnowledgeBaseSelector.razor` is deleted; in-tree imports update in the same PR. |
 
 ## 7. Acceptance criteria for Phase A
 
@@ -490,9 +482,9 @@ When Phase A is implemented and PR merged:
 3. `BuiltInModuleKey.cs` has `KnowledgeBase` and `KnowledgeBaseUI` entries.
 4. `Mo.AddKnowledgeBase()` and `Mo.AddKnowledgeBaseUI()` extension methods are callable from a host that does not register `Mo.AddRAG()`. The KB Manage page renders, KB CRUD works, KB Selector works in the chat page — all without RAG.
 5. `KnowledgeSearchToolProvider` continues to work unchanged in this phase (its full Skill migration is Phase B). KB list load in `ChatPageState` uses `KnowledgeBaseFacade`, not `RAGFacade`.
-6. The eight `[Obsolete]` shim methods on `RAGFacade` exist and forward correctly. Each carries a `// TODO: remove in <next-release>` comment.
+6. `RAGFacade` no longer carries any KB-CRUD methods. In-tree callers were migrated to `KnowledgeBaseFacade` in the same PR.
 7. `ModuleRAG` declares `DependsOnModule<ModuleKnowledgeBaseGuide>()`. `ModuleRAGUI` declares `DependsOnModule<ModuleKnowledgeBaseUIGuide>()` and no longer registers KB management pages.
-8. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy). The `[Obsolete]` shims are an exception: existing call sites that use them produce CS0618 warnings, which the migration steps in §5 must fix.
+8. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
 9. UI smoke test: load chat page with `Mo.AddRAG()` not configured → KB selector still renders → user can select a KB → chat starts normally (with no RAG-search Skill available, only the lookup-only Skill from Phase B; in Phase A pre-merge, no Skill at all is fine).
 
 ## 8. Cross-doc references

@@ -215,15 +215,24 @@ internal sealed class ProjectUnitSkill(
     AgentSkillFrontmatter frontmatter,
     string instructions,
     IReadOnlyList<AgentSkillScript> scripts)
-    : AgentClassSkill<ProjectUnitSkill>
+    : MoSkill<ProjectUnitSkill>
 {
-    public override AgentSkillFrontmatter Frontmatter => frontmatter;
-    protected override string Instructions => instructions;
-    public override IReadOnlyList<AgentSkillScript>? Scripts => scripts;
+    public override AgentSkillFrontmatter Frontmatter { get; } = frontmatter;
+    protected override string Instructions { get; } = instructions;
+
+    /// <summary>
+    /// Pre-built script list supplied by the Provider's reflection pass.
+    /// The override short-circuits MoSkill's [MoAITool] discovery — the Provider's
+    /// scanner already accounts for read/mutating CRUD rules and Handle methods,
+    /// so attribute-driven discovery would double up.
+    /// </summary>
+    public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = scripts;
 
     public ProjectUnit ProjectUnit { get; } = projectUnit;
 }
 ```
+
+Inherits `MoSkill<ProjectUnitSkill>` (same base as the Facade Provider's `FacadeSkill` from Doc 03 §2.1) for consistency with hand-written Skills.
 
 Frontmatter:
 - **Name.** `unit-{kebab(projectUnit.Title)}`. Example: `unit-orders`, `unit-customer`.

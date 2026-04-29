@@ -106,12 +106,34 @@ public abstract class MoSkill<[DynamicallyAccessedMembers(
     /// Default: 0.
     /// </summary>
     public virtual int Priority => 0;
+
+    /// <summary>
+    /// Override of <see cref="AgentClassSkill{TSelf}.Scripts"/> that uses Monica's
+    /// <see cref="MoAIToolAttribute"/> as the script-discovery marker instead of
+    /// Microsoft's <c>[AgentSkillScript]</c>. Methods on <typeparamref name="TSelf"/>
+    /// annotated with <c>[MoAITool]</c> become scripts; the script name comes from
+    /// <c>[MoAITool(Name = ...)]</c> when present, otherwise from the method name
+    /// converted to kebab-case (with the <c>Async</c> suffix stripped).
+    /// </summary>
+    /// <remarks>
+    /// Subclasses that need explicit script construction (e.g., the Provider-built
+    /// Facade and ProjectUnit Skills in Docs 03 and 04) re-override this property
+    /// to return a manually-built list. The Facade / ProjectUnit Providers do exactly
+    /// that — they pass a pre-built script collection to a subclass constructor and
+    /// the override returns it directly.
+    /// </remarks>
+    public override IReadOnlyList<AgentSkillScript>? Scripts =>
+        _moDiscoveredScripts ??= MoSkillScriptDiscovery.Discover<TSelf>(this);
+
+    private IReadOnlyList<AgentSkillScript>? _moDiscoveredScripts;
 }
 ```
 
-Direct inheritance from `AgentClassSkill<TSelf>` means hand-written Monica skills inherit Microsoft's L1/L2 discovery model unchanged. `[AgentSkillScript]` and `[AgentSkillResource]` work as documented; `IServiceProvider` parameters give per-invocation scoped DI; CRTP propagates the `[DynamicallyAccessedMembers]` constraint for AOT.
+Direct inheritance from `AgentClassSkill<TSelf>` means hand-written Monica skills inherit Microsoft's L1/L2 discovery model. `[AgentSkillResource]` continues to work as Microsoft documents — Monica does not override resource discovery in this rev. `IServiceProvider` parameters give per-invocation scoped DI; CRTP propagates the `[DynamicallyAccessedMembers]` constraint for AOT.
 
-There is **no** Monica class-level attribute. All metadata flows from the overridden members and from `AgentSkillFrontmatter`. This is a deliberate simplification — the user explicitly reviewed `AgentClassSkill<TSelf>` and concluded that the framework's existing surface is sufficient.
+For **scripts**, Monica overrides `Scripts` so `[MoAITool]` is the single discovery marker. Authors do **not** write `[AgentSkillScript("name")]` on Monica skill methods — that ceremony is replaced by `[MoAITool(Name = "name")]` (or just `[MoAITool]` for an auto-kebab-case name). One attribute, not two. `[MoAITool(Disabled = true)]` is honored as an exclusion gate even when Name is provided.
+
+There is **no** Monica class-level attribute. All metadata flows from overridden members, from `AgentSkillFrontmatter`, and from per-method `[MoAITool]`.
 
 ### 2.2 Required overrides on a concrete Skill
 
@@ -155,10 +177,11 @@ public sealed class RAGKnowledgeSkill(
 
     public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
 
-    [AgentSkillScript("search-knowledge-base")]
-    [MoAITool(Description =
-        "Semantic search over the selected knowledge bases. Returns ranked excerpts " +
-        "with source name and source link for citation.")]
+    [MoAITool(
+        Name = "search-knowledge-base",
+        Description =
+            "Semantic search over the selected knowledge bases. Returns ranked excerpts " +
+            "with source name and source link for citation.")]
     public async Task<string> SearchAsync(
         [MoAITool(Description = "Focused retrieval query, not conversational text.")]
         string query,
@@ -180,9 +203,10 @@ public sealed class RAGKnowledgeSkill(
 
 Notes on the migration:
 
-- The four tool methods are now first-class C# methods on the skill class, marked `[AgentSkillScript("...")]` (Microsoft) and `[MoAITool(Description = "...")]` (Monica).
+- The four tool methods are now first-class C# methods on the skill class, marked with a single `[MoAITool(Name = "...", Description = "...")]`.
+- If `Name` is omitted, Monica derives `search` from `SearchAsync` (kebab-case + drop `Async` suffix). Authors who want a longer name (e.g., `search-knowledge-base`) supply it explicitly.
 - Per-session knowledge-base ID list (today resolved through `AIChatAgentCreateContext.KnowledgeBaseIds`) flows through an `IServiceProvider`-scoped service that exposes the active KB list, *not* through script parameters. Scripts stay user-facing-clean.
-- Hard module gate via `RequiredModules`: the skill is silently skipped when `Monica.AI.RAG` is not loaded. The Knowledge Base lookup-only Skill (Doc 01) sets `RequiredModules => [BuiltInModuleKey.AI]` (or empty if KB extracted into its own `BuiltInModuleKey.KnowledgeBase`).
+- Hard module gate via `RequiredModules`: the skill is silently skipped when `Monica.AI.RAG` is not loaded. The Knowledge Base lookup-only Skill (Doc 01) requires `[BuiltInModuleKey.KnowledgeBase]`.
 
 ### 2.4 Lifecycle
 
@@ -304,6 +328,13 @@ namespace Monica.AI.Skills.Annotations;
 public sealed class MoAIToolAttribute : Attribute
 {
     /// <summary>
+    /// Script / tool name override. When omitted, Monica derives the name from
+    /// the member name: kebab-case, with a trailing <c>Async</c> stripped.
+    /// On parameters this property is ignored.
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
     /// Description override. Highest priority in the description chain.
     /// </summary>
     public string? Description { get; set; }
@@ -321,14 +352,24 @@ Usage by target:
 
 | Target | Effect |
 |---|---|
-| Method on a Facade (Doc 03) | Description override **and** registration gate. `Disabled = true` excludes the method from the synthesized `AgentSkill`. |
-| Method on an `ApplicationService` (Doc 04) | Same as Facade. Mutating CRUD methods require an explicit `[MoAITool]` (any properties) to be exposed at all (Doc 04 §4). |
-| Method on a `MoSkill<TSelf>` script | Description override only. Registration is controlled by `[AgentSkillScript]`. `Disabled = true` is honored: the skill discovery filter drops the method even if `[AgentSkillScript]` is present. |
-| Method on a `MoTool.InvokeAsync` delegate target | Description override only. Tool registration is controlled by class discovery. |
-| Parameter | Description override for the parameter's JSON schema entry. `Disabled` is ignored. |
+| Method on a `MoSkill<TSelf>` (hand-written skill) | **Discovery marker** — without `[MoAITool]` the method is not exposed as a script. `Name` overrides the auto-derived script name; `Description` flows through the priority chain; `Disabled = true` excludes. Microsoft's `[AgentSkillScript]` is no longer used on Monica skill methods. |
+| Method on a Facade (Doc 03) | Additive metadata. The Facade Provider's default is opt-out, so the method is exposed even without `[MoAITool]`. `Name` overrides the auto-derived script name. `Description` overrides the priority chain. `Disabled = true` excludes. |
+| Method on an `ApplicationService` (Doc 04) | Same as Facade. Mutating CRUD methods require an explicit `[MoAITool]` (any properties — even just `[MoAITool]`) to be exposed at all (Doc 04 §4). |
+| Method on a `MoTool.InvokeAsync` delegate target | Description override; `Name` ignored (the tool name comes from `MoTool.Name`). |
+| Parameter | Description override for the parameter's JSON schema entry. `Name` and `Disabled` are ignored. |
 | Class | **Not allowed.** Compile-time error via `AttributeUsage`. |
 
 The forward-compatibility slot for `string[] RequiredPermissions` is documented here for posterity but **not** added to the shipped attribute in this rev. A future security doc owns it.
+
+#### Name auto-derivation
+
+When `[MoAITool]` is present without `Name`, the script / tool name is derived as:
+
+1. Take the method name (e.g., `SearchKnowledgeBaseAsync`).
+2. Strip a trailing `Async` if present → `SearchKnowledgeBase`.
+3. Kebab-case via the same rule used in Doc 03 §2.2 → `search-knowledge-base`.
+
+The derivation is fully deterministic. If two methods on the same skill produce the same auto-derived name, registration throws at startup with a clear message identifying both methods. Authors fix the collision by setting `Name` explicitly on one or both.
 
 ### 5.2 Description priority chain
 
@@ -540,7 +581,7 @@ The Facade Provider (Doc 03) and ProjectUnit Provider (Doc 04) modules call `Dep
 | Concept | Lifetime | Notes |
 |---|---|---|
 | `MoSkill<TSelf>` instance | Singleton | Frontmatter, Instructions, RequiredModules, IsEnabled evaluated once. |
-| `[AgentSkillScript]` invocation | Per-call (scoped via `IServiceProvider` parameter) | Microsoft handles the scope creation. |
+| `[MoAITool]` script invocation | Per-call (scoped via `IServiceProvider` parameter) | Same `CreateScript`-backed pipeline Microsoft uses for `[AgentSkillScript]`; Monica's discovery just chooses the marker. |
 | `MoTool` instance | Singleton | Same as Skill. |
 | `MoTool.InvokeAsync` invocation | Per-call (scoped via `IServiceProvider` parameter) | Wired through `AIFunctionFactory.Create`. |
 | `MoMcp` | TBD when package is finalized | Reserve singleton + per-call scope as the default. |
@@ -552,23 +593,25 @@ Module gate evaluation is **iterator-phase only**. Skills whose `RequiredModules
 
 ### 8.1 Migration target: `KnowledgeSearchToolProvider`
 
-The existing provider becomes `Monica.AI.RAG.Skills.RAGKnowledgeSkill : MoSkill<RAGKnowledgeSkill>` (skeleton in §2.3). Migration steps:
+The existing provider becomes `Monica.AI.RAG.Skills.RAGKnowledgeSkill : MoSkill<RAGKnowledgeSkill>` (skeleton in §2.3). Migration steps, all in a single PR:
 
 1. Move the four nested local methods (`SearchKnowledgeAsync`, `BrowseKnowledgeDocumentsAsync`, `BrowseKnowledgeDocumentTreeAsync`, `GetKnowledgeDocumentContentAsync`) up to instance methods on the new skill class.
-2. Annotate each with `[AgentSkillScript("kebab-name")]` and `[MoAITool(Description = "...")]`.
+2. Annotate each with `[MoAITool(Name = "kebab-name", Description = "...")]`. No `[AgentSkillScript]`.
 3. Remove the manual `KnowledgeBase[]` plumbing — wire through a scoped `IKnowledgeBaseSelectionAccessor` exposed via `IServiceProvider` script parameter.
 4. Remove `services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatToolProvider, KnowledgeSearchToolProvider>())` from `ModuleRAG.ConfigureServices`. Discovery handles registration.
-5. Delete the old `KnowledgeSearchToolProvider.cs` once tests pass.
+5. Delete `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs`.
 
-### 8.2 Back-compat shim
+### 8.2 Breaking change — `IAIChatToolProvider` is removed
 
-`IAIChatToolProvider` is **not** deleted in this rev. The interface and its current `ConfigureAsync` signature remain. A new adapter `IAIChatToolProviderToSkillAdapter` wraps any registered `IAIChatToolProvider` into a synthesized `AgentSkill` so existing third-party code keeps working for one release. The adapter is documented as `[Obsolete]`-equivalent in release notes; the next release removes both the interface and the adapter.
+`Monica.AI/Abstractions/IAIChatToolProvider.cs` is **deleted** in this PR. There is no back-compat shim, no `[Obsolete]` adapter, no migration grace period. Per the Monica development-stage policy in `CLAUDE.md` ("Backward compatibility is not a concern unless explicitly instructed otherwise"), the simpler architecture wins.
 
-The shim's location: `Monica.AI/Skills/Compat/AIChatToolProviderSkillAdapter.cs`.
+The only existing consumer of `IAIChatToolProvider` is `KnowledgeSearchToolProvider`, which §8.1 migrates atomically. Any out-of-tree consumer must migrate to `MoSkill<TSelf>` in the same release.
 
 ### 8.3 `AIChatAgentBuilder` interaction
 
-`Monica.AI/Services/Support/AIChatAgentBuilder.cs` continues to exist but its `AddTool(AITool)` accumulator is now fed by the discovered `MoTool` set rather than by hand-rolled provider implementations. The builder also receives the `AgentSkillsProvider` produced by `MonicaSkillsProviderHostedService` and forwards it to the underlying `Microsoft.Agents.AI.AIAgent` build call.
+`Monica.AI/Services/Support/AIChatAgentBuilder.cs` is simplified. The `AddTool(AITool)` accumulator is removed from the public surface — tools come from the singleton `AgentSkillsProvider` produced by `MonicaSkillsProviderHostedService`. The builder forwards the `AgentSkillsProvider` to the underlying `Microsoft.Agents.AI.AIAgent` build call. Standalone `MoTool` instances are added through the same provider, not through ad-hoc `AddTool` calls.
+
+If `AIChatAgentBuilder` was consumed externally for `AddTool` use cases, those consumers also migrate to `MoSkill<TSelf>` or `MoTool` subclasses in the same release.
 
 ## 9. Microsoft Agent Framework binding
 
@@ -584,7 +627,7 @@ Microsoft.Extensions.VectorData.Abstractions  10.5.0
 
 Used surfaces:
 
-- `Microsoft.Agents.AI`: `AgentSkill`, `AgentClassSkill<TSelf>`, `AgentSkillFrontmatter`, `[AgentSkillScript]`, `[AgentSkillResource]`, `AgentSkillsProvider`, `AgentSkillsProviderBuilder`, `AgentSkillResource`, `AgentSkillScript`.
+- `Microsoft.Agents.AI`: `AgentSkill`, `AgentClassSkill<TSelf>`, `AgentSkillFrontmatter`, `[AgentSkillResource]`, `AgentSkillsProvider`, `AgentSkillsProviderBuilder`, `AgentSkillResource`, `AgentSkillScript`, the `CreateScript(...)` / `CreateResource(...)` factories on `AgentClassSkill<TSelf>`. Note: `[AgentSkillScript]` is **not** used by Monica; `[MoAITool]` replaces it as the script-discovery marker (§5.1).
 - `Microsoft.Extensions.AI`: `AIFunctionFactory.Create`, `AITool`, `AIFunction`, `IChatClient`, `ChatOptions`.
 
 MCP package selection (see §4.1) is **explicitly deferred** until Phase B of implementation. No package is pinned in this doc.
@@ -616,13 +659,15 @@ The doc-writer of the implementation phase must produce one end-to-end migration
 When Phase B (this doc) is implemented, the following must hold:
 
 1. `Monica.AI/Skills/Abstractions/MoSkill.cs`, `MoTool.cs` exist. `MoMcp.cs` is a placeholder file with a `// TODO: package selection` comment.
-2. `Monica.AI/Skills/Annotations/MoAIToolAttribute.cs` exists and constrains `AttributeUsage` to method + parameter.
-3. `Monica.AI/Skills/Modules/ModuleSkillSystem.cs` implements `IBusinessTypeIterator` and registers a hosted service that builds `AgentSkillsProvider`.
-4. `Monica.AI.RAG.Skills.RAGKnowledgeSkill` migrated from `KnowledgeSearchToolProvider`. Old file deleted. `services.TryAddEnumerable(...)` registration removed.
-5. The `IXmlDocumentationService.GetMethodDocumentation` path is exercised by at least one method per skill in tests (compile-time verification: every Facade-method-style script has a description in one of the three sources).
-6. `ModuleRAG` no longer registers `KnowledgeSearchToolProvider`; the new `RAGKnowledgeSkill` is auto-discovered.
-7. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
-8. The `AgentSkillsProvider` produced by the hosted service contains exactly the expected skill set in a smoke test that runs every Monica module.
+2. `Monica.AI/Skills/Annotations/MoAIToolAttribute.cs` exists with `Name`, `Description`, and `Disabled` properties; `AttributeUsage` constrained to method + parameter.
+3. `Monica.AI/Skills/Internal/MoSkillScriptDiscovery.cs` exists and implements the `[MoAITool]`-marker-based reflection used by `MoSkill<TSelf>.Scripts`. The auto-derived kebab-case name rule is unit-tested.
+4. `Monica.AI/Skills/Modules/ModuleSkillSystem.cs` implements `IBusinessTypeIterator` and registers a hosted service that builds `AgentSkillsProvider`.
+5. `Monica.AI.RAG.Skills.RAGKnowledgeSkill` migrated from `KnowledgeSearchToolProvider`. `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` deleted. `services.TryAddEnumerable(...)` registration removed.
+6. `Monica.AI/Abstractions/IAIChatToolProvider.cs` **deleted**. No shim, no `[Obsolete]` adapter. `Monica.AI/Services/Support/AIChatAgentBuilder.cs` no longer exposes `AddTool(AITool)`.
+7. The `IXmlDocumentationService.GetMethodDocumentation` path is exercised by at least one method per skill in tests (compile-time verification: every Facade-method-style script has a description in one of the three sources).
+8. `ModuleRAG` no longer registers `KnowledgeSearchToolProvider`; the new `RAGKnowledgeSkill` is auto-discovered.
+9. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
+10. The `AgentSkillsProvider` produced by the hosted service contains exactly the expected skill set in a smoke test that runs every Monica module.
 
 ## 13. Cross-doc references
 

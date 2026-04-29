@@ -59,7 +59,9 @@ The Skill System (Doc 02) hosts the discovery pipeline; the Facade Provider pigg
 
 ### 2.1 Construction approach
 
-Per Doc 02 §11(d), Microsoft's `AgentClassSkill<TSelf>` requires CRTP for attribute-based discovery, so the Provider cannot generate `MoSkill<TSelf>` subclasses at runtime per arbitrary `TFacade` type. Instead, Facade Skills use the *explicit-override* path documented by `AgentClassSkill<TSelf>`. A single internal class:
+The Provider does **not** rely on Microsoft's CRTP-attribute-based script discovery. Facade methods carry no `[MoAITool]` markers in the general case (the Provider's default is opt-out, not opt-in), so attribute-driven discovery would not find them. Instead, the Provider performs reflection-driven projection on the Facade type and **manually constructs** an `AgentSkill` whose `Scripts` collection is pre-built and returned directly through the `MoSkill<TSelf>` override.
+
+A single internal class:
 
 ```csharp
 namespace Monica.Framework.AISkillProviders.Facade.Internal;
@@ -69,17 +71,27 @@ internal sealed class FacadeSkill(
     AgentSkillFrontmatter frontmatter,
     string instructions,
     IReadOnlyList<AgentSkillScript> scripts)
-    : AgentClassSkill<FacadeSkill>
+    : MoSkill<FacadeSkill>
 {
-    public override AgentSkillFrontmatter Frontmatter => frontmatter;
-    protected override string Instructions => instructions;
-    public override IReadOnlyList<AgentSkillScript>? Scripts => scripts;
+    public override AgentSkillFrontmatter Frontmatter { get; } = frontmatter;
+    protected override string Instructions { get; } = instructions;
+
+    /// <summary>
+    /// Re-overrides <see cref="MoSkill{TSelf}.Scripts"/> so the pre-built script
+    /// list is returned directly, bypassing the attribute-based discovery on
+    /// <see cref="MoSkill{TSelf}"/>. The Facade Provider builds these scripts
+    /// in <see cref="ProjectUnitScriptFactory.BuildSkill"/> via Microsoft's
+    /// <c>CreateScript(...)</c> factory.
+    /// </summary>
+    public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = scripts;
 
     public Type FacadeType { get; } = facadeType;
 }
 ```
 
-One `FacadeSkill` instance per Facade type. The CRTP type parameter is `FacadeSkill` itself — Microsoft's discovery sees no decorated members on the closed `FacadeSkill` class because we use the explicit-override path (`Scripts` returns the pre-built list). This is the supported pattern per Microsoft's XML doc on `AgentClassSkill<TSelf>`.
+`FacadeSkill` inherits `MoSkill<FacadeSkill>` for consistency with hand-written Skills (Doc 02 §2). The CRTP type parameter is `FacadeSkill` itself. Authors and reviewers see one base class for all Monica Skills, regardless of whether they were hand-written or Provider-built. The override of `Scripts` short-circuits both `MoSkill<TSelf>`'s `[MoAITool]` discovery and Microsoft's `[AgentSkillScript]` discovery — the constructor-supplied list wins outright.
+
+`MoSkill<TSelf>`'s `RequiredModules`, `IsEnabled`, and `Priority` virtual hooks remain available; the Provider sets them to defaults (no required modules — implicit gating handled by §7.2; enabled; priority 0).
 
 ### 2.2 Frontmatter
 
@@ -119,7 +131,7 @@ For each public instance method on the Facade type:
 
 1. Apply the **deny-list filter** (§2.5).
 2. Apply the **`[MoAITool(Disabled = true)]` filter** — drop the method if disabled.
-3. Resolve the script **name** — kebab-case of the method name with the `Async` suffix removed (e.g., `CreateKnowledgeBaseAsync` → `create-knowledge-base`).
+3. Resolve the script **name**: `[MoAITool(Name = "...")]` if present (Doc 02 §5.1); otherwise kebab-case of the method name with the `Async` suffix removed (e.g., `CreateKnowledgeBaseAsync` → `create-knowledge-base`).
 4. Resolve the script **description** through the priority chain in Doc 02 §5.2.
 5. Resolve each parameter **description** through the priority chain in Doc 02 §5.2.
 6. Build an `AgentSkillScript` via `AgentClassSkill<FacadeSkill>.CreateScript(name, methodDelegate, description)`.
@@ -259,17 +271,20 @@ internal sealed class ModuleAggregatorSkill(
     AgentSkillFrontmatter frontmatter,
     string instructions,
     IReadOnlyList<string> facadeSkillNames)
-    : AgentClassSkill<ModuleAggregatorSkill>
+    : MoSkill<ModuleAggregatorSkill>
 {
-    public override AgentSkillFrontmatter Frontmatter => frontmatter;
-    protected override string Instructions => instructions;
+    public override AgentSkillFrontmatter Frontmatter { get; } = frontmatter;
+    protected override string Instructions { get; } = instructions;
+
+    /// <summary>Aggregator carries no scripts; override returns empty.</summary>
+    public override IReadOnlyList<AgentSkillScript>? Scripts { get; } = [];
 
     public ModuleKey ModuleKey { get; } = moduleKey;
     public IReadOnlyList<string> FacadeSkillNames { get; } = facadeSkillNames;
 }
 ```
 
-The aggregator carries no scripts of its own. It exists purely to surface one entry per module in L1 discovery and to point at sub-Facade Skills in L2.
+The aggregator inherits `MoSkill<ModuleAggregatorSkill>` (same base as `FacadeSkill`) and carries no scripts of its own. It exists purely to surface one entry per module in L1 discovery and to point at sub-Facade Skills in L2.
 
 ### 3.3 Frontmatter
 
@@ -638,7 +653,7 @@ public enum FacadeRegistrationMode
 | (b) | Complex DTO parameter handling — recursion depth. | **Recursive XML-doc descent with depth limit 3.** Implemented via `ModuleAIFacadeProviderOption.MaxParameterSchemaDepth`. Beyond depth 3, the parameter is described as `{TypeName}` with no nested doc — agents see the JSON schema name only. Cycles are detected and pruned. |
 | (c) | Per-method permission gates. | **Out of scope this rev.** `[MoAITool]` reserves `RequiredPermissions` as a documented forward-compat slot per Doc 02 §5.1; the property is not shipped until a future security doc owns it. |
 | (d) | What about Facades that aren't yet `IMonicaFacade`-marked? | **Mechanical migration.** Phase C's PR adds the marker to every existing Facade. No Facade is silently exposed without the marker. The PR is reviewable as a checklist (one line per Facade). |
-| (e) | Method-name collisions inside a single Facade (e.g., overloads). | **Forbidden.** Two overloads of `Get` produce two scripts named `get`, which the framework rejects. The discovery pipeline detects this and throws at startup with a clear message. Authors fix the collision by renaming one overload (e.g., `GetById` / `GetByName`). |
+| (e) | Method-name collisions inside a single Facade (e.g., overloads). | **Forbidden.** Two overloads of `Get` produce two scripts named `get`, which the framework rejects. The discovery pipeline detects this and throws at startup with a clear message. Authors fix the collision by renaming one overload (e.g., `GetById` / `GetByName`) or by setting `[MoAITool(Name = "...")]` explicitly on one of them per Doc 02 §5.1. |
 | (f) | What if the Facade's owning module key isn't on `BuiltInModuleKey`? | **Use `(ModuleKey)moduleKeyString`.** Third-party modules with custom `ModuleKey`s work transparently — the kebab-case and frontmatter generation use the `ModuleKey.Value` string. |
 
 ## 11. Acceptance criteria for Phase C
