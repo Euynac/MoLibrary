@@ -66,6 +66,8 @@ public class UnitApplicationService(Type type) : ProjectUnit(type, EProjectUnitT
                 unit.RequestType = args[0];
                 unit.ResponseType = args[1];
             }
+
+            unit.InitializeMethods<ApplicationService>();
         }
 
 
