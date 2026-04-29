@@ -21,12 +21,12 @@ PLANNING_FILES = ['task_plan.md', 'progress.md', 'findings.md']
 def get_project_dir(project_path: str) -> Path:
     """Convert project path to Claude's storage path format."""
     import re
-    # Convert Git Bash paths like /d/Code/MoLibrary -> D:\Code\MoLibrary
+    # Convert Git Bash paths like /d/Code/Project -> D:\Code\Project
     if re.match(r'^/[a-zA-Z]/', project_path):
         drive = project_path[1].upper()
         rest = project_path[2:].replace('/', '\\')
         project_path = f"{drive}:{rest}"
-        # Windows path: D:\Code\MoLibrary -> D--Code-MoLibrary (no leading dash)
+        # Windows path: D:\Code\Project -> D--Code-Project (no leading dash)
         sanitized = project_path.replace('\\', '-').replace(':', '-')
     else:
         # Unix path: /home/user/project -> -home-user-project

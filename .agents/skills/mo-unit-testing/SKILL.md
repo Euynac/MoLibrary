@@ -18,7 +18,7 @@ Create Monica unit tests under `tests/` using the shared `Test.Monica` base laye
 
 ## Workflow
 
-1. Read [`tests/README.md`](/mnt/d/Code/MoLibrary/tests/README.md) first. It is the current source of truth for Monica test layout, naming, stack, and WSL execution rules.
+1. Read `<project-root>/tests/README.md` first. It is the current source of truth for Monica test layout, naming, stack, and WSL execution rules.
 2. Reuse `tests/Test.Monica/` before adding project-local helpers. Shared result assertions, module reset helpers, localization stubs, and UI theme stubs belong there.
 3. Keep all unit-test-related artifacts under `tests/`. New runnable test projects must use the `Test.Monica.*` prefix and mirror the source project folder structure.
 4. Prefer public-surface tests first:

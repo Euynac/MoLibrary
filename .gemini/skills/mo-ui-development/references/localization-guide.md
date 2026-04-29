@@ -264,22 +264,22 @@ public class StateStoreResource { }
 
 **Basic validation:**
 ```bash
-python .gemini/skills/mo-ui-development/scripts/validate_localization.py
+python scripts/validate_localization.py
 ```
 
 **Summary only:**
 ```bash
-python .gemini/skills/mo-ui-development/scripts/validate_localization.py --summary
+python scripts/validate_localization.py --summary
 ```
 
 **Strict mode** (treat unused keys as errors):
 ```bash
-python .gemini/skills/mo-ui-development/scripts/validate_localization.py --strict
+python scripts/validate_localization.py --strict
 ```
 
 **JSON output** (for CI/CD):
 ```bash
-python .gemini/skills/mo-ui-development/scripts/validate_localization.py --json
+python scripts/validate_localization.py --json
 ```
 
 ### Validation Checks
@@ -326,7 +326,7 @@ Summary:
 ```yaml
 - name: Validate Localization
   run: |
-    python .gemini/skills/mo-ui-development/scripts/validate_localization.py --strict --json
+    python <path-to-mo-ui-development-skill>/scripts/validate_localization.py --strict --json
 ```
 
 ## Troubleshooting
@@ -351,7 +351,7 @@ Summary:
 1. Keep page-local text in the module resource JSON files
 2. Add the navigation/AppBar key to `Monica.UI/Localization/UIRegistryResource/zh-CN.json`
 3. Add the same key to `Monica.UI/Localization/UIRegistryResource/en-US.json`
-4. Re-run `python .gemini/skills/mo-ui-development/scripts/validate_localization.py`
+4. Re-run `python scripts/validate_localization.py`
 
 ### Parameterized String Shows {0}
 

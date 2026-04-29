@@ -41,8 +41,8 @@ Required recovery flow for source-dependent work:
 Typical registration commands:
 
 ```bash
-python3 /mnt/d/Code/MoLibrary/.codex/skills/third-party-source-catalog/scripts/source_catalog.py local add /mnt/d/Repositories/References/MudBlazor-9.0.0
-python3 /mnt/d/Code/MoLibrary/.codex/skills/third-party-source-catalog/scripts/source_catalog.py local scan /mnt/d/Repositories/References --update-existing
+python3 ../third-party-source-catalog/scripts/source_catalog.py local add <mudblazor-source-root>
+python3 ../third-party-source-catalog/scripts/source_catalog.py local scan <source-cache-root> --update-existing
 ```
 
 If the task is not source-dependent and the existing references are enough, continue without source inspection.
@@ -211,7 +211,7 @@ Key rules:
 Validate semantic theme-token compliance with:
 
 ```bash
-python /mnt/d/Code/MoLibrary/scripts/validate_ui_theme_tokens.py
+python <project-root>/scripts/validate_ui_theme_tokens.py
 ```
 
 ## MudBlazor CSS Variable Workflow (Required)
@@ -239,13 +239,13 @@ and updates:
 Validate all CSS and Razor files under a project/repo root:
 
 ```bash
-python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary
+python scripts/validate_mud_css_variables.py --root <project-root>
 ```
 
 JSON output:
 
 ```bash
-python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary --json
+python scripts/validate_mud_css_variables.py --root <project-root> --json
 ```
 
 ### C. Safe Auto-Fix Mode
@@ -253,7 +253,7 @@ python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary --json
 Apply safe deterministic replacements, then revalidate:
 
 ```bash
-python scripts/validate_mud_css_variables.py --root D:\Code\MoLibrary --fix
+python scripts/validate_mud_css_variables.py --root <project-root> --fix
 ```
 
 Safe auto-fix scope is intentionally limited. Remaining unknown variables require manual review.

@@ -13,7 +13,7 @@ VARIABLES_JSON_FILE = STATE_DIR / "mudblazor-css-variables.json"
 THIRD_PARTY_CATALOG_STATE_DIR = PROJECT_ROOT / ".tmp" / "third-party-source-catalog" / "state"
 THIRD_PARTY_CATALOG_FILE = THIRD_PARTY_CATALOG_STATE_DIR / "catalog.json"
 THIRD_PARTY_SOURCE_CATALOG_SCRIPT = (
-    PROJECT_ROOT / ".codex" / "skills" / "third-party-source-catalog" / "scripts" / "source_catalog.py"
+    SKILL_ROOT.parent / "third-party-source-catalog" / "scripts" / "source_catalog.py"
 )
 
 

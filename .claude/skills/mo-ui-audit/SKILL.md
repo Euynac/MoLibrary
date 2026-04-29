@@ -63,7 +63,7 @@ Fix: use the shared utilities in `Monica.UI/Shell/Support/` and methods on `Moni
 3. **Report**: Present a summary table of violations before making changes. Ask the user to confirm which violations to fix if the scope is large.
 4. **Fix**: Apply concrete fixes, preserving all existing functionality, localization, and responsive behavior.
 5. **Clean up**: Delete any `.razor.css` file only when the component no longer owns layout or localized presentation rules. Remove unused `@using` directives.
-6. **Build**: Build the affected project with the WSL Windows-path rule, for example `dotnet build 'D:\Code\MoLibrary\Monica.UI\Monica.UI.csproj' -m` or the specific UI module project. The build must produce 0 warnings.
+6. **Build**: Build the affected project with the WSL Windows-path rule, for example `dotnet build '<windows-project-path>' -m` for the specific UI module project. The build must produce 0 warnings.
 7. **Report**: List what was changed, which theme files may need a new shared selector, and any remaining items that need manual UI verification.
 
 ## Constraints
