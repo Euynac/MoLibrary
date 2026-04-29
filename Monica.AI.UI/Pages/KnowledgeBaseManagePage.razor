@@ -2,16 +2,16 @@
 @implements IDisposable
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.UIRAG.Components
-@using Monica.AI.UI.UIRAG.State
+@using Monica.AI.UI.UIKnowledgeBase.Components
+@using Monica.AI.UI.UIKnowledgeBase.State
 @using Monica.UI.Localization
 @inject IStringLocalizer<AIResource> L
 @inject IStringLocalizer<SharedResource> Shared
 
-<PageTitle>@L["RAG:Navigation:Manage"]</PageTitle>
+<PageTitle>@L["KnowledgeBase:Navigation:Manage"]</PageTitle>
 
-<div class="rag-manage-page">
-    <RAGManageKnowledgeBasePanel PageState="PageState" />
+<div class="knowledge-base-manage-page">
+    <KnowledgeBaseListPanel PageState="PageState" />
 
     <div class="kb-detail-panel">
         @if (PageState.IsInitialLoading)
@@ -24,7 +24,7 @@
                          Class="loading-phase-chip">
                     @Shared["ModuleSystem:SystemOverview:States:Initializing"]
                 </MudChip>
-                <MudText Typo="Typo.h6" Class="loading-title">@L["RAG:Navigation:Manage"]</MudText>
+                <MudText Typo="Typo.h6" Class="loading-title">@L["KnowledgeBase:Navigation:Manage"]</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="loading-phase-text">
                     @PageState.LoadingPhaseText
                 </MudText>
@@ -59,6 +59,19 @@
             else
             {
                 <div class="detail-content">
+                    <div class="embedding-model-section">
+                        <Monica.AI.UI.UIKnowledgeBase.Components.EmbeddingModelSelector AvailableModels="@PageState.AvailableModels"
+                                                                                         SelectedModelKey="@PageState.CurrentEmbeddingModelKey"
+                                                                                         SelectedModelKeyChanged="@PageState.ChangeEmbeddingModelAsync" />
+
+                        @if (PageState.AvailableModels.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
+                                @L["RAG:EmbeddingModel:NotConfigured"]
+                            </MudAlert>
+                        }
+                    </div>
+
                     <div class="kb-header">
                         <div class="kb-header-info">
                             <MudText Typo="Typo.h5">@selectedKnowledgeBase.Name</MudText>
@@ -82,7 +95,7 @@
                                      Icon="@Icons.Material.Filled.GridView">
                                 @selectedKnowledgeBase.ChunkCount @L["RAG:KnowledgeBase:ChunkCount"]
                             </MudChip>
-                            @if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase))
+                            @if (KnowledgeBaseManagePageState.IsRagEnabled(selectedKnowledgeBase))
                             {
                                 <MudChip T="string"
                                          Size="Size.Small"
@@ -103,37 +116,21 @@
                                         selectedKnowledgeBase.EmbeddingModelName)
                                 </MudChip>
                             }
+                            else
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Default"
+                                         Variant="Variant.Outlined"
+                                         Icon="@Icons.Material.Filled.Storage">
+                                    @L["KnowledgeBase:RagStatus:LookupOnly"]
+                                </MudChip>
+                            }
                         </div>
                     </div>
 
-                    @if (PageState.ShouldShowMissingVectorWarning)
-                    {
-                        <MudAlert Severity="Severity.Warning"
-                                  Variant="Variant.Outlined"
-                                  Class="vector-warning-alert">
-                            <div class="vector-warning-content">
-                                <div class="vector-warning-copy">
-                                    <MudText Typo="Typo.subtitle2" Class="vector-warning-title">
-                                        @L["RAG:VectorValidation:MissingVectors:Title"]
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Class="vector-warning-message">
-                                        @PageState.GetMissingVectorWarningMessage()
-                                    </MudText>
-                                </div>
-                                <MudButton Variant="Variant.Filled"
-                                           Color="Color.Warning"
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Refresh"
-                                           Class="vector-warning-action"
-                                           OnClick="@PageState.ReindexSelectedKnowledgeBaseAsync"
-                                           Disabled="@(!PageState.CanReindexSelectedKnowledgeBase)">
-                                    @L["RAG:VectorValidation:MissingVectors:Action"]
-                                </MudButton>
-                            </div>
-                        </MudAlert>
-                    }
-
-                    <RAGManageDocumentQueueSection PageState="PageState" />
+                    <KnowledgeBaseImportActions PageState="PageState" />
+                    <KnowledgeBaseDocumentInventorySection PageState="PageState" />
                 </div>
             }
         }

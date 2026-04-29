@@ -6,8 +6,6 @@ using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
-using Monica.Markdown.Abstractions;
-using Monica.Markdown.Models;
 
 namespace Monica.AI.RAG.Facades;
 
@@ -16,7 +14,6 @@ namespace Monica.AI.RAG.Facades;
 /// </summary>
 public class RAGFacade(
     IServiceProvider serviceProvider,
-    IMarkdownDocumentCatalog markdownService,
     ILogger<RAGFacade> logger)
 {
     public async Task<Res<KnowledgeBaseVectorValidationResult>> GetKnowledgeBaseVectorValidationAsync(string kbId)
@@ -52,96 +49,6 @@ public class RAGFacade(
         {
             logger.LogError(ex, "Search failed for query '{Query}'", query);
             return Res.Fail($"Search failed: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Indexes all documents from a markdown group into a knowledge base.
-    /// </summary>
-    public async Task<Res> IndexMarkdownGroupAsync(
-        string kbId,
-        string groupKey,
-        IProgress<IndexingProgress>? progress = null)
-    {
-        try
-        {
-            var documents = await markdownService.GetDocumentsAsync(groupKey);
-            if (documents.Count == 0)
-            {
-                return Res.Fail("No documents found in the selected group.");
-            }
-
-            Func<IndexingProgress, CancellationToken, Task>? progressCallback = progress is null
-                ? null
-                : (indexingProgress, _) =>
-                {
-                    progress.Report(indexingProgress);
-                    return Task.CompletedTask;
-                };
-
-            var indexed = 0;
-            foreach (var doc in documents)
-            {
-                var content = await markdownService.GetDocumentContentAsync(doc);
-                await GetRagService().IndexDocumentAsync(
-                    kbId,
-                    doc.RelativePath,
-                    doc.Title,
-                    content,
-                    progressCallback,
-                    sourceKind: KnowledgeDocumentSourceKinds.Markdown,
-                    sourceGroupKey: groupKey);
-
-                indexed++;
-                progress?.Report(new IndexingProgress(indexed, documents.Count, doc.Title));
-            }
-
-            return Res.Ok($"Indexed {indexed} documents.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to index markdown group '{GroupKey}' into KB '{KbId}'", groupKey, kbId);
-            return Res.Fail($"Indexing failed: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Indexes one uploaded document into a knowledge base.
-    /// </summary>
-    public async Task<Res> UploadAndIndexDocumentAsync(string kbId, string fileName, string content)
-    {
-        try
-        {
-            await GetRagService().IndexDocumentAsync(
-                kbId,
-                fileName,
-                fileName,
-                content,
-                sourceKind: KnowledgeDocumentSourceKinds.Uploaded);
-
-            return Res.Ok($"Indexed '{fileName}' successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to index uploaded document '{FileName}'", fileName);
-            return Res.Fail($"Upload indexing failed: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
-    /// Gets all markdown document groups.
-    /// </summary>
-    public async Task<Res<List<MarkdownDocumentGroup>>> GetMarkdownGroupsAsync()
-    {
-        try
-        {
-            var groups = await markdownService.GetAllDocumentGroupsAsync();
-            return groups;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get markdown groups");
-            return Res.Fail($"Failed to load markdown groups: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -263,6 +170,19 @@ public class RAGFacade(
         return StartBatchIndexingCoreAsync(kbId, maxConcurrency, progress, cancellationToken);
     }
 
+    /// <summary>
+    /// Starts queue-based batch indexing for selected document ids.
+    /// </summary>
+    public Task<Res> StartBatchIndexingAsync(
+        string kbId,
+        IEnumerable<string> documentIds,
+        int maxConcurrency = 5,
+        IProgress<IndexingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        return StartBatchIndexingCoreAsync(kbId, maxConcurrency, progress, cancellationToken, documentIds);
+    }
+
     public Res CancelBatchIndexing(string kbId)
     {
         return GetBatchIndexCoordinator().TryCancelBatchIndexing(kbId, out var message)
@@ -286,23 +206,6 @@ public class RAGFacade(
 
     public bool IsBatchIndexingActive(string kbId)
         => GetBatchIndexCoordinator().IsBatchIndexingActive(kbId);
-
-    /// <summary>
-    /// Gets available markdown documents from one group.
-    /// </summary>
-    public async Task<Res<IReadOnlyList<MarkdownDocument>>> GetAvailableDocumentsAsync(string groupKey)
-    {
-        try
-        {
-            var documents = await markdownService.GetDocumentsAsync(groupKey);
-            return Res.Ok<IReadOnlyList<MarkdownDocument>>(documents);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get available documents from group '{GroupKey}'", groupKey);
-            return Res.Fail($"Failed to load documents: {ex.GetMessageRecursively()}");
-        }
-    }
 
     #endregion
 
@@ -335,13 +238,15 @@ public class RAGFacade(
         string kbId,
         int maxConcurrency,
         IProgress<IndexingProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IEnumerable<string>? documentIds = null)
     {
         var outcome = await GetBatchIndexCoordinator().StartBatchIndexingAsync(
             kbId,
             maxConcurrency,
             progress,
-            cancellationToken);
+            cancellationToken,
+            documentIds);
 
         return outcome.Succeeded
             ? Res.Ok(outcome.Message)

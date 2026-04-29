@@ -51,6 +51,7 @@ public class ModuleRAG(ModuleRAGOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
+        DependsOnModule<ModuleMarkdownGuide>().Register();
     }
 
     /// <inheritdoc />

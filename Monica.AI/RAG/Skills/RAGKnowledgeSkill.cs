@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.KnowledgeBase.Services;
+using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
-using Monica.AI.RAG.Services.Support;
 using Monica.AI.Services.Support;
 using Monica.AI.Skills.Abstractions;
 using Monica.AI.Skills.Annotations;
@@ -209,7 +209,7 @@ public sealed class RAGKnowledgeSkill(
         CancellationToken ct)
     {
         var runtimeContext = services.GetRequiredService<IAIChatRuntimeContextAccessor>().Current;
-        var selection = runtimeContext.GetOrDefault(RAGChatRuntimeContextKeys.KnowledgeSelection);
+        var selection = runtimeContext.GetOrDefault(KnowledgeBaseChatRuntimeContextKeys.KnowledgeSelection);
         if (selection?.KnowledgeBaseIds is not { Count: > 0 } selectedIds)
         {
             return [];
@@ -221,7 +221,7 @@ public sealed class RAGKnowledgeSkill(
                      .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var knowledgeBase = await knowledgeBaseService.GetByIdAsync(knowledgeBaseId, ct);
-            if (knowledgeBase is not null)
+            if (knowledgeBase is not null && HasEmbeddingBinding(knowledgeBase))
             {
                 knowledgeBases.Add(knowledgeBase);
             }
@@ -230,14 +230,18 @@ public sealed class RAGKnowledgeSkill(
         return knowledgeBases;
     }
 
+    private static bool HasEmbeddingBinding(KnowledgeBaseModel knowledgeBase)
+        => !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingModelName);
+
     private static string SerializeNoSelection(string toolName)
     {
         return JsonSerializer.Serialize(
             new KnowledgeToolNoSelectionPayload
             {
                 ToolName = toolName,
-                Message = "No knowledge base is selected for this chat session.",
-                NextStepInstruction = "Ask the user to select one or more knowledge bases before using RAG retrieval.",
+                Message = "No RAG-enabled knowledge base is selected for this chat session.",
+                NextStepInstruction = "Use lookup scripts for non-RAG knowledge bases, or ask the user to configure an embedding model for semantic RAG retrieval.",
                 ResultCount = 0
             },
             _toolJsonOptions);

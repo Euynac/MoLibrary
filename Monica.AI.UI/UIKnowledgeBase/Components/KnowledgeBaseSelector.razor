@@ -86,7 +86,19 @@
                                 <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" />
                             </span>
                             <span class="kb-item-info">
-                                <MudText Typo="Typo.body2" Class="kb-item-title">@kb.Name</MudText>
+                                <span class="kb-item-title-row">
+                                    <MudText Typo="Typo.body2" Class="kb-item-title">@kb.Name</MudText>
+                                    @if (IsRagEnabled(kb))
+                                    {
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="Color.Info"
+                                                 Variant="Variant.Outlined"
+                                                 Class="kb-rag-chip">
+                                            RAG
+                                        </MudChip>
+                                    }
+                                </span>
                                 <MudText Typo="Typo.caption" Class="kb-item-meta">
                                     @GetStatsText(kb)
                                 </MudText>
@@ -192,4 +204,8 @@
 
     private string GetStatsText(KnowledgeBase kb)
         => $"{L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount]} · {L["RAG:KnowledgeBase:ChunksCount", kb.ChunkCount]}";
+
+    private static bool IsRagEnabled(KnowledgeBase kb)
+        => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(kb.EmbeddingModelName);
 }

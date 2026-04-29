@@ -1,7 +1,7 @@
 {
   "Pages": {
     "MarkdownDocuments": {
-      "Title": "Markdown 文档"
+      "Title": "Markdown 文档库"
     }
   },
   "Categories": {
@@ -13,21 +13,21 @@
     },
     "Placeholders": {
       "SearchFiles": "搜索文件",
-      "SearchKnowledgeBases": "查找知识库..."
+      "SearchKnowledgeBases": "查找文档库..."
     },
     "States": {
       "LoadingDocuments": "正在加载文档...",
       "LoadingDocument": "正在加载文档内容...",
-      "RefreshingKnowledgeBases": "正在刷新知识库...",
-      "NoKnowledgeBasesRegistered": "未注册任何知识库。",
-      "NoKnowledgeBases": "没有可用的知识库。",
-      "NoMatchingKnowledgeBases": "没有匹配的知识库。",
+      "RefreshingKnowledgeBases": "正在刷新文档库...",
+      "NoKnowledgeBasesRegistered": "未注册任何文档库。",
+      "NoKnowledgeBases": "没有可用的文档库。",
+      "NoMatchingKnowledgeBases": "没有匹配的文档库。",
       "NoDocumentSelected": "请选择一个文档进行查看",
       "NoDocumentsFound": "未找到任何文档",
       "NoMatchingDocuments": "没有匹配的文档",
-      "GroupUnavailable": "知识库不可用",
+      "GroupUnavailable": "文档库不可用",
       "GroupUnavailableDescription": "配置的路径不存在或当前无法访问。",
-      "MultilingualLayoutInvalid": "知识库布局需要迁移",
+      "MultilingualLayoutInvalid": "文档库布局需要迁移",
       "MultilingualLayoutInvalidDescription": "已启用多语言文档，但检测到部分 Markdown 文件不在受支持的语言目录下。请将所有 Markdown 文件移动到如 zh-CN 或 en-US 这样的文化根目录下。",
       "InvalidLanguageLayoutPaths": "语言目录之外的 Markdown 文件：",
       "DocumentLanguageMissing": "当前文档在 {0} 中不存在",
@@ -36,8 +36,8 @@
     "Navbar": {
       "ShowSidebar": "显示侧边栏",
       "HideSidebar": "隐藏侧边栏",
-      "OpenKnowledgeBaseSwitcher": "切换知识库",
-      "UnknownKnowledgeBase": "未知知识库",
+      "OpenKnowledgeBaseSwitcher": "切换文档库",
+      "UnknownKnowledgeBase": "未知文档库",
       "KnowledgeBaseDocumentCount": "共 {0} 篇文档",
       "Outline": "目录",
       "LastEdited": "最后更新于 {0}"
@@ -53,12 +53,12 @@
       "NoDocumentOutline": "请选择一个文档后再浏览目录。"
     },
     "Dialogs": {
-      "SwitchKnowledgeBaseTitle": "切换知识库",
+      "SwitchKnowledgeBaseTitle": "切换文档库",
       "Search": {
         "Title": "搜索",
-        "IncludeAllKnowledgeBases": "跨知识库查询",
+        "IncludeAllKnowledgeBases": "跨文档库查询",
         "InputPlaceholder": "输入标题、主题或文件夹",
-        "Hint": "输入关键词后搜索当前知识库中的文档内容。",
+        "Hint": "输入关键词后搜索当前文档库中的文档内容。",
         "Searching": "正在搜索文档...",
         "ResultCount": "{0} 个文档",
         "MinimumQueryLength": "请输入至少 {0} 个字符。",

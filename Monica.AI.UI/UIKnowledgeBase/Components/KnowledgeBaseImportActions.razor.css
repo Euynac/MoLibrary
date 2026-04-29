@@ -1,10 +1,10 @@
-.indexing-actions-grid {
+.import-actions-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
-.indexing-card {
+.import-card {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 12px;
     padding: 16px;
@@ -14,7 +14,7 @@
     background-color: var(--mud-palette-surface);
 }
 
-.indexing-card-title {
+.import-card-title {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -23,15 +23,14 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.markdown-group-section {
+.markdown-group-section,
+.markdown-loading-state {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
 .markdown-loading-state {
-    display: flex;
-    flex-direction: column;
     gap: 6px;
 }
 
@@ -77,7 +76,8 @@
 }
 
 @media (max-width: 768px) {
-    .indexing-actions-grid {
+    .import-actions-grid {
         grid-template-columns: 1fr;
     }
 }
+

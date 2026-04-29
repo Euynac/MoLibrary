@@ -1,5 +1,5 @@
-using Monica.AI.RAG.Models;
-using Monica.AI.RAG.Services.Support;
+using Monica.AI.KnowledgeBase.Models;
+using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.Services.Support;
 
 namespace Monica.AI.UI.UIChat.State;
@@ -20,7 +20,7 @@ public sealed partial class ChatPageState
         }
 
         return AIChatRuntimeContext.Empty.Set(
-            RAGChatRuntimeContextKeys.KnowledgeSelection,
-            new RAGKnowledgeSelection(knowledgeBaseIds));
+            KnowledgeBaseChatRuntimeContextKeys.KnowledgeSelection,
+            new KnowledgeBaseSelection(knowledgeBaseIds));
     }
 }

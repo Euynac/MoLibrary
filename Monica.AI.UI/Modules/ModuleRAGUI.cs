@@ -64,10 +64,10 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                     p.RegisterLocalizedComponent<RAGManagePage>(
                         RAGManagePage.PAGE_URL,
                         "Pages:RAGManage:Title",
-                        Icons.Material.Filled.Storage,
+                        Icons.Material.Filled.PlaylistPlay,
                         "Categories:AI",
                         addToNav: true,
-                        navOrder: 3);
+                        navOrder: 4);
                 });
         }
 
@@ -82,7 +82,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         Icons.Material.Filled.ManageSearch,
                         "Categories:AI",
                         addToNav: true,
-                        navOrder: 4);
+                        navOrder: 5);
                 });
         }
 
@@ -97,7 +97,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         Icons.Material.Filled.AccountTree,
                         "Categories:AI",
                         addToNav: true,
-                        navOrder: 5);
+                        navOrder: 6);
                 });
         }
     }

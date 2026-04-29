@@ -8,7 +8,7 @@ namespace Monica.AI.UI.UIRAG.State;
 public sealed partial class RAGManagePageState
 {
     /// <summary>
-    /// Start batch indexing for all pending queue rows.
+    /// Start batch indexing for selected pending or failed queue rows.
     /// </summary>
     public async Task StartBatchIndexingAsync()
     {
@@ -23,8 +23,11 @@ public sealed partial class RAGManagePageState
         }
 
         var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
-        var pendingDocuments = DocumentQueue.Where(document => document.Status == DocumentStatus.Pending).ToList();
-        if (pendingDocuments.Count == 0)
+        var selectedDocuments = DocumentQueue
+            .Where(document => SelectedDocumentIds.Contains(document.Id)
+                               && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
+            .ToList();
+        if (selectedDocuments.Count == 0)
         {
             _snackbar.Add(_localizer["RAG:ParallelIndexing:NoPendingDocuments"], Severity.Warning);
             return;
@@ -39,6 +42,7 @@ public sealed partial class RAGManagePageState
         {
             var result = await _ragFacade.StartBatchIndexingAsync(
                 selectedKnowledgeBaseId,
+                selectedDocuments.Select(static document => document.Id),
                 ParallelCount,
                 progress);
 
@@ -148,39 +152,6 @@ public sealed partial class RAGManagePageState
         await LoadDocumentQueueAsync();
         await RefreshSelectedKnowledgeBaseAsync();
         NotifyStateChanged();
-    }
-
-    /// <summary>
-    /// Remove all queue rows and indexed documents for the current selection.
-    /// </summary>
-    public async Task ClearKnowledgeBaseDocumentsAsync()
-    {
-        if (SelectedKnowledgeBase is null)
-        {
-            return;
-        }
-
-        var confirmed = await _dialogService.ShowMessageBoxAsync(
-            _localizer["Common:Confirm"],
-            _localizer["RAG:DocumentQueue:ClearDocumentsConfirm", SelectedKnowledgeBase.Name],
-            yesText: _localizer["RAG:DocumentQueue:Actions:ClearDocuments"],
-            cancelText: _localizer["Common:Cancel"]);
-
-        if (confirmed != true)
-        {
-            return;
-        }
-
-        var result = await _knowledgeBaseFacade.ClearDocumentsAsync(SelectedKnowledgeBase.Id);
-        if (result.IsFailed(out var error, out var removedCount))
-        {
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            return;
-        }
-
-        _snackbar.Add(_localizer["RAG:DocumentQueue:Messages:DocumentsCleared", removedCount], Severity.Success);
-        await RefreshSelectedKnowledgeBaseAsync();
-        await LoadDocumentQueueAsync();
     }
 
     /// <summary>

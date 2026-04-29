@@ -17,7 +17,7 @@
       "Title": "AI Provider 管理"
     },
     "RAGManage": {
-      "Title": "RAG 管理"
+      "Title": "RAG 索引"
     },
     "RAGDebug": {
       "Title": "RAG 调试"
@@ -25,8 +25,11 @@
     "RAGChunkers": {
       "Title": "RAG 分块器管理"
     },
-    "MarkdownDocuments": {
+    "KnowledgeBaseManage": {
       "Title": "知识库"
+    },
+    "MarkdownDocuments": {
+      "Title": "Markdown 文档库"
     },
     "DataChannelManage": {
       "Title": "DataChannel管理"

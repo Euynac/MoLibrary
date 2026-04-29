@@ -14,6 +14,63 @@ public sealed partial class RAGManagePageState
            && document.Status is DocumentStatus.Pending or DocumentStatus.Error
            && !HasActiveQueueWork;
 
+    /// <summary>
+    /// Toggles one queue row in the batch-indexing selection.
+    /// </summary>
+    public void ToggleDocumentSelection(DocumentQueueItem document, bool isSelected)
+    {
+        if (document.Status is not (DocumentStatus.Pending or DocumentStatus.Error))
+        {
+            SelectedDocumentIds.Remove(document.Id);
+            NotifyStateChanged();
+            return;
+        }
+
+        if (isSelected)
+        {
+            SelectedDocumentIds.Add(document.Id);
+        }
+        else
+        {
+            SelectedDocumentIds.Remove(document.Id);
+        }
+
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Selects all pending or failed queue rows.
+    /// </summary>
+    public void SelectAllIndexableDocuments()
+    {
+        SelectedDocumentIds.Clear();
+        foreach (var document in DocumentQueue.Where(static item => item.Status is DocumentStatus.Pending or DocumentStatus.Error))
+        {
+            SelectedDocumentIds.Add(document.Id);
+        }
+
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Clears document selection.
+    /// </summary>
+    public void ClearDocumentSelection()
+    {
+        SelectedDocumentIds.Clear();
+        NotifyStateChanged();
+    }
+
+    private void RemoveUnavailableDocumentSelections()
+    {
+        var availableDocumentIds = DocumentQueue
+            .Where(static document => document.Status is DocumentStatus.Pending or DocumentStatus.Error)
+            .Select(static document => document.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        SelectedDocumentIds.RemoveWhere(id => !availableDocumentIds.Contains(id));
+    }
+
     private void OnBatchIndexingProgress(IndexingProgress progress)
     {
         if (SelectedKnowledgeBase is null)

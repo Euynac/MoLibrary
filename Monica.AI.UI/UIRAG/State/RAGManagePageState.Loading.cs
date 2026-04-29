@@ -49,7 +49,6 @@ public sealed partial class RAGManagePageState
 
         if (knowledgeBase is null)
         {
-            CurrentEmbeddingModelKey = string.Empty;
             DocumentQueue = [];
             SelectedKnowledgeBaseVectorValidation = null;
             ClearBatchStartInFlight();
@@ -60,47 +59,15 @@ public sealed partial class RAGManagePageState
         }
 
         IsSelectionLoading = true;
-        UpdateLoadingState(_localizer["RAG:EmbeddingModel:Label"].Value, 28);
+        UpdateLoadingState(_localizer["RAG:DocumentQueue:Title"].Value, 72);
         NotifyStateChanged();
 
-        if (!AreEmbeddingModelsLoaded)
-        {
-            await LoadEmbeddingModelsAsync();
-        }
-
-        CurrentEmbeddingModelKey = HasEmbeddingBinding(knowledgeBase)
-            ? GetKnowledgeBaseModelKey(knowledgeBase)
-            : string.Empty;
-
-        UpdateLoadingState(_localizer["RAG:DocumentQueue:Title"].Value, 72);
         await LoadDocumentQueueAsync();
         EnsureQueuePolling();
         IsSelectionLoading = false;
         LoadingProgressValue = 100;
         NotifyStateChanged();
-        QueueMarkdownGroupWarmup();
         QueueSelectedKnowledgeBaseVectorValidation(knowledgeBase.Id);
-    }
-
-    private async Task<bool> LoadEmbeddingModelsAsync()
-    {
-        if ((await _embeddingFacade.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
-        {
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            return false;
-        }
-
-        AvailableModels = models.ToList();
-        AreEmbeddingModelsLoaded = true;
-
-        if (AvailableModels.Count == 0 && !_embeddingModelWarningShown)
-        {
-            _embeddingModelWarningShown = true;
-            _snackbar.Add(_localizer["RAG:EmbeddingModel:NotConfigured"], Severity.Warning);
-        }
-
-        NotifyStateChanged();
-        return true;
     }
 
     private async Task<bool> LoadKnowledgeBasesAsync()
@@ -112,20 +79,6 @@ public sealed partial class RAGManagePageState
         }
 
         KnowledgeBases = knowledgeBases.ToList();
-        NotifyStateChanged();
-        return true;
-    }
-
-    private async Task<bool> LoadMarkdownGroupsAsync()
-    {
-        if ((await _ragFacade.GetMarkdownGroupsAsync()).IsFailed(out var error, out var groups))
-        {
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            return false;
-        }
-
-        MarkdownGroups = groups.Select(group => group.Key).ToList();
-        AreMarkdownGroupsLoaded = true;
         NotifyStateChanged();
         return true;
     }
@@ -147,22 +100,14 @@ public sealed partial class RAGManagePageState
             DocumentQueue = queue.ToList();
         }
 
+        RemoveUnavailableDocumentSelections();
+
         if (ensurePolling)
         {
             EnsureQueuePolling();
         }
 
         NotifyStateChanged();
-    }
-
-    private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
-    {
-        if (knowledgeBase.DocumentCount > 0 || knowledgeBase.ChunkCount > 0)
-        {
-            return true;
-        }
-
-        return DocumentQueue.Any(item => item.Status == DocumentStatus.Done || item.ChunkCount > 0);
     }
 
     private async Task RefreshSelectedKnowledgeBaseAsync()
@@ -183,17 +128,12 @@ public sealed partial class RAGManagePageState
 
         if (SelectedKnowledgeBase is null)
         {
-            CurrentEmbeddingModelKey = string.Empty;
             DocumentQueue = [];
             SelectedKnowledgeBaseVectorValidation = null;
             ClearSingleIndexInFlight();
             NotifyStateChanged();
             return;
         }
-
-        CurrentEmbeddingModelKey = HasEmbeddingBinding(SelectedKnowledgeBase)
-            ? GetKnowledgeBaseModelKey(SelectedKnowledgeBase)
-            : string.Empty;
 
         QueueSelectedKnowledgeBaseVectorValidation(SelectedKnowledgeBase.Id);
         NotifyStateChanged();
@@ -236,31 +176,6 @@ public sealed partial class RAGManagePageState
         NotifyStateChanged();
     }
 
-    private void QueueMarkdownGroupWarmup()
-    {
-        if (AreMarkdownGroupsLoaded || IsMarkdownGroupsLoading || SelectedKnowledgeBase is null)
-        {
-            return;
-        }
-
-        IsMarkdownGroupsLoading = true;
-        NotifyStateChanged();
-        _ = LoadMarkdownGroupsWarmupAsync();
-    }
-
-    private async Task LoadMarkdownGroupsWarmupAsync()
-    {
-        try
-        {
-            await LoadMarkdownGroupsAsync();
-        }
-        finally
-        {
-            IsMarkdownGroupsLoading = false;
-            NotifyStateChanged();
-        }
-    }
-
     private void QueueSelectedKnowledgeBaseVectorValidation(string knowledgeBaseId)
     {
         _ = LoadSelectedKnowledgeBaseVectorValidationAsync(knowledgeBaseId);
@@ -269,6 +184,7 @@ public sealed partial class RAGManagePageState
     private void OnQueueRefreshed(IReadOnlyList<DocumentQueueItemModel> queue)
     {
         DocumentQueue = queue.ToList();
+        RemoveUnavailableDocumentSelections();
         NotifyStateChanged();
     }
 

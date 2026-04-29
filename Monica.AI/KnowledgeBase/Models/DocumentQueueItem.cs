@@ -44,4 +44,14 @@ public sealed class DocumentQueueItem
     /// Knowledge base ID this document belongs to.
     /// </summary>
     public required string KnowledgeBaseId { get; init; }
+
+    /// <summary>
+    /// Source kind used to resolve the document content.
+    /// </summary>
+    public string? SourceKind { get; init; }
+
+    /// <summary>
+    /// Source group key when the document came from a grouped source such as Markdown.
+    /// </summary>
+    public string? SourceGroupKey { get; init; }
 }

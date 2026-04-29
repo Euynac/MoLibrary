@@ -17,7 +17,7 @@
       "Title": "AI Provider Management"
     },
     "RAGManage": {
-      "Title": "RAG Management"
+      "Title": "RAG Indexing"
     },
     "RAGDebug": {
       "Title": "RAG Debug"
@@ -25,8 +25,11 @@
     "RAGChunkers": {
       "Title": "RAG Chunker Management"
     },
+    "KnowledgeBaseManage": {
+      "Title": "Knowledge Bases"
+    },
     "MarkdownDocuments": {
-      "Title": "Markdown Documents"
+      "Title": "Markdown Library"
     },
     "DataChannelManage": {
       "Title": "DataChannel Management"

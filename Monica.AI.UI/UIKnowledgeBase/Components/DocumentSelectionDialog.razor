@@ -41,10 +41,10 @@
                                 @doc.RelativePath
                             </MudText>
                         </div>
-                        @if (IndexedDocumentIds.Contains(doc.RelativePath))
+                        @if (ExistingDocumentIds.Contains(doc.RelativePath))
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Success">
-                                @L["RAG:DocumentSelection:Indexed"]
+                                @L["KnowledgeBase:DocumentImport:AlreadyAdded"]
                             </MudChip>
                         }
                     </div>
@@ -58,7 +58,7 @@
                    Variant="Variant.Filled"
                    OnClick="Submit"
                    Disabled="@(SelectedDocuments.Count == 0)">
-            @L["RAG:DocumentSelection:AddToQueue"]
+            @L["KnowledgeBase:DocumentImport:Add"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -71,7 +71,7 @@
     public List<MarkdownDocument> AvailableDocuments { get; set; } = new();
 
     [Parameter]
-    public HashSet<string> IndexedDocumentIds { get; set; } = new();
+    public HashSet<string> ExistingDocumentIds { get; set; } = new();
 
     private HashSet<string> SelectedDocuments { get; set; } = new();
 

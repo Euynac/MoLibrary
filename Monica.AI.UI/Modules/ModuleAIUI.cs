@@ -53,7 +53,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
 
         if (!Option.DisableAIChatPage)
         {
-            DependsOnModule<ModuleKnowledgeBaseUIGuide>().Register();
+            DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
         }
 
         if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage)

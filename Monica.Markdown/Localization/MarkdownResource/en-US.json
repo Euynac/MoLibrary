@@ -1,7 +1,7 @@
 {
   "Pages": {
     "MarkdownDocuments": {
-      "Title": "Markdown Documents"
+      "Title": "Markdown Library"
     }
   },
   "Categories": {
@@ -13,21 +13,21 @@
     },
     "Placeholders": {
       "SearchFiles": "Search files",
-      "SearchKnowledgeBases": "Find a knowledge base..."
+      "SearchKnowledgeBases": "Find a document library..."
     },
     "States": {
       "LoadingDocuments": "Loading documents...",
       "LoadingDocument": "Loading document...",
-      "RefreshingKnowledgeBases": "Refreshing knowledge bases...",
-      "NoKnowledgeBasesRegistered": "No knowledge bases registered",
-      "NoKnowledgeBases": "No knowledge bases available",
-      "NoMatchingKnowledgeBases": "No matching knowledge bases",
+      "RefreshingKnowledgeBases": "Refreshing document libraries...",
+      "NoKnowledgeBasesRegistered": "No document libraries registered",
+      "NoKnowledgeBases": "No document libraries available",
+      "NoMatchingKnowledgeBases": "No matching document libraries",
       "NoDocumentSelected": "Select a document to view",
       "NoDocumentsFound": "No documents found",
       "NoMatchingDocuments": "No matching documents",
-      "GroupUnavailable": "Knowledge base unavailable",
+      "GroupUnavailable": "Document library unavailable",
       "GroupUnavailableDescription": "The configured path does not exist or is not accessible.",
-      "MultilingualLayoutInvalid": "Knowledge base layout needs migration",
+      "MultilingualLayoutInvalid": "Document library layout needs migration",
       "MultilingualLayoutInvalidDescription": "Multilingual documents are enabled, but markdown files were found outside supported language folders. Move every markdown file under a culture root such as zh-CN or en-US.",
       "InvalidLanguageLayoutPaths": "Markdown files outside language folders:",
       "DocumentLanguageMissing": "This document is not available in {0}",
@@ -36,8 +36,8 @@
     "Navbar": {
       "ShowSidebar": "Show sidebar",
       "HideSidebar": "Hide sidebar",
-      "OpenKnowledgeBaseSwitcher": "Switch knowledge base",
-      "UnknownKnowledgeBase": "Unknown knowledge base",
+      "OpenKnowledgeBaseSwitcher": "Switch document library",
+      "UnknownKnowledgeBase": "Unknown document library",
       "KnowledgeBaseDocumentCount": "{0} documents",
       "Outline": "Outline",
       "LastEdited": "Last edited {0}"
@@ -53,12 +53,12 @@
       "NoDocumentOutline": "Select a document to browse its outline."
     },
     "Dialogs": {
-      "SwitchKnowledgeBaseTitle": "Switch Knowledge Base",
+      "SwitchKnowledgeBaseTitle": "Switch Document Library",
       "Search": {
         "Title": "Search",
-        "IncludeAllKnowledgeBases": "Search across knowledge bases",
+        "IncludeAllKnowledgeBases": "Search across document libraries",
         "InputPlaceholder": "Type a title, topic, or folder",
-        "Hint": "Enter keywords to search document content in the current knowledge base.",
+        "Hint": "Enter keywords to search document content in the current document library.",
         "Searching": "Searching documents...",
         "ResultCount": "{0} documents",
         "MinimumQueryLength": "Enter at least {0} characters.",

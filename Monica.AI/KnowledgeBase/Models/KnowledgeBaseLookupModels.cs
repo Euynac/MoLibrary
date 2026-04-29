@@ -8,7 +8,8 @@ public sealed record KnowledgeBaseSummary(
     string Name,
     string? Description,
     int DocumentCount,
-    int ChunkCount);
+    int ChunkCount,
+    bool IsRagEnabled);
 
 /// <summary>
 /// Summary information for one document in a knowledge base.
@@ -66,3 +67,10 @@ public sealed record KnowledgeDocumentContent(
     int TotalCharacterCount,
     bool HasMore,
     int? SuggestedNextStartCharacterIndex);
+
+/// <summary>
+/// Result returned when documents are imported into a knowledge base as pending inventory records.
+/// </summary>
+/// <param name="AddedCount">Number of newly added document records.</param>
+/// <param name="SkippedCount">Number of duplicate document records skipped.</param>
+public sealed record KnowledgeBaseDocumentImportResult(int AddedCount, int SkippedCount);

@@ -42,9 +42,36 @@ public sealed class DocumentIndexStateKnowledgeBaseStore(
                 Progress = state.Progress,
                 IndexedAt = state.IndexedAt,
                 ErrorMessage = state.ErrorMessage,
-                KnowledgeBaseId = state.KnowledgeBaseId
+                KnowledgeBaseId = state.KnowledgeBaseId,
+                SourceKind = state.SourceKind,
+                SourceGroupKey = state.SourceGroupKey
             })
             .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<KnowledgeBaseDocumentImportResult> AddPendingDocumentsAsync(
+        string knowledgeBaseId,
+        IEnumerable<DocumentIndexState> documents,
+        CancellationToken ct = default)
+    {
+        var addedCount = 0;
+        var skippedCount = 0;
+
+        foreach (var document in documents)
+        {
+            var existing = await stateStore.GetDocumentStateAsync(knowledgeBaseId, document.DocumentPath, ct);
+            if (existing is not null)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            await stateStore.UpsertDocumentStateAsync(document, ct);
+            addedCount++;
+        }
+
+        return new KnowledgeBaseDocumentImportResult(addedCount, skippedCount);
     }
 
     /// <inheritdoc />

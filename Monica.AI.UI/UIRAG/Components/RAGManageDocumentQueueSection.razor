@@ -26,12 +26,18 @@
                 @L["RAG:DocumentQueue:Actions:ClearQueue"]
             </MudButton>
             <MudButton Variant="Variant.Text"
-                       Color="Color.Error"
                        Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.DeleteSweep"
-                       OnClick="@PageState.ClearKnowledgeBaseDocumentsAsync"
-                       Disabled="@(!PageState.CanClearKnowledgeBaseDocuments)">
-                @L["RAG:DocumentQueue:Actions:ClearDocuments"]
+                       StartIcon="@Icons.Material.Filled.SelectAll"
+                       OnClick="@PageState.SelectAllIndexableDocuments"
+                       Disabled="@(!PageState.HasIndexableDocuments || PageState.HasActiveQueueWork)">
+                @L["RAG:DocumentQueue:Actions:SelectAllIndexable"]
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Deselect"
+                       OnClick="@PageState.ClearDocumentSelection"
+                       Disabled="@(PageState.SelectedDocumentIds.Count == 0 || PageState.HasActiveQueueWork)">
+                @L["RAG:DocumentQueue:Actions:ClearSelection"]
             </MudButton>
             <MudText Typo="Typo.caption" Class="parallel-label">
                 @L["RAG:ParallelIndexing:Label"]
@@ -72,12 +78,21 @@
                   Class="document-queue-table">
             <HeaderContent>
                 <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Select"]</MudTh>
                 <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
                 <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
                 <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">@context.Name</MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Select"]">
+                    <MudCheckBox T="bool"
+                                 Value="@PageState.SelectedDocumentIds.Contains(context.Id)"
+                                 ValueChanged="@((bool isChecked) => PageState.ToggleDocumentSelection(context, isChecked))"
+                                 Disabled="@(!CanSelectDocument(context))"
+                                 Dense="true"
+                                 Color="Color.Primary" />
+                </MudTd>
                 <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
                     @switch (context.Status)
                     {
@@ -123,12 +138,6 @@
                                    OnClick="@(() => PageState.ReindexDocumentAsync(context))"
                                    Disabled="@(context.Status == DocumentStatus.Indexing)"
                                    title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                   Size="Size.Small"
-                                   Color="Color.Error"
-                                   OnClick="@(() => PageState.DeleteDocumentAsync(context))"
-                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
-                                   title="@L["RAG:DocumentQueue:Actions:Delete"]" />
                     @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
                     {
                         <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
@@ -152,4 +161,8 @@
         get => PageState.ParallelCount;
         set => PageState.ParallelCount = value;
     }
+
+    private bool CanSelectDocument(DocumentQueueItem document)
+        => document.Status is DocumentStatus.Pending or DocumentStatus.Error
+           && !PageState.HasActiveQueueWork;
 }

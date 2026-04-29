@@ -67,14 +67,14 @@
     </aside>
 
     <main class="rag-main-panel">
-        <EmbeddingModelSelector
+        <Monica.AI.UI.UIRAG.Components.EmbeddingModelSelector
             AvailableModels="@_embeddingModels"
             SelectedModelKey="@_selectedEmbeddingModelKey"
             SelectedModelKeyChanged="@OnEmbeddingModelChanged" />
 
         @if (_showEmbeddingWarning)
         {
-            <EmbeddingModelWarning
+            <Monica.AI.UI.UIRAG.Components.EmbeddingModelWarning
                 CurrentModelId="@GetModelDisplayByKey(_selectedEmbeddingModelKey)"
                 KnowledgeBaseModelId="@_mismatchedKbModelDisplay"
                 AdditionalMessage="@_embeddingWarningMessage"

@@ -1,5 +1,6 @@
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
+using Monica.Markdown.Abstractions;
 
 namespace Monica.AI.KnowledgeBase.Services;
 
@@ -8,7 +9,8 @@ namespace Monica.AI.KnowledgeBase.Services;
 /// </summary>
 public sealed class KnowledgeBaseLookupService(
     KnowledgeBaseService knowledgeBaseService,
-    IKnowledgeDocumentSourceStore? sourceStore = null) : IKnowledgeBaseLookupService
+    IKnowledgeDocumentSourceStore? sourceStore = null,
+    IMarkdownDocumentCatalog? markdownService = null) : IKnowledgeBaseLookupService
 {
     private const int DEFAULT_MAX_CHARACTERS = 8000;
     private const int MAX_MAX_CHARACTERS = 32000;
@@ -79,11 +81,6 @@ public sealed class KnowledgeBaseLookupService(
         int startCharacterIndex = 0,
         CancellationToken ct = default)
     {
-        if (sourceStore is null)
-        {
-            return null;
-        }
-
         var inventory = await knowledgeBaseService.GetDocumentInventoryAsync(kbId, ct);
         var document = inventory.FirstOrDefault(item =>
             string.Equals(item.Id, documentId, StringComparison.OrdinalIgnoreCase));
@@ -92,7 +89,7 @@ public sealed class KnowledgeBaseLookupService(
             return null;
         }
 
-        var content = await sourceStore.GetContentAsync(kbId, document.Id, ct);
+        var content = await LoadDocumentContentAsync(kbId, document, ct);
         if (content is null)
         {
             return null;
@@ -124,7 +121,12 @@ public sealed class KnowledgeBaseLookupService(
             knowledgeBase.Name,
             knowledgeBase.Description,
             knowledgeBase.DocumentCount,
-            knowledgeBase.ChunkCount);
+            knowledgeBase.ChunkCount,
+            IsRagEnabled(knowledgeBase));
+
+    private static bool IsRagEnabled(Models.KnowledgeBase knowledgeBase)
+        => !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingProviderId)
+           && !string.IsNullOrWhiteSpace(knowledgeBase.EmbeddingModelName);
 
     private static KnowledgeDocumentSummary ToDocumentSummary(DocumentQueueItem item)
         => new(
@@ -135,6 +137,41 @@ public sealed class KnowledgeBaseLookupService(
             item.Status.ToString(),
             item.ChunkCount,
             item.IndexedAt);
+
+    private async Task<string?> LoadDocumentContentAsync(
+        string kbId,
+        DocumentQueueItem document,
+        CancellationToken ct)
+    {
+        if (sourceStore is not null)
+        {
+            var storedContent = await sourceStore.GetContentAsync(kbId, document.Id, ct);
+            if (storedContent is not null)
+            {
+                return storedContent;
+            }
+        }
+
+        if (markdownService is null
+            || !string.Equals(document.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.SourceGroupKey))
+        {
+            var groupDocuments = await markdownService.GetDocumentsAsync(document.SourceGroupKey);
+            var matchedDocument = groupDocuments.FirstOrDefault(item =>
+                string.Equals(item.RelativePath, document.Id, StringComparison.OrdinalIgnoreCase));
+            if (matchedDocument is not null)
+            {
+                return await markdownService.GetDocumentContentAsync(matchedDocument);
+            }
+        }
+
+        var markdownDocument = await markdownService.GetDocumentByPathAsync(document.Id);
+        return await markdownService.GetDocumentContentAsync(markdownDocument);
+    }
 
     private static string? NormalizeDirectoryPath(string? directoryPath)
     {

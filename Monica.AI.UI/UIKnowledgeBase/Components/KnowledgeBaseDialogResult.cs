@@ -1,4 +1,4 @@
-namespace Monica.AI.UI.UIRAG.Models;
+namespace Monica.AI.UI.UIKnowledgeBase.Components;
 
 /// <summary>
 /// Carries knowledge base values submitted from the create/edit dialog.

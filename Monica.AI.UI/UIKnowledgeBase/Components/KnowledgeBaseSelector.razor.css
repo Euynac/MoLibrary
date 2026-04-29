@@ -9,3 +9,18 @@
 .kb-selector-button.active ::deep .mud-icon-root {
     color: var(--mud-palette-primary);
 }
+
+.kb-item-title-row {
+    align-items: center;
+    display: flex;
+    gap: 0.375rem;
+    min-width: 0;
+}
+
+.kb-item-title-row ::deep .kb-item-title {
+    min-width: 0;
+}
+
+.kb-item-title-row ::deep .kb-rag-chip {
+    flex: 0 0 auto;
+}

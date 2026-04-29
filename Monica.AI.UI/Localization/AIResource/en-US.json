@@ -132,7 +132,7 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "Knowledge Base Management",
+      "Manage": "RAG Indexing",
       "Chunkers": "Chunker Management"
     },
     "EmbeddingModel": {
@@ -194,6 +194,7 @@
       "Title": "Documents & Queue",
       "Column": {
         "Name": "Name",
+        "Select": "Select",
         "Status": "Status",
         "Chunks": "Chunks",
         "Actions": "Actions"
@@ -210,7 +211,9 @@
         "Reindex": "Re-index",
         "Delete": "Delete",
         "ClearQueue": "Clear Queue",
-        "ClearDocuments": "Clear Documents"
+        "ClearDocuments": "Clear Documents",
+        "SelectAllIndexable": "Select Indexable",
+        "ClearSelection": "Clear Selection"
       },
       "DeleteConfirm": "Are you sure you want to delete '{0}'?",
       "ClearQueueConfirm": "Clear all queued documents from knowledge base '{0}'?",
@@ -319,6 +322,35 @@
       "PreviewStatus": "Preview by {0}"
     }
   },
+  "KnowledgeBase": {
+    "Navigation": {
+      "Manage": "Knowledge Base Management"
+    },
+    "RagStatus": {
+      "LookupOnly": "Lookup only"
+    },
+    "Documents": {
+      "Title": "Documents",
+      "Column": {
+        "Source": "Source"
+      },
+      "Source": {
+        "Markdown": "Markdown",
+        "Uploaded": "Uploaded",
+        "Unknown": "Unknown"
+      }
+    },
+    "DocumentImport": {
+      "MarkdownTitle": "Markdown documents",
+      "Title": "Import Markdown Documents",
+      "Add": "Add Documents",
+      "AlreadyAdded": "Already added",
+      "Imported": "Added {0} document(s), skipped {1} existing document(s)."
+    },
+    "Manage": {
+      "DeleteConfirm": "Delete knowledge base '{0}' and all of its documents?"
+    }
+  },
   "ProviderManage": {
     "Title": "AI Provider Management",
     "Refresh": "Refresh",
@@ -354,6 +386,15 @@
     }
   },
   "Pages": {
+    "KnowledgeBaseManage": {
+      "Title": "Knowledge Bases"
+    },
+    "RAGManage": {
+      "Title": "RAG Indexing"
+    },
+    "RAGDebug": {
+      "Title": "RAG Debug"
+    },
     "RAGChunkers": {
       "Title": "RAG Chunkers"
     }

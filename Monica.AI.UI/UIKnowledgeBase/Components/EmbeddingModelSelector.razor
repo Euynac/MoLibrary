@@ -1,0 +1,75 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@inject IStringLocalizer<AIResource> L
+
+<div class="embedding-model-selector-wrapper">
+    <div class="selector-header">
+        <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Class="selector-icon" />
+        <MudText Typo="Typo.body2" Class="selector-label">@L["RAG:EmbeddingModel:Label"]</MudText>
+    </div>
+
+    <MudSelect T="string"
+               Value="@SelectedModelKey"
+               ValueChanged="@OnModelChanged"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Dense="true"
+               Disabled="@(!HasAvailableModels || IsDisabled)"
+               Class="model-select">
+        @foreach (var model in AvailableModels)
+        {
+            <MudSelectItem T="string" Value="@model.ModelKey">
+                <div class="model-option">
+                    <span class="model-name">@model.ModelName</span>
+                    <span class="model-provider">@model.ProviderDisplayName</span>
+                    <span class="model-dimensions">@L["RAG:EmbeddingModel:Dimensions", FormatDimensions(model.Dimensions)]</span>
+                </div>
+            </MudSelectItem>
+        }
+    </MudSelect>
+
+    @if (CurrentModel is not null)
+    {
+        <MudText Typo="Typo.caption" Class="model-info">
+            @(CurrentModel.Description ?? CurrentModel.ModelName) - @CurrentModel.ProviderDisplayName - @L["RAG:EmbeddingModel:Dimensions", FormatDimensions(CurrentModel.Dimensions)]
+        </MudText>
+    }
+    else if (!HasAvailableModels)
+    {
+        <MudText Typo="Typo.caption" Class="model-empty">
+            @L["RAG:EmbeddingModel:NotConfigured"]
+        </MudText>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedModelKey { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedModelKeyChanged { get; set; }
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
+    private bool HasAvailableModels => AvailableModels.Count > 0;
+
+    private EmbeddingModelOption? CurrentModel =>
+        AvailableModels.FirstOrDefault(m =>
+            string.Equals(m.ModelKey, SelectedModelKey, StringComparison.OrdinalIgnoreCase));
+
+    private static string FormatDimensions(int? dimensions)
+        => dimensions.HasValue ? dimensions.Value.ToString() : "?";
+
+    private async Task OnModelChanged(string? modelKey)
+    {
+        if (modelKey is not null)
+        {
+            await SelectedModelKeyChanged.InvokeAsync(modelKey);
+        }
+    }
+}

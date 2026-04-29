@@ -132,7 +132,7 @@
   },
   "RAG": {
     "Navigation": {
-      "Manage": "知识库管理",
+      "Manage": "RAG 索引",
       "Chunkers": "分块器管理"
     },
     "EmbeddingModel": {
@@ -194,6 +194,7 @@
       "Title": "文档与队列",
       "Column": {
         "Name": "名称",
+        "Select": "选择",
         "Status": "状态",
         "Chunks": "分块数",
         "Actions": "操作"
@@ -210,7 +211,9 @@
         "Reindex": "重新索引",
         "Delete": "删除",
         "ClearQueue": "清空队列",
-        "ClearDocuments": "清空文档"
+        "ClearDocuments": "清空文档",
+        "SelectAllIndexable": "选择可索引项",
+        "ClearSelection": "清空选择"
       },
       "DeleteConfirm": "确定要删除 '{0}' 吗？",
       "ClearQueueConfirm": "确定要清空知识库 '{0}' 中所有排队文档吗？",
@@ -319,6 +322,35 @@
       "PreviewStatus": "由 {0} 预览"
     }
   },
+  "KnowledgeBase": {
+    "Navigation": {
+      "Manage": "知识库管理"
+    },
+    "RagStatus": {
+      "LookupOnly": "仅知识库检索"
+    },
+    "Documents": {
+      "Title": "文档",
+      "Column": {
+        "Source": "来源"
+      },
+      "Source": {
+        "Markdown": "Markdown",
+        "Uploaded": "上传文件",
+        "Unknown": "未知"
+      }
+    },
+    "DocumentImport": {
+      "MarkdownTitle": "Markdown 文档",
+      "Title": "导入 Markdown 文档",
+      "Add": "添加文档",
+      "AlreadyAdded": "已添加",
+      "Imported": "已添加 {0} 个文档，跳过 {1} 个已有文档。"
+    },
+    "Manage": {
+      "DeleteConfirm": "确定删除知识库 '{0}' 及其全部文档吗？"
+    }
+  },
   "ProviderManage": {
     "Title": "AI Provider 管理",
     "Refresh": "刷新",
@@ -354,6 +386,15 @@
     }
   },
   "Pages": {
+    "KnowledgeBaseManage": {
+      "Title": "知识库"
+    },
+    "RAGManage": {
+      "Title": "RAG 索引"
+    },
+    "RAGDebug": {
+      "Title": "RAG 调试"
+    },
     "RAGChunkers": {
       "Title": "RAG 分块器"
     }

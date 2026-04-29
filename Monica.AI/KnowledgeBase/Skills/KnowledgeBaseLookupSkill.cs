@@ -1,7 +1,10 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.KnowledgeBase.Abstractions;
+using Monica.AI.KnowledgeBase.Services.Support;
+using Monica.AI.Services.Support;
 using Monica.AI.Skills.Abstractions;
 using Monica.AI.Skills.Annotations;
 using Monica.Core.Modularity.Models;
@@ -51,6 +54,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// Lists documents in a knowledge base.
     /// </summary>
     /// <param name="kbId">Knowledge base id.</param>
+    /// <param name="services">Invocation service provider used to read the current runtime context.</param>
     /// <param name="directoryPath">Optional directory path filter.</param>
     /// <param name="maxResults">Maximum documents to return.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -60,11 +64,13 @@ public sealed class KnowledgeBaseLookupSkill(
         Description = "List documents in a knowledge base, optionally filtered to a directory path.")]
     public async Task<string> BrowseDocumentsAsync(
         string kbId,
+        IServiceProvider services,
         string? directoryPath = null,
         int maxResults = 50,
         CancellationToken ct = default)
     {
-        var result = await lookup.BrowseDocumentsAsync(kbId, directoryPath, maxResults, ct);
+        var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
+        var result = await lookup.BrowseDocumentsAsync(resolvedKbId, directoryPath, maxResults, ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
@@ -72,6 +78,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// Browses the document tree for a knowledge base.
     /// </summary>
     /// <param name="kbId">Knowledge base id.</param>
+    /// <param name="services">Invocation service provider used to read the current runtime context.</param>
     /// <param name="directoryPath">Optional directory path used as the tree root.</param>
     /// <param name="maxDepth">Maximum directory depth.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -81,11 +88,13 @@ public sealed class KnowledgeBaseLookupSkill(
         Description = "Browse the directory tree of a knowledge base.")]
     public async Task<string> GetDocumentTreeAsync(
         string kbId,
+        IServiceProvider services,
         string? directoryPath = null,
         int maxDepth = 3,
         CancellationToken ct = default)
     {
-        var result = await lookup.GetDocumentTreeAsync(kbId, directoryPath, maxDepth, ct);
+        var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
+        var result = await lookup.GetDocumentTreeAsync(resolvedKbId, directoryPath, maxDepth, ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
@@ -94,6 +103,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// </summary>
     /// <param name="kbId">Knowledge base id.</param>
     /// <param name="documentId">Document id returned by browsing scripts.</param>
+    /// <param name="services">Invocation service provider used to read the current runtime context.</param>
     /// <param name="maxCharacters">Maximum characters to return.</param>
     /// <param name="startCharacterIndex">Character index to start reading from.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -104,17 +114,37 @@ public sealed class KnowledgeBaseLookupSkill(
     public async Task<string> GetDocumentContentAsync(
         string kbId,
         string documentId,
+        IServiceProvider services,
         int maxCharacters = 8000,
         int startCharacterIndex = 0,
         CancellationToken ct = default)
     {
+        var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
         var result = await lookup.GetDocumentContentAsync(
-            kbId,
+            resolvedKbId,
             documentId,
             maxCharacters,
             startCharacterIndex,
             ct);
 
         return JsonSerializer.Serialize(result, _toolJsonOptions);
+    }
+
+    private static string ResolveKnowledgeBaseId(string kbId, IServiceProvider services)
+    {
+        if (!string.IsNullOrWhiteSpace(kbId))
+        {
+            return kbId.Trim();
+        }
+
+        var runtimeContext = services.GetRequiredService<IAIChatRuntimeContextAccessor>().Current;
+        var selection = runtimeContext.GetOrDefault(KnowledgeBaseChatRuntimeContextKeys.KnowledgeSelection);
+        if (selection?.KnowledgeBaseIds is { Count: 1 } selectedIds)
+        {
+            return selectedIds[0];
+        }
+
+        throw new InvalidOperationException(
+            "Knowledge base id is required unless exactly one knowledge base is selected for this chat session.");
     }
 }

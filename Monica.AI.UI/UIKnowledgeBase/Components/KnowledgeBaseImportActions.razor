@@ -2,16 +2,16 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
 @using Monica.AI.UI.Localization
-@using Monica.AI.UI.UIRAG.State
+@using Monica.AI.UI.UIKnowledgeBase.State
 @using Monica.UI.Localization
 @inject IStringLocalizer<AIResource> L
 @inject IStringLocalizer<SharedResource> Shared
 
-<div class="indexing-actions-grid">
-    <div class="indexing-card">
-        <div class="indexing-card-title">
+<div class="import-actions-grid">
+    <div class="import-card">
+        <div class="import-card-title">
             <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Small" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:Title"]</MudText>
+            <MudText Typo="Typo.subtitle2">@L["KnowledgeBase:DocumentImport:MarkdownTitle"]</MudText>
         </div>
         <div class="markdown-group-section">
             @if (PageState.IsMarkdownGroupsLoading)
@@ -41,16 +41,16 @@
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.FolderOpen"
-                       OnClick="@PageState.ShowDocumentSelectionDialogAsync"
+                       OnClick="@PageState.ShowDocumentImportDialogAsync"
                        Disabled="@string.IsNullOrEmpty(SelectedMarkdownGroup)"
                        FullWidth="true">
-                @L["RAG:DocumentSelection:Title"]
+                @L["KnowledgeBase:DocumentImport:Add"]
             </MudButton>
         </div>
     </div>
 
-    <div class="indexing-card">
-        <div class="indexing-card-title">
+    <div class="import-card">
+        <div class="import-card-title">
             <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary" />
             <MudText Typo="Typo.subtitle2">@L["RAG:Indexing:UploadFile"]</MudText>
         </div>
@@ -72,7 +72,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public required RAGManagePageState PageState { get; set; }
+    public required KnowledgeBaseManagePageState PageState { get; set; }
 
     private string? SelectedMarkdownGroup
     {
@@ -83,3 +83,4 @@
     private Task OnFileSelected(IBrowserFile file)
         => PageState.UploadFileAsync(file);
 }
+

@@ -88,7 +88,8 @@ public sealed class BatchIndexCoordinator(
         string kbId,
         int maxConcurrency = 5,
         IProgress<IndexingProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IEnumerable<string>? documentIds = null)
     {
         var markedActive = false;
         CancellationTokenSource? batchCancellation = null;
@@ -115,7 +116,15 @@ public sealed class BatchIndexCoordinator(
             var effectiveToken = linkedCancellation.Token;
 
             var queue = await ragService.GetDocumentQueueAsync(kbId, effectiveToken);
-            var pendingDocs = queue.Where(d => d.Status == DocumentStatus.Pending).ToList();
+            var selectedDocumentIds = documentIds?
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .Select(static id => id.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var pendingDocs = queue
+                .Where(d => d.Status is DocumentStatus.Pending or DocumentStatus.Error)
+                .Where(d => selectedDocumentIds is null || selectedDocumentIds.Contains(d.Id))
+                .ToList();
             if (pendingDocs.Count == 0)
             {
                 return RAGBatchIndexExecutionResult.Failed("No pending documents to index.");

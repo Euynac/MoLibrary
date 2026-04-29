@@ -1,0 +1,87 @@
+.document-inventory-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background-color: var(--mud-palette-surface);
+}
+
+.inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.inventory-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.inventory-title-icon {
+    color: var(--mud-palette-primary);
+    margin-top: 2px;
+}
+
+.inventory-title-copy,
+.document-name-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.inventory-title {
+    font-weight: 600;
+}
+
+.inventory-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.inventory-table-wrapper {
+    min-width: 0;
+}
+
+.document-inventory-table ::deep .mud-table-container {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--mud-palette-surface);
+}
+
+.document-inventory-table ::deep .mud-table-head .mud-table-cell {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.document-inventory-table ::deep .mud-table-body .mud-table-row:hover .mud-table-cell {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.document-inventory-table ::deep .mud-chip {
+    font-weight: 600;
+}
+
+.document-inventory-table ::deep .mud-icon-button {
+    padding: 4px;
+}
+
+@media (max-width: 1200px) {
+    .inventory-controls {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+

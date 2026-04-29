@@ -5,6 +5,8 @@ using Monica.AI.KnowledgeBase.Services;
 using Monica.AI.RAG.Services;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
+using Monica.Markdown.Abstractions;
+using Monica.Markdown.Models;
 
 namespace Monica.AI.KnowledgeBase.Facades;
 
@@ -14,6 +16,7 @@ namespace Monica.AI.KnowledgeBase.Facades;
 public sealed class KnowledgeBaseFacade(
     IServiceProvider serviceProvider,
     KnowledgeBaseService knowledgeBaseService,
+    IMarkdownDocumentCatalog markdownService,
     ILogger<KnowledgeBaseFacade> logger)
 {
     /// <summary>
@@ -111,6 +114,89 @@ public sealed class KnowledgeBaseFacade(
         {
             logger.LogError(ex, "Failed to delete knowledge base '{KnowledgeBaseId}'.", id);
             return Res.Fail($"Failed to delete knowledge base: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets all markdown document groups available for knowledge-base import.
+    /// </summary>
+    public async Task<Res<List<MarkdownDocumentGroup>>> GetMarkdownGroupsAsync()
+    {
+        try
+        {
+            return await markdownService.GetAllDocumentGroupsAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get markdown groups.");
+            return Res.Fail($"Failed to load markdown groups: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets markdown documents from one group for knowledge-base import.
+    /// </summary>
+    public async Task<Res<IReadOnlyList<MarkdownDocument>>> GetMarkdownDocumentsAsync(string groupKey)
+    {
+        try
+        {
+            return Res.Ok<IReadOnlyList<MarkdownDocument>>(await markdownService.GetDocumentsAsync(groupKey));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get markdown documents for group '{GroupKey}'.", groupKey);
+            return Res.Fail($"Failed to load markdown documents: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Imports markdown documents as pending knowledge-base records without indexing them.
+    /// </summary>
+    public async Task<Res<KnowledgeBaseDocumentImportResult>> ImportMarkdownDocumentsAsync(
+        string kbId,
+        string groupKey,
+        IEnumerable<string> documentIds)
+    {
+        try
+        {
+            var selectedIds = documentIds
+                .Where(static id => !string.IsNullOrWhiteSpace(id))
+                .Select(static id => id.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (selectedIds.Count == 0)
+            {
+                return Res.Fail("No documents selected.");
+            }
+
+            var documents = (await markdownService.GetDocumentsAsync(groupKey))
+                .Where(document => selectedIds.Contains(document.RelativePath))
+                .Select(document => (document.RelativePath, document.Title));
+
+            return Res.Ok(await knowledgeBaseService.ImportMarkdownDocumentsAsync(kbId, groupKey, documents));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to import markdown documents into KB '{KnowledgeBaseId}'.", kbId);
+            return Res.Fail($"Failed to import documents: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Uploads one source document as a pending knowledge-base record without indexing it.
+    /// </summary>
+    public async Task<Res> UploadDocumentAsync(string kbId, string fileName, string content)
+    {
+        try
+        {
+            await knowledgeBaseService.UploadDocumentAsync(kbId, fileName, content);
+            return Res.Ok($"Uploaded '{fileName}' successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to upload document '{FileName}' into KB '{KnowledgeBaseId}'.", fileName, kbId);
+            return Res.Fail($"Failed to upload document: {ex.GetMessageRecursively()}");
         }
     }
 

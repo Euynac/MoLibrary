@@ -18,7 +18,6 @@ public sealed partial class RAGManagePageState : IDisposable
 {
     private readonly RAGFacade _ragFacade;
     private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
-    private readonly EmbeddingModelFacade _embeddingFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
@@ -26,7 +25,6 @@ public sealed partial class RAGManagePageState : IDisposable
     private readonly RAGQueuePollingState _queuePollingState;
 
     private bool _isAttached;
-    private bool _embeddingModelWarningShown;
     private string? _batchStartInFlightKnowledgeBaseId;
     private string? _singleIndexInFlightKnowledgeBaseId;
     private string? _singleIndexInFlightDocumentId;
@@ -37,7 +35,6 @@ public sealed partial class RAGManagePageState : IDisposable
     public RAGManagePageState(
         RAGFacade ragFacade,
         KnowledgeBaseFacade knowledgeBaseFacade,
-        EmbeddingModelFacade embeddingFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
         IDialogService dialogService,
@@ -46,7 +43,6 @@ public sealed partial class RAGManagePageState : IDisposable
     {
         _ragFacade = ragFacade;
         _knowledgeBaseFacade = knowledgeBaseFacade;
-        _embeddingFacade = embeddingFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
         _dialogService = dialogService;
@@ -70,16 +66,6 @@ public sealed partial class RAGManagePageState : IDisposable
     public KnowledgeBaseModel? SelectedKnowledgeBase { get; private set; }
 
     /// <summary>
-    /// Current embedding model key selected in the page.
-    /// </summary>
-    public string CurrentEmbeddingModelKey { get; private set; } = string.Empty;
-
-    /// <summary>
-    /// Available embedding model options.
-    /// </summary>
-    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; private set; } = [];
-
-    /// <summary>
     /// Current document queue for the selected knowledge base.
     /// </summary>
     public IReadOnlyList<DocumentQueueItemModel> DocumentQueue { get; private set; } = [];
@@ -88,16 +74,6 @@ public sealed partial class RAGManagePageState : IDisposable
     /// Maximum parallel indexing concurrency requested by the UI.
     /// </summary>
     public int ParallelCount { get; set; } = 5;
-
-    /// <summary>
-    /// Markdown groups available for queue import.
-    /// </summary>
-    public IReadOnlyList<string> MarkdownGroups { get; private set; } = [];
-
-    /// <summary>
-    /// Markdown group currently selected in the page.
-    /// </summary>
-    public string? SelectedMarkdownGroup { get; set; }
 
     /// <summary>
     /// Vector validation result for the current selection.
@@ -113,21 +89,6 @@ public sealed partial class RAGManagePageState : IDisposable
     /// Whether the current knowledge-base selection is still loading.
     /// </summary>
     public bool IsSelectionLoading { get; private set; }
-
-    /// <summary>
-    /// Whether embedding-model metadata was loaded once already.
-    /// </summary>
-    public bool AreEmbeddingModelsLoaded { get; private set; }
-
-    /// <summary>
-    /// Whether markdown-group metadata was loaded once already.
-    /// </summary>
-    public bool AreMarkdownGroupsLoaded { get; private set; }
-
-    /// <summary>
-    /// Whether markdown groups are currently warming up.
-    /// </summary>
-    public bool IsMarkdownGroupsLoading { get; private set; }
 
     /// <summary>
     /// Current loading-phase label shown by the page.
@@ -152,7 +113,9 @@ public sealed partial class RAGManagePageState : IDisposable
     /// </summary>
     public bool CanStartBatchIndexing
         => SelectedKnowledgeBase is not null
-           && DocumentQueue.Any(document => document.Status == DocumentStatus.Pending)
+           && SelectedDocumentIds.Count > 0
+           && DocumentQueue.Any(document => SelectedDocumentIds.Contains(document.Id)
+                                            && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
            && !HasActiveQueueWork;
 
     /// <summary>
@@ -161,14 +124,6 @@ public sealed partial class RAGManagePageState : IDisposable
     public bool CanCancelBatchIndexing
         => SelectedKnowledgeBase is not null
            && IsBatchIndexingRunning;
-
-    /// <summary>
-    /// Whether all queued documents can be removed for the current selection.
-    /// </summary>
-    public bool CanClearKnowledgeBaseDocuments
-        => SelectedKnowledgeBase is not null
-           && DocumentQueue.Count > 0
-           && !HasActiveQueueWork;
 
     /// <summary>
     /// Whether pending/error queue rows can be cleared for the current selection.
@@ -185,6 +140,17 @@ public sealed partial class RAGManagePageState : IDisposable
         => SelectedKnowledgeBase is not null
            && ShouldShowMissingVectorWarning
            && !HasActiveQueueWork;
+
+    /// <summary>
+    /// Selected document ids for batch indexing.
+    /// </summary>
+    public HashSet<string> SelectedDocumentIds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whether at least one indexable row exists for the current selection.
+    /// </summary>
+    public bool HasIndexableDocuments
+        => DocumentQueue.Any(static document => document.Status is DocumentStatus.Pending or DocumentStatus.Error);
 
     /// <summary>
     /// Whether the current vector-validation result indicates missing vectors.

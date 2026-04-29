@@ -9,6 +9,7 @@ namespace Monica.AI.KnowledgeBase.Services;
 /// </summary>
 public sealed class KnowledgeBaseService(
     IKnowledgeBaseStore store,
+    IKnowledgeDocumentSourceStore sourceStore,
     ILogger<KnowledgeBaseService> logger)
 {
     /// <summary>
@@ -118,6 +119,7 @@ public sealed class KnowledgeBaseService(
         var normalizedId = NormalizeId(knowledgeBaseId);
         _ = await GetRequiredAsync(normalizedId, ct);
         await store.DeleteDocumentAsync(normalizedId, documentId, ct);
+        await sourceStore.DeleteContentAsync(normalizedId, documentId, ct);
     }
 
     /// <summary>
@@ -128,11 +130,112 @@ public sealed class KnowledgeBaseService(
         var normalizedId = NormalizeId(knowledgeBaseId);
         var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
         var removedCount = await store.DeleteDocumentsAsync(normalizedId, ct);
+        await sourceStore.DeleteKnowledgeBaseAsync(normalizedId, ct);
 
         knowledgeBase.DocumentCount = 0;
         knowledgeBase.ChunkCount = 0;
         await store.UpsertKnowledgeBaseAsync(knowledgeBase, ct);
         return removedCount;
+    }
+
+    /// <summary>
+    /// Imports markdown documents as pending knowledge-base inventory records.
+    /// </summary>
+    public async Task<KnowledgeBaseDocumentImportResult> ImportMarkdownDocumentsAsync(
+        string knowledgeBaseId,
+        string sourceGroupKey,
+        IEnumerable<(string DocumentPath, string DocumentName)> documents,
+        CancellationToken ct = default)
+    {
+        var normalizedId = NormalizeId(knowledgeBaseId);
+        _ = await GetRequiredAsync(normalizedId, ct);
+
+        var normalizedGroupKey = NormalizeRequiredText(sourceGroupKey, nameof(sourceGroupKey));
+        var states = documents
+            .Where(static document => !string.IsNullOrWhiteSpace(document.DocumentPath))
+            .GroupBy(static document => document.DocumentPath.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var document = group.First();
+                var documentPath = document.DocumentPath.Trim();
+                return CreatePendingDocumentState(
+                    normalizedId,
+                    documentPath,
+                    document.DocumentName,
+                    KnowledgeDocumentSourceKinds.Markdown,
+                    normalizedGroupKey);
+            })
+            .ToList();
+
+        return await store.AddPendingDocumentsAsync(normalizedId, states, ct);
+    }
+
+    /// <summary>
+    /// Uploads one source document as a pending knowledge-base inventory record.
+    /// </summary>
+    public async Task UploadDocumentAsync(
+        string knowledgeBaseId,
+        string fileName,
+        string content,
+        CancellationToken ct = default)
+    {
+        var normalizedId = NormalizeId(knowledgeBaseId);
+        _ = await GetRequiredAsync(normalizedId, ct);
+
+        var normalizedFileName = NormalizeRequiredText(fileName, nameof(fileName));
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new ArgumentException("Uploaded document content cannot be empty.", nameof(content));
+        }
+
+        var result = await store.AddPendingDocumentsAsync(
+            normalizedId,
+            [
+                CreatePendingDocumentState(
+                    normalizedId,
+                    normalizedFileName,
+                    normalizedFileName,
+                    KnowledgeDocumentSourceKinds.Uploaded,
+                    sourceGroupKey: null)
+            ],
+            ct);
+
+        if (result.AddedCount == 0)
+        {
+            throw new InvalidOperationException(
+                $"Document '{normalizedFileName}' already exists in knowledge base '{normalizedId}'.");
+        }
+
+        await sourceStore.SaveContentAsync(normalizedId, normalizedFileName, content, ct);
+    }
+
+    private static DocumentIndexState CreatePendingDocumentState(
+        string knowledgeBaseId,
+        string documentPath,
+        string? documentName,
+        string sourceKind,
+        string? sourceGroupKey)
+    {
+        var resolvedName = string.IsNullOrWhiteSpace(documentName)
+            ? ResolveDocumentName(documentPath)
+            : documentName.Trim();
+
+        return new DocumentIndexState
+        {
+            KnowledgeBaseId = knowledgeBaseId,
+            DocumentPath = documentPath,
+            DocumentName = resolvedName,
+            Status = DocumentStatus.Pending,
+            SourceKind = sourceKind,
+            SourceGroupKey = sourceGroupKey,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static string ResolveDocumentName(string documentPath)
+    {
+        var fileName = Path.GetFileName(documentPath);
+        return string.IsNullOrWhiteSpace(fileName) ? documentPath : fileName;
     }
 
     private static string NormalizeName(string name)
@@ -147,6 +250,16 @@ public sealed class KnowledgeBaseService(
 
     private static string? NormalizeOptionalText(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string NormalizeRequiredText(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException("Value cannot be empty.", parameterName);
+        }
+
+        return value.Trim();
+    }
 
     private static string NormalizeId(string id)
     {

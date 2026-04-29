@@ -336,7 +336,9 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
             ChunkCount = state.ChunkCount,
             Progress = state.Progress,
             IndexedAt = state.IndexedAt,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            SourceKind = state.SourceKind,
+            SourceGroupKey = state.SourceGroupKey
         };
     }
 }

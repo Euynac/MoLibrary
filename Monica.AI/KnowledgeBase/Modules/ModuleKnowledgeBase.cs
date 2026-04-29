@@ -42,6 +42,7 @@ public sealed class ModuleKnowledgeBase(ModuleKnowledgeBaseOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleSkillSystemGuide>().Register();
+        DependsOnModule<ModuleMarkdownGuide>().Register();
     }
 
     /// <inheritdoc />

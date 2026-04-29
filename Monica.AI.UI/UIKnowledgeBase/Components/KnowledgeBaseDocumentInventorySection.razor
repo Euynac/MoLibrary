@@ -1,0 +1,97 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Localization
+@using Monica.AI.KnowledgeBase.Models
+@using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIKnowledgeBase.State
+@inject IStringLocalizer<AIResource> L
+
+<div class="document-inventory-section">
+    <div class="inventory-header">
+        <div class="inventory-title-row">
+            <MudIcon Icon="@Icons.Material.Filled.FolderCopy" Size="Size.Small" Class="inventory-title-icon" />
+            <div class="inventory-title-copy">
+                <MudText Typo="Typo.subtitle1" Class="inventory-title">@L["KnowledgeBase:Documents:Title"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="inventory-meta">
+                    @PageState.DocumentInventory.Count @L["RAG:KnowledgeBase:DocumentCount"]
+                </MudText>
+            </div>
+        </div>
+        <div class="inventory-controls">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       OnClick="@PageState.ClearKnowledgeBaseDocumentsAsync"
+                       Disabled="@(!PageState.CanClearKnowledgeBaseDocuments)">
+                @L["RAG:DocumentQueue:Actions:ClearDocuments"]
+            </MudButton>
+        </div>
+    </div>
+
+    <div class="inventory-table-wrapper">
+        <MudTable T="DocumentQueueItem"
+                  Items="@PageState.DocumentInventory"
+                  Dense="true"
+                  Hover="true"
+                  Class="document-inventory-table">
+            <HeaderContent>
+                <MudTh>@L["RAG:DocumentQueue:Column:Name"]</MudTh>
+                <MudTh>@L["KnowledgeBase:Documents:Column:Source"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Status"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Chunks"]</MudTh>
+                <MudTh>@L["RAG:DocumentQueue:Column:Actions"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Name"]">
+                    <div class="document-name-cell">
+                        <MudText Typo="Typo.body2">@context.Name</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Id</MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="@L["KnowledgeBase:Documents:Column:Source"]">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        @PageState.GetSourceKindDisplay(context)
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Status"]">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                        @PageState.GetDocumentStatusDisplay(context.Status)
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
+                <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Size="Size.Small"
+                                   Color="Color.Error"
+                                   OnClick="@(() => PageState.DeleteDocumentAsync(context))"
+                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                   title="@L["RAG:DocumentQueue:Actions:Delete"]" />
+                    @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ErrorOutline"
+                                       Size="Size.Small"
+                                       Color="Color.Warning"
+                                       OnClick="@(() => PageState.ShowIndexingErrorAsync(context))"
+                                       title="@L["Common:Error"]" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required KnowledgeBaseManagePageState PageState { get; set; }
+
+    private static Color GetStatusColor(DocumentStatus status)
+        => status switch
+        {
+            DocumentStatus.Pending => Color.Default,
+            DocumentStatus.Indexing => Color.Info,
+            DocumentStatus.Done => Color.Success,
+            DocumentStatus.Error => Color.Error,
+            _ => Color.Default
+        };
+}
+

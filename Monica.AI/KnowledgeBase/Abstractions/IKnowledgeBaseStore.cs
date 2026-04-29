@@ -35,6 +35,14 @@ public interface IKnowledgeBaseStore
         CancellationToken ct = default);
 
     /// <summary>
+    /// Adds pending document inventory rows and skips existing rows.
+    /// </summary>
+    Task<KnowledgeBaseDocumentImportResult> AddPendingDocumentsAsync(
+        string knowledgeBaseId,
+        IEnumerable<DocumentIndexState> documents,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Deletes one document from the knowledge-base inventory.
     /// </summary>
     Task DeleteDocumentAsync(string knowledgeBaseId, string documentId, CancellationToken ct = default);
