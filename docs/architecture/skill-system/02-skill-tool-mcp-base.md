@@ -185,14 +185,28 @@ public sealed class RAGKnowledgeSkill(
     public async Task<string> SearchAsync(
         [MoAITool(Description = "Focused retrieval query, not conversational text.")]
         string query,
+        IServiceProvider services,
         [MoAITool(Description = "Optional original user question for context.")]
         string? userQuestion = null,
         [MoAITool(Description = "Top-K result count override.")]
         int? topK = null,
         CancellationToken ct = default)
     {
+        var runtimeContext = services.GetRequiredService<IAIChatRuntimeContextAccessor>().Current;
+        var selection = runtimeContext.GetOrDefault(RAGChatRuntimeContextKeys.KnowledgeSelection);
+        if (selection is null || selection.KnowledgeBaseIds.Count == 0)
+        {
+            return JsonSerializer.Serialize(
+                KnowledgeToolPayload.NoKnowledgeBaseSelected(),
+                _toolJsonOptions);
+        }
+
+        var knowledgeBases = await ragService.LoadKnowledgeBasesAsync(
+            selection.KnowledgeBaseIds,
+            ct);
+
         var payload = await knowledgeToolService.SearchKnowledgeAsync(
-            "search-knowledge-base", _knowledgeBases, query, userQuestion, topK, ct);
+            "search-knowledge-base", knowledgeBases, query, userQuestion, topK, ct);
         return JsonSerializer.Serialize(payload, _toolJsonOptions);
     }
 
@@ -205,7 +219,8 @@ Notes on the migration:
 
 - The four tool methods are now first-class C# methods on the skill class, marked with a single `[MoAITool(Name = "...", Description = "...")]`.
 - If `Name` is omitted, Monica derives `search` from `SearchAsync` (kebab-case + drop `Async` suffix). Authors who want a longer name (e.g., `search-knowledge-base`) supply it explicitly.
-- Per-session knowledge-base ID list (today resolved through `AIChatAgentCreateContext.KnowledgeBaseIds`) flows through an `IServiceProvider`-scoped service that exposes the active KB list, *not* through script parameters. Scripts stay user-facing-clean.
+- Per-session knowledge-base selection flows through `AIChatRuntimeContext` using the RAG-owned `RAGChatRuntimeContextKeys.KnowledgeSelection` key. It does **not** live on `AIChatAgentCreateContext`, in skill frontmatter, or in loaded skill content.
+- Script parameters stay user-facing-clean. Runtime-only parameters such as `IServiceProvider` and `CancellationToken` are hidden from the schema and used only to resolve scoped services and the current runtime context.
 - Hard module gate via `RequiredModules`: the skill is silently skipped when `Monica.AI.RAG` is not loaded. The Knowledge Base lookup-only Skill (Doc 01) requires `[BuiltInModuleKey.KnowledgeBase]`.
 
 ### 2.4 Lifecycle
@@ -213,6 +228,7 @@ Notes on the migration:
 - **Skill instance — singleton.** The discovery host registers each `MoSkill<TSelf>` subclass as a singleton in DI. `Frontmatter`, `Instructions`, `Resources`, and `Scripts` collections are evaluated once and cached.
 - **Script invocation — scoped.** Microsoft's `[AgentSkillScript]` machinery resolves an `IServiceProvider` parameter (when present) by creating a per-invocation scope. Scoped dependencies (DbContext, UnitOfWork, ChatSessionContext) come through that scope.
 - **No per-session skill rebuild.** The earlier rev 1 design proposed rebuilding the skill collection each session; rev 2 replaces that with Microsoft's progressive disclosure (frontmatter-only at L1, content on activation). This is simpler and matches the framework's intended use.
+- **No per-session metadata.** Microsoft's `AgentSkillsProvider` caches generated `AIContext` by default (`DisableCaching = false`), including the skill advertisement prompt and generic `load_skill` / `read_skill_resource` / `run_skill_script` tools. Monica therefore treats skill metadata as static process-level data. Session-specific values are read only inside script/resource execution through `AIChatRuntimeContext`.
 
 ## 3. `MoTool` — standalone class-based tool
 
@@ -589,6 +605,48 @@ The Facade Provider (Doc 03) and ProjectUnit Provider (Doc 04) modules call `Dep
 
 Module gate evaluation is **iterator-phase only**. Skills whose `RequiredModules` aren't satisfied are dropped before any `AgentSkillsProvider` is built. A skill cannot become enabled mid-process by loading a new module dynamically — Monica modules are loaded at startup and that's the moment the gate fires.
 
+### 7.1 Runtime context contract
+
+`AIChatAgentCreateContext` is construction-only. It carries the inputs needed to build the agent pipeline, such as base instructions, but it must not grow module-specific session properties. `KnowledgeBaseIds` is explicitly rejected here because it makes the base AI module depend on RAG and conflicts with the cached `AgentSkillsProvider` lifecycle.
+
+Per-session and per-run state flows through a new `AIChatRuntimeContext`:
+
+```csharp
+public sealed class AIChatRuntimeContext
+{
+    public static AIChatRuntimeContext Empty { get; }
+
+    public AIChatRuntimeContext Set<T>(AIChatRuntimeContextKey<T> key, T value);
+    public bool TryGet<T>(AIChatRuntimeContextKey<T> key, out T value);
+    public T? GetOrDefault<T>(AIChatRuntimeContextKey<T> key);
+}
+
+public sealed record AIChatRuntimeContextKey<T>(string Name);
+
+public interface IAIChatRuntimeContextAccessor
+{
+    AIChatRuntimeContext Current { get; }
+}
+```
+
+`AIChatRuntimeContext` is immutable: `Set` returns a new context snapshot. `ChatSession` owns the current snapshot. `AIChatService` pushes that snapshot into an ambient accessor for the duration of the async `RunAsync` / `RunStreamingAsync` call, then restores the previous value in `finally`. The accessor is registered as a singleton facade over `AsyncLocal<AIChatRuntimeContext>` so nested script invocation scopes still see the same per-run context. Script and resource methods that need session state resolve `IAIChatRuntimeContextAccessor` from their `IServiceProvider` parameter and read typed keys from `Current`.
+
+Module-owned feature state is modeled by module-owned keys. RAG defines:
+
+```csharp
+public sealed record RAGKnowledgeSelection(IReadOnlyList<string> KnowledgeBaseIds);
+
+public static class RAGChatRuntimeContextKeys
+{
+    public static readonly AIChatRuntimeContextKey<RAGKnowledgeSelection> KnowledgeSelection =
+        new("rag.knowledge-selection");
+}
+```
+
+The AI UI maps its selected knowledge-base IDs into `RAGKnowledgeSelection` and stores it on the session runtime context. `RAGKnowledgeSkill` reads this key only when a script executes. If no selection is present, the script returns a clear no-selection payload instead of relying on skill availability, provider rebuilds, or prompt changes.
+
+`AgentSkillsProviderOptions.DisableCaching = true` is not the fix for session state. It may be useful for development diagnostics or truly dynamic skill catalogs, but production session variance must be represented by `AIChatRuntimeContext` so the skill advertisement prompt and generic skill tools remain cacheable and non-leaky.
+
 ## 8. Migrating the existing `IAIChatToolProvider` surface
 
 ### 8.1 Migration target: `KnowledgeSearchToolProvider`
@@ -597,7 +655,7 @@ The existing provider becomes `Monica.AI.RAG.Skills.RAGKnowledgeSkill : MoSkill<
 
 1. Move the four nested local methods (`SearchKnowledgeAsync`, `BrowseKnowledgeDocumentsAsync`, `BrowseKnowledgeDocumentTreeAsync`, `GetKnowledgeDocumentContentAsync`) up to instance methods on the new skill class.
 2. Annotate each with `[MoAITool(Name = "kebab-name", Description = "...")]`. No `[AgentSkillScript]`.
-3. Remove the manual `KnowledgeBase[]` plumbing — wire through a scoped `IKnowledgeBaseSelectionAccessor` exposed via `IServiceProvider` script parameter.
+3. Remove the manual `KnowledgeBase[]` plumbing and `AIChatAgentCreateContext.KnowledgeBaseIds`. Resolve `IAIChatRuntimeContextAccessor` from the `IServiceProvider` script parameter, read `RAGChatRuntimeContextKeys.KnowledgeSelection`, and load the selected knowledge bases inside the script invocation.
 4. Remove `services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatToolProvider, KnowledgeSearchToolProvider>())` from `ModuleRAG.ConfigureServices`. Discovery handles registration.
 5. Delete `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs`.
 
@@ -641,7 +699,7 @@ The doc-writer of the implementation phase must produce one end-to-end migration
 | `Monica.AI/RAG/Tools/KnowledgeSearchToolProvider.cs` (426 lines) | `Monica.AI/RAG/Skills/RAGKnowledgeSkill.cs` (target ~200 lines, four methods) |
 | `services.TryAddEnumerable(...)` in `ModuleRAG.ConfigureServices` | nothing — auto-discovery |
 | Tool descriptions hand-rolled in `BuildKnowledgeSearchToolDescription` | XML doc + `[MoAITool(Description = ...)]` |
-| Per-session tool collection wired through `AIChatAgentBuilder.AddTool` | `AgentSkillsProvider` built once at startup |
+| Per-session tool collection wired through `AIChatAgentBuilder.AddTool` and `AIChatAgentCreateContext.KnowledgeBaseIds` | `AgentSkillsProvider` built once at startup; selected KBs flow through `AIChatRuntimeContext` at script execution time |
 
 ## 11. Open questions and resolutions
 
@@ -653,6 +711,7 @@ The doc-writer of the implementation phase must produce one end-to-end migration
 | (d) | Multi-level inheritance (e.g., `SpecialSkill : RAGKnowledgeSkill`) — does discovery still work? | **No.** Microsoft's CRTP discovery reflects only on `TSelf`. Each leaf must re-apply CRTP: `class SpecialSkill : MoSkill<SpecialSkill>`. The doc cites Microsoft's documented limitation. |
 | (e) | MCP package selection. | **Verify-before-implement.** Doc 02 reserves the slot; the implementation phase pins the package after inspecting Microsoft's MCP integration release at that time. |
 | (f) | Forward-compat `[MoAITool(RequiredPermissions = ...)]` slot. | **Not in this rev.** A future security doc owns it. The attribute does not ship the property; adding it later is a non-breaking change because attribute properties are additive. |
+| (g) | Should selected knowledge bases live on `AIChatAgentCreateContext`? | **No.** `AIChatAgentCreateContext` is construction-only and module-neutral. Selected KBs are RAG-owned runtime state under `AIChatRuntimeContext`. |
 
 ## 12. Acceptance criteria for implementation
 
@@ -666,8 +725,10 @@ When Phase B (this doc) is implemented, the following must hold:
 6. `Monica.AI/Abstractions/IAIChatToolProvider.cs` **deleted**. No shim, no `[Obsolete]` adapter. `Monica.AI/Services/Support/AIChatAgentBuilder.cs` no longer exposes `AddTool(AITool)`.
 7. The `IXmlDocumentationService.GetMethodDocumentation` path is exercised by at least one method per skill in tests (compile-time verification: every Facade-method-style script has a description in one of the three sources).
 8. `ModuleRAG` no longer registers `KnowledgeSearchToolProvider`; the new `RAGKnowledgeSkill` is auto-discovered.
-9. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
-10. The `AgentSkillsProvider` produced by the hosted service contains exactly the expected skill set in a smoke test that runs every Monica module.
+9. `AIChatAgentCreateContext` has no `KnowledgeBaseIds` or other module-specific feature state; `AIChatRuntimeContext`, `AIChatRuntimeContextKey<T>`, and `IAIChatRuntimeContextAccessor` carry typed per-session/per-run state.
+10. RAG declares `RAGKnowledgeSelection` and `RAGChatRuntimeContextKeys.KnowledgeSelection`; `RAGKnowledgeSkill` reads that key at script execution time and returns a clear no-selection payload when absent.
+11. Solution builds with **zero new warnings** (per `CLAUDE.md` build-warning policy).
+12. The `AgentSkillsProvider` produced by the hosted service contains exactly the expected skill set in a smoke test that runs every Monica module, and the generated skill advertisement/content does not vary by selected KB.
 
 ## 13. Cross-doc references
 

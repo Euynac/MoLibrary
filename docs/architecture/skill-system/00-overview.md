@@ -176,11 +176,28 @@ Chat session start
     ▼
 AIChatAgentFactory
     │
+    ├── receives AIChatAgentCreateContext for agent construction only
+    │       (instructions, not per-session feature state)
+    │
     └── injects the singleton AgentSkillsProvider into the AIAgent
+
+Chat run
+    │
+    ├── AIChatService snapshots the session's AIChatRuntimeContext
+    │       into the ambient runtime-context accessor for this async run
+    │
+    └── RAGKnowledgeSkill scripts read the RAG-owned
+            KnowledgeSelection key at execution time
 
 Resulting agent has the full Skill hierarchy via Microsoft's progressive
 disclosure: L1 frontmatter visible in the system prompt, L2 content only
 when the agent activates a skill.
+
+Important invariant: the singleton `AgentSkillsProvider` and generated skill
+frontmatter/content are process-static. Per-session state such as selected
+knowledge bases must never be embedded in skill descriptions, loaded skill
+content, or `AIChatAgentCreateContext`; it flows through `AIChatRuntimeContext`
+and is read only when a script/resource executes.
 ```
 
 ## 6. Implementation sequencing
