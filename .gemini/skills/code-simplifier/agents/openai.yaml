@@ -1,4 +1,0 @@
-interface:
-  display_name: "Code Simplifier"
-  short_description: "Refine .NET code without changing behavior"
-  default_prompt: "Use $code-simplifier to simplify recent .NET code changes while preserving exact behavior."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Monica Docs Authoring"
-  short_description: "Monica documentation standards and templates"
-  default_prompt: "Use $mo-docs-authoring to draft or revise Monica documentation from current source code and unified docs conventions."
