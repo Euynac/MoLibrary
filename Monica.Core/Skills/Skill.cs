@@ -14,6 +14,14 @@ namespace Monica.Core.Skills;
 public abstract class Skill
 {
     /// <summary>
+    /// Initializes the runtime skill base. Direct inheritance is restricted; use <see cref="Skill{TSelf}" /> for
+    /// Monica skill authoring.
+    /// </summary>
+    private protected Skill()
+    {
+    }
+
+    /// <summary>
     /// Gets the framework-neutral skill definition.
     /// </summary>
     public abstract SkillDefinition Definition { get; }

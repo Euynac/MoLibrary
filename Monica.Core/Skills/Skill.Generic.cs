@@ -21,4 +21,10 @@ public abstract class Skill<
     TSelf> : Skill
     where TSelf : Skill<TSelf>
 {
+    /// <summary>
+    /// Initializes a Monica skill authored with the trim-friendly generic base.
+    /// </summary>
+    protected Skill()
+    {
+    }
 }
