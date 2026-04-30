@@ -47,7 +47,7 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         services.AddSingleton<EventBusTestService>();
 
         // Register the Provider Discovery Service
-        services.AddScoped<EventBusProviderDiscoveryService>();
+        services.AddSingleton<EventBusProviderDiscoveryService>();
     }
 
     public override void ClaimDependencies()
@@ -171,7 +171,15 @@ public class ModuleEventBusUIGuide : WebModuleGuide<ModuleEventBusUI, ModuleEven
 public class ModuleEventBusUIOption : MinimalApiModuleOptions<ModuleEventBusUI>
 {
     /// <summary>
-    /// Whether to disable the event bus monitoring page
+    /// Whether to disable the event bus monitoring page.
     /// </summary>
     public bool DisablePage { get; set; }
+
+    /// <summary>
+    /// Maximum number of recent messages retained by each active row-level test listener.
+    /// The default is 20. Increase this when developers need a longer listener history during
+    /// manual diagnostics; the limit is applied per active listener and older messages are
+    /// discarded as new messages arrive.
+    /// </summary>
+    public int TestListenerMessageLimit { get; set; } = 20;
 }

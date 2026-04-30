@@ -22,6 +22,21 @@ public static class SystemTypeExtensions
 
 public static class TypeExtensions
 {
+    private static readonly HashSet<Type> NumericTypes =
+    [
+        typeof(byte),
+        typeof(sbyte),
+        typeof(short),
+        typeof(ushort),
+        typeof(int),
+        typeof(uint),
+        typeof(long),
+        typeof(ulong),
+        typeof(float),
+        typeof(double),
+        typeof(decimal)
+    ];
+
     /// <summary>
     /// Gets the full name of the type combined with its assembly name in a format suitable for type loading.
     /// This method provides a string representation that can be used with Type.GetType() for dynamic type loading.
@@ -57,6 +72,47 @@ public static class TypeExtensions
     public static bool IsClassObject(this Type type)
     {
         return type.IsClass && type != typeof(string);
+    }
+
+    /// <summary>
+    /// Determines whether the specified type is a built-in CLR numeric type.
+    /// Nullable numeric types are treated the same as their underlying numeric type.
+    /// </summary>
+    /// <param name="type">The type to examine.</param>
+    /// <returns>True if the type is numeric; otherwise, false.</returns>
+    public static bool IsNumeric(this Type type)
+    {
+        return NumericTypes.Contains(Nullable.GetUnderlyingType(type) ?? type);
+    }
+
+    /// <summary>
+    /// Determines whether the specified type is <see cref="DateTime"/> or nullable <see cref="DateTime"/>.
+    /// </summary>
+    /// <param name="type">The type to examine.</param>
+    /// <returns>True if the type represents a date/time value; otherwise, false.</returns>
+    public static bool IsDateTime(this Type type)
+    {
+        return (Nullable.GetUnderlyingType(type) ?? type) == typeof(DateTime);
+    }
+
+    /// <summary>
+    /// Determines whether the specified type is <see cref="TimeSpan"/> or nullable <see cref="TimeSpan"/>.
+    /// </summary>
+    /// <param name="type">The type to examine.</param>
+    /// <returns>True if the type represents a time span value; otherwise, false.</returns>
+    public static bool IsTimeSpan(this Type type)
+    {
+        return (Nullable.GetUnderlyingType(type) ?? type) == typeof(TimeSpan);
+    }
+
+    /// <summary>
+    /// Determines whether the specified type is <see cref="bool"/> or nullable <see cref="bool"/>.
+    /// </summary>
+    /// <param name="type">The type to examine.</param>
+    /// <returns>True if the type represents a Boolean value; otherwise, false.</returns>
+    public static bool IsBoolean(this Type type)
+    {
+        return (Nullable.GetUnderlyingType(type) ?? type) == typeof(bool);
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Logging;
 using Monica.Core.Modularity.Abstractions;
+using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Exceptions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
@@ -204,7 +205,8 @@ public static class ModuleRegistry
 
         // 3. Allow modules to inspect and transform discovered business types.
         ModuleInitializationProfiler.StartPhase(nameof(ModulePhase.IterateBusinessTypes));
-        var businessTypes = Mo.Options.GlobalTypeFinder.GetTypes();
+        var businessTypes = Mo.Options.GlobalTypeFinder.GetTypes()
+            .Where(static type => !type.IsDefined(typeof(ExcludeFromBusinessTypeDiscoveryAttribute), inherit: false));
         var needToIterate = false;
         foreach (var module in snapshots.Where(p => p.RegisterInfo.ModulePhase == ModulePhase.ConfigureServices))
         {

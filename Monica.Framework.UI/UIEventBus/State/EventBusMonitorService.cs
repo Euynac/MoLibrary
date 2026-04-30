@@ -49,6 +49,11 @@ public sealed class EventBusMonitorService(
                 // Subscribe to local EventBus changes
                 var localSub = localEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
+                        if (EventBusTestMetadataKeys.IsTestListenerSubscription(change.Subscription))
+                        {
+                            return;
+                        }
+
                         var vm = MapToChangeViewModel(change);
                         _changesChannel.Writer.TryWrite(vm);
                         logger.LogDebug("Local subscription change: {ChangeType} - {EventType}",
@@ -59,6 +64,11 @@ public sealed class EventBusMonitorService(
                 // Subscribe to changes in distributed EventBus
                 var distSub = distributedEventBus.Subscriptions.Subscribe(
                     new SubscriptionChangeObserver(change => {
+                        if (EventBusTestMetadataKeys.IsTestListenerSubscription(change.Subscription))
+                        {
+                            return;
+                        }
+
                         var vm = MapToChangeViewModel(change);
                         _changesChannel.Writer.TryWrite(vm);
                         logger.LogDebug("Distributed subscription change: {ChangeType} - {EventType}",
@@ -98,7 +108,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var allSubscriptions = _subscriptionManager.GetAll().ToList();
+            var allSubscriptions = GetVisibleSubscriptions();
 
             var allSubs = allSubscriptions
                 .Select(MapToViewModel)
@@ -151,7 +161,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var allSubs = _subscriptionManager.GetAll().AsQueryable();
+            var allSubs = GetVisibleSubscriptions().AsQueryable();
 
             // Apply filters
             if (filter.State.HasValue)
@@ -205,7 +215,7 @@ public sealed class EventBusMonitorService(
     {
         try
         {
-            var allSubs = _subscriptionManager.GetAll().ToList();
+            var allSubs = GetVisibleSubscriptions();
 
             var stats = new SubscriptionStatistics
             {
@@ -431,6 +441,13 @@ public sealed class EventBusMonitorService(
         }
 
         return vm;
+    }
+
+    private List<IEventSubscription> GetVisibleSubscriptions()
+    {
+        return _subscriptionManager.GetAll()
+            .Where(subscription => !EventBusTestMetadataKeys.IsTestListenerSubscription(subscription))
+            .ToList();
     }
 
     /// <summary>

@@ -177,10 +177,8 @@ public static class TypeHelper
         return null;
     }
 
-    public static string GetFullNameHandlingNullableAndGenerics( Type type)
+    public static string GetFullNameHandlingNullableAndGenerics(Type type)
     {
-        
-
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
             return type.GenericTypeArguments[0].FullName + "?";
@@ -190,16 +188,15 @@ public static class TypeHelper
         {
             var genericType = type.GetGenericTypeDefinition();
             var genericTypeFullName = genericType.FullName!;
-            return $"{genericTypeFullName.Left(genericTypeFullName.IndexOf('`'))}<{type.GenericTypeArguments.Select(GetFullNameHandlingNullableAndGenerics).JoinAsString(",")}>";
+            return
+                $"{genericTypeFullName.Left(genericTypeFullName.IndexOf('`'))}<{type.GenericTypeArguments.Select(GetFullNameHandlingNullableAndGenerics).JoinAsString(",")}>";
         }
 
         return type.FullName ?? type.Name;
     }
 
-    public static string GetSimplifiedName( Type type)
+    public static string GetSimplifiedName(Type type)
     {
-        
-
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         {
             return GetSimplifiedName(type.GenericTypeArguments[0]) + "?";
@@ -209,22 +206,13 @@ public static class TypeHelper
         {
             var genericType = type.GetGenericTypeDefinition();
             var genericTypeFullName = genericType.FullName!;
-            return $"{genericTypeFullName.Left(genericTypeFullName.IndexOf('`'))}<{type.GenericTypeArguments.Select(GetSimplifiedName).JoinAsString(",")}>";
+            return
+                $"{genericTypeFullName.Left(genericTypeFullName.IndexOf('`'))}<{type.GenericTypeArguments.Select(GetSimplifiedName).JoinAsString(",")}>";
         }
 
         if (type == typeof(string))
         {
             return "string";
-        }
-
-        if (type == typeof(int))
-        {
-            return "number";
-        }
-
-        if (type == typeof(long))
-        {
-            return "number";
         }
 
         if (type == typeof(bool))
@@ -237,20 +225,7 @@ public static class TypeHelper
             return "string";
         }
 
-        if (type == typeof(double))
-        {
-            return "number";
-        }
-
-        if (type == typeof(float))
-        {
-            return "number";
-        }
-
-        if (type == typeof(decimal))
-        {
-            return "number";
-        }
+        if (type.IsNumeric()) return "number";
 
         if (type == typeof(DateTime))
         {
@@ -282,36 +257,6 @@ public static class TypeHelper
             return "string";
         }
 
-        if (type == typeof(byte))
-        {
-            return "number";
-        }
-
-        if (type == typeof(sbyte))
-        {
-            return "number";
-        }
-
-        if (type == typeof(short))
-        {
-            return "number";
-        }
-
-        if (type == typeof(ushort))
-        {
-            return "number";
-        }
-
-        if (type == typeof(uint))
-        {
-            return "number";
-        }
-
-        if (type == typeof(ulong))
-        {
-            return "number";
-        }
-
         if (type == typeof(IntPtr))
         {
             return "number";
@@ -330,7 +275,7 @@ public static class TypeHelper
         return type.FullName ?? type.Name;
     }
 
-    
+
     public static bool IsFloatingType(Type type, bool includeNullable = true)
     {
         if (FloatingTypes.Contains(type))

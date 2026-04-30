@@ -9,6 +9,7 @@ using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
 using Monica.EventBus.Providers.NoOp;
 using Monica.Framework.UI.UIEventBus.Models;
+using Monica.Framework.UI.UIEventBus.State;
 using Monica.Modules;
 
 namespace Monica.Framework.UI.UIEventBus.Support;
@@ -292,7 +293,9 @@ public class EventBusProviderDiscoveryService(
     /// </summary>
     private void PopulateSubscriptionCounts(List<EventBusProviderInfo> providers)
     {
-        var allSubscriptions = subscriptionManager.GetAll().ToList();
+        var allSubscriptions = subscriptionManager.GetAll()
+            .Where(subscription => !EventBusTestMetadataKeys.IsTestListenerSubscription(subscription))
+            .ToList();
 
         foreach (var provider in providers)
         {

@@ -4,6 +4,12 @@
 @if (Subscription != null && Subscription.State != EventSubscriptionState.Disposed)
 {
     <MudStack Row="true" Spacing="1">
+        <MudTooltip Text="测试订阅">
+            <MudIconButton Icon="@Icons.Material.Filled.Science"
+                           Color="@(IsTestListening ? Color.Success : Color.Info)"
+                           Size="Size.Small"
+                           OnClick="() => OnTest.InvokeAsync()" />
+        </MudTooltip>
         @if (Subscription.State == EventSubscriptionState.Active)
         {
             <!-- Active state: Show deactivate and remove buttons -->
@@ -56,4 +62,10 @@ else if (Subscription?.State == EventSubscriptionState.Disposed)
 
     [Parameter]
     public EventCallback OnUnsubscribe { get; set; }
+
+    [Parameter]
+    public EventCallback OnTest { get; set; }
+
+    [Parameter]
+    public bool IsTestListening { get; set; }
 }

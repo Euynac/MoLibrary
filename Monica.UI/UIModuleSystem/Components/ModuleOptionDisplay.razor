@@ -3,6 +3,7 @@
 @using Monica.UI.Localization
 @using Microsoft.Extensions.Localization
 @using Monica.Tool.Diagnostics
+@using Monica.Tool.Extensions
 @inject IStringLocalizer<SharedResource> L
 
 <div class="module-option-display">
@@ -127,13 +128,6 @@
         FullWidth = true
     };
 
-    private static readonly HashSet<Type> NumericTypes =
-    [
-        typeof(int), typeof(int?), typeof(long), typeof(long?),
-        typeof(double), typeof(double?), typeof(float), typeof(float?),
-        typeof(decimal), typeof(decimal?)
-    ];
-
     /// <summary>
     /// Get the list of properties that need to be displayed
     /// </summary>
@@ -162,11 +156,11 @@
     {
         var type = GetUnderlyingType(property.PropertyType);
 
-        if (type == typeof(bool)) return Icons.Material.Filled.ToggleOn;
-        if (NumericTypes.Contains(property.PropertyType) || IsNumericType(type)) return Icons.Material.Filled.Numbers;
+        if (type.IsBoolean()) return Icons.Material.Filled.ToggleOn;
+        if (type.IsNumeric()) return Icons.Material.Filled.Numbers;
         if (type == typeof(string)) return Icons.Material.Filled.TextFields;
-        if (type == typeof(DateTime)) return Icons.Material.Filled.CalendarToday;
-        if (type == typeof(TimeSpan)) return Icons.Material.Filled.Timer;
+        if (type.IsDateTime()) return Icons.Material.Filled.CalendarToday;
+        if (type.IsTimeSpan()) return Icons.Material.Filled.Timer;
         if (type.IsEnum) return Icons.Material.Filled.List;
         if (IsCollectionType(property.PropertyType)) return Icons.Material.Filled.ViewList;
         if (type.IsClass && type != typeof(string)) return Icons.Material.Filled.DataObject;
@@ -181,10 +175,10 @@
     {
         var type = GetUnderlyingType(property.PropertyType);
 
-        if (type == typeof(bool)) return Color.Success;
-        if (NumericTypes.Contains(property.PropertyType) || IsNumericType(type)) return Color.Info;
+        if (type.IsBoolean()) return Color.Success;
+        if (type.IsNumeric()) return Color.Info;
         if (type == typeof(string)) return Color.Primary;
-        if (type == typeof(TimeSpan)) return Color.Warning;
+        if (type.IsTimeSpan()) return Color.Warning;
         if (type.IsEnum) return Color.Tertiary;
 
         return Color.Secondary;
@@ -370,7 +364,7 @@
     {
         if (value == null) return "null";
 
-        if (type == typeof(TimeSpan))
+        if (type.IsTimeSpan())
         {
             var ts = (TimeSpan)value;
             if (ts.TotalDays >= 1) return $"{ts.TotalDays:F1}d";
@@ -379,7 +373,7 @@
             return $"{ts.TotalSeconds:F1}s";
         }
 
-        if (type == typeof(DateTime))
+        if (type.IsDateTime())
         {
             return ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss");
         }
@@ -388,7 +382,7 @@
     }
 
     /// <summary>
-    /// Truncate values ​​that are too long
+    /// Truncate values that are too long
     /// </summary>
     private static string TruncateValue(string value, int maxLength)
     {
@@ -396,13 +390,4 @@
         return value[..(maxLength - 3)] + "...";
     }
 
-    /// <summary>
-    /// Determine whether it is a numeric type
-    /// </summary>
-    private static bool IsNumericType(Type type)
-    {
-        return type == typeof(int) || type == typeof(long) || type == typeof(double) ||
-               type == typeof(float) || type == typeof(decimal) || type == typeof(short) ||
-               type == typeof(byte) || type == typeof(uint) || type == typeof(ulong);
-    }
 }

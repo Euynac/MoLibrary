@@ -1,0 +1,411 @@
+@using Monica.Core.Results
+@using Monica.EventBus.Models
+@using Monica.Framework.UI.UIEventBus.Models
+@using Monica.Framework.UI.UIEventBus.State
+@implements IDisposable
+@inject EventBusTestService TestService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Science" />
+            <MudText Typo="Typo.h6">测试订阅 - @Subscription?.EventTypeShortName</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Subscription is null)
+        {
+            <MudAlert Severity="Severity.Info">未选择订阅</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">事件类型</MudText>
+                            <MudText Typo="Typo.body2">@Subscription.EventType</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">主题名称</MudText>
+                            <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">范围</MudText>
+                            <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@Subscription.ScopeDisplay</MudChip>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Provider</MudText>
+                            <MudText Typo="Typo.body2">@(Subscription.ServiceKey ?? "默认")</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">处理器</MudText>
+                            <MudText Typo="Typo.body2">@Subscription.HandlerDisplay</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <MudTextField @bind-Value="_jsonPayload"
+                              T="string"
+                              Label="JSON 示例"
+                              Variant="Variant.Outlined"
+                              Lines="@GetJsonLines()"
+                              MaxLines="28"
+                              Immediate="true"
+                              HelperText="@_validationMessage"
+                              Error="@_hasValidationError"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.DataObject" />
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                   OnClick="ValidateJson">
+                            验证 JSON
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   OnClick="PublishAsync"
+                                   Disabled="@_publishing">
+                            @if (_publishing)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <text>发布中...</text>
+                            }
+                            else
+                            {
+                                <text>发布测试事件</text>
+                            }
+                        </MudButton>
+                    </MudStack>
+
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.RestartAlt"
+                               OnClick="LoadSampleJson">
+                        重置示例
+                    </MudButton>
+                </MudStack>
+
+                <MudDivider />
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        @if (_listenerSnapshot.IsListening)
+                        {
+                            <MudProgressCircular Color="Color.Success" Size="Size.Small" Indeterminate="true" />
+                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                正在监听，已接收 @_listenerSnapshot.MessageCount 条
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Default" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">未监听</MudText>
+                        }
+                    </MudStack>
+
+                    <MudStack Row="true" Spacing="1">
+                        @if (!_listenerSnapshot.IsListening)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       OnClick="StartListeningAsync"
+                                       Disabled="@_listenerBusy">
+                                开启监听
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.Stop"
+                                       OnClick="StopListeningAsync"
+                                       Disabled="@_listenerBusy">
+                                停止监听
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Clear"
+                                       OnClick="ClearMessages"
+                                       Disabled="@(_listenerSnapshot.MessageCount == 0)">
+                                清空
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudStack>
+
+                @if (_listenerSnapshot.IsListening)
+                {
+                    @if (_listenerSnapshot.Messages.Count == 0)
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-4">
+                            <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">暂无接收到的信息</MudText>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2" Style="max-height: 420px; overflow-y: auto;">
+                            @foreach (var message in _listenerSnapshot.Messages.OrderByDescending(m => m.ReceivedAt))
+                            {
+                                <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                                    <MudStack Spacing="2">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Info" Size="Size.Small" />
+                                                <MudText Typo="Typo.body2">@message.TopicName</MudText>
+                                            </MudStack>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">
+                                                @message.ReceivedAt.ToString("HH:mm:ss.fff")
+                                            </MudChip>
+                                        </MudStack>
+                                        <MudPaper Class="pa-2" Elevation="0" Style="background-color: var(--mud-palette-background-gray); border-radius: var(--mud-default-borderradius);">
+                                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap; word-break: break-word;">@message.PayloadJson</MudText>
+                                        </MudPaper>
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly PeriodicTimer _refreshTimer = new(TimeSpan.FromMilliseconds(500));
+    private CancellationTokenSource _refreshCts = new();
+
+    private string _jsonPayload = "{}";
+    private string? _validationMessage;
+    private bool _hasValidationError;
+    private bool _publishing;
+    private bool _listenerBusy;
+    private RuntimeTestListenerSnapshot _listenerSnapshot = new();
+
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public SubscriptionViewModel? Subscription { get; set; }
+
+    protected override void OnInitialized()
+    {
+        LoadSampleJson();
+        RefreshListenerSnapshot();
+        _ = RefreshLoopAsync(_refreshCts.Token);
+    }
+
+    private void LoadSampleJson()
+    {
+        if (Subscription is null)
+        {
+            _jsonPayload = "{}";
+            return;
+        }
+
+        var subscriptionId = GetSubscriptionId();
+        if (TestService.CreateRuntimeJsonSample(subscriptionId).IsFailed(out var error, out var sample))
+        {
+            _jsonPayload = "{}";
+            _hasValidationError = true;
+            _validationMessage = error.Message;
+            return;
+        }
+
+        _jsonPayload = sample ?? "{}";
+        _hasValidationError = false;
+        _validationMessage = "JSON 示例已生成";
+    }
+
+    private void ValidateJson()
+    {
+        if (Subscription is null)
+        {
+            return;
+        }
+
+        var result = TestService.ValidateRuntimePayload(GetSubscriptionId(), _jsonPayload);
+        if (result.IsFailed(out var error))
+        {
+            _hasValidationError = true;
+            _validationMessage = error.Message;
+            Snackbar.Add(error.Message ?? "JSON 验证失败", Severity.Error);
+            return;
+        }
+
+        _hasValidationError = false;
+        _validationMessage = "JSON 验证成功";
+        Snackbar.Add("JSON 验证成功", Severity.Success);
+    }
+
+    private async Task PublishAsync()
+    {
+        if (Subscription is null)
+        {
+            return;
+        }
+
+        _publishing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await TestService.PublishRuntimePayloadAsync(GetSubscriptionId(), _jsonPayload);
+            if (result.IsFailed(out var error))
+            {
+                _hasValidationError = true;
+                _validationMessage = error.Message;
+                Snackbar.Add(error.Message ?? "发布失败", Severity.Error);
+                return;
+            }
+
+            _hasValidationError = false;
+            _validationMessage = "测试事件发布成功";
+            Snackbar.Add("测试事件发布成功", Severity.Success);
+        }
+        finally
+        {
+            _publishing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartListeningAsync()
+    {
+        if (Subscription is null)
+        {
+            return;
+        }
+
+        _listenerBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await TestService.StartRuntimeListenerAsync(GetSubscriptionId());
+            if (result.IsFailed(out var error, out var snapshot))
+            {
+                Snackbar.Add(error.Message ?? "启动监听失败", Severity.Error);
+                return;
+            }
+
+            _listenerSnapshot = snapshot ?? new RuntimeTestListenerSnapshot();
+            Snackbar.Add("监听已开启", Severity.Success);
+        }
+        finally
+        {
+            _listenerBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopListeningAsync()
+    {
+        if (Subscription is null)
+        {
+            return;
+        }
+
+        _listenerBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await TestService.StopRuntimeListenerAsync(GetSubscriptionId());
+            if (result.IsFailed(out var error))
+            {
+                Snackbar.Add(error.Message ?? "停止监听失败", Severity.Error);
+                return;
+            }
+
+            RefreshListenerSnapshot();
+            Snackbar.Add("监听已停止", Severity.Info);
+        }
+        finally
+        {
+            _listenerBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearMessages()
+    {
+        if (Subscription is null)
+        {
+            return;
+        }
+
+        TestService.ClearRuntimeListenerMessages(GetSubscriptionId());
+        RefreshListenerSnapshot();
+        Snackbar.Add("已清空监听消息", Severity.Info);
+    }
+
+    private async Task RefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await _refreshTimer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(() =>
+                {
+                    RefreshListenerSnapshot();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the dialog closes.
+        }
+    }
+
+    private void RefreshListenerSnapshot()
+    {
+        if (Subscription is null)
+        {
+            _listenerSnapshot = new RuntimeTestListenerSnapshot();
+            return;
+        }
+
+        _listenerSnapshot = TestService.GetRuntimeListenerSnapshot(GetSubscriptionId());
+    }
+
+    private EventSubscriptionId GetSubscriptionId()
+    {
+        return new EventSubscriptionId(Guid.Parse(Subscription!.SubscriptionId));
+    }
+
+    private int GetJsonLines()
+    {
+        if (string.IsNullOrEmpty(_jsonPayload))
+        {
+            return 8;
+        }
+
+        var lines = _jsonPayload.Split('\n').Length;
+        return Math.Max(8, Math.Min(lines + 2, 28));
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+
+    public void Dispose()
+    {
+        _refreshCts.Cancel();
+        _refreshCts.Dispose();
+        _refreshTimer.Dispose();
+    }
+}

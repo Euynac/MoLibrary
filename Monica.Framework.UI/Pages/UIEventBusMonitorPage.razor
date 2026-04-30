@@ -104,10 +104,12 @@
 
                     <SubscriptionTable Subscriptions="_displayedSubscriptions"
                                       Loading="_loading"
+                                      ActiveTestListenerIds="@_activeTestListenerIds"
                                       OnRowClick="ShowSubscriptionDetail"
                                       OnActivate="ActivateSubscriptionAsync"
                                       OnDeactivate="DeactivateSubscriptionAsync"
-                                      OnUnsubscribe="UnsubscribeWithConfirmAsync" />
+                                      OnUnsubscribe="UnsubscribeWithConfirmAsync"
+                                      OnTest="ShowSubscriptionTestAsync" />
                 </MudTabPanel>
 
                 <MudTabPanel Text="测试工具" Icon="@Icons.Material.Filled.Science">
@@ -130,6 +132,7 @@
     private SubscriptionStatistics? _statistics;
     private List<SubscriptionChangeViewModel> _recentChanges = new();
     private List<EventBusProviderInfo> _providers = new();
+    private IReadOnlySet<string> _activeTestListenerIds = new HashSet<string>();
 
     // filter
     private SubscriptionFilter _filter = new();
@@ -184,6 +187,8 @@
             {
                 _providers = providers ?? new();
             }
+
+            RefreshActiveTestListeners();
         }
         catch (Exception ex)
         {
@@ -278,6 +283,7 @@
 
                 // Refresh subscription list and statistics
                 await RefreshSubscriptionsAsync();
+                RefreshActiveTestListeners();
 
                 await InvokeAsync(StateHasChanged);
             }
@@ -329,6 +335,27 @@
         };
 
         await DialogService.ShowAsync<SubscriptionDetailDialog>($"订阅详情 - {subscription.EventTypeShortName}", parameters, options);
+    }
+
+    private async Task ShowSubscriptionTestAsync(SubscriptionViewModel subscription)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Subscription"] = subscription
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            Position = DialogPosition.Center,
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<SubscriptionTestDialog>($"测试订阅 - {subscription.EventTypeShortName}", parameters, options);
+        await dialog.Result;
+        RefreshActiveTestListeners();
+        StateHasChanged();
     }
 
     private async Task ShowSubscriptionsByEventTypeAsync(string eventType)
@@ -392,6 +419,11 @@
         }
     }
 
+    private void RefreshActiveTestListeners()
+    {
+        _activeTestListenerIds = TestService.GetActiveRuntimeListenerIds();
+    }
+
     private async Task DeactivateSubscriptionAsync(SubscriptionViewModel subscription)
     {
         var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
@@ -410,6 +442,13 @@
         // Simplified processing: perform removal directly without displaying a confirmation dialog box
         // In a production environment, you can use MudBlazor's IDialogService to display a confirmation dialog
         var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
+        if (TestService.GetRuntimeListenerSnapshot(subscriptionId).IsListening
+            && (await TestService.StopRuntimeListenerAsync(subscriptionId)).IsFailed(out var stopError))
+        {
+            Snackbar.Add("停止测试监听失败: " + stopError.Message, Severity.Error);
+            return;
+        }
+
         if ((await MonitorService.UnsubscribeAsync(subscriptionId)).IsFailed(out var error))
         {
             Snackbar.Add("移除失败: " + error.Message, Severity.Error);

@@ -3,6 +3,7 @@ using Monica.Office.Excel.Annotations;
 using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Models.Internal;
 using Monica.Office.Excel.Services.Support;
+using Monica.Tool.Extensions;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -68,7 +69,7 @@ namespace Monica.Office.Excel.Providers.Npoi
                 {
                     cell.SetCellValue(value.GetTypedValue<DateTime>().ToString(CultureInfo.CurrentCulture));
                 }
-                else if (valueType.IsBool())
+                else if (valueType.IsBoolean())
                 {
                     cell.SetCellValue(value.GetTypedValue<bool>());
                 }

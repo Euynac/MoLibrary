@@ -88,9 +88,17 @@
                 </MudChip>
             </MudTd>
             <MudTd DataLabel="状态">
-                <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
-                    @context.StateDisplay
-                </MudChip>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
+                        @context.StateDisplay
+                    </MudChip>
+                    @if (IsTestListening(context))
+                    {
+                        <MudTooltip Text="测试监听中">
+                            <MudIcon Icon="@Icons.Material.Filled.Hearing" Color="Color.Success" Size="Size.Small" />
+                        </MudTooltip>
+                    }
+                </MudStack>
             </MudTd>
             <MudTd DataLabel="创建时间">
                 <MudStack Spacing="0">
@@ -107,7 +115,9 @@
                 <SubscriptionLifecycleControl Subscription="context"
                                              OnActivate="() => OnActivate.InvokeAsync(context)"
                                              OnDeactivate="() => OnDeactivate.InvokeAsync(context)"
-                                             OnUnsubscribe="() => OnUnsubscribe.InvokeAsync(context)" />
+                                             OnUnsubscribe="() => OnUnsubscribe.InvokeAsync(context)"
+                                             OnTest="() => OnTest.InvokeAsync(context)"
+                                             IsTestListening="@IsTestListening(context)" />
             </MudTd>
         </RowTemplate>
         <PagerContent>
@@ -140,4 +150,15 @@
 
     [Parameter]
     public EventCallback<SubscriptionViewModel> OnUnsubscribe { get; set; }
+
+    [Parameter]
+    public EventCallback<SubscriptionViewModel> OnTest { get; set; }
+
+    [Parameter]
+    public IReadOnlySet<string> ActiveTestListenerIds { get; set; } = new HashSet<string>();
+
+    private bool IsTestListening(SubscriptionViewModel subscription)
+    {
+        return ActiveTestListenerIds.Contains(subscription.SubscriptionId);
+    }
 }

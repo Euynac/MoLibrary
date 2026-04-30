@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Monica.Tool.Extensions;
 
 namespace Monica.Office.Excel.Services.Support
 {
@@ -7,51 +8,6 @@ namespace Monica.Office.Excel.Services.Support
     /// </summary>
     internal static class ExcelCellValueConverter
     {
-        /// <summary>
-        /// Determines whether the provided type should be treated as a numeric type in Excel.
-        /// </summary>
-        /// <param name="type">The target CLR type.</param>
-        /// <returns></returns>
-        public static bool IsNumeric(this Type type)
-        {
-            return type == typeof(decimal) || type == typeof(int) || type == typeof(float)
-                  || type == typeof(long) || type == typeof(sbyte) || type == typeof(short)
-                  || type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort)
-                  || type == typeof(decimal?) || type == typeof(int?) || type == typeof(float?)
-                  || type == typeof(long?) || type == typeof(sbyte?) || type == typeof(short?)
-                  || type == typeof(uint?) || type == typeof(ulong?) || type == typeof(ushort?);
-        }
-
-        /// <summary>
-        /// Determines whether the provided type is a date/time type.
-        /// </summary>
-        /// <param name="type">The target CLR type.</param>
-        /// <returns></returns>
-        public static bool IsDateTime(this Type type)
-        {
-            return type == typeof(DateTime) || type == typeof(DateTime?);
-        }
-
-        /// <summary>
-        /// Determines whether the provided type is a time span type.
-        /// </summary>
-        /// <param name="type">The target CLR type.</param>
-        /// <returns></returns>
-        public static bool IsTimeSpan(this Type type)
-        {
-            return type == typeof(TimeSpan) || type == typeof(TimeSpan?);
-        }
-
-        /// <summary>
-        /// Determines whether the provided type is a Boolean type.
-        /// </summary>
-        /// <param name="type">The target CLR type.</param>
-        /// <returns></returns>
-        public static bool IsBool(this Type type)
-        {
-            return type == typeof(bool) || type == typeof(bool?);
-        }
-
         /// <summary>
         /// Converts a raw Excel cell value into the requested target type.
         /// </summary>

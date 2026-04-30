@@ -6,6 +6,7 @@ using Monica.Office.Excel.Models;
 using Monica.Office.Excel.Models.Internal;
 using Monica.Office.Excel.Services.Support;
 using Monica.StateStore.TaskProgress.Models;
+using Monica.Tool.Extensions;
 
 namespace Monica.Office.Excel.Providers
 {
