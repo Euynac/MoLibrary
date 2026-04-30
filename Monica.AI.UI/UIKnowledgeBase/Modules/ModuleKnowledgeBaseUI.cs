@@ -55,7 +55,7 @@ public sealed class ModuleKnowledgeBaseUI(ModuleKnowledgeBaseUIOption option)
                         KnowledgeBaseManagePage.PAGE_URL,
                         "Pages:KnowledgeBaseManage:Title",
                         Icons.Material.Filled.Storage,
-                        "Categories:AI",
+                        "Categories:KnowledgeRetrieval",
                         addToNav: true,
                         navOrder: 3);
                 });

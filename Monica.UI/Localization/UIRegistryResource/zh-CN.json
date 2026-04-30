@@ -2,6 +2,7 @@
   "Categories": {
     "AI": "AI",
     "Documentation": "文档",
+    "KnowledgeRetrieval": "知识与检索",
     "Monitor": "监控",
     "Configuration": "配置",
     "Debug": "调试",

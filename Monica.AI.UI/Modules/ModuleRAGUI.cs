@@ -65,7 +65,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         RAGManagePage.PAGE_URL,
                         "Pages:RAGManage:Title",
                         Icons.Material.Filled.PlaylistPlay,
-                        "Categories:AI",
+                        "Categories:KnowledgeRetrieval",
                         addToNav: true,
                         navOrder: 4);
                 });
@@ -80,7 +80,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         RAGDebugPage.PAGE_URL,
                         "Pages:RAGDebug:Title",
                         Icons.Material.Filled.ManageSearch,
-                        "Categories:AI",
+                        "Categories:KnowledgeRetrieval",
                         addToNav: true,
                         navOrder: 5);
                 });
@@ -95,7 +95,7 @@ public class ModuleRAGUI(ModuleRAGUIOption option)
                         RAGChunkersPage.PAGE_URL,
                         "Pages:RAGChunkers:Title",
                         Icons.Material.Filled.AccountTree,
-                        "Categories:AI",
+                        "Categories:KnowledgeRetrieval",
                         addToNav: true,
                         navOrder: 6);
                 });
