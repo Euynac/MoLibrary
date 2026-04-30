@@ -121,29 +121,22 @@ public sealed partial class RAGService(
         var clearedIndexedDocumentCount = states.Count(static state => state.Status == DocumentStatus.Done || state.ChunkCount > 0);
         var clearedChunkCount = states.Sum(static state => Math.Max(0, state.ChunkCount));
         var collectionName = vectorCollectionCoordinator.GetCollectionName(knowledgeBaseId);
-        string? vectorStoreCleanupErrorMessage = null;
-        var vectorStoreCleanupSucceeded = true;
+        var vectorStoreCleanupSkipped = forceLocalMetadataRemoval;
 
-        try
+        if (!forceLocalMetadataRemoval)
         {
             await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
         }
-        catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
+        else
         {
-            if (!forceLocalMetadataRemoval)
-            {
-                throw;
-            }
-
-            vectorStoreCleanupSucceeded = false;
-            vectorStoreCleanupErrorMessage = ex.Message;
             logger.LogWarning(
-                ex,
-                "Force-removing local RAG support for KB '{KbId}' after vector collection cleanup failed.",
-                knowledgeBaseId);
+                "Force-removing local RAG support for KB '{KbId}' without contacting the vector store. Stale vectors may remain in collection '{CollectionName}'.",
+                knowledgeBaseId,
+                collectionName);
         }
 
         var resetDocumentCount = await indexStateCoordinator.ResetIndexedDocumentStatesToPendingAsync(knowledgeBaseId, ct);
+        var clearedRemoteChunkCount = vectorStoreCleanupSkipped ? 0 : clearedChunkCount;
 
         kb.EmbeddingProviderId = null;
         kb.EmbeddingModelName = null;
@@ -155,20 +148,19 @@ public sealed partial class RAGService(
             "Removed RAG support for KB '{KbId}'. Reset {ResetDocumentCount} document(s), cleared {ClearedChunkCount} chunk vector(s), forced={WasForced}.",
             knowledgeBaseId,
             resetDocumentCount,
-            clearedChunkCount,
-            forceLocalMetadataRemoval && !vectorStoreCleanupSucceeded);
+            clearedRemoteChunkCount,
+            forceLocalMetadataRemoval);
 
         return new KnowledgeBaseRagSupportRemovalResult
         {
             KnowledgeBaseId = knowledgeBaseId,
             ResetDocumentCount = resetDocumentCount,
             ClearedIndexedDocumentCount = clearedIndexedDocumentCount,
-            ClearedChunkCount = clearedChunkCount,
+            ClearedChunkCount = clearedRemoteChunkCount,
             VectorCollectionName = collectionName,
-            VectorStoreCleanupSucceeded = vectorStoreCleanupSucceeded,
-            WasForced = forceLocalMetadataRemoval && !vectorStoreCleanupSucceeded,
-            StaleVectorCollectionMayRemain = !vectorStoreCleanupSucceeded,
-            VectorStoreCleanupErrorMessage = vectorStoreCleanupErrorMessage
+            VectorStoreCleanupSucceeded = !vectorStoreCleanupSkipped,
+            WasForced = forceLocalMetadataRemoval,
+            StaleVectorCollectionMayRemain = vectorStoreCleanupSkipped
         };
     }
 

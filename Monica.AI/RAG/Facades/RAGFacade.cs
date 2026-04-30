@@ -76,7 +76,7 @@ public class RAGFacade(
     /// Removes RAG support from one knowledge base and clears its persisted vector/index data.
     /// </summary>
     /// <param name="kbId">Knowledge base identifier.</param>
-    /// <param name="forceLocalMetadataRemoval">Whether local RAG metadata can be removed when remote vector cleanup fails.</param>
+    /// <param name="forceLocalMetadataRemoval">Whether to skip remote vector cleanup and remove local RAG metadata only.</param>
     public async Task<Res<KnowledgeBaseRagSupportRemovalResult>> RemoveKnowledgeBaseRagSupportAsync(
         string kbId,
         bool forceLocalMetadataRemoval = false)

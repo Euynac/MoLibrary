@@ -36,7 +36,7 @@ public sealed record KnowledgeBaseRagSupportRemovalResult
     public bool VectorStoreCleanupSucceeded { get; init; } = true;
 
     /// <summary>
-    /// Whether local RAG metadata was removed after vector cleanup failed.
+    /// Whether local RAG metadata was removed without contacting the vector store.
     /// </summary>
     public bool WasForced { get; init; }
 
@@ -46,7 +46,7 @@ public sealed record KnowledgeBaseRagSupportRemovalResult
     public bool StaleVectorCollectionMayRemain { get; init; }
 
     /// <summary>
-    /// Vector-store cleanup failure details when forced local removal was used.
+    /// Vector-store cleanup failure details when a non-forced cleanup attempt failed before local removal.
     /// </summary>
     public string? VectorStoreCleanupErrorMessage { get; init; }
 }
