@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
+using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.AI.Skills.Internal;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;

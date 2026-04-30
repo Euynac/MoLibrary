@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Monica.AI.Skills.Abstractions;
+using Monica.AI.Skills.Internal;
 using Monica.AI.Skills.Services;
+using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -41,8 +41,6 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
       IBusinessTypeIterator
 {
     private readonly List<Type> _skillTypes = [];
-    private readonly List<Type> _toolTypes = [];
-    private readonly List<Type> _mcpTypes = [];
 
     /// <inheritdoc />
     public override void ClaimDependencies()
@@ -60,14 +58,6 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
                 if (type.IsAssignableTo(typeof(Skill)))
                 {
                     _skillTypes.Add(type);
-                }
-                else if (type.IsAssignableTo(typeof(StandaloneTool)))
-                {
-                    _toolTypes.Add(type);
-                }
-                else if (type.IsAssignableTo(typeof(McpService)))
-                {
-                    _mcpTypes.Add(type);
                 }
             }
 
@@ -92,14 +82,6 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         services.TryAddSingleton<MonicaSkillCatalog>();
         services.TryAddSingleton<MonicaAgentSkillsProviderFactory>();
         services.TryAddSingleton(sp => sp.GetRequiredService<MonicaAgentSkillsProviderFactory>().GetProvider());
-
-        if (_toolTypes.Count > 0 || _mcpTypes.Count > 0)
-        {
-            Logger.LogWarning(
-                "StandaloneTool and McpService discovery is reserved but not active yet. Tool types: {ToolCount}; MCP types: {McpCount}.",
-                _toolTypes.Count,
-                _mcpTypes.Count);
-        }
     }
 }
 

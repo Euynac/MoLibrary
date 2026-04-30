@@ -52,6 +52,7 @@ public class ModuleAI(ModuleAIOption option)
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleSkillSystemGuide>().Register();
+        DependsOnModule<ModuleMcpGuide>().Register();
     }
 
     /// <inheritdoc />

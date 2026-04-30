@@ -1,6 +1,6 @@
 using Monica.Core.Modularity.Models;
 
-namespace Monica.AI.Skills.Services;
+namespace Monica.AI.Services.Support.ModuleCatalog;
 
 /// <summary>
 /// Provides the set of modules loaded in the current Monica host.

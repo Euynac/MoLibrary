@@ -9,6 +9,7 @@ namespace Monica.AI.Services.Support;
 public sealed class AIChatAgentBuilder(string? instructions)
 {
     private readonly List<AIContextProvider> _contextProviders = [];
+    private readonly List<AITool> _tools = [];
     private readonly List<string> _instructions = string.IsNullOrWhiteSpace(instructions)
         ? []
         : [instructions];
@@ -27,6 +28,15 @@ public sealed class AIChatAgentBuilder(string? instructions)
     {
         ArgumentNullException.ThrowIfNull(contextProvider);
         _contextProviders.Add(contextProvider);
+    }
+
+    /// <summary>
+    /// Add tools that should be available for the whole agent lifetime.
+    /// </summary>
+    public void AddTools(IEnumerable<AITool> tools)
+    {
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools.AddRange(tools);
     }
 
     /// <summary>
@@ -49,11 +59,12 @@ public sealed class AIChatAgentBuilder(string? instructions)
     {
         return new ChatClientAgentOptions
         {
-            ChatOptions = string.IsNullOrWhiteSpace(Instructions)
+            ChatOptions = string.IsNullOrWhiteSpace(Instructions) && _tools.Count == 0
                 ? null
                 : new ChatOptions
                 {
-                    Instructions = Instructions
+                    Instructions = Instructions,
+                    Tools = _tools.Count > 0 ? [.. _tools] : null
                 },
             AIContextProviders = _contextProviders.Count > 0 ? [.. _contextProviders] : null
         };

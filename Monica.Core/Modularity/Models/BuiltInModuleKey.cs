@@ -219,6 +219,10 @@ public enum BuiltInModuleKey
     /// </summary>
     AISkillSystem,
     /// <summary>
+    /// MCP server discovery, hosting, and client catalog module.
+    /// </summary>
+    Mcp,
+    /// <summary>
     /// Knowledge-base inventory and lookup module.
     /// </summary>
     KnowledgeBase,

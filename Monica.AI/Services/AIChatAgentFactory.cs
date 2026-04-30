@@ -2,6 +2,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
+using Monica.AI.Mcp.Services;
 using Monica.AI.Services.Support;
 using Monica.AI.Skills.Services;
 
@@ -12,6 +13,7 @@ namespace Monica.AI.Services;
 /// </summary>
 public class AIChatAgentFactory(
     MonicaAgentSkillsProviderFactory skillsProviderFactory,
+    MonicaMcpCatalog mcpCatalog,
     IEnumerable<IAIChatAgentDecorator> agentDecorators,
     ILoggerFactory loggerFactory,
     IServiceProvider serviceProvider)
@@ -21,7 +23,7 @@ public class AIChatAgentFactory(
     private readonly ILogger<AIChatAgentFactory> _logger = loggerFactory.CreateLogger<AIChatAgentFactory>();
 
     /// <inheritdoc />
-    public Task<AIAgent> CreateAsync(
+    public async Task<AIAgent> CreateAsync(
         IChatClient chatClient,
         AIChatAgentCreateContext context,
         CancellationToken ct = default)
@@ -32,11 +34,14 @@ public class AIChatAgentFactory(
 
         var builder = new AIChatAgentBuilder(context.Instructions);
         builder.AddContextProvider(skillsProviderFactory.GetProvider());
+        var mcpTools = await mcpCatalog.GetAgentToolsAsync(ct);
+        builder.AddTools(mcpTools);
 
         var agentOptions = builder.BuildOptions();
 
         _logger.LogInformation(
-            "Creating AI chat agent with skill context provider and {DecoratorCount} agent decorators.",
+            "Creating AI chat agent with skill context provider, {McpToolCount} MCP tools, and {DecoratorCount} agent decorators.",
+            mcpTools.Count,
             _agentDecorators.Count);
 
         var agent = new ChatClientAgent(
@@ -47,7 +52,7 @@ public class AIChatAgentFactory(
 
         if (_agentDecorators.Count == 0)
         {
-            return Task.FromResult<AIAgent>(agent);
+            return agent;
         }
 
         var pipeline = agent.AsBuilder();
@@ -58,6 +63,6 @@ public class AIChatAgentFactory(
 
         var decoratedAgent = pipeline.Build(serviceProvider);
         _logger.LogInformation("Created decorated AI chat agent pipeline type: {AgentType}.", decoratedAgent.GetType().FullName);
-        return Task.FromResult(decoratedAgent);
+        return decoratedAgent;
     }
 }
