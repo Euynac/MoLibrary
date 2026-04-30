@@ -1,10 +1,11 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudDialog>
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudIcon Icon="@Icons.Material.Filled.Info" />
-            <MudText Typo="Typo.h6">订阅详情</MudText>
+            <MudText Typo="Typo.h6">@L["SubscriptionDetail:Title"]</MudText>
         </MudStack>
     </TitleContent>
     <DialogContent>
@@ -14,11 +15,11 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info">未选择订阅</MudAlert>
+            <MudAlert Severity="Severity.Info">@L["SubscriptionDetail:States:NotSelected"]</MudAlert>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+        <MudButton OnClick="Close" Color="Color.Primary">@L["Shared:Common:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 

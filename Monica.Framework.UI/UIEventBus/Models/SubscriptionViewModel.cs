@@ -1,4 +1,6 @@
+using Monica.Core.Localization.Services;
 using Monica.EventBus.Models;
+using Monica.Framework.UI.Localization;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
@@ -90,31 +92,7 @@ public class SubscriptionViewModel
     {
         get
         {
-            if (!IsActionHandler) return string.Empty;
-
-            var parts = new List<string>();
-
-            if (!string.IsNullOrEmpty(ActionDeclaringType))
-            {
-                parts.Add($"声明类型: {ActionDeclaringType}");
-            }
-
-            if (!string.IsNullOrEmpty(ActionMethodName))
-            {
-                parts.Add($"方法名称: {ActionMethodName}");
-            }
-
-            if (!string.IsNullOrEmpty(ActionMethodSignature))
-            {
-                parts.Add($"方法签名: {ActionMethodSignature}");
-            }
-
-            if (ActionIsStatic.HasValue)
-            {
-                parts.Add($"静态方法: {(ActionIsStatic.Value ? "是" : "否")}");
-            }
-
-            return parts.Count > 0 ? string.Join("\n", parts) : "Action处理器";
+            return LocalizationManager.For<EventBusResource>().BuildActionHandlerTooltip(this);
         }
     }
 
@@ -130,7 +108,7 @@ public class SubscriptionViewModel
     /// <summary>
     /// Subscription range display text
     /// </summary>
-    public string ScopeDisplay => Scope == EventSubscriptionScope.Local ? "本地" : "分布式";
+    public string ScopeDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionScopeText(Scope);
 
     /// <summary>
     /// Subscription status
@@ -140,14 +118,7 @@ public class SubscriptionViewModel
     /// <summary>
     /// Subscription status display text
     /// </summary>
-    public string StateDisplay => State switch
-    {
-        EventSubscriptionState.Pending => "待激活",
-        EventSubscriptionState.Active => "活跃",
-        EventSubscriptionState.Inactive => "未激活",
-        EventSubscriptionState.Disposed => "已释放",
-        _ => "未知"
-    };
+    public string StateDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionStateText(State);
 
     /// <summary>
     /// The color corresponding to the subscription status
@@ -254,14 +225,9 @@ public class SubscriptionViewModel
         {
             if (IsActionHandler)
             {
-                // If there is a method name, display the method name
-                if (!string.IsNullOrEmpty(ActionMethodName))
-                {
-                    return $"Action: {ActionMethodName}";
-                }
-                return "Action处理器";
+                return LocalizationManager.For<EventBusResource>().GetHandlerDisplayText(this);
             }
-            return HandlerTypeShortName ?? "未知";
+            return HandlerTypeShortName ?? LocalizationManager.Get<EventBusResource>("Shared:Labels:Unknown");
         }
     }
 
@@ -271,13 +237,7 @@ public class SubscriptionViewModel
 
     private static string FormatDuration(TimeSpan duration)
     {
-        if (duration.TotalDays >= 1)
-            return $"{(int)duration.TotalDays}天 {duration.Hours}小时";
-        if (duration.TotalHours >= 1)
-            return $"{(int)duration.TotalHours}小时 {duration.Minutes}分钟";
-        if (duration.TotalMinutes >= 1)
-            return $"{(int)duration.TotalMinutes}分钟 {duration.Seconds}秒";
-        return $"{(int)duration.TotalSeconds}秒";
+        return LocalizationManager.For<EventBusResource>().FormatEventBusDuration(duration);
     }
 
     #endregion

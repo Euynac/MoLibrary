@@ -276,6 +276,7 @@ See:
 - Keep module resource marker classes and JSON folders under the project root `Localization/` directory.
 - Prefer nested JSON objects and access them with colon-separated keys such as `Page:Title` or `RuntimeConfigDialog:Intro`.
 - Do not use flat dot-style keys such as `Page.Title` for new Monica UI work.
+- Prefer dependency-injected `IStringLocalizer<TResource>` in Razor components, pages, dialogs, state classes, support services, and any DI-created service. Use `LocalizationManager.Get/For` only where DI is not available, such as static helpers, view-model computed properties created outside DI, and module registration or endpoint metadata that must be built outside a service instance.
 - Keep `zh-CN.json` and `en-US.json` synchronized.
 - For page content, use the module-local resource marker and JSON files.
 - For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.

@@ -49,6 +49,7 @@ DependsOnModule<ModuleLocalizationGuide>().Register()
 ```
 
 - For Monica project-local resources, keep the marker class and JSON files under the project root `Localization/` folder so resource namespace, embedded resource path, and validation tooling stay aligned.
+- Prefer constructor-injected `IStringLocalizer<TResource>` in modules' DI-created services, support classes, state classes, Razor components, pages, and dialogs. Use `LocalizationManager.Get/For` only when dependency injection is not available, such as static helpers, view-model computed properties created outside DI, or module registration/endpoint metadata that is built outside a service instance.
 - Preferred layout:
 
 ```text

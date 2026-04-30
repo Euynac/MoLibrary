@@ -11,15 +11,16 @@
 @inject EventBusProviderDiscoveryService ProviderDiscoveryService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IStringLocalizer<EventBusResource> L
 
-<PageTitle>事件总线监控</PageTitle>
+<PageTitle>@L["Page:PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <MudPaper Class="pa-4 mb-4 event-bus-page-hero">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" />
-                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">事件总线监控</MudText>
+                <MudText Typo="Typo.h4" Style="font-weight: 500; margin: 0;">@L["Page:Header:Title"]</MudText>
             </MudStack>
             <MudStack Row="true" Spacing="2">
                 <MudButton StartIcon="@Icons.Material.Filled.Refresh"
@@ -28,7 +29,7 @@
                           OnClick="RefreshAsync"
                           Size="Size.Medium"
                           Class="event-bus-page-hero-action">
-                    刷新
+                    @L["Page:Header:Refresh"]
                 </MudButton>
             </MudStack>
         </MudStack>
@@ -38,7 +39,7 @@
     {
         <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-8">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Typo="Typo.h6" Color="Color.Primary">正在加载订阅信息...</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Primary">@L["Page:States:LoadingSubscriptions"]</MudText>
         </MudStack>
     }
     else
@@ -46,7 +47,7 @@
         <!-- Tabs -->
         <div class="ui-event-bus-tabs">
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="ui-event-bus-tab-panels">
-                <MudTabPanel Text="总览" Icon="@Icons.Material.Filled.Dashboard">
+                <MudTabPanel Text="@L["Page:Tabs:Overview"]" Icon="@Icons.Material.Filled.Dashboard">
                     <SubscriptionStatisticsCard Statistics="_statistics"
                                                OnEventTypeClick="ShowSubscriptionsByEventTypeAsync"
                                                OnTopicClick="ShowSubscriptionsByTopicAsync" />
@@ -58,10 +59,10 @@
                                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudIcon Icon="@Icons.Material.Filled.Update" Color="Color.Info" />
-                                        <MudText Typo="Typo.h6">最近变更</MudText>
+                                        <MudText Typo="Typo.h6">@L["Page:RecentChanges:Title"]</MudText>
                                     </MudStack>
                                     <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                                        @_recentChanges.Count 条
+                                        @L["ChangesFeed:Count", _recentChanges.Count]
                                     </MudChip>
                                 </MudStack>
 
@@ -90,14 +91,14 @@
                     }
                 </MudTabPanel>
 
-                <MudTabPanel Text="Provider" Icon="@Icons.Material.Filled.Hub" BadgeData="@_providers.Count.ToString()" BadgeColor="Color.Primary">
+                <MudTabPanel Text="@L["Page:Tabs:Providers"]" Icon="@Icons.Material.Filled.Hub" BadgeData="@_providers.Count.ToString()" BadgeColor="Color.Primary">
                     <EventBusProviderList Providers="_providers"
                                          AllSubscriptions="_subscriptions"
                                          IsLoading="_loading"
                                          OnRefresh="RefreshProvidersAsync" />
                 </MudTabPanel>
 
-                <MudTabPanel Text="订阅浏览" Icon="@Icons.Material.Filled.List">
+                <MudTabPanel Text="@L["Page:Tabs:Subscriptions"]" Icon="@Icons.Material.Filled.List">
                     <SubscriptionFilterPanel Filter="_filter"
                                             Providers="_providers"
                                             OnFilterChanged="ApplyFilterAsync" />
@@ -112,7 +113,7 @@
                                       OnTest="ShowSubscriptionTestAsync" />
                 </MudTabPanel>
 
-                <MudTabPanel Text="测试工具" Icon="@Icons.Material.Filled.Science">
+                <MudTabPanel Text="@L["Page:Tabs:TestTools"]" Icon="@Icons.Material.Filled.Science">
                     <EventBusTestPanel />
                 </MudTabPanel>
             </MudTabs>
@@ -160,7 +161,7 @@
             // Load subscription list
             if ((await MonitorService.GetAllSubscriptionsAsync()).IsFailed(out var error, out var subscriptions))
             {
-                Snackbar.Add("加载订阅列表失败: " + error, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadSubscriptionsFailed", error], Severity.Error);
             }
             else
             {
@@ -171,7 +172,7 @@
             // Load statistics
             if ((await MonitorService.GetStatisticsAsync()).IsFailed(out var statsError, out var stats))
             {
-                Snackbar.Add("加载统计信息失败: " + statsError, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadStatisticsFailed", statsError], Severity.Error);
             }
             else
             {
@@ -181,7 +182,7 @@
             // Load provider list
             if (ProviderDiscoveryService.GetRegisteredProviders().IsFailed(out var providerError, out var providers))
             {
-                Snackbar.Add("加载 Provider 列表失败: " + providerError, Severity.Error);
+                Snackbar.Add(L["Page:Messages:LoadProvidersFailed", providerError], Severity.Error);
             }
             else
             {
@@ -192,7 +193,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"加载数据时发生错误: {ex.Message}", Severity.Error);
+            Snackbar.Add(L["Page:Messages:LoadDataFailed", ex.Message], Severity.Error);
         }
         finally
         {
@@ -204,7 +205,7 @@
     private async Task RefreshAsync()
     {
         await LoadDataAsync();
-        Snackbar.Add("数据已刷新", Severity.Success);
+        Snackbar.Add(L["Page:Messages:RefreshSucceeded"], Severity.Success);
     }
 
     private Task ApplyFilterAsync()
@@ -257,12 +258,12 @@
     {
         if (ProviderDiscoveryService.GetRegisteredProviders().IsFailed(out var providerError, out var providers))
         {
-            Snackbar.Add("刷新 Provider 列表失败: " + providerError, Severity.Error);
+            Snackbar.Add(L["Page:Messages:RefreshProvidersFailed", providerError], Severity.Error);
         }
         else
         {
             _providers = providers ?? new();
-            Snackbar.Add("Provider 列表已刷新", Severity.Success);
+            Snackbar.Add(L["Page:Messages:RefreshProvidersSucceeded"], Severity.Success);
             StateHasChanged();
         }
     }
@@ -296,7 +297,7 @@
         {
             await InvokeAsync(() =>
             {
-                Snackbar.Add($"实时更新错误: {ex.Message}", Severity.Error);
+                Snackbar.Add(L["Page:Messages:RealtimeUpdateFailed", ex.Message], Severity.Error);
             });
         }
     }
@@ -334,7 +335,7 @@
             FullWidth = true
         };
 
-        await DialogService.ShowAsync<SubscriptionDetailDialog>($"订阅详情 - {subscription.EventTypeShortName}", parameters, options);
+        await DialogService.ShowAsync<SubscriptionDetailDialog>(L["Page:DialogTitles:SubscriptionDetail", subscription.EventTypeShortName], parameters, options);
     }
 
     private async Task ShowSubscriptionTestAsync(SubscriptionViewModel subscription)
@@ -352,7 +353,7 @@
             FullWidth = true
         };
 
-        var dialog = await DialogService.ShowAsync<SubscriptionTestDialog>($"测试订阅 - {subscription.EventTypeShortName}", parameters, options);
+        var dialog = await DialogService.ShowAsync<SubscriptionTestDialog>(L["Page:DialogTitles:SubscriptionTest", subscription.EventTypeShortName], parameters, options);
         await dialog.Result;
         RefreshActiveTestListeners();
         StateHasChanged();
@@ -366,7 +367,7 @@
 
         var parameters = new DialogParameters
         {
-            ["Title"] = $"事件类型: {filteredSubscriptions.FirstOrDefault()?.EventTypeShortName ?? eventType}",
+            ["Title"] = L["Page:DialogTitles:EventTypeSubscriptions", filteredSubscriptions.FirstOrDefault()?.EventTypeShortName ?? eventType].Value,
             ["Subscriptions"] = filteredSubscriptions,
             ["OnSubscriptionSelected"] = EventCallback.Factory.Create<SubscriptionViewModel>(this, ShowSubscriptionDetail)
         };
@@ -379,7 +380,7 @@
             FullWidth = true
         };
 
-        await DialogService.ShowAsync<SubscriptionListDialog>("订阅列表", parameters, options);
+        await DialogService.ShowAsync<SubscriptionListDialog>(L["Page:DialogTitles:SubscriptionList"], parameters, options);
     }
 
     private async Task ShowSubscriptionsByTopicAsync(string topicName)
@@ -390,7 +391,7 @@
 
         var parameters = new DialogParameters
         {
-            ["Title"] = $"主题: {topicName}",
+            ["Title"] = L["Page:DialogTitles:TopicSubscriptions", topicName].Value,
             ["Subscriptions"] = filteredSubscriptions,
             ["OnSubscriptionSelected"] = EventCallback.Factory.Create<SubscriptionViewModel>(this, ShowSubscriptionDetail)
         };
@@ -403,7 +404,7 @@
             FullWidth = true
         };
 
-        await DialogService.ShowAsync<SubscriptionListDialog>("订阅列表", parameters, options);
+        await DialogService.ShowAsync<SubscriptionListDialog>(L["Page:DialogTitles:SubscriptionList"], parameters, options);
     }
 
     private async Task ActivateSubscriptionAsync(SubscriptionViewModel subscription)
@@ -411,11 +412,11 @@
         var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.ActivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
         {
-            Snackbar.Add("激活失败: " + error.Message, Severity.Error);
+            Snackbar.Add(L["Page:Messages:ActivateFailed", error.Message ?? string.Empty], Severity.Error);
         }
         else
         {
-            Snackbar.Add("订阅已激活", Severity.Success);
+            Snackbar.Add(L["Page:Messages:ActivateSucceeded"], Severity.Success);
         }
     }
 
@@ -429,11 +430,11 @@
         var subscriptionId = new EventSubscriptionId(Guid.Parse(subscription.SubscriptionId));
         if ((await MonitorService.DeactivateSubscriptionAsync(subscriptionId)).IsFailed(out var error))
         {
-            Snackbar.Add("停用失败: " + error.Message, Severity.Error);
+            Snackbar.Add(L["Page:Messages:DeactivateFailed", error.Message ?? string.Empty], Severity.Error);
         }
         else
         {
-            Snackbar.Add("订阅已停用", Severity.Warning);
+            Snackbar.Add(L["Page:Messages:DeactivateSucceeded"], Severity.Warning);
         }
     }
 
@@ -445,17 +446,17 @@
         if (TestService.GetRuntimeListenerSnapshot(subscriptionId).IsListening
             && (await TestService.StopRuntimeListenerAsync(subscriptionId)).IsFailed(out var stopError))
         {
-            Snackbar.Add("停止测试监听失败: " + stopError.Message, Severity.Error);
+            Snackbar.Add(L["Page:Messages:StopRuntimeListenerFailed", stopError.Message ?? string.Empty], Severity.Error);
             return;
         }
 
         if ((await MonitorService.UnsubscribeAsync(subscriptionId)).IsFailed(out var error))
         {
-            Snackbar.Add("移除失败: " + error.Message, Severity.Error);
+            Snackbar.Add(L["Page:Messages:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Error);
         }
         else
         {
-            Snackbar.Add("订阅已移除", Severity.Info);
+            Snackbar.Add(L["Page:Messages:UnsubscribeSucceeded"], Severity.Info);
         }
     }
 

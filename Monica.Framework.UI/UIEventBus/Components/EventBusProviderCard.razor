@@ -1,5 +1,6 @@
 @using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudCard Elevation="2">
     <MudCardHeader>
@@ -18,7 +19,7 @@
                     @Provider.ProviderTypeName
                 </MudChip>
                 <MudChip T="string" Color="@(Provider.IsDistributed ? Color.Info : Color.Success)" Size="Size.Small">
-                    @(Provider.IsDistributed ? "分布式" : "本地")
+                    @L.GetProviderModeText(Provider.IsDistributed)
                 </MudChip>
             </MudStack>
         </CardHeaderActions>
@@ -30,8 +31,8 @@
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                 <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Small" Color="Color.Primary" />
                 <MudText Typo="Typo.body2">
-                    订阅: <strong>@Provider.SubscriptionCount</strong>
-                    (活跃: <span style="color: var(--mud-palette-success);">@Provider.ActiveSubscriptionCount</span>)
+                    @L["Providers:Card:Subscriptions", Provider.SubscriptionCount]
+                    (<span style="color: var(--mud-palette-success);">@L["Providers:Card:Active", Provider.ActiveSubscriptionCount]</span>)
                 </MudText>
             </MudStack>
 
@@ -41,7 +42,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                        批量发布
+                        @L["Providers:Capabilities:BulkPublish"]
                     </MudChip>
                 }
 
@@ -49,7 +50,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
-                        流式订阅
+                        @L["Providers:Capabilities:Streaming"]
                     </MudChip>
                 }
 
@@ -57,7 +58,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
-                        死信队列
+                        @L["Providers:Capabilities:DeadLetterQueue"]
                     </MudChip>
                 }
 
@@ -65,7 +66,7 @@
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
                         <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-1" />
-                        有配置项
+                        @L["Providers:Capabilities:HasOptions"]
                     </MudChip>
                 }
             </div>
@@ -77,7 +78,7 @@
                    Color="Color.Primary"
                    EndIcon="@Icons.Material.Filled.OpenInNew"
                    OnClick="OnViewDetails">
-            查看详情
+            @L["Providers:Card:ViewDetails"]
         </MudButton>
     </MudCardActions>
 </MudCard>

@@ -1,10 +1,11 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudDialog>
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudIcon Icon="@Icons.Material.Filled.List" />
-            <MudText Typo="Typo.h6">@Title</MudText>
+            <MudText Typo="Typo.h6">@ResolvedTitle</MudText>
         </MudStack>
     </TitleContent>
     <DialogContent>
@@ -17,32 +18,32 @@
                      OnRowClick="HandleSubscriptionRowClickAsync"
                      Style="cursor: pointer;">
                 <HeaderContent>
-                    <MudTh>事件类型</MudTh>
-                    <MudTh>主题名称</MudTh>
-                    <MudTh>处理器</MudTh>
-                    <MudTh>范围</MudTh>
-                    <MudTh>状态</MudTh>
+                    <MudTh>@L["SubscriptionTable:Columns:EventType"]</MudTh>
+                    <MudTh>@L["SubscriptionTable:Columns:TopicName"]</MudTh>
+                    <MudTh>@L["SubscriptionTable:Columns:Handler"]</MudTh>
+                    <MudTh>@L["SubscriptionTable:Columns:Scope"]</MudTh>
+                    <MudTh>@L["SubscriptionTable:Columns:State"]</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="事件类型">
+                    <MudTd DataLabel="@L["SubscriptionTable:Columns:EventType"]">
                         <MudTooltip Text="@context.EventType">
                             <MudText Typo="Typo.body2">@context.EventTypeShortName</MudText>
                         </MudTooltip>
                     </MudTd>
-                    <MudTd DataLabel="主题名称">
+                    <MudTd DataLabel="@L["SubscriptionTable:Columns:TopicName"]">
                         <MudText Typo="Typo.body2">@context.TopicName</MudText>
                     </MudTd>
-                    <MudTd DataLabel="处理器">
+                    <MudTd DataLabel="@L["SubscriptionTable:Columns:Handler"]">
                         <MudText Typo="Typo.body2">@context.HandlerDisplay</MudText>
                     </MudTd>
-                    <MudTd DataLabel="范围">
+                    <MudTd DataLabel="@L["SubscriptionTable:Columns:Scope"]">
                         <MudChip T="string" Color="@context.ScopeColor" Size="Size.Small">
                             @context.ScopeDisplay
                         </MudChip>
                     </MudTd>
-                    <MudTd DataLabel="状态">
+                    <MudTd DataLabel="@L["SubscriptionTable:Columns:State"]">
                         <MudChip T="string" Color="@context.StateColor" Size="Size.Small">
-                            @context.StateColor
+                            @context.StateDisplay
                         </MudChip>
                     </MudTd>
                 </RowTemplate>
@@ -50,11 +51,11 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info">暂无订阅</MudAlert>
+            <MudAlert Severity="Severity.Info">@L["SubscriptionTable:States:Empty"]</MudAlert>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+        <MudButton OnClick="Close" Color="Color.Primary">@L["Shared:Common:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -63,13 +64,17 @@
     public IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
-    public string Title { get; set; } = "订阅列表";
+    public string Title { get; set; } = string.Empty;
 
     [Parameter]
     public List<SubscriptionViewModel>? Subscriptions { get; set; }
 
     [Parameter]
     public EventCallback<SubscriptionViewModel> OnSubscriptionSelected { get; set; }
+
+    private string ResolvedTitle => string.IsNullOrWhiteSpace(Title)
+        ? L["Page:DialogTitles:SubscriptionList"].Value
+        : Title;
 
     private Task HandleSubscriptionRowClickAsync(TableRowClickEventArgs<SubscriptionViewModel> args)
     {

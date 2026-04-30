@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Core;
+using Monica.Core.Localization.Services;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.Pages;
 using Monica.Framework.UI.UIEventBus.State;
 using Monica.Framework.UI.UIEventBus.Support;
@@ -55,6 +57,9 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
         // Depends on EventBus module
         DependsOnModule<ModuleEventBusGuide>().Register();
 
+        DependsOnModule<ModuleLocalizationGuide>().Register()
+            .AddResource<EventBusResource>();
+
         // Registration UI page
         if (!Option.DisablePage)
         {
@@ -82,10 +87,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetAllSubscriptionsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取所有订阅")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Name"))
                 .WithTags(tagName)
-                .WithSummary("获取所有订阅")
-                .WithDescription("获取所有EventBus订阅信息，包括本地和分布式订阅");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:List:Description"));
 
             // Get subscription details
             endpoints.MapGet("/eventbus-ui/subscriptions/{id:guid}",
@@ -96,10 +101,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetSubscriptionByIdAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("获取订阅详情")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Name"))
                 .WithTags(tagName)
-                .WithSummary("获取订阅详情")
-                .WithDescription("根据订阅ID获取详细信息");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Detail:Description"));
 
             // Get statistics
             endpoints.MapGet("/eventbus-ui/statistics",
@@ -108,10 +113,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.GetStatisticsAsync();
                     return result.GetResponse();
                 })
-                .WithName("获取订阅统计")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Name"))
                 .WithTags(tagName)
-                .WithSummary("获取订阅统计")
-                .WithDescription("获取订阅的统计信息，包括总数、状态分布、范围分布等");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Statistics:Description"));
 
             // Activate subscription
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/activate",
@@ -122,10 +127,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.ActivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("激活订阅")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Name"))
                 .WithTags(tagName)
-                .WithSummary("激活订阅")
-                .WithDescription("激活处于Pending或Inactive状态的订阅");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Activate:Description"));
 
             // Deactivate subscription
             endpoints.MapPost("/eventbus-ui/subscriptions/{id:guid}/deactivate",
@@ -136,10 +141,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.DeactivateSubscriptionAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("停用订阅")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Name"))
                 .WithTags(tagName)
-                .WithSummary("停用订阅")
-                .WithDescription("停用活跃的订阅（不移除）");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Deactivate:Description"));
 
             // Remove subscription
             endpoints.MapDelete("/eventbus-ui/subscriptions/{id:guid}",
@@ -150,10 +155,10 @@ public class ModuleEventBusUI(ModuleEventBusUIOption option)
                     var result = await service.UnsubscribeAsync(subscriptionId);
                     return result.GetResponse();
                 })
-                .WithName("移除订阅")
+                .WithName(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Name"))
                 .WithTags(tagName)
-                .WithSummary("移除订阅")
-                .WithDescription("永久移除订阅");
+                .WithSummary(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Summary"))
+                .WithDescription(LocalizationManager.Get<EventBusResource>("Api:Subscriptions:Remove:Description"));
         });
     }
 }

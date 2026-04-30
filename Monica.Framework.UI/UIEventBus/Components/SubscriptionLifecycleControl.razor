@@ -1,10 +1,11 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.EventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 @if (Subscription != null && Subscription.State != EventSubscriptionState.Disposed)
 {
     <MudStack Row="true" Spacing="1">
-        <MudTooltip Text="测试订阅">
+        <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Test"]">
             <MudIconButton Icon="@Icons.Material.Filled.Science"
                            Color="@(IsTestListening ? Color.Success : Color.Info)"
                            Size="Size.Small"
@@ -13,13 +14,13 @@
         @if (Subscription.State == EventSubscriptionState.Active)
         {
             <!-- Active state: Show deactivate and remove buttons -->
-            <MudTooltip Text="停用订阅">
+            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Deactivate"]">
                 <MudIconButton Icon="@Icons.Material.Filled.PauseCircle"
                              Color="Color.Warning"
                              Size="Size.Small"
                              OnClick="() => OnDeactivate.InvokeAsync()" />
             </MudTooltip>
-            <MudTooltip Text="移除订阅">
+            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Remove"]">
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
                              Color="Color.Error"
                              Size="Size.Small"
@@ -29,13 +30,13 @@
         else if (Subscription.State == EventSubscriptionState.Inactive || Subscription.State == EventSubscriptionState.Pending)
         {
             <!-- Inactive/pending activation status: Show activation and removal buttons -->
-            <MudTooltip Text="激活订阅">
+            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Activate"]">
                 <MudIconButton Icon="@Icons.Material.Filled.PlayCircle"
                              Color="Color.Success"
                              Size="Size.Small"
                              OnClick="() => OnActivate.InvokeAsync()" />
             </MudTooltip>
-            <MudTooltip Text="移除订阅">
+            <MudTooltip Text="@L["SubscriptionLifecycle:Actions:Remove"]">
                 <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
                              Color="Color.Error"
                              Size="Size.Small"
@@ -47,7 +48,7 @@
 else if (Subscription?.State == EventSubscriptionState.Disposed)
 {
     <!-- Released state: no buttons are displayed -->
-    <MudChip T="string" Color="Color.Default" Size="Size.Small">已释放</MudChip>
+    <MudChip T="string" Color="Color.Default" Size="Size.Small">@L.GetSubscriptionStateText(EventSubscriptionState.Disposed)</MudChip>
 }
 
 @code {

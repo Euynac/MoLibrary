@@ -1,4 +1,5 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 @if (Statistics != null)
 {
@@ -12,9 +13,9 @@
                             <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" Size="Size.Large" />
                             <MudText Typo="Typo.h3" Color="Color.Primary">@Statistics.TotalSubscriptions</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">订阅总数</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:TotalSubscriptions"]</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            活跃率: @Statistics.ActiveRateDisplay
+                            @L["Statistics:Cards:ActiveRate", Statistics.ActiveRateDisplay]
                         </MudText>
                     </MudStack>
                 </MudCardContent>
@@ -30,9 +31,9 @@
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
                             <MudText Typo="Typo.h3" Color="Color.Success">@Statistics.ActiveSubscriptions</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">活跃订阅</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:ActiveSubscriptions"]</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            待激活: @Statistics.PendingSubscriptions | 未激活: @Statistics.InactiveSubscriptions
+                            @L["Statistics:Cards:PendingInactive", Statistics.PendingSubscriptions, Statistics.InactiveSubscriptions]
                         </MudText>
                     </MudStack>
                 </MudCardContent>
@@ -48,9 +49,9 @@
                             <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Info" Size="Size.Large" />
                             <MudText Typo="Typo.h3" Color="Color.Info">@Statistics.LocalSubscriptions</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">本地订阅</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:LocalSubscriptions"]</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            分布式: @Statistics.DistributedSubscriptions
+                            @L["Statistics:Cards:DistributedCount", Statistics.DistributedSubscriptions]
                         </MudText>
                     </MudStack>
                 </MudCardContent>
@@ -66,9 +67,9 @@
                             <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Tertiary" Size="Size.Large" />
                             <MudText Typo="Typo.h3" Color="Color.Tertiary">@Statistics.AutoDiscoveredCount</MudText>
                         </MudStack>
-                        <MudText Typo="Typo.body1" Style="font-weight: 500;">自动发现</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@L["Statistics:Cards:AutoDiscovered"]</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            自动发现率: @Statistics.AutoDiscoveredRateDisplay
+                            @L["Statistics:Cards:AutoDiscoveredRate", Statistics.AutoDiscoveredRateDisplay]
                         </MudText>
                     </MudStack>
                 </MudCardContent>
@@ -84,7 +85,7 @@
                     <CardHeaderContent>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Primary" />
-                            <MudText Typo="Typo.h6">Top 事件类型</MudText>
+                            <MudText Typo="Typo.h6">@L["Statistics:Sections:TopEventTypes"]</MudText>
                         </MudStack>
                     </CardHeaderContent>
                 </MudCardHeader>
@@ -107,7 +108,7 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">暂无数据</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
                     }
                 </MudCardContent>
             </MudCard>
@@ -119,7 +120,7 @@
                     <CardHeaderContent>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Filled.Topic" Color="Color.Secondary" />
-                            <MudText Typo="Typo.h6">Top 主题</MudText>
+                            <MudText Typo="Typo.h6">@L["Statistics:Sections:TopTopics"]</MudText>
                         </MudStack>
                     </CardHeaderContent>
                 </MudCardHeader>
@@ -140,7 +141,7 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">暂无数据</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Statistics:States:Empty"]</MudText>
                     }
                 </MudCardContent>
             </MudCard>
@@ -149,7 +150,7 @@
 }
 else
 {
-    <MudAlert Severity="Severity.Info">正在加载统计信息...</MudAlert>
+    <MudAlert Severity="Severity.Info">@L["Statistics:States:Loading"]</MudAlert>
 }
 
 @code {

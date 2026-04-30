@@ -1,0 +1,421 @@
+{
+  "Page": {
+    "PageTitle": "Event Bus Monitor",
+    "Header": {
+      "Title": "Event Bus Monitor",
+      "Refresh": "Refresh"
+    },
+    "Tabs": {
+      "Overview": "Overview",
+      "Providers": "Providers",
+      "Subscriptions": "Subscriptions",
+      "TestTools": "Test Tools"
+    },
+    "RecentChanges": {
+      "Title": "Recent Changes"
+    },
+    "States": {
+      "LoadingSubscriptions": "Loading subscriptions..."
+    },
+    "Messages": {
+      "LoadSubscriptionsFailed": "Failed to load subscriptions: {0}",
+      "LoadStatisticsFailed": "Failed to load statistics: {0}",
+      "LoadProvidersFailed": "Failed to load providers: {0}",
+      "LoadDataFailed": "Failed to load data: {0}",
+      "RefreshSucceeded": "Data refreshed.",
+      "RefreshProvidersFailed": "Failed to refresh providers: {0}",
+      "RefreshProvidersSucceeded": "Provider list refreshed.",
+      "RealtimeUpdateFailed": "Real-time update failed: {0}",
+      "ActivateFailed": "Activation failed: {0}",
+      "ActivateSucceeded": "Subscription activated.",
+      "DeactivateFailed": "Deactivation failed: {0}",
+      "DeactivateSucceeded": "Subscription deactivated.",
+      "StopRuntimeListenerFailed": "Failed to stop test listener: {0}",
+      "UnsubscribeFailed": "Removal failed: {0}",
+      "UnsubscribeSucceeded": "Subscription removed."
+    },
+    "DialogTitles": {
+      "SubscriptionDetail": "Subscription Details - {0}",
+      "SubscriptionTest": "Test Subscription - {0}",
+      "SubscriptionList": "Subscription List",
+      "EventTypeSubscriptions": "Event type: {0}",
+      "TopicSubscriptions": "Topic: {0}"
+    }
+  },
+  "SubscriptionTable": {
+    "Columns": {
+      "EventType": "Event Type",
+      "TopicName": "Topic",
+      "Handler": "Handler",
+      "Scope": "Scope",
+      "State": "State",
+      "CreatedAt": "Created At",
+      "Actions": "Actions"
+    },
+    "Labels": {
+      "Auto": "Auto",
+      "DeclaringType": "Declaring type",
+      "MethodName": "Method name",
+      "MethodSignature": "Method signature",
+      "StaticMethod": "Static method",
+      "InstanceMethod": "Instance method",
+      "TestListening": "Test listener active",
+      "RunningFor": "Running for {0}"
+    },
+    "States": {
+      "Empty": "No subscriptions found."
+    }
+  },
+  "SubscriptionFilter": {
+    "Title": "Filters",
+    "Clear": "Clear Filters",
+    "Provider": "Provider",
+    "Status": "Status",
+    "Scope": "Scope",
+    "DiscoveryMode": "Discovery Mode",
+    "Search": "Search",
+    "SearchPlaceholder": "Event type or topic name",
+    "Applied": "{0} filters applied",
+    "Options": {
+      "All": "All"
+    }
+  },
+  "SubscriptionLifecycle": {
+    "Actions": {
+      "Test": "Test subscription",
+      "Deactivate": "Deactivate subscription",
+      "Remove": "Remove subscription",
+      "Activate": "Activate subscription"
+    }
+  },
+  "Statistics": {
+    "Cards": {
+      "TotalSubscriptions": "Total Subscriptions",
+      "ActiveRate": "Active rate: {0}",
+      "ActiveSubscriptions": "Active Subscriptions",
+      "PendingInactive": "Pending: {0} | Inactive: {1}",
+      "LocalSubscriptions": "Local Subscriptions",
+      "DistributedCount": "Distributed: {0}",
+      "AutoDiscovered": "Auto Discovered",
+      "AutoDiscoveredRate": "Auto-discovery rate: {0}"
+    },
+    "Sections": {
+      "TopEventTypes": "Top Event Types",
+      "TopTopics": "Top Topics"
+    },
+    "States": {
+      "Empty": "No data.",
+      "Loading": "Loading statistics..."
+    }
+  },
+  "SubscriptionDetail": {
+    "Title": "Subscription Details",
+    "Sections": {
+      "BasicInformation": "Basic Information",
+      "HandlerInformation": "Handler Information",
+      "Lifecycle": "Lifecycle",
+      "Metadata": "Metadata"
+    },
+    "Fields": {
+      "SubscriptionId": "Subscription ID",
+      "State": "State",
+      "EventType": "Event Type",
+      "TopicName": "Topic",
+      "Scope": "Scope",
+      "ServiceKey": "Service Key",
+      "HandlerType": "Handler Type",
+      "DeclaringType": "Declaring Type",
+      "MethodName": "Method Name",
+      "MethodSignature": "Method Signature",
+      "HandlerFactory": "Handler Factory",
+      "DiscoveryMode": "Discovery Mode",
+      "Key": "Key",
+      "Value": "Value"
+    },
+    "Timeline": {
+      "Created": "Created",
+      "Activated": "Activated",
+      "Deactivated": "Deactivated",
+      "CurrentState": "Current State",
+      "ActiveRunning": "Active - running for {0}"
+    },
+    "States": {
+      "NotSelected": "No subscription selected."
+    }
+  },
+  "ChangesFeed": {
+    "DefaultTitle": "Recent Changes",
+    "Truncated": "Showing the latest {0} of {1} changes",
+    "Empty": "No change records.",
+    "Count": "{0} items"
+  },
+  "Providers": {
+    "Title": "Registered EventBus Providers",
+    "Refresh": "Refresh",
+    "Count": "{0} providers",
+    "States": {
+      "Empty": "No registered EventBus providers were found."
+    },
+    "Card": {
+      "Subscriptions": "Subscriptions: {0}",
+      "Active": "Active: {0}",
+      "ViewDetails": "View Details"
+    },
+    "Detail": {
+      "Tabs": {
+        "Info": "Provider Info",
+        "Options": "Options",
+        "Subscriptions": "Subscriptions"
+      },
+      "Fields": {
+        "ProviderType": "Provider Type",
+        "ServiceKey": "Service Key",
+        "BusMode": "Event Bus Mode",
+        "ImplementationType": "Implementation Type",
+        "Capabilities": "Capabilities"
+      },
+      "States": {
+        "NoSubscriptions": "This provider has no related subscriptions."
+      }
+    },
+    "Capabilities": {
+      "BulkPublish": "Bulk Publish",
+      "Streaming": "Streaming",
+      "DeadLetterQueue": "Dead Letter Queue",
+      "HasOptions": "Has Options",
+      "Basic": "Basic"
+    },
+    "Columns": {
+      "EventType": "Event Type",
+      "Topic": "Topic",
+      "State": "State",
+      "DiscoveryMode": "Discovery Mode"
+    }
+  },
+  "TestPanel": {
+    "Publish": {
+      "Title": "Publish Test Message",
+      "TopicName": "Topic",
+      "TopicHelper": "Defaults to the event type full name",
+      "MessageContent": "Message Content",
+      "MessagePlaceholder": "Enter a test message...",
+      "Sending": "Sending...",
+      "Send": "Send Message"
+    },
+    "Subscribe": {
+      "Title": "Subscribe to Test Messages",
+      "TopicName": "Topic",
+      "TopicHelper": "Defaults to the event type full name",
+      "Start": "Start Listening",
+      "Stop": "Stop Listening",
+      "Clear": "Clear Messages",
+      "ListeningStatus": "Listening... Topic: {0} | Received: {1}",
+      "NotListening": "Not listening",
+      "NoMessages": "No received messages yet.",
+      "NoMessagesHint": "Messages appear here in real time and refresh every 500 ms."
+    },
+    "Messages": {
+      "MessageId": "Message ID: {0}",
+      "MessageContent": "Message content:",
+      "CreatedAt": "Created: {0}",
+      "ReceivedAt": "Received: {0}"
+    },
+    "Instructions": {
+      "Title": "Usage notes:",
+      "Publish": "1. Publish a message: enter a topic and message content, then click \"Send Message\".",
+      "Subscribe": "2. Subscribe to a topic: enter a topic, then click \"Start Listening\" to see messages below.",
+      "DefaultTopic": "3. The default topic is {0}.",
+      "MultiTab": "4. You can test publish and subscribe flows across multiple browser tabs."
+    },
+    "Validation": {
+      "MessageRequired": "Message content is required.",
+      "TopicRequired": "Topic is required."
+    },
+    "Snackbars": {
+      "PublishFailed": "Publish failed: {0}",
+      "PublishSucceeded": "Message published.",
+      "SubscribeFailed": "Subscribe failed: {0}",
+      "SubscribeSucceeded": "Subscribed and listening for messages.",
+      "UnsubscribeFailed": "Unsubscribe failed: {0}",
+      "UnsubscribeSucceeded": "Stopped listening.",
+      "ClearSucceeded": "All messages cleared."
+    }
+  },
+  "SubscriptionTestDialog": {
+    "Title": "Test Subscription - {0}",
+    "Fields": {
+      "EventType": "Event Type",
+      "TopicName": "Topic",
+      "Scope": "Scope",
+      "Provider": "Provider",
+      "Handler": "Handler",
+      "JsonSample": "JSON Sample"
+    },
+    "Actions": {
+      "ValidateJson": "Validate JSON",
+      "PublishEvent": "Publish Test Event",
+      "Publishing": "Publishing...",
+      "ResetSample": "Reset Sample",
+      "StartListening": "Start Listening",
+      "StopListening": "Stop Listening",
+      "Clear": "Clear",
+      "Close": "Close"
+    },
+    "States": {
+      "NotSelected": "No subscription selected.",
+      "Listening": "Listening, received {0}",
+      "NotListening": "Not listening",
+      "NoMessages": "No received messages yet."
+    },
+    "Messages": {
+      "SampleGenerated": "JSON sample generated.",
+      "JsonValidationFailed": "JSON validation failed.",
+      "JsonValidationSucceeded": "JSON validation succeeded.",
+      "PublishFailed": "Publish failed.",
+      "PublishSucceeded": "Test event published.",
+      "StartListeningFailed": "Failed to start listening.",
+      "StartListeningSucceeded": "Listening started.",
+      "StopListeningFailed": "Failed to stop listening.",
+      "StopListeningSucceeded": "Listening stopped.",
+      "ClearSucceeded": "Listener messages cleared."
+    }
+  },
+  "Api": {
+    "Subscriptions": {
+      "List": {
+        "Name": "Get all subscriptions",
+        "Summary": "Get all subscriptions",
+        "Description": "Gets all EventBus subscription information, including local and distributed subscriptions."
+      },
+      "Detail": {
+        "Name": "Get subscription details",
+        "Summary": "Get subscription details",
+        "Description": "Gets detailed subscription information by subscription ID."
+      },
+      "Statistics": {
+        "Name": "Get subscription statistics",
+        "Summary": "Get subscription statistics",
+        "Description": "Gets subscription statistics, including totals, state distribution, and scope distribution."
+      },
+      "Activate": {
+        "Name": "Activate subscription",
+        "Summary": "Activate subscription",
+        "Description": "Activates a pending or inactive subscription."
+      },
+      "Deactivate": {
+        "Name": "Deactivate subscription",
+        "Summary": "Deactivate subscription",
+        "Description": "Deactivates an active subscription without removing it."
+      },
+      "Remove": {
+        "Name": "Remove subscription",
+        "Summary": "Remove subscription",
+        "Description": "Permanently removes a subscription."
+      }
+    }
+  },
+  "Services": {
+    "Common": {
+      "SubscriptionNotFound": "Subscription does not exist.",
+      "JsonContentRequired": "JSON content is required.",
+      "MessageContentRequired": "Message content is required.",
+      "TopicNameRequired": "Topic is required.",
+      "DefaultProviderName": "Default",
+      "DefaultProviderKey": "Default",
+      "DefaultProviderKeyWithNoKey": "Default (no key)"
+    },
+    "Monitor": {
+      "GetSubscriptionsFailed": "Failed to get subscriptions: {0}",
+      "GetSubscriptionDetailFailed": "Failed to get subscription details: {0}",
+      "FilterSubscriptionsFailed": "Failed to filter subscriptions: {0}",
+      "StatisticsFailed": "Failed to calculate statistics: {0}",
+      "AlreadyActive": "Subscription is already active.",
+      "CannotActivateDisposed": "Cannot activate a disposed subscription.",
+      "Activated": "Subscription activated.",
+      "ActivateFailed": "Failed to activate subscription: {0}",
+      "OnlyActiveCanDeactivate": "Only active subscriptions can be deactivated. Current state: {0}",
+      "Deactivated": "Subscription deactivated.",
+      "DeactivateFailed": "Failed to deactivate subscription: {0}",
+      "AlreadyRemoved": "Subscription has already been removed.",
+      "Removed": "Subscription removed.",
+      "RemoveFailed": "Failed to remove subscription: {0}"
+    },
+    "Test": {
+      "CreateJsonSampleFailed": "Failed to generate JSON sample: {0}",
+      "JsonValidationFailed": "JSON validation failed: {0}",
+      "PublishRuntimePayloadFailed": "Failed to publish test event: {0}",
+      "StartRuntimeListenerFailed": "Failed to start listener: {0}",
+      "StopRuntimeListenerFailed": "Failed to stop listener: {0}",
+      "PublishMessageFailed": "Publish failed: {0}",
+      "ActiveSubscriptionExists": "An active subscription already exists. Stop it first.",
+      "SubscribeFailed": "Subscribe failed: {0}",
+      "UnsubscribeFailed": "Unsubscribe failed: {0}",
+      "JsonDeserializeNull": "JSON deserialization produced a null result."
+    },
+    "Providers": {
+      "GetRegisteredFailed": "Failed to get registered providers: {0}",
+      "LocalNotFound": "Local provider was not found: {0}",
+      "DistributedNotFound": "Distributed provider was not found: {0}",
+      "GetProviderFailed": "Failed to get provider: {0}"
+    }
+  },
+  "Shared": {
+    "Common": {
+      "Yes": "Yes",
+      "No": "No",
+      "Close": "Close"
+    },
+    "Labels": {
+      "Unknown": "Unknown",
+      "Default": "Default",
+      "ActionHandler": "Action handler"
+    },
+    "Fields": {
+      "DeclaringType": "Declaring type",
+      "MethodName": "Method name",
+      "MethodSignature": "Method signature",
+      "StaticMethod": "Static method"
+    },
+    "Formats": {
+      "ActionMethod": "Action: {0}",
+      "FieldValue": "{0}: {1}"
+    },
+    "Scopes": {
+      "Local": "Local",
+      "Distributed": "Distributed"
+    },
+    "SubscriptionStates": {
+      "Pending": "Pending",
+      "Active": "Active",
+      "Inactive": "Inactive",
+      "Disposed": "Disposed"
+    },
+    "ChangeTypes": {
+      "Added": "Added",
+      "Activated": "Activated",
+      "Deactivated": "Deactivated",
+      "Removed": "Removed"
+    },
+    "DiscoveryModes": {
+      "AutoDiscovered": "Auto discovered",
+      "ManualSubscription": "Manual subscription"
+    },
+    "ProviderKinds": {
+      "Local": "Local",
+      "Dapr": "Dapr",
+      "Unknown": "Unknown"
+    },
+    "Duration": {
+      "DaysHours": "{0}d {1}h",
+      "HoursMinutes": "{0}h {1}m",
+      "MinutesSeconds": "{0}m {1}s",
+      "Seconds": "{0}s"
+    },
+    "RelativeTime": {
+      "SecondsAgo": "{0}s ago",
+      "MinutesAgo": "{0}m ago",
+      "HoursAgo": "{0}h ago",
+      "DaysAgo": "{0}d ago"
+    }
+  }
+}

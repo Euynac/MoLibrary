@@ -1,6 +1,7 @@
 @using Monica.EventBus.Abstractions
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.UI.UIModuleSystem.Components
+@inject IStringLocalizer<EventBusResource> L
 
 <MudDialog Visible="IsVisible" VisibleChanged="OnVisibleChanged" Options="DialogOptions">
     <DialogContent>
@@ -19,14 +20,14 @@
             </div>
 
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
-                <MudTabPanel Text="Provider 信息" Icon="@Icons.Material.Filled.Info">
+                <MudTabPanel Text="@L["Providers:Detail:Tabs:Info"]" Icon="@Icons.Material.Filled.Info">
                     <div class="tab-content pa-4">
                         <MudGrid Spacing="3">
                             <MudItem xs="12" sm="6">
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Category" Color="Color.Primary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">Provider 类型</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ProviderType"]</MudText>
                                     </div>
                                     <MudChip T="string" Color="@GetProviderColor()" Size="Size.Small">
                                         @Provider.ProviderTypeName
@@ -37,10 +38,10 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Info" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">服务键</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ServiceKey"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
-                                        @(Provider.ServiceKey ?? "默认 (无键)")
+                                        @(Provider.ServiceKey ?? L["Services:Common:DefaultProviderKeyWithNoKey"].Value)
                                     </MudText>
                                 </MudPaper>
                             </MudItem>
@@ -50,12 +51,12 @@
                                         <MudIcon Icon="@(Provider.IsDistributed ? Icons.Material.Filled.Cloud : Icons.Material.Filled.Memory)"
                                                  Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
                                                  Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">事件总线模式</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:BusMode"]</MudText>
                                     </div>
                                     <MudChip T="string"
                                              Color="@(Provider.IsDistributed ? Color.Info : Color.Success)"
                                              Size="Size.Small">
-                                        @(Provider.IsDistributed ? "分布式" : "本��")
+                                        @L.GetProviderModeText(Provider.IsDistributed)
                                     </MudChip>
                                 </MudPaper>
                             </MudItem>
@@ -63,7 +64,7 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-2">
                                         <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">实现类型</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:ImplementationType"]</MudText>
                                     </div>
                                     <MudText Typo="Typo.body1" Color="Color.Secondary">
                                         @Provider.ImplementationType
@@ -74,35 +75,35 @@
                                 <MudPaper Class="pa-4" Elevation="2">
                                     <div class="d-flex align-center mb-3">
                                         <MudIcon Icon="@Icons.Material.Filled.Extension" Color="Color.Tertiary" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">支持的能力</MudText>
+                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@L["Providers:Detail:Fields:Capabilities"]</MudText>
                                     </div>
                                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                         @if (Provider.SupportsBulkPublish)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Size="Size.Small" Class="mr-1" />
-                                                批量发布
+                                                @L["Providers:Capabilities:BulkPublish"]
                                             </MudChip>
                                         }
                                         @if (Provider.SupportsStreaming)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.Stream" Size="Size.Small" Class="mr-1" />
-                                                流式订阅
+                                                @L["Providers:Capabilities:Streaming"]
                                             </MudChip>
                                         }
                                         @if (Provider.SupportsDeadLetterQueue)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="mr-1" />
-                                                死信队列
+                                                @L["Providers:Capabilities:DeadLetterQueue"]
                                             </MudChip>
                                         }
                                         @if (Provider.Capabilities == EventBusProviderCapabilities.None)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
                                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
-                                                基础功能
+                                                @L["Providers:Capabilities:Basic"]
                                             </MudChip>
                                         }
                                     </MudStack>
@@ -112,40 +113,40 @@
                     </div>
                 </MudTabPanel>
 
-                <MudTabPanel Text="配置选项" Icon="@Icons.Material.Filled.Settings">
+                <MudTabPanel Text="@L["Providers:Detail:Tabs:Options"]" Icon="@Icons.Material.Filled.Settings">
                     <div class="tab-content pa-4">
                         <ModuleOptionDisplay OptionType="@Provider.OptionType"
                                            OptionInstance="@Provider.OptionInstance" />
                     </div>
                 </MudTabPanel>
 
-                <MudTabPanel Text="订阅列表" Icon="@Icons.Material.Filled.Subscriptions" BadgeData="@Subscriptions.Count.ToString()" BadgeColor="Color.Primary">
+                <MudTabPanel Text="@L["Providers:Detail:Tabs:Subscriptions"]" Icon="@Icons.Material.Filled.Subscriptions" BadgeData="@Subscriptions.Count.ToString()" BadgeColor="Color.Primary">
                     <div class="tab-content pa-4">
                         @if (!Subscriptions.Any())
                         {
                             <MudAlert Severity="Severity.Info">
-                                该 Provider 没有关联的订阅
+                                @L["Providers:Detail:States:NoSubscriptions"]
                             </MudAlert>
                         }
                         else
                         {
                             <MudDataGrid T="SubscriptionViewModel" Items="@Subscriptions" Dense="true" Hover="true">
                                 <Columns>
-                                    <PropertyColumn Property="x => x.EventTypeShortName" Title="事件类型" />
-                                    <PropertyColumn Property="x => x.TopicName" Title="主题" />
-                                    <TemplateColumn Title="状态">
+                                    <PropertyColumn Property="x => x.EventTypeShortName" Title="@L["Providers:Columns:EventType"]" />
+                                    <PropertyColumn Property="x => x.TopicName" Title="@L["Providers:Columns:Topic"]" />
+                                    <TemplateColumn Title="@L["Providers:Columns:State"]">
                                         <CellTemplate>
                                             <MudChip T="string" Size="Size.Small" Color="@context.Item.StateColor">
                                                 @context.Item.StateDisplay
                                             </MudChip>
                                         </CellTemplate>
                                     </TemplateColumn>
-                                    <TemplateColumn Title="发现方式">
+                                    <TemplateColumn Title="@L["Providers:Columns:DiscoveryMode"]">
                                         <CellTemplate>
                                             <MudChip T="string" Size="Size.Small"
                                                      Color="@(context.Item.IsAutoDiscovered ? Color.Info : Color.Secondary)"
                                                      Variant="Variant.Outlined">
-                                                @(context.Item.IsAutoDiscovered ? "自动发现" : "手动订阅")
+                                                @L.GetDiscoveryModeText(context.Item.IsAutoDiscovered)
                                             </MudChip>
                                         </CellTemplate>
                                     </TemplateColumn>
@@ -159,7 +160,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Primary" OnClick="OnClose" StartIcon="@Icons.Material.Filled.Close">
-            关闭
+            @L["Shared:Common:Close"]
         </MudButton>
     </DialogActions>
 </MudDialog>

@@ -1,16 +1,17 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudPaper Class="pa-4" Elevation="2">
     <MudStack Spacing="2">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.Update" Color="Color.Info" />
-                <MudText Typo="Typo.h6">@Title</MudText>
+                <MudText Typo="Typo.h6">@ResolvedTitle</MudText>
             </MudStack>
             @if (Changes.Any())
             {
                 <MudChip T="string" Color="Color.Info" Size="Size.Small">
-                    @Changes.Count 条
+                    @L["ChangesFeed:Count", Changes.Count]
                 </MudChip>
             }
         </MudStack>
@@ -58,7 +59,7 @@
             @if (Changes.Count > MaxItems)
             {
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                    显示最近 @MaxItems 条，共 @Changes.Count 条变更
+                    @L["ChangesFeed:Truncated", MaxItems, Changes.Count]
                 </MudText>
             }
         }
@@ -66,7 +67,7 @@
         {
             <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-4">
                 <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.body2" Color="Color.Secondary">暂无变更记录</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["ChangesFeed:Empty"]</MudText>
             </MudStack>
         }
     </MudStack>
@@ -77,11 +78,15 @@
     public List<SubscriptionChangeViewModel> Changes { get; set; } = new();
 
     [Parameter]
-    public string Title { get; set; } = "最近变更";
+    public string Title { get; set; } = string.Empty;
 
     [Parameter]
     public int MaxItems { get; set; } = 20;
 
     [Parameter]
     public int MaxHeight { get; set; } = 400;
+
+    private string ResolvedTitle => string.IsNullOrWhiteSpace(Title)
+        ? L["ChangesFeed:DefaultTitle"].Value
+        : Title;
 }

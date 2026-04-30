@@ -3,6 +3,7 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monica.Core.Extensions;
@@ -11,6 +12,7 @@ using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Framework.UI.UIEventBus.Support;
 using Monica.Modules;
@@ -27,6 +29,7 @@ public sealed class EventBusTestService(
     EventBusProviderDiscoveryService providerDiscoveryService,
     IJsonSerializerOptionsProvider jsonSerializerOptionsProvider,
     IOptions<ModuleEventBusUIOption> options,
+    IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusTestService> logger) : IAsyncDisposable
 {
     private const int DEFAULT_LEGACY_MESSAGE_COUNT = 100;
@@ -67,7 +70,7 @@ public sealed class EventBusTestService(
             var subscription = GetSourceSubscription(subscriptionId);
             if (subscription is null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             var sample = CreateSampleValue(subscription.EventType, [], depth: 0);
@@ -80,7 +83,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create EventBus test JSON sample for {SubscriptionId}", subscriptionId);
-            return Res.Fail($"生成 JSON 示例失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:CreateJsonSampleFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -96,13 +99,13 @@ public sealed class EventBusTestService(
         {
             if (string.IsNullOrWhiteSpace(json))
             {
-                return Res.Fail("JSON 内容不能为空");
+                return Res.Fail(localizer["Services:Common:JsonContentRequired"]);
             }
 
             var subscription = GetSourceSubscription(subscriptionId);
             if (subscription is null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             _ = DeserializePayload(subscription.EventType, json);
@@ -111,7 +114,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "EventBus test JSON validation failed for {SubscriptionId}", subscriptionId);
-            return Res.Fail($"JSON 验证失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:JsonValidationFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -131,13 +134,13 @@ public sealed class EventBusTestService(
         {
             if (string.IsNullOrWhiteSpace(json))
             {
-                return Res.Fail("JSON 内容不能为空");
+                return Res.Fail(localizer["Services:Common:JsonContentRequired"]);
             }
 
             var subscription = GetSourceSubscription(subscriptionId);
             if (subscription is null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             var eventBusResult = GetEventBus(subscription);
@@ -161,7 +164,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to publish EventBus UI runtime test payload for {SubscriptionId}", subscriptionId);
-            return Res.Fail($"发布测试事件失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:PublishRuntimePayloadFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -177,7 +180,7 @@ public sealed class EventBusTestService(
             var subscription = GetSourceSubscription(subscriptionId);
             if (subscription is null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             if (_runtimeListeners.TryGetValue(subscriptionId, out var existingState))
@@ -225,7 +228,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start EventBus UI runtime listener for {SubscriptionId}", subscriptionId);
-            return Res.Fail($"启动监听失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:StartRuntimeListenerFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -257,7 +260,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to stop EventBus UI runtime listener for {SubscriptionId}", subscriptionId);
-            return Res.Fail($"停止监听失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:StopRuntimeListenerFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -305,12 +308,12 @@ public sealed class EventBusTestService(
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                return Res.Fail("消息内容不能为空");
+                return Res.Fail(localizer["Services:Common:MessageContentRequired"]);
             }
 
             if (string.IsNullOrWhiteSpace(topicName))
             {
-                return Res.Fail("主题名称不能为空");
+                return Res.Fail(localizer["Services:Common:TopicNameRequired"]);
             }
 
             var testMessage = new TestEventMessage
@@ -329,7 +332,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "发布测试消息失败");
-            return Res.Fail($"发布失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:PublishMessageFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -342,14 +345,14 @@ public sealed class EventBusTestService(
         {
             if (string.IsNullOrWhiteSpace(topicName))
             {
-                return Res.Fail("主题名称不能为空");
+                return Res.Fail(localizer["Services:Common:TopicNameRequired"]);
             }
 
             lock (_legacySubscriptionLock)
             {
                 if (_activeSubscription != null)
                 {
-                    return Res.Fail("已存在活动订阅，请先停止当前订阅");
+                    return Res.Fail(localizer["Services:Test:ActiveSubscriptionExists"]);
                 }
             }
 
@@ -387,7 +390,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "订阅测试主题失败");
-            return Res.Fail($"订阅失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:SubscribeFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -418,7 +421,7 @@ public sealed class EventBusTestService(
         catch (Exception ex)
         {
             logger.LogError(ex, "取消订阅失败");
-            return Res.Fail($"取消订阅失败: {ex.GetMessageRecursively()}");
+            return Res.Fail(localizer["Services:Test:UnsubscribeFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -485,7 +488,7 @@ public sealed class EventBusTestService(
     private object DeserializePayload(Type eventType, string json)
     {
         return JsonSerializer.Deserialize(json, eventType, jsonSerializerOptionsProvider.SerializerOptions)
-               ?? throw new InvalidOperationException("JSON 反序列化结果为空");
+               ?? throw new InvalidOperationException(localizer["Services:Test:JsonDeserializeNull"]);
     }
 
     private object? CreateSampleValue(Type type, HashSet<Type> visitedTypes, int depth)

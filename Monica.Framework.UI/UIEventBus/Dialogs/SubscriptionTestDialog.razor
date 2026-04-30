@@ -5,18 +5,19 @@
 @implements IDisposable
 @inject EventBusTestService TestService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<EventBusResource> L
 
 <MudDialog>
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudIcon Icon="@Icons.Material.Filled.Science" />
-            <MudText Typo="Typo.h6">测试订阅 - @Subscription?.EventTypeShortName</MudText>
+            <MudText Typo="Typo.h6">@L["SubscriptionTestDialog:Title", Subscription?.EventTypeShortName ?? L["Shared:Labels:Unknown"].Value]</MudText>
         </MudStack>
     </TitleContent>
     <DialogContent>
         @if (Subscription is null)
         {
-            <MudAlert Severity="Severity.Info">未选择订阅</MudAlert>
+            <MudAlert Severity="Severity.Info">@L["SubscriptionTestDialog:States:NotSelected"]</MudAlert>
         }
         else
         {
@@ -24,23 +25,23 @@
                 <MudPaper Class="pa-3" Elevation="0" Outlined="true">
                     <MudGrid Spacing="2">
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">事件类型</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:EventType"]</MudText>
                             <MudText Typo="Typo.body2">@Subscription.EventType</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">主题名称</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:TopicName"]</MudText>
                             <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">范围</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Scope"]</MudText>
                             <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">@Subscription.ScopeDisplay</MudChip>
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Provider</MudText>
-                            <MudText Typo="Typo.body2">@(Subscription.ServiceKey ?? "默认")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Provider"]</MudText>
+                            <MudText Typo="Typo.body2">@(Subscription.ServiceKey ?? L["Services:Common:DefaultProviderKey"].Value)</MudText>
                         </MudItem>
                         <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">处理器</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionTestDialog:Fields:Handler"]</MudText>
                             <MudText Typo="Typo.body2">@Subscription.HandlerDisplay</MudText>
                         </MudItem>
                     </MudGrid>
@@ -48,7 +49,7 @@
 
                 <MudTextField @bind-Value="_jsonPayload"
                               T="string"
-                              Label="JSON 示例"
+                              Label="@L["SubscriptionTestDialog:Fields:JsonSample"]"
                               Variant="Variant.Outlined"
                               Lines="@GetJsonLines()"
                               MaxLines="28"
@@ -64,7 +65,7 @@
                                    Color="Color.Primary"
                                    StartIcon="@Icons.Material.Filled.CheckCircle"
                                    OnClick="ValidateJson">
-                            验证 JSON
+                            @L["SubscriptionTestDialog:Actions:ValidateJson"]
                         </MudButton>
                         <MudButton Variant="Variant.Filled"
                                    Color="Color.Primary"
@@ -74,11 +75,11 @@
                             @if (_publishing)
                             {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <text>发布中...</text>
+                                <text>@L["SubscriptionTestDialog:Actions:Publishing"]</text>
                             }
                             else
                             {
-                                <text>发布测试事件</text>
+                                <text>@L["SubscriptionTestDialog:Actions:PublishEvent"]</text>
                             }
                         </MudButton>
                     </MudStack>
@@ -87,7 +88,7 @@
                                Color="Color.Default"
                                StartIcon="@Icons.Material.Filled.RestartAlt"
                                OnClick="LoadSampleJson">
-                        重置示例
+                        @L["SubscriptionTestDialog:Actions:ResetSample"]
                     </MudButton>
                 </MudStack>
 
@@ -99,13 +100,13 @@
                         {
                             <MudProgressCircular Color="Color.Success" Size="Size.Small" Indeterminate="true" />
                             <MudText Typo="Typo.body2" Color="Color.Success">
-                                正在监听，已接收 @_listenerSnapshot.MessageCount 条
+                                @L["SubscriptionTestDialog:States:Listening", _listenerSnapshot.MessageCount]
                             </MudText>
                         }
                         else
                         {
                             <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Default" Size="Size.Small" />
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">未监听</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["SubscriptionTestDialog:States:NotListening"]</MudText>
                         }
                     </MudStack>
 
@@ -117,7 +118,7 @@
                                        StartIcon="@Icons.Material.Filled.PlayArrow"
                                        OnClick="StartListeningAsync"
                                        Disabled="@_listenerBusy">
-                                开启监听
+                                @L["SubscriptionTestDialog:Actions:StartListening"]
                             </MudButton>
                         }
                         else
@@ -127,14 +128,14 @@
                                        StartIcon="@Icons.Material.Filled.Stop"
                                        OnClick="StopListeningAsync"
                                        Disabled="@_listenerBusy">
-                                停止监听
+                                @L["SubscriptionTestDialog:Actions:StopListening"]
                             </MudButton>
                             <MudButton Variant="Variant.Outlined"
                                        Color="Color.Primary"
                                        StartIcon="@Icons.Material.Filled.Clear"
                                        OnClick="ClearMessages"
                                        Disabled="@(_listenerSnapshot.MessageCount == 0)">
-                                清空
+                                @L["SubscriptionTestDialog:Actions:Clear"]
                             </MudButton>
                         }
                     </MudStack>
@@ -146,7 +147,7 @@
                     {
                         <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-4">
                             <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">暂无接收到的信息</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["SubscriptionTestDialog:States:NoMessages"]</MudText>
                         </MudStack>
                     }
                     else
@@ -178,7 +179,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">关闭</MudButton>
+        <MudButton OnClick="Close" Color="Color.Primary">@L["SubscriptionTestDialog:Actions:Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -225,7 +226,7 @@
 
         _jsonPayload = sample ?? "{}";
         _hasValidationError = false;
-        _validationMessage = "JSON 示例已生成";
+        _validationMessage = L["SubscriptionTestDialog:Messages:SampleGenerated"];
     }
 
     private void ValidateJson()
@@ -240,13 +241,13 @@
         {
             _hasValidationError = true;
             _validationMessage = error.Message;
-            Snackbar.Add(error.Message ?? "JSON 验证失败", Severity.Error);
+            Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:JsonValidationFailed"], Severity.Error);
             return;
         }
 
         _hasValidationError = false;
-        _validationMessage = "JSON 验证成功";
-        Snackbar.Add("JSON 验证成功", Severity.Success);
+        _validationMessage = L["SubscriptionTestDialog:Messages:JsonValidationSucceeded"];
+        Snackbar.Add(L["SubscriptionTestDialog:Messages:JsonValidationSucceeded"], Severity.Success);
     }
 
     private async Task PublishAsync()
@@ -266,13 +267,13 @@
             {
                 _hasValidationError = true;
                 _validationMessage = error.Message;
-                Snackbar.Add(error.Message ?? "发布失败", Severity.Error);
+                Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:PublishFailed"], Severity.Error);
                 return;
             }
 
             _hasValidationError = false;
-            _validationMessage = "测试事件发布成功";
-            Snackbar.Add("测试事件发布成功", Severity.Success);
+            _validationMessage = L["SubscriptionTestDialog:Messages:PublishSucceeded"];
+            Snackbar.Add(L["SubscriptionTestDialog:Messages:PublishSucceeded"], Severity.Success);
         }
         finally
         {
@@ -296,12 +297,12 @@
             var result = await TestService.StartRuntimeListenerAsync(GetSubscriptionId());
             if (result.IsFailed(out var error, out var snapshot))
             {
-                Snackbar.Add(error.Message ?? "启动监听失败", Severity.Error);
+                Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:StartListeningFailed"], Severity.Error);
                 return;
             }
 
             _listenerSnapshot = snapshot ?? new RuntimeTestListenerSnapshot();
-            Snackbar.Add("监听已开启", Severity.Success);
+            Snackbar.Add(L["SubscriptionTestDialog:Messages:StartListeningSucceeded"], Severity.Success);
         }
         finally
         {
@@ -325,12 +326,12 @@
             var result = await TestService.StopRuntimeListenerAsync(GetSubscriptionId());
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add(error.Message ?? "停止监听失败", Severity.Error);
+                Snackbar.Add(error.Message ?? L["SubscriptionTestDialog:Messages:StopListeningFailed"], Severity.Error);
                 return;
             }
 
             RefreshListenerSnapshot();
-            Snackbar.Add("监听已停止", Severity.Info);
+            Snackbar.Add(L["SubscriptionTestDialog:Messages:StopListeningSucceeded"], Severity.Info);
         }
         finally
         {
@@ -348,7 +349,7 @@
 
         TestService.ClearRuntimeListenerMessages(GetSubscriptionId());
         RefreshListenerSnapshot();
-        Snackbar.Add("已清空监听消息", Severity.Info);
+        Snackbar.Add(L["SubscriptionTestDialog:Messages:ClearSucceeded"], Severity.Info);
     }
 
     private async Task RefreshLoopAsync(CancellationToken cancellationToken)

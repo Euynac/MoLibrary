@@ -1,4 +1,5 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 @if (Subscription != null)
 {
@@ -11,7 +12,7 @@
                         <CardHeaderContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" />
-                                <MudText Typo="Typo.h6">基本信息</MudText>
+                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:BasicInformation"]</MudText>
                             </MudStack>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -19,13 +20,13 @@
                         <MudGrid Spacing="2">
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">订阅ID</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:SubscriptionId"]</MudText>
                                     <MudText Typo="Typo.body2" Style="font-family: monospace;">@Subscription.SubscriptionId</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">状态</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:State"]</MudText>
                                     <MudChip T="string" Color="@Subscription.StateColor" Size="Size.Small">
                                         @Subscription.StateDisplay
                                     </MudChip>
@@ -33,19 +34,19 @@
                             </MudItem>
                             <MudItem xs="12">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">事件类型</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:EventType"]</MudText>
                                     <MudText Typo="Typo.body2" Style="font-family: monospace;">@Subscription.EventType</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">主题名称</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:TopicName"]</MudText>
                                     <MudText Typo="Typo.body2">@Subscription.TopicName</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">范围</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:Scope"]</MudText>
                                     <MudChip T="string" Color="@Subscription.ScopeColor" Size="Size.Small">
                                         @Subscription.ScopeDisplay
                                     </MudChip>
@@ -55,7 +56,7 @@
                             {
                                 <MudItem xs="12">
                                     <MudStack Spacing="1">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">服务键</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:ServiceKey"]</MudText>
                                         <MudText Typo="Typo.body2">@Subscription.ServiceKey</MudText>
                                     </MudStack>
                                 </MudItem>
@@ -72,7 +73,7 @@
                         <CardHeaderContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Code" Color="Color.Secondary" />
-                                <MudText Typo="Typo.h6">处理器信息</MudText>
+                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:HandlerInformation"]</MudText>
                             </MudStack>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -80,18 +81,18 @@
                         <MudGrid Spacing="2">
                             <MudItem xs="12">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">处理器类型</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:HandlerType"]</MudText>
                                     @if (Subscription.IsActionHandler)
                                     {
                                         <MudStack Spacing="2">
                                             <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Functions">
-                                                Action处理器
+                                                @L["Shared:Labels:ActionHandler"]
                                             </MudChip>
 
                                             @if (!string.IsNullOrEmpty(Subscription.ActionDeclaringType))
                                             {
                                                 <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">声明类型</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:DeclaringType"]</MudText>
                                                     <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
                                                         @Subscription.ActionDeclaringType
                                                     </MudText>
@@ -101,7 +102,7 @@
                                             @if (!string.IsNullOrEmpty(Subscription.ActionMethodName))
                                             {
                                                 <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">方法名称</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodName"]</MudText>
                                                     <MudText Typo="Typo.body2" Style="font-family: monospace;">
                                                         @Subscription.ActionMethodName
                                                     </MudText>
@@ -111,7 +112,7 @@
                                             @if (!string.IsNullOrEmpty(Subscription.ActionMethodSignature))
                                             {
                                                 <MudStack Spacing="1">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">方法签名</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:MethodSignature"]</MudText>
                                                     <MudText Typo="Typo.body2" Style="font-family: monospace; word-break: break-all;">
                                                         @Subscription.ActionMethodSignature
                                                     </MudText>
@@ -122,7 +123,7 @@
                                             {
                                                 <MudChip T="string" Size="Size.Small"
                                                          Color="@(Subscription.ActionIsStatic.Value ? Color.Secondary : Color.Default)">
-                                                    @(Subscription.ActionIsStatic.Value ? "静态方法" : "实例方法")
+                                                    @(Subscription.ActionIsStatic.Value ? L["SubscriptionTable:Labels:StaticMethod"] : L["SubscriptionTable:Labels:InstanceMethod"])
                                                 </MudChip>
                                             }
                                         </MudStack>
@@ -135,23 +136,23 @@
                             </MudItem>
                             <MudItem xs="12">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">处理器工厂</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:HandlerFactory"]</MudText>
                                     <MudText Typo="Typo.body2">@Subscription.HandlerFactoryType</MudText>
                                 </MudStack>
                             </MudItem>
                             <MudItem xs="12">
                                 <MudStack Spacing="1">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">发现方式</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["SubscriptionDetail:Fields:DiscoveryMode"]</MudText>
                                     @if (Subscription.IsAutoDiscovered)
                                     {
                                         <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.AutoAwesome">
-                                            自动发现
+                                            @L.GetDiscoveryModeText(true)
                                         </MudChip>
                                     }
                                     else
                                     {
                                         <MudChip T="string" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.TouchApp">
-                                            手动订阅
+                                            @L.GetDiscoveryModeText(false)
                                         </MudChip>
                                     }
                                 </MudStack>
@@ -168,7 +169,7 @@
                         <CardHeaderContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Tertiary" />
-                                <MudText Typo="Typo.h6">生命周期</MudText>
+                                <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Lifecycle"]</MudText>
                             </MudStack>
                         </CardHeaderContent>
                     </MudCardHeader>
@@ -177,7 +178,7 @@
                             <MudTimelineItem Color="Color.Info" Size="Size.Small">
                                 <ItemContent>
                                     <MudStack Spacing="1">
-                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">创建</MudText>
+                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Created"]</MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.CreatedAtDisplay</MudText>
                                     </MudStack>
                                 </ItemContent>
@@ -188,7 +189,7 @@
                                 <MudTimelineItem Color="Color.Success" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">激活</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Activated"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.ActivatedAtDisplay</MudText>
                                         </MudStack>
                                     </ItemContent>
@@ -200,7 +201,7 @@
                                 <MudTimelineItem Color="Color.Warning" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">停用</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:Deactivated"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@Subscription.DeactivatedAtDisplay</MudText>
                                         </MudStack>
                                     </ItemContent>
@@ -212,9 +213,9 @@
                                 <MudTimelineItem Color="Color.Success" Size="Size.Small">
                                     <ItemContent>
                                         <MudStack Spacing="1">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">当前状态</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@L["SubscriptionDetail:Timeline:CurrentState"]</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Success">
-                                                活跃 - 已运行 @Subscription.DurationDisplay
+                                                @L["SubscriptionDetail:Timeline:ActiveRunning", Subscription.DurationDisplay]
                                             </MudText>
                                         </MudStack>
                                     </ItemContent>
@@ -234,7 +235,7 @@
                             <CardHeaderContent>
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                     <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Default" />
-                                    <MudText Typo="Typo.h6">元数据</MudText>
+                                    <MudText Typo="Typo.h6">@L["SubscriptionDetail:Sections:Metadata"]</MudText>
                                 </MudStack>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -242,8 +243,8 @@
                             <MudSimpleTable Dense="true" Hover="true">
                                 <thead>
                                     <tr>
-                                        <th>键</th>
-                                        <th>值</th>
+                                        <th>@L["SubscriptionDetail:Fields:Key"]</th>
+                                        <th>@L["SubscriptionDetail:Fields:Value"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>

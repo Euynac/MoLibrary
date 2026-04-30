@@ -5,6 +5,7 @@
 @implements IDisposable
 @inject EventBusTestService TestService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<EventBusResource> L
 
 <div class="test-panel-wrapper">
     <MudStack Spacing="4">
@@ -14,7 +15,7 @@
                 <MudStack Spacing="3">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" />
-                        <MudText Typo="Typo.h6">发布测试消息</MudText>
+                        <MudText Typo="Typo.h6">@L["TestPanel:Publish:Title"]</MudText>
                     </MudStack>
 
                     <MudDivider />
@@ -23,18 +24,18 @@
                         <MudItem xs="12" md="6">
                             <MudTextField @bind-Value="_publishTopicName"
                                           T="string"
-                                          Label="主题名称"
+                                          Label="@L["TestPanel:Publish:TopicName"]"
                                           Variant="Variant.Outlined"
-                                          HelperText="默认使用事件类型的完整名称"
+                                          HelperText="@L["TestPanel:Publish:TopicHelper"]"
                                           Immediate="true" />
                         </MudItem>
                         <MudItem xs="12">
                             <MudTextField @bind-Value="_publishMessage"
                                           T="string"
-                                          Label="消息内容"
+                                          Label="@L["TestPanel:Publish:MessageContent"]"
                                           Variant="Variant.Outlined"
                                           Lines="3"
-                                          Placeholder="输入要发送的测试消息..."
+                                          Placeholder="@L["TestPanel:Publish:MessagePlaceholder"]"
                                           Immediate="true" />
                         </MudItem>
                         <MudItem xs="12">
@@ -46,11 +47,11 @@
                                 @if (_isPublishing)
                                 {
                                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                    <text>发送中...</text>
+                                    <text>@L["TestPanel:Publish:Sending"]</text>
                                 }
                                 else
                                 {
-                                    <text>发送消息</text>
+                                    <text>@L["TestPanel:Publish:Send"]</text>
                                 }
                             </MudButton>
                         </MudItem>
@@ -65,7 +66,7 @@
                 <MudStack Spacing="3">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudIcon Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" />
-                        <MudText Typo="Typo.h6">订阅测试消息</MudText>
+                        <MudText Typo="Typo.h6">@L["TestPanel:Subscribe:Title"]</MudText>
                     </MudStack>
 
                     <MudDivider />
@@ -74,9 +75,9 @@
                         <MudItem xs="12" md="6">
                             <MudTextField @bind-Value="_subscribeTopicName"
                                           T="string"
-                                          Label="监听主题"
+                                          Label="@L["TestPanel:Subscribe:TopicName"]"
                                           Variant="Variant.Outlined"
-                                          HelperText="默认使用事件类型的完整名称"
+                                          HelperText="@L["TestPanel:Subscribe:TopicHelper"]"
                                           Immediate="true"
                                           Disabled="@_isListening" />
                         </MudItem>
@@ -88,7 +89,7 @@
                                                Variant="Variant.Filled"
                                                StartIcon="@Icons.Material.Filled.PlayArrow"
                                                OnClick="StartListeningAsync">
-                                        开始监听
+                                        @L["TestPanel:Subscribe:Start"]
                                     </MudButton>
                                 }
                                 else
@@ -97,14 +98,14 @@
                                                Variant="Variant.Filled"
                                                StartIcon="@Icons.Material.Filled.Stop"
                                                OnClick="StopListeningAsync">
-                                        取消监听
+                                        @L["TestPanel:Subscribe:Stop"]
                                     </MudButton>
                                     <MudButton Color="Color.Primary"
                                                Variant="Variant.Outlined"
                                                StartIcon="@Icons.Material.Filled.Clear"
                                                OnClick="ClearMessages"
                                                Disabled="@(_messages.Count == 0)">
-                                        清空消息
+                                        @L["TestPanel:Subscribe:Clear"]
                                     </MudButton>
                                 }
                             </MudStack>
@@ -119,14 +120,14 @@
                                 {
                                     <MudProgressCircular Color="Color.Success" Size="Size.Small" Indeterminate="true" />
                                     <MudText Typo="Typo.body2" Color="Color.Success">
-                                        <strong>正在监听...</strong> 主题: @TestService.CurrentTopicName | 已接收: @_messages.Count 条
+                                        <strong>@L["TestPanel:Subscribe:ListeningStatus", TestService.CurrentTopicName ?? string.Empty, _messages.Count]</strong>
                                     </MudText>
                                 }
                                 else
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Default" Size="Size.Small" />
                                     <MudText Typo="Typo.body2" Color="Color.Default">
-                                        未监听
+                                        @L["TestPanel:Subscribe:NotListening"]
                                     </MudText>
                                 }
                             </MudStack>
@@ -143,10 +144,10 @@
                             <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-6">
                                 <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
                                 <MudText Typo="Typo.body1" Color="Color.Default">
-                                    暂无接收到的消息
+                                    @L["TestPanel:Subscribe:NoMessages"]
                                 </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    消息将实时显示在这里（每500ms刷新）
+                                    @L["TestPanel:Subscribe:NoMessagesHint"]
                                 </MudText>
                             </MudStack>
                         }
@@ -165,7 +166,7 @@
                                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                                                 <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Info" Size="Size.Small" />
                                                                 <MudText Typo="Typo.subtitle2">
-                                                                    消息 ID: @msg.EventData.MessageId
+                                                                    @L["TestPanel:Messages:MessageId", msg.EventData.MessageId]
                                                                 </MudText>
                                                             </MudStack>
                                                             <MudChip T="string" Size="Size.Small" Color="Color.Success">
@@ -178,7 +179,7 @@
                                                         <!-- Message content -->
                                                         <MudStack Spacing="1">
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                消息内容:
+                                                                @L["TestPanel:Messages:MessageContent"]
                                                             </MudText>
                                                             <MudPaper Class="pa-2" Elevation="0" Style="background-color: var(--mud-palette-background-gray); border-radius: 4px;">
                                                                 <MudText Typo="Typo.body2" Style="white-space: pre-wrap; word-break: break-word;">
@@ -192,13 +193,13 @@
                                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                                                 <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Color="Color.Secondary" />
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                    创建: @msg.EventData.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                                                    @L["TestPanel:Messages:CreatedAt", msg.EventData.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")]
                                                                 </MudText>
                                                             </MudStack>
                                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                                                                 <MudIcon Icon="@Icons.Material.Filled.Download" Size="Size.Small" Color="Color.Secondary" />
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                                    接收: @msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                                                                    @L["TestPanel:Messages:ReceivedAt", msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")]
                                                                 </MudText>
                                                             </MudStack>
                                                         </MudStack>
@@ -218,20 +219,20 @@
         <!-- Instructions for use -->
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
             <MudText Typo="Typo.body2">
-                <strong>使用说明：</strong>
+                <strong>@L["TestPanel:Instructions:Title"]</strong>
             </MudText>
             <MudList T="string" Dense="true">
                 <MudListItem T="string">
-                    <MudText Typo="Typo.body2">1. 发布消息：填写主题名称和消息内容后点击"发送消息"</MudText>
+                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:Publish"]</MudText>
                 </MudListItem>
                 <MudListItem T="string">
-                    <MudText Typo="Typo.body2">2. 订阅主题：填写监听主题后点击"开始监听"，消息将实时显示在下方</MudText>
+                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:Subscribe"]</MudText>
                 </MudListItem>
                 <MudListItem T="string">
-                    <MudText Typo="Typo.body2">3. 主题名称默认为 <code>@_defaultTopicName</code></MudText>
+                    <MudText Typo="Typo.body2">@((MarkupString)L["TestPanel:Instructions:DefaultTopic", $"<code>{_defaultTopicName}</code>"].Value)</MudText>
                 </MudListItem>
                 <MudListItem T="string">
-                    <MudText Typo="Typo.body2">4. 可以在多个浏览器标签页测试发布/订阅</MudText>
+                    <MudText Typo="Typo.body2">@L["TestPanel:Instructions:MultiTab"]</MudText>
                 </MudListItem>
             </MudList>
         </MudAlert>
@@ -261,7 +262,7 @@
     {
         if (string.IsNullOrWhiteSpace(_publishMessage))
         {
-            Snackbar.Add("请输入消息内容", Severity.Warning);
+            Snackbar.Add(L["TestPanel:Validation:MessageRequired"], Severity.Warning);
             return;
         }
 
@@ -274,12 +275,12 @@
 
             if (result.IsFailed(out var error))
             {
-                Snackbar.Add($"发布失败: {error.Message}", Severity.Error);
+                Snackbar.Add(L["TestPanel:Snackbars:PublishFailed", error.Message ?? string.Empty], Severity.Error);
             }
             else
             {
-                Snackbar.Add("消息发布成功", Severity.Success);
-                _publishMessage = string.Empty; // 清空输入
+                Snackbar.Add(L["TestPanel:Snackbars:PublishSucceeded"], Severity.Success);
+                _publishMessage = string.Empty;
             }
         }
         finally
@@ -293,7 +294,7 @@
     {
         if (string.IsNullOrWhiteSpace(_subscribeTopicName))
         {
-            Snackbar.Add("请输入监听主题", Severity.Warning);
+            Snackbar.Add(L["TestPanel:Validation:TopicRequired"], Severity.Warning);
             return;
         }
 
@@ -302,12 +303,12 @@
 
         if (subscribeResult.IsFailed(out var error, out var subscription))
         {
-            Snackbar.Add($"订阅失败: {error.Message}", Severity.Error);
+            Snackbar.Add(L["TestPanel:Snackbars:SubscribeFailed", error.Message ?? string.Empty], Severity.Error);
             return;
         }
 
         _isListening = true;
-        Snackbar.Add("订阅成功，开始监听消息...", Severity.Success);
+        Snackbar.Add(L["TestPanel:Snackbars:SubscribeSucceeded"], Severity.Success);
 
         // Start scheduled refresh
         StartRefreshTimer();
@@ -323,11 +324,11 @@
 
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add($"取消订阅失败: {error.Message}", Severity.Warning);
+            Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeFailed", error.Message ?? string.Empty], Severity.Warning);
         }
         else
         {
-            Snackbar.Add("已停止监听", Severity.Info);
+            Snackbar.Add(L["TestPanel:Snackbars:UnsubscribeSucceeded"], Severity.Info);
         }
 
         _isListening = false;
@@ -337,7 +338,7 @@
     private void StartRefreshTimer()
     {
         _refreshTimer?.Dispose();
-        _refreshTimer = new Timer(500); // 每500ms刷新一次
+        _refreshTimer = new Timer(500);
         _refreshTimer.Elapsed += async (sender, e) =>
         {
             await InvokeAsync(() =>
@@ -365,7 +366,7 @@
     {
         TestService.ClearReceivedMessages();
         _messages.Clear();
-        Snackbar.Add("已清空所有消息", Severity.Info);
+        Snackbar.Add(L["TestPanel:Snackbars:ClearSucceeded"], Severity.Info);
         StateHasChanged();
     }
 

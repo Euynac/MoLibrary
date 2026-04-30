@@ -1,0 +1,421 @@
+{
+  "Page": {
+    "PageTitle": "事件总线监控",
+    "Header": {
+      "Title": "事件总线监控",
+      "Refresh": "刷新"
+    },
+    "Tabs": {
+      "Overview": "总览",
+      "Providers": "Provider",
+      "Subscriptions": "订阅浏览",
+      "TestTools": "测试工具"
+    },
+    "RecentChanges": {
+      "Title": "最近变更"
+    },
+    "States": {
+      "LoadingSubscriptions": "正在加载订阅信息..."
+    },
+    "Messages": {
+      "LoadSubscriptionsFailed": "加载订阅列表失败：{0}",
+      "LoadStatisticsFailed": "加载统计信息失败：{0}",
+      "LoadProvidersFailed": "加载 Provider 列表失败：{0}",
+      "LoadDataFailed": "加载数据时发生错误：{0}",
+      "RefreshSucceeded": "数据已刷新。",
+      "RefreshProvidersFailed": "刷新 Provider 列表失败：{0}",
+      "RefreshProvidersSucceeded": "Provider 列表已刷新。",
+      "RealtimeUpdateFailed": "实时更新错误：{0}",
+      "ActivateFailed": "激活失败：{0}",
+      "ActivateSucceeded": "订阅已激活。",
+      "DeactivateFailed": "停用失败：{0}",
+      "DeactivateSucceeded": "订阅已停用。",
+      "StopRuntimeListenerFailed": "停止测试监听失败：{0}",
+      "UnsubscribeFailed": "移除失败：{0}",
+      "UnsubscribeSucceeded": "订阅已移除。"
+    },
+    "DialogTitles": {
+      "SubscriptionDetail": "订阅详情 - {0}",
+      "SubscriptionTest": "测试订阅 - {0}",
+      "SubscriptionList": "订阅列表",
+      "EventTypeSubscriptions": "事件类型：{0}",
+      "TopicSubscriptions": "主题：{0}"
+    }
+  },
+  "SubscriptionTable": {
+    "Columns": {
+      "EventType": "事件类型",
+      "TopicName": "主题名称",
+      "Handler": "处理器",
+      "Scope": "范围",
+      "State": "状态",
+      "CreatedAt": "创建时间",
+      "Actions": "操作"
+    },
+    "Labels": {
+      "Auto": "自动",
+      "DeclaringType": "声明类型",
+      "MethodName": "方法名称",
+      "MethodSignature": "方法签名",
+      "StaticMethod": "静态方法",
+      "InstanceMethod": "实例方法",
+      "TestListening": "测试监听中",
+      "RunningFor": "已运行 {0}"
+    },
+    "States": {
+      "Empty": "暂无订阅数据"
+    }
+  },
+  "SubscriptionFilter": {
+    "Title": "过滤条件",
+    "Clear": "清空过滤",
+    "Provider": "Provider",
+    "Status": "状态",
+    "Scope": "范围",
+    "DiscoveryMode": "发现方式",
+    "Search": "搜索",
+    "SearchPlaceholder": "事件类型或主题名称",
+    "Applied": "已应用 {0} 个过滤条件",
+    "Options": {
+      "All": "全部"
+    }
+  },
+  "SubscriptionLifecycle": {
+    "Actions": {
+      "Test": "测试订阅",
+      "Deactivate": "停用订阅",
+      "Remove": "移除订阅",
+      "Activate": "激活订阅"
+    }
+  },
+  "Statistics": {
+    "Cards": {
+      "TotalSubscriptions": "订阅总数",
+      "ActiveRate": "活跃率：{0}",
+      "ActiveSubscriptions": "活跃订阅",
+      "PendingInactive": "待激活：{0} | 未激活：{1}",
+      "LocalSubscriptions": "本地订阅",
+      "DistributedCount": "分布式：{0}",
+      "AutoDiscovered": "自动发现",
+      "AutoDiscoveredRate": "自动发现率：{0}"
+    },
+    "Sections": {
+      "TopEventTypes": "Top 事件类型",
+      "TopTopics": "Top 主题"
+    },
+    "States": {
+      "Empty": "暂无数据",
+      "Loading": "正在加载统计信息..."
+    }
+  },
+  "SubscriptionDetail": {
+    "Title": "订阅详情",
+    "Sections": {
+      "BasicInformation": "基本信息",
+      "HandlerInformation": "处理器信息",
+      "Lifecycle": "生命周期",
+      "Metadata": "元数据"
+    },
+    "Fields": {
+      "SubscriptionId": "订阅 ID",
+      "State": "状态",
+      "EventType": "事件类型",
+      "TopicName": "主题名称",
+      "Scope": "范围",
+      "ServiceKey": "服务键",
+      "HandlerType": "处理器类型",
+      "DeclaringType": "声明类型",
+      "MethodName": "方法名称",
+      "MethodSignature": "方法签名",
+      "HandlerFactory": "处理器工厂",
+      "DiscoveryMode": "发现方式",
+      "Key": "键",
+      "Value": "值"
+    },
+    "Timeline": {
+      "Created": "创建",
+      "Activated": "激活",
+      "Deactivated": "停用",
+      "CurrentState": "当前状态",
+      "ActiveRunning": "活跃 - 已运行 {0}"
+    },
+    "States": {
+      "NotSelected": "未选择订阅"
+    }
+  },
+  "ChangesFeed": {
+    "DefaultTitle": "最近变更",
+    "Truncated": "显示最近 {0} 条，共 {1} 条变更",
+    "Empty": "暂无变更记录",
+    "Count": "{0} 条"
+  },
+  "Providers": {
+    "Title": "已注册的 EventBus Provider",
+    "Refresh": "刷新",
+    "Count": "{0} 个",
+    "States": {
+      "Empty": "未发现已注册的 EventBus Provider"
+    },
+    "Card": {
+      "Subscriptions": "订阅：{0}",
+      "Active": "活跃：{0}",
+      "ViewDetails": "查看详情"
+    },
+    "Detail": {
+      "Tabs": {
+        "Info": "Provider 信息",
+        "Options": "配置选项",
+        "Subscriptions": "订阅列表"
+      },
+      "Fields": {
+        "ProviderType": "Provider 类型",
+        "ServiceKey": "服务键",
+        "BusMode": "事件总线模式",
+        "ImplementationType": "实现类型",
+        "Capabilities": "支持的能力"
+      },
+      "States": {
+        "NoSubscriptions": "该 Provider 没有关联的订阅"
+      }
+    },
+    "Capabilities": {
+      "BulkPublish": "批量发布",
+      "Streaming": "流式订阅",
+      "DeadLetterQueue": "死信队列",
+      "HasOptions": "有配置项",
+      "Basic": "基础功能"
+    },
+    "Columns": {
+      "EventType": "事件类型",
+      "Topic": "主题",
+      "State": "状态",
+      "DiscoveryMode": "发现方式"
+    }
+  },
+  "TestPanel": {
+    "Publish": {
+      "Title": "发布测试消息",
+      "TopicName": "主题名称",
+      "TopicHelper": "默认使用事件类型的完整名称",
+      "MessageContent": "消息内容",
+      "MessagePlaceholder": "输入要发送的测试消息...",
+      "Sending": "发送中...",
+      "Send": "发送消息"
+    },
+    "Subscribe": {
+      "Title": "订阅测试消息",
+      "TopicName": "监听主题",
+      "TopicHelper": "默认使用事件类型的完整名称",
+      "Start": "开始监听",
+      "Stop": "取消监听",
+      "Clear": "清空消息",
+      "ListeningStatus": "正在监听... 主题：{0} | 已接收：{1}",
+      "NotListening": "未监听",
+      "NoMessages": "暂无接收到的消息",
+      "NoMessagesHint": "消息将实时显示在这里（每 500ms 刷新）"
+    },
+    "Messages": {
+      "MessageId": "消息 ID：{0}",
+      "MessageContent": "消息内容：",
+      "CreatedAt": "创建：{0}",
+      "ReceivedAt": "接收：{0}"
+    },
+    "Instructions": {
+      "Title": "使用说明：",
+      "Publish": "1. 发布消息：填写主题名称和消息内容后点击“发送消息”。",
+      "Subscribe": "2. 订阅主题：填写监听主题后点击“开始监听”，消息将实时显示在下方。",
+      "DefaultTopic": "3. 主题名称默认为 {0}。",
+      "MultiTab": "4. 可以在多个浏览器标签页测试发布 / 订阅。"
+    },
+    "Validation": {
+      "MessageRequired": "请输入消息内容",
+      "TopicRequired": "请输入监听主题"
+    },
+    "Snackbars": {
+      "PublishFailed": "发布失败：{0}",
+      "PublishSucceeded": "消息发布成功。",
+      "SubscribeFailed": "订阅失败：{0}",
+      "SubscribeSucceeded": "订阅成功，开始监听消息。",
+      "UnsubscribeFailed": "取消订阅失败：{0}",
+      "UnsubscribeSucceeded": "已停止监听。",
+      "ClearSucceeded": "已清空所有消息。"
+    }
+  },
+  "SubscriptionTestDialog": {
+    "Title": "测试订阅 - {0}",
+    "Fields": {
+      "EventType": "事件类型",
+      "TopicName": "主题名称",
+      "Scope": "范围",
+      "Provider": "Provider",
+      "Handler": "处理器",
+      "JsonSample": "JSON 示例"
+    },
+    "Actions": {
+      "ValidateJson": "验证 JSON",
+      "PublishEvent": "发布测试事件",
+      "Publishing": "发布中...",
+      "ResetSample": "重置示例",
+      "StartListening": "开启监听",
+      "StopListening": "停止监听",
+      "Clear": "清空",
+      "Close": "关闭"
+    },
+    "States": {
+      "NotSelected": "未选择订阅",
+      "Listening": "正在监听，已接收 {0} 条",
+      "NotListening": "未监听",
+      "NoMessages": "暂无接收到的信息"
+    },
+    "Messages": {
+      "SampleGenerated": "JSON 示例已生成",
+      "JsonValidationFailed": "JSON 验证失败",
+      "JsonValidationSucceeded": "JSON 验证成功",
+      "PublishFailed": "发布失败",
+      "PublishSucceeded": "测试事件发布成功",
+      "StartListeningFailed": "启动监听失败",
+      "StartListeningSucceeded": "监听已开启",
+      "StopListeningFailed": "停止监听失败",
+      "StopListeningSucceeded": "监听已停止",
+      "ClearSucceeded": "已清空监听消息"
+    }
+  },
+  "Api": {
+    "Subscriptions": {
+      "List": {
+        "Name": "获取所有订阅",
+        "Summary": "获取所有订阅",
+        "Description": "获取所有 EventBus 订阅信息，包括本地和分布式订阅。"
+      },
+      "Detail": {
+        "Name": "获取订阅详情",
+        "Summary": "获取订阅详情",
+        "Description": "根据订阅 ID 获取详细信息。"
+      },
+      "Statistics": {
+        "Name": "获取订阅统计",
+        "Summary": "获取订阅统计",
+        "Description": "获取订阅的统计信息，包括总数、状态分布、范围分布等。"
+      },
+      "Activate": {
+        "Name": "激活订阅",
+        "Summary": "激活订阅",
+        "Description": "激活处于 Pending 或 Inactive 状态的订阅。"
+      },
+      "Deactivate": {
+        "Name": "停用订阅",
+        "Summary": "停用订阅",
+        "Description": "停用活跃的订阅（不移除）。"
+      },
+      "Remove": {
+        "Name": "移除订阅",
+        "Summary": "移除订阅",
+        "Description": "永久移除订阅。"
+      }
+    }
+  },
+  "Services": {
+    "Common": {
+      "SubscriptionNotFound": "订阅不存在",
+      "JsonContentRequired": "JSON 内容不能为空",
+      "MessageContentRequired": "消息内容不能为空",
+      "TopicNameRequired": "主题名称不能为空",
+      "DefaultProviderName": "默认",
+      "DefaultProviderKey": "默认",
+      "DefaultProviderKeyWithNoKey": "默认（无键）"
+    },
+    "Monitor": {
+      "GetSubscriptionsFailed": "获取订阅列表失败：{0}",
+      "GetSubscriptionDetailFailed": "获取订阅详情失败：{0}",
+      "FilterSubscriptionsFailed": "过滤订阅失败：{0}",
+      "StatisticsFailed": "统计失败：{0}",
+      "AlreadyActive": "订阅已经是活跃状态",
+      "CannotActivateDisposed": "无法激活已释放的订阅",
+      "Activated": "订阅已激活",
+      "ActivateFailed": "激活订阅失败：{0}",
+      "OnlyActiveCanDeactivate": "只能停用活跃订阅，当前状态：{0}",
+      "Deactivated": "订阅已停用",
+      "DeactivateFailed": "停用订阅失败：{0}",
+      "AlreadyRemoved": "订阅已经被移除",
+      "Removed": "订阅已移除",
+      "RemoveFailed": "移除订阅失败：{0}"
+    },
+    "Test": {
+      "CreateJsonSampleFailed": "生成 JSON 示例失败：{0}",
+      "JsonValidationFailed": "JSON 验证失败：{0}",
+      "PublishRuntimePayloadFailed": "发布测试事件失败：{0}",
+      "StartRuntimeListenerFailed": "启动监听失败：{0}",
+      "StopRuntimeListenerFailed": "停止监听失败：{0}",
+      "PublishMessageFailed": "发布失败：{0}",
+      "ActiveSubscriptionExists": "已存在活动订阅，请先停止当前订阅",
+      "SubscribeFailed": "订阅失败：{0}",
+      "UnsubscribeFailed": "取消订阅失败：{0}",
+      "JsonDeserializeNull": "JSON 反序列化结果为空"
+    },
+    "Providers": {
+      "GetRegisteredFailed": "获取已注册 Provider 失败：{0}",
+      "LocalNotFound": "未找到 Local Provider：{0}",
+      "DistributedNotFound": "未找到 Distributed Provider：{0}",
+      "GetProviderFailed": "获取 Provider 失败：{0}"
+    }
+  },
+  "Shared": {
+    "Common": {
+      "Yes": "是",
+      "No": "否",
+      "Close": "关闭"
+    },
+    "Labels": {
+      "Unknown": "未知",
+      "Default": "默认",
+      "ActionHandler": "Action 处理器"
+    },
+    "Fields": {
+      "DeclaringType": "声明类型",
+      "MethodName": "方法名称",
+      "MethodSignature": "方法签名",
+      "StaticMethod": "静态方法"
+    },
+    "Formats": {
+      "ActionMethod": "Action：{0}",
+      "FieldValue": "{0}：{1}"
+    },
+    "Scopes": {
+      "Local": "本地",
+      "Distributed": "分布式"
+    },
+    "SubscriptionStates": {
+      "Pending": "待激活",
+      "Active": "活跃",
+      "Inactive": "未激活",
+      "Disposed": "已释放"
+    },
+    "ChangeTypes": {
+      "Added": "添加",
+      "Activated": "激活",
+      "Deactivated": "停用",
+      "Removed": "移除"
+    },
+    "DiscoveryModes": {
+      "AutoDiscovered": "自动发现",
+      "ManualSubscription": "手动订阅"
+    },
+    "ProviderKinds": {
+      "Local": "本地",
+      "Dapr": "Dapr",
+      "Unknown": "未知"
+    },
+    "Duration": {
+      "DaysHours": "{0}天 {1}小时",
+      "HoursMinutes": "{0}小时 {1}分钟",
+      "MinutesSeconds": "{0}分钟 {1}秒",
+      "Seconds": "{0}秒"
+    },
+    "RelativeTime": {
+      "SecondsAgo": "{0}秒前",
+      "MinutesAgo": "{0}分钟前",
+      "HoursAgo": "{0}小时前",
+      "DaysAgo": "{0}天前"
+    }
+  }
+}

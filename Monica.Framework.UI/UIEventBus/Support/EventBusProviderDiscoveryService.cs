@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Extensions;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
@@ -8,6 +10,7 @@ using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Models;
 using Monica.EventBus.Providers.NoOp;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Framework.UI.UIEventBus.State;
 using Monica.Modules;
@@ -20,6 +23,7 @@ namespace Monica.Framework.UI.UIEventBus.Support;
 public class EventBusProviderDiscoveryService(
     IServiceProvider serviceProvider,
     IEventSubscriptionRegistry subscriptionManager,
+    IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusProviderDiscoveryService> logger)
 {
     /// <summary>
@@ -123,7 +127,7 @@ public class EventBusProviderDiscoveryService(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取已注册 EventBus Provider 失败");
-            return Res.Fail($"获取已注册 Provider 失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Providers:GetRegisteredFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -140,7 +144,9 @@ public class EventBusProviderDiscoveryService(
 
             if (provider == null)
             {
-                return Res.Fail($"未找到 Local Provider: {serviceKey ?? "默认"}");
+                return Res.Fail(localizer[
+                    "Services:Providers:LocalNotFound",
+                    serviceKey ?? localizer["Services:Common:DefaultProviderKey"].Value]);
             }
 
             return Res.Ok(provider);
@@ -148,7 +154,7 @@ public class EventBusProviderDiscoveryService(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取 Local Provider 失败: {Key}", serviceKey);
-            return Res.Fail($"获取 Provider 失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Providers:GetProviderFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -165,7 +171,9 @@ public class EventBusProviderDiscoveryService(
 
             if (provider == null || provider is NoOpDistributedEventBus)
             {
-                return Res.Fail($"未找到 Distributed Provider: {serviceKey ?? "默认"}");
+                return Res.Fail(localizer[
+                    "Services:Providers:DistributedNotFound",
+                    serviceKey ?? localizer["Services:Common:DefaultProviderKey"].Value]);
             }
 
             return Res.Ok(provider);
@@ -173,7 +181,7 @@ public class EventBusProviderDiscoveryService(
         catch (Exception ex)
         {
             logger.LogError(ex, "获取 Distributed Provider 失败: {Key}", serviceKey);
-            return Res.Fail($"获取 Provider 失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Providers:GetProviderFailed", ex.GetMessageRecursively()]);
         }
     }
 

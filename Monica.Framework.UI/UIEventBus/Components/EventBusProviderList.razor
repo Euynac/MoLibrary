@@ -1,21 +1,22 @@
 @using Monica.Framework.UI.UIEventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudGrid>
     <MudItem xs="12">
         <div class="d-flex justify-space-between align-center mb-4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.Hub" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">已注册的 EventBus Provider</MudText>
+                <MudText Typo="Typo.h6">@L["Providers:Title"]</MudText>
                 @if (Providers.Any())
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@Providers.Count 个</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@L["Providers:Count", Providers.Count]</MudChip>
                 }
             </MudStack>
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Refresh"
                        OnClick="OnRefresh"
                        Disabled="IsLoading">
-                刷新
+                @L["Providers:Refresh"]
             </MudButton>
         </div>
     </MudItem>
@@ -32,7 +33,7 @@
     {
         <MudItem xs="12">
             <MudAlert Severity="Severity.Info">
-                未发现已注册的 EventBus Provider
+                @L["Providers:States:Empty"]
             </MudAlert>
         </MudItem>
     }

@@ -1,9 +1,12 @@
 using System.Threading.Channels;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.EventBus.Abstractions;
 using Monica.EventBus.Constants;
 using Monica.EventBus.Models;
+using Monica.Framework.UI.Localization;
 using Monica.Framework.UI.UIEventBus.Models;
 using Monica.Tool.Extensions;
 
@@ -16,6 +19,7 @@ public sealed class EventBusMonitorService(
     IEventSubscriptionRegistry subscriptionManager,
     ILocalEventBus localEventBus,
     IDistributedEventBus distributedEventBus,
+    IStringLocalizer<EventBusResource> localizer,
     ILogger<EventBusMonitorService> logger) : IAsyncDisposable
 {
     private readonly IEventSubscriptionRegistry _subscriptionManager = subscriptionManager;
@@ -126,7 +130,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get all subscriptions");
-            return Res.Fail($"获取订阅列表失败: {ex.Message}", ResStatus.InternalError);
+            return Res.Fail(localizer["Services:Monitor:GetSubscriptionsFailed", ex.GetMessageRecursively()], ResStatus.InternalError);
         }
     }
 
@@ -150,7 +154,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get subscription by ID: {EventSubscriptionId}", subscriptionId);
-            return Res.Fail($"获取订阅详情失败: {ex.Message}", ResStatus.InternalError);
+            return Res.Fail(localizer["Services:Monitor:GetSubscriptionDetailFailed", ex.GetMessageRecursively()], ResStatus.InternalError);
         }
     }
 
@@ -204,7 +208,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to filter subscriptions");
-            return Res.Fail($"过滤订阅失败: {ex.Message}", ResStatus.InternalError);
+            return Res.Fail(localizer["Services:Monitor:FilterSubscriptionsFailed", ex.GetMessageRecursively()], ResStatus.InternalError);
         }
     }
 
@@ -261,7 +265,7 @@ public sealed class EventBusMonitorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to calculate statistics");
-            return Res.Fail($"统计失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Monitor:StatisticsFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -280,17 +284,17 @@ public sealed class EventBusMonitorService(
 
             if (subscription == null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             if (subscription.State == EventSubscriptionState.Active)
             {
-                return Res.Fail("订阅已经是活跃状态");
+                return Res.Fail(localizer["Services:Monitor:AlreadyActive"]);
             }
 
             if (subscription.State == EventSubscriptionState.Disposed)
             {
-                return Res.Fail("无法激活已释放的订阅");
+                return Res.Fail(localizer["Services:Monitor:CannotActivateDisposed"]);
             }
 
             // Select the corresponding manager based on the scope
@@ -308,12 +312,12 @@ public sealed class EventBusMonitorService(
             }
 
             logger.LogInformation("Activated subscription: {EventSubscriptionId}", subscriptionId);
-            return Res.Ok("订阅已激活");
+            return Res.Ok(localizer["Services:Monitor:Activated"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to activate subscription: {EventSubscriptionId}", subscriptionId);
-            return Res.Fail($"激活订阅失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Monitor:ActivateFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -328,12 +332,12 @@ public sealed class EventBusMonitorService(
 
             if (subscription == null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             if (subscription.State != EventSubscriptionState.Active)
             {
-                return Res.Fail($"只能停用活跃订阅，当前状态: {subscription.State}");
+                return Res.Fail(localizer["Services:Monitor:OnlyActiveCanDeactivate", subscription.State]);
             }
 
             // Select the corresponding manager based on the scope
@@ -344,12 +348,12 @@ public sealed class EventBusMonitorService(
             await manager.DeactivateAsync(subscriptionId);
 
             logger.LogInformation("Deactivated subscription: {EventSubscriptionId}", subscriptionId);
-            return Res.Ok("订阅已停用");
+            return Res.Ok(localizer["Services:Monitor:Deactivated"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to deactivate subscription: {EventSubscriptionId}", subscriptionId);
-            return Res.Fail($"停用订阅失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Monitor:DeactivateFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -364,12 +368,12 @@ public sealed class EventBusMonitorService(
 
             if (subscription == null)
             {
-                return Res.Fail("订阅不存在");
+                return Res.Fail(localizer["Services:Common:SubscriptionNotFound"]);
             }
 
             if (subscription.State == EventSubscriptionState.Disposed)
             {
-                return Res.Fail("订阅已经被移除");
+                return Res.Fail(localizer["Services:Monitor:AlreadyRemoved"]);
             }
 
             // Select the corresponding manager based on the scope
@@ -380,12 +384,12 @@ public sealed class EventBusMonitorService(
             await manager.UnsubscribeAsync(subscriptionId);
 
             logger.LogInformation("Removed subscription: {EventSubscriptionId}", subscriptionId);
-            return Res.Ok("订阅已移除");
+            return Res.Ok(localizer["Services:Monitor:Removed"]);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to unsubscribe: {EventSubscriptionId}", subscriptionId);
-            return Res.Fail($"移除订阅失败: {ex.Message}");
+            return Res.Fail(localizer["Services:Monitor:RemoveFailed", ex.GetMessageRecursively()]);
         }
     }
 
@@ -432,7 +436,7 @@ public sealed class EventBusMonitorService(
         };
 
         // Extract Action handler metadata
-        if (subscription.HandlerType == null) // Action 处理器
+        if (subscription.HandlerType == null)
         {
             vm.ActionMethodName = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionMethodName);
             vm.ActionDeclaringType = subscription.GetMetadata<string>(SubscriptionMetadataKeys.ActionDeclaringType);

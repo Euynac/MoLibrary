@@ -1,4 +1,6 @@
+using Monica.Core.Localization.Services;
 using Monica.EventBus.Models;
+using Monica.Framework.UI.Localization;
 using MudBlazor;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
@@ -16,14 +18,7 @@ public class SubscriptionChangeViewModel
     /// <summary>
     /// Change type display text
     /// </summary>
-    public string ChangeTypeDisplay => ChangeType switch
-    {
-        EventSubscriptionChangeType.Added => "添加",
-        EventSubscriptionChangeType.Activated => "激活",
-        EventSubscriptionChangeType.Deactivated => "停用",
-        EventSubscriptionChangeType.Removed => "移除",
-        _ => "未知"
-    };
+    public string ChangeTypeDisplay => LocalizationManager.For<EventBusResource>().GetSubscriptionChangeTypeText(ChangeType);
 
     /// <summary>
     /// The color corresponding to the change type
@@ -76,18 +71,7 @@ public class SubscriptionChangeViewModel
     {
         get
         {
-            var elapsed = DateTime.UtcNow - Timestamp;
-
-            if (elapsed.TotalSeconds < 60)
-                return $"{(int)elapsed.TotalSeconds}秒前";
-            if (elapsed.TotalMinutes < 60)
-                return $"{(int)elapsed.TotalMinutes}分钟前";
-            if (elapsed.TotalHours < 24)
-                return $"{(int)elapsed.TotalHours}小时前";
-            if (elapsed.TotalDays < 30)
-                return $"{(int)elapsed.TotalDays}天前";
-
-            return FullTimestampDisplay;
+            return LocalizationManager.For<EventBusResource>().FormatEventBusRelativeTime(Timestamp);
         }
     }
 }

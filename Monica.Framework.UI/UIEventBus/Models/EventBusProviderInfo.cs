@@ -1,4 +1,6 @@
+using Monica.Core.Localization.Services;
 using Monica.EventBus.Abstractions;
+using Monica.Framework.UI.Localization;
 
 namespace Monica.Framework.UI.UIEventBus.Models;
 
@@ -15,7 +17,7 @@ public class EventBusProviderInfo
     /// <summary>
     /// display name
     /// </summary>
-    public string DisplayName => ServiceKey ?? "默认";
+    public string DisplayName => ServiceKey ?? LocalizationManager.Get<EventBusResource>("Services:Common:DefaultProviderName");
 
     /// <summary>
     /// Provider type
@@ -75,12 +77,7 @@ public class EventBusProviderInfo
     /// <summary>
     /// Get the display name of the Provider type
     /// </summary>
-    public string ProviderTypeName => ProviderType switch
-    {
-        EventBusProviderKind.Local => "本地",
-        EventBusProviderKind.Dapr => "Dapr",
-        _ => "未知"
-    };
+    public string ProviderTypeName => LocalizationManager.For<EventBusResource>().GetProviderKindText(ProviderType);
 
     /// <summary>
     /// Get unique identifier (for comparison and selection)

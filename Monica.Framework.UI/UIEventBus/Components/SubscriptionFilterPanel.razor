@@ -1,12 +1,13 @@
 @using Monica.Framework.UI.UIEventBus.Models
 @using Monica.EventBus.Models
+@inject IStringLocalizer<EventBusResource> L
 
 <MudPaper Class="pa-4 mb-4" Elevation="2">
     <MudStack Spacing="3">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
-                <MudText Typo="Typo.h6">过滤条件</MudText>
+                <MudText Typo="Typo.h6">@L["SubscriptionFilter:Title"]</MudText>
             </MudStack>
             @if (Filter?.HasAnyFilter == true)
             {
@@ -15,7 +16,7 @@
                           Variant="Variant.Text"
                           Size="Size.Small"
                           OnClick="ClearFilter">
-                    清空过滤
+                    @L["SubscriptionFilter:Clear"]
                 </MudButton>
             }
         </MudStack>
@@ -26,14 +27,14 @@
             {
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string"
-                               Label="Provider"
+                               Label="@L["SubscriptionFilter:Provider"]"
                                @bind-Value="SelectedProviderId"
                                OpenChanged="ApplyFilterOnSelectClosedAsync">
-                        <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
+                        <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
                         @foreach (var provider in Providers)
                         {
                             <MudSelectItem T="string" Value="@provider.UniqueId">
-                                @provider.DisplayName (@provider.ProviderTypeName, @(provider.IsDistributed ? "分布式" : "本地"))
+                                @provider.DisplayName (@provider.ProviderTypeName, @L.GetProviderModeText(provider.IsDistributed))
                             </MudSelectItem>
                         }
                     </MudSelect>
@@ -43,47 +44,47 @@
             <!-- Status filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
-                          Label="状态"
+                          Label="@L["SubscriptionFilter:Status"]"
                           @bind-Value="SelectedState"
                           OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Active)">活跃</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Pending)">待激活</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Inactive)">未激活</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Disposed)">已释放</MudSelectItem>
+                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Active)">@L.GetSubscriptionStateText(EventSubscriptionState.Active)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Pending)">@L.GetSubscriptionStateText(EventSubscriptionState.Pending)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Inactive)">@L.GetSubscriptionStateText(EventSubscriptionState.Inactive)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionState.Disposed)">@L.GetSubscriptionStateText(EventSubscriptionState.Disposed)</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
             <!-- Range filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
-                          Label="范围"
+                          Label="@L["SubscriptionFilter:Scope"]"
                           @bind-Value="SelectedScope"
                           OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Local)">本地</MudSelectItem>
-                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Distributed)">分布式</MudSelectItem>
+                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Local)">@L.GetSubscriptionScopeText(EventSubscriptionScope.Local)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@nameof(EventSubscriptionScope.Distributed)">@L.GetSubscriptionScopeText(EventSubscriptionScope.Distributed)</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
             <!-- Automatic discovery filtering -->
             <MudItem xs="12" sm="6" md="@(Providers.Any() ? 2 : 3)">
                 <MudSelect T="string"
-                          Label="发现方式"
+                          Label="@L["SubscriptionFilter:DiscoveryMode"]"
                           @bind-Value="SelectedDiscoveryMode"
                           OpenChanged="ApplyFilterOnSelectClosedAsync">
-                    <MudSelectItem T="string" Value="@AllSelectionValue">全部</MudSelectItem>
-                    <MudSelectItem T="string" Value="@AutoDiscoveredSelectionValue">自动发现</MudSelectItem>
-                    <MudSelectItem T="string" Value="@ManualSelectionValue">手动订阅</MudSelectItem>
+                    <MudSelectItem T="string" Value="@AllSelectionValue">@L["SubscriptionFilter:Options:All"]</MudSelectItem>
+                    <MudSelectItem T="string" Value="@AutoDiscoveredSelectionValue">@L.GetDiscoveryModeText(true)</MudSelectItem>
+                    <MudSelectItem T="string" Value="@ManualSelectionValue">@L.GetDiscoveryModeText(false)</MudSelectItem>
                 </MudSelect>
             </MudItem>
 
             <!-- Search text -->
             <MudItem xs="12" sm="6" md="3">
                 <MudTextField T="string"
-                             Label="搜索"
+                             Label="@L["SubscriptionFilter:Search"]"
                              @bind-Value="Filter!.SearchText"
-                             Placeholder="事件类型或主题名称"
+                             Placeholder="@L["SubscriptionFilter:SearchPlaceholder"]"
                              Clearable="true"
                              Immediate="false"
                              OnDebounceIntervalElapsed="ApplyFilterAsync"
@@ -99,7 +100,7 @@
                     Color="Color.Info"
                     Size="Size.Small"
                     Icon="@Icons.Material.Filled.Info">
-                已应用 @GetFilterCount() 个过滤条件
+                @L["SubscriptionFilter:Applied", GetFilterCount()]
             </MudChip>
         }
     </MudStack>
