@@ -1,14 +1,35 @@
 @using Monica.AI.KnowledgeBase.Models
 @using Microsoft.Extensions.Localization
+@using Monica.AI.AgentCapabilities.Models
 @using Monica.AI.UI.Localization
+@using Monica.AI.UI.UIChat.Models
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 @inject IStringLocalizer<AIResource> L
 
 <div class="input-area">
     <MudPaper Elevation="2" Class="input-container">
-        <div class="input-top">
+        @if (_selectedReferences.Count > 0)
+        {
+            <div class="reference-chip-row">
+                @foreach (var reference in _selectedReferences)
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Outlined"
+                             Color="@GetReferenceColor(reference.Kind)"
+                             Icon="@GetReferenceIcon(reference.Kind)"
+                             OnClose="@(_ => RemoveReference(reference))">
+                        @reference.Name
+                    </MudChip>
+                }
+            </div>
+        }
+        <div class="input-top" @ref="_inputTopRef">
             <MudTextField @ref="_textFieldRef"
                           T="string"
-                          @bind-Value="InputText"
+                          Value="@InputText"
+                          ValueChanged="@HandleInputChanged"
                           Placeholder="@_placeholderText"
                           Variant="Variant.Text"
                           Lines="1"
@@ -18,6 +39,41 @@
                           Immediate="true"
                           Class="input-field"
                           OnKeyDown="@HandleKeyDown" />
+            <MudPopover Open="@ShowSlashPicker"
+                        AnchorOrigin="Origin.TopLeft"
+                        TransformOrigin="Origin.BottomLeft"
+                        Class="mo-ai-capability-popover"
+                        Paper="false">
+                <MudPaper Elevation="6" Class="capability-picker">
+                    @if (FilteredCapabilityCandidates.Count == 0)
+                    {
+                        <div class="capability-empty">
+                            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@L["Chat:CapabilityPicker:NoMatches"]</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var candidate in FilteredCapabilityCandidates.Select((candidate, index) => (candidate, index)))
+                        {
+                            <button type="button"
+                                    class="@GetCandidateClass(candidate.index)"
+                                    @onclick="@(() => CompleteCandidate(candidate.candidate))">
+                                <span class="candidate-icon">
+                                    <MudIcon Icon="@GetReferenceIcon(candidate.candidate.Kind)" Size="Size.Small" />
+                                </span>
+                                <span class="candidate-copy">
+                                    <span class="candidate-title">@candidate.candidate.Name</span>
+                                    <span class="candidate-description">@candidate.candidate.Description</span>
+                                </span>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @candidate.candidate.Kind
+                                </MudChip>
+                            </button>
+                        }
+                    }
+                </MudPaper>
+            </MudPopover>
         </div>
         <div class="input-bottom">
             <div class="input-actions-left">
@@ -86,8 +142,9 @@
     [Parameter] public bool SupportsReasoning { get; set; }
     [Parameter] public bool ReasoningEnabled { get; set; }
     [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
+    [Parameter] public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; set; } = [];
     [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
-    [Parameter] public EventCallback<string> OnSend { get; set; }
+    [Parameter] public EventCallback<ChatSendRequest> OnSend { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<string> OnModelChanged { get; set; }
     [Parameter] public IReadOnlyList<KnowledgeBase>? KnowledgeBases { get; set; }
@@ -96,8 +153,23 @@
 
     public string InputText { get; set; } = string.Empty;
     private MudTextField<string>? _textFieldRef;
+    private ElementReference _inputTopRef;
+    private IJSObjectReference? _jsModule;
+    private IJSObjectReference? _keyboardController;
     private bool _wasSending;
     private string _placeholderText = string.Empty;
+    private readonly List<AgentCapabilityReference> _selectedReferences = [];
+    private bool _slashPickerOpen;
+    private string _slashQuery = string.Empty;
+    private int _highlightedCandidateIndex;
+    private bool ShowSlashPicker => _slashPickerOpen && !IsSending;
+
+    private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
+        CapabilityCandidates
+            .Where(IsCandidateAvailable)
+            .Where(MatchesSlashQuery)
+            .Take(8)
+            .ToList();
 
     protected override void OnInitialized()
     {
@@ -110,9 +182,24 @@
         {
             InputText = string.Empty;
             _textFieldRef?.ClearAsync();
+            _selectedReferences.Clear();
+            CloseSlashPicker();
         }
 
         _wasSending = IsSending;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeKeyboardControllerAsync();
+        }
+
+        if (_keyboardController is not null)
+        {
+            await _keyboardController.InvokeVoidAsync("setPickerOpen", ShowSlashPicker);
+        }
     }
 
     private async Task HandleSend()
@@ -120,14 +207,17 @@
         if (string.IsNullOrWhiteSpace(InputText) || IsSending) return;
 
         var message = InputText.Trim();
+        var references = _selectedReferences.ToList();
 
         InputText = string.Empty;
         await _textFieldRef?.ClearAsync()!;
+        _selectedReferences.Clear();
+        CloseSlashPicker();
 
         // Ensure component renders with empty value before parent re-renders
         StateHasChanged();
 
-        await OnSend.InvokeAsync(message);
+        await OnSend.InvokeAsync(new ChatSendRequest(message, references));
     }
 
     private async Task HandleCancel()
@@ -137,11 +227,197 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        if (ShowSlashPicker)
+        {
+            if (e.Key == "ArrowDown")
+            {
+                MoveHighlight(1);
+                StateHasChanged();
+                return;
+            }
+
+            if (e.Key == "ArrowUp")
+            {
+                MoveHighlight(-1);
+                StateHasChanged();
+                return;
+            }
+
+            if (e.Key == "Tab")
+            {
+                CompleteHighlightedCandidate();
+                return;
+            }
+
+            if (e is { Key: "Enter", ShiftKey: false })
+            {
+                CompleteHighlightedCandidate();
+                return;
+            }
+
+            if (e.Key == "Escape")
+            {
+                CloseSlashPicker();
+                StateHasChanged();
+                return;
+            }
+        }
+
         // Enter to send, Shift+Enter for new line
         if (e is { Key: "Enter", ShiftKey: false })
         {
             await HandleSend();
         }
+    }
+
+    private async Task InitializeKeyboardControllerAsync()
+    {
+        try
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.AI.UI/UIChat/Components/ChatInputArea.razor.js");
+
+            _keyboardController = await _jsModule.InvokeAsync<IJSObjectReference>(
+                "initComposerKeyboard",
+                _inputTopRef);
+        }
+        catch (JSException)
+        {
+            // JS interop can fail during prerendering; the composer remains usable without shortcut interception.
+        }
+    }
+
+    private Task HandleInputChanged(string? value)
+    {
+        InputText = value ?? string.Empty;
+        UpdateSlashPicker();
+        return Task.CompletedTask;
+    }
+
+    private void UpdateSlashPicker()
+    {
+        var slashIndex = InputText.LastIndexOf('/');
+        if (slashIndex < 0)
+        {
+            CloseSlashPicker();
+            return;
+        }
+
+        var query = InputText[(slashIndex + 1)..];
+        if (query.Any(char.IsWhiteSpace))
+        {
+            CloseSlashPicker();
+            return;
+        }
+
+        _slashQuery = query;
+        _slashPickerOpen = true;
+        _highlightedCandidateIndex = Math.Clamp(_highlightedCandidateIndex, 0, Math.Max(FilteredCapabilityCandidates.Count - 1, 0));
+    }
+
+    private void MoveHighlight(int delta)
+    {
+        var candidates = FilteredCapabilityCandidates;
+        if (candidates.Count == 0)
+        {
+            _highlightedCandidateIndex = 0;
+            return;
+        }
+
+        _highlightedCandidateIndex = (_highlightedCandidateIndex + delta + candidates.Count) % candidates.Count;
+    }
+
+    private void CompleteHighlightedCandidate()
+    {
+        var candidates = FilteredCapabilityCandidates;
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        CompleteCandidate(candidates[Math.Clamp(_highlightedCandidateIndex, 0, candidates.Count - 1)]);
+    }
+
+    private void CompleteCandidate(AgentCapabilityReferenceCandidate candidate)
+    {
+        var reference = new AgentCapabilityReference(candidate.Kind, candidate.Name);
+        if (_selectedReferences.All(existing => !string.Equals(existing.Key, reference.Key, StringComparison.OrdinalIgnoreCase)))
+        {
+            _selectedReferences.Add(reference);
+        }
+
+        RemoveSlashToken();
+        CloseSlashPicker();
+        StateHasChanged();
+        _ = FocusAsync();
+    }
+
+    private void RemoveSlashToken()
+    {
+        var slashIndex = InputText.LastIndexOf('/');
+        if (slashIndex < 0)
+        {
+            return;
+        }
+
+        InputText = InputText[..slashIndex].TrimEnd();
+    }
+
+    private void RemoveReference(AgentCapabilityReference reference)
+    {
+        _selectedReferences.RemoveAll(existing =>
+            string.Equals(existing.Key, reference.Key, StringComparison.OrdinalIgnoreCase));
+        StateHasChanged();
+    }
+
+    private void CloseSlashPicker()
+    {
+        _slashPickerOpen = false;
+        _slashQuery = string.Empty;
+        _highlightedCandidateIndex = 0;
+    }
+
+    private bool MatchesSlashQuery(AgentCapabilityReferenceCandidate candidate)
+    {
+        if (string.IsNullOrWhiteSpace(_slashQuery))
+        {
+            return true;
+        }
+
+        return Contains(candidate.Name, _slashQuery)
+               || Contains(candidate.Description, _slashQuery)
+               || candidate.ToolNames.Any(tool => Contains(tool, _slashQuery))
+               || Contains(candidate.Kind.ToString(), _slashQuery);
+    }
+
+    private bool IsCandidateAvailable(AgentCapabilityReferenceCandidate candidate)
+    {
+        return candidate.IsEnabled
+               && _selectedReferences.All(reference =>
+                   !string.Equals(reference.Key, candidate.Key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool Contains(string? text, string query)
+    {
+        return text?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private string GetCandidateClass(int index)
+    {
+        return index == _highlightedCandidateIndex ? "candidate-item selected" : "candidate-item";
+    }
+
+    private static string GetReferenceIcon(AgentCapabilityKind kind)
+    {
+        return kind == AgentCapabilityKind.Skill
+            ? Icons.Material.Filled.AutoAwesome
+            : Icons.Material.Filled.AccountTree;
+    }
+
+    private static Color GetReferenceColor(AgentCapabilityKind kind)
+    {
+        return kind == AgentCapabilityKind.Skill ? Color.Primary : Color.Secondary;
     }
 
     private Task HandleAttach()
@@ -165,6 +441,34 @@
         if (_textFieldRef != null)
         {
             await _textFieldRef.FocusAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_keyboardController is not null)
+        {
+            try
+            {
+                await _keyboardController.InvokeVoidAsync("dispose");
+                await _keyboardController.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit disconnected, ignore.
+            }
+        }
+
+        if (_jsModule is not null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit disconnected, ignore.
+            }
         }
     }
 }

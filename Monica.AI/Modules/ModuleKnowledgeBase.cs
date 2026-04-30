@@ -4,7 +4,6 @@ using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.Core;
-using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;

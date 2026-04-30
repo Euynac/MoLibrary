@@ -1,6 +1,10 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Monica.AI.AgentCapabilities.Models;
+using Monica.AI.AgentCapabilities.Services;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -64,10 +68,19 @@ public sealed class MonicaMcpCatalog(
     /// <summary>
     /// Gets tools that should be exposed directly to Monica agents.
     /// </summary>
-    public async Task<IReadOnlyList<AITool>> GetAgentToolsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AITool>> GetAgentToolsAsync(
+        AgentCapabilityState state,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(state);
+        if (!state.McpEnabled)
+        {
+            return [];
+        }
+
         var localTools = _localEntries.Value
-            .Where(entry => entry.IsLocalToolEnabled)
+            .Where(entry => entry.IsLocalToolEnabled
+                            && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Definition.Name))
             .SelectMany(entry => entry.Tools)
             .Select(tool => tool.AgentTool)
             .OfType<AITool>()
@@ -76,7 +89,8 @@ public sealed class MonicaMcpCatalog(
         var externalEntries = await GetExternalEntriesAsync(cancellationToken);
         localTools.AddRange(
             externalEntries
-                .Where(entry => entry.Registration.IsAgentToolEnabled)
+                .Where(entry => entry.Registration.IsAgentToolEnabled
+                                && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Registration.Name))
                 .SelectMany(entry => entry.Tools)
                 .Cast<AITool>());
 
@@ -87,15 +101,58 @@ public sealed class MonicaMcpCatalog(
     /// <summary>
     /// Gets management metadata for local and external MCP catalog entries.
     /// </summary>
-    public async Task<IReadOnlyList<McpCatalogEntryInfo>> GetEntriesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<McpCatalogEntryInfo>> GetEntriesAsync(
+        AgentCapabilityState state,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(state);
+
         var entries = _localEntries.Value
-            .Select(static entry => entry.ToInfo())
+            .Select(entry => entry.ToInfo(state))
             .ToList();
 
         var externalEntries = await GetExternalEntriesAsync(cancellationToken);
-        entries.AddRange(externalEntries.Select(static entry => entry.ToInfo()));
+        entries.AddRange(externalEntries.Select(entry => entry.ToInfo(state)));
         return entries;
+    }
+
+    /// <summary>
+    /// Gets management metadata in the shared agent capability shape.
+    /// </summary>
+    public async Task<IReadOnlyList<AgentCapabilityEntryInfo>> GetCapabilityEntriesAsync(
+        AgentCapabilityState state,
+        CancellationToken cancellationToken = default)
+    {
+        var mcpEntries = await GetEntriesAsync(state, cancellationToken);
+        return mcpEntries
+            .Select(ToCapabilityInfo)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Tests connectivity or readiness for a specific MCP catalog entry.
+    /// </summary>
+    public async Task<McpConnectivityTestResult?> TestConnectivityAsync(
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var localEntry = _localEntries.Value.FirstOrDefault(entry =>
+            string.Equals(entry.Definition.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (localEntry is not null)
+        {
+            return await TestLocalEntryAsync(localEntry, cancellationToken);
+        }
+
+        var registration = _clientRegistrations.FirstOrDefault(entry =>
+            string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (registration is null)
+        {
+            return null;
+        }
+
+        return await TestExternalRegistrationAsync(registration, cancellationToken);
     }
 
     /// <summary>
@@ -184,6 +241,97 @@ public sealed class MonicaMcpCatalog(
         finally
         {
             _clientLock.Release();
+        }
+    }
+
+    private async Task<McpConnectivityTestResult> TestLocalEntryAsync(
+        LocalMcpServerEntry entry,
+        CancellationToken cancellationToken)
+    {
+        var startedAt = Stopwatch.GetTimestamp();
+        var testedAt = DateTimeOffset.UtcNow;
+
+        if (entry.TransportKind == McpServerTransportKind.Http
+            && Uri.TryCreate(entry.HttpDisplayUrl, UriKind.Absolute, out var endpoint))
+        {
+            try
+            {
+                await using var transport = new HttpClientTransport(new HttpClientTransportOptions
+                {
+                    Name = entry.Definition.Name,
+                    Endpoint = endpoint
+                });
+                await using var client = await McpClient.CreateAsync(
+                    transport,
+                    loggerFactory: null,
+                    cancellationToken: cancellationToken);
+                var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
+                return new McpConnectivityTestResult(
+                    entry.Definition.Name,
+                    McpCatalogSourceKind.LocalServer,
+                    true,
+                    $"Connected to {endpoint}.",
+                    Stopwatch.GetElapsedTime(startedAt),
+                    tools.Count,
+                    testedAt);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return new McpConnectivityTestResult(
+                    entry.Definition.Name,
+                    McpCatalogSourceKind.LocalServer,
+                    false,
+                    ex.Message,
+                    Stopwatch.GetElapsedTime(startedAt),
+                    0,
+                    testedAt);
+            }
+        }
+
+        var message = entry.TransportKind == McpServerTransportKind.Http
+            ? "Local HTTP MCP server is discovered, but no absolute display URL is configured for a network probe."
+            : "Local stdio MCP server is discovered. In-process readiness was checked because the running web UI cannot connect back to its own stdio transport.";
+
+        return new McpConnectivityTestResult(
+            entry.Definition.Name,
+            McpCatalogSourceKind.LocalServer,
+            true,
+            message,
+            Stopwatch.GetElapsedTime(startedAt),
+            entry.Tools.Count,
+            testedAt);
+    }
+
+    private async Task<McpConnectivityTestResult> TestExternalRegistrationAsync(
+        McpClientRegistration registration,
+        CancellationToken cancellationToken)
+    {
+        var startedAt = Stopwatch.GetTimestamp();
+        var testedAt = DateTimeOffset.UtcNow;
+
+        try
+        {
+            await using var client = await registration.ClientFactory(serviceProvider, cancellationToken);
+            var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
+            return new McpConnectivityTestResult(
+                registration.Name,
+                McpCatalogSourceKind.ExternalClient,
+                true,
+                "Connected and listed tools.",
+                Stopwatch.GetElapsedTime(startedAt),
+                tools.Count,
+                testedAt);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new McpConnectivityTestResult(
+                registration.Name,
+                McpCatalogSourceKind.ExternalClient,
+                false,
+                ex.Message,
+                Stopwatch.GetElapsedTime(startedAt),
+                0,
+                testedAt);
         }
     }
 
@@ -317,8 +465,13 @@ public sealed class MonicaMcpCatalog(
 
         internal bool IsLocalToolEnabled => Server.IsLocalToolEnabled;
 
-        internal McpCatalogEntryInfo ToInfo()
+        internal McpCatalogEntryInfo ToInfo(AgentCapabilityState state)
         {
+            var catalogEnabled = state.McpEnabled;
+            var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Definition.Name);
+            var disabledReason = ResolveDisabledReason(IsLocalToolEnabled, catalogEnabled, entryEnabled);
+            var isAgentToolEnabled = disabledReason is null;
+
             return new McpCatalogEntryInfo(
                 Definition.Name,
                 Definition.Description,
@@ -327,7 +480,14 @@ public sealed class MonicaMcpCatalog(
                 TransportKind == McpServerTransportKind.Http ? HttpEndpointPath : null,
                 TransportKind == McpServerTransportKind.Http ? HttpDisplayUrl : null,
                 IsLocalToolEnabled,
-                Tools.Select(tool => new McpCatalogToolInfo(tool.Name, tool.Description, IsLocalToolEnabled)).ToList());
+                catalogEnabled,
+                entryEnabled,
+                disabledReason,
+                Tools.Select(tool => new McpCatalogToolInfo(
+                    tool.Name,
+                    tool.Description,
+                    isAgentToolEnabled,
+                    AgentCapabilitySchemaParser.FormatSchema(tool.SdkTool.ProtocolTool.InputSchema))).ToList());
         }
     }
 
@@ -335,8 +495,13 @@ public sealed class MonicaMcpCatalog(
         McpClientRegistration Registration,
         IReadOnlyList<McpClientTool> Tools)
     {
-        internal McpCatalogEntryInfo ToInfo()
+        internal McpCatalogEntryInfo ToInfo(AgentCapabilityState state)
         {
+            var catalogEnabled = state.McpEnabled;
+            var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Registration.Name);
+            var disabledReason = ResolveDisabledReason(Registration.IsAgentToolEnabled, catalogEnabled, entryEnabled);
+            var isAgentToolEnabled = disabledReason is null;
+
             return new McpCatalogEntryInfo(
                 Registration.Name,
                 Registration.Description,
@@ -345,7 +510,74 @@ public sealed class MonicaMcpCatalog(
                 null,
                 null,
                 Registration.IsAgentToolEnabled,
-                Tools.Select(tool => new McpCatalogToolInfo(tool.Name, tool.Description, Registration.IsAgentToolEnabled)).ToList());
+                catalogEnabled,
+                entryEnabled,
+                disabledReason,
+                Tools.Select(tool => new McpCatalogToolInfo(
+                    tool.Name,
+                    tool.Description,
+                    isAgentToolEnabled,
+                    AgentCapabilitySchemaParser.FormatSchema(tool.JsonSchema))).ToList());
         }
+    }
+
+    private static AgentCapabilityEntryInfo ToCapabilityInfo(McpCatalogEntryInfo entry)
+    {
+        return new AgentCapabilityEntryInfo(
+            AgentCapabilityKind.Mcp,
+            entry.Name,
+            entry.Name,
+            entry.Description,
+            null,
+            entry.SourceKind.ToString(),
+            [],
+            entry.IsBuiltInAgentToolEnabled,
+            entry.IsCatalogEnabled,
+            entry.IsEntryEnabled,
+            entry.DisabledReason,
+            entry.Tools.Select(tool =>
+            {
+                var schema = TryParseSchema(tool.ParametersSchemaJson);
+                return new AgentCapabilityToolInfo(
+                    tool.Name,
+                    tool.Description,
+                    tool.IsAgentToolEnabled,
+                    tool.ParametersSchemaJson,
+                    AgentCapabilitySchemaParser.ParseParameters(schema));
+            }).ToList(),
+            [],
+            entry.SourceKind,
+            entry.TransportKind,
+            entry.EndpointPath,
+            entry.DisplayUrl);
+    }
+
+    private static string? ResolveDisabledReason(
+        bool builtInEnabled,
+        bool catalogEnabled,
+        bool entryEnabled)
+    {
+        if (!builtInEnabled)
+        {
+            return "This MCP entry is not configured to expose tools to Monica agents.";
+        }
+
+        if (!catalogEnabled)
+        {
+            return "The MCP catalog is globally disabled.";
+        }
+
+        return entryEnabled ? null : "This MCP entry is disabled in runtime capability settings.";
+    }
+
+    private static JsonElement? TryParseSchema(string? schemaJson)
+    {
+        if (string.IsNullOrWhiteSpace(schemaJson))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(schemaJson);
+        return document.RootElement.Clone();
     }
 }

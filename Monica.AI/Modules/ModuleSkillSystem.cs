@@ -1,10 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Monica.AI.Skills.Internal;
 using Monica.AI.Skills.Services;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
-using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
@@ -81,7 +79,6 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaSkillCatalog>();
         services.TryAddSingleton<MonicaAgentSkillsProviderFactory>();
-        services.TryAddSingleton(sp => sp.GetRequiredService<MonicaAgentSkillsProviderFactory>().GetProvider());
     }
 }
 

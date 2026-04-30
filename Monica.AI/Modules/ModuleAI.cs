@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Monica.AI.AgentCapabilities.Abstractions;
+using Monica.AI.AgentCapabilities.Services;
 using Monica.AI.Abstractions;
 using Monica.AI.Facades;
 using Monica.AI.Models;
@@ -13,7 +15,6 @@ using Monica.AI.Services;
 using Monica.AI.Services.Support;
 using Monica.Core;
 using Monica.Core.Extensions;
-using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
@@ -74,6 +75,7 @@ public class ModuleAI(ModuleAIOption option)
 
         // Register provider manager
         services.TryAddSingleton<ITokenCountProvider, EstimatedUtf8TokenCountProvider>();
+        services.TryAddSingleton<IAgentCapabilityStateStore, FileAgentCapabilityStateStore>();
         services.TryAddSingleton<AIChatRuntimeContextAccessor>();
         services.TryAddSingleton<IAIChatRuntimeContextAccessor>(sp =>
             sp.GetRequiredService<AIChatRuntimeContextAccessor>());
@@ -87,6 +89,7 @@ public class ModuleAI(ModuleAIOption option)
         services.AddSingleton<AIChatService>();
         services.AddScoped<ChatFacade>();
         services.AddScoped<ProviderFacade>();
+        services.AddScoped<AgentCapabilityFacade>();
     }
 }
 
@@ -334,4 +337,11 @@ public class ModuleAIOption : ModuleOptions<ModuleAI>
     /// Indicates whether request logging is enabled.
     /// </summary>
     public bool EnableRequestLogging { get; set; }
+
+    /// <summary>
+    /// Relative or absolute file path used to persist runtime Skill and MCP enablement state.
+    /// Defaults to <c>monica_data/ai/capabilities_state.json</c>. Configure this when multiple hosts should
+    /// isolate capability-management state or when the default runtime data directory is unsuitable.
+    /// </summary>
+    public string CapabilityStateStoreFilePath { get; set; } = "monica_data/ai/capabilities_state.json";
 }

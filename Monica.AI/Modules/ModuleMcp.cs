@@ -9,7 +9,6 @@ using Monica.AI.Mcp.Models;
 using Monica.AI.Mcp.Services;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
-using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;

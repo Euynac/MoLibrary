@@ -17,6 +17,9 @@
     "AIProviderManage": {
       "Title": "AI Provider 管理"
     },
+    "AICapabilities": {
+      "Title": "AI 能力"
+    },
     "RAGManage": {
       "Title": "RAG 索引"
     },

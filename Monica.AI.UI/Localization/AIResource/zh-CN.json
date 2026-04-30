@@ -23,6 +23,9 @@
       "NoMatching": "未找到匹配的知识库",
       "Clear": "清空"
     },
+    "CapabilityPicker": {
+      "NoMatches": "未找到匹配的 Skill 或 MCP"
+    },
     "Actions": {
       "EnableDeepThinking": "启用深度思考",
       "DisableDeepThinking": "禁用深度思考",
@@ -474,6 +477,41 @@
       }
     }
   },
+  "Capabilities": {
+    "Title": "AI 能力管理",
+    "Subtitle": "管理 AI Agent 会话全局可用的 Skill 与 MCP。",
+    "Refresh": "刷新",
+    "Empty": "当前未注册任何能力。",
+    "Search": "搜索能力",
+    "SelectPrompt": "选择一个能力查看详情。",
+    "Enabled": "启用",
+    "Tools": "个工具",
+    "Resources": "个资源",
+    "Content": "内容",
+    "NoTools": "该能力未注册工具。",
+    "Tabs": {
+      "Skills": "Skills",
+      "Mcp": "MCP"
+    },
+    "Global": {
+      "Skills": "启用全部 Skill",
+      "Mcp": "启用全部 MCP"
+    },
+    "Status": {
+      "Enabled": "已启用",
+      "Disabled": "已禁用"
+    },
+    "Mcp": {
+      "Test": "连通性测试"
+    },
+    "Tool": {
+      "Name": "工具",
+      "Description": "描述",
+      "Parameters": "参数",
+      "NoParameters": "无参数",
+      "Schema": "原始 Schema"
+    }
+  },
   "Pages": {
     "KnowledgeBaseManage": {
       "Title": "知识库"
@@ -486,6 +524,9 @@
     },
     "RAGChunkers": {
       "Title": "RAG 分块器"
+    },
+    "AICapabilities": {
+      "Title": "AI 能力"
     }
   }
 }

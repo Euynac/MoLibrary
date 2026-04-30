@@ -2,6 +2,7 @@ using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Facades;
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.Models;
@@ -23,6 +24,7 @@ public sealed partial class ChatPageState : IDisposable
     private readonly ChatFacade _chatFacade;
     private readonly ChatSessionStore _sessionStore;
     private readonly ProviderFacade _providerFacade;
+    private readonly AgentCapabilityFacade _capabilityFacade;
     private readonly ModuleAIUIOption _options;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
@@ -38,6 +40,7 @@ public sealed partial class ChatPageState : IDisposable
         ChatFacade chatFacade,
         ChatSessionStore sessionStore,
         ProviderFacade providerFacade,
+        AgentCapabilityFacade capabilityFacade,
         IOptions<ModuleAIUIOption> options,
         ISnackbar snackbar,
         IDialogService dialogService,
@@ -48,6 +51,7 @@ public sealed partial class ChatPageState : IDisposable
         _chatFacade = chatFacade;
         _sessionStore = sessionStore;
         _providerFacade = providerFacade;
+        _capabilityFacade = capabilityFacade;
         _options = options.Value;
         _snackbar = snackbar;
         _dialogService = dialogService;
@@ -188,6 +192,11 @@ public sealed partial class ChatPageState : IDisposable
     public List<string> SelectedKnowledgeBaseIds { get; private set; } = [];
 
     /// <summary>
+    /// Slash-command candidates for explicit Skill and MCP references.
+    /// </summary>
+    public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; private set; } = [];
+
+    /// <summary>
     /// Initialize the page for the current visit.
     /// </summary>
     public async Task InitializeAsync()
@@ -200,6 +209,7 @@ public sealed partial class ChatPageState : IDisposable
         InitializeKnowledgeBaseSelection();
         await LoadPersistedPreferencesAsync();
         await LoadKnowledgeBasesAsync();
+        await LoadCapabilityCandidatesAsync();
         await EnsureSessionExistsAsync();
         UpdateCurrentSession();
         NotifyStateChanged();
@@ -229,7 +239,8 @@ public sealed partial class ChatPageState : IDisposable
             ToolDebugEnabled = ToolDebugEnabled,
             KnowledgeBases = KnowledgeBases,
             SelectedKnowledgeBaseIds = SelectedKnowledgeBaseIds,
-            OnSendMessage = EventCallback.Factory.Create<string>(this, SendMessageAsync),
+            CapabilityCandidates = CapabilityCandidates,
+            OnSendMessage = EventCallback.Factory.Create<ChatSendRequest>(this, SendMessageAsync),
             OnStreamComplete = EventCallback.Factory.Create<string>(this, CompleteStream),
             OnStreamError = EventCallback.Factory.Create<string>(this, SetStreamError),
             OnCancel = EventCallback.Factory.Create(this, CancelAsync),

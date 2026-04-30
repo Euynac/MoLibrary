@@ -88,7 +88,7 @@
         {
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
                 "import",
-                "./_content/Monica.AI.UI/Components/Chat/ChatMessageList.razor.js");
+                "./_content/Monica.AI.UI/UIChat/Components/ChatMessageList.razor.js");
 
             _autoScrollInstance = await _jsModule.InvokeAsync<IJSObjectReference>(
                 "initAutoScroll",

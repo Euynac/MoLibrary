@@ -23,6 +23,9 @@
       "NoMatching": "No matching knowledge bases found",
       "Clear": "Clear"
     },
+    "CapabilityPicker": {
+      "NoMatches": "No matching skills or MCP servers"
+    },
     "Actions": {
       "EnableDeepThinking": "Enable deep thinking",
       "DisableDeepThinking": "Disable deep thinking",
@@ -474,6 +477,41 @@
       }
     }
   },
+  "Capabilities": {
+    "Title": "AI Capabilities",
+    "Subtitle": "Manage globally available skills and MCP servers for AI agent sessions.",
+    "Refresh": "Refresh",
+    "Empty": "No capabilities are currently registered.",
+    "Search": "Search capabilities",
+    "SelectPrompt": "Select a capability to inspect its details.",
+    "Enabled": "Enabled",
+    "Tools": "tools",
+    "Resources": "resources",
+    "Content": "Content",
+    "NoTools": "No tools are registered for this capability.",
+    "Tabs": {
+      "Skills": "Skills",
+      "Mcp": "MCP"
+    },
+    "Global": {
+      "Skills": "Enable all skills",
+      "Mcp": "Enable all MCP"
+    },
+    "Status": {
+      "Enabled": "Enabled",
+      "Disabled": "Disabled"
+    },
+    "Mcp": {
+      "Test": "Test connectivity"
+    },
+    "Tool": {
+      "Name": "Tool",
+      "Description": "Description",
+      "Parameters": "Parameters",
+      "NoParameters": "No parameters",
+      "Schema": "Raw schema"
+    }
+  },
   "Pages": {
     "KnowledgeBaseManage": {
       "Title": "Knowledge Bases"
@@ -486,6 +524,9 @@
     },
     "RAGChunkers": {
       "Title": "RAG Chunkers"
+    },
+    "AICapabilities": {
+      "Title": "AI Capabilities"
     }
   }
 }

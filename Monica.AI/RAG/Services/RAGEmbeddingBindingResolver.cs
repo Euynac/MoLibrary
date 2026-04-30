@@ -3,8 +3,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
-using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.RAG.Models;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;

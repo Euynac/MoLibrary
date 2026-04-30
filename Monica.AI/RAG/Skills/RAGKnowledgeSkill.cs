@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.RAG.Models;

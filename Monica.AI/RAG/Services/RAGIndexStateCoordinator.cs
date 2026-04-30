@@ -1,6 +1,5 @@
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.RAG.Models;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.RAG.Services;

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.Modules;
-using Monica.Tool.Extensions;
 using Monica.Tool.Runtime;
 
 namespace Monica.AI.KnowledgeBase.Services;

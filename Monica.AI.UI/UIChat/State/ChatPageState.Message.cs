@@ -1,5 +1,6 @@
 using System.Net.Http;
 using Monica.AI.Models;
+using Monica.AI.UI.UIChat.Models;
 using Monica.AI.UI.UIChat.Support;
 using MudBlazor;
 
@@ -7,8 +8,9 @@ namespace Monica.AI.UI.UIChat.State;
 
 public sealed partial class ChatPageState
 {
-    private async Task SendMessageAsync(string message)
+    private async Task SendMessageAsync(ChatSendRequest request)
     {
+        var message = request.Message;
         if (string.IsNullOrWhiteSpace(message) || IsSending)
         {
             return;
@@ -27,7 +29,13 @@ public sealed partial class ChatPageState
         AddUserMessageAndUpdateTitle(resolvedSessionId, message);
         _sessionStore.UpdateSession(
             resolvedSessionId,
-            session => session.ReasoningEnabled = ReasoningEnabled);
+            session =>
+            {
+                session.ReasoningEnabled = ReasoningEnabled;
+                session.RuntimeContext = BuildRuntimeContext(
+                    SelectedKnowledgeBaseIds,
+                    request.CapabilityReferences);
+            });
 
         await StartStreamingMessageAsync(resolvedSessionId, message);
     }
@@ -126,7 +134,7 @@ public sealed partial class ChatPageState
         }
 
         ClearError();
-        await SendMessageAsync(LastMessage);
+        await SendMessageAsync(new ChatSendRequest(LastMessage, []));
     }
 
     private void EditMessage((AIChatMessage Message, string NewContent) args)

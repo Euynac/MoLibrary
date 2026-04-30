@@ -16,6 +16,8 @@
 
 .input-top {
     display: flex;
+    position: relative;
+    min-width: 0;
 }
 
 .input-bottom {
@@ -48,6 +50,83 @@
 
 .input-area ::deep .input-field {
     flex: 1;
+}
+
+.reference-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 12px;
+}
+
+.input-area ::deep .mo-ai-capability-popover {
+    min-width: min(520px, calc(100vw - 32px));
+}
+
+.input-area ::deep .capability-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.capability-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.candidate-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--mud-palette-text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.candidate-item:hover,
+.candidate-item.selected {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.candidate-icon {
+    color: var(--mud-palette-text-secondary);
+}
+
+.candidate-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.candidate-title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.candidate-description {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .input-area ::deep .mud-input-root {

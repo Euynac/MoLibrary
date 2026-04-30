@@ -27,6 +27,7 @@
         SupportsReasoning="@_params.SupportsReasoning"
         ReasoningEnabled="@_params.ReasoningEnabled"
         AvailableModels="@_params.AvailableModels"
+        CapabilityCandidates="@_params.CapabilityCandidates"
         ReasoningEnabledChanged="@_params.ReasoningEnabledChanged"
         KnowledgeBases="@_params.KnowledgeBases"
         SelectedKnowledgeBaseIds="@_params.SelectedKnowledgeBaseIds"
@@ -43,9 +44,9 @@
     private ChatMessageList? _messageListRef;
     private ChatContainerParameters _params => Parameters;
 
-    private async Task HandleSend(string message)
+    private async Task HandleSend(ChatSendRequest request)
     {
-        await _params.OnSendMessage.InvokeAsync(message);
+        await _params.OnSendMessage.InvokeAsync(request);
 
         if (_messageListRef != null)
         {

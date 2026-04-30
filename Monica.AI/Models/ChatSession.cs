@@ -11,15 +11,18 @@ namespace Monica.AI.Models;
 public class ChatSession
 {
     private string _providerId;
+    private long _capabilityRevision;
 
     internal ChatSession(
         AIAgent agent,
         AgentSession session,
-        string providerId)
+        string providerId,
+        long capabilityRevision)
     {
         Agent = agent;
         Session = session;
         _providerId = providerId;
+        _capabilityRevision = capabilityRevision;
         SessionId = Guid.NewGuid().ToString("N");
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
@@ -100,6 +103,30 @@ public class ChatSession
     /// Runtime context visible to skills and tools during the next chat invocation.
     /// </summary>
     public AIChatRuntimeContext RuntimeContext { get; set; } = AIChatRuntimeContext.Empty;
+
+    /// <summary>
+    /// Runtime capability-state revision used to create the current agent pipeline.
+    /// Setting this property triggers agent recreation on next message send when it changes.
+    /// </summary>
+    public long CapabilityRevision
+    {
+        get => _capabilityRevision;
+        internal set => _capabilityRevision = value;
+    }
+
+    /// <summary>
+    /// Marks this session for recreation when the persisted capability-state revision changed.
+    /// </summary>
+    internal void MarkCapabilityRevision(long capabilityRevision)
+    {
+        if (_capabilityRevision == capabilityRevision)
+        {
+            return;
+        }
+
+        _capabilityRevision = capabilityRevision;
+        NeedsRecreation = true;
+    }
 
     /// <summary>
     /// Whether reasoning/thinking mode is enabled for this session.

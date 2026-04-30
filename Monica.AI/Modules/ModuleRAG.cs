@@ -16,7 +16,6 @@ using Monica.AI.Services;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
 using Monica.Core;
-using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;

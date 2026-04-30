@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
+using Monica.AI.AgentCapabilities.Models;
 using Monica.AI.Models;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
@@ -42,8 +43,11 @@ public sealed class ChatContainerParameters
     public IReadOnlyList<KnowledgeBaseModel>? KnowledgeBases { get; init; }
     public List<string> SelectedKnowledgeBaseIds { get; init; } = [];
 
+    // Agent capabilities
+    public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; init; } = [];
+
     // Event callbacks
-    public required EventCallback<string> OnSendMessage { get; init; }
+    public required EventCallback<ChatSendRequest> OnSendMessage { get; init; }
     public EventCallback<string> OnStreamComplete { get; init; }
     public EventCallback<string> OnStreamError { get; init; }
     public EventCallback OnCancel { get; init; }

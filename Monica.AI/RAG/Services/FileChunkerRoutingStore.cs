@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Monica.Modules;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Models;
-using Monica.Tool.Extensions;
 using Monica.Tool.Runtime;
 
 namespace Monica.AI.RAG.Services;

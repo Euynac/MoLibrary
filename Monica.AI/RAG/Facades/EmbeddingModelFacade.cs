@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using Monica.AI.Abstractions;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.AI.Models;
-using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.Core.Extensions;

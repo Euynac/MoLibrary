@@ -33,8 +33,8 @@ public class AIChatAgentFactory(
         ct.ThrowIfCancellationRequested();
 
         var builder = new AIChatAgentBuilder(context.Instructions);
-        builder.AddContextProvider(skillsProviderFactory.GetProvider());
-        var mcpTools = await mcpCatalog.GetAgentToolsAsync(ct);
+        builder.AddContextProvider(skillsProviderFactory.CreateProvider(context.CapabilityState));
+        var mcpTools = await mcpCatalog.GetAgentToolsAsync(context.CapabilityState, ct);
         builder.AddTools(mcpTools);
 
         var agentOptions = builder.BuildOptions();

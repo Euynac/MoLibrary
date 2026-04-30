@@ -56,7 +56,7 @@ public class ModuleAIUI(ModuleAIUIOption option)
             DependsOnModule<ModuleKnowledgeBaseGuide>().Register();
         }
 
-        if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage)
+        if (!Option.DisableAIChatPage || !Option.DisableAIProviderPage || !Option.DisableAICapabilityPage)
         {
             DependsOnModule<ModuleLocalizationGuide>().Register()
                 .AddResource<AIResource>();
@@ -92,6 +92,21 @@ public class ModuleAIUI(ModuleAIUIOption option)
                         navOrder: 2);
                 });
         }
+
+        if (!Option.DisableAICapabilityPage)
+        {
+            DependsOnModule<ModuleShellUIGuide>().Register()
+                .RegisterUIComponents(p =>
+                {
+                    p.RegisterLocalizedComponent<AgentCapabilityManagePage>(
+                        AgentCapabilityManagePage.PAGE_URL,
+                        "Pages:AICapabilities:Title",
+                        Icons.Material.Filled.Extension,
+                        "Categories:AI",
+                        addToNav: true,
+                        navOrder: 3);
+                });
+        }
     }
 }
 
@@ -117,6 +132,11 @@ public class ModuleAIUIOption : ModuleOptions<ModuleAIUI>
     /// Disable the AI provider manage page
     /// </summary>
     public bool DisableAIProviderPage { get; set; }
+
+    /// <summary>
+    /// Disable the AI Skill and MCP capability management page.
+    /// </summary>
+    public bool DisableAICapabilityPage { get; set; }
 
     /// <summary>
     /// Enable Markdown rendering

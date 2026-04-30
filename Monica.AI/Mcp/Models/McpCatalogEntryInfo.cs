@@ -15,7 +15,10 @@ public sealed record McpCatalogEntryInfo
         McpServerTransportKind? transportKind,
         string? endpointPath,
         string? displayUrl,
-        bool isAgentToolEnabled,
+        bool isBuiltInAgentToolEnabled,
+        bool isCatalogEnabled,
+        bool isEntryEnabled,
+        string? disabledReason,
         IReadOnlyList<McpCatalogToolInfo> tools)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -28,7 +31,10 @@ public sealed record McpCatalogEntryInfo
         TransportKind = transportKind;
         EndpointPath = endpointPath;
         DisplayUrl = displayUrl;
-        IsAgentToolEnabled = isAgentToolEnabled;
+        IsBuiltInAgentToolEnabled = isBuiltInAgentToolEnabled;
+        IsCatalogEnabled = isCatalogEnabled;
+        IsEntryEnabled = isEntryEnabled;
+        DisabledReason = disabledReason;
         Tools = tools;
     }
 
@@ -63,9 +69,29 @@ public sealed record McpCatalogEntryInfo
     public string? DisplayUrl { get; }
 
     /// <summary>
-    /// Gets whether this entry contributes tools to Monica agents.
+    /// Gets whether this entry is configured by its author or registration to expose tools to Monica agents.
     /// </summary>
-    public bool IsAgentToolEnabled { get; }
+    public bool IsBuiltInAgentToolEnabled { get; }
+
+    /// <summary>
+    /// Gets whether the MCP catalog runtime switch is enabled.
+    /// </summary>
+    public bool IsCatalogEnabled { get; }
+
+    /// <summary>
+    /// Gets whether this specific MCP entry is enabled in runtime settings.
+    /// </summary>
+    public bool IsEntryEnabled { get; }
+
+    /// <summary>
+    /// Gets whether this entry currently contributes tools to Monica agents.
+    /// </summary>
+    public bool IsAgentToolEnabled => IsBuiltInAgentToolEnabled && IsCatalogEnabled && IsEntryEnabled && DisabledReason is null;
+
+    /// <summary>
+    /// Human-readable reason the entry cannot currently be exposed to Monica agents.
+    /// </summary>
+    public string? DisabledReason { get; }
 
     /// <summary>
     /// Tools known for this catalog entry.

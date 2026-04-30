@@ -1,25 +1,26 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
+using Monica.AI.AgentCapabilities.Models;
 
 namespace Monica.AI.Skills.Services;
 
 /// <summary>
-/// Creates the singleton Microsoft agent skills provider from Monica's discovered skill catalog.
+/// Creates Microsoft agent skills providers from Monica's discovered skill catalog.
 /// </summary>
 public sealed class MonicaAgentSkillsProviderFactory(
     MonicaSkillCatalog skillCatalog,
     ILoggerFactory loggerFactory)
 {
-    private readonly Lazy<AgentSkillsProvider> _provider = new(() =>
+    /// <summary>
+    /// Creates a provider for the currently enabled skills.
+    /// </summary>
+    public AgentSkillsProvider CreateProvider(AgentCapabilityState state)
     {
+        ArgumentNullException.ThrowIfNull(state);
+
         return new AgentSkillsProviderBuilder()
-            .UseSkills(skillCatalog.GetActiveSkills())
+            .UseSkills(skillCatalog.GetActiveSkills(state))
             .UseLoggerFactory(loggerFactory)
             .Build();
-    });
-
-    /// <summary>
-    /// Gets the process-static skills provider.
-    /// </summary>
-    public AgentSkillsProvider GetProvider() => _provider.Value;
+    }
 }

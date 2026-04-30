@@ -17,6 +17,9 @@
     "AIProviderManage": {
       "Title": "AI Provider Management"
     },
+    "AICapabilities": {
+      "Title": "AI Capabilities"
+    },
     "RAGManage": {
       "Title": "RAG Indexing"
     },
