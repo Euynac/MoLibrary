@@ -57,15 +57,15 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         {
             if (type is { IsClass: true, IsAbstract: false })
             {
-                if (IsAssignableToOpenGeneric(type, typeof(MoSkill<>)))
+                if (IsAssignableToOpenGeneric(type, typeof(Skill<>)))
                 {
                     _skillTypes.Add(type);
                 }
-                else if (type.IsAssignableTo(typeof(MoTool)))
+                else if (type.IsAssignableTo(typeof(StandaloneTool)))
                 {
                     _toolTypes.Add(type);
                 }
-                else if (type.IsAssignableTo(typeof(MoMcp)))
+                else if (type.IsAssignableTo(typeof(McpService)))
                 {
                     _mcpTypes.Add(type);
                 }
@@ -96,7 +96,7 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         if (_toolTypes.Count > 0 || _mcpTypes.Count > 0)
         {
             Logger.LogWarning(
-                "MoTool and MoMcp discovery is reserved but not active yet. Tool types: {ToolCount}; MCP types: {McpCount}.",
+                "StandaloneTool and McpService discovery is reserved but not active yet. Tool types: {ToolCount}; MCP types: {McpCount}.",
                 _toolTypes.Count,
                 _mcpTypes.Count);
         }

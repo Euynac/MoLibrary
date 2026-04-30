@@ -6,15 +6,15 @@ using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
 
-internal static class MoSkillScriptDiscovery
+internal static class SkillScriptDiscovery
 {
     private const BindingFlags DISCOVERY_FLAGS =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
     internal static IReadOnlyList<AgentSkillScript>? Discover<TSelf>(
-        MoSkill<TSelf> skill,
+        Skill<TSelf> skill,
         IXmlDocumentationService? xmlDocs)
-        where TSelf : MoSkill<TSelf>
+        where TSelf : Skill<TSelf>
     {
         ArgumentNullException.ThrowIfNull(skill);
 
@@ -23,31 +23,31 @@ internal static class MoSkillScriptDiscovery
 
         foreach (var method in typeof(TSelf).GetMethods(DISCOVERY_FLAGS))
         {
-            var toolAttribute = method.GetCustomAttribute<MoAIToolAttribute>();
+            var toolAttribute = method.GetCustomAttribute<SkillToolAttribute>();
             if (toolAttribute is null || toolAttribute.Disabled)
             {
                 continue;
             }
 
             var name = string.IsNullOrWhiteSpace(toolAttribute.Name)
-                ? MoAIToolNameHelper.DeriveName(method.Name)
+                ? SkillToolNameHelper.DeriveName(method.Name)
                 : toolAttribute.Name.Trim();
 
             if (scriptMethods.TryGetValue(name, out var existingMethod))
             {
                 throw new InvalidOperationException(
                     $"Skill '{skill.Frontmatter.Name}' exposes duplicate script name '{name}' from methods " +
-                    $"'{existingMethod.Name}' and '{method.Name}'. Set an explicit [MoAITool(Name = ...)] value.");
+                    $"'{existingMethod.Name}' and '{method.Name}'. Set an explicit [SkillTool(Name = ...)] value.");
             }
 
             scriptMethods.Add(name, method);
             scripts ??= [];
-            scripts.Add(new MoInlineSkillScript(
+            scripts.Add(new InlineSkillScript(
                 name,
                 method,
                 method.IsStatic ? null : skill,
-                MoAIDescriptionResolver.ResolveMethod(method, xmlDocs),
-                skill.MoSerializerOptions,
+                SkillDescriptionResolver.ResolveMethod(method, xmlDocs),
+                skill.ScriptSerializerOptions,
                 xmlDocs));
         }
 

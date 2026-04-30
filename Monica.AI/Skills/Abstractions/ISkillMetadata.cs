@@ -5,7 +5,7 @@ namespace Monica.AI.Skills.Abstractions;
 /// <summary>
 /// Runtime metadata shared by all Monica skill implementations.
 /// </summary>
-public interface IMoSkillMetadata
+public interface ISkillMetadata
 {
     /// <summary>
     /// Module keys that must be loaded for the skill to be available.

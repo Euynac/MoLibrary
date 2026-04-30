@@ -33,7 +33,7 @@ public sealed class MonicaSkillCatalog(
         IReadOnlySet<ModuleKey> loadedModuleKeys,
         ILogger logger)
     {
-        if (skill is not IMoSkillMetadata metadata)
+        if (skill is not ISkillMetadata metadata)
         {
             return true;
         }
@@ -61,5 +61,5 @@ public sealed class MonicaSkillCatalog(
     }
 
     private static int GetPriority(AgentSkill skill)
-        => skill is IMoSkillMetadata metadata ? metadata.Priority : 0;
+        => skill is ISkillMetadata metadata ? metadata.Priority : 0;
 }

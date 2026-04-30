@@ -28,7 +28,7 @@ public sealed class RAGKnowledgeSkill(
     IOptions<ModuleRAGOption> ragOptions,
     IXmlDocumentationService xmlDocumentationService,
     ILogger<RAGKnowledgeSkill> logger)
-    : MoSkill<RAGKnowledgeSkill>(xmlDocumentationService)
+    : Skill<RAGKnowledgeSkill>(xmlDocumentationService)
 {
     private static readonly JsonSerializerOptions _toolJsonOptions = new()
     {
@@ -62,7 +62,7 @@ public sealed class RAGKnowledgeSkill(
     /// <param name="topK">Optional top-K result count override.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized knowledge search payload.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "search-knowledge-base",
         Description = "Semantic search over the selected knowledge bases. Returns ranked excerpts with source name and source link for citation.")]
     public async Task<string> SearchAsync(
@@ -98,7 +98,7 @@ public sealed class RAGKnowledgeSkill(
     /// <param name="maxDocuments">Optional maximum number of documents to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document browsing payload.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "browse-knowledge-documents",
         Description = "List indexed knowledge-base documents or fuzzy-search document titles, paths, and preview contexts.")]
     public async Task<string> BrowseDocumentsAsync(
@@ -133,7 +133,7 @@ public sealed class RAGKnowledgeSkill(
     /// <param name="maxEntries">Optional maximum number of tree entries.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document tree payload.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "browse-knowledge-document-tree",
         Description = "Browse the indexed document directory tree for selected knowledge bases.")]
     public async Task<string> BrowseDocumentTreeAsync(
@@ -173,7 +173,7 @@ public sealed class RAGKnowledgeSkill(
     /// <param name="startCharacterIndex">Optional character offset used to continue a previous read.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document content payload.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "get-knowledge-document-content",
         Description = "Load original source content for a specific indexed knowledge-base document.")]
     public async Task<string> GetDocumentContentAsync(

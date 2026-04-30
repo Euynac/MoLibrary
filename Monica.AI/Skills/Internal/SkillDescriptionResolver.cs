@@ -5,13 +5,13 @@ using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
 
-internal static class MoAIDescriptionResolver
+internal static class SkillDescriptionResolver
 {
     internal static string ResolveMethod(MethodInfo method, IXmlDocumentationService? xmlDocs)
     {
         ArgumentNullException.ThrowIfNull(method);
 
-        var fromAttribute = method.GetCustomAttribute<MoAIToolAttribute>()?.Description;
+        var fromAttribute = method.GetCustomAttribute<SkillToolAttribute>()?.Description;
         if (!string.IsNullOrWhiteSpace(fromAttribute))
         {
             return fromAttribute;
@@ -36,7 +36,7 @@ internal static class MoAIDescriptionResolver
     {
         ArgumentNullException.ThrowIfNull(parameter);
 
-        var fromAttribute = parameter.GetCustomAttribute<MoAIToolAttribute>()?.Description;
+        var fromAttribute = parameter.GetCustomAttribute<SkillToolAttribute>()?.Description;
         if (!string.IsNullOrWhiteSpace(fromAttribute))
         {
             return fromAttribute;

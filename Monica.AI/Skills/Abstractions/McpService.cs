@@ -5,7 +5,7 @@ namespace Monica.AI.Skills.Abstractions;
 /// <summary>
 /// Placeholder base for future MCP server integrations.
 /// </summary>
-public abstract class MoMcp
+public abstract class McpService
 {
     /// <summary>
     /// MCP service name.

@@ -7,11 +7,11 @@ using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
 
-internal sealed class MoInlineSkillScript : AgentSkillScript
+internal sealed class InlineSkillScript : AgentSkillScript
 {
     private readonly AIFunction _function;
 
-    internal MoInlineSkillScript(
+    internal InlineSkillScript(
         string name,
         MethodInfo method,
         object? target,
@@ -28,7 +28,7 @@ internal sealed class MoInlineSkillScript : AgentSkillScript
             JsonSchemaCreateOptions = new AIJsonSchemaCreateOptions
             {
                 ParameterDescriptionProvider = parameter =>
-                    MoAIDescriptionResolver.ResolveParameter(parameter, xmlDocs)
+                    SkillDescriptionResolver.ResolveParameter(parameter, xmlDocs)
             }
         });
     }

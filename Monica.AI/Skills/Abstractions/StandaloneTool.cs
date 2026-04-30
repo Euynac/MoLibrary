@@ -6,7 +6,7 @@ namespace Monica.AI.Skills.Abstractions;
 /// <summary>
 /// Base class for standalone AI tools that are not part of a larger skill.
 /// </summary>
-public abstract class MoTool : AITool
+public abstract class StandaloneTool : AITool
 {
     /// <inheritdoc />
     public abstract override string Name { get; }

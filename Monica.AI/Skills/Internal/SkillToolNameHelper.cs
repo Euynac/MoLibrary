@@ -2,7 +2,7 @@ using System.Text;
 
 namespace Monica.AI.Skills.Internal;
 
-internal static class MoAIToolNameHelper
+internal static class SkillToolNameHelper
 {
     internal static string DeriveName(string memberName)
     {

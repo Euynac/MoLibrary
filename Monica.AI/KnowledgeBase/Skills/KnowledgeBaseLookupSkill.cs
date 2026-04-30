@@ -18,7 +18,7 @@ namespace Monica.AI.KnowledgeBase.Skills;
 public sealed class KnowledgeBaseLookupSkill(
     IKnowledgeBaseLookupService lookup,
     IXmlDocumentationService xmlDocumentationService)
-    : MoSkill<KnowledgeBaseLookupSkill>(xmlDocumentationService)
+    : Skill<KnowledgeBaseLookupSkill>(xmlDocumentationService)
 {
     private static readonly JsonSerializerOptions _toolJsonOptions = new()
     {
@@ -44,7 +44,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized knowledge-base summaries.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "list-knowledge-bases",
         Description = "List all knowledge bases, including id, display name, description, and document counts.")]
     public async Task<string> ListAsync(CancellationToken ct = default)
@@ -59,7 +59,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// <param name="maxResults">Maximum documents to return.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document summaries.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "browse-knowledge-documents",
         Description = "List documents in a knowledge base, optionally filtered to a directory path.")]
     public async Task<string> BrowseDocumentsAsync(
@@ -83,7 +83,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// <param name="maxDepth">Maximum directory depth.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document tree.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "browse-knowledge-document-tree",
         Description = "Browse the directory tree of a knowledge base.")]
     public async Task<string> GetDocumentTreeAsync(
@@ -108,7 +108,7 @@ public sealed class KnowledgeBaseLookupSkill(
     /// <param name="startCharacterIndex">Character index to start reading from.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Serialized document content segment.</returns>
-    [MoAITool(
+    [SkillTool(
         Name = "get-knowledge-document-content",
         Description = "Read a specific document's source content by id.")]
     public async Task<string> GetDocumentContentAsync(

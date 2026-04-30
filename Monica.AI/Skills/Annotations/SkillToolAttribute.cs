@@ -7,7 +7,7 @@ namespace Monica.AI.Skills.Annotations;
     AttributeTargets.Method | AttributeTargets.Parameter,
     AllowMultiple = false,
     Inherited = false)]
-public sealed class MoAIToolAttribute : Attribute
+public sealed class SkillToolAttribute : Attribute
 {
     /// <summary>
     /// Optional script name override for methods. Parameters ignore this value.
