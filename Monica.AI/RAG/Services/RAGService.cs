@@ -104,6 +104,7 @@ public sealed partial class RAGService(
     /// </summary>
     public async Task<KnowledgeBaseRagSupportRemovalResult> RemoveKnowledgeBaseRagSupportAsync(
         string knowledgeBaseId,
+        bool forceLocalMetadataRemoval = false,
         CancellationToken ct = default)
     {
         var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
@@ -119,6 +120,9 @@ public sealed partial class RAGService(
 
         var clearedIndexedDocumentCount = states.Count(static state => state.Status == DocumentStatus.Done || state.ChunkCount > 0);
         var clearedChunkCount = states.Sum(static state => Math.Max(0, state.ChunkCount));
+        var collectionName = vectorCollectionCoordinator.GetCollectionName(knowledgeBaseId);
+        string? vectorStoreCleanupErrorMessage = null;
+        var vectorStoreCleanupSucceeded = true;
 
         try
         {
@@ -126,9 +130,17 @@ public sealed partial class RAGService(
         }
         catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
         {
-            throw new InvalidOperationException(
-                RAGFailureTranslator.DescribeEmbeddingModelSwitch(ex),
-                ex);
+            if (!forceLocalMetadataRemoval)
+            {
+                throw;
+            }
+
+            vectorStoreCleanupSucceeded = false;
+            vectorStoreCleanupErrorMessage = ex.Message;
+            logger.LogWarning(
+                ex,
+                "Force-removing local RAG support for KB '{KbId}' after vector collection cleanup failed.",
+                knowledgeBaseId);
         }
 
         var resetDocumentCount = await indexStateCoordinator.ResetIndexedDocumentStatesToPendingAsync(knowledgeBaseId, ct);
@@ -140,16 +152,73 @@ public sealed partial class RAGService(
         await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
 
         logger.LogInformation(
-            "Removed RAG support for KB '{KbId}'. Reset {ResetDocumentCount} document(s), cleared {ClearedChunkCount} chunk vector(s).",
+            "Removed RAG support for KB '{KbId}'. Reset {ResetDocumentCount} document(s), cleared {ClearedChunkCount} chunk vector(s), forced={WasForced}.",
             knowledgeBaseId,
             resetDocumentCount,
-            clearedChunkCount);
+            clearedChunkCount,
+            forceLocalMetadataRemoval && !vectorStoreCleanupSucceeded);
 
         return new KnowledgeBaseRagSupportRemovalResult
         {
             KnowledgeBaseId = knowledgeBaseId,
             ResetDocumentCount = resetDocumentCount,
             ClearedIndexedDocumentCount = clearedIndexedDocumentCount,
+            ClearedChunkCount = clearedChunkCount,
+            VectorCollectionName = collectionName,
+            VectorStoreCleanupSucceeded = vectorStoreCleanupSucceeded,
+            WasForced = forceLocalMetadataRemoval && !vectorStoreCleanupSucceeded,
+            StaleVectorCollectionMayRemain = !vectorStoreCleanupSucceeded,
+            VectorStoreCleanupErrorMessage = vectorStoreCleanupErrorMessage
+        };
+    }
+
+    /// <summary>
+    /// Checks whether the vector collection assigned to a knowledge base currently exists.
+    /// </summary>
+    public Task<KnowledgeBaseVectorCollectionStatus> GetKnowledgeBaseVectorCollectionStatusAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+        => vectorCollectionCoordinator.GetKnowledgeBaseVectorCollectionStatusAsync(knowledgeBaseId, ct);
+
+    /// <summary>
+    /// Clears an existing vector collection so the knowledge base ID can be reused.
+    /// </summary>
+    public async Task<KnowledgeBaseVectorCollectionOverwriteResult> OverwriteKnowledgeBaseVectorCollectionAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        if (states.Any(state =>
+                state.Status == DocumentStatus.Indexing
+                && IsDocumentIndexingActiveAtRuntime(state.KnowledgeBaseId, state.DocumentPath)))
+        {
+            throw new InvalidOperationException("Cannot overwrite vector collection while indexing is in progress.");
+        }
+
+        var collectionName = vectorCollectionCoordinator.GetCollectionName(knowledgeBaseId);
+        var clearedChunkCount = states.Sum(static state => Math.Max(0, state.ChunkCount));
+
+        await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+        var resetDocumentCount = await indexStateCoordinator.ResetIndexedDocumentStatesToPendingAsync(knowledgeBaseId, ct);
+
+        kb.DocumentCount = 0;
+        kb.ChunkCount = 0;
+        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
+
+        logger.LogWarning(
+            "Overwrote vector collection '{CollectionName}' for KB '{KbId}'. Reset {ResetDocumentCount} document(s).",
+            collectionName,
+            knowledgeBaseId,
+            resetDocumentCount);
+
+        return new KnowledgeBaseVectorCollectionOverwriteResult
+        {
+            KnowledgeBaseId = knowledgeBaseId,
+            CollectionName = collectionName,
+            ResetDocumentCount = resetDocumentCount,
             ClearedChunkCount = clearedChunkCount
         };
     }

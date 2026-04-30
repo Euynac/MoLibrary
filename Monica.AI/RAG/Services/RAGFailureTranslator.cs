@@ -20,6 +20,12 @@ public static class RAGFailureTranslator
     private static string EmbeddingModelSwitchMessage =>
         $"Cannot switch the embedding model because the existing vector index could not be cleared. {VectorStoreRecoveryHint}";
 
+    private static string RagSupportRemovalMessage =>
+        $"Cannot remove RAG support because the configured vector store is unavailable or misconfigured. You can force local removal if you accept that stale vectors may remain in the vector store. {VectorStoreRecoveryHint}";
+
+    private static string VectorCollectionOverwriteMessage =>
+        $"Cannot overwrite the existing vector collection because the configured vector store is unavailable or misconfigured. {VectorStoreRecoveryHint}";
+
     /// <summary>
     /// Returns a friendly message for failures that block indexing from starting.
     /// </summary>
@@ -47,6 +53,26 @@ public static class RAGFailureTranslator
     {
         return IsVectorStoreFailure(exception)
             ? EmbeddingModelSwitchMessage
+            : exception.Message;
+    }
+
+    /// <summary>
+    /// Returns a friendly message for failures raised while removing RAG support.
+    /// </summary>
+    public static string DescribeRagSupportRemoval(Exception exception)
+    {
+        return IsVectorStoreFailure(exception)
+            ? RagSupportRemovalMessage
+            : exception.Message;
+    }
+
+    /// <summary>
+    /// Returns a friendly message for failures raised while clearing an existing vector collection for reuse.
+    /// </summary>
+    public static string DescribeVectorCollectionOverwrite(Exception exception)
+    {
+        return IsVectorStoreFailure(exception)
+            ? VectorCollectionOverwriteMessage
             : exception.Message;
     }
 

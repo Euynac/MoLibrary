@@ -42,6 +42,43 @@ public sealed class RAGVectorCollectionCoordinator(
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
 
     /// <summary>
+    /// Checks whether the vector collection assigned to a knowledge base currently exists.
+    /// </summary>
+    public async Task<KnowledgeBaseVectorCollectionStatus> GetKnowledgeBaseVectorCollectionStatusAsync(
+        string knowledgeBaseId,
+        CancellationToken ct)
+    {
+        var collectionName = GetCollectionName(knowledgeBaseId);
+        try
+        {
+            var exists = await vectorStore.CollectionExistsAsync(collectionName, ct);
+            return new KnowledgeBaseVectorCollectionStatus
+            {
+                KnowledgeBaseId = knowledgeBaseId,
+                CollectionName = collectionName,
+                WasChecked = true,
+                Exists = exists
+            };
+        }
+        catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to check vector collection '{CollectionName}' for KB '{KbId}'.",
+                collectionName,
+                knowledgeBaseId);
+            return new KnowledgeBaseVectorCollectionStatus
+            {
+                KnowledgeBaseId = knowledgeBaseId,
+                CollectionName = collectionName,
+                WasChecked = false,
+                Exists = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
     /// Gets runtime diagnostics for the configured vector store without opening a network connection.
     /// </summary>
     public VectorStoreDiagnosticInfo GetVectorStoreDiagnostics()

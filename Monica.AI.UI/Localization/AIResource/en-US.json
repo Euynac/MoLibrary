@@ -163,10 +163,25 @@
       "Remove": "Remove RAG",
       "Enabled": "RAG support enabled.",
       "Removed": "RAG support removed. Reset {0} document(s) and cleared {1} indexed chunk(s).",
+      "ForceRemoved": "RAG support force removed. Reset {0} document(s). Stale vector data may remain in the vector store.",
       "RemoveConfirm": {
         "Title": "Remove RAG Support",
         "Message": "Remove RAG support from knowledge base '{0}'? This will clear all RAG vector data and reset indexed documents to pending, but it will keep the knowledge base and source documents.",
         "Confirm": "Remove RAG"
+      },
+      "ForceRemoveConfirm": {
+        "Title": "Force Remove RAG Support",
+        "Message": "The vector store could not be reached, so vector data cannot be cleared now. Force local removal anyway? This keeps the knowledge base and source documents, but stale vectors may remain in the vector store and must be overwritten before reusing the same ID.",
+        "Confirm": "Force Remove"
+      }
+    },
+    "VectorCollection": {
+      "CheckUnavailable": "Vector collection could not be checked because the vector store is unavailable. RAG metadata can be saved, but indexing may fail until the vector store is reachable.",
+      "Overwritten": "Vector collection '{0}' overwritten. Reset {1} document(s) and cleared {2} indexed chunk(s).",
+      "OverwriteConfirm": {
+        "Title": "Overwrite Existing Vector Collection",
+        "Message": "The active vector store already contains collection '{0}'. Overwrite it before using this knowledge base ID? This clears existing vector data for that collection.",
+        "Confirm": "Overwrite"
       }
     },
     "EmbeddingDiagnostics": {

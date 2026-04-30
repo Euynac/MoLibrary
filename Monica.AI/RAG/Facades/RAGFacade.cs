@@ -16,6 +16,8 @@ public class RAGFacade(
     IServiceProvider serviceProvider,
     ILogger<RAGFacade> logger)
 {
+    public const string CAN_FORCE_REMOVE_RAG_SUPPORT_METADATA_KEY = "canForceRemoveRagSupport";
+
     public async Task<Res<KnowledgeBaseVectorValidationResult>> GetKnowledgeBaseVectorValidationAsync(string kbId)
     {
         try
@@ -74,19 +76,71 @@ public class RAGFacade(
     /// Removes RAG support from one knowledge base and clears its persisted vector/index data.
     /// </summary>
     /// <param name="kbId">Knowledge base identifier.</param>
-    public async Task<Res<KnowledgeBaseRagSupportRemovalResult>> RemoveKnowledgeBaseRagSupportAsync(string kbId)
+    /// <param name="forceLocalMetadataRemoval">Whether local RAG metadata can be removed when remote vector cleanup fails.</param>
+    public async Task<Res<KnowledgeBaseRagSupportRemovalResult>> RemoveKnowledgeBaseRagSupportAsync(
+        string kbId,
+        bool forceLocalMetadataRemoval = false)
     {
         try
         {
-            var result = await GetRagService().RemoveKnowledgeBaseRagSupportAsync(kbId);
+            var result = await GetRagService().RemoveKnowledgeBaseRagSupportAsync(kbId, forceLocalMetadataRemoval);
             return Res.Ok(result);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to remove RAG support for KB '{KbId}'", kbId);
+            if (RAGFailureTranslator.IsVectorStoreFailure(ex))
+            {
+                return Res.Fail(RAGFailureTranslator.DescribeRagSupportRemoval(ex))
+                    .AppendMetadata(CAN_FORCE_REMOVE_RAG_SUPPORT_METADATA_KEY, true);
+            }
+
             return ex is InvalidOperationException or KeyNotFoundException
                 ? Res.Fail(ex.GetMessageRecursively())
                 : Res.Fail($"Failed to remove RAG support: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the active vector store already contains the collection assigned to one knowledge base.
+    /// </summary>
+    public async Task<Res<KnowledgeBaseVectorCollectionStatus>> GetKnowledgeBaseVectorCollectionStatusAsync(string kbId)
+    {
+        try
+        {
+            var result = await GetRagService().GetKnowledgeBaseVectorCollectionStatusAsync(kbId);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to check vector collection status for KB '{KbId}'", kbId);
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? Res.Fail(ex.GetMessageRecursively())
+                : Res.Fail($"Failed to check vector collection status: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Clears an existing vector collection so the knowledge base ID can be reused.
+    /// </summary>
+    public async Task<Res<KnowledgeBaseVectorCollectionOverwriteResult>> OverwriteKnowledgeBaseVectorCollectionAsync(string kbId)
+    {
+        try
+        {
+            var result = await GetRagService().OverwriteKnowledgeBaseVectorCollectionAsync(kbId);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to overwrite vector collection for KB '{KbId}'", kbId);
+            if (RAGFailureTranslator.IsVectorStoreFailure(ex))
+            {
+                return Res.Fail(RAGFailureTranslator.DescribeVectorCollectionOverwrite(ex));
+            }
+
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? Res.Fail(ex.GetMessageRecursively())
+                : Res.Fail($"Failed to overwrite vector collection: {ex.GetMessageRecursively()}");
         }
     }
 

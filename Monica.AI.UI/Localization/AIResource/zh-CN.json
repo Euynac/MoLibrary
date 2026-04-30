@@ -163,10 +163,25 @@
       "Remove": "移除 RAG",
       "Enabled": "已启用 RAG 支持。",
       "Removed": "已移除 RAG 支持。已重置 {0} 个文档并清除 {1} 个已索引分块。",
+      "ForceRemoved": "已强制移除 RAG 支持。已重置 {0} 个文档。向量库中可能仍存在过期向量数据。",
       "RemoveConfirm": {
         "Title": "移除 RAG 支持",
         "Message": "确定要移除知识库 '{0}' 的 RAG 支持吗？这会清除全部 RAG 向量数据，并将已索引文档重置为待处理，但会保留知识库和源文档。",
         "Confirm": "移除 RAG"
+      },
+      "ForceRemoveConfirm": {
+        "Title": "强制移除 RAG 支持",
+        "Message": "当前无法连接向量库，因此现在无法清理向量数据。是否仍要强制移除本地 RAG 元数据？这会保留知识库和源文档，但向量库中可能残留过期向量，后续复用相同 ID 前需要覆盖。",
+        "Confirm": "强制移除"
+      }
+    },
+    "VectorCollection": {
+      "CheckUnavailable": "当前无法检查向量集合，因为向量库不可用。可以保存 RAG 元数据，但在向量库恢复前索引可能失败。",
+      "Overwritten": "已覆盖向量集合 '{0}'。已重置 {1} 个文档并清除 {2} 个已索引分块。",
+      "OverwriteConfirm": {
+        "Title": "覆盖已有向量集合",
+        "Message": "当前向量库中已存在集合 '{0}'。是否在使用此知识库 ID 前覆盖它？这会清除该集合中的已有向量数据。",
+        "Confirm": "覆盖"
       }
     },
     "EmbeddingDiagnostics": {

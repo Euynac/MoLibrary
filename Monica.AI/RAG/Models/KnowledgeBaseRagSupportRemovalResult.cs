@@ -24,4 +24,29 @@ public sealed record KnowledgeBaseRagSupportRemovalResult
     /// Number of previously indexed chunks whose vector data was cleared.
     /// </summary>
     public int ClearedChunkCount { get; init; }
+
+    /// <summary>
+    /// Vector collection name associated with the knowledge base.
+    /// </summary>
+    public string? VectorCollectionName { get; init; }
+
+    /// <summary>
+    /// Whether the remote vector store cleanup completed successfully.
+    /// </summary>
+    public bool VectorStoreCleanupSucceeded { get; init; } = true;
+
+    /// <summary>
+    /// Whether local RAG metadata was removed after vector cleanup failed.
+    /// </summary>
+    public bool WasForced { get; init; }
+
+    /// <summary>
+    /// Whether the remote vector collection may still contain stale records.
+    /// </summary>
+    public bool StaleVectorCollectionMayRemain { get; init; }
+
+    /// <summary>
+    /// Vector-store cleanup failure details when forced local removal was used.
+    /// </summary>
+    public string? VectorStoreCleanupErrorMessage { get; init; }
 }

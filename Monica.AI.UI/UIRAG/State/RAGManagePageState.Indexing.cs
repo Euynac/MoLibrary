@@ -1,4 +1,5 @@
 using Monica.AI.KnowledgeBase.Models;
+using Monica.AI.RAG.Facades;
 using Monica.AI.RAG.Models;
 using Monica.AI.UI.UIRAG.Components;
 using Monica.Core.Results;
@@ -38,6 +39,9 @@ public sealed partial class RAGManagePageState
             return;
         }
 
+        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        var isNewRagBinding = !HasEmbeddingBinding(SelectedKnowledgeBase);
+
         if (!EmbeddingModelOption.TryParseModelKey(CurrentEmbeddingModelKey, out var providerId, out var modelName))
         {
             _snackbar.Add($"{_localizer["Common:Error"]}: invalid embedding model key.", Severity.Error);
@@ -69,8 +73,13 @@ public sealed partial class RAGManagePageState
             }
         }
 
+        if (isNewRagBinding && !await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
+        {
+            return;
+        }
+
         if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
-                SelectedKnowledgeBase.Id,
+                selectedKnowledgeBaseId,
                 providerId,
                 modelName,
                 clearIndex: true)).IsFailed(out var error))
@@ -101,6 +110,7 @@ public sealed partial class RAGManagePageState
             return;
         }
 
+        var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
         var confirmed = await _dialogService.ShowMessageBoxAsync(
             _localizer["RAG:RagSupport:RemoveConfirm:Title"],
             _localizer["RAG:RagSupport:RemoveConfirm:Message", SelectedKnowledgeBase.Name],
@@ -112,24 +122,21 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(SelectedKnowledgeBase.Id);
+        var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(selectedKnowledgeBaseId);
         if (result.IsFailed(out var error, out var removal))
         {
+            if (CanForceRemoveRagSupport(error)
+                && await ConfirmForceRemoveRagSupportAsync())
+            {
+                await ForceRemoveRagSupportAsync(selectedKnowledgeBaseId);
+                return;
+            }
+
             _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        CurrentEmbeddingModelKey = string.Empty;
-        SelectedKnowledgeBaseVectorValidation = null;
-        _snackbar.Add(
-            _localizer[
-                "RAG:RagSupport:Removed",
-                removal.ResetDocumentCount,
-                removal.ClearedChunkCount],
-            Severity.Warning);
-
-        await RefreshSelectedKnowledgeBaseAsync();
-        await LoadDocumentQueueAsync();
+        await CompleteRagSupportRemovalAsync(removal);
     }
 
     /// <summary>
@@ -168,6 +175,11 @@ public sealed partial class RAGManagePageState
         }
 
         var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        if (!await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
+        {
+            return;
+        }
+
         var selectedDocuments = DocumentQueue
             .Where(document => SelectedDocumentIds.Contains(document.Id)
                                && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
@@ -244,6 +256,11 @@ public sealed partial class RAGManagePageState
         }
 
         var selectedKnowledgeBaseId = SelectedKnowledgeBase.Id;
+        if (!await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
+        {
+            return;
+        }
+
         _singleIndexInFlightKnowledgeBaseId = selectedKnowledgeBaseId;
         _singleIndexInFlightDocumentId = document.Id;
         EnsureQueuePolling();
@@ -362,5 +379,120 @@ public sealed partial class RAGManagePageState
         }
 
         return DocumentQueue.Any(static item => item.Status == DocumentStatus.Done || item.ChunkCount > 0);
+    }
+
+    private async Task<bool> EnsureVectorCollectionReusableAsync(string knowledgeBaseId)
+    {
+        if (SelectedKnowledgeBase is null)
+        {
+            return false;
+        }
+
+        if (HasIndexedContent(SelectedKnowledgeBase))
+        {
+            return true;
+        }
+
+        var statusResult = await _ragFacade.GetKnowledgeBaseVectorCollectionStatusAsync(knowledgeBaseId);
+        if (statusResult.IsFailed(out var statusError, out var status))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {statusError.Message}", Severity.Error);
+            return false;
+        }
+
+        if (!status.WasChecked)
+        {
+            _snackbar.Add(_localizer["RAG:VectorCollection:CheckUnavailable"], Severity.Warning);
+            return true;
+        }
+
+        if (!status.Exists)
+        {
+            return true;
+        }
+
+        var confirmed = await _dialogService.ShowMessageBoxAsync(
+            _localizer["RAG:VectorCollection:OverwriteConfirm:Title"],
+            _localizer["RAG:VectorCollection:OverwriteConfirm:Message", status.CollectionName],
+            yesText: _localizer["RAG:VectorCollection:OverwriteConfirm:Confirm"],
+            cancelText: _localizer["Common:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return false;
+        }
+
+        var overwriteResult = await _ragFacade.OverwriteKnowledgeBaseVectorCollectionAsync(knowledgeBaseId);
+        if (overwriteResult.IsFailed(out var overwriteError, out var overwrite))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {overwriteError.Message}", Severity.Error);
+            return false;
+        }
+
+        SelectedKnowledgeBaseVectorValidation = null;
+        _snackbar.Add(
+            _localizer[
+                "RAG:VectorCollection:Overwritten",
+                overwrite.CollectionName,
+                overwrite.ResetDocumentCount,
+                overwrite.ClearedChunkCount],
+            Severity.Warning);
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+        return true;
+    }
+
+    private async Task<bool> ConfirmForceRemoveRagSupportAsync()
+    {
+        var confirmed = await _dialogService.ShowMessageBoxAsync(
+            _localizer["RAG:RagSupport:ForceRemoveConfirm:Title"],
+            _localizer["RAG:RagSupport:ForceRemoveConfirm:Message"],
+            yesText: _localizer["RAG:RagSupport:ForceRemoveConfirm:Confirm"],
+            cancelText: _localizer["Common:Cancel"]);
+
+        return confirmed == true;
+    }
+
+    private async Task ForceRemoveRagSupportAsync(string knowledgeBaseId)
+    {
+        var forcedResult = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(
+            knowledgeBaseId,
+            forceLocalMetadataRemoval: true);
+        if (forcedResult.IsFailed(out var forceError, out var forcedRemoval))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {forceError.Message}", Severity.Error);
+            return;
+        }
+
+        await CompleteRagSupportRemovalAsync(forcedRemoval);
+    }
+
+    private async Task CompleteRagSupportRemovalAsync(KnowledgeBaseRagSupportRemovalResult removal)
+    {
+        CurrentEmbeddingModelKey = string.Empty;
+        SelectedKnowledgeBaseVectorValidation = null;
+        _snackbar.Add(
+            _localizer[
+                removal.WasForced
+                    ? "RAG:RagSupport:ForceRemoved"
+                    : "RAG:RagSupport:Removed",
+                removal.ResetDocumentCount,
+                removal.ClearedChunkCount],
+            removal.WasForced ? Severity.Warning : Severity.Success);
+
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+    }
+
+    private static bool CanForceRemoveRagSupport(Res error)
+    {
+        if (error.Metadata is null)
+        {
+            return false;
+        }
+
+        var metadata = (IDictionary<string, object?>)error.Metadata;
+        return metadata.TryGetValue(RAGFacade.CAN_FORCE_REMOVE_RAG_SUPPORT_METADATA_KEY, out var canForce)
+               && canForce is true;
     }
 }
