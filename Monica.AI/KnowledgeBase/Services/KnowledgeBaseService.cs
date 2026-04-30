@@ -69,14 +69,30 @@ public sealed class KnowledgeBaseService(
     /// <summary>
     /// Gets all knowledge bases.
     /// </summary>
-    public Task<IReadOnlyList<Models.KnowledgeBase>> GetAllAsync(CancellationToken ct = default)
-        => store.GetKnowledgeBasesAsync(ct);
+    public async Task<IReadOnlyList<Models.KnowledgeBase>> GetAllAsync(CancellationToken ct = default)
+    {
+        var knowledgeBases = await store.GetKnowledgeBasesAsync(ct);
+        foreach (var knowledgeBase in knowledgeBases)
+        {
+            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+        }
+
+        return knowledgeBases;
+    }
 
     /// <summary>
     /// Gets one knowledge base by id.
     /// </summary>
-    public Task<Models.KnowledgeBase?> GetByIdAsync(string id, CancellationToken ct = default)
-        => store.GetKnowledgeBaseAsync(NormalizeId(id), ct);
+    public async Task<Models.KnowledgeBase?> GetByIdAsync(string id, CancellationToken ct = default)
+    {
+        var knowledgeBase = await store.GetKnowledgeBaseAsync(NormalizeId(id), ct);
+        if (knowledgeBase is not null)
+        {
+            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+        }
+
+        return knowledgeBase;
+    }
 
     /// <summary>
     /// Gets one knowledge base or throws when it is missing.
@@ -84,8 +100,11 @@ public sealed class KnowledgeBaseService(
     public async Task<Models.KnowledgeBase> GetRequiredAsync(string id, CancellationToken ct = default)
     {
         var normalizedId = NormalizeId(id);
-        return await store.GetKnowledgeBaseAsync(normalizedId, ct)
-               ?? throw new KeyNotFoundException($"Knowledge base '{normalizedId}' was not found.");
+        var knowledgeBase = await store.GetKnowledgeBaseAsync(normalizedId, ct)
+                            ?? throw new KeyNotFoundException($"Knowledge base '{normalizedId}' was not found.");
+
+        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+        return knowledgeBase;
     }
 
     /// <summary>
@@ -117,9 +136,10 @@ public sealed class KnowledgeBaseService(
         CancellationToken ct = default)
     {
         var normalizedId = NormalizeId(knowledgeBaseId);
-        _ = await GetRequiredAsync(normalizedId, ct);
+        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
         await store.DeleteDocumentAsync(normalizedId, documentId, ct);
         await sourceStore.DeleteContentAsync(normalizedId, documentId, ct);
+        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
     }
 
     /// <summary>
@@ -148,7 +168,7 @@ public sealed class KnowledgeBaseService(
         CancellationToken ct = default)
     {
         var normalizedId = NormalizeId(knowledgeBaseId);
-        _ = await GetRequiredAsync(normalizedId, ct);
+        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
 
         var normalizedGroupKey = NormalizeRequiredText(sourceGroupKey, nameof(sourceGroupKey));
         var states = documents
@@ -167,7 +187,13 @@ public sealed class KnowledgeBaseService(
             })
             .ToList();
 
-        return await store.AddPendingDocumentsAsync(normalizedId, states, ct);
+        var result = await store.AddPendingDocumentsAsync(normalizedId, states, ct);
+        if (result.AddedCount > 0)
+        {
+            await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -180,7 +206,7 @@ public sealed class KnowledgeBaseService(
         CancellationToken ct = default)
     {
         var normalizedId = NormalizeId(knowledgeBaseId);
-        _ = await GetRequiredAsync(normalizedId, ct);
+        var knowledgeBase = await GetRequiredAsync(normalizedId, ct);
 
         var normalizedFileName = NormalizeRequiredText(fileName, nameof(fileName));
         if (string.IsNullOrWhiteSpace(content))
@@ -207,6 +233,28 @@ public sealed class KnowledgeBaseService(
         }
 
         await sourceStore.SaveContentAsync(normalizedId, normalizedFileName, content, ct);
+        await RefreshKnowledgeBaseStatsAsync(knowledgeBase, ct);
+    }
+
+    /// <summary>
+    /// Refreshes persisted aggregate counts from document inventory state.
+    /// </summary>
+    public async Task RefreshKnowledgeBaseStatsAsync(
+        Models.KnowledgeBase knowledgeBase,
+        CancellationToken ct = default)
+    {
+        var documents = await store.GetDocumentInventoryAsync(knowledgeBase.Id, ct);
+        var documentCount = documents.Count;
+        var chunkCount = documents.Sum(static document => Math.Max(0, document.ChunkCount));
+
+        if (knowledgeBase.DocumentCount == documentCount && knowledgeBase.ChunkCount == chunkCount)
+        {
+            return;
+        }
+
+        knowledgeBase.DocumentCount = documentCount;
+        knowledgeBase.ChunkCount = chunkCount;
+        await store.UpsertKnowledgeBaseAsync(knowledgeBase, ct);
     }
 
     private static DocumentIndexState CreatePendingDocumentState(

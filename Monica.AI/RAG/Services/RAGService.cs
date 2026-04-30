@@ -76,8 +76,7 @@ public sealed partial class RAGService(
             {
                 await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
                 await indexStateCoordinator.ResetKnowledgeBaseDocumentStatesForReindexAsync(knowledgeBaseId, ct);
-                kb.DocumentCount = 0;
-                kb.ChunkCount = 0;
+                await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
             }
             catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
             {
@@ -140,8 +139,7 @@ public sealed partial class RAGService(
 
         kb.EmbeddingProviderId = null;
         kb.EmbeddingModelName = null;
-        kb.DocumentCount = 0;
-        kb.ChunkCount = 0;
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
         await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
 
         logger.LogInformation(
@@ -196,9 +194,7 @@ public sealed partial class RAGService(
         await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
         var resetDocumentCount = await indexStateCoordinator.ResetIndexedDocumentStatesToPendingAsync(knowledgeBaseId, ct);
 
-        kb.DocumentCount = 0;
-        kb.ChunkCount = 0;
-        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
+        await indexStateCoordinator.RefreshKnowledgeBaseStatsAsync(kb, ct);
 
         logger.LogWarning(
             "Overwrote vector collection '{CollectionName}' for KB '{KbId}'. Reset {ResetDocumentCount} document(s).",
@@ -1199,13 +1195,13 @@ public sealed partial class RAGService(
 
     private async Task<bool> HasPersistedIndexedContentAsync(KnowledgeBaseModel kb, CancellationToken ct)
     {
-        if (kb.DocumentCount > 0 || kb.ChunkCount > 0)
+        if (kb.ChunkCount > 0)
         {
             return true;
         }
 
         return (await indexStateStore.GetDocumentStatesAsync(kb.Id, ct))
-            .Any(state => state.Status == DocumentStatus.Done && state.ChunkCount > 0);
+            .Any(state => state.Status == DocumentStatus.Done || state.ChunkCount > 0);
     }
 
     private bool IsDocumentIndexingActiveAtRuntime(string knowledgeBaseId, string documentPath)

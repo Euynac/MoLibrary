@@ -248,6 +248,38 @@ public sealed partial class KnowledgeBaseManagePageState
     }
 
     /// <summary>
+    /// Opens the raw source preview for one knowledge-base document.
+    /// </summary>
+    public async Task ShowDocumentPreviewAsync(DocumentQueueItem document)
+    {
+        if (SelectedKnowledgeBase is null)
+        {
+            return;
+        }
+
+        var result = await _knowledgeBaseFacade.GetDocumentPreviewAsync(SelectedKnowledgeBase.Id, document.Id);
+        if (result.IsFailed(out var error, out var preview))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(KnowledgeBaseDocumentPreviewDialog.DocumentName), preview.DocumentName },
+            { nameof(KnowledgeBaseDocumentPreviewDialog.DocumentPath), preview.DocumentId },
+            { nameof(KnowledgeBaseDocumentPreviewDialog.Content), preview.Content },
+            { nameof(KnowledgeBaseDocumentPreviewDialog.SourceKind), preview.SourceKind },
+            { nameof(KnowledgeBaseDocumentPreviewDialog.SourceGroupKey), preview.SourceGroupKey }
+        };
+
+        await _dialogService.ShowAsync<KnowledgeBaseDocumentPreviewDialog>(
+            _localizer["KnowledgeBase:Documents:Preview:Title"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    /// <summary>
     /// Clears all documents after confirmation.
     /// </summary>
     public async Task ClearKnowledgeBaseDocumentsAsync()

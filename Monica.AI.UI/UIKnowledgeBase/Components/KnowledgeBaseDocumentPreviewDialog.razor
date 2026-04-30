@@ -1,0 +1,82 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.KnowledgeBase.Models
+@using Monica.AI.UI.Localization
+@using Monica.UI.Shared.Components.Markdown
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="kb-document-preview-root">
+            <div class="kb-document-preview-header">
+                <div class="kb-document-preview-title-block">
+                    <MudText Typo="Typo.h6">@DocumentName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["KnowledgeBase:Documents:Preview:Path", DocumentPath]
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @L["KnowledgeBase:Documents:Preview:Source", GetSourceDisplay()]
+                    </MudText>
+                </div>
+            </div>
+
+            <div class="kb-document-preview-content">
+                @if (string.IsNullOrWhiteSpace(Content))
+                {
+                    <div class="empty-state">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @L["KnowledgeBase:Documents:Preview:NoContent"]
+                        </MudText>
+                    </div>
+                }
+                else if (UseMarkdownRendering)
+                {
+                    <MoMarkdown Value="@Content"
+                                EnableMermaid="true"
+                                ScopeKey="@SourceGroupKey"
+                                DocumentRelativePath="@DocumentPath" />
+                }
+                else
+                {
+                    <div class="original-text">@Content</div>
+                }
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string DocumentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string DocumentPath { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Content { get; set; } = string.Empty;
+
+    [Parameter]
+    public string SourceKind { get; set; } = KnowledgeDocumentSourceKinds.Unknown;
+
+    [Parameter]
+    public string? SourceGroupKey { get; set; }
+
+    private bool UseMarkdownRendering =>
+        string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase);
+
+    private void Close() => MudDialog.Close();
+
+    private string GetSourceDisplay()
+        => string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase)
+            ? L["KnowledgeBase:Documents:Source:Markdown"].Value
+            : string.Equals(SourceKind, KnowledgeDocumentSourceKinds.Uploaded, StringComparison.OrdinalIgnoreCase)
+                ? L["KnowledgeBase:Documents:Source:Uploaded"].Value
+                : L["KnowledgeBase:Documents:Source:Unknown"].Value;
+}

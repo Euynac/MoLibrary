@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.KnowledgeBase.Services;
 using Monica.AI.RAG.Services;
@@ -17,6 +18,7 @@ public sealed class KnowledgeBaseFacade(
     IServiceProvider serviceProvider,
     KnowledgeBaseService knowledgeBaseService,
     IMarkdownDocumentCatalog markdownService,
+    IKnowledgeDocumentSourceStore sourceStore,
     ILogger<KnowledgeBaseFacade> logger)
 {
     /// <summary>
@@ -217,6 +219,48 @@ public sealed class KnowledgeBaseFacade(
     }
 
     /// <summary>
+    /// Returns raw source content for one knowledge-base document.
+    /// </summary>
+    public async Task<Res<KnowledgeBaseDocumentPreview>> GetDocumentPreviewAsync(string kbId, string documentId)
+    {
+        try
+        {
+            var documents = await knowledgeBaseService.GetDocumentInventoryAsync(kbId);
+            var document = documents.FirstOrDefault(item =>
+                string.Equals(item.Id, documentId, StringComparison.OrdinalIgnoreCase));
+            if (document is null)
+            {
+                return Res.Fail($"Document '{documentId}' was not found in knowledge base '{kbId}'.");
+            }
+
+            var content = await LoadDocumentContentAsync(kbId, document);
+            if (content is null)
+            {
+                return Res.Fail($"Source content for document '{document.Name}' is not available.");
+            }
+
+            return Res.Ok(new KnowledgeBaseDocumentPreview
+            {
+                KnowledgeBaseId = kbId,
+                DocumentId = document.Id,
+                DocumentName = document.Name,
+                Content = content,
+                SourceKind = document.SourceKind ?? KnowledgeDocumentSourceKinds.Unknown,
+                SourceGroupKey = document.SourceGroupKey
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to load document preview for document '{DocumentId}' in KB '{KnowledgeBaseId}'.",
+                documentId,
+                kbId);
+            return Res.Fail($"Failed to load document preview: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Removes one document from a knowledge base. RAG vector/source cleanup is performed when the RAG service is registered.
     /// </summary>
     public async Task<Res> RemoveDocumentAsync(string kbId, string documentId)
@@ -263,5 +307,33 @@ public sealed class KnowledgeBaseFacade(
             logger.LogError(ex, "Failed to clear documents for KB '{KnowledgeBaseId}'.", kbId);
             return Res.Fail($"Failed to clear documents: {ex.GetMessageRecursively()}");
         }
+    }
+
+    private async Task<string?> LoadDocumentContentAsync(string kbId, DocumentQueueItem document)
+    {
+        var storedContent = await sourceStore.GetContentAsync(kbId, document.Id);
+        if (storedContent is not null)
+        {
+            return storedContent;
+        }
+
+        if (!string.Equals(document.SourceKind, KnowledgeDocumentSourceKinds.Markdown, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.SourceGroupKey))
+        {
+            var groupDocuments = await markdownService.GetDocumentsAsync(document.SourceGroupKey);
+            var matchedDocument = groupDocuments.FirstOrDefault(item =>
+                string.Equals(item.RelativePath, document.Id, StringComparison.OrdinalIgnoreCase));
+            if (matchedDocument is not null)
+            {
+                return await markdownService.GetDocumentContentAsync(matchedDocument);
+            }
+        }
+
+        var markdownDocument = await markdownService.GetDocumentByPathAsync(document.Id);
+        return await markdownService.GetDocumentContentAsync(markdownDocument);
     }
 }

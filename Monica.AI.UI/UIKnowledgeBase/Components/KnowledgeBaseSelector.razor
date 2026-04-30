@@ -203,7 +203,9 @@
             : L["Chat:KnowledgeBaseSelector:NoneSelected"];
 
     private string GetStatsText(KnowledgeBase kb)
-        => $"{L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount]} · {L["RAG:KnowledgeBase:ChunksCount", kb.ChunkCount]}";
+        => IsRagEnabled(kb)
+            ? $"{L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount]} · {L["RAG:KnowledgeBase:ChunksCount", kb.ChunkCount]}"
+            : L["RAG:KnowledgeBase:DocsCount", kb.DocumentCount];
 
     private static bool IsRagEnabled(KnowledgeBase kb)
         => !string.IsNullOrWhiteSpace(kb.EmbeddingProviderId)

@@ -40,6 +40,14 @@ public sealed partial class KnowledgeBaseManagePageState
     }
 
     /// <summary>
+    /// Resolves the aggregate sidebar statistics for one knowledge base.
+    /// </summary>
+    public string GetKnowledgeBaseStatsDisplay(KnowledgeBaseModel knowledgeBase)
+        => IsRagEnabled(knowledgeBase)
+            ? _localizer["RAG:Debug:KBSidebar:Stats", knowledgeBase.DocumentCount, knowledgeBase.ChunkCount].Value
+            : _localizer["RAG:KnowledgeBase:DocsCount", knowledgeBase.DocumentCount].Value;
+
+    /// <summary>
     /// Resolves display text for document status.
     /// </summary>
     public string GetDocumentStatusDisplay(DocumentStatus status)

@@ -414,10 +414,19 @@
       "Column": {
         "Source": "Source"
       },
+      "Actions": {
+        "Preview": "Preview"
+      },
       "Source": {
         "Markdown": "Markdown",
         "Uploaded": "Uploaded",
         "Unknown": "Unknown"
+      },
+      "Preview": {
+        "Title": "Document Preview",
+        "Path": "Path: {0}",
+        "Source": "Source: {0}",
+        "NoContent": "No source content available."
       }
     },
     "DocumentImport": {

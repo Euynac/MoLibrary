@@ -414,10 +414,19 @@
       "Column": {
         "Source": "来源"
       },
+      "Actions": {
+        "Preview": "预览"
+      },
       "Source": {
         "Markdown": "Markdown",
         "Uploaded": "上传文件",
         "Unknown": "未知"
+      },
+      "Preview": {
+        "Title": "文档原文预览",
+        "Path": "路径：{0}",
+        "Source": "来源：{0}",
+        "NoContent": "暂无原文内容。"
       }
     },
     "DocumentImport": {

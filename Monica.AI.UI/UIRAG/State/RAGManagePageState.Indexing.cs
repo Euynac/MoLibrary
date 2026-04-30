@@ -397,7 +397,7 @@ public sealed partial class RAGManagePageState
 
     private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
     {
-        if (knowledgeBase.DocumentCount > 0 || knowledgeBase.ChunkCount > 0)
+        if (knowledgeBase.ChunkCount > 0)
         {
             return true;
         }

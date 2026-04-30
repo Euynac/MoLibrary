@@ -1,7 +1,7 @@
 namespace Monica.AI.KnowledgeBase.Models;
 
 /// <summary>
-/// Represents a knowledge base - a named collection of indexed document chunks.
+/// Represents a knowledge base - a named collection of source documents and optional RAG index metadata.
 /// </summary>
 public record KnowledgeBase
 {
@@ -17,7 +17,14 @@ public record KnowledgeBase
 
     public string? Description { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
+    /// <summary>
+    /// Number of source documents currently recorded in the knowledge-base inventory.
+    /// </summary>
     public int DocumentCount { get; set; }
+
+    /// <summary>
+    /// Number of indexed RAG chunks currently recorded for the knowledge base.
+    /// </summary>
     public int ChunkCount { get; set; }
 
     /// <summary>

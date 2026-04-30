@@ -60,6 +60,10 @@
                 </MudTd>
                 <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Chunks"]">@context.ChunkCount</MudTd>
                 <MudTd DataLabel="@L["RAG:DocumentQueue:Column:Actions"]">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Size="Size.Small"
+                                   OnClick="@(() => PageState.ShowDocumentPreviewAsync(context))"
+                                   title="@L["KnowledgeBase:Documents:Actions:Preview"]" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                    Size="Size.Small"
                                    Color="Color.Error"
@@ -94,4 +98,3 @@
             _ => Color.Default
         };
 }
-

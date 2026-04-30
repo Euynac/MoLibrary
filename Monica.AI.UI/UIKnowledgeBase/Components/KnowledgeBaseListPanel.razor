@@ -90,7 +90,7 @@
                             </MudText>
                         }
                         <MudText Typo="Typo.caption" Class="kb-stats">
-                            @L["RAG:Debug:KBSidebar:Stats", knowledgeBase.DocumentCount, knowledgeBase.ChunkCount]
+                            @PageState.GetKnowledgeBaseStatsDisplay(knowledgeBase)
                         </MudText>
                         @if (KnowledgeBaseManagePageState.IsRagEnabled(knowledgeBase))
                         {

@@ -298,10 +298,8 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
     public async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBaseModel kb, CancellationToken ct)
     {
         var indexedStates = await indexStateStore.GetDocumentStatesAsync(kb.Id, ct);
-        var doneStates = indexedStates.Where(state => state.Status == DocumentStatus.Done).ToList();
-
-        var documentCount = doneStates.Count;
-        var chunkCount = doneStates.Sum(state => state.ChunkCount);
+        var documentCount = indexedStates.Count;
+        var chunkCount = indexedStates.Sum(state => Math.Max(0, state.ChunkCount));
 
         if (kb.DocumentCount == documentCount && kb.ChunkCount == chunkCount)
         {
