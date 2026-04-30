@@ -62,16 +62,26 @@ public sealed class ToolInvocationTrackingAgentDecorator(
 
             return result;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
+            logger.LogWarning(
+                ex,
+                "Tool invocation '{ToolName}' failed and will be returned to the model as a tool error result.",
+                functionCall.Name);
+
+            var errorResult = ToolInvocationErrorResult.Create(functionCall, ex);
             if (updateChannel is not null)
             {
                 await updateChannel.PublishAsync(
-                    CreateFunctionResultUpdate(functionCall.CallId, result: null, ex),
+                    CreateFunctionResultUpdate(functionCall.CallId, errorResult, ex),
                     cancellationToken);
             }
 
-            throw;
+            return errorResult;
         }
     }
 

@@ -89,25 +89,51 @@ public class ChatFacade(
     {
         var accumulator = new StreamingContentAccumulator();
         var historyCountBeforeSend = state.ChatHistory?.Count ?? 0;
+        var streamFailure = default(Exception);
+        var enumerator = chatService.SendMessageStreamingAsync(state, message, ct).GetAsyncEnumerator(ct);
 
-        await foreach (var update in chatService.SendMessageStreamingAsync(state, message, ct))
+        try
         {
-            foreach (var content in update.Contents)
+            while (true)
             {
-                accumulator.ProcessContent(content);
+                AgentResponseUpdate update;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
+
+                    update = enumerator.Current;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    streamFailure = ex;
+                    throw;
+                }
+
+                foreach (var content in update.Contents)
+                {
+                    accumulator.ProcessContent(content);
+                }
+
+                yield return update;
             }
-            yield return update;
         }
-
-        var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
-        var toolCallsFromHistory = ToolCallHistoryExtractor.Extract(state.ChatHistory, historyCountBeforeSend);
-        if (toolCallsFromHistory.Count > 0)
+        finally
         {
-            aiMessage.ToolCalls = MergeToolCalls(aiMessage.ToolCalls, toolCallsFromHistory);
-        }
+            if (streamFailure is not null)
+            {
+                accumulator.FailRunningToolCalls(streamFailure);
+            }
 
-        state.Messages.Add(aiMessage);
-        state.UpdatedAt = DateTimeOffset.UtcNow;
+            CommitAssistantMessageIfAny(accumulator, state, historyCountBeforeSend);
+            await enumerator.DisposeAsync();
+        }
     }
 
     /// <summary>
@@ -226,5 +252,26 @@ public class ChatFacade(
         }
 
         return merged;
+    }
+
+    private static void CommitAssistantMessageIfAny(
+        StreamingContentAccumulator accumulator,
+        ChatSession state,
+        int historyCountBeforeSend)
+    {
+        var toolCallsFromHistory = ToolCallHistoryExtractor.Extract(state.ChatHistory, historyCountBeforeSend);
+        if (!accumulator.HasBufferedContent && toolCallsFromHistory.Count == 0)
+        {
+            return;
+        }
+
+        var aiMessage = accumulator.CreateMessage(state.ProviderId ?? string.Empty, state.ModelName ?? string.Empty);
+        if (toolCallsFromHistory.Count > 0)
+        {
+            aiMessage.ToolCalls = MergeToolCalls(aiMessage.ToolCalls, toolCallsFromHistory);
+        }
+
+        state.Messages.Add(aiMessage);
+        state.UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

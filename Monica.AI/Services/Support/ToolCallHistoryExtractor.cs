@@ -61,7 +61,9 @@ public static class ToolCallHistoryExtractor
         DateTimeOffset completedAt)
     {
         var callId = functionResult.CallId ?? string.Empty;
-        var exceptionMessage = functionResult.Exception?.ToString();
+        var exceptionMessage = ToolCallContentSerializer.GetExceptionMessage(
+            functionResult.Result,
+            functionResult.Exception);
 
         if (toolCallLookup.TryGetValue(callId, out var index))
         {
@@ -69,7 +71,7 @@ public static class ToolCallHistoryExtractor
             {
                 ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
                 ExceptionMessage = exceptionMessage,
-                Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+                Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage, functionResult.Result),
                 CompletedAt = completedAt
             };
             return;
@@ -81,7 +83,7 @@ public static class ToolCallHistoryExtractor
             CallId = callId,
             ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
             ExceptionMessage = exceptionMessage,
-            Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+            Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage, functionResult.Result),
             StartedAt = completedAt,
             CompletedAt = completedAt
         });

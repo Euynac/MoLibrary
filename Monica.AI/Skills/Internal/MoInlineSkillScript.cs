@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Monica.AI.Services.Support;
 using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
@@ -41,6 +42,17 @@ internal sealed class MoInlineSkillScript : AgentSkillScript
         AIFunctionArguments arguments,
         CancellationToken cancellationToken = default)
     {
-        return await _function.InvokeAsync(arguments, cancellationToken);
+        try
+        {
+            return await _function.InvokeAsync(arguments, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ToolInvocationErrorResult.Create(Name, arguments, ex);
+        }
     }
 }

@@ -29,6 +29,11 @@ public class StreamingContentAccumulator
     /// </summary>
     public List<ToolCallInfo> ToolCalls { get; } = new();
 
+    internal bool HasBufferedContent
+        => !string.IsNullOrEmpty(FullContent)
+           || !string.IsNullOrEmpty(FullReasoning)
+           || ToolCalls.Count > 0;
+
     /// <summary>
     /// Process a single AIContent item from the stream
     /// </summary>
@@ -89,6 +94,27 @@ public class StreamingContentAccumulator
         ToolCalls.Clear();
     }
 
+    internal void FailRunningToolCalls(Exception exception)
+    {
+        var completedAt = DateTimeOffset.UtcNow;
+        var exceptionMessage = exception.ToString();
+
+        for (var index = 0; index < ToolCalls.Count; index++)
+        {
+            if (ToolCalls[index].Status != ToolCallStatus.Running)
+            {
+                continue;
+            }
+
+            ToolCalls[index] = ToolCalls[index] with
+            {
+                ExceptionMessage = exceptionMessage,
+                Status = ToolCallStatus.Failed,
+                CompletedAt = completedAt
+            };
+        }
+    }
+
     private void ProcessFunctionCall(FunctionCallContent functionCall)
     {
         var argumentsText = ToolCallContentSerializer.SerializeArguments(functionCall.Arguments);
@@ -120,7 +146,9 @@ public class StreamingContentAccumulator
     private void ProcessFunctionResult(FunctionResultContent functionResult)
     {
         var completedAt = DateTimeOffset.UtcNow;
-        var exceptionMessage = functionResult.Exception?.ToString();
+        var exceptionMessage = ToolCallContentSerializer.GetExceptionMessage(
+            functionResult.Result,
+            functionResult.Exception);
         var matchingIndex = FindMatchingFunctionResultIndex(functionResult);
         if (matchingIndex >= 0)
         {
@@ -128,7 +156,7 @@ public class StreamingContentAccumulator
             {
                 ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
                 ExceptionMessage = exceptionMessage,
-                Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+                Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage, functionResult.Result),
                 CompletedAt = completedAt
             };
             return;
@@ -140,7 +168,7 @@ public class StreamingContentAccumulator
             CallId = functionResult.CallId ?? string.Empty,
             ResultText = ToolCallContentSerializer.SerializeResult(functionResult.Result),
             ExceptionMessage = exceptionMessage,
-            Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage),
+            Status = ToolCallContentSerializer.GetFinalStatus(exceptionMessage, functionResult.Result),
             StartedAt = completedAt,
             CompletedAt = completedAt
         });

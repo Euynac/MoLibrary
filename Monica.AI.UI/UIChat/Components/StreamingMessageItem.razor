@@ -10,76 +10,74 @@
             <MudIcon Icon="@Icons.Material.Filled.SmartToy" />
         </MudAvatar>
         <div class="message-content assistant-bubble">
+            @* Reasoning section *@
+            @if (!string.IsNullOrEmpty(_accumulator.FullReasoning))
+            {
+                <div class="reasoning-section @(_isReasoning ? "reasoning-active" : "")">
+                    @if (_isReasoning)
+                    {
+                        <div class="reasoning-header">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Class="reasoning-label">Thinking...</MudText>
+                            <span class="reasoning-pulse"></span>
+                        </div>
+                        <div class="reasoning-body">
+                            <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="reasoning-header reasoning-header-clickable"
+                             @onclick="ToggleReasoningExpanded">
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
+                            <MudText Typo="Typo.body2" Class="reasoning-label">
+                                Thought for @FormatDuration(_reasoningDurationSeconds) seconds
+                            </MudText>
+                            <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                     Size="Size.Small" Class="reasoning-chevron" />
+                        </div>
+                        @if (_reasoningExpanded)
+                        {
+                            <div class="reasoning-body">
+                                <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
+            @* Tool call indicator *@
+            @if (_accumulator.ToolCalls.Count > 0)
+            {
+                <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls"
+                                   EnableDebugMode="@ToolDebugEnabled" />
+            }
+
+            @* Main content *@
+            @if (EnableMarkdown && !string.IsNullOrEmpty(_accumulator.FullContent))
+            {
+                <MoMarkdown Value="@_accumulator.FullContent" EnableMermaid="true" />
+            }
+            else if (!string.IsNullOrEmpty(_accumulator.FullContent))
+            {
+                <MudText Typo="Typo.body1" Class="message-text">@_accumulator.FullContent</MudText>
+            }
+            else if (_isStreaming && string.IsNullOrEmpty(_accumulator.FullReasoning))
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="200px" />
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="160px" />
+            }
+            @if (_isStreaming && !string.IsNullOrEmpty(_accumulator.FullContent))
+            {
+                <span class="typing-indicator"></span>
+            }
+
             @if (_hasError)
             {
                 <div class="stream-error">
                     <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Color="Color.Error" />
                     <MudText Typo="Typo.body2" Color="Color.Error">@_errorMessage</MudText>
                 </div>
-            }
-            else
-            {
-                @* Reasoning section *@
-                @if (!string.IsNullOrEmpty(_accumulator.FullReasoning))
-                {
-                    <div class="reasoning-section @(_isReasoning ? "reasoning-active" : "")">
-                        @if (_isReasoning)
-                        {
-                            <div class="reasoning-header">
-                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
-                                <MudText Typo="Typo.body2" Class="reasoning-label">Thinking...</MudText>
-                                <span class="reasoning-pulse"></span>
-                            </div>
-                            <div class="reasoning-body">
-                                <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="reasoning-header reasoning-header-clickable"
-                                 @onclick="ToggleReasoningExpanded">
-                                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Small" />
-                                <MudText Typo="Typo.body2" Class="reasoning-label">
-                                    Thought for @FormatDuration(_reasoningDurationSeconds) seconds
-                                </MudText>
-                                <MudIcon Icon="@(_reasoningExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                                         Size="Size.Small" Class="reasoning-chevron" />
-                            </div>
-                            @if (_reasoningExpanded)
-                            {
-                                <div class="reasoning-body">
-                                    <MudText Typo="Typo.body2" Class="reasoning-text">@_accumulator.FullReasoning</MudText>
-                                </div>
-                            }
-                        }
-                    </div>
-                }
-
-                @* Tool call indicator *@
-                @if (_accumulator.ToolCalls.Count > 0)
-                {
-                    <ToolCallIndicator ActiveToolCalls="@_accumulator.ToolCalls"
-                                       EnableDebugMode="@ToolDebugEnabled" />
-                }
-
-                @* Main content *@
-                @if (EnableMarkdown && !string.IsNullOrEmpty(_accumulator.FullContent))
-                {
-                    <MoMarkdown Value="@_accumulator.FullContent" EnableMermaid="true" />
-                }
-                else if (!string.IsNullOrEmpty(_accumulator.FullContent))
-                {
-                    <MudText Typo="Typo.body1" Class="message-text">@_accumulator.FullContent</MudText>
-                }
-                else if (_isStreaming && string.IsNullOrEmpty(_accumulator.FullReasoning))
-                {
-                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="200px" />
-                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="160px" />
-                }
-                @if (_isStreaming && !string.IsNullOrEmpty(_accumulator.FullContent))
-                {
-                    <span class="typing-indicator"></span>
-                }
             }
         </div>
     </MudStack>
@@ -102,6 +100,7 @@
     private string? _errorMessage;
     private CancellationTokenSource? _cts;
     private bool _hasStarted;
+    private bool _streamFailed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -161,14 +160,17 @@
         }
         catch (HttpRequestException ex)
         {
+            _streamFailed = true;
             await HandleStreamError($"Network error: {ex.Message}");
         }
         catch (TimeoutException ex)
         {
+            _streamFailed = true;
             await HandleStreamError($"Request timed out: {ex.Message}");
         }
         catch (Exception ex)
         {
+            _streamFailed = true;
             await HandleStreamError($"Error: {ex.Message}");
         }
         finally
@@ -180,7 +182,10 @@
             }
             _isStreaming = false;
             await InvokeAsync(StateHasChanged);
-            await InvokeAsync(() => OnStreamComplete.InvokeAsync(_accumulator.FullContent));
+            if (!_streamFailed)
+            {
+                await InvokeAsync(() => OnStreamComplete.InvokeAsync(_accumulator.FullContent));
+            }
         }
     }
 
