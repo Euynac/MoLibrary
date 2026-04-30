@@ -11,6 +11,7 @@ using Monica.AI.Models;
 using Monica.AI.Providers;
 using Monica.AI.RAG.Abstractions;
 using Monica.AI.RAG.Facades;
+using Monica.AI.RAG.Models;
 using Monica.AI.Services;
 using Monica.AI.RAG.Services;
 using Monica.AI.RAG.Services.Support;
@@ -216,6 +217,11 @@ public class ModuleRAGGuide
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<VectorStore>(_ => new InMemoryVectorStore());
+            ctx.Services.AddSingleton(new RAGVectorStoreRegistrationInfo
+            {
+                ProviderKind = "InMemory",
+                ProviderDisplayName = "In-Memory"
+            });
         }, key: CONFIG_VECTOR_STORE);
         return this;
     }
@@ -226,6 +232,11 @@ public class ModuleRAGGuide
         ConfigureServices(ctx =>
         {
             ctx.Services.AddSingleton<VectorStore, TVectorStore>();
+            ctx.Services.AddSingleton(new RAGVectorStoreRegistrationInfo
+            {
+                ProviderKind = "Custom",
+                ProviderDisplayName = typeof(TVectorStore).Name
+            });
         }, key: CONFIG_VECTOR_STORE);
         return this;
     }
@@ -246,9 +257,43 @@ public class ModuleRAGGuide
                 option.Https,
                 option.ApiKey ?? string.Empty,
                 new QdrantVectorStoreOptions());
+            ctx.Services.AddSingleton(CreateQdrantVectorStoreRegistrationInfo(option));
         }, key: CONFIG_VECTOR_STORE);
 
         return this;
+    }
+
+    private static RAGVectorStoreRegistrationInfo CreateQdrantVectorStoreRegistrationInfo(ModuleRAGQdrantOption option)
+    {
+        return new RAGVectorStoreRegistrationInfo
+        {
+            ProviderKind = "Qdrant",
+            ProviderDisplayName = "Qdrant",
+            ConfigurationEntries =
+            [
+                new VectorStoreConfigurationEntry
+                {
+                    Key = nameof(ModuleRAGQdrantOption.Host),
+                    Value = NormalizeQdrantHost(option.Host, option.Https)
+                },
+                new VectorStoreConfigurationEntry
+                {
+                    Key = nameof(ModuleRAGQdrantOption.Port),
+                    Value = option.Port.ToString()
+                },
+                new VectorStoreConfigurationEntry
+                {
+                    Key = nameof(ModuleRAGQdrantOption.Https),
+                    Value = option.Https.ToString()
+                },
+                new VectorStoreConfigurationEntry
+                {
+                    Key = nameof(ModuleRAGQdrantOption.ApiKey),
+                    Value = string.IsNullOrWhiteSpace(option.ApiKey) ? "Not configured" : "Configured",
+                    IsSensitive = true
+                }
+            ]
+        };
     }
 
     private static string NormalizeQdrantHost(string host, bool https)

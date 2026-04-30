@@ -31,6 +31,46 @@ public class RAGFacade(
     }
 
     /// <summary>
+    /// Gets runtime diagnostics for the configured vector store.
+    /// </summary>
+    public Task<Res<VectorStoreDiagnosticInfo>> GetVectorStoreDiagnosticsAsync()
+    {
+        try
+        {
+            var result = GetRagService().GetVectorStoreDiagnostics();
+            return Task.FromResult(Res.Ok(result));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get vector store diagnostics.");
+            return Task.FromResult<Res<VectorStoreDiagnosticInfo>>(
+                Res.Fail($"Failed to load vector store diagnostics: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Runs a non-destructive connectivity test against the configured vector store.
+    /// </summary>
+    public async Task<Res<VectorStoreConnectionTestResult>> TestVectorStoreConnectionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await GetRagService().TestVectorStoreConnectionAsync(ct);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to test vector store connection.");
+            return Res.Ok(new VectorStoreConnectionTestResult
+            {
+                Succeeded = false,
+                ProbeCollectionName = string.Empty,
+                Message = ex.GetMessageRecursively()
+            });
+        }
+    }
+
+    /// <summary>
     /// Removes RAG support from one knowledge base and clears its persisted vector/index data.
     /// </summary>
     /// <param name="kbId">Knowledge base identifier.</param>

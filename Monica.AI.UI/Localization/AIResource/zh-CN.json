@@ -120,6 +120,8 @@
     "Delete": "删除",
     "Confirm": "确认",
     "Close": "关闭",
+    "Yes": "是",
+    "No": "否",
     "Validation": {
       "Required": "此字段为必填项"
     },
@@ -189,6 +191,29 @@
       "Connection": {
         "NotTested": "未测试",
         "Success": "已连接 · {0}维"
+      }
+    },
+    "VectorDiagnostics": {
+      "Open": "向量库",
+      "Title": "向量库诊断",
+      "Subtitle": "查看当前配置的向量库、连接信息、元数据以及实时连接状态。",
+      "Loading": "正在加载向量库诊断...",
+      "Configuration": "配置",
+      "NoConfiguration": "当前向量库没有可展示的 Provider 专属配置。",
+      "Sensitive": "敏感",
+      "Test": "测试连接",
+      "Testing": "测试中...",
+      "Field": {
+        "Provider": "Provider",
+        "RuntimeType": "运行时类型",
+        "SystemName": "系统名称",
+        "StoreName": "存储名称",
+        "CollectionPrefix": "集合前缀"
+      },
+      "Connection": {
+        "Title": "连接测试",
+        "NotTested": "尚未测试连接。",
+        "Success": "已连接，耗时 {0:N0} ms。探测集合是否存在：{1}。"
       }
     },
     "KnowledgeBase": {

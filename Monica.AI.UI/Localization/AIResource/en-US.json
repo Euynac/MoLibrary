@@ -120,6 +120,8 @@
     "Delete": "Delete",
     "Confirm": "Confirm",
     "Close": "Close",
+    "Yes": "Yes",
+    "No": "No",
     "Validation": {
       "Required": "This field is required"
     },
@@ -189,6 +191,29 @@
       "Connection": {
         "NotTested": "Not tested",
         "Success": "Connected · {0}d"
+      }
+    },
+    "VectorDiagnostics": {
+      "Open": "Vector Store",
+      "Title": "Vector Store Diagnostics",
+      "Subtitle": "Review the configured vector store, connection details, metadata, and live connectivity.",
+      "Loading": "Loading vector store diagnostics...",
+      "Configuration": "Configuration",
+      "NoConfiguration": "No provider-specific configuration is available for this vector store.",
+      "Sensitive": "Sensitive",
+      "Test": "Test Connection",
+      "Testing": "Testing...",
+      "Field": {
+        "Provider": "Provider",
+        "RuntimeType": "Runtime type",
+        "SystemName": "System name",
+        "StoreName": "Store name",
+        "CollectionPrefix": "Collection prefix"
+      },
+      "Connection": {
+        "Title": "Connection Test",
+        "NotTested": "Connection has not been tested.",
+        "Success": "Connected in {0:N0} ms. Probe collection exists: {1}."
       }
     },
     "KnowledgeBase": {

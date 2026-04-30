@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,10 +17,12 @@ namespace Monica.AI.RAG.Services;
 public sealed class RAGVectorCollectionCoordinator(
     VectorStore vectorStore,
     RAGEmbeddingBindingResolver embeddingBindingResolver,
+    IEnumerable<RAGVectorStoreRegistrationInfo> vectorStoreRegistrations,
     IOptions<ModuleRAGOption> options,
     ILogger<RAGVectorCollectionCoordinator> logger)
 {
     private readonly ModuleRAGOption _options = options.Value;
+    private readonly RAGVectorStoreRegistrationInfo? _registrationInfo = vectorStoreRegistrations.FirstOrDefault();
 
     private readonly ConcurrentDictionary<string, VectorStoreCollection<Guid, RAGVectorRecord>> _collections =
         new(StringComparer.OrdinalIgnoreCase);
@@ -37,6 +40,62 @@ public sealed class RAGVectorCollectionCoordinator(
 
     public string GetCollectionName(string knowledgeBaseId)
         => $"{_options.CollectionNamePrefix}{knowledgeBaseId}";
+
+    /// <summary>
+    /// Gets runtime diagnostics for the configured vector store without opening a network connection.
+    /// </summary>
+    public VectorStoreDiagnosticInfo GetVectorStoreDiagnostics()
+    {
+        var metadata = vectorStore.GetService(typeof(VectorStoreMetadata)) as VectorStoreMetadata;
+        var registrationInfo = _registrationInfo ?? new RAGVectorStoreRegistrationInfo
+        {
+            ProviderKind = "Unknown",
+            ProviderDisplayName = vectorStore.GetType().Name
+        };
+
+        return new VectorStoreDiagnosticInfo
+        {
+            ProviderKind = registrationInfo.ProviderKind,
+            ProviderDisplayName = registrationInfo.ProviderDisplayName,
+            RuntimeTypeName = vectorStore.GetType().FullName ?? vectorStore.GetType().Name,
+            VectorStoreSystemName = metadata?.VectorStoreSystemName,
+            VectorStoreName = metadata?.VectorStoreName,
+            CollectionNamePrefix = _options.CollectionNamePrefix,
+            ConfigurationEntries = registrationInfo.ConfigurationEntries
+        };
+    }
+
+    /// <summary>
+    /// Runs a non-destructive vector-store connectivity probe through the registered provider.
+    /// </summary>
+    public async Task<VectorStoreConnectionTestResult> TestVectorStoreConnectionAsync(CancellationToken ct)
+    {
+        var probeCollectionName = $"{_options.CollectionNamePrefix}diagnostics_probe";
+        var startedAt = Stopwatch.GetTimestamp();
+        try
+        {
+            var exists = await vectorStore.CollectionExistsAsync(probeCollectionName, ct);
+            return new VectorStoreConnectionTestResult
+            {
+                Succeeded = true,
+                ProbeCollectionName = probeCollectionName,
+                ProbeCollectionExists = exists,
+                Duration = Stopwatch.GetElapsedTime(startedAt),
+                Message = $"Connection succeeded. Probe collection exists: {exists}."
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Vector store connectivity probe failed for collection '{CollectionName}'.", probeCollectionName);
+            return new VectorStoreConnectionTestResult
+            {
+                Succeeded = false,
+                ProbeCollectionName = probeCollectionName,
+                Duration = Stopwatch.GetElapsedTime(startedAt),
+                Message = ex.Message
+            };
+        }
+    }
 
     public async Task<VectorStoreCollection<Guid, RAGVectorRecord>> GetOrCreateCollectionAsync(
         KnowledgeBaseModel kb,

@@ -176,6 +176,18 @@ public sealed partial class RAGService(
         }
     }
 
+    /// <summary>
+    /// Gets runtime diagnostics for the configured vector store.
+    /// </summary>
+    public VectorStoreDiagnosticInfo GetVectorStoreDiagnostics()
+        => vectorCollectionCoordinator.GetVectorStoreDiagnostics();
+
+    /// <summary>
+    /// Runs a non-destructive vector-store connectivity probe.
+    /// </summary>
+    public Task<VectorStoreConnectionTestResult> TestVectorStoreConnectionAsync(CancellationToken ct = default)
+        => vectorCollectionCoordinator.TestVectorStoreConnectionAsync(ct);
+
     public async Task DeleteKnowledgeBaseAsync(string knowledgeBaseId, CancellationToken ct = default)
     {
         await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);

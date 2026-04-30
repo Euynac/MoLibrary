@@ -81,6 +81,12 @@
                                            OnClick="@PageState.ShowEmbeddingDiagnosticsDialogAsync">
                                     @L["RAG:EmbeddingDiagnostics:Open"]
                                 </MudButton>
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Storage"
+                                           OnClick="@PageState.ShowVectorStoreDiagnosticsDialogAsync">
+                                    @L["RAG:VectorDiagnostics:Open"]
+                                </MudButton>
                                 @if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase))
                                 {
                                     <MudButton Variant="Variant.Outlined"

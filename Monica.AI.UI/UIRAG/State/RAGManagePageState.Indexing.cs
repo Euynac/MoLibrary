@@ -143,6 +143,16 @@ public sealed partial class RAGManagePageState
     }
 
     /// <summary>
+    /// Opens the vector-store diagnostics dialog.
+    /// </summary>
+    public async Task ShowVectorStoreDiagnosticsDialogAsync()
+    {
+        await _dialogService.ShowAsync<VectorStoreDiagnosticsDialog>(
+            _localizer["RAG:VectorDiagnostics:Title"],
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
+    /// <summary>
     /// Start batch indexing for selected pending or failed queue rows.
     /// </summary>
     public async Task StartBatchIndexingAsync()

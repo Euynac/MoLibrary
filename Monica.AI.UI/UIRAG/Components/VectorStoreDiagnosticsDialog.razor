@@ -1,0 +1,223 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.RAG.Facades
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@inject RAGFacade RagFacade
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="vector-diagnostics-root">
+            <div class="dialog-header">
+                <MudText Typo="Typo.h6">@L["RAG:VectorDiagnostics:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["RAG:VectorDiagnostics:Subtitle"]
+                </MudText>
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="diagnostics-loading">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["RAG:VectorDiagnostics:Loading"]
+                    </MudText>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_loadErrorMessage
+                </MudAlert>
+            }
+            else if (_diagnostics is { } diagnostics)
+            {
+                <div class="diagnostics-summary">
+                    <div class="summary-item">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["RAG:VectorDiagnostics:Field:Provider"]</MudText>
+                        <MudText Typo="Typo.body2">@diagnostics.ProviderDisplayName</MudText>
+                    </div>
+                    <div class="summary-item">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["RAG:VectorDiagnostics:Field:RuntimeType"]</MudText>
+                        <MudText Typo="Typo.body2" Class="mono-text">@diagnostics.RuntimeTypeName</MudText>
+                    </div>
+                    <div class="summary-item">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["RAG:VectorDiagnostics:Field:SystemName"]</MudText>
+                        <MudText Typo="Typo.body2">@FormatOptional(diagnostics.VectorStoreSystemName)</MudText>
+                    </div>
+                    <div class="summary-item">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["RAG:VectorDiagnostics:Field:StoreName"]</MudText>
+                        <MudText Typo="Typo.body2">@FormatOptional(diagnostics.VectorStoreName)</MudText>
+                    </div>
+                    <div class="summary-item">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["RAG:VectorDiagnostics:Field:CollectionPrefix"]</MudText>
+                        <MudText Typo="Typo.body2" Class="mono-text">@diagnostics.CollectionNamePrefix</MudText>
+                    </div>
+                </div>
+
+                <MudDivider />
+
+                <div class="configuration-section">
+                    <MudText Typo="Typo.subtitle2" Class="section-title">
+                        @L["RAG:VectorDiagnostics:Configuration"]
+                    </MudText>
+
+                    @if (diagnostics.ConfigurationEntries.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            @L["RAG:VectorDiagnostics:NoConfiguration"]
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <div class="configuration-grid">
+                            @foreach (var entry in diagnostics.ConfigurationEntries)
+                            {
+                                <div class="configuration-row">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Key</MudText>
+                                    <MudText Typo="Typo.body2" Class="configuration-value">
+                                        @entry.Value
+                                        @if (entry.IsSensitive)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="sensitive-chip">
+                                                @L["RAG:VectorDiagnostics:Sensitive"]
+                                            </MudChip>
+                                        }
+                                    </MudText>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <MudDivider />
+
+                <div class="connection-section">
+                    <div class="connection-header">
+                        <MudText Typo="Typo.subtitle2" Class="section-title">
+                            @L["RAG:VectorDiagnostics:Connection:Title"]
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   OnClick="@TestConnectionAsync"
+                                   Disabled="@_isTesting">
+                            @(_isTesting ? L["RAG:VectorDiagnostics:Testing"] : L["RAG:VectorDiagnostics:Test"])
+                        </MudButton>
+                    </div>
+
+                    @if (_testResult is null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["RAG:VectorDiagnostics:Connection:NotTested"]
+                        </MudText>
+                    }
+                    else
+                    {
+                        <div class="test-result @(_testResult.Succeeded ? "success" : "failed")">
+                            <MudIcon Icon="@(_testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
+                                     Size="Size.Small" />
+                            <div class="test-result-copy">
+                                <MudText Typo="Typo.body2">@BuildTestResultText(_testResult)</MudText>
+                                @if (!string.IsNullOrWhiteSpace(_testResult.ProbeCollectionName))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mono-text">
+                                        @_testResult.ProbeCollectionName
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private VectorStoreDiagnosticInfo? _diagnostics;
+    private VectorStoreConnectionTestResult? _testResult;
+    private string? _loadErrorMessage;
+    private bool _isLoading = true;
+    private bool _isTesting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await RagFacade.GetVectorStoreDiagnosticsAsync();
+        if (result.IsFailed(out var error, out var diagnostics))
+        {
+            _loadErrorMessage = error.Message ?? L["Common:Error"].Value;
+            _diagnostics = null;
+        }
+        else
+        {
+            _loadErrorMessage = null;
+            _diagnostics = diagnostics;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        if (_isTesting)
+        {
+            return;
+        }
+
+        _isTesting = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await RagFacade.TestVectorStoreConnectionAsync();
+            if (result.IsFailed(out var error, out var testResult))
+            {
+                testResult = new VectorStoreConnectionTestResult
+                {
+                    Succeeded = false,
+                    ProbeCollectionName = string.Empty,
+                    Message = error.Message ?? L["Common:Error"].Value
+                };
+            }
+
+            _testResult = testResult;
+        }
+        finally
+        {
+            _isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    private string BuildTestResultText(VectorStoreConnectionTestResult result)
+        => result.Succeeded
+            ? L[
+                "RAG:VectorDiagnostics:Connection:Success",
+                result.Duration.TotalMilliseconds,
+                FormatBoolean(result.ProbeCollectionExists)].Value
+            : result.Message;
+
+    private string FormatBoolean(bool? value)
+        => value switch
+        {
+            true => L["Common:Yes"].Value,
+            false => L["Common:No"].Value,
+            null => "-"
+        };
+
+    private static string FormatOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "-" : value;
+
+    private void Close() => MudDialog.Close();
+}
