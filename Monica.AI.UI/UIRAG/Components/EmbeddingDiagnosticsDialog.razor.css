@@ -1,0 +1,62 @@
+.embedding-diagnostics-root {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: min(900px, 80vw);
+}
+
+.dialog-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.diagnostics-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 120px;
+}
+
+.diagnostics-table-wrapper {
+    max-height: min(62vh, 620px);
+    overflow: auto;
+}
+
+.diagnostics-table-wrapper ::deep .diagnostics-table {
+    background-color: var(--mud-palette-surface);
+}
+
+.model-cell,
+.provider-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.model-name {
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+.status-detail {
+    display: block;
+    max-width: 280px;
+    margin-top: 4px;
+}
+
+.test-result {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 320px;
+    font-size: 0.8125rem;
+}
+
+.test-result.success {
+    color: var(--mud-palette-success);
+}
+
+.test-result.failed {
+    color: var(--mud-palette-error);
+}

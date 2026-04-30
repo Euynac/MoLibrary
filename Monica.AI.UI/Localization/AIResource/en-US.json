@@ -153,6 +153,44 @@
         "SearchMismatch": "The following knowledge bases use different embedding models: {0}. Search results may be inaccurate."
       }
     },
+    "RagSupport": {
+      "Title": "RAG Support",
+      "EnabledStatus": "RAG indexing is enabled for this knowledge base.",
+      "DisabledStatus": "RAG indexing is not enabled for this knowledge base.",
+      "Enable": "Enable RAG",
+      "Remove": "Remove RAG",
+      "Enabled": "RAG support enabled.",
+      "Removed": "RAG support removed. Reset {0} document(s) and cleared {1} indexed chunk(s).",
+      "RemoveConfirm": {
+        "Title": "Remove RAG Support",
+        "Message": "Remove RAG support from knowledge base '{0}'? This will clear all RAG vector data and reset indexed documents to pending, but it will keep the knowledge base and source documents.",
+        "Confirm": "Remove RAG"
+      }
+    },
+    "EmbeddingDiagnostics": {
+      "Open": "Embedding Info",
+      "Title": "Embedding Diagnostics",
+      "Subtitle": "Review configured embedding models, provider status, dimensions, and live connection results.",
+      "Loading": "Loading embedding models...",
+      "Test": "Test",
+      "Testing": "Testing...",
+      "Column": {
+        "Model": "Model",
+        "Provider": "Provider",
+        "Dimensions": "Dimensions",
+        "Status": "Status",
+        "Connection": "Connection",
+        "Actions": "Actions"
+      },
+      "Status": {
+        "Available": "Available",
+        "Invalid": "Invalid"
+      },
+      "Connection": {
+        "NotTested": "Not tested",
+        "Success": "Connected · {0}d"
+      }
+    },
     "KnowledgeBase": {
       "Title": "Knowledge Bases",
       "DocumentCount": "Documents",

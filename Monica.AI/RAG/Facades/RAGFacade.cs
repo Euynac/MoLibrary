@@ -30,6 +30,26 @@ public class RAGFacade(
         }
     }
 
+    /// <summary>
+    /// Removes RAG support from one knowledge base and clears its persisted vector/index data.
+    /// </summary>
+    /// <param name="kbId">Knowledge base identifier.</param>
+    public async Task<Res<KnowledgeBaseRagSupportRemovalResult>> RemoveKnowledgeBaseRagSupportAsync(string kbId)
+    {
+        try
+        {
+            var result = await GetRagService().RemoveKnowledgeBaseRagSupportAsync(kbId);
+            return Res.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove RAG support for KB '{KbId}'", kbId);
+            return ex is InvalidOperationException or KeyNotFoundException
+                ? Res.Fail(ex.GetMessageRecursively())
+                : Res.Fail($"Failed to remove RAG support: {ex.GetMessageRecursively()}");
+        }
+    }
+
     public async Task<Res<IReadOnlyList<TextSearchResult>>> SearchAsync(
         string query,
         IEnumerable<string> kbIds,

@@ -55,6 +55,121 @@ public class EmbeddingModelFacade(
         }
     }
 
+    /// <summary>
+    /// Gets diagnostic metadata for every configured embedding model, including invalid providers.
+    /// </summary>
+    public Task<Res<IReadOnlyList<EmbeddingModelDiagnosticInfo>>> GetEmbeddingModelDiagnosticsAsync()
+    {
+        try
+        {
+            var diagnostics = providerFactory.GetAllProviders()
+                .SelectMany(provider => provider.Info.SupportedModels?
+                    .OfType<EmbeddingModelInfo>()
+                    .Select(model => new EmbeddingModelDiagnosticInfo
+                    {
+                        ProviderId = provider.ProviderId,
+                        ProviderDisplayName = provider.DisplayName,
+                        ProviderStatus = provider.Info.Status.ToString(),
+                        IsProviderValid = provider.Info.IsValid,
+                        ModelName = model.ModelName,
+                        Dimensions = model.Dimensions,
+                        Description = model.Description,
+                        ConfigurationErrors = provider.Info.ConfigurationErrors ?? []
+                    }) ?? [])
+                .GroupBy(
+                    option => EmbeddingModelOption.ToModelKey(option.ProviderId, option.ModelName),
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(option => option.ProviderDisplayName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(option => option.ModelName, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+                .AsReadOnly();
+
+            return Task.FromResult(Res.Ok<IReadOnlyList<EmbeddingModelDiagnosticInfo>>(diagnostics));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get embedding model diagnostics.");
+            return Task.FromResult<Res<IReadOnlyList<EmbeddingModelDiagnosticInfo>>>(
+                Res.Fail($"Failed to load embedding diagnostics: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Tests whether one configured embedding model can generate a vector through its provider.
+    /// </summary>
+    /// <param name="providerId">Provider identifier that owns the embedding model.</param>
+    /// <param name="modelName">Embedding model name to test.</param>
+    /// <param name="ct">Cancellation token used for the live embedding request.</param>
+    public async Task<Res<EmbeddingModelConnectionTestResult>> TestEmbeddingModelConnectionAsync(
+        string providerId,
+        string modelName,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(providerId))
+            {
+                return Res.Fail("Embedding provider ID cannot be empty.");
+            }
+
+            if (string.IsNullOrWhiteSpace(modelName))
+            {
+                return Res.Fail("Embedding model name cannot be empty.");
+            }
+
+            var provider = providerFactory.GetProvider(providerId);
+            if (provider is null)
+            {
+                return Res.Fail($"Embedding provider '{providerId}' was not found.");
+            }
+
+            var embeddingModel = provider.Info.SupportedModels?
+                .OfType<EmbeddingModelInfo>()
+                .FirstOrDefault(model => string.Equals(model.ModelName, modelName, StringComparison.OrdinalIgnoreCase));
+
+            if (embeddingModel is null)
+            {
+                return Res.Fail($"Embedding model '{modelName}' is not configured on provider '{provider.ProviderId}'.");
+            }
+
+            var generator = provider.GetEmbeddingGenerator(embeddingModel.ModelName);
+            var generated = await generator.GenerateAsync(["embedding connection test"], cancellationToken: ct);
+            var embedding = generated.FirstOrDefault();
+            if (embedding is null)
+            {
+                return Res.Fail("Embedding generator returned no vectors.");
+            }
+
+            var dimensions = embedding.Vector.Length;
+            embeddingModel.Dimensions = dimensions;
+
+            return Res.Ok(new EmbeddingModelConnectionTestResult
+            {
+                ProviderId = provider.ProviderId,
+                ModelName = embeddingModel.ModelName,
+                Succeeded = true,
+                Dimensions = dimensions,
+                Message = $"Connection succeeded. Dimensions: {dimensions}."
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to test embedding model '{ModelName}' on provider '{ProviderId}'.",
+                modelName,
+                providerId);
+            return Res.Ok(new EmbeddingModelConnectionTestResult
+            {
+                ProviderId = providerId,
+                ModelName = modelName,
+                Succeeded = false,
+                Message = ex.GetMessageRecursively()
+            });
+        }
+    }
+
     public async Task<Res<EmbeddingModelOption?>> GetKnowledgeBaseEmbeddingModelAsync(string kbId)
     {
         try

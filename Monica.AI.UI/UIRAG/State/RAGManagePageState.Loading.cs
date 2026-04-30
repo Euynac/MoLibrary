@@ -18,6 +18,7 @@ public sealed partial class RAGManagePageState
         IsInitialLoading = true;
         UpdateLoadingState(_localizer["RAG:KnowledgeBase:Title"].Value, 35);
         await LoadKnowledgeBasesAsync();
+        await LoadEmbeddingModelsAsync();
         LoadingProgressValue = 100;
         IsInitialLoading = false;
         NotifyStateChanged();
@@ -50,6 +51,7 @@ public sealed partial class RAGManagePageState
         if (knowledgeBase is null)
         {
             DocumentQueue = [];
+            CurrentEmbeddingModelKey = string.Empty;
             SelectedKnowledgeBaseVectorValidation = null;
             ClearBatchStartInFlight();
             ClearSingleIndexInFlight();
@@ -59,8 +61,14 @@ public sealed partial class RAGManagePageState
         }
 
         IsSelectionLoading = true;
+        UpdateEmbeddingModelSelection(knowledgeBase);
         UpdateLoadingState(_localizer["RAG:DocumentQueue:Title"].Value, 72);
         NotifyStateChanged();
+
+        if (!AreEmbeddingModelsLoaded)
+        {
+            await LoadEmbeddingModelsAsync();
+        }
 
         await LoadDocumentQueueAsync();
         EnsureQueuePolling();
@@ -79,6 +87,25 @@ public sealed partial class RAGManagePageState
         }
 
         KnowledgeBases = knowledgeBases.ToList();
+        NotifyStateChanged();
+        return true;
+    }
+
+    private async Task<bool> LoadEmbeddingModelsAsync()
+    {
+        if ((await _embeddingFacade.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+            return false;
+        }
+
+        AvailableModels = models.ToList();
+        AreEmbeddingModelsLoaded = true;
+        if (SelectedKnowledgeBase is not null)
+        {
+            UpdateEmbeddingModelSelection(SelectedKnowledgeBase);
+        }
+
         NotifyStateChanged();
         return true;
     }
@@ -129,12 +156,14 @@ public sealed partial class RAGManagePageState
         if (SelectedKnowledgeBase is null)
         {
             DocumentQueue = [];
+            CurrentEmbeddingModelKey = string.Empty;
             SelectedKnowledgeBaseVectorValidation = null;
             ClearSingleIndexInFlight();
             NotifyStateChanged();
             return;
         }
 
+        UpdateEmbeddingModelSelection(SelectedKnowledgeBase);
         QueueSelectedKnowledgeBaseVectorValidation(SelectedKnowledgeBase.Id);
         NotifyStateChanged();
     }

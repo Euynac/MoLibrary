@@ -272,6 +272,29 @@ public sealed class RAGIndexStateCoordinator(IDocumentIndexStateStore indexState
         }
     }
 
+    /// <summary>
+    /// Resets indexed document-state records to pending after their vector data has been removed.
+    /// </summary>
+    public async Task<int> ResetIndexedDocumentStatesToPendingAsync(string knowledgeBaseId, CancellationToken ct)
+    {
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        var resetCount = 0;
+        foreach (var state in states.Where(static state => state.Status == DocumentStatus.Done || state.ChunkCount > 0))
+        {
+            state.Status = DocumentStatus.Pending;
+            state.ChunkCount = 0;
+            state.Progress = 0;
+            state.IndexedAt = null;
+            state.ErrorMessage = null;
+            state.ChunkerId = null;
+            state.UpdatedAt = DateTimeOffset.UtcNow;
+            await indexStateStore.UpsertDocumentStateAsync(state, ct);
+            resetCount++;
+        }
+
+        return resetCount;
+    }
+
     public async Task RefreshKnowledgeBaseStatsAsync(KnowledgeBaseModel kb, CancellationToken ct)
     {
         var indexedStates = await indexStateStore.GetDocumentStatesAsync(kb.Id, ct);

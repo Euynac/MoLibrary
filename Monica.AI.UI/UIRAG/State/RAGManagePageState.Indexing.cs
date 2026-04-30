@@ -1,12 +1,147 @@
 using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.RAG.Models;
+using Monica.AI.UI.UIRAG.Components;
 using Monica.Core.Results;
 using MudBlazor;
+using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
 
 public sealed partial class RAGManagePageState
 {
+    /// <summary>
+    /// Changes the current embedding selection and immediately updates RAG support when already enabled.
+    /// </summary>
+    public async Task ChangeEmbeddingModelAsync(string modelKey)
+    {
+        if (SelectedKnowledgeBase is null)
+        {
+            return;
+        }
+
+        CurrentEmbeddingModelKey = modelKey;
+        NotifyStateChanged();
+
+        if (HasEmbeddingBinding(SelectedKnowledgeBase))
+        {
+            await EnableOrUpdateRagSupportAsync();
+        }
+    }
+
+    /// <summary>
+    /// Enables RAG support for the selected knowledge base or switches its embedding model.
+    /// </summary>
+    public async Task EnableOrUpdateRagSupportAsync()
+    {
+        if (SelectedKnowledgeBase is null)
+        {
+            return;
+        }
+
+        if (!EmbeddingModelOption.TryParseModelKey(CurrentEmbeddingModelKey, out var providerId, out var modelName))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: invalid embedding model key.", Severity.Error);
+            return;
+        }
+
+        var previousModelKey = GetKnowledgeBaseModelKey(SelectedKnowledgeBase);
+        if (HasEmbeddingBinding(SelectedKnowledgeBase)
+            && string.Equals(previousModelKey, CurrentEmbeddingModelKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var requiresReindexWarning = HasIndexedContent(SelectedKnowledgeBase)
+            && !string.IsNullOrWhiteSpace(previousModelKey);
+        if (requiresReindexWarning)
+        {
+            var confirmed = await _dialogService.ShowMessageBoxAsync(
+                _localizer["RAG:EmbeddingModel:ReindexConfirm:Title"],
+                _localizer["RAG:EmbeddingModel:ReindexConfirm:Message", SelectedKnowledgeBase.Name],
+                yesText: _localizer["RAG:EmbeddingModel:ReindexConfirm:Continue"],
+                cancelText: _localizer["Common:Cancel"]);
+
+            if (confirmed != true)
+            {
+                CurrentEmbeddingModelKey = previousModelKey;
+                NotifyStateChanged();
+                return;
+            }
+        }
+
+        if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
+                SelectedKnowledgeBase.Id,
+                providerId,
+                modelName,
+                clearIndex: true)).IsFailed(out var error))
+        {
+            CurrentEmbeddingModelKey = previousModelKey;
+            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+            NotifyStateChanged();
+            return;
+        }
+
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+
+        _snackbar.Add(
+            requiresReindexWarning
+                ? _localizer["RAG:EmbeddingModel:ReindexRequired"]
+                : _localizer["RAG:RagSupport:Enabled"],
+            requiresReindexWarning ? Severity.Warning : Severity.Success);
+    }
+
+    /// <summary>
+    /// Removes RAG support and clears existing RAG vector/index data for the selected knowledge base.
+    /// </summary>
+    public async Task RemoveRagSupportAsync()
+    {
+        if (SelectedKnowledgeBase is null || !HasEmbeddingBinding(SelectedKnowledgeBase))
+        {
+            return;
+        }
+
+        var confirmed = await _dialogService.ShowMessageBoxAsync(
+            _localizer["RAG:RagSupport:RemoveConfirm:Title"],
+            _localizer["RAG:RagSupport:RemoveConfirm:Message", SelectedKnowledgeBase.Name],
+            yesText: _localizer["RAG:RagSupport:RemoveConfirm:Confirm"],
+            cancelText: _localizer["Common:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(SelectedKnowledgeBase.Id);
+        if (result.IsFailed(out var error, out var removal))
+        {
+            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        CurrentEmbeddingModelKey = string.Empty;
+        SelectedKnowledgeBaseVectorValidation = null;
+        _snackbar.Add(
+            _localizer[
+                "RAG:RagSupport:Removed",
+                removal.ResetDocumentCount,
+                removal.ClearedChunkCount],
+            Severity.Warning);
+
+        await RefreshSelectedKnowledgeBaseAsync();
+        await LoadDocumentQueueAsync();
+    }
+
+    /// <summary>
+    /// Opens the embedding model diagnostics dialog.
+    /// </summary>
+    public async Task ShowEmbeddingDiagnosticsDialogAsync()
+    {
+        await _dialogService.ShowAsync<EmbeddingDiagnosticsDialog>(
+            _localizer["RAG:EmbeddingDiagnostics:Title"],
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
     /// <summary>
     /// Start batch indexing for selected pending or failed queue rows.
     /// </summary>
@@ -207,5 +342,15 @@ public sealed partial class RAGManagePageState
         _snackbar.Add(_localizer["RAG:VectorValidation:Messages:ReindexQueued", queuedCount], Severity.Success);
         await RefreshSelectedKnowledgeBaseAsync();
         await LoadDocumentQueueAsync();
+    }
+
+    private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
+    {
+        if (knowledgeBase.DocumentCount > 0 || knowledgeBase.ChunkCount > 0)
+        {
+            return true;
+        }
+
+        return DocumentQueue.Any(static item => item.Status == DocumentStatus.Done || item.ChunkCount > 0);
     }
 }

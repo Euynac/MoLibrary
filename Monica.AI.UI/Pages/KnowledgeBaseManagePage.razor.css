@@ -63,17 +63,6 @@
     height: 100%;
 }
 
-.embedding-model-section {
-    padding: 14px;
-    background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 12px;
-}
-
-.embedding-empty-warning {
-    margin-top: 10px;
-}
-
 .kb-header {
     display: flex;
     align-items: flex-start;
@@ -127,4 +116,3 @@
         grid-template-rows: auto 1fr;
     }
 }
-

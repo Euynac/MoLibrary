@@ -17,6 +17,7 @@ namespace Monica.AI.UI.UIRAG.State;
 public sealed partial class RAGManagePageState : IDisposable
 {
     private readonly RAGFacade _ragFacade;
+    private readonly EmbeddingModelFacade _embeddingFacade;
     private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
@@ -34,6 +35,7 @@ public sealed partial class RAGManagePageState : IDisposable
     /// </summary>
     public RAGManagePageState(
         RAGFacade ragFacade,
+        EmbeddingModelFacade embeddingFacade,
         KnowledgeBaseFacade knowledgeBaseFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
@@ -42,6 +44,7 @@ public sealed partial class RAGManagePageState : IDisposable
         RAGQueuePollingState queuePollingState)
     {
         _ragFacade = ragFacade;
+        _embeddingFacade = embeddingFacade;
         _knowledgeBaseFacade = knowledgeBaseFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
@@ -66,6 +69,16 @@ public sealed partial class RAGManagePageState : IDisposable
     public KnowledgeBaseModel? SelectedKnowledgeBase { get; private set; }
 
     /// <summary>
+    /// Available embedding model options used to enable or reconfigure RAG indexing.
+    /// </summary>
+    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; private set; } = [];
+
+    /// <summary>
+    /// Current embedding model key selected in the RAG page.
+    /// </summary>
+    public string CurrentEmbeddingModelKey { get; private set; } = string.Empty;
+
+    /// <summary>
     /// Current document queue for the selected knowledge base.
     /// </summary>
     public IReadOnlyList<DocumentQueueItemModel> DocumentQueue { get; private set; } = [];
@@ -79,6 +92,11 @@ public sealed partial class RAGManagePageState : IDisposable
     /// Vector validation result for the current selection.
     /// </summary>
     public KnowledgeBaseVectorValidationResult? SelectedKnowledgeBaseVectorValidation { get; private set; }
+
+    /// <summary>
+    /// Whether embedding-model metadata was loaded once already.
+    /// </summary>
+    public bool AreEmbeddingModelsLoaded { get; private set; }
 
     /// <summary>
     /// Whether the first page load is still running.
@@ -113,6 +131,7 @@ public sealed partial class RAGManagePageState : IDisposable
     /// </summary>
     public bool CanStartBatchIndexing
         => SelectedKnowledgeBase is not null
+           && HasEmbeddingBinding(SelectedKnowledgeBase)
            && SelectedDocumentIds.Count > 0
            && DocumentQueue.Any(document => SelectedDocumentIds.Contains(document.Id)
                                             && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
@@ -139,6 +158,23 @@ public sealed partial class RAGManagePageState : IDisposable
     public bool CanReindexSelectedKnowledgeBase
         => SelectedKnowledgeBase is not null
            && ShouldShowMissingVectorWarning
+           && !HasActiveQueueWork;
+
+    /// <summary>
+    /// Whether RAG support can be enabled for the current knowledge base.
+    /// </summary>
+    public bool CanEnableRagSupport
+        => SelectedKnowledgeBase is not null
+           && !HasEmbeddingBinding(SelectedKnowledgeBase)
+           && !string.IsNullOrWhiteSpace(CurrentEmbeddingModelKey)
+           && !HasActiveQueueWork;
+
+    /// <summary>
+    /// Whether RAG support can be removed for the current knowledge base.
+    /// </summary>
+    public bool CanRemoveRagSupport
+        => SelectedKnowledgeBase is not null
+           && HasEmbeddingBinding(SelectedKnowledgeBase)
            && !HasActiveQueueWork;
 
     /// <summary>

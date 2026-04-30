@@ -100,6 +100,61 @@ public sealed partial class RAGService(
     }
 
     /// <summary>
+    /// Removes RAG embedding support from a knowledge base while keeping its source documents.
+    /// </summary>
+    public async Task<KnowledgeBaseRagSupportRemovalResult> RemoveKnowledgeBaseRagSupportAsync(
+        string knowledgeBaseId,
+        CancellationToken ct = default)
+    {
+        var kb = await indexStateCoordinator.GetKnowledgeBaseRequiredAsync(knowledgeBaseId, ct);
+        _ = await ConvergeInactiveIndexingDocumentsAsync(knowledgeBaseId, ct);
+
+        var states = await indexStateStore.GetDocumentStatesAsync(knowledgeBaseId, ct);
+        if (states.Any(state =>
+                state.Status == DocumentStatus.Indexing
+                && IsDocumentIndexingActiveAtRuntime(state.KnowledgeBaseId, state.DocumentPath)))
+        {
+            throw new InvalidOperationException("Cannot remove RAG support while indexing is in progress.");
+        }
+
+        var clearedIndexedDocumentCount = states.Count(static state => state.Status == DocumentStatus.Done || state.ChunkCount > 0);
+        var clearedChunkCount = states.Sum(static state => Math.Max(0, state.ChunkCount));
+
+        try
+        {
+            await vectorCollectionCoordinator.ClearCollectionCacheAndStorageAsync(knowledgeBaseId, ct);
+        }
+        catch (Exception ex) when (RAGFailureTranslator.IsVectorStoreFailure(ex))
+        {
+            throw new InvalidOperationException(
+                RAGFailureTranslator.DescribeEmbeddingModelSwitch(ex),
+                ex);
+        }
+
+        var resetDocumentCount = await indexStateCoordinator.ResetIndexedDocumentStatesToPendingAsync(knowledgeBaseId, ct);
+
+        kb.EmbeddingProviderId = null;
+        kb.EmbeddingModelName = null;
+        kb.DocumentCount = 0;
+        kb.ChunkCount = 0;
+        await indexStateStore.UpsertKnowledgeBaseAsync(kb, ct);
+
+        logger.LogInformation(
+            "Removed RAG support for KB '{KbId}'. Reset {ResetDocumentCount} document(s), cleared {ClearedChunkCount} chunk vector(s).",
+            knowledgeBaseId,
+            resetDocumentCount,
+            clearedChunkCount);
+
+        return new KnowledgeBaseRagSupportRemovalResult
+        {
+            KnowledgeBaseId = knowledgeBaseId,
+            ResetDocumentCount = resetDocumentCount,
+            ClearedIndexedDocumentCount = clearedIndexedDocumentCount,
+            ClearedChunkCount = clearedChunkCount
+        };
+    }
+
+    /// <summary>
     /// Validates that indexing can reach the configured embedding model and vector store.
     /// </summary>
     public async Task EnsureKnowledgeBaseIndexingReadyAsync(

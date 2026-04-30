@@ -153,6 +153,44 @@
         "Continue": "继续"
       }
     },
+    "RagSupport": {
+      "Title": "RAG 支持",
+      "EnabledStatus": "当前知识库已启用 RAG 索引。",
+      "DisabledStatus": "当前知识库未启用 RAG 索引。",
+      "Enable": "启用 RAG",
+      "Remove": "移除 RAG",
+      "Enabled": "已启用 RAG 支持。",
+      "Removed": "已移除 RAG 支持。已重置 {0} 个文档并清除 {1} 个已索引分块。",
+      "RemoveConfirm": {
+        "Title": "移除 RAG 支持",
+        "Message": "确定要移除知识库 '{0}' 的 RAG 支持吗？这会清除全部 RAG 向量数据，并将已索引文档重置为待处理，但会保留知识库和源文档。",
+        "Confirm": "移除 RAG"
+      }
+    },
+    "EmbeddingDiagnostics": {
+      "Open": "嵌入信息",
+      "Title": "嵌入诊断",
+      "Subtitle": "查看当前已配置的嵌入模型、Provider 状态、维度以及实时连接结果。",
+      "Loading": "正在加载嵌入模型...",
+      "Test": "测试",
+      "Testing": "测试中...",
+      "Column": {
+        "Model": "模型",
+        "Provider": "Provider",
+        "Dimensions": "维度",
+        "Status": "状态",
+        "Connection": "连接",
+        "Actions": "操作"
+      },
+      "Status": {
+        "Available": "可用",
+        "Invalid": "无效"
+      },
+      "Connection": {
+        "NotTested": "未测试",
+        "Success": "已连接 · {0}维"
+      }
+    },
     "KnowledgeBase": {
       "Title": "知识库",
       "DocumentCount": "文档数",

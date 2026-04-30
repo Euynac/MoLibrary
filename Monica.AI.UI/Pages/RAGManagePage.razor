@@ -59,6 +59,66 @@
             else
             {
                 <div class="detail-content">
+                    <div class="rag-support-section">
+                        <div class="rag-support-header">
+                            <div class="rag-support-title-group">
+                                <MudIcon Icon="@Icons.Material.Filled.Memory" Size="Size.Small" Class="rag-support-icon" />
+                                <div class="rag-support-title-copy">
+                                    <MudText Typo="Typo.subtitle1" Class="rag-support-title">
+                                        @L["RAG:RagSupport:Title"]
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @(RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase)
+                                            ? L["RAG:RagSupport:EnabledStatus"]
+                                            : L["RAG:RagSupport:DisabledStatus"])
+                                    </MudText>
+                                </div>
+                            </div>
+                            <div class="rag-support-actions">
+                                <MudButton Variant="Variant.Text"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.FactCheck"
+                                           OnClick="@PageState.ShowEmbeddingDiagnosticsDialogAsync">
+                                    @L["RAG:EmbeddingDiagnostics:Open"]
+                                </MudButton>
+                                @if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase))
+                                {
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.LinkOff"
+                                               OnClick="@PageState.RemoveRagSupportAsync"
+                                               Disabled="@(!PageState.CanRemoveRagSupport)">
+                                        @L["RAG:RagSupport:Remove"]
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Link"
+                                               OnClick="@PageState.EnableOrUpdateRagSupportAsync"
+                                               Disabled="@(!PageState.CanEnableRagSupport)">
+                                        @L["RAG:RagSupport:Enable"]
+                                    </MudButton>
+                                }
+                            </div>
+                        </div>
+
+                        <EmbeddingModelSelector AvailableModels="@PageState.AvailableModels"
+                                                SelectedModelKey="@PageState.CurrentEmbeddingModelKey"
+                                                SelectedModelKeyChanged="@PageState.ChangeEmbeddingModelAsync"
+                                                IsDisabled="@PageState.HasActiveQueueWork" />
+
+                        @if (PageState.AvailableModels.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
+                                @L["RAG:EmbeddingModel:NotConfigured"]
+                            </MudAlert>
+                        }
+                    </div>
+
                     <div class="kb-header">
                         <div class="kb-header-info">
                             <MudText Typo="Typo.h5">@selectedKnowledgeBase.Name</MudText>

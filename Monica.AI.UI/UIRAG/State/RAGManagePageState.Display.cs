@@ -1,3 +1,4 @@
+using Monica.AI.RAG.Models;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIRAG.State;
@@ -21,6 +22,16 @@ public sealed partial class RAGManagePageState
             return string.Empty;
         }
 
+        var model = AvailableModels.FirstOrDefault(option =>
+            string.Equals(option.ProviderId, providerId, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(modelName)
+                || string.Equals(option.ModelName, modelName, StringComparison.OrdinalIgnoreCase)));
+
+        if (model is not null)
+        {
+            return model.ProviderDisplayName;
+        }
+
         var provider = _providerFactory.GetProvider(providerId);
         return provider?.DisplayName ?? providerId.Trim();
     }
@@ -39,6 +50,42 @@ public sealed partial class RAGManagePageState
     }
 
     /// <summary>
+    /// Resolves one model display string by the composite model key.
+    /// </summary>
+    public string GetModelDisplayByKey(string modelKey)
+    {
+        var model = AvailableModels.FirstOrDefault(option =>
+            string.Equals(option.ModelKey, modelKey, StringComparison.OrdinalIgnoreCase));
+
+        if (model is not null)
+        {
+            return $"{model.ModelName} ({model.ProviderDisplayName})";
+        }
+
+        if (!EmbeddingModelOption.TryParseModelKey(modelKey, out var providerId, out var modelName))
+        {
+            return modelKey;
+        }
+
+        return $"{modelName} ({GetProviderDisplayLabel(providerId, modelName)})";
+    }
+
+    /// <summary>
+    /// Resolves the persisted embedding model key for one knowledge base.
+    /// </summary>
+    public static string GetKnowledgeBaseModelKey(KnowledgeBaseModel knowledgeBase)
+    {
+        if (!HasEmbeddingBinding(knowledgeBase))
+        {
+            return string.Empty;
+        }
+
+        return EmbeddingModelOption.ToModelKey(
+            knowledgeBase.EmbeddingProviderId!,
+            knowledgeBase.EmbeddingModelName!);
+    }
+
+    /// <summary>
     /// Build the missing-vector warning copy for the current selection.
     /// </summary>
     public string GetMissingVectorWarningMessage()
@@ -51,5 +98,22 @@ public sealed partial class RAGManagePageState
         return _localizer["RAG:VectorValidation:MissingVectors:Message",
             SelectedKnowledgeBaseVectorValidation.IndexedDocumentCount,
             SelectedKnowledgeBaseVectorValidation.IndexedChunkCount];
+    }
+
+    private void UpdateEmbeddingModelSelection(KnowledgeBaseModel knowledgeBase)
+    {
+        if (HasEmbeddingBinding(knowledgeBase))
+        {
+            CurrentEmbeddingModelKey = GetKnowledgeBaseModelKey(knowledgeBase);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(CurrentEmbeddingModelKey)
+            && AvailableModels.Any(model => string.Equals(model.ModelKey, CurrentEmbeddingModelKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        CurrentEmbeddingModelKey = AvailableModels.FirstOrDefault()?.ModelKey ?? string.Empty;
     }
 }

@@ -2,8 +2,6 @@ using Microsoft.Extensions.Localization;
 using Monica.AI.Abstractions;
 using Monica.AI.KnowledgeBase.Facades;
 using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.RAG.Facades;
-using Monica.AI.RAG.Models;
 using Monica.AI.UI.Localization;
 using Monica.Core.Results;
 using MudBlazor;
@@ -18,26 +16,22 @@ namespace Monica.AI.UI.UIKnowledgeBase.State;
 public sealed partial class KnowledgeBaseManagePageState
 {
     private readonly KnowledgeBaseFacade _knowledgeBaseFacade;
-    private readonly EmbeddingModelFacade _embeddingFacade;
     private readonly IAIProviderFactory _providerFactory;
     private readonly ISnackbar _snackbar;
     private readonly IDialogService _dialogService;
     private readonly IStringLocalizer<AIResource> _localizer;
-    private bool _embeddingModelWarningShown;
 
     /// <summary>
     /// Initializes the page state and its collaborators.
     /// </summary>
     public KnowledgeBaseManagePageState(
         KnowledgeBaseFacade knowledgeBaseFacade,
-        EmbeddingModelFacade embeddingFacade,
         IAIProviderFactory providerFactory,
         ISnackbar snackbar,
         IDialogService dialogService,
         IStringLocalizer<AIResource> localizer)
     {
         _knowledgeBaseFacade = knowledgeBaseFacade;
-        _embeddingFacade = embeddingFacade;
         _providerFactory = providerFactory;
         _snackbar = snackbar;
         _dialogService = dialogService;
@@ -58,16 +52,6 @@ public sealed partial class KnowledgeBaseManagePageState
     /// Current knowledge-base selection.
     /// </summary>
     public KnowledgeBaseModel? SelectedKnowledgeBase { get; private set; }
-
-    /// <summary>
-    /// Available embedding model options.
-    /// </summary>
-    public IReadOnlyList<EmbeddingModelOption> AvailableModels { get; private set; } = [];
-
-    /// <summary>
-    /// Current embedding model key selected in the page.
-    /// </summary>
-    public string CurrentEmbeddingModelKey { get; private set; } = string.Empty;
 
     /// <summary>
     /// Current document inventory for the selected knowledge base.
@@ -93,11 +77,6 @@ public sealed partial class KnowledgeBaseManagePageState
     /// Whether the current knowledge-base selection is still loading.
     /// </summary>
     public bool IsSelectionLoading { get; private set; }
-
-    /// <summary>
-    /// Whether embedding-model metadata was loaded once already.
-    /// </summary>
-    public bool AreEmbeddingModelsLoaded { get; private set; }
 
     /// <summary>
     /// Whether markdown-group metadata was loaded once already.
@@ -135,7 +114,6 @@ public sealed partial class KnowledgeBaseManagePageState
         IsInitialLoading = true;
         UpdateLoadingState(_localizer["RAG:KnowledgeBase:Title"].Value, 35);
         await LoadKnowledgeBasesAsync();
-        await LoadEmbeddingModelsAsync();
         QueueMarkdownGroupWarmup();
         LoadingProgressValue = 100;
         IsInitialLoading = false;
@@ -150,26 +128,15 @@ public sealed partial class KnowledgeBaseManagePageState
         SelectedKnowledgeBase = knowledgeBase;
         if (knowledgeBase is null)
         {
-            CurrentEmbeddingModelKey = string.Empty;
             DocumentInventory = [];
             NotifyStateChanged();
             return;
         }
 
         IsSelectionLoading = true;
-        UpdateLoadingState(_localizer["RAG:EmbeddingModel:Label"].Value, 28);
+        UpdateLoadingState(_localizer["KnowledgeBase:Documents:Title"].Value, 72);
         NotifyStateChanged();
 
-        if (!AreEmbeddingModelsLoaded)
-        {
-            await LoadEmbeddingModelsAsync();
-        }
-
-        CurrentEmbeddingModelKey = IsRagEnabled(knowledgeBase)
-            ? GetKnowledgeBaseModelKey(knowledgeBase)
-            : string.Empty;
-
-        UpdateLoadingState(_localizer["KnowledgeBase:Documents:Title"].Value, 72);
         await LoadDocumentInventoryAsync();
         IsSelectionLoading = false;
         LoadingProgressValue = 100;
@@ -186,27 +153,6 @@ public sealed partial class KnowledgeBaseManagePageState
         }
 
         KnowledgeBases = knowledgeBases.ToList();
-        NotifyStateChanged();
-        return true;
-    }
-
-    private async Task<bool> LoadEmbeddingModelsAsync()
-    {
-        if ((await _embeddingFacade.GetEmbeddingModelsAsync()).IsFailed(out var error, out var models))
-        {
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            return false;
-        }
-
-        AvailableModels = models.ToList();
-        AreEmbeddingModelsLoaded = true;
-
-        if (AvailableModels.Count == 0 && !_embeddingModelWarningShown)
-        {
-            _embeddingModelWarningShown = true;
-            _snackbar.Add(_localizer["RAG:EmbeddingModel:NotConfigured"], Severity.Warning);
-        }
-
         NotifyStateChanged();
         return true;
     }
@@ -259,10 +205,6 @@ public sealed partial class KnowledgeBaseManagePageState
         await LoadKnowledgeBasesAsync();
         SelectedKnowledgeBase = KnowledgeBases.FirstOrDefault(kb =>
             string.Equals(kb.Id, selectedKnowledgeBaseId, StringComparison.OrdinalIgnoreCase));
-
-        CurrentEmbeddingModelKey = SelectedKnowledgeBase is not null && IsRagEnabled(SelectedKnowledgeBase)
-            ? GetKnowledgeBaseModelKey(SelectedKnowledgeBase)
-            : string.Empty;
 
         NotifyStateChanged();
     }

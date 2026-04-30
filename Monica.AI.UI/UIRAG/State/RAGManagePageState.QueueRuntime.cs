@@ -11,6 +11,7 @@ public sealed partial class RAGManagePageState
     /// </summary>
     public bool CanStartDocumentIndexing(DocumentQueueItem document)
         => SelectedKnowledgeBase is not null
+           && HasEmbeddingBinding(SelectedKnowledgeBase)
            && document.Status is DocumentStatus.Pending or DocumentStatus.Error
            && !HasActiveQueueWork;
 

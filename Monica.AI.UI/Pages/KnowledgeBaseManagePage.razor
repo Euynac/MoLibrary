@@ -59,19 +59,6 @@
             else
             {
                 <div class="detail-content">
-                    <div class="embedding-model-section">
-                        <Monica.AI.UI.UIKnowledgeBase.Components.EmbeddingModelSelector AvailableModels="@PageState.AvailableModels"
-                                                                                         SelectedModelKey="@PageState.CurrentEmbeddingModelKey"
-                                                                                         SelectedModelKeyChanged="@PageState.ChangeEmbeddingModelAsync" />
-
-                        @if (PageState.AvailableModels.Count == 0)
-                        {
-                            <MudAlert Severity="Severity.Warning" Dense="true" Class="embedding-empty-warning">
-                                @L["RAG:EmbeddingModel:NotConfigured"]
-                            </MudAlert>
-                        }
-                    </div>
-
                     <div class="kb-header">
                         <div class="kb-header-info">
                             <MudText Typo="Typo.h5">@selectedKnowledgeBase.Name</MudText>

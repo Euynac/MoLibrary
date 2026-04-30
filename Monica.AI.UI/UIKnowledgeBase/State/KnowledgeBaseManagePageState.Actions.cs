@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Components.Forms;
 using Monica.AI.KnowledgeBase.Models;
-using Monica.AI.RAG.Models;
 using Monica.AI.UI.UIKnowledgeBase.Components;
 using Monica.Core.Results;
 using MudBlazor;
-using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
 namespace Monica.AI.UI.UIKnowledgeBase.State;
 
@@ -49,78 +47,11 @@ public sealed partial class KnowledgeBaseManagePageState
         if (string.Equals(SelectedKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase))
         {
             SelectedKnowledgeBase = null;
-            CurrentEmbeddingModelKey = string.Empty;
             DocumentInventory = [];
         }
 
         await LoadKnowledgeBasesAsync();
         NotifyStateChanged();
-    }
-
-    /// <summary>
-    /// Changes the embedding binding for the current knowledge base.
-    /// </summary>
-    public async Task ChangeEmbeddingModelAsync(string modelKey)
-    {
-        if (SelectedKnowledgeBase is null)
-        {
-            return;
-        }
-
-        if (!EmbeddingModelOption.TryParseModelKey(modelKey, out var providerId, out var modelName))
-        {
-            _snackbar.Add($"{_localizer["Common:Error"]}: invalid embedding model key.", Severity.Error);
-            return;
-        }
-
-        var previousModelKey = GetKnowledgeBaseModelKey(SelectedKnowledgeBase);
-        if (string.Equals(previousModelKey, modelKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var requiresReindexWarning = HasIndexedContent(SelectedKnowledgeBase)
-            && !string.IsNullOrWhiteSpace(previousModelKey);
-
-        if (requiresReindexWarning)
-        {
-            var confirmed = await _dialogService.ShowMessageBoxAsync(
-                _localizer["RAG:EmbeddingModel:ReindexConfirm:Title"],
-                _localizer["RAG:EmbeddingModel:ReindexConfirm:Message", SelectedKnowledgeBase.Name],
-                yesText: _localizer["RAG:EmbeddingModel:ReindexConfirm:Continue"],
-                cancelText: _localizer["Common:Cancel"]);
-
-            if (confirmed != true)
-            {
-                CurrentEmbeddingModelKey = previousModelKey;
-                NotifyStateChanged();
-                return;
-            }
-        }
-
-        CurrentEmbeddingModelKey = modelKey;
-        NotifyStateChanged();
-
-        if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
-                SelectedKnowledgeBase.Id,
-                providerId,
-                modelName,
-                clearIndex: true)).IsFailed(out var error))
-        {
-            CurrentEmbeddingModelKey = previousModelKey;
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            NotifyStateChanged();
-            return;
-        }
-
-        await RefreshSelectedKnowledgeBaseAsync();
-        await LoadDocumentInventoryAsync();
-
-        _snackbar.Add(
-            requiresReindexWarning
-                ? _localizer["RAG:EmbeddingModel:ReindexRequired"]
-                : _localizer["Common:Success"],
-            requiresReindexWarning ? Severity.Warning : Severity.Success);
     }
 
     /// <summary>
@@ -364,13 +295,4 @@ public sealed partial class KnowledgeBaseManagePageState
             yesText: _localizer["Common:Close"]);
     }
 
-    private bool HasIndexedContent(KnowledgeBaseModel knowledgeBase)
-    {
-        if (knowledgeBase.DocumentCount > 0 || knowledgeBase.ChunkCount > 0)
-        {
-            return true;
-        }
-
-        return DocumentInventory.Any(item => item.Status == DocumentStatus.Done || item.ChunkCount > 0);
-    }
 }

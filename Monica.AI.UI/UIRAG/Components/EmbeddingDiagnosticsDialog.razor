@@ -1,0 +1,216 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.RAG.Facades
+@using Monica.AI.RAG.Models
+@using Monica.AI.UI.Localization
+@using Monica.Core.Results
+@inject EmbeddingModelFacade EmbeddingFacade
+@inject IStringLocalizer<AIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <div class="embedding-diagnostics-root">
+            <div class="dialog-header">
+                <MudText Typo="Typo.h6">@L["RAG:EmbeddingDiagnostics:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @L["RAG:EmbeddingDiagnostics:Subtitle"]
+                </MudText>
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="diagnostics-loading">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["RAG:EmbeddingDiagnostics:Loading"]
+                    </MudText>
+                </div>
+            }
+            else if (_models.Count == 0)
+            {
+                @if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        @_loadErrorMessage
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                        @L["RAG:EmbeddingModel:NotConfigured"]
+                    </MudAlert>
+                }
+            }
+            else
+            {
+                <div class="diagnostics-table-wrapper">
+                    <MudTable T="EmbeddingModelDiagnosticInfo"
+                              Items="@_models"
+                              Dense="true"
+                              Hover="true"
+                              Class="diagnostics-table">
+                        <HeaderContent>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Model"]</MudTh>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Provider"]</MudTh>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Dimensions"]</MudTh>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Status"]</MudTh>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Connection"]</MudTh>
+                            <MudTh>@L["RAG:EmbeddingDiagnostics:Column:Actions"]</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Model"]">
+                                <div class="model-cell">
+                                    <MudText Typo="Typo.body2" Class="model-name">@context.ModelName</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(context.Description))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @context.Description
+                                        </MudText>
+                                    }
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Provider"]">
+                                <div class="provider-cell">
+                                    <MudText Typo="Typo.body2">@context.ProviderDisplayName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @context.ProviderId
+                                    </MudText>
+                                </div>
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Dimensions"]">
+                                @FormatDimensions(context.Dimensions)
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Status"]">
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@(context.IsProviderValid ? Color.Success : Color.Error)"
+                                     Variant="Variant.Outlined">
+                                    @(context.IsProviderValid
+                                        ? L["RAG:EmbeddingDiagnostics:Status:Available"]
+                                        : L["RAG:EmbeddingDiagnostics:Status:Invalid"])
+                                </MudChip>
+                                @if (!string.IsNullOrWhiteSpace(context.ProviderStatus))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="status-detail">
+                                        @context.ProviderStatus
+                                    </MudText>
+                                }
+                                @if (context.ConfigurationErrors.Count > 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Error" Class="status-detail">
+                                        @string.Join("; ", context.ConfigurationErrors)
+                                    </MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Connection"]">
+                                @if (_testResults.TryGetValue(context.ModelKey, out var testResult))
+                                {
+                                    <div class="test-result @(testResult.Succeeded ? "success" : "failed")">
+                                        <MudIcon Icon="@(testResult.Succeeded ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.ErrorOutline)"
+                                                 Size="Size.Small" />
+                                        <span>@BuildTestResultText(testResult)</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @L["RAG:EmbeddingDiagnostics:Connection:NotTested"]
+                                    </MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="@L["RAG:EmbeddingDiagnostics:Column:Actions"]">
+                                <MudButton Variant="Variant.Outlined"
+                                           Size="Size.Small"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                           OnClick="@(() => TestModelAsync(context))"
+                                           Disabled="@(!context.IsProviderValid || IsTesting(context))">
+                                    @(IsTesting(context)
+                                        ? L["RAG:EmbeddingDiagnostics:Testing"]
+                                        : L["RAG:EmbeddingDiagnostics:Test"])
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly Dictionary<string, EmbeddingModelConnectionTestResult> _testResults = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _testingModelKeys = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<EmbeddingModelDiagnosticInfo> _models = [];
+    private string? _loadErrorMessage;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await EmbeddingFacade.GetEmbeddingModelDiagnosticsAsync();
+        if (result.IsFailed(out var error, out var models))
+        {
+            _models = [];
+            _loadErrorMessage = error.Message ?? L["Common:Error"].Value;
+        }
+        else
+        {
+            _models = models;
+            _loadErrorMessage = null;
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task TestModelAsync(EmbeddingModelDiagnosticInfo model)
+    {
+        if (!_testingModelKeys.Add(model.ModelKey))
+        {
+            return;
+        }
+
+        StateHasChanged();
+
+        try
+        {
+            var result = await EmbeddingFacade.TestEmbeddingModelConnectionAsync(model.ProviderId, model.ModelName);
+            if (result.IsFailed(out var error, out var testResult))
+            {
+                testResult = new EmbeddingModelConnectionTestResult
+                {
+                    ProviderId = model.ProviderId,
+                    ModelName = model.ModelName,
+                    Succeeded = false,
+                    Message = error.Message ?? L["Common:Error"].Value
+                };
+            }
+
+            _testResults[model.ModelKey] = testResult;
+        }
+        finally
+        {
+            _testingModelKeys.Remove(model.ModelKey);
+            StateHasChanged();
+        }
+    }
+
+    private bool IsTesting(EmbeddingModelDiagnosticInfo model)
+        => _testingModelKeys.Contains(model.ModelKey);
+
+    private string BuildTestResultText(EmbeddingModelConnectionTestResult result)
+        => result.Succeeded && result.Dimensions is { } dimensions
+            ? L["RAG:EmbeddingDiagnostics:Connection:Success", dimensions].Value
+            : result.Message;
+
+    private static string FormatDimensions(int? dimensions)
+        => dimensions.HasValue ? dimensions.Value.ToString() : "?";
+
+    private void Close() => MudDialog.Close();
+}
