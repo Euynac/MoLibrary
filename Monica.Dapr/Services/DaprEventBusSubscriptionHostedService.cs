@@ -50,6 +50,7 @@ internal class DaprEventBusSubscriptionHostedService(
 
     // Track Dapr subscriptions by topic name
     private readonly ConcurrentDictionary<string, IAsyncDisposable> _daprSubscriptionsByTopic = new();
+    private bool _wasHealthy;
 
     /// <summary>
     /// Override ExecuteBackgroundAsync to wait for Dapr sidecar health before creating subscriptions.
@@ -61,31 +62,60 @@ internal class DaprEventBusSubscriptionHostedService(
 
         Logger.LogInformation("Waiting for Dapr sidecar health check...");
 
-        // Wait for Dapr sidecar to be healthy before subscribing
-        var isHealthy = await healthCoordinator.WaitForHealthyAsync(
-            _options.SidecarHealthWaitTimeout,
-            stoppingToken);
-
-        if (!isHealthy)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            var message = "Dapr sidecar is not healthy. Subscription creation will be skipped.";
+            // Wait for Dapr sidecar to be healthy before subscribing.
+            var isHealthy = await healthCoordinator.WaitForHealthyAsync(
+                _options.SidecarHealthWaitTimeout,
+                stoppingToken);
+
+            if (isHealthy)
+            {
+                break;
+            }
+
+            var message = "Dapr sidecar is not healthy. Subscription creation will be retried.";
             RecordState(message, HostedServiceState.Degraded);
-            Logger.LogWarning(message);
+            Logger.LogWarning(
+                "Dapr sidecar is not healthy. Retrying subscription creation in {Delay}",
+                _options.SidecarHealthWaitTimeout);
 
             if (_options.FailFastOnSidecarUnavailable)
             {
                 applicationLifetime.StopApplication();
+                return;
             }
-
-            return; // Don't call base - skip subscription creation
         }
+
+        stoppingToken.ThrowIfCancellationRequested();
 
         RecordState("Dapr sidecar is healthy, proceeding with subscription creation", HostedServiceState.Starting);
 
         Logger.LogInformation("Dapr sidecar is healthy, creating subscriptions");
 
+        _wasHealthy = true;
+
         // Now safe to create subscriptions - call base to initialize and keep running
         await base.ExecuteBackgroundAsync(stoppingToken);
+    }
+
+    protected override async Task OnHeartbeatAsync(CancellationToken cancellationToken)
+    {
+        await base.OnHeartbeatAsync(cancellationToken);
+
+        if (!healthCoordinator.IsHealthy)
+        {
+            _wasHealthy = false;
+            return;
+        }
+
+        if (_wasHealthy)
+        {
+            return;
+        }
+
+        _wasHealthy = true;
+        await RecreateExternalSubscriptionsAsync(cancellationToken);
     }
 
     /// <summary>

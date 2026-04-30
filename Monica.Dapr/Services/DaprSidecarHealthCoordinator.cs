@@ -142,21 +142,30 @@ public class DaprSidecarHealthCoordinator(
             }
         }
 
-        // Failed to become healthy after all initial retries
-        Status = DaprHealthStatus.Failed;
-        RecordState($"Failed to connect to Dapr sidecar after {_options.InitialRetryTimes} attempts", HostedServiceState.Faulted);
-        _initialHealthCompletionSource.TrySetResult(false);
-
-        // If fail-fast is enabled, trigger graceful application shutdown for K8s recreation
-        // During initial startup, we use InitialRetryTimes exhaustion as the trigger (not FailFastThreshold)
         if (_options.EnableFailFast)
         {
+            // If fail-fast is enabled, trigger graceful application shutdown for K8s recreation.
+            // During initial startup, we use InitialRetryTimes exhaustion as the trigger (not FailFastThreshold).
+            Status = DaprHealthStatus.Failed;
+            RecordState($"Failed to connect to Dapr sidecar after {_options.InitialRetryTimes} attempts", HostedServiceState.Faulted);
             Logger.LogCritical(
                 "Fail-fast enabled: Failed to connect to Dapr sidecar after {Attempts} initial attempts. Initiating graceful application shutdown",
                 _options.InitialRetryTimes);
             RecordState("Initiating graceful shutdown (fail-fast mode)", HostedServiceState.Faulted);
             applicationLifetime.StopApplication();
+            return;
         }
+
+        Status = DaprHealthStatus.Unhealthy;
+        RecordState(
+            $"Dapr sidecar is unavailable after {_options.InitialRetryTimes} initial attempts; continuing recovery checks",
+            HostedServiceState.Degraded);
+        Logger.LogWarning(
+            "Dapr sidecar is unavailable after {Attempts} initial attempts. Continuing health checks every {Interval}",
+            _options.InitialRetryTimes,
+            _options.PeriodicCheckInterval);
+
+        await RunPeriodicHealthCheckAsync(stoppingToken);
     }
 
     /// <summary>
@@ -177,6 +186,7 @@ public class DaprSidecarHealthCoordinator(
                 {
                     _lastHealthyAt = DateTime.UtcNow;
                     _consecutiveFailures = 0;
+                    _initialHealthCompletionSource.TrySetResult(true);
 
                     if (Status != DaprHealthStatus.Healthy)
                     {

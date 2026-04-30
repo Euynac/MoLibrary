@@ -312,6 +312,35 @@ public abstract class EventBusSubscriptionHostedServiceBase(
     }
 
     /// <summary>
+    /// Recreates all external subscriptions that are tracked in the in-memory registry.
+    /// Use this when an external provider reconnects and previously created provider-side subscriptions may be lost.
+    /// </summary>
+    protected virtual async Task RecreateExternalSubscriptionsAsync(CancellationToken cancellationToken)
+    {
+        var topics = _topicSubscriptions
+            .Select(p => (TopicName: p.Key, p.Value.EventType))
+            .ToList();
+
+        if (topics.Count == 0)
+        {
+            return;
+        }
+
+        RecordState($"Recreating {topics.Count} external subscriptions", HostedServiceState.Running);
+
+        await DisposeExternalSubscriptionsAsync(cancellationToken);
+
+        foreach (var (topicName, eventType) in topics)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await CreateExternalSubscriptionForTopicAsync(topicName, eventType, cancellationToken);
+        }
+
+        RecordState($"Successfully recreated {topics.Count} external subscriptions", HostedServiceState.Running);
+    }
+
+    /// <summary>
     /// Creates an external subscription for the given topic and event type.
     /// Called when the first subscription for a topic is added.
     /// </summary>

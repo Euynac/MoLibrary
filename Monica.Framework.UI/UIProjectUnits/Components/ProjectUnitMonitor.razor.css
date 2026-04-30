@@ -70,11 +70,10 @@
         overflow: hidden;
     }
 
-    .project-units-monitor-grid ::deep .project-units-monitor-grid__type-column,
-    .project-units-monitor-grid ::deep .project-units-monitor-grid__count-column,
     .project-units-monitor-grid ::deep .project-units-monitor-grid__actions-column {
         justify-content: center;
     }
+
 }
 
 .project-units-monitor-grid__ellipsis {
