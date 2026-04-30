@@ -111,6 +111,12 @@
     background-color: rgba(var(--mud-palette-primary-rgb), 0.05);
 }
 
+.kb-card.disabled {
+    cursor: default;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
 .kb-card.selected {
     background-color: rgba(var(--mud-palette-primary-rgb), 0.08);
     border-color: var(--mud-palette-primary);

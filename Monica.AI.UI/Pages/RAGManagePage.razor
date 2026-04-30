@@ -78,16 +78,31 @@
                                 <MudButton Variant="Variant.Text"
                                            Size="Size.Small"
                                            StartIcon="@Icons.Material.Filled.FactCheck"
-                                           OnClick="@PageState.ShowEmbeddingDiagnosticsDialogAsync">
+                                           OnClick="@PageState.ShowEmbeddingDiagnosticsDialogAsync"
+                                           Disabled="@PageState.HasRagSupportActionInFlight">
                                     @L["RAG:EmbeddingDiagnostics:Open"]
                                 </MudButton>
                                 <MudButton Variant="Variant.Text"
                                            Size="Size.Small"
                                            StartIcon="@Icons.Material.Filled.Storage"
-                                           OnClick="@PageState.ShowVectorStoreDiagnosticsDialogAsync">
+                                           OnClick="@PageState.ShowVectorStoreDiagnosticsDialogAsync"
+                                           Disabled="@PageState.HasRagSupportActionInFlight">
                                     @L["RAG:VectorDiagnostics:Open"]
                                 </MudButton>
-                                @if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase))
+                                @if (PageState.IsRagSupportEnableActionInFlight)
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Link"
+                                               OnClick="@PageState.EnableOrUpdateRagSupportAsync"
+                                               Disabled="true">
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        @L["RAG:RagSupport:Enabling"]
+                                    </MudButton>
+                                }
+                                else if (RAGManagePageState.HasEmbeddingBinding(selectedKnowledgeBase)
+                                         || PageState.IsRagSupportRemoveActionInFlight)
                                 {
                                     <MudButton Variant="Variant.Outlined"
                                                Color="Color.Error"
@@ -95,7 +110,15 @@
                                                StartIcon="@Icons.Material.Filled.LinkOff"
                                                OnClick="@PageState.RemoveRagSupportAsync"
                                                Disabled="@(!PageState.CanRemoveRagSupport)">
-                                        @L["RAG:RagSupport:Remove"]
+                                        @if (PageState.IsRagSupportRemoveActionInFlight)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                            @L["RAG:RagSupport:Removing"]
+                                        }
+                                        else
+                                        {
+                                            @L["RAG:RagSupport:Remove"]
+                                        }
                                     </MudButton>
                                 }
                                 else
@@ -115,7 +138,7 @@
                         <EmbeddingModelSelector AvailableModels="@PageState.AvailableModels"
                                                 SelectedModelKey="@PageState.CurrentEmbeddingModelKey"
                                                 SelectedModelKeyChanged="@PageState.ChangeEmbeddingModelAsync"
-                                                IsDisabled="@PageState.HasActiveQueueWork" />
+                                                IsDisabled="@(PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)" />
 
                         @if (PageState.AvailableModels.Count == 0)
                         {

@@ -29,6 +29,8 @@ public sealed partial class RAGManagePageState : IDisposable
     private string? _batchStartInFlightKnowledgeBaseId;
     private string? _singleIndexInFlightKnowledgeBaseId;
     private string? _singleIndexInFlightDocumentId;
+    private string? _ragSupportActionInFlightKnowledgeBaseId;
+    private RagSupportActionKind _ragSupportActionInFlightKind = RagSupportActionKind.None;
 
     /// <summary>
     /// Initializes the page state and its collaborators.
@@ -127,6 +129,44 @@ public sealed partial class RAGManagePageState : IDisposable
            || HasSingleDocumentIndexInFlight;
 
     /// <summary>
+    /// Whether a RAG support enable, update, or removal operation is currently running.
+    /// </summary>
+    public bool HasRagSupportActionInFlight
+        => _ragSupportActionInFlightKind != RagSupportActionKind.None
+           && !string.IsNullOrWhiteSpace(_ragSupportActionInFlightKnowledgeBaseId);
+
+    /// <summary>
+    /// Whether the current selection owns the active RAG support operation.
+    /// </summary>
+    public bool IsRagSupportActionInFlight
+        => SelectedKnowledgeBase is not null
+           && HasRagSupportActionInFlight
+           && string.Equals(
+               _ragSupportActionInFlightKnowledgeBaseId,
+               SelectedKnowledgeBase.Id,
+               StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whether the page should allow changing the current knowledge-base selection.
+    /// </summary>
+    public bool CanChangeKnowledgeBaseSelection
+        => !HasRagSupportActionInFlight;
+
+    /// <summary>
+    /// Whether the current selection is enabling or updating RAG support.
+    /// </summary>
+    public bool IsRagSupportEnableActionInFlight
+        => IsRagSupportActionInFlight
+           && _ragSupportActionInFlightKind == RagSupportActionKind.EnableOrUpdate;
+
+    /// <summary>
+    /// Whether the current selection is removing RAG support.
+    /// </summary>
+    public bool IsRagSupportRemoveActionInFlight
+        => IsRagSupportActionInFlight
+           && _ragSupportActionInFlightKind == RagSupportActionKind.Remove;
+
+    /// <summary>
     /// Whether batch indexing can start for the current selection.
     /// </summary>
     public bool CanStartBatchIndexing
@@ -135,7 +175,8 @@ public sealed partial class RAGManagePageState : IDisposable
            && SelectedDocumentIds.Count > 0
            && DocumentQueue.Any(document => SelectedDocumentIds.Contains(document.Id)
                                             && document.Status is DocumentStatus.Pending or DocumentStatus.Error)
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Whether batch indexing can be cancelled for the current selection.
@@ -150,7 +191,8 @@ public sealed partial class RAGManagePageState : IDisposable
     public bool CanClearDocumentQueue
         => SelectedKnowledgeBase is not null
            && DocumentQueue.Any(document => document.Status != DocumentStatus.Done)
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Whether missing vectors can be repaired through reindexing.
@@ -158,7 +200,8 @@ public sealed partial class RAGManagePageState : IDisposable
     public bool CanReindexSelectedKnowledgeBase
         => SelectedKnowledgeBase is not null
            && ShouldShowMissingVectorWarning
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Whether RAG support can be enabled for the current knowledge base.
@@ -167,7 +210,8 @@ public sealed partial class RAGManagePageState : IDisposable
         => SelectedKnowledgeBase is not null
            && !HasEmbeddingBinding(SelectedKnowledgeBase)
            && !string.IsNullOrWhiteSpace(CurrentEmbeddingModelKey)
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Whether RAG support can be removed for the current knowledge base.
@@ -175,7 +219,8 @@ public sealed partial class RAGManagePageState : IDisposable
     public bool CanRemoveRagSupport
         => SelectedKnowledgeBase is not null
            && HasEmbeddingBinding(SelectedKnowledgeBase)
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Selected document ids for batch indexing.
@@ -257,6 +302,39 @@ public sealed partial class RAGManagePageState : IDisposable
         _singleIndexInFlightDocumentId = null;
     }
 
+    private bool TryBeginRagSupportAction(string knowledgeBaseId, RagSupportActionKind actionKind)
+    {
+        if (HasRagSupportActionInFlight)
+        {
+            return false;
+        }
+
+        _ragSupportActionInFlightKnowledgeBaseId = knowledgeBaseId;
+        _ragSupportActionInFlightKind = actionKind;
+        NotifyStateChanged();
+        return true;
+    }
+
+    private void EndRagSupportAction(string knowledgeBaseId)
+    {
+        if (!string.Equals(
+                _ragSupportActionInFlightKnowledgeBaseId,
+                knowledgeBaseId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ClearRagSupportActionInFlight();
+        NotifyStateChanged();
+    }
+
+    private void ClearRagSupportActionInFlight()
+    {
+        _ragSupportActionInFlightKnowledgeBaseId = null;
+        _ragSupportActionInFlightKind = RagSupportActionKind.None;
+    }
+
     private void NotifyStateChanged()
     {
         StateChanged?.Invoke();
@@ -267,6 +345,7 @@ public sealed partial class RAGManagePageState : IDisposable
     {
         ClearBatchStartInFlight();
         ClearSingleIndexInFlight();
+        ClearRagSupportActionInFlight();
         _queuePollingState.Stop();
 
         if (_isAttached)
@@ -275,5 +354,12 @@ public sealed partial class RAGManagePageState : IDisposable
             _queuePollingState.QueueRefreshFailed -= OnQueueRefreshFailed;
             _isAttached = false;
         }
+    }
+
+    private enum RagSupportActionKind
+    {
+        None,
+        EnableOrUpdate,
+        Remove
     }
 }

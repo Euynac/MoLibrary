@@ -29,6 +29,11 @@ public sealed partial class RAGManagePageState
     /// </summary>
     public async Task SelectKnowledgeBaseAsync(KnowledgeBaseModel? knowledgeBase)
     {
+        if (!CanChangeKnowledgeBaseSelection)
+        {
+            return;
+        }
+
         if (!string.Equals(
                 _batchStartInFlightKnowledgeBaseId,
                 knowledgeBase?.Id,
@@ -55,6 +60,7 @@ public sealed partial class RAGManagePageState
             SelectedKnowledgeBaseVectorValidation = null;
             ClearBatchStartInFlight();
             ClearSingleIndexInFlight();
+            ClearRagSupportActionInFlight();
             _queuePollingState.Stop();
             NotifyStateChanged();
             return;
@@ -144,6 +150,7 @@ public sealed partial class RAGManagePageState
             SelectedKnowledgeBaseVectorValidation = null;
             ClearBatchStartInFlight();
             ClearSingleIndexInFlight();
+            ClearRagSupportActionInFlight();
             NotifyStateChanged();
             return;
         }
@@ -159,6 +166,7 @@ public sealed partial class RAGManagePageState
             CurrentEmbeddingModelKey = string.Empty;
             SelectedKnowledgeBaseVectorValidation = null;
             ClearSingleIndexInFlight();
+            ClearRagSupportActionInFlight();
             NotifyStateChanged();
             return;
         }

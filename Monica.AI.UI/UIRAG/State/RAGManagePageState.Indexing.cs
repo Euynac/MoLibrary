@@ -73,31 +73,43 @@ public sealed partial class RAGManagePageState
             }
         }
 
-        if (isNewRagBinding && !await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
+        if (!TryBeginRagSupportAction(selectedKnowledgeBaseId, RagSupportActionKind.EnableOrUpdate))
         {
             return;
         }
 
-        if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
-                selectedKnowledgeBaseId,
-                providerId,
-                modelName,
-                clearIndex: true)).IsFailed(out var error))
+        try
         {
-            CurrentEmbeddingModelKey = previousModelKey;
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
-            NotifyStateChanged();
-            return;
+            if (isNewRagBinding && !await EnsureVectorCollectionReusableAsync(selectedKnowledgeBaseId))
+            {
+                return;
+            }
+
+            if ((await _embeddingFacade.SetKnowledgeBaseEmbeddingModelAsync(
+                    selectedKnowledgeBaseId,
+                    providerId,
+                    modelName,
+                    clearIndex: true)).IsFailed(out var error))
+            {
+                CurrentEmbeddingModelKey = previousModelKey;
+                _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+                NotifyStateChanged();
+                return;
+            }
+
+            await RefreshSelectedKnowledgeBaseAsync();
+            await LoadDocumentQueueAsync();
+
+            _snackbar.Add(
+                requiresReindexWarning
+                    ? _localizer["RAG:EmbeddingModel:ReindexRequired"]
+                    : _localizer["RAG:RagSupport:Enabled"],
+                requiresReindexWarning ? Severity.Warning : Severity.Success);
         }
-
-        await RefreshSelectedKnowledgeBaseAsync();
-        await LoadDocumentQueueAsync();
-
-        _snackbar.Add(
-            requiresReindexWarning
-                ? _localizer["RAG:EmbeddingModel:ReindexRequired"]
-                : _localizer["RAG:RagSupport:Enabled"],
-            requiresReindexWarning ? Severity.Warning : Severity.Success);
+        finally
+        {
+            EndRagSupportAction(selectedKnowledgeBaseId);
+        }
     }
 
     /// <summary>
@@ -122,21 +134,33 @@ public sealed partial class RAGManagePageState
             return;
         }
 
-        var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(selectedKnowledgeBaseId);
-        if (result.IsFailed(out var error, out var removal))
+        if (!TryBeginRagSupportAction(selectedKnowledgeBaseId, RagSupportActionKind.Remove))
         {
-            if (CanForceRemoveRagSupport(error)
-                && await ConfirmForceRemoveRagSupportAsync())
-            {
-                await ForceRemoveRagSupportAsync(selectedKnowledgeBaseId);
-                return;
-            }
-
-            _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
             return;
         }
 
-        await CompleteRagSupportRemovalAsync(removal);
+        try
+        {
+            var result = await _ragFacade.RemoveKnowledgeBaseRagSupportAsync(selectedKnowledgeBaseId);
+            if (result.IsFailed(out var error, out var removal))
+            {
+                if (CanForceRemoveRagSupport(error)
+                    && await ConfirmForceRemoveRagSupportAsync())
+                {
+                    await ForceRemoveRagSupportAsync(selectedKnowledgeBaseId);
+                    return;
+                }
+
+                _snackbar.Add($"{_localizer["Common:Error"]}: {error.Message}", Severity.Error);
+                return;
+            }
+
+            await CompleteRagSupportRemovalAsync(removal);
+        }
+        finally
+        {
+            EndRagSupportAction(selectedKnowledgeBaseId);
+        }
     }
 
     /// <summary>
@@ -383,12 +407,13 @@ public sealed partial class RAGManagePageState
 
     private async Task<bool> EnsureVectorCollectionReusableAsync(string knowledgeBaseId)
     {
-        if (SelectedKnowledgeBase is null)
+        var knowledgeBase = SelectedKnowledgeBase;
+        if (knowledgeBase is null)
         {
             return false;
         }
 
-        if (HasIndexedContent(SelectedKnowledgeBase))
+        if (HasIndexedContent(knowledgeBase))
         {
             return true;
         }

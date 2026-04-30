@@ -13,7 +13,8 @@ public sealed partial class RAGManagePageState
         => SelectedKnowledgeBase is not null
            && HasEmbeddingBinding(SelectedKnowledgeBase)
            && document.Status is DocumentStatus.Pending or DocumentStatus.Error
-           && !HasActiveQueueWork;
+           && !HasActiveQueueWork
+           && !HasRagSupportActionInFlight;
 
     /// <summary>
     /// Toggles one queue row in the batch-indexing selection.

@@ -48,7 +48,7 @@
         <div class="kb-list">
             @foreach (var knowledgeBase in PageState.KnowledgeBases)
             {
-                <div class="kb-card @(IsSelected(knowledgeBase) ? "selected" : string.Empty)"
+                <div class="@GetKnowledgeBaseCardClass(knowledgeBase)"
                      @onclick="@(() => PageState.SelectKnowledgeBaseAsync(knowledgeBase))">
                     <div class="kb-card-content">
                         <MudText Typo="Typo.body1" Class="kb-name">@knowledgeBase.Name</MudText>
@@ -96,4 +96,20 @@
 
     private bool IsSelected(KnowledgeBaseModel knowledgeBase)
         => string.Equals(PageState.SelectedKnowledgeBase?.Id, knowledgeBase.Id, StringComparison.OrdinalIgnoreCase);
+
+    private string GetKnowledgeBaseCardClass(KnowledgeBaseModel knowledgeBase)
+    {
+        var classes = new List<string> { "kb-card" };
+        if (IsSelected(knowledgeBase))
+        {
+            classes.Add("selected");
+        }
+
+        if (!PageState.CanChangeKnowledgeBaseSelection)
+        {
+            classes.Add("disabled");
+        }
+
+        return string.Join(" ", classes);
+    }
 }

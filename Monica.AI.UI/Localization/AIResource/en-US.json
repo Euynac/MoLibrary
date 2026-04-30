@@ -161,6 +161,8 @@
       "DisabledStatus": "RAG indexing is not enabled for this knowledge base.",
       "Enable": "Enable RAG",
       "Remove": "Remove RAG",
+      "Enabling": "Enabling...",
+      "Removing": "Removing...",
       "Enabled": "RAG support enabled.",
       "Removed": "RAG support removed. Reset {0} document(s) and cleared {1} indexed chunk(s).",
       "ForceRemoved": "RAG support force removed. Reset {0} document(s). Stale vector data may remain in the vector store.",

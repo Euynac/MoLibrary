@@ -161,6 +161,8 @@
       "DisabledStatus": "当前知识库未启用 RAG 索引。",
       "Enable": "启用 RAG",
       "Remove": "移除 RAG",
+      "Enabling": "启用中...",
+      "Removing": "移除中...",
       "Enabled": "已启用 RAG 支持。",
       "Removed": "已移除 RAG 支持。已重置 {0} 个文档并清除 {1} 个已索引分块。",
       "ForceRemoved": "已强制移除 RAG 支持。已重置 {0} 个文档。向量库中可能仍存在过期向量数据。",

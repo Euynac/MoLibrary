@@ -29,14 +29,14 @@
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.SelectAll"
                        OnClick="@PageState.SelectAllIndexableDocuments"
-                       Disabled="@(!PageState.HasIndexableDocuments || PageState.HasActiveQueueWork)">
+                       Disabled="@(!PageState.HasIndexableDocuments || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">
                 @L["RAG:DocumentQueue:Actions:SelectAllIndexable"]
             </MudButton>
             <MudButton Variant="Variant.Text"
                        Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Deselect"
                        OnClick="@PageState.ClearDocumentSelection"
-                       Disabled="@(PageState.SelectedDocumentIds.Count == 0 || PageState.HasActiveQueueWork)">
+                       Disabled="@(PageState.SelectedDocumentIds.Count == 0 || PageState.HasActiveQueueWork || PageState.HasRagSupportActionInFlight)">
                 @L["RAG:DocumentQueue:Actions:ClearSelection"]
             </MudButton>
             <MudText Typo="Typo.caption" Class="parallel-label">
@@ -136,7 +136,7 @@
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                    Size="Size.Small"
                                    OnClick="@(() => PageState.ReindexDocumentAsync(context))"
-                                   Disabled="@(context.Status == DocumentStatus.Indexing)"
+                                   Disabled="@(context.Status == DocumentStatus.Indexing || PageState.HasRagSupportActionInFlight)"
                                    title="@L["RAG:DocumentQueue:Actions:Reindex"]" />
                     @if (context.Status == DocumentStatus.Error && !string.IsNullOrWhiteSpace(context.ErrorMessage))
                     {
@@ -164,5 +164,6 @@
 
     private bool CanSelectDocument(DocumentQueueItem document)
         => document.Status is DocumentStatus.Pending or DocumentStatus.Error
-           && !PageState.HasActiveQueueWork;
+           && !PageState.HasActiveQueueWork
+           && !PageState.HasRagSupportActionInFlight;
 }
