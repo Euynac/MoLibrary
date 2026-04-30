@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Agents.AI;
-using Monica.AI.Skills.Abstractions;
-using Monica.AI.Skills.Annotations;
+using Monica.Core.Skills;
+using Monica.Core.Skills.Annotations;
 using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
@@ -18,10 +18,27 @@ internal static class SkillScriptDiscovery
     {
         ArgumentNullException.ThrowIfNull(skill);
 
+        return Discover(skill, typeof(TSelf), xmlDocs);
+    }
+
+    internal static IReadOnlyList<AgentSkillScript>? Discover(
+        Skill skill,
+        IXmlDocumentationService? xmlDocs)
+    {
+        ArgumentNullException.ThrowIfNull(skill);
+
+        return Discover(skill, skill.GetType(), xmlDocs);
+    }
+
+    private static IReadOnlyList<AgentSkillScript>? Discover(
+        Skill skill,
+        Type discoveryType,
+        IXmlDocumentationService? xmlDocs)
+    {
         List<AgentSkillScript>? scripts = null;
         var scriptMethods = new Dictionary<string, MethodInfo>(StringComparer.Ordinal);
 
-        foreach (var method in typeof(TSelf).GetMethods(DISCOVERY_FLAGS))
+        foreach (var method in discoveryType.GetMethods(DISCOVERY_FLAGS))
         {
             var toolAttribute = method.GetCustomAttribute<SkillToolAttribute>();
             if (toolAttribute is null || toolAttribute.Disabled)
@@ -36,7 +53,7 @@ internal static class SkillScriptDiscovery
             if (scriptMethods.TryGetValue(name, out var existingMethod))
             {
                 throw new InvalidOperationException(
-                    $"Skill '{skill.Frontmatter.Name}' exposes duplicate script name '{name}' from methods " +
+                    $"Skill '{skill.Definition.Name}' exposes duplicate script name '{name}' from methods " +
                     $"'{existingMethod.Name}' and '{method.Name}'. Set an explicit [SkillTool(Name = ...)] value.");
             }
 
@@ -47,7 +64,7 @@ internal static class SkillScriptDiscovery
                 method,
                 method.IsStatic ? null : skill,
                 SkillDescriptionResolver.ResolveMethod(method, xmlDocs),
-                skill.ScriptSerializerOptions,
+                skill.SerializerOptions,
                 xmlDocs));
         }
 

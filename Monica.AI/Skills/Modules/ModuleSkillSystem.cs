@@ -1,4 +1,3 @@
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -9,6 +8,7 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Skills;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -33,7 +33,7 @@ public static class ModuleSkillSystemBuilderExtensions
 }
 
 /// <summary>
-/// Discovers Monica AI skill classes and exposes them through Microsoft Agent Skills.
+/// Discovers Monica skill classes and exposes them through Microsoft Agent Skills.
 /// </summary>
 [ModuleKey(BuiltInModuleKey.AISkillSystem)]
 public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
@@ -57,7 +57,7 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         {
             if (type is { IsClass: true, IsAbstract: false })
             {
-                if (IsAssignableToOpenGeneric(type, typeof(Skill<>)))
+                if (type.IsAssignableTo(typeof(Skill)))
                 {
                     _skillTypes.Add(type);
                 }
@@ -85,7 +85,7 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
                 services.AddSingleton(skillType);
             }
 
-            services.AddSingleton(typeof(AgentSkill), sp => sp.GetRequiredService(skillType));
+            services.AddSingleton(typeof(Skill), sp => (Skill)sp.GetRequiredService(skillType));
         }
 
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
@@ -100,19 +100,6 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
                 _toolTypes.Count,
                 _mcpTypes.Count);
         }
-    }
-
-    private static bool IsAssignableToOpenGeneric(Type type, Type openGenericType)
-    {
-        for (var current = type; current is not null && current != typeof(object); current = current.BaseType)
-        {
-            if (current.IsGenericType && current.GetGenericTypeDefinition() == openGenericType)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
 

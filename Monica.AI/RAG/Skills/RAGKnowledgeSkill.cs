@@ -1,6 +1,5 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,10 +9,10 @@ using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.RAG.Models;
 using Monica.AI.RAG.Services;
 using Monica.AI.Services.Support;
-using Monica.AI.Skills.Abstractions;
-using Monica.AI.Skills.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Core.XmlDocumentation.Abstractions;
+using Monica.Core.Skills;
+using Monica.Core.Skills.Annotations;
+using Monica.Core.Skills.Models;
 using Monica.Modules;
 using KnowledgeBaseModel = Monica.AI.KnowledgeBase.Models.KnowledgeBase;
 
@@ -26,9 +25,8 @@ public sealed class RAGKnowledgeSkill(
     KnowledgeToolService knowledgeToolService,
     KnowledgeBaseService knowledgeBaseService,
     IOptions<ModuleRAGOption> ragOptions,
-    IXmlDocumentationService xmlDocumentationService,
     ILogger<RAGKnowledgeSkill> logger)
-    : Skill<RAGKnowledgeSkill>(xmlDocumentationService)
+    : Skill<RAGKnowledgeSkill>
 {
     private static readonly JsonSerializerOptions _toolJsonOptions = new()
     {
@@ -39,19 +37,16 @@ public sealed class RAGKnowledgeSkill(
     private readonly ModuleRAGOption _ragOptions = ragOptions.Value;
 
     /// <inheritdoc />
-    public override AgentSkillFrontmatter Frontmatter { get; } = new(
+    public override SkillDefinition Definition { get; } = new(
         "rag-knowledge",
-        "Retrieve grounded facts and citations from indexed knowledge bases.");
-
-    /// <inheritdoc />
-    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
-
-    /// <inheritdoc />
-    protected override string Instructions =>
+        "Retrieve grounded facts and citations from indexed knowledge bases.",
         "Use these scripts when the user asks about content in the selected knowledge bases. " +
         "Rewrite the question into a focused retrieval query before semantic search. " +
         "Use browse-knowledge-documents to discover candidate documents, browse-knowledge-document-tree to navigate folder hierarchy, " +
-        "and get-knowledge-document-content to load source text. Always cite source name and source link.";
+        "and get-knowledge-document-content to load source text. Always cite source name and source link.");
+
+    /// <inheritdoc />
+    public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
 
     /// <summary>
     /// Semantic search over the selected knowledge bases.

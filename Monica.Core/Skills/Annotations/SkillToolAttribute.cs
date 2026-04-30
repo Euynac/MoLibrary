@@ -1,4 +1,4 @@
-namespace Monica.AI.Skills.Annotations;
+namespace Monica.Core.Skills.Annotations;
 
 /// <summary>
 /// Marks a Monica skill method as an AI-callable script and supplies optional tool metadata.

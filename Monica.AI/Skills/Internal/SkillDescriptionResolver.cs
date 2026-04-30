@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Reflection;
-using Monica.AI.Skills.Annotations;
+using Monica.Core.Skills.Annotations;
 using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Internal;
@@ -58,5 +58,26 @@ internal static class SkillDescriptionResolver
                && !string.IsNullOrWhiteSpace(fromXml)
             ? fromXml
             : string.Empty;
+    }
+
+    internal static string? ResolveResource(MemberInfo member, IXmlDocumentationService? xmlDocs)
+    {
+        ArgumentNullException.ThrowIfNull(member);
+
+        var fromAttribute = member.GetCustomAttribute<SkillResourceAttribute>()?.Description;
+        if (!string.IsNullOrWhiteSpace(fromAttribute))
+        {
+            return fromAttribute;
+        }
+
+        var fromDescription = member.GetCustomAttribute<DescriptionAttribute>()?.Description;
+        if (!string.IsNullOrWhiteSpace(fromDescription))
+        {
+            return fromDescription;
+        }
+
+        return member is MethodInfo method
+            ? xmlDocs?.GetMethodDocumentation(method)?.Summary
+            : null;
     }
 }

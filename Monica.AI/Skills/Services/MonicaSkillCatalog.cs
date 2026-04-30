@@ -1,7 +1,9 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
-using Monica.AI.Skills.Abstractions;
+using Monica.AI.Skills.Internal;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Skills;
+using Monica.Core.XmlDocumentation.Abstractions;
 
 namespace Monica.AI.Skills.Services;
 
@@ -9,17 +11,23 @@ namespace Monica.AI.Skills.Services;
 /// Builds the static skill catalog exposed to chat agents.
 /// </summary>
 public sealed class MonicaSkillCatalog(
-    IEnumerable<AgentSkill> skills,
+    IEnumerable<Skill> skills,
     ILoadedModuleCatalog loadedModules,
+    IXmlDocumentationService xmlDocumentationService,
     ILogger<MonicaSkillCatalog> logger)
 {
     private readonly Lazy<IReadOnlyList<AgentSkill>> _activeSkills = new(() =>
     {
         var loadedModuleKeys = loadedModules.GetLoadedModuleKeys();
-        return skills
+        var activeSkills = skills
             .Where(skill => IsActive(skill, loadedModuleKeys, logger))
-            .OrderByDescending(GetPriority)
-            .ThenBy(skill => skill.Frontmatter.Name, StringComparer.Ordinal)
+            .OrderBy(skill => skill.Definition.Name, StringComparer.Ordinal)
+            .ToList();
+
+        ValidateUniqueSkillNames(activeSkills);
+
+        return activeSkills
+            .Select(skill => new MonicaAgentSkillAdapter(skill, xmlDocumentationService))
             .ToList();
     });
 
@@ -29,22 +37,17 @@ public sealed class MonicaSkillCatalog(
     public IReadOnlyList<AgentSkill> GetActiveSkills() => _activeSkills.Value;
 
     private static bool IsActive(
-        AgentSkill skill,
+        Skill skill,
         IReadOnlySet<ModuleKey> loadedModuleKeys,
         ILogger logger)
     {
-        if (skill is not ISkillMetadata metadata)
+        if (!skill.IsEnabled)
         {
-            return true;
-        }
-
-        if (!metadata.IsEnabled)
-        {
-            logger.LogDebug("Skipping disabled AI skill '{SkillName}'.", skill.Frontmatter.Name);
+            logger.LogDebug("Skipping disabled AI skill '{SkillName}'.", skill.Definition.Name);
             return false;
         }
 
-        var missing = metadata.RequiredModules
+        var missing = skill.RequiredModules
             .Where(required => !loadedModuleKeys.Contains(required))
             .ToList();
 
@@ -55,11 +58,26 @@ public sealed class MonicaSkillCatalog(
 
         logger.LogDebug(
             "Skipping AI skill '{SkillName}' because required modules are not loaded: {RequiredModules}.",
-            skill.Frontmatter.Name,
+            skill.Definition.Name,
             string.Join(", ", missing));
         return false;
     }
 
-    private static int GetPriority(AgentSkill skill)
-        => skill is ISkillMetadata metadata ? metadata.Priority : 0;
+    private static void ValidateUniqueSkillNames(IReadOnlyList<Skill> activeSkills)
+    {
+        var duplicateNames = activeSkills
+            .GroupBy(skill => skill.Definition.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        if (duplicateNames.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "Duplicate AI skill names are not allowed: " +
+            string.Join(", ", duplicateNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)) + ".");
+    }
 }

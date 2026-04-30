@@ -1,24 +1,21 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.Services.Support;
-using Monica.AI.Skills.Abstractions;
-using Monica.AI.Skills.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Core.XmlDocumentation.Abstractions;
+using Monica.Core.Skills;
+using Monica.Core.Skills.Annotations;
+using Monica.Core.Skills.Models;
 
 namespace Monica.AI.KnowledgeBase.Skills;
 
 /// <summary>
 /// Provides lookup-only scripts for knowledge-base inventory and source documents.
 /// </summary>
-public sealed class KnowledgeBaseLookupSkill(
-    IKnowledgeBaseLookupService lookup,
-    IXmlDocumentationService xmlDocumentationService)
-    : Skill<KnowledgeBaseLookupSkill>(xmlDocumentationService)
+public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
+    : Skill<KnowledgeBaseLookupSkill>
 {
     private static readonly JsonSerializerOptions _toolJsonOptions = new()
     {
@@ -27,17 +24,14 @@ public sealed class KnowledgeBaseLookupSkill(
     };
 
     /// <inheritdoc />
-    public override AgentSkillFrontmatter Frontmatter { get; } = new(
+    public override SkillDefinition Definition { get; } = new(
         "knowledge-base-lookup",
-        "List, browse, and read knowledge-base documents without semantic search.");
+        "List, browse, and read knowledge-base documents without semantic search.",
+        "Use these scripts when the user wants to discover available knowledge bases, inspect document inventory, " +
+        "navigate document hierarchy, or read raw source text. This skill does not perform semantic search; use rag-knowledge when semantic retrieval is needed and available.");
 
     /// <inheritdoc />
     public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.KnowledgeBase];
-
-    /// <inheritdoc />
-    protected override string Instructions =>
-        "Use these scripts when the user wants to discover available knowledge bases, inspect document inventory, " +
-        "navigate document hierarchy, or read raw source text. This skill does not perform semantic search; use rag-knowledge when semantic retrieval is needed and available.";
 
     /// <summary>
     /// Lists all knowledge bases.
