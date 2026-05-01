@@ -206,7 +206,7 @@ def build_action_prompt(changed: list[dict[str, Any]], all_scoped: list[dict[str
         "- Do NOT make broad product/design decisions silently.\n"
         "- Do NOT touch unrelated untracked files such as examples/README.md unless the feedback explicitly requires it.\n"
         "- Before editing Monica code, follow project-local guidance: read AGENTS.md and relevant .agents skills.\n"
-        "- For Blazor/MudBlazor UI changes, apply .agents/skills/mo-ui-development/SKILL.md guidance.\n"
+        "- For Blazor/MudBlazor UI changes, apply .agents/skills/monica-ui-development/SKILL.md guidance.\n"
         "- For UI visual verification/testing, use Monica's Debug skill and start Monica.Docs as the bridge project when practical.\n"
         "- Prefer delegating non-trivial Monica development fixes to Codex; explicitly tell Codex to load AGENTS.md/.agents skills and use the Debug skill + Monica.Docs bridge workflow when testing UI changes.\n"
         "- Keep responses concise but include PR URL, actions taken, commits, verification, and anything needing the user's decision.\n\n"

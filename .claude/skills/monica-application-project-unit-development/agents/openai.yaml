@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Application ProjectUnit Development"
+  short_description: "ProjectUnit implementation for Monica applications"
+  default_prompt: "Use $monica-application-project-unit-development to create or refine Monica-native DDD ProjectUnits."

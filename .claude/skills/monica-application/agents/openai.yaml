@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Application"
+  short_description: "Router for Monica application architecture skills"
+  default_prompt: "Use $monica-application to choose the right Monica application skill for DDD architecture or ProjectUnit implementation."

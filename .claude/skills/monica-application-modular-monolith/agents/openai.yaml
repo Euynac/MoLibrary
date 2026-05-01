@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Application Modular Monolith"
+  short_description: "DDD modular monolith guidance for Monica applications"
+  default_prompt: "Use $monica-application-modular-monolith with $monica-application-project-unit-development to design or extend a Monica DDD modular monolith subdomain."
