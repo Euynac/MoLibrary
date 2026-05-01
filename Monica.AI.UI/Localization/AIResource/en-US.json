@@ -489,6 +489,10 @@
     "Resources": "resources",
     "Content": "Content",
     "NoTools": "No tools are registered for this capability.",
+    "Sections": {
+      "Tools": "Tools",
+      "Resources": "Resources"
+    },
     "Tabs": {
       "Skills": "Skills",
       "Mcp": "MCP"

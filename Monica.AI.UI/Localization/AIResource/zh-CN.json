@@ -489,6 +489,10 @@
     "Resources": "个资源",
     "Content": "内容",
     "NoTools": "该能力未注册工具。",
+    "Sections": {
+      "Tools": "工具",
+      "Resources": "资源"
+    },
     "Tabs": {
       "Skills": "Skills",
       "Mcp": "MCP"

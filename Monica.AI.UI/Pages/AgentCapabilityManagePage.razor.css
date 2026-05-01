@@ -158,6 +158,14 @@
     margin-top: 6px;
 }
 
+.detail-panel ::deep .mud-expand-panel-content {
+    padding: 0 16px 16px;
+}
+
+.detail-panel ::deep .mud-expand-panel-content .mud-expand-panel-content {
+    padding: 0 16px 16px;
+}
+
 .tool-table {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;

@@ -242,7 +242,7 @@
                 </MudExpansionPanels>
             }
 
-            <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Tools"]</MudText>
+            <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Sections:Tools"]</MudText>
             @if (entry.Tools.Count == 0)
             {
                 <MudAlert Severity="Severity.Info">@L["Capabilities:NoTools"]</MudAlert>
@@ -293,7 +293,7 @@
 
             @if (entry.Resources.Count > 0)
             {
-                <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Resources"]</MudText>
+                <MudText Typo="Typo.h6" Class="section-title">@L["Capabilities:Sections:Resources"]</MudText>
                 <div class="resource-list">
                     @foreach (var resource in entry.Resources)
                     {
