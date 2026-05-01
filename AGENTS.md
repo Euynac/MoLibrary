@@ -6,10 +6,9 @@ Monica is a modular .NET infrastructure library designed for flexibility and per
 
 Proactively invoke these skills when encountering relevant development patterns:
 
-### /monica-framework
+### /monica-development
 
 Invoke when:
-- You need the Monica framework entry point for module architecture, UI, docs, requirements, tests, or bridge-debug work.
 - Writing Facade methods with `Res` or `Res<T>` return types
 - Uncertain about Res implicit conversions or IsFailed pattern
 - Determining whether code belongs in Facades (Res<T>) or internal Services (exceptions)
@@ -17,13 +16,6 @@ Invoke when:
 - Configuring module registration or dependencies
 - Implementing hosted services (MoBackgroundService, RecordState)
 - Structuring module folders (Abstractions, Models, Facades, Services, Providers)
-
-### /monica-application
-
-Invoke when:
-- You need the Monica application entry point for microservice, modular monolith, or ProjectUnit work.
-- Designing solution layout, service boundaries, bounded contexts, or ProjectUnit placement.
-- Implementing typed DDD application features that span `ApplicationService`, `RequestDto`, `DomainService`, `Entity`, `Repository`, events, or jobs.
 
 ### /monica-ui-development
 
@@ -91,7 +83,7 @@ When handling questions around how to work with native Microsoft technologies, s
 - **Internal services** (`Services/`) must use standard .NET patterns: direct return types and throw exceptions (e.g., `KeyNotFoundException`, `InvalidOperationException`) for error cases.
 - **Other infrastructure modules** do not consume Facades — they depend on `Abstractions/` interfaces instead.
 - **Critical `string` overload trap**: when a facade method returns `Res<string>`, do **not** write `return Res.Ok(content)`. C# will bind to the non-generic `Res.Ok(string hint)` overload, which drops `Res<string>.Data` and can silently break UI behavior. Always use `return Res.Ok<string>(content)` or another explicit generic construction when `T` is `string`.
-- See the `monica-architecture` skill for the full architecture specification.
+- See the `mo-architecture` skill for the full architecture specification.
 
 ## Dependency Injection Guidelines
 
