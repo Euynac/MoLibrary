@@ -505,6 +505,25 @@
       "Enabled": "Enabled",
       "Disabled": "Disabled"
     },
+    "Skill": {
+      "External": "External Skill",
+      "SourcePath": "Source path",
+      "Sources": {
+        "Title": "External skill sources",
+        "Summary": "{0} skill(s) loaded from {1} source registration(s).",
+        "Healthy": "Healthy",
+        "HasIssues": "Needs attention",
+        "Loaded": "{0} skill(s) loaded",
+        "PathLoaded": "{0} skill(s) loaded from this path",
+        "PathOk": "OK",
+        "IssueCount": "{0} issue(s)",
+        "SubprocessRunner": "Subprocess runner",
+        "CustomRunner": "Custom runner",
+        "NoRunner": "No script runner",
+        "UnknownPath": "Unknown path",
+        "PathGroup": "{0} + {1} more"
+      }
+    },
     "Mcp": {
       "Add": "Add MCP client",
       "Test": "Test connectivity",

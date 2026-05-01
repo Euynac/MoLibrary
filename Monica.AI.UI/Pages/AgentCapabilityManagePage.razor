@@ -1,5 +1,6 @@
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Localization
+@using Monica.AI.AgentCapabilities.Models
 @using Monica.AI.Facades
 @using Monica.AI.Mcp.Models
 @using Monica.AI.UI.Localization
@@ -44,6 +45,7 @@
                  Elevation="0"
                  Class="capability-tabs">
             <MudTabPanel Text="@L["Capabilities:Tabs:Skills"]" Icon="@Icons.Material.Filled.AutoAwesome">
+                @RenderFileSkillSourceStatus()
                 @RenderCapabilityCatalog(
                     AgentCapabilityKind.Skill,
                     _management.Skills,
@@ -157,6 +159,12 @@
                                 <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(entry)" Variant="Variant.Outlined">
                                     @GetStatusText(entry)
                                 </MudChip>
+                                @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                        @L["Capabilities:Skill:External"]
+                                    </MudChip>
+                                }
                                 <span>@entry.Tools.Count @L["Capabilities:Tools"]</span>
                             </span>
                         </button>
@@ -174,6 +182,105 @@
                     }
                 </div>
             </div>
+        </div>;
+    }
+
+    private RenderFragment RenderFileSkillSourceStatus()
+    {
+        if (_management?.FileSkillSources.Count is not > 0)
+        {
+            return @<text></text>;
+        }
+
+        return @<div class="skill-source-status">
+            <div class="skill-source-header">
+                <div>
+                    <MudText Typo="Typo.subtitle1">@L["Capabilities:Skill:Sources:Title"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @L["Capabilities:Skill:Sources:Summary", GetLoadedFileSkillCount(), _management.FileSkillSources.Count]
+                    </MudText>
+                </div>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(_management.FileSkillSources.Any(static source => source.HasIssues) ? Color.Warning : Color.Success)"
+                         Variant="Variant.Outlined">
+                    @(_management.FileSkillSources.Any(static source => source.HasIssues)
+                        ? L["Capabilities:Skill:Sources:HasIssues"]
+                        : L["Capabilities:Skill:Sources:Healthy"])
+                </MudChip>
+            </div>
+
+            <MudExpansionPanels Elevation="0" Dense="true" Class="skill-source-panels">
+                @foreach (var source in _management.FileSkillSources)
+                {
+                    <MudExpansionPanel Text="@GetFileSkillSourceTitle(source)" Icon="@Icons.Material.Filled.FolderOpen">
+                        <div class="skill-source-body">
+                            <div class="skill-source-chips">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @L["Capabilities:Skill:Sources:Loaded", source.LoadedSkillCount]
+                                </MudChip>
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@(source.HasScriptRunner ? Color.Success : Color.Warning)"
+                                         Variant="Variant.Outlined">
+                                    @(source.UsesSubprocessRunner
+                                        ? L["Capabilities:Skill:Sources:SubprocessRunner"]
+                                        : source.HasScriptRunner
+                                            ? L["Capabilities:Skill:Sources:CustomRunner"]
+                                            : L["Capabilities:Skill:Sources:NoRunner"])
+                                </MudChip>
+                            </div>
+
+                            @if (source.Issues.Count > 0)
+                            {
+                                @RenderIssueList(source.Issues)
+                            }
+
+                            <div class="skill-path-list">
+                                @foreach (var path in source.Paths)
+                                {
+                                    <div class="skill-path-row">
+                                        <div class="skill-path-main">
+                                            <MudIcon Icon="@(path.Exists ? Icons.Material.Filled.Folder : Icons.Material.Filled.FolderOff)"
+                                                     Size="Size.Small"
+                                                     Color="@(path.Exists ? Color.Primary : Color.Warning)" />
+                                            <div class="skill-path-text">
+                                                <MudText Typo="Typo.body2">@path.Path</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @L["Capabilities:Skill:Sources:PathLoaded", path.LoadedSkillCount]
+                                                </MudText>
+                                            </div>
+                                        </div>
+                                        <MudChip T="string"
+                                                 Size="Size.Small"
+                                                 Color="@(path.Issues.Count == 0 ? Color.Success : Color.Warning)"
+                                                 Variant="Variant.Outlined">
+                                            @(path.Issues.Count == 0
+                                                ? L["Capabilities:Skill:Sources:PathOk"]
+                                                : L["Capabilities:Skill:Sources:IssueCount", path.Issues.Count])
+                                        </MudChip>
+                                    </div>
+
+                                    @if (path.LoadedSkillNames.Count > 0)
+                                    {
+                                        <div class="skill-name-list">
+                                            @foreach (var skillName in path.LoadedSkillNames)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@skillName</MudChip>
+                                            }
+                                        </div>
+                                    }
+
+                                    @if (path.Issues.Count > 0)
+                                    {
+                                        @RenderIssueList(path.Issues)
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
         </div>;
     }
 
@@ -207,6 +314,12 @@
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.Resources.Count @L["Capabilities:Resources"]</MudChip>
                 }
+                @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @L["Capabilities:Skill:External"]
+                    </MudChip>
+                }
                 @if (entry.McpSourceKind is not null)
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpSourceKind</MudChip>
@@ -227,9 +340,18 @@
                 }
             </MudStack>
 
+            @if (entry.SourceKind == AgentCapabilitySourceKind.ExternalFile
+                 && !string.IsNullOrWhiteSpace(entry.SourcePath))
+            {
+                <div class="capability-source-summary">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Skill:SourcePath"]</MudText>
+                    <MudText Typo="Typo.body2">@entry.SourcePath</MudText>
+                </div>
+            }
+
             @if (entry.McpExternalProfile is not null)
             {
-                <div class="mcp-profile-summary">
+                <div class="capability-source-summary">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Mcp:Endpoint"]</MudText>
                     <MudText Typo="Typo.body2">@entry.McpExternalProfile.Endpoint</MudText>
                     @if (entry.McpExternalProfile.Headers.Count > 0)
@@ -354,6 +476,31 @@
                 </div>
             }
         </div>;
+    }
+
+    private RenderFragment RenderIssueList(IReadOnlyList<string> issues)
+    {
+        return @<MudAlert Severity="Severity.Warning" Dense="true" Class="skill-source-issues">
+            <ul>
+                @foreach (var issue in issues)
+                {
+                    <li>@issue</li>
+                }
+            </ul>
+        </MudAlert>;
+    }
+
+    private int GetLoadedFileSkillCount()
+    {
+        return _management?.FileSkillSources.Sum(static source => source.LoadedSkillCount) ?? 0;
+    }
+
+    private string GetFileSkillSourceTitle(AgentCapabilityFileSkillSourceStatusInfo source)
+    {
+        var firstPath = source.ConfiguredPaths.FirstOrDefault() ?? L["Capabilities:Skill:Sources:UnknownPath"];
+        return source.ConfiguredPaths.Count <= 1
+            ? firstPath
+            : L["Capabilities:Skill:Sources:PathGroup", firstPath, source.ConfiguredPaths.Count - 1];
     }
 
     private void SetActiveTab(int index)

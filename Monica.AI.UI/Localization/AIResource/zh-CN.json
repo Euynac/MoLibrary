@@ -505,6 +505,25 @@
       "Enabled": "已启用",
       "Disabled": "已禁用"
     },
+    "Skill": {
+      "External": "外部 Skill",
+      "SourcePath": "来源路径",
+      "Sources": {
+        "Title": "外部 Skill 来源",
+        "Summary": "已从 {1} 个来源配置加载 {0} 个 Skill。",
+        "Healthy": "正常",
+        "HasIssues": "需要处理",
+        "Loaded": "已加载 {0} 个 Skill",
+        "PathLoaded": "此路径已加载 {0} 个 Skill",
+        "PathOk": "正常",
+        "IssueCount": "{0} 个问题",
+        "SubprocessRunner": "子进程 Runner",
+        "CustomRunner": "自定义 Runner",
+        "NoRunner": "未配置脚本 Runner",
+        "UnknownPath": "未知路径",
+        "PathGroup": "{0} + 其他 {1} 个"
+      }
+    },
     "Mcp": {
       "Add": "新增 MCP 客户端",
       "Test": "连通性测试",

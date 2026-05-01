@@ -8,7 +8,8 @@ public sealed record AgentCapabilityManagementInfo(
     bool AreMcpToolsEnabled,
     long Revision,
     IReadOnlyList<AgentCapabilityEntryInfo> Skills,
-    IReadOnlyList<AgentCapabilityEntryInfo> McpEntries)
+    IReadOnlyList<AgentCapabilityEntryInfo> McpEntries,
+    IReadOnlyList<AgentCapabilityFileSkillSourceStatusInfo> FileSkillSources)
 {
     /// <summary>
     /// All entries in display order.

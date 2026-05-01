@@ -30,7 +30,9 @@ public sealed record AgentCapabilityEntryInfo
         string? mcpDisplayUrl = null,
         ExternalMcpClientProfile? mcpExternalProfile = null,
         bool isUserManaged = false,
-        string? discoveryError = null)
+        string? discoveryError = null,
+        AgentCapabilitySourceKind? sourceKind = null,
+        string? sourcePath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(requiredModules);
@@ -57,6 +59,8 @@ public sealed record AgentCapabilityEntryInfo
         McpExternalProfile = mcpExternalProfile;
         IsUserManaged = isUserManaged;
         DiscoveryError = discoveryError;
+        SourceKind = sourceKind;
+        SourcePath = sourcePath;
     }
 
     /// <summary>
@@ -128,6 +132,16 @@ public sealed record AgentCapabilityEntryInfo
     /// Skill resources exposed by this entry. MCP entries currently have no Monica-owned resources here.
     /// </summary>
     public IReadOnlyList<AgentCapabilityResourceInfo> Resources { get; }
+
+    /// <summary>
+    /// Optional source classification for the entry.
+    /// </summary>
+    public AgentCapabilitySourceKind? SourceKind { get; }
+
+    /// <summary>
+    /// Optional source path for file-backed or externally registered entries.
+    /// </summary>
+    public string? SourcePath { get; }
 
     /// <summary>
     /// MCP origin when <see cref="Kind"/> is <see cref="AgentCapabilityKind.Mcp"/>.

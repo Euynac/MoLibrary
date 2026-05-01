@@ -33,7 +33,8 @@ public sealed class AgentCapabilityFacade(
                 state.McpEnabled,
                 state.Revision,
                 skills,
-                mcpEntries);
+                mcpEntries,
+                skillCatalog.GetFileSkillSourceStatuses());
         }
         catch (Exception ex)
         {

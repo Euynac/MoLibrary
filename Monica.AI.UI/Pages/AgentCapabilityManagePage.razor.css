@@ -154,7 +154,7 @@
     flex-wrap: wrap;
 }
 
-.mcp-profile-summary {
+.capability-source-summary {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 4px 12px;
@@ -166,7 +166,75 @@
     min-width: 0;
 }
 
-.mcp-profile-summary ::deep .mud-typography {
+.capability-source-summary ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.skill-source-status {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+    min-width: 0;
+}
+
+.skill-source-header,
+.skill-path-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.skill-source-panels ::deep .mud-expand-panel-content {
+    padding: 8px 16px 16px;
+}
+
+.skill-source-body,
+.skill-path-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.skill-source-chips,
+.skill-name-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.skill-path-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.skill-path-text {
+    min-width: 0;
+}
+
+.skill-path-text ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.skill-source-issues {
+    min-width: 0;
+}
+
+.skill-source-issues ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.skill-source-issues li {
     overflow-wrap: anywhere;
 }
 
@@ -215,7 +283,13 @@
         align-items: flex-start;
     }
 
-    .mcp-profile-summary {
+    .capability-source-summary {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .skill-source-header,
+    .skill-path-row {
+        align-items: stretch;
+        flex-direction: column;
     }
 }
