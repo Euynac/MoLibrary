@@ -1,5 +1,7 @@
 using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.AgentCapabilities.Models;
+using Monica.AI.Mcp.Abstractions;
+using Monica.AI.Mcp.Models;
 using Monica.AI.Mcp.Services;
 using Monica.AI.Skills.Services;
 using Monica.Core.Extensions;
@@ -12,6 +14,7 @@ namespace Monica.AI.Facades;
 /// </summary>
 public sealed class AgentCapabilityFacade(
     IAgentCapabilityStateStore stateStore,
+    IExternalMcpClientProfileStore mcpProfileStore,
     MonicaSkillCatalog skillCatalog,
     MonicaMcpCatalog mcpCatalog)
 {
@@ -143,6 +146,106 @@ public sealed class AgentCapabilityFacade(
         {
             return Res.Fail(ex.GetMessageRecursively());
         }
+    }
+
+    /// <summary>
+    /// Tests a draft external MCP client profile without saving it.
+    /// </summary>
+    public async Task<Res<McpConnectivityTestResult>> TestExternalMcpProfileAsync(
+        ExternalMcpClientProfile profile,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            return await mcpCatalog.TestExternalProfileAsync(profile.Normalize(ExternalMcpClientProfileOrigin.User), ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    /// <summary>
+    /// Saves a UI-managed external MCP client profile and refreshes the management view.
+    /// </summary>
+    public async Task<Res<AgentCapabilityManagementInfo>> SaveExternalMcpProfileAsync(
+        ExternalMcpClientProfile profile,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var normalized = profile.Normalize(ExternalMcpClientProfileOrigin.User);
+            normalized.Validate();
+            var current = await GetManagementInfoAsync(ct);
+            if (current.IsFailed(out var currentError, out var management))
+            {
+                return currentError;
+            }
+
+            var conflictingEntry = management.McpEntries.FirstOrDefault(entry =>
+                string.Equals(entry.Name, normalized.Name, StringComparison.OrdinalIgnoreCase)
+                && !entry.IsUserManaged);
+            if (conflictingEntry is not null)
+            {
+                return Res.Fail($"MCP entry '{normalized.Name}' is code-defined or local and cannot be overwritten from the UI.");
+            }
+
+            await mcpProfileStore.SaveAsync(normalized, ct);
+            await mcpCatalog.InvalidateExternalEntriesAsync(ct);
+            await TouchRevisionAsync(ct);
+            return await GetManagementInfoAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    /// <summary>
+    /// Deletes a UI-managed external MCP client profile and refreshes the management view.
+    /// </summary>
+    public async Task<Res<AgentCapabilityManagementInfo>> DeleteExternalMcpProfileAsync(
+        string name,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            var deleted = await mcpProfileStore.DeleteAsync(name, ct);
+            if (!deleted)
+            {
+                return Res.Fail($"External MCP profile '{name}' was not found.");
+            }
+
+            await mcpCatalog.InvalidateExternalEntriesAsync(ct);
+            await stateStore.UpdateAsync(state =>
+            {
+                state.McpEntries.Remove(name.Trim());
+                return true;
+            }, ct);
+            return await GetManagementInfoAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail(ex.GetMessageRecursively());
+        }
+    }
+
+    private async Task TouchRevisionAsync(CancellationToken ct)
+    {
+        await stateStore.UpdateAsync(_ => true, ct);
     }
 
     private static bool Matches(AgentCapabilityReferenceCandidate candidate, string? query)

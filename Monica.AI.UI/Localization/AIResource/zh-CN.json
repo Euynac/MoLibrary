@@ -506,7 +506,28 @@
       "Disabled": "已禁用"
     },
     "Mcp": {
-      "Test": "连通性测试"
+      "Add": "新增 MCP 客户端",
+      "Test": "连通性测试",
+      "Endpoint": "端点",
+      "Headers": "已配置 {0} 个请求头",
+      "UserManaged": "界面管理",
+      "DeleteConfirm": "确定删除外部 MCP 客户端“{0}”吗？",
+      "Dialog": {
+        "AddTitle": "新增外部 MCP 客户端",
+        "EditTitle": "编辑外部 MCP 客户端",
+        "Name": "名称",
+        "Description": "描述",
+        "Endpoint": "端点",
+        "EndpointInvalid": "请输入 HTTP 或 HTTPS 绝对 URL。",
+        "TransportMode": "传输模式",
+        "Timeout": "超时秒数",
+        "ExposeTools": "暴露工具给 Monica Agent",
+        "Headers": "HTTP 请求头",
+        "AddHeader": "新增请求头",
+        "NoHeaders": "未配置请求头。",
+        "HeaderName": "请求头",
+        "HeaderValue": "值"
+      }
     },
     "Tool": {
       "Name": "工具",

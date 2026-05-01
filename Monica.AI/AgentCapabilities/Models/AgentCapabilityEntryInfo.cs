@@ -27,7 +27,10 @@ public sealed record AgentCapabilityEntryInfo
         McpCatalogSourceKind? mcpSourceKind = null,
         McpServerTransportKind? mcpTransportKind = null,
         string? mcpEndpointPath = null,
-        string? mcpDisplayUrl = null)
+        string? mcpDisplayUrl = null,
+        ExternalMcpClientProfile? mcpExternalProfile = null,
+        bool isUserManaged = false,
+        string? discoveryError = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(requiredModules);
@@ -51,6 +54,9 @@ public sealed record AgentCapabilityEntryInfo
         McpTransportKind = mcpTransportKind;
         McpEndpointPath = mcpEndpointPath;
         McpDisplayUrl = mcpDisplayUrl;
+        McpExternalProfile = mcpExternalProfile;
+        IsUserManaged = isUserManaged;
+        DiscoveryError = discoveryError;
     }
 
     /// <summary>
@@ -142,6 +148,21 @@ public sealed record AgentCapabilityEntryInfo
     /// Optional externally reachable MCP URL configured for management UIs.
     /// </summary>
     public string? McpDisplayUrl { get; }
+
+    /// <summary>
+    /// External HTTP MCP profile when this entry is backed by a remote MCP client.
+    /// </summary>
+    public ExternalMcpClientProfile? McpExternalProfile { get; }
+
+    /// <summary>
+    /// Gets whether this capability can be edited from the runtime management UI.
+    /// </summary>
+    public bool IsUserManaged { get; }
+
+    /// <summary>
+    /// Error captured while discovering capability tools, if discovery failed.
+    /// </summary>
+    public string? DiscoveryError { get; }
 
     /// <summary>
     /// Stable UI key used by management rows and slash chips.

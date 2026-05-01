@@ -6,6 +6,7 @@
 @using Monica.Core.Results
 @rendermode InteractiveServer
 @inject AgentCapabilityFacade CapabilityFacade
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
 
@@ -122,6 +123,15 @@
                               AdornmentIcon="@Icons.Material.Filled.Search"
                               Immediate="true"
                               Class="search-box" />
+                @if (kind == AgentCapabilityKind.Mcp)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="ShowAddMcpProfileDialogAsync">
+                        @L["Capabilities:Mcp:Add"]
+                    </MudButton>
+                }
                 <MudSwitch T="bool"
                            Value="@catalogEnabled"
                            ValueChanged="@((bool enabled) => SetCatalogEnabledAsync(kind, enabled))"
@@ -205,7 +215,31 @@
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpTransportKind</MudChip>
                 }
+                @if (entry.McpExternalProfile is not null)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpExternalProfile.TransportMode</MudChip>
+                }
+                @if (entry.IsUserManaged)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @L["Capabilities:Mcp:UserManaged"]
+                    </MudChip>
+                }
             </MudStack>
+
+            @if (entry.McpExternalProfile is not null)
+            {
+                <div class="mcp-profile-summary">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Mcp:Endpoint"]</MudText>
+                    <MudText Typo="Typo.body2">@entry.McpExternalProfile.Endpoint</MudText>
+                    @if (entry.McpExternalProfile.Headers.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @L["Capabilities:Mcp:Headers", entry.McpExternalProfile.Headers.Count]
+                        </MudText>
+                    }
+                </div>
+            }
 
             @if (entry.Kind == AgentCapabilityKind.Mcp)
             {
@@ -221,6 +255,22 @@
                         }
                         @L["Capabilities:Mcp:Test"]
                     </MudButton>
+                    @if (entry.IsUserManaged)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="@(() => ShowEditMcpProfileDialogAsync(entry))">
+                            @L["Common:Edit"]
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="@(() => DeleteMcpProfileAsync(entry))">
+                            @L["Common:Delete"]
+                        </MudButton>
+                    }
                     @if (_lastConnectivityResult?.Name == entry.Name)
                     {
                         <MudChip T="string"
@@ -371,6 +421,97 @@
         await ApplyManagementResultAsync(result);
     }
 
+    private async Task ShowAddMcpProfileDialogAsync()
+    {
+        var dialog = await DialogService.ShowAsync<ExternalMcpProfileDialog>(
+            L["Capabilities:Mcp:Dialog:AddTitle"],
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+
+        var dialogResult = await dialog.Result;
+        if (dialogResult is not { Canceled: false, Data: ExternalMcpClientProfile profile })
+        {
+            return;
+        }
+
+        var result = await CapabilityFacade.SaveExternalMcpProfileAsync(profile);
+        if (result.IsFailed(out var error, out var management))
+        {
+            AddErrorSnackbar(error.Message);
+            return;
+        }
+
+        _management = management;
+        SelectEntryByName(profile.Name);
+        Snackbar.Add(L["Common:Success"], Severity.Success);
+    }
+
+    private async Task ShowEditMcpProfileDialogAsync(AgentCapabilityEntryInfo entry)
+    {
+        if (entry.McpExternalProfile is null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(ExternalMcpProfileDialog.Profile), entry.McpExternalProfile },
+            { nameof(ExternalMcpProfileDialog.IsEdit), true },
+            { nameof(ExternalMcpProfileDialog.SubmitText), L["Common:Actions:Save"].Value }
+        };
+
+        var dialog = await DialogService.ShowAsync<ExternalMcpProfileDialog>(
+            L["Capabilities:Mcp:Dialog:EditTitle"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+
+        var dialogResult = await dialog.Result;
+        if (dialogResult is not { Canceled: false, Data: ExternalMcpClientProfile profile })
+        {
+            return;
+        }
+
+        var result = await CapabilityFacade.SaveExternalMcpProfileAsync(profile);
+        if (result.IsFailed(out var error, out var management))
+        {
+            AddErrorSnackbar(error.Message);
+            return;
+        }
+
+        _management = management;
+        SelectEntryByName(profile.Name);
+        Snackbar.Add(L["Common:Success"], Severity.Success);
+    }
+
+    private async Task DeleteMcpProfileAsync(AgentCapabilityEntryInfo entry)
+    {
+        if (!entry.IsUserManaged)
+        {
+            return;
+        }
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            L["Common:Confirm"],
+            L["Capabilities:Mcp:DeleteConfirm", entry.Name],
+            yesText: L["Common:Delete"],
+            cancelText: L["Common:Cancel"]);
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        var result = await CapabilityFacade.DeleteExternalMcpProfileAsync(entry.Name);
+        if (result.IsFailed(out var error, out var management))
+        {
+            AddErrorSnackbar(error.Message);
+            return;
+        }
+
+        _management = management;
+        EnsureSelectedEntry();
+        Snackbar.Add(L["Common:Success"], Severity.Success);
+    }
+
     private async Task ApplyManagementResultAsync(Core.Results.Res<AgentCapabilityManagementInfo> result)
     {
         if (result.IsFailed(out var error, out var management))
@@ -382,6 +523,13 @@
         _management = management;
         EnsureSelectedEntry();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectEntryByName(string name)
+    {
+        _selectedEntry = CurrentEntries.FirstOrDefault(entry =>
+            string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
+        EnsureSelectedEntry();
     }
 
     private async Task TestMcpAsync(AgentCapabilityEntryInfo entry)

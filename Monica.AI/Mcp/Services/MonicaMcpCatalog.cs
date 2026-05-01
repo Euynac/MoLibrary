@@ -8,6 +8,7 @@ using Monica.AI.AgentCapabilities.Services;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using Monica.AI.Mcp.Abstractions;
 using Monica.AI.Mcp.Internal;
 using Monica.AI.Mcp.Models;
 using Monica.AI.Services.Support.ModuleCatalog;
@@ -23,14 +24,18 @@ namespace Monica.AI.Mcp.Services;
 /// </summary>
 public sealed class MonicaMcpCatalog(
     IEnumerable<MonicaMcpServer> localServers,
-    IEnumerable<McpClientRegistration> clientRegistrations,
+    IEnumerable<ExternalMcpClientProfile> codeProfiles,
+    IExternalMcpClientProfileStore profileStore,
+    ExternalMcpClientFactory clientFactory,
     ILoadedModuleCatalog loadedModules,
     IXmlDocumentationService xmlDocumentationService,
     IOptions<ModuleMcpOption> options,
     IServiceProvider serviceProvider,
     ILogger<MonicaMcpCatalog> logger) : IAsyncDisposable
 {
-    private readonly IReadOnlyList<McpClientRegistration> _clientRegistrations = clientRegistrations.ToList();
+    private readonly IReadOnlyList<ExternalMcpClientProfile> _codeProfiles = codeProfiles
+        .Select(static profile => profile.Normalize(ExternalMcpClientProfileOrigin.Code))
+        .ToList();
     private readonly List<McpClient> _createdClients = [];
     private readonly SemaphoreSlim _clientLock = new(1, 1);
     private readonly Lazy<IReadOnlyList<LocalMcpServerEntry>> _localEntries = new(() =>
@@ -89,8 +94,9 @@ public sealed class MonicaMcpCatalog(
         var externalEntries = await GetExternalEntriesAsync(cancellationToken);
         localTools.AddRange(
             externalEntries
-                .Where(entry => entry.Registration.IsAgentToolEnabled
-                                && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Registration.Name))
+                .Where(entry => string.IsNullOrWhiteSpace(entry.DiscoveryError)
+                                && entry.Profile.IsAgentToolEnabled
+                                && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Profile.Name))
                 .SelectMany(entry => entry.Tools)
                 .Cast<AITool>());
 
@@ -145,14 +151,42 @@ public sealed class MonicaMcpCatalog(
             return await TestLocalEntryAsync(localEntry, cancellationToken);
         }
 
-        var registration = _clientRegistrations.FirstOrDefault(entry =>
+        var profile = (await GetExternalProfilesAsync(cancellationToken)).FirstOrDefault(entry =>
             string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
-        if (registration is null)
+        if (profile is null)
         {
             return null;
         }
 
-        return await TestExternalRegistrationAsync(registration, cancellationToken);
+        return await TestExternalProfileAsync(profile, cancellationToken);
+    }
+
+    /// <summary>
+    /// Tests a draft external MCP client profile without saving it to the runtime profile store.
+    /// </summary>
+    public Task<McpConnectivityTestResult> TestExternalProfileAsync(
+        ExternalMcpClientProfile profile,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return TestExternalProfileCoreAsync(profile.Normalize(profile.Origin), cancellationToken);
+    }
+
+    /// <summary>
+    /// Clears cached external MCP tool discovery results.
+    /// </summary>
+    public async Task InvalidateExternalEntriesAsync(CancellationToken cancellationToken = default)
+    {
+        await _clientLock.WaitAsync(cancellationToken);
+        try
+        {
+            _externalEntries = null;
+            await DisposeCreatedClientsAsync();
+        }
+        finally
+        {
+            _clientLock.Release();
+        }
     }
 
     /// <summary>
@@ -201,12 +235,8 @@ public sealed class MonicaMcpCatalog(
         }
 
         _disposed = true;
+        await DisposeCreatedClientsAsync();
         _clientLock.Dispose();
-
-        foreach (var client in _createdClients)
-        {
-            await client.DisposeAsync();
-        }
     }
 
     private async Task<IReadOnlyList<ExternalMcpClientEntry>> GetExternalEntriesAsync(CancellationToken cancellationToken)
@@ -224,17 +254,42 @@ public sealed class MonicaMcpCatalog(
                 return _externalEntries;
             }
 
-            var entries = new List<ExternalMcpClientEntry>();
-            foreach (var registration in _clientRegistrations)
-            {
-                var client = await registration.ClientFactory(serviceProvider, cancellationToken);
-                _createdClients.Add(client);
+            var profiles = await GetExternalProfilesAsync(cancellationToken);
+            ValidateUniqueExternalClientNames(profiles);
 
-                var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
-                entries.Add(new ExternalMcpClientEntry(registration, tools.ToList()));
+            var entries = new List<ExternalMcpClientEntry>();
+            foreach (var profile in profiles)
+            {
+                McpClient? client = null;
+                try
+                {
+                    client = await clientFactory.CreateAsync(profile, cancellationToken);
+                    var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
+                    _createdClients.Add(client);
+                    client = null;
+                    entries.Add(new ExternalMcpClientEntry(profile, tools.ToList(), null));
+                }
+                catch (OperationCanceledException)
+                {
+                    if (client is not null)
+                    {
+                        await client.DisposeAsync();
+                    }
+
+                    throw;
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    if (client is not null)
+                    {
+                        await client.DisposeAsync();
+                    }
+
+                    logger.LogWarning(ex, "Failed to discover tools for external MCP client profile '{Name}'.", profile.Name);
+                    entries.Add(new ExternalMcpClientEntry(profile, [], ex.Message));
+                }
             }
 
-            ValidateUniqueExternalClientNames(entries);
             _externalEntries = entries;
             return _externalEntries;
         }
@@ -302,8 +357,8 @@ public sealed class MonicaMcpCatalog(
             testedAt);
     }
 
-    private async Task<McpConnectivityTestResult> TestExternalRegistrationAsync(
-        McpClientRegistration registration,
+    private async Task<McpConnectivityTestResult> TestExternalProfileCoreAsync(
+        ExternalMcpClientProfile profile,
         CancellationToken cancellationToken)
     {
         var startedAt = Stopwatch.GetTimestamp();
@@ -311,10 +366,10 @@ public sealed class MonicaMcpCatalog(
 
         try
         {
-            await using var client = await registration.ClientFactory(serviceProvider, cancellationToken);
+            await using var client = await clientFactory.CreateAsync(profile, cancellationToken);
             var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
             return new McpConnectivityTestResult(
-                registration.Name,
+                profile.Name,
                 McpCatalogSourceKind.ExternalClient,
                 true,
                 "Connected and listed tools.",
@@ -325,7 +380,7 @@ public sealed class MonicaMcpCatalog(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new McpConnectivityTestResult(
-                registration.Name,
+                profile.Name,
                 McpCatalogSourceKind.ExternalClient,
                 false,
                 ex.Message,
@@ -333,6 +388,25 @@ public sealed class MonicaMcpCatalog(
                 0,
                 testedAt);
         }
+    }
+
+    private async Task<IReadOnlyList<ExternalMcpClientProfile>> GetExternalProfilesAsync(CancellationToken cancellationToken)
+    {
+        var userProfiles = await profileStore.LoadAsync(cancellationToken);
+        return _codeProfiles
+            .Concat(userProfiles)
+            .OrderBy(static profile => profile.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task DisposeCreatedClientsAsync()
+    {
+        foreach (var client in _createdClients)
+        {
+            await client.DisposeAsync();
+        }
+
+        _createdClients.Clear();
     }
 
     private static IReadOnlyList<LocalMcpServerEntry> BuildLocalEntries(
@@ -405,10 +479,10 @@ public sealed class MonicaMcpCatalog(
         }
     }
 
-    private static void ValidateUniqueExternalClientNames(IReadOnlyList<ExternalMcpClientEntry> entries)
+    private static void ValidateUniqueExternalClientNames(IReadOnlyList<ExternalMcpClientProfile> profiles)
     {
-        var duplicateNames = entries
-            .GroupBy(entry => entry.Registration.Name, StringComparer.OrdinalIgnoreCase)
+        var duplicateNames = profiles
+            .GroupBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToList();
@@ -479,6 +553,9 @@ public sealed class MonicaMcpCatalog(
                 TransportKind,
                 TransportKind == McpServerTransportKind.Http ? HttpEndpointPath : null,
                 TransportKind == McpServerTransportKind.Http ? HttpDisplayUrl : null,
+                null,
+                false,
+                null,
                 IsLocalToolEnabled,
                 catalogEnabled,
                 entryEnabled,
@@ -492,24 +569,28 @@ public sealed class MonicaMcpCatalog(
     }
 
     private sealed record ExternalMcpClientEntry(
-        McpClientRegistration Registration,
-        IReadOnlyList<McpClientTool> Tools)
+        ExternalMcpClientProfile Profile,
+        IReadOnlyList<McpClientTool> Tools,
+        string? DiscoveryError)
     {
         internal McpCatalogEntryInfo ToInfo(AgentCapabilityState state)
         {
             var catalogEnabled = state.McpEnabled;
-            var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Registration.Name);
-            var disabledReason = ResolveDisabledReason(Registration.IsAgentToolEnabled, catalogEnabled, entryEnabled);
+            var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Profile.Name);
+            var disabledReason = ResolveDisabledReason(Profile.IsAgentToolEnabled, catalogEnabled, entryEnabled, DiscoveryError);
             var isAgentToolEnabled = disabledReason is null;
 
             return new McpCatalogEntryInfo(
-                Registration.Name,
-                Registration.Description,
+                Profile.Name,
+                Profile.Description,
                 McpCatalogSourceKind.ExternalClient,
                 null,
                 null,
-                null,
-                Registration.IsAgentToolEnabled,
+                Profile.Endpoint,
+                Profile,
+                Profile.IsUserManaged,
+                DiscoveryError,
+                Profile.IsAgentToolEnabled,
                 catalogEnabled,
                 entryEnabled,
                 disabledReason,
@@ -549,14 +630,23 @@ public sealed class MonicaMcpCatalog(
             entry.SourceKind,
             entry.TransportKind,
             entry.EndpointPath,
-            entry.DisplayUrl);
+            entry.DisplayUrl,
+            entry.ExternalProfile,
+            entry.IsUserManaged,
+            entry.DiscoveryError);
     }
 
     private static string? ResolveDisabledReason(
         bool builtInEnabled,
         bool catalogEnabled,
-        bool entryEnabled)
+        bool entryEnabled,
+        string? discoveryError = null)
     {
+        if (!string.IsNullOrWhiteSpace(discoveryError))
+        {
+            return discoveryError;
+        }
+
         if (!builtInEnabled)
         {
             return "This MCP entry is not configured to expose tools to Monica agents.";

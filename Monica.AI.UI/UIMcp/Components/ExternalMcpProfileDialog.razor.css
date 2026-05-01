@@ -1,0 +1,31 @@
+.headers-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.headers-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.headers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.header-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 720px) {
+    .header-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

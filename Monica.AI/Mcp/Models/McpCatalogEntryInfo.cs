@@ -15,6 +15,9 @@ public sealed record McpCatalogEntryInfo
         McpServerTransportKind? transportKind,
         string? endpointPath,
         string? displayUrl,
+        ExternalMcpClientProfile? externalProfile,
+        bool isUserManaged,
+        string? discoveryError,
         bool isBuiltInAgentToolEnabled,
         bool isCatalogEnabled,
         bool isEntryEnabled,
@@ -31,6 +34,9 @@ public sealed record McpCatalogEntryInfo
         TransportKind = transportKind;
         EndpointPath = endpointPath;
         DisplayUrl = displayUrl;
+        ExternalProfile = externalProfile;
+        IsUserManaged = isUserManaged;
+        DiscoveryError = discoveryError;
         IsBuiltInAgentToolEnabled = isBuiltInAgentToolEnabled;
         IsCatalogEnabled = isCatalogEnabled;
         IsEntryEnabled = isEntryEnabled;
@@ -67,6 +73,21 @@ public sealed record McpCatalogEntryInfo
     /// Optional externally reachable URL configured for display in MCP management UIs.
     /// </summary>
     public string? DisplayUrl { get; }
+
+    /// <summary>
+    /// External HTTP MCP profile when the entry is backed by a remote client.
+    /// </summary>
+    public ExternalMcpClientProfile? ExternalProfile { get; }
+
+    /// <summary>
+    /// Gets whether this entry can be edited from the runtime management UI.
+    /// </summary>
+    public bool IsUserManaged { get; }
+
+    /// <summary>
+    /// Error captured while discovering remote MCP tools, if discovery failed.
+    /// </summary>
+    public string? DiscoveryError { get; }
 
     /// <summary>
     /// Gets whether this entry is configured by its author or registration to expose tools to Monica agents.

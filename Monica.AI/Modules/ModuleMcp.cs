@@ -77,7 +77,7 @@ public sealed class ModuleMcp(ModuleMcpOption option)
     {
         foreach (var mcpType in _mcpTypes.Distinct())
         {
-            if (!services.Any(descriptor => descriptor.ServiceType == mcpType))
+            if (services.All(descriptor => descriptor.ServiceType != mcpType))
             {
                 services.AddSingleton(mcpType);
             }
@@ -100,9 +100,12 @@ public sealed class ModuleMcp(ModuleMcpOption option)
             services.AddHostedService<MonicaStdioMcpHostedService>();
         }
 
-        foreach (var registration in option.McpClientRegistrations)
+        services.TryAddSingleton<IExternalMcpClientProfileStore, FileExternalMcpClientProfileStore>();
+        services.TryAddSingleton<ExternalMcpClientFactory>();
+
+        foreach (var profile in option.ExternalMcpClientProfiles)
         {
-            services.AddSingleton(registration);
+            services.AddSingleton(profile);
         }
     }
 
@@ -127,7 +130,7 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 /// </summary>
 public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
 {
-    internal List<McpClientRegistration> McpClientRegistrations { get; } = [];
+    internal List<ExternalMcpClientProfile> ExternalMcpClientProfiles { get; } = [];
 
     /// <summary>
     /// Route pattern used when Monica-defined MCP servers choose HTTP transport.
@@ -148,13 +151,21 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
     public bool McpHttpStateless { get; set; } = true;
 
     /// <summary>
-    /// Adds an external MCP client registration to Monica's MCP catalog.
+    /// Relative or absolute file path used to persist runtime-managed external MCP client profiles.
+    /// Defaults to <c>monica_data/ai/external_mcp_clients.json</c>.
     /// </summary>
-    /// <param name="registration">External MCP client registration to add.</param>
-    public void AddMcpClient(McpClientRegistration registration)
+    public string ExternalMcpClientProfileStoreFilePath { get; set; } = "monica_data/ai/external_mcp_clients.json";
+
+    /// <summary>
+    /// Adds a code-defined external MCP client profile to Monica's MCP catalog.
+    /// </summary>
+    /// <param name="profile">External MCP client profile to add.</param>
+    public void AddMcpClient(ExternalMcpClientProfile profile)
     {
-        ArgumentNullException.ThrowIfNull(registration);
-        McpClientRegistrations.Add(registration);
+        ArgumentNullException.ThrowIfNull(profile);
+        var normalized = profile.Normalize(ExternalMcpClientProfileOrigin.Code);
+        normalized.Validate();
+        ExternalMcpClientProfiles.Add(normalized);
     }
 }
 
@@ -188,25 +199,38 @@ public sealed class ModuleMcpGuide
     }
 
     /// <summary>
-    /// Registers an external MCP client whose tools may be exposed to Monica agents.
+    /// Registers an external HTTP MCP client whose tools may be exposed to Monica agents.
     /// </summary>
     /// <param name="name">Stable client name shown to management UIs.</param>
     /// <param name="description">Short description of the remote MCP server or client connection.</param>
-    /// <param name="clientFactory">Factory that creates and connects an MCP client when tools are first needed.</param>
+    /// <param name="endpoint">Absolute HTTP or HTTPS endpoint for the remote MCP server.</param>
+    /// <param name="headers">Optional HTTP headers sent with MCP requests.</param>
+    /// <param name="transportMode">HTTP transport mode used by the MCP SDK.</param>
+    /// <param name="connectionTimeoutSeconds">Connection timeout in seconds.</param>
     /// <param name="isAgentToolEnabled">Whether listed client tools should be exposed to Monica agents.</param>
     /// <returns>The current guide instance.</returns>
     public ModuleMcpGuide AddMcpClient(
         string name,
         string description,
-        Func<IServiceProvider, CancellationToken, Task<McpClient>> clientFactory,
+        string endpoint,
+        IDictionary<string, string>? headers = null,
+        HttpTransportMode transportMode = HttpTransportMode.AutoDetect,
+        int connectionTimeoutSeconds = 30,
         bool isAgentToolEnabled = true)
     {
-        var registration = new McpClientRegistration(name, description, clientFactory)
+        var profile = new ExternalMcpClientProfile
         {
-            IsAgentToolEnabled = isAgentToolEnabled
-        };
+            Name = name,
+            Description = description,
+            Endpoint = endpoint,
+            Headers = new Dictionary<string, string>(headers ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase),
+            TransportMode = transportMode,
+            ConnectionTimeoutSeconds = connectionTimeoutSeconds,
+            IsAgentToolEnabled = isAgentToolEnabled,
+            Origin = ExternalMcpClientProfileOrigin.Code
+        }.Normalize(ExternalMcpClientProfileOrigin.Code);
 
-        ConfigureModuleOption(options => options.AddMcpClient(registration), secondKey: registration.Name);
+        ConfigureModuleOption(options => options.AddMcpClient(profile), secondKey: profile.Name);
         return this;
     }
 }

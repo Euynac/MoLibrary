@@ -506,7 +506,28 @@
       "Disabled": "Disabled"
     },
     "Mcp": {
-      "Test": "Test connectivity"
+      "Add": "Add MCP client",
+      "Test": "Test connectivity",
+      "Endpoint": "Endpoint",
+      "Headers": "{0} headers configured",
+      "UserManaged": "User managed",
+      "DeleteConfirm": "Delete external MCP client '{0}'?",
+      "Dialog": {
+        "AddTitle": "Add external MCP client",
+        "EditTitle": "Edit external MCP client",
+        "Name": "Name",
+        "Description": "Description",
+        "Endpoint": "Endpoint",
+        "EndpointInvalid": "Use an absolute HTTP or HTTPS URL.",
+        "TransportMode": "Transport mode",
+        "Timeout": "Timeout seconds",
+        "ExposeTools": "Expose tools to Monica agents",
+        "Headers": "HTTP headers",
+        "AddHeader": "Add header",
+        "NoHeaders": "No headers configured.",
+        "HeaderName": "Header",
+        "HeaderValue": "Value"
+      }
     },
     "Tool": {
       "Name": "Tool",
