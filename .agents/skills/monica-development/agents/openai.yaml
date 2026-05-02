@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monica Development"
+  short_description: "Monica module registration and service patterns"
+  default_prompt: "Use $monica-development to implement Monica modules, Guide methods, Facades, Res results, services, and hosted services."

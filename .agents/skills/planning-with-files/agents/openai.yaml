@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planning With Files"
+  short_description: "Create persistent markdown task plans"
+  default_prompt: "Use $planning-with-files to create persistent task planning files for multi-step work."

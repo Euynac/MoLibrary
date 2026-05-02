@@ -6,7 +6,7 @@ Monica is a modular .NET infrastructure library designed for flexibility and per
 
 Proactively invoke these skills when encountering relevant development patterns:
 
-### /mo-development
+### /monica-development
 
 Invoke when:
 - Writing Facade methods with `Res` or `Res<T>` return types
@@ -17,7 +17,7 @@ Invoke when:
 - Implementing hosted services (MoBackgroundService, RecordState)
 - Structuring module folders (Abstractions, Models, Facades, Services, Providers)
 
-### /mo-ui-development
+### /monica-ui-development
 
 Invoke when:
 - Creating or modifying Blazor components

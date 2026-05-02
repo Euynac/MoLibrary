@@ -1,6 +1,6 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $mo-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
 ---
 
 # Monica UI Bridge Debug
@@ -10,7 +10,7 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 ## Required companion skills
 
 - Use `$planning-with-files` to create a new task folder for every bridge run.
-- Use `$mo-ui-development` for every Monica Blazor UI implementation or style change.
+- Use `$monica-ui-development` for every Monica Blazor UI implementation or style change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
 - Use `$subagent-progress-report` whenever the selected workflow is delegated sub-agent mode.
 
@@ -65,7 +65,7 @@ Rules:
 
 ## Mandatory Monica UI rule handoff
 
-Before editing Monica UI files, also apply `$mo-ui-development`:
+Before editing Monica UI files, also apply `$monica-ui-development`:
 
 ```bash
 python scripts/check_mudblazor_source.py
@@ -90,7 +90,7 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 4. Launch the bridge service with `scripts/bridge_service.py run`.
 5. Wait for readiness with `scripts/bridge_service.py wait-ready`.
 6. Open the full page URL with `$playwright-cli` and capture artifacts.
-7. Implement Monica UI changes under `$mo-ui-development` rules.
+7. Implement Monica UI changes under `$monica-ui-development` rules.
 8. Restart the bridge service with the same script when verification requires a rebuild.
 9. Leave the bridge service running after success so the user can inspect it.
 
@@ -313,7 +313,7 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 - [ ] Create a new task folder with `$planning-with-files`
 - [ ] Skip the three planning files in simple mode
 - [ ] Use `$subagent-progress-report` in delegated sub-agent mode
-- [ ] Run `$mo-ui-development` source check before UI edits
+- [ ] Run `$monica-ui-development` source check before UI edits
 - [ ] Use `bridge_service.py run` instead of ad-hoc launch commands
 - [ ] Use `bridge_service.py wait-ready` before opening Playwright
 - [ ] If `localhost` works in shell probes but Playwright cannot connect in WSL, retry with the WSL gateway IP
