@@ -87,25 +87,33 @@
 
     private bool _autoRefreshEnabled = true;
     private int _autoRefreshInterval = 30; // seconds
-    private System.Timers.Timer? _refreshTimer;
-    private CancellationTokenSource? _cts;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationToken _lifetimeToken;
+    private PeriodicTimer? _refreshTimer;
+    private Task? _refreshLoop;
+
+    public DashboardPage()
+    {
+        _lifetimeToken = _cts.Token;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            _cts = new CancellationTokenSource();
-            await LoadDataAsync();
+            return;
+        }
 
-            if (_autoRefreshEnabled)
-            {
-                StartAutoRefresh();
-            }
+        if (await LoadDataAsync() && _autoRefreshEnabled)
+        {
+            StartAutoRefresh();
         }
     }
 
-    private async Task LoadDataAsync(bool showLoading = true)
+    private async Task<bool> LoadDataAsync(bool showLoading = true)
     {
+        var token = _lifetimeToken;
+
         try
         {
             if (showLoading)
@@ -114,8 +122,6 @@
                 _loadError = null;
                 StateHasChanged();
             }
-
-            var token = _cts?.Token ?? CancellationToken.None;
 
             var snapshotResult = await DashboardFacade.GetDashboardAsync(
                 UiOptions.Value.HealthMetricsWindow,
@@ -132,14 +138,18 @@
                 _recentActivities = snapshot.RecentActivities.ToList();
                 _problemJobs = snapshot.Problems;
             }
+
+            return true;
         }
         catch (OperationCanceledException)
         {
             // Ignore cancellation
+            return false;
         }
         catch (Exception ex)
         {
             _loadError = $"{L["Common:Messages:LoadFailed"]}: {ex.Message}";
+            return true;
         }
         finally
         {
@@ -147,13 +157,22 @@
             {
                 _isLoading = false;
             }
-            StateHasChanged();
+
+            if (!token.IsCancellationRequested)
+            {
+                StateHasChanged();
+            }
         }
     }
 
     private async Task RefreshDataAsync()
     {
-        if (_isRefreshing) return;
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        var token = _lifetimeToken;
 
         try
         {
@@ -165,26 +184,28 @@
         }
         finally
         {
-            _isRefreshing = false;
-            StateHasChanged();
+            if (!token.IsCancellationRequested)
+            {
+                _isRefreshing = false;
+                StateHasChanged();
+            }
         }
     }
 
     private void StartAutoRefresh()
     {
-        _refreshTimer?.Dispose();
-        _refreshTimer = new System.Timers.Timer(_autoRefreshInterval * 1000);
-        _refreshTimer.Elapsed += async (_, _) =>
+        if (_lifetimeToken.IsCancellationRequested)
         {
-            await InvokeAsync(RefreshDataAsync);
-        };
-        _refreshTimer.AutoReset = true;
-        _refreshTimer.Start();
+            return;
+        }
+
+        StopAutoRefresh();
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(_autoRefreshInterval));
+        _refreshLoop = RefreshLoopAsync(_refreshTimer, _lifetimeToken);
     }
 
     private void StopAutoRefresh()
     {
-        _refreshTimer?.Stop();
         _refreshTimer?.Dispose();
         _refreshTimer = null;
     }
@@ -205,9 +226,37 @@
 
     public async ValueTask DisposeAsync()
     {
-        StopAutoRefresh();
-        await _cts.SafeCancelAndDisposeAsync();
+        await _cts.CancelAsync();
+
+        if (_refreshLoop != null)
+        {
+            try
+            {
+                await _refreshLoop;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _refreshTimer?.Dispose();
+        _cts.Dispose();
 
         await ValueTask.CompletedTask;
+    }
+
+    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(RefreshDataAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the page is disposed.
+        }
     }
 }
