@@ -343,15 +343,16 @@ internal sealed partial class MonicaFileSkillsSource
         string skillName,
         ICollection<string> issues)
     {
-        return DiscoverFiles(
+        var resources = DiscoverFiles(
                 skillDirectoryFullPath,
                 skillName,
                 _resourceDirectories,
                 _allowedResourceExtensions,
                 isResource: true,
                 issues)
-            .Select(file => (AgentSkillResource)new MonicaFileSkillResource(file.RelativePath, file.FullPath))
             .ToList();
+
+        return BuildResourceList(resources);
     }
 
     private IReadOnlyList<AgentSkillScript> DiscoverScriptFiles(
@@ -517,6 +518,41 @@ internal sealed partial class MonicaFileSkillsSource
     private static bool ContainsParentTraversalSegment(string directory)
     {
         return directory.Split(["/", "\\"], StringSplitOptions.None).Any(static segment => segment == "..");
+    }
+
+    private static IReadOnlyList<AgentSkillResource> BuildResourceList(IReadOnlyList<DiscoveredFile> files)
+    {
+        var resources = new List<AgentSkillResource>();
+        var fileNameCounts = files
+            .GroupBy(static file => Path.GetFileName(file.RelativePath), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static group => group.Key, static group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in files.OrderBy(static file => file.RelativePath, StringComparer.OrdinalIgnoreCase))
+        {
+            var fileName = Path.GetFileName(file.RelativePath);
+            var hasUniqueFileName = fileNameCounts[fileName] == 1;
+            var canonicalName = hasUniqueFileName ? fileName : file.RelativePath;
+            var description = string.Equals(canonicalName, file.RelativePath, StringComparison.Ordinal)
+                ? null
+                : $"File resource at {file.RelativePath}.";
+
+            resources.Add(new MonicaFileSkillResource(
+                canonicalName,
+                file.FullPath,
+                description,
+                canonicalName));
+
+            if (hasUniqueFileName && !string.Equals(fileName, file.RelativePath, StringComparison.Ordinal))
+            {
+                resources.Add(new MonicaFileSkillResource(
+                    file.RelativePath,
+                    file.FullPath,
+                    $"Alias for {fileName}.",
+                    canonicalName: fileName));
+            }
+        }
+
+        return resources;
     }
 
     private static bool IsDiscoveryException(Exception ex)

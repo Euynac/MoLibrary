@@ -2,7 +2,7 @@
  * Chat message list auto-scroll module
  */
 
-const scrollThreshold = 100; // pixels from bottom to consider "at bottom"
+const scrollThreshold = 80; // pixels from bottom to consider "at bottom"
 
 /**
  * Initialize auto-scroll behavior for a message list element
@@ -12,71 +12,74 @@ const scrollThreshold = 100; // pixels from bottom to consider "at bottom"
 export function initAutoScroll(element) {
     if (!element) return null;
 
-    let isUserScrolling = false;
-    let isProgrammaticScrolling = false;
-    let scrollTimeout = null;
+    let shouldStickToBottom = true;
     let mutationDebounceTimeout = null;
-    let lastScrollHeight = element.scrollHeight;
+    let resizeFrame = null;
 
     const isNearBottom = () => {
         const { scrollTop, scrollHeight, clientHeight } = element;
-        return scrollHeight - scrollTop - clientHeight < scrollThreshold;
+        return scrollHeight - scrollTop - clientHeight <= scrollThreshold;
     };
 
-    const scrollToBottom = () => {
-        isProgrammaticScrolling = true;
+    const scrollToBottom = (behavior = 'auto') => {
+        shouldStickToBottom = true;
         element.scrollTo({
             top: element.scrollHeight,
-            behavior: 'smooth'
+            behavior
         });
-        // Reset after smooth scroll animation completes (~300-500ms)
-        setTimeout(() => {
-            isProgrammaticScrolling = false;
-        }, 400);
     };
 
     const handleScroll = () => {
-        // Ignore scroll events caused by our programmatic scrolling
-        if (isProgrammaticScrolling) return;
-
-        clearTimeout(scrollTimeout);
-        isUserScrolling = true;
-        scrollTimeout = setTimeout(() => {
-            isUserScrolling = false;
-        }, 150);
+        shouldStickToBottom = isNearBottom();
     };
 
-    // Debounced scroll check - waits for mutations to settle
-    const checkAndScroll = () => {
+    const scheduleStickyScroll = () => {
+        if (!shouldStickToBottom) {
+            return;
+        }
+
         clearTimeout(mutationDebounceTimeout);
         mutationDebounceTimeout = setTimeout(() => {
-            const newScrollHeight = element.scrollHeight;
-            const contentGrew = newScrollHeight > lastScrollHeight;
-            lastScrollHeight = newScrollHeight;
-
-            if (contentGrew || (!isUserScrolling && isNearBottom())) {
-                requestAnimationFrame(scrollToBottom);
+            if (!shouldStickToBottom) {
+                return;
             }
-        }, 16); // ~1 frame, allows DOM to settle
+
+            requestAnimationFrame(() => scrollToBottom('auto'));
+        }, 16);
     };
 
-    const observer = new MutationObserver(checkAndScroll);
+    const observer = new MutationObserver(scheduleStickyScroll);
+    const resizeObserver = new ResizeObserver(() => {
+        if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+        }
+
+        resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = null;
+            scheduleStickyScroll();
+        });
+    });
 
     element.addEventListener('scroll', handleScroll, { passive: true });
     observer.observe(element, {
         childList: true,
         subtree: true,
+        attributes: true,
         characterData: true
     });
+    resizeObserver.observe(element);
 
     scrollToBottom();
 
     return {
-        scrollToBottom,
+        scrollToBottom: () => scrollToBottom('smooth'),
         dispose: () => {
             element.removeEventListener('scroll', handleScroll);
             observer.disconnect();
-            clearTimeout(scrollTimeout);
+            resizeObserver.disconnect();
+            if (resizeFrame !== null) {
+                cancelAnimationFrame(resizeFrame);
+            }
             clearTimeout(mutationDebounceTimeout);
         }
     };

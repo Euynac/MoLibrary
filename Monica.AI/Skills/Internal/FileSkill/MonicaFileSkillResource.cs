@@ -3,9 +3,18 @@ using Microsoft.Agents.AI;
 
 namespace Monica.AI.Skills.Internal.FileSkill;
 
-internal sealed class MonicaFileSkillResource(string name, string fullPath) : AgentSkillResource(name)
+internal sealed class MonicaFileSkillResource(
+    string name,
+    string fullPath,
+    string? description = null,
+    string? canonicalName = null)
+    : AgentSkillResource(name, description)
 {
     internal string FullPath { get; } = fullPath;
+
+    internal string CanonicalName { get; } = string.IsNullOrWhiteSpace(canonicalName)
+        ? name
+        : canonicalName;
 
     /// <inheritdoc />
     public override async Task<object?> ReadAsync(
