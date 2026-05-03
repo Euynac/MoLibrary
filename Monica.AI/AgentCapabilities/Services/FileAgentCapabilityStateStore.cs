@@ -109,6 +109,7 @@ public sealed class FileAgentCapabilityStateStore(
         state.Revision = Math.Max(1, state.Revision);
         state.SkillEntries = NormalizeEntries(state.SkillEntries);
         state.McpEntries = NormalizeEntries(state.McpEntries);
+        state.SkillMcpServers = NormalizeEntries(state.SkillMcpServers);
         return state;
     }
 

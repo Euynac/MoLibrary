@@ -165,6 +165,17 @@
                                         @L["Capabilities:Skill:External"]
                                     </MudChip>
                                 }
+                                @if (entry.CanExposeAsMcpServer)
+                                {
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@(entry.IsMcpServerExposureEnabled ? Color.Secondary : Color.Default)"
+                                             Variant="Variant.Outlined">
+                                        @(entry.IsMcpServerExposureEnabled
+                                            ? L["Capabilities:Skill:McpServerEnabled"]
+                                            : L["Capabilities:Skill:McpServerAvailable"])
+                                    </MudChip>
+                                }
                                 <span>@entry.Tools.Count @L["Capabilities:Tools"]</span>
                             </span>
                         </button>
@@ -320,6 +331,12 @@
                         @L["Capabilities:Skill:External"]
                     </MudChip>
                 }
+                @if (entry.CanExposeAsMcpServer)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                        @L["Capabilities:Skill:McpCapable"]
+                    </MudChip>
+                }
                 @if (entry.McpSourceKind is not null)
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpSourceKind</MudChip>
@@ -349,6 +366,32 @@
                 </div>
             }
 
+            @if (entry.CanExposeAsMcpServer)
+            {
+                <div class="skill-mcp-summary">
+                    <div class="skill-mcp-main">
+                        <MudIcon Icon="@Icons.Material.Filled.SettingsEthernet" Color="Color.Secondary" Size="Size.Small" />
+                        <div>
+                            <MudText Typo="Typo.subtitle2">@L["Capabilities:Skill:McpServerTitle"]</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @L["Capabilities:Skill:McpServerDescription", entry.SkillMcpServerName ?? entry.Name]
+                            </MudText>
+                        </div>
+                    </div>
+                    <MudSwitch T="bool"
+                               Value="@entry.IsMcpServerExposureEnabled"
+                               ValueChanged="@((bool enabled) => SetSkillMcpServerEnabledAsync(entry, enabled))"
+                               Color="Color.Secondary"
+                               Label="@L["Capabilities:Skill:McpServerToggle"]" />
+                    @if (entry.McpServerExposureRequiresRestart)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="restart-hint">
+                            @L["Capabilities:Skill:McpServerRestartHint"]
+                        </MudAlert>
+                    }
+                </div>
+            }
+
             @if (entry.McpExternalProfile is not null)
             {
                 <div class="capability-source-summary">
@@ -360,6 +403,14 @@
                             @L["Capabilities:Mcp:Headers", entry.McpExternalProfile.Headers.Count]
                         </MudText>
                     }
+                </div>
+            }
+            else if (entry.Kind == AgentCapabilityKind.Mcp
+                     && !string.IsNullOrWhiteSpace(entry.McpEndpointPath))
+            {
+                <div class="capability-source-summary">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Capabilities:Mcp:Endpoint"]</MudText>
+                    <MudText Typo="Typo.body2">@(entry.McpDisplayUrl ?? entry.McpEndpointPath)</MudText>
                 </div>
             }
 
@@ -565,6 +616,12 @@
     private async Task SetEntryEnabledAsync(AgentCapabilityEntryInfo entry, bool enabled)
     {
         var result = await CapabilityFacade.SetEntryEnabledAsync(entry.Kind, entry.Name, enabled);
+        await ApplyManagementResultAsync(result);
+    }
+
+    private async Task SetSkillMcpServerEnabledAsync(AgentCapabilityEntryInfo entry, bool enabled)
+    {
+        var result = await CapabilityFacade.SetSkillMcpServerEnabledAsync(entry.Name, enabled);
         await ApplyManagementResultAsync(result);
     }
 

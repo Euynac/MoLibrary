@@ -13,6 +13,8 @@ using Monica.AI.Mcp.Internal;
 using Monica.AI.Mcp.Models;
 using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Skills;
+using Monica.Core.Skills.Models;
 using Monica.Core.XmlDocumentation.Abstractions;
 using Monica.Modules;
 using MonicaMcpServer = Monica.AI.Mcp.Abstractions.McpServer;
@@ -24,6 +26,7 @@ namespace Monica.AI.Mcp.Services;
 /// </summary>
 public sealed class MonicaMcpCatalog(
     IEnumerable<MonicaMcpServer> localServers,
+    IEnumerable<Skill> skills,
     IEnumerable<ExternalMcpClientProfile> codeProfiles,
     IExternalMcpClientProfileStore profileStore,
     ExternalMcpClientFactory clientFactory,
@@ -41,6 +44,7 @@ public sealed class MonicaMcpCatalog(
     private readonly Lazy<IReadOnlyList<LocalMcpServerEntry>> _localEntries = new(() =>
         BuildLocalEntries(
             localServers.ToList(),
+            skills.ToList(),
             loadedModules.GetLoadedModuleKeys(),
             options.Value,
             serviceProvider,
@@ -60,14 +64,51 @@ public sealed class MonicaMcpCatalog(
     public bool HasStdioServers => _localEntries.Value.Any(entry => entry.TransportKind == McpServerTransportKind.Stdio);
 
     /// <summary>
-    /// Gets active MCP server tools exposed through Monica's MCP endpoint.
+    /// Applies HTTP MCP server options for one logical MCP server selected by route.
     /// </summary>
-    public IReadOnlyList<McpServerTool> GetMcpServerTools()
+    public bool TryConfigureHttpServerOptions(string? serverName, McpServerOptions serverOptions)
     {
-        return _localEntries.Value
-            .SelectMany(entry => entry.Tools)
-            .Select(tool => tool.SdkTool)
+        ArgumentNullException.ThrowIfNull(serverOptions);
+        if (string.IsNullOrWhiteSpace(serverName))
+        {
+            return false;
+        }
+
+        var entry = _localEntries.Value.FirstOrDefault(entry =>
+            entry.TransportKind == McpServerTransportKind.Http
+            && string.Equals(entry.Definition.Name, serverName.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+        {
+            return false;
+        }
+
+        ConfigureServerOptions(serverOptions, entry);
+        return true;
+    }
+
+    /// <summary>
+    /// Applies aggregate stdio MCP server options for all active stdio MCP servers.
+    /// </summary>
+    public bool TryConfigureStdioServerOptions(McpServerOptions serverOptions, AgentCapabilityState state)
+    {
+        ArgumentNullException.ThrowIfNull(serverOptions);
+        ArgumentNullException.ThrowIfNull(state);
+
+        var entries = _localEntries.Value
+            .Where(entry => entry.TransportKind == McpServerTransportKind.Stdio && entry.IsStartupEnabled(state))
             .ToList();
+        if (entries.Count == 0)
+        {
+            return false;
+        }
+
+        ValidateUniqueStdioToolNames(entries);
+        ConfigureServerOptions(
+            serverOptions,
+            CreateAggregateStdioImplementation(entries),
+            CreateAggregateInstructions(entries),
+            entries.SelectMany(entry => entry.Tools).Select(tool => tool.SdkTool));
+        return true;
     }
 
     /// <summary>
@@ -85,7 +126,8 @@ public sealed class MonicaMcpCatalog(
 
         var localTools = _localEntries.Value
             .Where(entry => entry.IsLocalToolEnabled
-                            && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Definition.Name))
+                            && state.IsEntryEnabled(AgentCapabilityKind.Mcp, entry.Definition.Name)
+                            && entry.IsStartupEnabled(state))
             .SelectMany(entry => entry.Tools)
             .Select(tool => tool.AgentTool)
             .OfType<AITool>()
@@ -189,43 +231,6 @@ public sealed class MonicaMcpCatalog(
         }
     }
 
-    /// <summary>
-    /// Creates MCP server implementation metadata from the active local server catalog.
-    /// </summary>
-    public Implementation CreateServerImplementation()
-    {
-        var localEntries = _localEntries.Value;
-        var title = localEntries.Count == 1
-            ? localEntries[0].Definition.Title
-            : "Monica MCP";
-
-        return new Implementation
-        {
-            Name = localEntries.Count == 1 ? localEntries[0].Definition.Name : "monica-mcp",
-            Title = string.IsNullOrWhiteSpace(title) ? null : title,
-            Version = localEntries.Count == 1 ? localEntries[0].Definition.Version : "1.0.0",
-            Description = localEntries.Count == 1
-                ? localEntries[0].Definition.Description
-                : "Aggregated MCP tools exposed by Monica.",
-            WebsiteUrl = localEntries.Count == 1 ? localEntries[0].Definition.WebsiteUrl : null
-        };
-    }
-
-    /// <summary>
-    /// Creates initialization instructions from all active local MCP servers.
-    /// </summary>
-    public string? CreateServerInstructions()
-    {
-        var instructions = _localEntries.Value
-            .Select(entry => entry.Definition.Instructions)
-            .Where(instruction => !string.IsNullOrWhiteSpace(instruction))
-            .ToList();
-
-        return instructions.Count == 0
-            ? null
-            : string.Join(Environment.NewLine + Environment.NewLine, instructions);
-    }
-
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -323,7 +328,7 @@ public sealed class MonicaMcpCatalog(
                 var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);
                 return new McpConnectivityTestResult(
                     entry.Definition.Name,
-                    McpCatalogSourceKind.LocalServer,
+                    entry.SourceKind,
                     true,
                     $"Connected to {endpoint}.",
                     Stopwatch.GetElapsedTime(startedAt),
@@ -334,7 +339,7 @@ public sealed class MonicaMcpCatalog(
             {
                 return new McpConnectivityTestResult(
                     entry.Definition.Name,
-                    McpCatalogSourceKind.LocalServer,
+                    entry.SourceKind,
                     false,
                     ex.Message,
                     Stopwatch.GetElapsedTime(startedAt),
@@ -349,7 +354,7 @@ public sealed class MonicaMcpCatalog(
 
         return new McpConnectivityTestResult(
             entry.Definition.Name,
-            McpCatalogSourceKind.LocalServer,
+            entry.SourceKind,
             true,
             message,
             Stopwatch.GetElapsedTime(startedAt),
@@ -411,6 +416,7 @@ public sealed class MonicaMcpCatalog(
 
     private static IReadOnlyList<LocalMcpServerEntry> BuildLocalEntries(
         IReadOnlyList<MonicaMcpServer> servers,
+        IReadOnlyList<Skill> skills,
         IReadOnlySet<ModuleKey> loadedModuleKeys,
         ModuleMcpOption options,
         IServiceProvider serviceProvider,
@@ -423,16 +429,28 @@ public sealed class MonicaMcpCatalog(
             .ToList();
 
         ValidateUniqueLocalServerNames(activeServers);
+        var activeSkills = skills
+            .Where(skill => IsActiveSkillMcpServer(skill, loadedModuleKeys, logger))
+            .OrderBy(skill => skill.McpServerDefinition!.Name, StringComparer.Ordinal)
+            .ToList();
+
+        ValidateUniqueSkillServerNames(activeSkills);
+        ValidateNoLocalServerNameCollision(activeServers, activeSkills);
 
         var entries = activeServers
             .Select(server =>
             {
                 var tools = McpServerToolDiscovery.Discover(server, serviceProvider, xmlDocumentationService);
-                return new LocalMcpServerEntry(server, options.McpHttpEndpointPath, options.McpHttpDisplayUrl, tools);
+                return LocalMcpServerEntry.FromServer(server, options.McpHttpEndpointPath, options.McpHttpDisplayUrl, tools);
             })
             .ToList();
 
-        ValidateUniqueMcpServerToolNames(entries.SelectMany(entry => entry.Tools));
+        entries.AddRange(activeSkills.Select(skill =>
+        {
+            var tools = McpServerToolDiscovery.DiscoverSkill(skill, serviceProvider, xmlDocumentationService);
+            return LocalMcpServerEntry.FromSkill(skill, options.McpHttpEndpointPath, options.McpHttpDisplayUrl, tools);
+        }));
+
         return entries;
     }
 
@@ -463,6 +481,41 @@ public sealed class MonicaMcpCatalog(
         return false;
     }
 
+    private static bool IsActiveSkillMcpServer(
+        Skill skill,
+        IReadOnlySet<ModuleKey> loadedModuleKeys,
+        ILogger logger)
+    {
+        var mcpDefinition = skill.McpServerDefinition;
+        if (mcpDefinition is null)
+        {
+            return false;
+        }
+
+        if (!skill.IsEnabled)
+        {
+            logger.LogDebug(
+                "Skipping MCP exposure for disabled AI skill '{SkillName}'.",
+                skill.Definition.Name);
+            return false;
+        }
+
+        var missing = skill.RequiredModules
+            .Where(required => !loadedModuleKeys.Contains(required))
+            .ToList();
+
+        if (missing.Count == 0)
+        {
+            return true;
+        }
+
+        logger.LogDebug(
+            "Skipping MCP exposure for AI skill '{SkillName}' because required modules are not loaded: {RequiredModules}.",
+            skill.Definition.Name,
+            string.Join(", ", missing));
+        return false;
+    }
+
     private static void ValidateUniqueLocalServerNames(IReadOnlyList<MonicaMcpServer> servers)
     {
         var duplicateNames = servers
@@ -475,6 +528,43 @@ public sealed class MonicaMcpCatalog(
         {
             throw new InvalidOperationException(
                 "Duplicate MCP server names are not allowed: " +
+                string.Join(", ", duplicateNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)) + ".");
+        }
+    }
+
+    private static void ValidateUniqueSkillServerNames(IReadOnlyList<Skill> skills)
+    {
+        var duplicateNames = skills
+            .GroupBy(skill => skill.McpServerDefinition!.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        if (duplicateNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Duplicate skill-backed MCP server names are not allowed: " +
+                string.Join(", ", duplicateNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)) + ".");
+        }
+    }
+
+    private static void ValidateNoLocalServerNameCollision(
+        IReadOnlyList<MonicaMcpServer> servers,
+        IReadOnlyList<Skill> skills)
+    {
+        var serverNames = servers
+            .Select(server => server.Definition.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var duplicateNames = skills
+            .Select(skill => skill.McpServerDefinition!.Name)
+            .Where(serverNames.Contains)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (duplicateNames.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "MCP server names must be unique across local servers and skill-backed servers: " +
                 string.Join(", ", duplicateNames.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)) + ".");
         }
     }
@@ -495,9 +585,10 @@ public sealed class MonicaMcpCatalog(
         }
     }
 
-    private static void ValidateUniqueMcpServerToolNames(IEnumerable<McpServerToolDescriptor> tools)
+    private static void ValidateUniqueStdioToolNames(IReadOnlyList<LocalMcpServerEntry> entries)
     {
-        var duplicateNames = tools
+        var duplicateNames = entries
+            .SelectMany(entry => entry.Tools)
             .GroupBy(tool => tool.Name, StringComparer.Ordinal)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
@@ -505,9 +596,22 @@ public sealed class MonicaMcpCatalog(
 
         if (duplicateNames.Count > 0)
         {
+            var details = duplicateNames
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .Select(name =>
+                {
+                    var servers = entries
+                        .Where(entry => entry.Tools.Any(tool => string.Equals(tool.Name, name, StringComparison.Ordinal)))
+                        .Select(entry => entry.Definition.Name)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(server => server, StringComparer.OrdinalIgnoreCase);
+                    return $"{name} ({string.Join(", ", servers)})";
+                });
+
             throw new InvalidOperationException(
-                "Duplicate MCP server tool names are not allowed: " +
-                string.Join(", ", duplicateNames.OrderBy(name => name, StringComparer.Ordinal)) + ".");
+                "Duplicate stdio MCP server tool names are not allowed because stdio exposes one aggregate tool namespace. " +
+                "Use HTTP transport for per-server URLs or rename the duplicate tools: " +
+                string.Join("; ", details) + ".");
         }
     }
 
@@ -527,29 +631,141 @@ public sealed class MonicaMcpCatalog(
         }
     }
 
+    private static void ConfigureServerOptions(McpServerOptions serverOptions, LocalMcpServerEntry entry)
+    {
+        ConfigureServerOptions(
+            serverOptions,
+            CreateImplementation(entry),
+            entry.Definition.Instructions,
+            entry.Tools.Select(tool => tool.SdkTool));
+    }
+
+    private static void ConfigureServerOptions(
+        McpServerOptions serverOptions,
+        Implementation implementation,
+        string? instructions,
+        IEnumerable<McpServerTool> tools)
+    {
+        serverOptions.ServerInfo = implementation;
+        serverOptions.ServerInstructions = string.IsNullOrWhiteSpace(instructions) ? null : instructions;
+        serverOptions.ToolCollection = new McpServerPrimitiveCollection<McpServerTool>();
+
+        foreach (var tool in tools)
+        {
+            serverOptions.ToolCollection.Add(tool);
+        }
+    }
+
+    private static Implementation CreateImplementation(LocalMcpServerEntry entry)
+    {
+        return new Implementation
+        {
+            Name = entry.Definition.Name,
+            Title = string.IsNullOrWhiteSpace(entry.Definition.Title) ? null : entry.Definition.Title,
+            Version = entry.Definition.Version,
+            Description = entry.Definition.Description,
+            WebsiteUrl = entry.Definition.WebsiteUrl
+        };
+    }
+
+    private static Implementation CreateAggregateStdioImplementation(IReadOnlyList<LocalMcpServerEntry> entries)
+    {
+        return entries.Count == 1
+            ? CreateImplementation(entries[0])
+            : new Implementation
+            {
+                Name = "monica-mcp-stdio",
+                Title = "Monica MCP Stdio",
+                Version = "1.0.0",
+                Description = "Aggregated stdio MCP tools exposed by Monica."
+            };
+    }
+
+    private static string? CreateAggregateInstructions(IReadOnlyList<LocalMcpServerEntry> entries)
+    {
+        var instructions = entries
+            .Select(entry => entry.Definition.Instructions)
+            .Where(instruction => !string.IsNullOrWhiteSpace(instruction))
+            .ToList();
+
+        return instructions.Count == 0
+            ? null
+            : string.Join(Environment.NewLine + Environment.NewLine, instructions);
+    }
+
     private sealed record LocalMcpServerEntry(
-        MonicaMcpServer Server,
+        McpServerDefinition Definition,
+        string? SkillName,
+        bool SkillMcpEnabledByDefault,
+        McpCatalogSourceKind SourceKind,
+        McpServerTransportKind TransportKind,
+        bool IsLocalToolEnabled,
         string HttpEndpointPath,
         string? HttpDisplayUrl,
         IReadOnlyList<McpServerToolDescriptor> Tools)
     {
-        internal McpServerDefinition Definition => Server.Definition;
+        internal static LocalMcpServerEntry FromServer(
+            MonicaMcpServer server,
+            string httpEndpointPath,
+            string? httpDisplayUrl,
+            IReadOnlyList<McpServerToolDescriptor> tools)
+        {
+            return new LocalMcpServerEntry(
+                server.Definition,
+                null,
+                false,
+                McpCatalogSourceKind.LocalServer,
+                server.TransportKind,
+                server.IsLocalToolEnabled,
+                ResolveHttpEndpointPath(server.TransportKind, httpEndpointPath, server.Definition.Name),
+                ResolveHttpDisplayUrl(server.TransportKind, httpDisplayUrl, server.Definition.Name),
+                tools);
+        }
 
-        internal McpServerTransportKind TransportKind => Server.TransportKind;
+        internal static LocalMcpServerEntry FromSkill(
+            Skill skill,
+            string httpEndpointPath,
+            string? httpDisplayUrl,
+            IReadOnlyList<McpServerToolDescriptor> tools)
+        {
+            var skillDefinition = skill.McpServerDefinition
+                                  ?? throw new InvalidOperationException(
+                                      $"Skill '{skill.Definition.Name}' does not define MCP server exposure metadata.");
 
-        internal bool IsLocalToolEnabled => Server.IsLocalToolEnabled;
+            return new LocalMcpServerEntry(
+                new McpServerDefinition(skillDefinition.Name, skillDefinition.Description)
+                {
+                    Version = skillDefinition.Version,
+                    Title = skillDefinition.Title ?? skill.Definition.Name,
+                    Instructions = skillDefinition.Instructions ?? skill.Definition.Instructions,
+                    WebsiteUrl = skillDefinition.WebsiteUrl
+                },
+                skill.Definition.Name,
+                skillDefinition.EnabledByDefault,
+                McpCatalogSourceKind.SkillServer,
+                ToMcpTransportKind(skillDefinition.TransportKind),
+                skillDefinition.IsLocalToolEnabled,
+                ResolveHttpEndpointPath(ToMcpTransportKind(skillDefinition.TransportKind), httpEndpointPath, skillDefinition.Name),
+                ResolveHttpDisplayUrl(ToMcpTransportKind(skillDefinition.TransportKind), httpDisplayUrl, skillDefinition.Name),
+                tools);
+        }
 
         internal McpCatalogEntryInfo ToInfo(AgentCapabilityState state)
         {
             var catalogEnabled = state.McpEnabled;
             var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Definition.Name);
-            var disabledReason = ResolveDisabledReason(IsLocalToolEnabled, catalogEnabled, entryEnabled);
+            var startupEnabled = IsStartupEnabled(state);
+            var disabledReason = ResolveDisabledReason(
+                IsLocalToolEnabled,
+                catalogEnabled,
+                entryEnabled,
+                startupEnabled: startupEnabled);
             var isAgentToolEnabled = disabledReason is null;
 
             return new McpCatalogEntryInfo(
                 Definition.Name,
                 Definition.Description,
-                McpCatalogSourceKind.LocalServer,
+                SourceKind,
                 TransportKind,
                 TransportKind == McpServerTransportKind.Http ? HttpEndpointPath : null,
                 TransportKind == McpServerTransportKind.Http ? HttpDisplayUrl : null,
@@ -565,6 +781,32 @@ public sealed class MonicaMcpCatalog(
                     tool.Description,
                     isAgentToolEnabled,
                     AgentCapabilitySchemaParser.FormatSchema(tool.SdkTool.ProtocolTool.InputSchema))).ToList());
+        }
+
+        internal bool IsStartupEnabled(AgentCapabilityState state)
+        {
+            return SkillName is null
+                   || state.IsSkillMcpServerEnabled(SkillName, SkillMcpEnabledByDefault);
+        }
+
+        private static string ResolveHttpEndpointPath(
+            McpServerTransportKind transportKind,
+            string httpEndpointPath,
+            string serverName)
+        {
+            return transportKind == McpServerTransportKind.Http
+                ? ModuleMcpOption.CreateHttpEndpointPath(httpEndpointPath, serverName)
+                : httpEndpointPath;
+        }
+
+        private static string? ResolveHttpDisplayUrl(
+            McpServerTransportKind transportKind,
+            string? httpDisplayUrl,
+            string serverName)
+        {
+            return transportKind == McpServerTransportKind.Http
+                ? ModuleMcpOption.CreateHttpDisplayUrl(httpDisplayUrl, serverName)
+                : httpDisplayUrl;
         }
     }
 
@@ -627,24 +869,40 @@ public sealed class MonicaMcpCatalog(
                     AgentCapabilitySchemaParser.ParseParameters(schema));
             }).ToList(),
             [],
-            entry.SourceKind,
-            entry.TransportKind,
-            entry.EndpointPath,
-            entry.DisplayUrl,
-            entry.ExternalProfile,
-            entry.IsUserManaged,
-            entry.DiscoveryError);
+            mcpSourceKind: entry.SourceKind,
+            mcpTransportKind: entry.TransportKind,
+            mcpEndpointPath: entry.EndpointPath,
+            mcpDisplayUrl: entry.DisplayUrl,
+            mcpExternalProfile: entry.ExternalProfile,
+            isUserManaged: entry.IsUserManaged,
+            discoveryError: entry.DiscoveryError);
+    }
+
+    private static McpServerTransportKind ToMcpTransportKind(SkillMcpServerTransportKind transportKind)
+    {
+        return transportKind switch
+        {
+            SkillMcpServerTransportKind.Http => McpServerTransportKind.Http,
+            SkillMcpServerTransportKind.Stdio => McpServerTransportKind.Stdio,
+            _ => throw new ArgumentOutOfRangeException(nameof(transportKind), transportKind, null)
+        };
     }
 
     private static string? ResolveDisabledReason(
         bool builtInEnabled,
         bool catalogEnabled,
         bool entryEnabled,
-        string? discoveryError = null)
+        string? discoveryError = null,
+        bool startupEnabled = true)
     {
         if (!string.IsNullOrWhiteSpace(discoveryError))
         {
             return discoveryError;
+        }
+
+        if (!startupEnabled)
+        {
+            return "This skill-backed MCP server is disabled in persisted Skill MCP exposure settings. Restart the host after changing this setting.";
         }
 
         if (!builtInEnabled)

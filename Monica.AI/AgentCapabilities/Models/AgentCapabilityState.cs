@@ -31,6 +31,11 @@ public sealed class AgentCapabilityState
     public Dictionary<string, bool> McpEntries { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Per-skill MCP exposure overrides keyed by skill name. Missing entries use the skill author's default.
+    /// </summary>
+    public Dictionary<string, bool> SkillMcpServers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets the persisted entry state for the given capability. Missing entries default to enabled.
     /// </summary>
     public bool IsEntryEnabled(AgentCapabilityKind kind, string name)
@@ -45,5 +50,17 @@ public sealed class AgentCapabilityState
     public bool IsCatalogEnabled(AgentCapabilityKind kind)
     {
         return kind == AgentCapabilityKind.Skill ? SkillsEnabled : McpEnabled;
+    }
+
+    /// <summary>
+    /// Gets whether a skill should be exposed as an MCP server after applying runtime overrides.
+    /// </summary>
+    /// <param name="skillName">Skill name from the skill definition.</param>
+    /// <param name="enabledByDefault">Author-defined exposure default used when no runtime override exists.</param>
+    public bool IsSkillMcpServerEnabled(string skillName, bool enabledByDefault)
+    {
+        return SkillMcpServers.TryGetValue(skillName, out var isEnabled)
+            ? isEnabled
+            : enabledByDefault;
     }
 }

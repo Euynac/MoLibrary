@@ -508,6 +508,13 @@
     "Skill": {
       "External": "External Skill",
       "SourcePath": "Source path",
+      "McpCapable": "MCP capable",
+      "McpServerAvailable": "MCP available",
+      "McpServerEnabled": "MCP server",
+      "McpServerTitle": "Skill as MCP server",
+      "McpServerDescription": "Expose this skill externally as MCP server '{0}'.",
+      "McpServerToggle": "Expose as MCP",
+      "McpServerRestartHint": "This setting is persisted. Restart the host for MCP endpoint registration to reflect the change.",
       "Sources": {
         "Title": "External skill sources",
         "Summary": "{0} skill(s) loaded from {1} source registration(s).",

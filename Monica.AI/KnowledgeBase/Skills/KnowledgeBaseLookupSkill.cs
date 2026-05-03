@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.AI.KnowledgeBase.Abstractions;
+using Monica.AI.KnowledgeBase.Models;
 using Monica.AI.KnowledgeBase.Services.Support;
 using Monica.AI.Services.Support;
 using Monica.Core.Modularity.Models;
@@ -26,12 +27,29 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
     /// <inheritdoc />
     public override SkillDefinition Definition { get; } = new(
         "knowledge-base-lookup",
-        "List, browse, and read knowledge-base documents without semantic search.",
+        "List, fuzzy-search, regex-search, browse, and read knowledge-base documents without semantic search.",
         "Use these scripts when the user wants to discover available knowledge bases, inspect document inventory, " +
-        "navigate document hierarchy, or read raw source text. This skill does not perform semantic search; use rag-knowledge when semantic retrieval is needed and available.");
+        "navigate document hierarchy, fuzzy-search document metadata or source content, run targeted regex searches, " +
+        "or read raw source text. For hybrid retrieval, use this skill first to find exact files, names, paths, or " +
+        "literal/regex matches, then combine those results with rag-knowledge semantic retrieval when RAG is available. " +
+        "Prefer search-knowledge-documents before broad browsing when the user gives keywords, filenames, rules, or phrases.");
 
     /// <inheritdoc />
     public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.KnowledgeBase];
+
+    /// <summary>
+    /// Gets the optional MCP server definition for external knowledge-base lookup clients.
+    /// </summary>
+    public override SkillMcpServerDefinition McpServerDefinition { get; } = new(
+        "knowledge-base-lookup",
+        "List, fuzzy-search, regex-search, browse, and read Monica knowledge-base documents.")
+    {
+        Title = "Knowledge Base Lookup",
+        Instructions =
+            "Use fuzzy or regex lookup to locate exact knowledge-base source documents before reading content. " +
+            "When semantic RAG search is also available, combine literal lookup results with RAG retrieval.",
+        EnabledByDefault = true
+    };
 
     /// <summary>
     /// Lists all knowledge bases.
@@ -65,6 +83,44 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
     {
         var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
         var result = await lookup.BrowseDocumentsAsync(resolvedKbId, directoryPath, maxResults, ct);
+        return JsonSerializer.Serialize(result, _toolJsonOptions);
+    }
+
+    /// <summary>
+    /// Searches documents in a knowledge base using fuzzy metadata/content matching or regular expressions.
+    /// </summary>
+    /// <param name="kbId">Knowledge base id.</param>
+    /// <param name="query">Fuzzy query text or regular expression pattern.</param>
+    /// <param name="services">Invocation service provider used to read the current runtime context.</param>
+    /// <param name="mode">Search mode: fuzzy or regex.</param>
+    /// <param name="directoryPath">Optional directory path filter.</param>
+    /// <param name="includeContent">Whether to search source content when it is available.</param>
+    /// <param name="maxResults">Maximum results to return.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Serialized document search results.</returns>
+    [SkillTool(
+        Name = "search-knowledge-documents",
+        Description = "Fuzzy-search or regex-search knowledge-base document names, paths, directories, and available source content. Use before RAG for hybrid retrieval.")]
+    public async Task<string> SearchDocumentsAsync(
+        string kbId,
+        string query,
+        IServiceProvider services,
+        string mode = "fuzzy",
+        string? directoryPath = null,
+        bool includeContent = true,
+        int maxResults = 20,
+        CancellationToken ct = default)
+    {
+        var resolvedKbId = ResolveKnowledgeBaseId(kbId, services);
+        var searchMode = ParseSearchMode(mode);
+        var result = await lookup.SearchDocumentsAsync(
+            resolvedKbId,
+            query,
+            searchMode,
+            directoryPath,
+            includeContent,
+            maxResults,
+            ct);
         return JsonSerializer.Serialize(result, _toolJsonOptions);
     }
 
@@ -140,5 +196,17 @@ public sealed class KnowledgeBaseLookupSkill(IKnowledgeBaseLookupService lookup)
 
         throw new InvalidOperationException(
             "Knowledge base id is required unless exactly one knowledge base is selected for this chat session.");
+    }
+
+    private static KnowledgeDocumentSearchMode ParseSearchMode(string? mode)
+    {
+        if (string.IsNullOrWhiteSpace(mode))
+        {
+            return KnowledgeDocumentSearchMode.Fuzzy;
+        }
+
+        return Enum.TryParse<KnowledgeDocumentSearchMode>(mode, ignoreCase: true, out var parsed)
+            ? parsed
+            : throw new ArgumentException("Knowledge document search mode must be 'fuzzy' or 'regex'.", nameof(mode));
     }
 }

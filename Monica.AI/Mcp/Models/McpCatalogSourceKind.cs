@@ -11,6 +11,11 @@ public enum McpCatalogSourceKind
     LocalServer,
 
     /// <summary>
+    /// The entry was generated from a Monica skill configured for MCP exposure.
+    /// </summary>
+    SkillServer,
+
+    /// <summary>
     /// The entry was registered from an external MCP client factory.
     /// </summary>
     ExternalClient

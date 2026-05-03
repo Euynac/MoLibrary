@@ -41,11 +41,26 @@ public sealed class RAGKnowledgeSkill(
         "Retrieve grounded facts and citations from indexed knowledge bases.",
         "Use these scripts when the user asks about content in the selected knowledge bases. " +
         "Rewrite the question into a focused retrieval query before semantic search. " +
+        "For hybrid retrieval, first use knowledge-base-lookup search-knowledge-documents to find exact filenames, paths, " +
+        "literal phrases, or regex matches, then run semantic search here for concept-level recall. " +
         "Use browse-knowledge-documents to discover candidate documents, browse-knowledge-document-tree to navigate folder hierarchy, " +
         "and get-knowledge-document-content to load source text. Always cite source name and source link.");
 
     /// <inheritdoc />
     public override IEnumerable<ModuleKey> RequiredModules => [BuiltInModuleKey.RAG];
+
+    /// <summary>
+    /// Gets the optional MCP server definition for external RAG clients.
+    /// </summary>
+    public override SkillMcpServerDefinition McpServerDefinition { get; } = new(
+        "rag-knowledge",
+        "Retrieve grounded semantic results and citations from selected RAG-enabled knowledge bases.")
+    {
+        Title = "RAG Knowledge",
+        Instructions =
+            "Run semantic retrieval over selected RAG-enabled knowledge bases. For hybrid retrieval, combine these results with knowledge-base-lookup fuzzy or regex document search.",
+        EnabledByDefault = true
+    };
 
     /// <summary>
     /// Semantic search over the selected knowledge bases.

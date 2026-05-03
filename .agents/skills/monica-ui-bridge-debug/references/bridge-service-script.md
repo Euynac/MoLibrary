@@ -21,6 +21,8 @@ Required arguments:
 - `--service-url`
 - `--task-dir`
 
+`--service-url` must be concrete, but it does not have to come from the user. The agent may discover it from launch settings, an existing project-owned listener, or an unused localhost port before calling the script.
+
 Optional arguments:
 
 - `--project-file`
@@ -84,6 +86,8 @@ When the script detects WSL plus a Windows `dotnet.exe`, it converts the project
 ## WSL NAT behavior
 
 When `--service-url` uses a non-loopback IP address, the script keeps the external access URL unchanged but binds the bridge process to `0.0.0.0:<port>`.
+
+For loopback URLs, the script also passes the requested URL to `dotnet run -- --urls`, so a discovered `http://localhost:<port>` value is honored by the bridge process.
 
 ## Recommended sub-agent split
 

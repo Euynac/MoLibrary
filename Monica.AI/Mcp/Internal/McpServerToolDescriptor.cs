@@ -8,11 +8,12 @@ namespace Monica.AI.Mcp.Internal;
 
 internal sealed record McpServerToolDescriptor(
     string ServerName,
+    string? SkillName,
     McpServerTransportKind TransportKind,
     bool IsLocalToolEnabled,
     string Name,
     string Description,
     MethodInfo Method,
-    MonicaMcpServer Server,
+    object Target,
     McpServerTool SdkTool,
     AITool? AgentTool);

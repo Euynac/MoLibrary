@@ -27,6 +27,18 @@ public interface IKnowledgeBaseLookupService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Searches documents in a knowledge base using fuzzy metadata/content matching or regular expressions.
+    /// </summary>
+    Task<IReadOnlyList<KnowledgeDocumentSearchResult>> SearchDocumentsAsync(
+        string kbId,
+        string query,
+        KnowledgeDocumentSearchMode mode = KnowledgeDocumentSearchMode.Fuzzy,
+        string? directoryPath = null,
+        bool includeContent = true,
+        int maxResults = 20,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Gets a directory tree built from knowledge-base document paths.
     /// </summary>
     Task<KnowledgeDocumentTreeNode?> GetDocumentTreeAsync(

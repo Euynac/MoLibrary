@@ -126,6 +126,30 @@ public sealed class AgentCapabilityFacade(
     }
 
     /// <summary>
+    /// Sets whether a skill should be exposed as an MCP server on the next host startup.
+    /// </summary>
+    public async Task<Res<AgentCapabilityManagementInfo>> SetSkillMcpServerEnabledAsync(
+        string skillName,
+        bool isEnabled,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(skillName);
+
+        await stateStore.UpdateAsync(state =>
+        {
+            if (state.SkillMcpServers.TryGetValue(skillName, out var current) && current == isEnabled)
+            {
+                return false;
+            }
+
+            state.SkillMcpServers[skillName.Trim()] = isEnabled;
+            return true;
+        }, ct);
+
+        return await GetManagementInfoAsync(ct);
+    }
+
+    /// <summary>
     /// Tests connectivity or readiness for an MCP entry.
     /// </summary>
     public async Task<Res<McpConnectivityTestResult>> TestMcpConnectivityAsync(

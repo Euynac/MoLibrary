@@ -37,6 +37,17 @@ public abstract class Skill
     public virtual bool IsEnabled => true;
 
     /// <summary>
+    /// Gets optional metadata that allows this skill to be exposed as a local MCP server.
+    /// </summary>
+    /// <remarks>
+    /// Return <see langword="null" /> for normal in-process skills. When a definition is provided, Monica can
+    /// adapt the skill's <c>SkillToolAttribute</c> methods into MCP tools and list the skill-backed MCP server in
+    /// capability management UIs. Runtime changes to this exposure are persisted, but the MCP endpoint is usually
+    /// materialized at startup, so enabling or disabling exposure may require restarting the host.
+    /// </remarks>
+    public virtual SkillMcpServerDefinition? McpServerDefinition => null;
+
+    /// <summary>
     /// Gets serializer options used by adapters to marshal skill scripts and dynamic resources.
     /// </summary>
     public virtual JsonSerializerOptions? SerializerOptions => null;

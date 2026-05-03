@@ -12,6 +12,7 @@ using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
+using Monica.Core.Skills;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -44,11 +45,13 @@ public sealed class ModuleMcp(ModuleMcpOption option)
       IBusinessTypeIterator
 {
     private readonly List<Type> _mcpTypes = [];
+    private readonly List<Type> _skillTypes = [];
 
     /// <inheritdoc />
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleXmlDocumentationGuide>().Register();
+        DependsOnModule<ModuleSkillSystemGuide>().Register();
     }
 
     /// <inheritdoc />
@@ -66,6 +69,12 @@ public sealed class ModuleMcp(ModuleMcpOption option)
                 && type.IsAssignableTo(typeof(McpServer)))
             {
                 _mcpTypes.Add(type);
+            }
+
+            if (type is { IsClass: true, IsAbstract: false }
+                && type.IsAssignableTo(typeof(Skill)))
+            {
+                _skillTypes.Add(type);
             }
 
             yield return type;
@@ -91,11 +100,25 @@ public sealed class ModuleMcp(ModuleMcpOption option)
             ServiceDescriptor.Singleton<IConfigureOptions<ModelContextProtocol.Server.McpServerOptions>, McpServerOptionsConfigurator>());
 
         var mcpBuilder = services.AddMcpServer();
-        if (_mcpTypes.Count > 0)
+        if (_mcpTypes.Count > 0 || _skillTypes.Count > 0)
         {
             mcpBuilder.WithHttpTransport(transportOptions =>
             {
                 transportOptions.Stateless = option.McpHttpStateless;
+                transportOptions.ConfigureSessionOptions = (httpContext, serverOptions, _) =>
+                {
+                    var catalog = httpContext.RequestServices.GetRequiredService<MonicaMcpCatalog>();
+                    var serverName = httpContext.Request.RouteValues[ModuleMcpOption.HTTP_SERVER_ROUTE_VALUE]?.ToString();
+                    if (!catalog.TryConfigureHttpServerOptions(serverName, serverOptions))
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(serverName)
+                                ? "HTTP MCP server name is required in the endpoint route."
+                                : $"HTTP MCP server '{serverName}' was not found or is not configured for HTTP transport.");
+                    }
+
+                    return Task.CompletedTask;
+                };
             });
             services.AddHostedService<MonicaStdioMcpHostedService>();
         }
@@ -120,7 +143,7 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 
         UseEndpoints(app, endpoints =>
         {
-            endpoints.MapMcp(Option.McpHttpEndpointPath);
+            endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern());
         });
     }
 }
@@ -130,10 +153,13 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 /// </summary>
 public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
 {
+    internal const string HTTP_SERVER_ROUTE_VALUE = "serverName";
+
     internal List<ExternalMcpClientProfile> ExternalMcpClientProfiles { get; } = [];
 
     /// <summary>
-    /// Route pattern used when Monica-defined MCP servers choose HTTP transport.
+    /// Base route pattern used when Monica-defined MCP servers choose HTTP transport.
+    /// Monica appends a <c>{serverName}</c> route segment so each logical HTTP MCP server owns an isolated tool namespace.
     /// The ASP.NET Core host remains responsible for binding addresses, ports, and TLS.
     /// </summary>
     public string McpHttpEndpointPath { get; set; } = "/mcp";
@@ -167,6 +193,52 @@ public sealed class ModuleMcpOption : ModuleOptions<ModuleMcp>
         normalized.Validate();
         ExternalMcpClientProfiles.Add(normalized);
     }
+
+    internal string CreateHttpEndpointRoutePattern()
+    {
+        return AppendServerNameSegment(NormalizeHttpEndpointBasePath(McpHttpEndpointPath), rawServerName: false);
+    }
+
+    internal static string CreateHttpEndpointPath(string basePath, string serverName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(serverName);
+        return AppendServerNameSegment(NormalizeHttpEndpointBasePath(basePath), serverName);
+    }
+
+    internal static string? CreateHttpDisplayUrl(string? displayBaseUrl, string serverName)
+    {
+        if (string.IsNullOrWhiteSpace(displayBaseUrl))
+        {
+            return null;
+        }
+
+        var normalizedBaseUrl = displayBaseUrl.TrimEnd('/');
+        return $"{normalizedBaseUrl}/{Uri.EscapeDataString(serverName.Trim())}";
+    }
+
+    private static string NormalizeHttpEndpointBasePath(string endpointPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpointPath);
+
+        var path = endpointPath.Trim().TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        return path.StartsWith('/') ? path : "/" + path;
+    }
+
+    private static string AppendServerNameSegment(string basePath, string? serverName = null, bool rawServerName = true)
+    {
+        var segment = rawServerName
+            ? Uri.EscapeDataString(serverName ?? string.Empty)
+            : $"{{{HTTP_SERVER_ROUTE_VALUE}}}";
+
+        return string.IsNullOrWhiteSpace(basePath)
+            ? "/" + segment
+            : basePath + "/" + segment;
+    }
 }
 
 /// <summary>
@@ -178,8 +250,8 @@ public sealed class ModuleMcpGuide
     /// <summary>
     /// Configures the HTTP route used by Monica-defined MCP servers that select HTTP transport.
     /// </summary>
-    /// <param name="endpointPath">ASP.NET Core route pattern for the MCP endpoint. Defaults to <c>"/mcp"</c>.</param>
-    /// <param name="displayUrl">Optional externally reachable URL shown in future management UIs.</param>
+    /// <param name="endpointPath">ASP.NET Core base route pattern for HTTP MCP endpoints. Defaults to <c>"/mcp"</c>. Monica appends <c>/{serverName}</c>.</param>
+    /// <param name="displayUrl">Optional externally reachable base URL shown in management UIs. Monica appends each MCP server name.</param>
     /// <param name="stateless">Whether Streamable HTTP should use stateless mode.</param>
     /// <returns>The current guide instance.</returns>
     public ModuleMcpGuide ConfigureMcpHttpEndpoint(

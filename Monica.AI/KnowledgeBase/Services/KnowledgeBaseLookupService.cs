@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Monica.AI.KnowledgeBase.Abstractions;
 using Monica.AI.KnowledgeBase.Models;
 using Monica.Markdown.Abstractions;
@@ -14,6 +15,8 @@ public sealed class KnowledgeBaseLookupService(
 {
     private const int DEFAULT_MAX_CHARACTERS = 8000;
     private const int MAX_MAX_CHARACTERS = 32000;
+    private const int CONTENT_PREVIEW_RADIUS = 180;
+    private const int REGEX_TIMEOUT_MILLISECONDS = 500;
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<KnowledgeBaseSummary>> ListAsync(CancellationToken ct = default)
@@ -43,6 +46,57 @@ public sealed class KnowledgeBaseLookupService(
             .OrderBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
             .Take(Math.Clamp(maxResults, 1, 500))
             .Select(ToDocumentSummary)
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<KnowledgeDocumentSearchResult>> SearchDocumentsAsync(
+        string kbId,
+        string query,
+        KnowledgeDocumentSearchMode mode = KnowledgeDocumentSearchMode.Fuzzy,
+        string? directoryPath = null,
+        bool includeContent = true,
+        int maxResults = 20,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+
+        var normalizedQuery = NormalizeSearchText(query);
+        var normalizedDirectoryPath = NormalizeDirectoryPath(directoryPath);
+        var inventory = await knowledgeBaseService.GetDocumentInventoryAsync(kbId, ct);
+        var documents = inventory
+            .Where(item => MatchesDirectory(item.Id, normalizedDirectoryPath))
+            .ToList();
+
+        var regex = mode == KnowledgeDocumentSearchMode.Regex
+            ? CreateSearchRegex(normalizedQuery)
+            : null;
+        var tokens = mode == KnowledgeDocumentSearchMode.Fuzzy
+            ? SplitSearchTokens(normalizedQuery)
+            : [];
+        var results = new List<KnowledgeDocumentSearchResult>();
+
+        foreach (var document in documents)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var content = includeContent
+                ? await LoadDocumentContentAsync(kbId, document, ct)
+                : null;
+            var result = mode == KnowledgeDocumentSearchMode.Regex
+                ? MatchByRegex(document, regex!, content)
+                : MatchByFuzzy(document, normalizedQuery, tokens, content);
+
+            if (result is not null)
+            {
+                results.Add(result);
+            }
+        }
+
+        return results
+            .OrderByDescending(static result => result.Score)
+            .ThenBy(static result => result.DocumentId, StringComparer.OrdinalIgnoreCase)
+            .Take(Math.Clamp(maxResults, 1, 200))
             .ToList();
     }
 
@@ -137,6 +191,221 @@ public sealed class KnowledgeBaseLookupService(
             item.Status.ToString(),
             item.ChunkCount,
             item.IndexedAt);
+
+    private static KnowledgeDocumentSearchResult? MatchByFuzzy(
+        DocumentQueueItem document,
+        string normalizedQuery,
+        IReadOnlyList<string> tokens,
+        string? content)
+    {
+        if (tokens.Count == 0)
+        {
+            return null;
+        }
+
+        var summary = ToDocumentSummary(document);
+        var fields = new List<SearchField>
+        {
+            new SearchField(summary.Name, KnowledgeDocumentSearchMatchField.Name, 240d),
+            new SearchField(summary.DocumentId, KnowledgeDocumentSearchMatchField.DocumentId, 210d),
+            new SearchField(summary.DirectoryPath, KnowledgeDocumentSearchMatchField.DirectoryPath, 160d)
+        };
+        if (content is not null)
+        {
+            fields.Add(new SearchField(content, KnowledgeDocumentSearchMatchField.Content, 120d));
+        }
+
+        KnowledgeDocumentSearchResult? best = null;
+        foreach (var field in fields)
+        {
+            var match = ScoreFuzzyField(summary, field, normalizedQuery, tokens, content is not null);
+            if (match is not null && (best is null || match.Score > best.Score))
+            {
+                best = match;
+            }
+        }
+
+        return best;
+    }
+
+    private static KnowledgeDocumentSearchResult? ScoreFuzzyField(
+        KnowledgeDocumentSummary summary,
+        SearchField field,
+        string normalizedQuery,
+        IReadOnlyList<string> tokens,
+        bool contentAvailable)
+    {
+        if (string.IsNullOrWhiteSpace(field.Text))
+        {
+            return null;
+        }
+
+        var exactIndex = field.Text.IndexOf(normalizedQuery, StringComparison.OrdinalIgnoreCase);
+        var matchedTokens = tokens
+            .Select(token => new
+            {
+                Token = token,
+                Index = field.Text.IndexOf(token, StringComparison.OrdinalIgnoreCase)
+            })
+            .Where(static token => token.Index >= 0)
+            .ToList();
+
+        if (exactIndex < 0 && matchedTokens.Count == 0)
+        {
+            return null;
+        }
+
+        var firstIndex = exactIndex >= 0
+            ? exactIndex
+            : matchedTokens.Min(static token => token.Index);
+        var matchLength = exactIndex >= 0
+            ? normalizedQuery.Length
+            : matchedTokens
+                .OrderBy(static token => token.Index)
+                .First()
+                .Token
+                .Length;
+        var score = field.Weight;
+        if (exactIndex >= 0)
+        {
+            score += 120;
+        }
+
+        score += matchedTokens.Count * 40d / tokens.Count;
+        score -= Math.Min(firstIndex, 500) * 0.04;
+
+        return BuildSearchResult(
+            summary,
+            KnowledgeDocumentSearchMode.Fuzzy,
+            field.MatchField,
+            score,
+            field.Text,
+            firstIndex,
+            matchLength,
+            contentSearched: field.MatchField == KnowledgeDocumentSearchMatchField.Content,
+            contentAvailable);
+    }
+
+    private static KnowledgeDocumentSearchResult? MatchByRegex(
+        DocumentQueueItem document,
+        Regex regex,
+        string? content)
+    {
+        var summary = ToDocumentSummary(document);
+        var fields = new List<SearchField>
+        {
+            new SearchField(summary.Name, KnowledgeDocumentSearchMatchField.Name, 240d),
+            new SearchField(summary.DocumentId, KnowledgeDocumentSearchMatchField.DocumentId, 210d),
+            new SearchField(summary.DirectoryPath, KnowledgeDocumentSearchMatchField.DirectoryPath, 160d)
+        };
+        if (content is not null)
+        {
+            fields.Add(new SearchField(content, KnowledgeDocumentSearchMatchField.Content, 120d));
+        }
+
+        KnowledgeDocumentSearchResult? best = null;
+        foreach (var field in fields)
+        {
+            if (string.IsNullOrWhiteSpace(field.Text))
+            {
+                continue;
+            }
+
+            var match = regex.Match(field.Text);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var score = field.Weight + 100 - Math.Min(match.Index, 500) * 0.04;
+            var result = BuildSearchResult(
+                summary,
+                KnowledgeDocumentSearchMode.Regex,
+                field.MatchField,
+                score,
+                field.Text,
+                match.Index,
+                match.Length,
+                contentSearched: field.MatchField == KnowledgeDocumentSearchMatchField.Content,
+                contentAvailable: content is not null);
+
+            if (best is null || result.Score > best.Score)
+            {
+                best = result;
+            }
+        }
+
+        return best;
+    }
+
+    private static KnowledgeDocumentSearchResult BuildSearchResult(
+        KnowledgeDocumentSummary summary,
+        KnowledgeDocumentSearchMode mode,
+        KnowledgeDocumentSearchMatchField matchField,
+        double score,
+        string matchedText,
+        int matchStart,
+        int matchLength,
+        bool contentSearched,
+        bool contentAvailable)
+    {
+        return new KnowledgeDocumentSearchResult(
+            summary.KnowledgeBaseId,
+            summary.DocumentId,
+            summary.Name,
+            summary.DirectoryPath,
+            summary.Status,
+            summary.ChunkCount,
+            summary.IndexedAt,
+            mode,
+            matchField,
+            score,
+            BuildPreview(matchedText, matchStart, matchLength),
+            matchStart,
+            matchLength,
+            contentSearched,
+            contentAvailable);
+    }
+
+    private static string BuildPreview(string text, int matchStart, int matchLength)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var start = Math.Max(0, matchStart - CONTENT_PREVIEW_RADIUS);
+        var end = Math.Min(text.Length, matchStart + Math.Max(matchLength, 1) + CONTENT_PREVIEW_RADIUS);
+        var preview = text[start..end].Trim();
+
+        return string.Concat(
+            start > 0 ? "..." : string.Empty,
+            preview,
+            end < text.Length ? "..." : string.Empty);
+    }
+
+    private static Regex CreateSearchRegex(string pattern)
+    {
+        try
+        {
+            return new Regex(
+                pattern,
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                TimeSpan.FromMilliseconds(REGEX_TIMEOUT_MILLISECONDS));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidOperationException($"Invalid knowledge-base search regex: {ex.Message}", ex);
+        }
+    }
+
+    private static IReadOnlyList<string> SplitSearchTokens(string normalizedQuery)
+    {
+        return normalizedQuery
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
     private async Task<string?> LoadDocumentContentAsync(
         string kbId,
@@ -243,4 +512,21 @@ public sealed class KnowledgeBaseLookupService(
 
     private static string BuildChildPath(string parentPath, string childName)
         => string.IsNullOrWhiteSpace(parentPath) ? childName : $"{parentPath}/{childName}";
+
+    private static string NormalizeSearchText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            ' ',
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    private sealed record SearchField(
+        string Text,
+        KnowledgeDocumentSearchMatchField MatchField,
+        double Weight);
 }
