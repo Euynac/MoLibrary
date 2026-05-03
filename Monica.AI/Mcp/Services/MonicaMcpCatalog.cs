@@ -330,10 +330,11 @@ public sealed class MonicaMcpCatalog(
                     entry.Definition.Name,
                     entry.SourceKind,
                     true,
-                    $"Connected to {endpoint}.",
+                    McpCapabilityMessageCode.Connectivity.ConnectedToEndpoint,
                     Stopwatch.GetElapsedTime(startedAt),
                     tools.Count,
-                    testedAt);
+                    testedAt,
+                    tools.Select(static tool => tool.Name).OrderBy(static name => name, StringComparer.Ordinal).ToList());
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -349,8 +350,8 @@ public sealed class MonicaMcpCatalog(
         }
 
         var message = entry.TransportKind == McpServerTransportKind.Http
-            ? "Local HTTP MCP server is discovered, but no absolute display URL is configured for a network probe."
-            : "Local stdio MCP server is discovered. In-process readiness was checked because the running web UI cannot connect back to its own stdio transport.";
+            ? McpCapabilityMessageCode.Connectivity.LocalHttpDisplayUrlMissing
+            : McpCapabilityMessageCode.Connectivity.LocalStdioInProcessReady;
 
         return new McpConnectivityTestResult(
             entry.Definition.Name,
@@ -359,7 +360,8 @@ public sealed class MonicaMcpCatalog(
             message,
             Stopwatch.GetElapsedTime(startedAt),
             entry.Tools.Count,
-            testedAt);
+            testedAt,
+            entry.Tools.Select(static tool => tool.Name).OrderBy(static name => name, StringComparer.Ordinal).ToList());
     }
 
     private async Task<McpConnectivityTestResult> TestExternalProfileCoreAsync(
@@ -377,10 +379,11 @@ public sealed class MonicaMcpCatalog(
                 profile.Name,
                 McpCatalogSourceKind.ExternalClient,
                 true,
-                "Connected and listed tools.",
+                McpCapabilityMessageCode.Connectivity.ConnectedAndListedTools,
                 Stopwatch.GetElapsedTime(startedAt),
                 tools.Count,
-                testedAt);
+                testedAt,
+                tools.Select(static tool => tool.Name).OrderBy(static name => name, StringComparer.Ordinal).ToList());
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -759,7 +762,8 @@ public sealed class MonicaMcpCatalog(
                 IsLocalToolEnabled,
                 catalogEnabled,
                 entryEnabled,
-                startupEnabled: startupEnabled);
+                startupEnabled: startupEnabled,
+                sourceKind: SourceKind);
             var isAgentToolEnabled = disabledReason is null;
 
             return new McpCatalogEntryInfo(
@@ -819,7 +823,12 @@ public sealed class MonicaMcpCatalog(
         {
             var catalogEnabled = state.McpEnabled;
             var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Mcp, Profile.Name);
-            var disabledReason = ResolveDisabledReason(Profile.IsAgentToolEnabled, catalogEnabled, entryEnabled, DiscoveryError);
+            var disabledReason = ResolveDisabledReason(
+                Profile.IsAgentToolEnabled,
+                catalogEnabled,
+                entryEnabled,
+                DiscoveryError,
+                sourceKind: McpCatalogSourceKind.ExternalClient);
             var isAgentToolEnabled = disabledReason is null;
 
             return new McpCatalogEntryInfo(
@@ -893,7 +902,8 @@ public sealed class MonicaMcpCatalog(
         bool catalogEnabled,
         bool entryEnabled,
         string? discoveryError = null,
-        bool startupEnabled = true)
+        bool startupEnabled = true,
+        McpCatalogSourceKind? sourceKind = null)
     {
         if (!string.IsNullOrWhiteSpace(discoveryError))
         {
@@ -902,20 +912,22 @@ public sealed class MonicaMcpCatalog(
 
         if (!startupEnabled)
         {
-            return "This skill-backed MCP server is disabled in persisted Skill MCP exposure settings. Restart the host after changing this setting.";
+            return McpCapabilityMessageCode.DisabledReason.SkillMcpExposureDisabled;
         }
 
         if (!builtInEnabled)
         {
-            return "This MCP entry is not configured to expose tools to Monica agents.";
+            return sourceKind == McpCatalogSourceKind.SkillServer
+                ? McpCapabilityMessageCode.DisabledReason.SkillServerNotAgentTool
+                : McpCapabilityMessageCode.DisabledReason.NotAgentTool;
         }
 
         if (!catalogEnabled)
         {
-            return "The MCP catalog is globally disabled.";
+            return McpCapabilityMessageCode.DisabledReason.CatalogDisabled;
         }
 
-        return entryEnabled ? null : "This MCP entry is disabled in runtime capability settings.";
+        return entryEnabled ? null : McpCapabilityMessageCode.DisabledReason.EntryDisabled;
     }
 
     private static JsonElement? TryParseSchema(string? schemaJson)

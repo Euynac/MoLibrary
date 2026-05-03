@@ -1,5 +1,7 @@
 @attribute [Route(PAGE_URL)]
 @using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
+@using System.Text.Json
 @using Monica.AI.AgentCapabilities.Models
 @using Monica.AI.Facades
 @using Monica.AI.Mcp.Models
@@ -10,6 +12,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<AIResource> L
+@inject IJSRuntime JSRuntime
 
 <PageTitle>@L["Capabilities:Title"]</PageTitle>
 
@@ -176,6 +179,12 @@
                                             : L["Capabilities:Skill:McpServerAvailable"])
                                     </MudChip>
                                 }
+                                @if (entry.McpSourceKind == McpCatalogSourceKind.SkillServer)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                                        @L["Capabilities:Mcp:Source:SkillServer"]
+                                    </MudChip>
+                                }
                                 <span>@entry.Tools.Count @L["Capabilities:Tools"]</span>
                             </span>
                         </button>
@@ -315,7 +324,7 @@
 
             @if (!entry.IsEnabled && !string.IsNullOrWhiteSpace(entry.DisabledReason))
             {
-                <MudAlert Severity="Severity.Warning" Dense="true">@entry.DisabledReason</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true">@FormatDisabledReason(entry.DisabledReason)</MudAlert>
             }
 
             <MudStack Row="true" Spacing="1" Class="detail-chips">
@@ -339,7 +348,12 @@
                 }
                 @if (entry.McpSourceKind is not null)
                 {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@entry.McpSourceKind</MudChip>
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@(entry.McpSourceKind == McpCatalogSourceKind.SkillServer ? Color.Secondary : Color.Default)"
+                             Variant="Variant.Outlined">
+                        @GetMcpSourceKindText(entry.McpSourceKind.Value)
+                    </MudChip>
                 }
                 @if (entry.McpTransportKind is not null)
                 {
@@ -428,6 +442,15 @@
                         }
                         @L["Capabilities:Mcp:Test"]
                     </MudButton>
+                    <MudTooltip Text="@GetCopyMcpConfigTooltip(entry)">
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.ContentCopy"
+                                   Disabled="@(!CanCopyMcpConfig(entry))"
+                                   OnClick="@(() => CopyMcpConfigAsync(entry))">
+                            @L["Capabilities:Mcp:CopyConfig"]
+                        </MudButton>
+                    </MudTooltip>
                     @if (entry.IsUserManaged)
                     {
                         <MudButton Variant="Variant.Outlined"
@@ -450,7 +473,7 @@
                                  Size="Size.Small"
                                  Color="@(_lastConnectivityResult.Success ? Color.Success : Color.Error)"
                                  Variant="Variant.Outlined">
-                            @_lastConnectivityResult.Message
+                            @FormatConnectivityMessage(_lastConnectivityResult)
                         </MudChip>
                     }
                 </div>
@@ -755,7 +778,7 @@
         else
         {
             _lastConnectivityResult = connectivity;
-            Snackbar.Add(connectivity.Message, connectivity.Success ? Severity.Success : Severity.Error);
+            Snackbar.Add(FormatConnectivityMessage(connectivity), connectivity.Success ? Severity.Success : Severity.Error);
         }
 
         _isTestingMcp = false;
@@ -789,6 +812,93 @@
     private string GetStatusText(AgentCapabilityEntryInfo entry)
     {
         return entry.IsEnabled ? L["Capabilities:Status:Enabled"] : L["Capabilities:Status:Disabled"];
+    }
+
+    private string FormatDisabledReason(string disabledReason)
+    {
+        return disabledReason switch
+        {
+            McpCapabilityMessageCode.DisabledReason.SkillMcpExposureDisabled => L["Capabilities:Mcp:DisabledReason:SkillMcpExposureDisabled"],
+            McpCapabilityMessageCode.DisabledReason.SkillServerNotAgentTool => L["Capabilities:Mcp:DisabledReason:SkillServerNotAgentTool"],
+            McpCapabilityMessageCode.DisabledReason.NotAgentTool => L["Capabilities:Mcp:DisabledReason:NotAgentTool"],
+            McpCapabilityMessageCode.DisabledReason.CatalogDisabled => L["Capabilities:Mcp:DisabledReason:CatalogDisabled"],
+            McpCapabilityMessageCode.DisabledReason.EntryDisabled => L["Capabilities:Mcp:DisabledReason:EntryDisabled"],
+            _ => disabledReason
+        };
+    }
+
+    private string FormatConnectivityMessage(McpConnectivityTestResult result)
+    {
+        return result.Message switch
+        {
+            McpCapabilityMessageCode.Connectivity.ConnectedToEndpoint => L["Capabilities:Mcp:Connectivity:ConnectedToEndpoint", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.ConnectedAndListedTools => L["Capabilities:Mcp:Connectivity:ConnectedAndListedTools", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.LocalHttpDisplayUrlMissing => L["Capabilities:Mcp:Connectivity:LocalHttpDisplayUrlMissing", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.LocalStdioInProcessReady => L["Capabilities:Mcp:Connectivity:LocalStdioInProcessReady", result.ToolCount],
+            _ => result.Message
+        };
+    }
+
+    private string GetMcpSourceKindText(McpCatalogSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            McpCatalogSourceKind.LocalServer => L["Capabilities:Mcp:Source:LocalServer"],
+            McpCatalogSourceKind.SkillServer => L["Capabilities:Mcp:Source:SkillServer"],
+            McpCatalogSourceKind.ExternalClient => L["Capabilities:Mcp:Source:ExternalClient"],
+            _ => sourceKind.ToString()
+        };
+    }
+
+    private bool CanCopyMcpConfig(AgentCapabilityEntryInfo entry)
+    {
+        return entry.McpExternalProfile is not null
+               || !string.IsNullOrWhiteSpace(entry.McpDisplayUrl)
+               || !string.IsNullOrWhiteSpace(entry.McpEndpointPath);
+    }
+
+    private string GetCopyMcpConfigTooltip(AgentCapabilityEntryInfo entry)
+    {
+        return CanCopyMcpConfig(entry)
+            ? L["Capabilities:Mcp:CopyConfigTooltip"]
+            : L["Capabilities:Mcp:CopyConfigUnavailable"];
+    }
+
+    private async Task CopyMcpConfigAsync(AgentCapabilityEntryInfo entry)
+    {
+        if (!CanCopyMcpConfig(entry))
+        {
+            return;
+        }
+
+        var endpoint = entry.McpExternalProfile?.Endpoint
+                       ?? entry.McpDisplayUrl
+                       ?? entry.McpEndpointPath
+                       ?? string.Empty;
+        var server = new Dictionary<string, object?>
+        {
+            ["type"] = "http",
+            ["url"] = endpoint
+        };
+
+        if (entry.McpExternalProfile?.Headers.Count > 0)
+        {
+            server["headers"] = entry.McpExternalProfile.Headers;
+        }
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["mcpServers"] = new Dictionary<string, object?>
+            {
+                [entry.Name] = server
+            }
+        };
+
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        var copied = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", json);
+        Snackbar.Add(
+            copied ? L["Capabilities:Mcp:CopyConfigSuccess"] : L["Capabilities:Mcp:CopyConfigFailed"],
+            copied ? Severity.Success : Severity.Error);
     }
 
     private void AddErrorSnackbar(string? message)

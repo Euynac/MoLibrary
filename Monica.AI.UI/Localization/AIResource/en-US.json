@@ -552,7 +552,31 @@
         "AddHeader": "Add header",
         "NoHeaders": "No headers configured.",
         "HeaderName": "Header",
-        "HeaderValue": "Value"
+        "HeaderValue": "Value",
+        "DiscoveredTools": "Discovered {0} tool(s)"
+      },
+      "CopyConfig": "Copy agent config",
+      "CopyConfigTooltip": "Copy an MCP JSON snippet for common agents.",
+      "CopyConfigUnavailable": "No HTTP endpoint is available to copy for this MCP entry.",
+      "CopyConfigSuccess": "MCP JSON configuration copied.",
+      "CopyConfigFailed": "Failed to copy MCP JSON configuration.",
+      "Source": {
+        "LocalServer": "Local MCP server",
+        "SkillServer": "Skill-backed MCP",
+        "ExternalClient": "External MCP client"
+      },
+      "Connectivity": {
+        "ConnectedToEndpoint": "Connected successfully. Discovered {0} tool(s).",
+        "ConnectedAndListedTools": "Connected and listed tools. Discovered {0} tool(s).",
+        "LocalHttpDisplayUrlMissing": "Local HTTP MCP server is discovered, but no absolute display URL is configured for a network probe. {0} tool(s) are registered in-process.",
+        "LocalStdioInProcessReady": "Local stdio MCP server is discovered. In-process readiness was checked because the web UI cannot connect back to its own stdio transport. {0} tool(s) are registered."
+      },
+      "DisabledReason": {
+        "SkillMcpExposureDisabled": "This skill-backed MCP server is disabled by the persisted Skill MCP exposure setting. Restart the host after changing this setting.",
+        "SkillServerNotAgentTool": "This MCP server is generated from a Skill. Its tools are already exposed to Monica agents through the Skill catalog, so the MCP copy is not exposed again as Monica-agent MCP tools.",
+        "NotAgentTool": "This MCP entry is not configured to expose tools to Monica agents.",
+        "CatalogDisabled": "The MCP catalog is globally disabled.",
+        "EntryDisabled": "This MCP entry is disabled in runtime capability settings."
       }
     },
     "Tool": {

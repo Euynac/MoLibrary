@@ -12,4 +12,5 @@ public sealed record McpConnectivityTestResult(
     string Message,
     TimeSpan Duration,
     int ToolCount,
-    DateTimeOffset TestedAt);
+    DateTimeOffset TestedAt,
+    IReadOnlyList<string>? ToolNames = null);
