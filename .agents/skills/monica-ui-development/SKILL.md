@@ -1,7 +1,7 @@
 ---
 name: monica-ui-development
 description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.10.0
+version: 2.11.0
 ---
 
 # Monica UI Development Guide
@@ -135,6 +135,7 @@ Always specify `T` for generic MudBlazor components:
 - Do not run JS interop in `OnInitializedAsync`.
 - Use `OnAfterRenderAsync(firstRender)` for JS interop and heavy first-load tasks.
 - Use `CancellationToken` for async loading tasks.
+- For page-owned auto-refresh, prefer the `PeriodicTimer` pattern in `references/auto-refresh-page-pattern.md` over `System.Timers.Timer`.
 
 ### 5. MudBlazor v9 Async APIs
 
@@ -305,6 +306,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/css-isolation-fix-workflow.md`
 - `references/theme-css-guide.md`
 - `references/theme-authoring-pitfalls.md`
+- `references/auto-refresh-page-pattern.md`
 - `references/browser-storage-guide.md`
 - `references/localization-guide.md`
 - `references/offline-requirements.md`

@@ -75,32 +75,41 @@
 
     private bool _autoRefreshEnabled = true;
     private RefreshInterval _refreshInterval = RefreshInterval.FiveSeconds;
-    private System.Timers.Timer? _refreshTimer;
-    private CancellationTokenSource? _cts;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationToken _lifetimeToken;
+    private PeriodicTimer? _refreshTimer;
+    private Task? _refreshLoop;
+
+    public MonitorPage()
+    {
+        _lifetimeToken = _cts.Token;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender)
         {
-            _cts = new CancellationTokenSource();
-            await LoadDataAsync();
+            return;
+        }
 
-            if (_autoRefreshEnabled)
-            {
-                StartAutoRefresh();
-            }
+        if (await LoadDataAsync() && _autoRefreshEnabled)
+        {
+            StartAutoRefresh();
         }
     }
 
-    private async Task LoadDataAsync()
+    private async Task<bool> LoadDataAsync(bool showLoading = true, bool showRefreshError = false)
     {
+        var token = _lifetimeToken;
+
         try
         {
-            _isLoading = true;
-            _loadError = null;
-            StateHasChanged();
-
-            var token = _cts?.Token ?? CancellationToken.None;
+            if (showLoading)
+            {
+                _isLoading = true;
+                _loadError = null;
+                StateHasChanged();
+            }
 
             // Load both monitor state and concurrency state in parallel
             var monitorTask = MonitorFacade.GetMonitorStateAsync(token);
@@ -113,58 +122,15 @@
 
             if (monitorResult.IsFailed(out var error, out _))
             {
-                _loadError = error.Message;
+                if (showLoading)
+                {
+                    _loadError = error.Message;
+                }
             }
             else
             {
                 _state = monitorResult.Data;
                 _lastRefreshTime = _state?.LastRefreshTime ?? DateTime.UtcNow;
-            }
-
-            if (concurrencyResult.IsOk(out var concurrencyState))
-            {
-                _concurrencyState = concurrencyState;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation
-        }
-        catch (Exception ex)
-        {
-            _loadError = $"{L["Monitor:Messages:LoadFailed"]}: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshDataAsync()
-    {
-        if (_isRefreshing) return;
-
-        try
-        {
-            _isRefreshing = true;
-            StateHasChanged();
-
-            var token = _cts?.Token ?? CancellationToken.None;
-
-            // Refresh both in parallel
-            var monitorTask = MonitorFacade.GetMonitorStateAsync(token);
-            var concurrencyTask = MonitorFacade.GetConcurrencyMonitorStateAsync(token);
-
-            await Task.WhenAll(monitorTask, concurrencyTask);
-
-            var monitorResult = await monitorTask;
-            var concurrencyResult = await concurrencyTask;
-
-            if (monitorResult.IsOk(out var state))
-            {
-                _state = state;
-                _lastRefreshTime = state.LastRefreshTime;
                 _loadError = null;
             }
 
@@ -172,32 +138,84 @@
             {
                 _concurrencyState = concurrencyState;
             }
+
+            return true;
         }
         catch (OperationCanceledException)
         {
-            // Ignore
+            return false;
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"{L["Monitor:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
+            if (showRefreshError)
+            {
+                Snackbar.Add($"{L["Monitor:Messages:RefreshFailed"]}: {ex.Message}", Severity.Error);
+            }
+            else
+            {
+                _loadError = $"{L["Monitor:Messages:LoadFailed"]}: {ex.Message}";
+            }
+
+            return true;
         }
         finally
         {
-            _isRefreshing = false;
+            if (showLoading)
+            {
+                _isLoading = false;
+            }
+
+            if (!token.IsCancellationRequested)
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        var token = _lifetimeToken;
+
+        try
+        {
+            _isRefreshing = true;
             StateHasChanged();
+
+            await LoadDataAsync(showLoading: false, showRefreshError: true);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isRefreshing = false;
+                StateHasChanged();
+            }
         }
     }
 
     private async Task HandleReconcileAsync()
     {
-        if (_isReconciling) return;
+        if (_isReconciling)
+        {
+            return;
+        }
+
+        var token = _lifetimeToken;
 
         try
         {
             _isReconciling = true;
             StateHasChanged();
 
-            var result = await MonitorFacade.ReconcileAsync(_cts?.Token ?? CancellationToken.None);
+            var result = await MonitorFacade.ReconcileAsync(token);
 
             if (result.IsOk(out var reconcileResult))
             {
@@ -213,22 +231,30 @@
                 Snackbar.Add($"{L["Monitor:ConcurrencyUtilization:ReconcileFailed"]}: {error.Message}", Severity.Error);
             }
         }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             Snackbar.Add($"{L["Monitor:ConcurrencyUtilization:ReconcileFailed"]}: {ex.Message}", Severity.Error);
         }
         finally
         {
-            _isReconciling = false;
-            StateHasChanged();
+            if (!token.IsCancellationRequested)
+            {
+                _isReconciling = false;
+                StateHasChanged();
+            }
         }
     }
 
     private async Task CancelInstanceAsync(string instanceId)
     {
+        var token = _lifetimeToken;
+
         try
         {
-            var result = await UIService.CancelInstanceAsync(instanceId);
+            var result = await UIService.CancelInstanceAsync(instanceId, token);
             if (result.IsFailed(out var error))
             {
                 Snackbar.Add($"{L["Monitor:LiveExecution:Messages:CancelFailed"]}: {error.Message}", Severity.Error);
@@ -238,6 +264,9 @@
                 Snackbar.Add(L["Monitor:LiveExecution:Messages:CancelSuccess"], Severity.Success);
                 await RefreshDataAsync();
             }
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
@@ -270,29 +299,55 @@
 
     private void StartAutoRefresh()
     {
-        StopAutoRefresh();
-        _refreshTimer = new System.Timers.Timer((int)_refreshInterval);
-        _refreshTimer.Elapsed += async (_, _) =>
+        if (_lifetimeToken.IsCancellationRequested)
         {
-            await InvokeAsync(RefreshDataAsync);
-        };
-        _refreshTimer.AutoReset = true;
-        _refreshTimer.Start();
+            return;
+        }
+
+        StopAutoRefresh();
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromMilliseconds((int)_refreshInterval));
+        _refreshLoop = RefreshLoopAsync(_refreshTimer, _lifetimeToken);
     }
 
     private void StopAutoRefresh()
     {
-        _refreshTimer?.Stop();
         _refreshTimer?.Dispose();
         _refreshTimer = null;
     }
 
     public async ValueTask DisposeAsync()
     {
-        StopAutoRefresh();
-        _cts?.Cancel();
-        _cts?.Dispose();
+        await _cts.CancelAsync();
+
+        if (_refreshLoop != null)
+        {
+            try
+            {
+                await _refreshLoop;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _refreshTimer?.Dispose();
+        _cts.Dispose();
 
         await ValueTask.CompletedTask;
+    }
+
+    private async Task RefreshLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(RefreshDataAsync);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the page is disposed.
+        }
     }
 }
