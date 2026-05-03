@@ -112,14 +112,20 @@
         </MudPaper>
 
         <!-- Health Metrics and Statistics -->
-        <MudGrid Class="mb-4">
-            <MudItem xs="12" md="6">
-                <JobHealthMetricsCard JobKey="@JobKey" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <JobStatisticsCard JobKey="@JobKey" />
-            </MudItem>
-        </MudGrid>
+        <div class="job-detail-card-grid">
+            <MudGrid Spacing="4" Class="mb-4 job-detail-card-row">
+                <MudItem xs="12" md="6" Class="job-detail-card-column">
+                    <div class="job-detail-card-frame">
+                        <JobHealthMetricsCard JobKey="@JobKey" />
+                    </div>
+                </MudItem>
+                <MudItem xs="12" md="6" Class="job-detail-card-column">
+                    <div class="job-detail-card-frame">
+                        <JobStatisticsCard JobKey="@JobKey" />
+                    </div>
+                </MudItem>
+            </MudGrid>
+        </div>
 
         <!-- Running instance -->
         <MudPaper Class="pa-4 mb-4" Elevation="2">
