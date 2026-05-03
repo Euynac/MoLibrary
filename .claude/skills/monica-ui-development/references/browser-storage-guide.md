@@ -149,7 +149,7 @@ Task<int> ClearAllTableStatesAsync()
 @inject IBrowserStorage BrowserStorage
 
 @code {
-    private record ThemeData(string ThemeName, bool IsDarkMode);
+    private record ThemeData(MonicaThemeKind ThemeKind, bool IsDarkMode);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -162,8 +162,7 @@ Task<int> ClearAllTableStatesAsync()
             {
                 if (themeData != null)
                 {
-                    ThemeService.CurrentThemeName = themeData.ThemeName;
-                    ThemeService.IsDarkMode = themeData.IsDarkMode;
+                    ThemeService.SetTheme(themeData.ThemeKind, themeData.IsDarkMode);
                 }
             });
         }
@@ -173,12 +172,14 @@ Task<int> ClearAllTableStatesAsync()
     {
         // Save theme preference
         await BrowserStorage.SetAsync("theme:data", new ThemeData(
-            ThemeService.CurrentThemeName, ThemeService.IsDarkMode));
+            ThemeService.CurrentThemeKind, ThemeService.IsDarkMode));
 
         await InvokeAsync(StateHasChanged);
     }
 }
 ```
+
+Theme storage uses `MonicaThemeKind` enum names in JSON, for example `{"themeKind":"VibeUsageMatrix","isDarkMode":true}`. CSS classes and `data-theme` use the derived CSS token, for example `vibe-usage-matrix-dark`.
 
 ## Adding Custom State Persistence
 

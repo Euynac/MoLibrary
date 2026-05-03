@@ -15,6 +15,7 @@ using Monica.UI.Shell.Components;
 using Monica.UI.Shared.Components.Markdown;
 using Monica.UI.Shell.State;
 using Monica.UI.Shell.Support;
+using Monica.UI.Theming;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -248,6 +249,24 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
     /// Enable Markdown support
     /// </summary>
     public bool EnableMarkdown { get; set; }
+
+    /// <summary>
+    /// The theme applied when a browser initializes the Monica shell without a saved theme preference.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="MonicaThemeKind.Default"/>. Once the browser stores a user-selected theme, the stored
+    /// preference takes precedence over this option on later visits.
+    /// </remarks>
+    public MonicaThemeKind DefaultTheme { get; set; } = MonicaThemeKind.Default;
+
+    /// <summary>
+    /// Whether the shell should start in dark mode when a browser has no saved theme preference.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="false"/>. Once the browser stores a user-selected mode, the stored preference takes
+    /// precedence over this option on later visits.
+    /// </remarks>
+    public bool DefaultDarkMode { get; set; }
 
     /// <summary>
     /// The maximum number of categories displayed in the top navigation bar (the excess will be placed in the "More" menu)

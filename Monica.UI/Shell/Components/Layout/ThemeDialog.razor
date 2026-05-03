@@ -23,18 +23,18 @@
                     <MudStack Spacing="2">
                         @foreach (var theme in _themeOptions)
                         {
-                            <MudCard Elevation="@(ThemeService.CurrentThemeName == theme.Name ? 4 : 1)"
-                                     Class="@GetThemeCardClass(theme.Name)"
+                            <MudCard Elevation="@(ThemeService.CurrentThemeKind == theme.Kind ? 4 : 1)"
+                                     Class="@GetThemeCardClass(theme.Kind)"
                                      Style="cursor: pointer; transition: all 0.3s ease;"
-                                     @onclick="() => OnThemeChanged(theme.Name)">
+                                     @onclick="() => OnThemeChanged(theme.Kind)">
                                 <MudCardContent Class="pa-3">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                                        <MudRadio T="string" Value="@theme.Name" Color="Color.Primary" ReadOnly="true" />
+                                        <MudRadio T="MonicaThemeKind" Value="@theme.Kind" Color="Color.Primary" ReadOnly="true" />
                                         <MudStack Spacing="0" Class="flex-grow-1">
                                             <MudText Typo="Typo.body1" Style="font-weight: 500;">@theme.DisplayName</MudText>
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">@theme.Description</MudText>
                                         </MudStack>
-                                        @if (ThemeService.CurrentThemeName == theme.Name)
+                                        @if (ThemeService.CurrentThemeKind == theme.Kind)
                                         {
                                             <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" />
                                         }
@@ -68,7 +68,7 @@
 </MudDialog>
 
 @code {
-    private IReadOnlyList<(string Name, string DisplayName, string Description)> _themeOptions = [];
+    private IReadOnlyList<(MonicaThemeKind Kind, string DisplayName, string Description)> _themeOptions = [];
 
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; } = null!;
@@ -94,15 +94,15 @@
         MudDialog.Close();
     }
 
-    private void OnThemeChanged(string newTheme)
+    private void OnThemeChanged(MonicaThemeKind newTheme)
     {
-        ThemeService.CurrentThemeName = newTheme;
+        ThemeService.CurrentThemeKind = newTheme;
         StateHasChanged();
     }
 
     private string GetCurrentThemeDisplayName()
     {
-        return ThemeDisplayTextProvider.GetCurrentThemeSummary(L, ThemeService.CurrentThemeName, ThemeService.IsDarkMode);
+        return ThemeDisplayTextProvider.GetCurrentThemeSummary(L, ThemeService.CurrentThemeKind, ThemeService.IsDarkMode);
     }
 
     private void RefreshThemeOptions()
@@ -110,10 +110,10 @@
         _themeOptions = ThemeDisplayTextProvider.GetThemeOptions(L);
     }
 
-    private string GetThemeCardClass(string themeName)
+    private string GetThemeCardClass(MonicaThemeKind themeKind)
     {
         var baseClass = "theme-card";
-        if (ThemeService.CurrentThemeName == themeName)
+        if (ThemeService.CurrentThemeKind == themeKind)
         {
             baseClass += " selected";
         }

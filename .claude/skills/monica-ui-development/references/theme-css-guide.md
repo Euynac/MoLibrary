@@ -8,11 +8,19 @@ Monica's theme system is split between C# theme definitions and theme CSS.
 
 - Theme definitions live under `Monica.UI/Theming/Definitions/`
 - Each theme implements `IThemeDefinition`
+- Each built-in theme is identified by `MonicaThemeKind`; theme definitions expose `Kind`, not a string name
 - `ThemeCatalog` registers the available definitions
-- `ThemeState` owns the active theme name, dark-mode state, and generated CSS/data-theme identifiers
+- `ThemeState` owns the active theme kind, dark-mode state, and generated CSS/data-theme identifiers
+- `ModuleShellUIOption.DefaultTheme` and `ModuleShellUIOption.DefaultDarkMode` provide the first-visit browser defaults; persisted browser preferences still win after the user changes theme settings
 - `ThemeProviderHost` renders the wrapper that applies:
-  - `class="mo-theme-{name}-{mode}"`
-  - `data-theme="{name}-{mode}"`
+  - `class="mo-theme-{theme-token}-{mode}"`
+  - `data-theme="{theme-token}-{mode}"`
+
+The theme token is generated from `MonicaThemeKind.ToCssToken()`, for example:
+
+- `MonicaThemeKind.MudBlazor` -> `mud-blazor`
+- `MonicaThemeKind.MaterialDesign3` -> `material-design-3`
+- `MonicaThemeKind.VibeUsageMatrix` -> `vibe-usage-matrix`
 
 ### CSS theme layer
 
@@ -23,13 +31,14 @@ Monica's theme system is split between C# theme definitions and theme CSS.
 
 ## Theme Authoring Workflow
 
-1. Add a new `IThemeDefinition` under `Monica.UI/Theming/Definitions/`.
-2. Register it in `ThemeCatalog`.
-3. Add localized name and description entries for theme selection UI.
-4. Create `Monica.UI/wwwroot/css/themes/mo-theme-{name}.css`.
-5. Import the new CSS file from `Monica.UI/wwwroot/css/mo-theme-main.css`.
-6. If the theme needs a custom markdown/code-block presentation, add the corresponding markdown CSS file and register the code-block theme through the definition.
-7. Verify persisted theme switching through `ThemeState` and browser storage.
+1. Add a new `MonicaThemeKind` enum value.
+2. Add a new `IThemeDefinition` under `Monica.UI/Theming/Definitions/` and return that enum value from `Kind`.
+3. Register it in `ThemeCatalog`.
+4. Add localized name and description entries for theme selection UI under `Theme:Options:{EnumValue}:Name` and `Theme:Options:{EnumValue}:Description`.
+5. Create `Monica.UI/wwwroot/css/themes/mo-theme-{theme-token}.css`.
+6. Import the new CSS file from `Monica.UI/wwwroot/css/mo-theme-main.css`.
+7. If the theme needs a custom markdown/code-block presentation, add the corresponding markdown CSS file and register the code-block theme through the definition.
+8. Verify persisted theme switching through `ThemeState` and browser storage.
 
 ## CSS Structure Rules
 

@@ -3,7 +3,7 @@
 /* Color is managed by the MudBlazor theme system, CSS is only responsible for component styles */
 
 /* 0. Introduce the baseline MudBlazor-compatible theme hook */
-@import url('./themes/mo-theme-mudblazor.css');
+@import url('./themes/mo-theme-mud-blazor.css');
 
 /* 1. Introduce Material Design theme styles */
 @import url('./themes/mo-theme-material-design-3.css');
@@ -16,7 +16,7 @@
 /* 3. Introduce the default Clean SaaS theme */
 @import url('./themes/mo-theme-default.css');
 @import url('./themes/mo-theme-hermes-teal.css');       /* Hermes Teal theme */
-@import url('./themes/mo-theme-vibeusage-matrix.css');  /* VibeUsage Matrix theme */
+@import url('./themes/mo-theme-vibe-usage-matrix.css');  /* VibeUsage Matrix theme */
 
 /* 4. Introduce additional theme styles */
 @import url('./themes/mo-theme-ink-landscape.css');      /* Ink Landscape theme */
@@ -24,7 +24,7 @@
 
 @import url('./markdown/mo-markdown-default.css');
 @import url('./markdown/mo-markdown-hermes-teal.css');
-@import url('./markdown/mo-markdown-vibeusage-matrix.css');
+@import url('./markdown/mo-markdown-vibe-usage-matrix.css');
 /* 5. Custom theme style example */
 /* If you want to create a new theme, you can create a new CSS file and introduce it here */
 /* @import url('./themes/mo-theme-custom.css'); */

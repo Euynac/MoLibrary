@@ -110,9 +110,10 @@ mo:theme:data
 - The serialized payload must match Monica's camelCase JSON shape:
 
 ```json
-{"themeName":"your-theme","isDarkMode":true}
+{"themeKind":"VibeUsageMatrix","isDarkMode":true}
 ```
 
+- `themeKind` is the `MonicaThemeKind` enum name, not the CSS token. CSS and `data-theme` still use the deterministic token, for example `vibe-usage-matrix-dark`.
 - If a page is already mounted, it can write its current in-memory theme state back to storage. For manual mode switches, prefer a fresh browser session or write the storage value and reload immediately.
 
 If you write only `theme:data` during manual verification, the theme will appear to ignore persisted state.

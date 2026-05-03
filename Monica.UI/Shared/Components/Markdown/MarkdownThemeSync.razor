@@ -28,7 +28,7 @@
 
     private void UpdateMarkdownTheme()
     {
-        var themeProvider = ThemeCatalog.GetTheme(ThemeService.CurrentThemeName);
+        var themeProvider = ThemeCatalog.GetTheme(ThemeService.CurrentThemeKind);
         var codeBlockTheme = ThemeService.IsDarkMode ? themeProvider.DarkCodeBlockTheme : themeProvider.LightCodeBlockTheme;
         MarkdownThemeService.SetCodeBlockTheme(codeBlockTheme);
     }

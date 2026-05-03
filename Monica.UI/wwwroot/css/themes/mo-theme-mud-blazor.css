@@ -2,19 +2,19 @@
 /* This file is empty, no custom styles are added, and MudBlazor’s default styles are completely used. */
 
 /* Light Theme Placeholder */
-:root[data-theme="mudblazor-light"],
-.mo-theme-mudblazor-light {
+:root[data-theme="mud-blazor-light"],
+.mo-theme-mud-blazor-light {
     /* No custom variables, completely using MudBlazor default values */
 }
 
 /* Dark Theme Placeholder */
-:root[data-theme="mudblazor-dark"],
-.mo-theme-mudblazor-dark {
+:root[data-theme="mud-blazor-dark"],
+.mo-theme-mud-blazor-dark {
     /* No custom variables, completely using MudBlazor default values */
 }
 
 /* No custom styles, keep MudBlazor original look */
-.mo-theme-mudblazor-light,
-.mo-theme-mudblazor-dark {
+.mo-theme-mud-blazor-light,
+.mo-theme-mud-blazor-dark {
     /* This theme does not cover any MudBlazor component styles */
 }

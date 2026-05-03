@@ -7,7 +7,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public sealed class MaterialDesign3Theme : ThemeDefinitionBase
 {
-    public override string Name => "material-design-3";
+    public override MonicaThemeKind Kind => MonicaThemeKind.MaterialDesign3;
 
     public override string DisplayName => "Material Design 3";
 

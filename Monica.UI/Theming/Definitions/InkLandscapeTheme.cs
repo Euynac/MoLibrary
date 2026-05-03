@@ -9,7 +9,7 @@ public sealed class InkLandscapeTheme : ThemeDefinitionBase
 {
     private static readonly string[] SerifFontFamily = ["Noto Serif SC", "Source Han Serif SC", "serif"];
 
-    public override string Name => "ink-landscape";
+    public override MonicaThemeKind Kind => MonicaThemeKind.InkLandscape;
 
     public override string DisplayName => "墨韵山水";
 
