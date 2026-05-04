@@ -69,7 +69,7 @@
     pointer-events: none;
 }
 
-.composer-reference-token {
+.composer-editor ::deep .composer-reference-token {
     display: inline-flex;
     align-items: center;
     max-width: 100%;
@@ -85,12 +85,12 @@
     user-select: all;
 }
 
-.composer-reference-token.skills {
+.composer-editor ::deep .composer-reference-token.skills {
     border-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary);
 }
 
-.composer-reference-token.mcp {
+.composer-editor ::deep .composer-reference-token.mcp {
     border-color: var(--mud-palette-secondary);
     color: var(--mud-palette-secondary);
 }
