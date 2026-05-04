@@ -4,6 +4,10 @@
 }
 
 .capability-reference-text ::deep .capability-reference-token {
-    vertical-align: baseline;
+    vertical-align: middle;
     margin: 0 2px;
+}
+
+.capability-reference-text ::deep .capability-reference-token .mud-chip-content {
+    line-height: 1;
 }
