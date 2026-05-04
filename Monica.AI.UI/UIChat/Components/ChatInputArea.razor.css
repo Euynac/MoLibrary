@@ -48,15 +48,51 @@
     background-color: var(--mud-palette-secondary-hover);
 }
 
-.input-area ::deep .input-field {
+.composer-editor {
     flex: 1;
+    min-height: 42px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 10px 15px 0;
+    border: 0;
+    outline: 0;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    cursor: text;
 }
 
-.reference-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 12px;
+.composer-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--mud-palette-text-disabled);
+    pointer-events: none;
+}
+
+.composer-reference-token {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin: 0 2px;
+    padding: 1px 8px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 999px;
+    background-color: var(--mud-palette-action-default-hover);
+    color: var(--mud-palette-text-primary);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    vertical-align: baseline;
+    user-select: all;
+}
+
+.composer-reference-token.skills {
+    border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary);
+}
+
+.composer-reference-token.mcp {
+    border-color: var(--mud-palette-secondary);
+    color: var(--mud-palette-secondary);
 }
 
 .input-area ::deep .mo-ai-capability-popover {
@@ -127,23 +163,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.input-area ::deep .mud-input-root {
-    margin-top: 0 !important;
-}
-
-.input-area ::deep .mud-input-slot {
-    padding: 10px 15px 0 15px !important
-}
-
-.input-area ::deep .mud-input-underline::before,
-.input-area ::deep .mud-input-underline::after {
-    display: none !important;
-}
-
-.input-area ::deep textarea {
-    resize: none;
 }
 
 .input-area ::deep .model-pill {

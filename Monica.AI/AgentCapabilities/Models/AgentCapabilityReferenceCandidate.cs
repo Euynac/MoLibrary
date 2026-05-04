@@ -1,7 +1,7 @@
 namespace Monica.AI.AgentCapabilities.Models;
 
 /// <summary>
-/// Describes a slash-command candidate that can be explicitly attached to a chat message.
+/// Describes a slash-command candidate that can be inserted into a chat message as an inline reference token.
 /// </summary>
 public sealed record AgentCapabilityReferenceCandidate
 {
@@ -58,7 +58,7 @@ public sealed record AgentCapabilityReferenceCandidate
     public IReadOnlyList<string> ToolNames { get; }
 
     /// <summary>
-    /// Stable UI key used by chips and completion.
+    /// Stable UI key used by completion and candidate identity.
     /// </summary>
-    public string Key => AgentCapabilityReference.CreateKey(Kind, Name);
+    public string Key => AgentCapabilityKey.Create(Kind, Name);
 }

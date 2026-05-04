@@ -4,7 +4,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Monica.AI.AgentCapabilities.Abstractions;
 using Monica.AI.AgentCapabilities.Models;
-using Monica.AI.AgentCapabilities.Services;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
 using Monica.AI.Services.Support;
@@ -22,8 +21,6 @@ public class AIChatService(
     IOptions<ModuleAIOption> options,
     IAIChatAgentFactory agentFactory,
     IAgentCapabilityStateStore capabilityStateStore,
-    Monica.AI.Skills.Services.MonicaSkillCatalog skillCatalog,
-    Monica.AI.Mcp.Services.MonicaMcpCatalog mcpCatalog,
     AIChatRuntimeContextAccessor runtimeContextAccessor)
 {
     private readonly ModuleAIOption _options = options.Value;
@@ -128,9 +125,9 @@ public class AIChatService(
             await RecreateAgentAsync(state, ct);
         }
 
-        var userMessage = await CreateUserMessageAsync(message, state.RuntimeContext, capabilityState, ct);
+        var userMessage = new ChatMessage(ChatRole.User, message);
         var updateChannel = new AgentResponseUpdateChannel();
-        var runOptions = await CreateRunOptionsAsync(state, updateChannel, ct);
+        var runOptions = CreateRunOptions(state, updateChannel);
         _ = ProduceStreamingUpdatesAsync(state, userMessage, runOptions, updateChannel, ct);
 
         await foreach (var update in updateChannel.ReadAllAsync(ct))
@@ -210,10 +207,9 @@ public class AIChatService(
             ct);
     }
 
-    private async Task<ChatClientAgentRunOptions> CreateRunOptionsAsync(
+    private ChatClientAgentRunOptions CreateRunOptions(
         ChatSession state,
-        AgentResponseUpdateChannel updateChannel,
-        CancellationToken ct)
+        AgentResponseUpdateChannel updateChannel)
     {
         ArgumentNullException.ThrowIfNull(updateChannel);
 
@@ -231,74 +227,7 @@ public class AIChatService(
             };
         }
 
-        var referenceInstructions = await BuildReferenceInstructionsAsync(state.RuntimeContext, ct);
-        if (!string.IsNullOrWhiteSpace(referenceInstructions))
-        {
-            runOptions.ChatOptions ??= new ChatOptions();
-            runOptions.ChatOptions.Instructions = string.IsNullOrWhiteSpace(runOptions.ChatOptions.Instructions)
-                ? referenceInstructions
-                : runOptions.ChatOptions.Instructions + Environment.NewLine + Environment.NewLine + referenceInstructions;
-        }
-
         return runOptions;
-    }
-
-    private async Task<ChatMessage> CreateUserMessageAsync(
-        string message,
-        AIChatRuntimeContext runtimeContext,
-        AgentCapabilityState capabilityState,
-        CancellationToken ct)
-    {
-        var references = runtimeContext.GetOrDefault(AgentCapabilityChatRuntimeContextKeys.References);
-        if (references is not { Count: > 0 })
-        {
-            return new ChatMessage(ChatRole.User, message);
-        }
-
-        var enabledReferences = await ResolveEnabledReferencesAsync(references, capabilityState, ct);
-        if (enabledReferences.Count == 0)
-        {
-            return new ChatMessage(ChatRole.User, message);
-        }
-
-        var referenceLine = "Explicit Monica capability references: " +
-                            string.Join(", ", enabledReferences.Select(static reference => $"{reference.Kind}:{reference.Name}"));
-        return new ChatMessage(ChatRole.User, message + Environment.NewLine + Environment.NewLine + referenceLine);
-    }
-
-    private async Task<string?> BuildReferenceInstructionsAsync(
-        AIChatRuntimeContext runtimeContext,
-        CancellationToken ct)
-    {
-        var references = runtimeContext.GetOrDefault(AgentCapabilityChatRuntimeContextKeys.References);
-        if (references is not { Count: > 0 })
-        {
-            return null;
-        }
-
-        var capabilityState = await capabilityStateStore.LoadAsync(ct);
-        var entries = skillCatalog.GetEntries(capabilityState)
-            .Concat(await mcpCatalog.GetCapabilityEntriesAsync(capabilityState, ct))
-            .ToList();
-        return AgentCapabilityPromptBuilder.BuildReferenceInstructions(references, entries);
-    }
-
-    private async Task<IReadOnlyList<AgentCapabilityReference>> ResolveEnabledReferencesAsync(
-        IReadOnlyList<AgentCapabilityReference> references,
-        AgentCapabilityState capabilityState,
-        CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        var available = skillCatalog.GetEntries(capabilityState)
-            .Concat(await mcpCatalog.GetCapabilityEntriesAsync(capabilityState, ct))
-            .Where(static entry => entry.IsEnabled)
-            .Select(static entry => entry.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        return references
-            .Where(reference => available.Contains(reference.Key))
-            .ToList();
     }
 
     private async Task ProduceStreamingUpdatesAsync(

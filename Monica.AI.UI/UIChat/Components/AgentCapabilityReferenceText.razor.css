@@ -1,0 +1,9 @@
+.capability-reference-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.capability-reference-text ::deep .capability-reference-token {
+    vertical-align: baseline;
+    margin: 0 2px;
+}
