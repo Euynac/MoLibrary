@@ -9,7 +9,7 @@ namespace Monica.UI.Theming.Definitions;
 public sealed class FluentDesignTheme : ThemeDefinitionBase
 {
     /// <inheritdoc />
-    public override string Name => "fluent-design";
+    public override MonicaThemeKind Kind => MonicaThemeKind.FluentDesign;
 
     /// <inheritdoc />
     public override string DisplayName => "Fluent Design";

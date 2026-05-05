@@ -10,7 +10,7 @@ public sealed class ZenInkTheme : ThemeDefinitionBase
 {
     private static readonly string[] SerifFontFamily = ["Noto Serif SC", "Source Han Serif SC", "STZhongsong", "serif"];
 
-    public override string Name => "zen-ink";
+    public override MonicaThemeKind Kind => MonicaThemeKind.ZenInk;
 
     public override string DisplayName => "禅墨";
 

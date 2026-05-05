@@ -10,43 +10,43 @@
     "Dark": "Dark",
     "Light": "Light",
     "Options": {
-      "mudblazor": {
+      "MudBlazor": {
         "Name": "MudBlazor",
         "Description": "Original MudBlazor styling"
       },
-      "default": {
+      "Default": {
         "Name": "Default",
         "Description": "Modern SaaS design with minimal borders and diffuse shadows"
       },
-      "hermes-teal": {
+      "HermesTeal": {
         "Name": "Hermes Teal",
         "Description": "Editorial dark teal dashboard inspired by the Hermes Agent web UI"
       },
-      "vibeusage-matrix": {
+      "VibeUsageMatrix": {
         "Name": "Hacker Matrix",
         "Description": "Terminal-green hacker console inspired by the VibeUsage dashboard"
       },
-      "material-design-3": {
+      "MaterialDesign3": {
         "Name": "Material Design 3",
         "Description": "Material Design 3 tokens with soft surfaces, rounded shapes, and expressive typography"
       },
-      "fluent-design": {
+      "FluentDesign": {
         "Name": "Fluent Design",
         "Description": "Fluent Design styling with Mica-inspired layers, acrylic flyouts, Segoe typography, and soft rounded controls"
       },
-      "fresh": {
+      "Fresh": {
         "Name": "Fresh",
         "Description": "Light mint colors and a calm feel"
       },
-      "macaron-sweetheart": {
+      "MacaronSweetheart": {
         "Name": "Macaron Sweetheart",
         "Description": "A playful pastel macaron theme with rounded candy surfaces and handwritten typography"
       },
-      "ink-landscape": {
+      "InkLandscape": {
         "Name": "Ink Landscape",
         "Description": "Ink-wash style with quiet contrast"
       },
-      "zen-ink": {
+      "ZenInk": {
         "Name": "Zen Sumi-e",
         "Description": "Minimalist Chinese ink wash painting style with ample white space"
       }

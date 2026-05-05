@@ -8,7 +8,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public class FreshTheme : ThemeDefinitionBase
 {
-    public override string Name => "fresh";
+    public override MonicaThemeKind Kind => MonicaThemeKind.Fresh;
     public override string DisplayName => "小清新";
     public override string Description => "清爽柔和的主题，给人以舒适宁静的感觉";
     

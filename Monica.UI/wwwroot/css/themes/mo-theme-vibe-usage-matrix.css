@@ -1,0 +1,676 @@
+/* Monica Hacker Matrix Theme - phosphor green terminal dashboard */
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('../../fonts/GeistMono-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('../../fonts/GeistMono-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('../../fonts/GeistMono-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    src: url('../../fonts/GeistMono-Black.woff2') format('woff2');
+    font-weight: 900;
+    font-display: swap;
+}
+
+:root[data-theme="vibe-usage-matrix-light"],
+:root[data-theme="vibe-usage-matrix-dark"],
+.mo-theme-vibe-usage-matrix-light,
+.mo-theme-vibe-usage-matrix-dark {
+    --mo-vibe-font: 'Geist Mono', 'Microsoft YaHei UI', 'PingFang SC', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --mo-vibe-panel-blur: 10px;
+    --mo-card-border-radius: 0px;
+    --mo-dialog-border-radius: 0px;
+    --mo-input-border-radius: 0px;
+    --mo-button-border-radius: 0px;
+    --mo-nav-menu-border-radius: 0px;
+    --mo-appbar-backdrop-filter: blur(12px);
+    --mo-appbar-box-shadow: inset 0 -1px 0 rgba(0, 255, 65, 0.06);
+    --mo-appbar-menu-item-border-radius: 0px;
+    --mo-appbar-menu-item-border: 1px solid transparent;
+    --mo-appbar-menu-item-hover-border: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-active-border: 1px solid var(--mud-palette-primary);
+    --mo-appbar-menu-item-font-family: var(--mo-vibe-font);
+    --mo-appbar-menu-item-font-size: 0.72rem;
+    --mo-appbar-menu-item-font-weight: 700;
+    --mo-appbar-menu-item-letter-spacing: 0.14em;
+    --mo-appbar-menu-item-text-transform: uppercase;
+    --mo-appbar-menu-item-active-font-weight: 700;
+    --mo-appbar-menu-item-hover-shadow: 0 0 8px rgba(0, 255, 65, 0.06);
+    --mo-appbar-menu-item-hover-transform: translateX(1px);
+    --mo-appbar-menu-item-active-shadow: inset 2px 0 0 var(--mud-palette-primary);
+    --mo-appbar-menu-item-transition:
+        border-color 180ms ease,
+        background-color 180ms ease,
+        box-shadow 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
+    --mo-vibe-corner-size: 10px;
+    --mo-vibe-surface-line-step: 12px;
+}
+
+:root[data-theme="vibe-usage-matrix-light"],
+.mo-theme-vibe-usage-matrix-light {
+    --mo-vibe-bg: #effff1;
+    --mo-vibe-panel: rgba(249, 255, 249, 0.92);
+    --mo-vibe-panel-strong: rgba(236, 255, 239, 0.98);
+    --mo-vibe-ink: #00bf40;
+    --mo-vibe-ink-bright: #062b12;
+    --mo-vibe-ink-muted: rgba(6, 43, 18, 0.72);
+    --mo-vibe-ink-dim: rgba(0, 179, 54, 0.42);
+    --mo-vibe-ghost: rgba(0, 179, 54, 0.18);
+    --mo-vibe-glow: rgba(0, 179, 54, 0.10);
+    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 179, 54, 0.08), 0 18px 40px rgba(6, 43, 18, 0.10);
+    --mo-vibe-scanline-opacity: 0.06;
+    --mo-vibe-selection-text: #041206;
+    --mo-vibe-corner-ink: rgba(0, 179, 54, 0.34);
+    --mo-vibe-surface-pattern: rgba(0, 179, 54, 0.06);
+    --mo-vibe-sweep: rgba(0, 179, 54, 0.12);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-text: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-hover-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-hover-icon: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-active-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-icon: var(--mo-vibe-ink-bright);
+}
+
+:root[data-theme="vibe-usage-matrix-dark"],
+.mo-theme-vibe-usage-matrix-dark {
+    --mo-vibe-bg: #050505;
+    --mo-vibe-panel: rgba(0, 10, 0, 0.72);
+    --mo-vibe-panel-strong: rgba(0, 10, 0, 0.82);
+    --mo-vibe-ink: #00ff41;
+    --mo-vibe-ink-bright: #e8ffe9;
+    --mo-vibe-ink-muted: rgba(0, 255, 65, 0.68);
+    --mo-vibe-ink-dim: rgba(0, 255, 65, 0.38);
+    --mo-vibe-ghost: rgba(0, 255, 65, 0.18);
+    --mo-vibe-glow: rgba(0, 255, 65, 0.18);
+    --mo-vibe-panel-shadow: 0 0 0 1px rgba(0, 255, 65, 0.08), 0 18px 40px rgba(0, 0, 0, 0.45);
+    --mo-vibe-scanline-opacity: 0.12;
+    --mo-vibe-selection-text: #050505;
+    --mo-vibe-corner-ink: rgba(0, 255, 65, 0.40);
+    --mo-vibe-surface-pattern: rgba(0, 255, 65, 0.08);
+    --mo-vibe-sweep: rgba(0, 255, 65, 0.16);
+    --mo-appbar-background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+    --mo-appbar-dark-background: var(--mo-appbar-background);
+    --mo-appbar-border-bottom: 1px solid var(--mo-vibe-ghost);
+    --mo-appbar-menu-item-text: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-icon: var(--mo-vibe-ink-muted);
+    --mo-appbar-menu-item-hover-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-hover-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-hover-icon: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-background: var(--mo-vibe-panel-strong);
+    --mo-appbar-menu-item-active-text: var(--mo-vibe-ink-bright);
+    --mo-appbar-menu-item-active-icon: var(--mo-vibe-ink-bright);
+}
+
+.mo-theme-vibe-usage-matrix-light,
+.mo-theme-vibe-usage-matrix-dark {
+    position: relative;
+    isolation: isolate;
+    background: var(--mo-vibe-bg);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mo-vibe-font);
+}
+
+.mo-theme-vibe-usage-matrix-light::before,
+.mo-theme-vibe-usage-matrix-dark::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 16% 10%, var(--mo-vibe-glow) 0%, transparent 34%),
+        radial-gradient(circle at 84% 0%, color-mix(in srgb, var(--mo-vibe-glow) 78%, transparent) 0%, transparent 28%),
+        linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.05) 100%);
+}
+
+.mo-theme-vibe-usage-matrix-light ::selection,
+.mo-theme-vibe-usage-matrix-dark ::selection {
+    background: var(--mud-palette-primary);
+    color: var(--mo-vibe-selection-text);
+}
+
+.mo-theme-vibe-usage-matrix-light .mo-layout,
+.mo-theme-vibe-usage-matrix-dark .mo-layout,
+.mo-theme-vibe-usage-matrix-light .mo-main-content,
+.mo-theme-vibe-usage-matrix-dark .mo-main-content,
+.mo-theme-vibe-usage-matrix-light .mo-body-content,
+.mo-theme-vibe-usage-matrix-dark .mo-body-content {
+    background: transparent;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-typography, .mud-button, .mud-chip, .mud-table, .mud-data-grid, .mud-input, .mud-select),
+.mo-theme-vibe-usage-matrix-light :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title),
+.mo-theme-vibe-usage-matrix-dark :is(.navbar-link, .navbar-measure-link, .more-menu-item-title, .flyout-menu-item-title) {
+    font-family: var(--mo-vibe-font);
+}
+
+.mo-theme-vibe-usage-matrix-light .navbar-link,
+.mo-theme-vibe-usage-matrix-dark .navbar-link,
+.mo-theme-vibe-usage-matrix-light .navbar-measure-link,
+.mo-theme-vibe-usage-matrix-dark .navbar-measure-link {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.mo-theme-vibe-usage-matrix-light .navbar-link:hover,
+.mo-theme-vibe-usage-matrix-dark .navbar-link:hover {
+    color: var(--mo-vibe-ink-bright);
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+}
+
+.mo-theme-vibe-usage-matrix-light .navbar-link::before,
+.mo-theme-vibe-usage-matrix-dark .navbar-link::before {
+    height: 1px;
+    background: var(--mud-palette-primary);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.28);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.more-menu, .flyout-menu, .dropdown-menu),
+.mo-theme-vibe-usage-matrix-dark :is(.more-menu, .flyout-menu, .dropdown-menu) {
+    background: var(--mo-vibe-panel-strong);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: var(--mo-vibe-panel-shadow);
+    backdrop-filter: blur(12px);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.more-menu-header, .flyout-menu-header),
+.mo-theme-vibe-usage-matrix-dark :is(.more-menu-header, .flyout-menu-header) {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-table-container, .mud-data-grid, .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+    background: var(--mo-vibe-panel);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: blur(var(--mo-vibe-panel-blur));
+    position: relative;
+}
+
+:root[data-theme="vibe-usage-matrix-light"] .mud-popover:not(.mud-tooltip),
+:root[data-theme="vibe-usage-matrix-dark"] .mud-popover:not(.mud-tooltip),
+.mo-theme-vibe-usage-matrix-light .mud-popover:not(.mud-tooltip),
+.mo-theme-vibe-usage-matrix-dark .mud-popover:not(.mud-tooltip) {
+    background: var(--mo-vibe-panel);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: var(--mo-vibe-panel-shadow);
+    backdrop-filter: blur(var(--mo-vibe-panel-blur));
+    position: absolute;
+    width: fit-content;
+    max-width: min(24rem, calc(100vw - 32px));
+    overflow: visible;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-dialog, .mud-snackbar),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-dialog, .mud-snackbar) {
+    box-shadow: var(--mo-vibe-panel-shadow);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-appbar,
+.mo-theme-vibe-usage-matrix-dark .mud-appbar {
+    border-bottom: 1px solid var(--mo-vibe-ghost);
+    box-shadow: none;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-drawer,
+.mo-theme-vibe-usage-matrix-dark .mud-drawer {
+    box-shadow: none;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-button {
+    border-radius: 0;
+    box-shadow: none;
+    font-family: var(--mo-vibe-font);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.mo-theme-vibe-usage-matrix-dark .mud-button {
+    border-radius: 0;
+    box-shadow: none;
+    font-family: var(--mo-vibe-font);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-button-filled, .mud-button-outlined),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-button-filled, .mud-button-outlined) {
+    border: 1px solid var(--mo-vibe-ghost);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-button-filled-primary,
+.mo-theme-vibe-usage-matrix-dark .mud-button-filled-primary {
+    background: var(--mud-palette-primary);
+    border-color: var(--mud-palette-primary);
+    color: #050505;
+    box-shadow: 0 0 12px rgba(0, 255, 65, 0.20);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-button-filled-primary:hover,
+.mo-theme-vibe-usage-matrix-dark .mud-button-filled-primary:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 84%, white);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 84%, white);
+    box-shadow: 0 0 18px rgba(0, 255, 65, 0.32);
+    transform: translateY(-1px);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-button-outlined,
+.mo-theme-vibe-usage-matrix-dark .mud-button-outlined {
+    background: var(--mo-vibe-panel);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-button-text:hover, .mud-button-outlined:hover),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-button-text:hover, .mud-button-outlined:hover) {
+    background: var(--mo-vibe-panel-strong);
+    border-color: var(--mo-vibe-ink-dim);
+    box-shadow: 0 0 16px rgba(0, 255, 65, 0.16);
+    transform: translateY(-1px);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card) {
+    position: relative;
+    overflow: hidden;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card)::after,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-button, .mud-navmenu .mud-nav-link, .navbar-link, .navbar-measure-link, .theme-card)::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+        120deg,
+        transparent 0%,
+        transparent 34%,
+        color-mix(in srgb, var(--mo-vibe-sweep) 90%, transparent) 47%,
+        rgba(255, 255, 255, 0.22) 50%,
+        color-mix(in srgb, var(--mo-vibe-sweep) 90%, transparent) 53%,
+        transparent 66%,
+        transparent 100%
+    );
+    transform: translateX(-125%);
+    transition: transform 320ms ease, opacity 180ms ease;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-button:hover, .mud-navmenu .mud-nav-link:hover, .navbar-link:hover, .navbar-measure-link:hover, .theme-card:hover)::after,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-button:hover, .mud-navmenu .mud-nav-link:hover, .navbar-link:hover, .navbar-measure-link:hover, .theme-card:hover)::after {
+    opacity: 1;
+    transform: translateX(125%);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-chip, .mud-alert, .mud-snackbar .mud-snackbar-message),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-chip, .mud-alert, .mud-snackbar .mud-snackbar-message) {
+    border-radius: 0;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-chip, .mud-alert-message, .mud-badge, .mud-snackbar .mud-snackbar-message),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-chip, .mud-alert-message, .mud-badge, .mud-snackbar .mud-snackbar-message) {
+    font-family: var(--mo-vibe-font);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+:root[data-theme="vibe-usage-matrix-light"] :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-chip-filled,
+:root[data-theme="vibe-usage-matrix-dark"] :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-chip-filled,
+.mo-theme-vibe-usage-matrix-light :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-chip-filled,
+.mo-theme-vibe-usage-matrix-dark :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-chip-filled {
+    background: var(--mo-vibe-panel-strong);
+    border: 1px solid var(--mo-vibe-ghost);
+    color: var(--mo-vibe-ink-bright);
+}
+
+:root[data-theme="vibe-usage-matrix-light"] :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-clickable:is(:hover, :focus-visible, :active):not(.mud-disabled),
+:root[data-theme="vibe-usage-matrix-dark"] :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-clickable:is(:hover, :focus-visible, :active):not(.mud-disabled),
+.mo-theme-vibe-usage-matrix-light :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-clickable:is(:hover, :focus-visible, :active):not(.mud-disabled),
+.mo-theme-vibe-usage-matrix-dark :is(.cron-compact-wrapper, .cron-full-wrapper) .mud-chip.mud-clickable:is(:hover, :focus-visible, :active):not(.mud-disabled) {
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 82%, var(--mo-vibe-ink) 18%);
+    border-color: var(--mo-vibe-ink-dim);
+    color: var(--mo-vibe-ink-bright);
+}
+
+:root[data-theme="vibe-usage-matrix-light"] .mud-snackbar,
+:root[data-theme="vibe-usage-matrix-dark"] .mud-snackbar,
+.mo-theme-vibe-usage-matrix-light .mud-snackbar,
+.mo-theme-vibe-usage-matrix-dark .mud-snackbar {
+    background: var(--mo-vibe-panel-strong);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: var(--mo-vibe-panel-shadow);
+    backdrop-filter: blur(var(--mo-vibe-panel-blur));
+    color: var(--mo-vibe-ink-bright);
+}
+
+:root[data-theme="vibe-usage-matrix-light"] :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
+:root[data-theme="vibe-usage-matrix-dark"] :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
+.mo-theme-vibe-usage-matrix-light :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-snackbar .mud-snackbar-content-message, .mud-snackbar .mud-snackbar-content-action, .mud-snackbar .mud-button-root, .mud-snackbar .mud-icon-root) {
+    color: inherit;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-snackbar.mud-alert-filled-success,
+.mo-theme-vibe-usage-matrix-dark .mud-snackbar.mud-alert-filled-success {
+    border-inline-start: 3px solid var(--mud-palette-success);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-snackbar.mud-alert-filled-info,
+.mo-theme-vibe-usage-matrix-dark .mud-snackbar.mud-alert-filled-info {
+    border-inline-start: 3px solid var(--mud-palette-info);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-snackbar.mud-alert-filled-warning,
+.mo-theme-vibe-usage-matrix-dark .mud-snackbar.mud-alert-filled-warning {
+    border-inline-start: 3px solid var(--mud-palette-warning);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-snackbar.mud-alert-filled-error,
+.mo-theme-vibe-usage-matrix-dark .mud-snackbar.mud-alert-filled-error {
+    border-inline-start: 3px solid var(--mud-palette-error);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) {
+    background: var(--mo-vibe-panel);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: var(--mo-vibe-panel-shadow);
+    overflow: hidden;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-tabbar {
+    background: var(--mo-vibe-panel-strong);
+    border-bottom: 1px solid var(--mo-vibe-ghost);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-tabs.mud-tabs-rounded, .mud-tabs.mud-paper-outlined, .mud-tabs[class*="mud-elevation-"]) > .mud-tabs-panels {
+    background: var(--mo-vibe-panel);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-tab,
+.mo-theme-vibe-usage-matrix-dark .mud-tab {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-tab.mud-tab-active,
+.mo-theme-vibe-usage-matrix-dark .mud-tab.mud-tab-active {
+    color: var(--mo-vibe-ink-bright);
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 88%, transparent);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-tab-slider,
+.mo-theme-vibe-usage-matrix-dark .mud-tab-slider {
+    background: var(--mud-palette-primary);
+    box-shadow: 0 0 12px rgba(0, 255, 65, 0.30);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-input-outlined, .mud-select),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-input-outlined, .mud-select) {
+    border-radius: 0;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-input-outlined,
+.mo-theme-vibe-usage-matrix-dark .mud-input-outlined {
+    background: var(--mo-vibe-panel);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-input-outlined .mud-input-outlined-border,
+.mo-theme-vibe-usage-matrix-dark .mud-input-outlined .mud-input-outlined-border {
+    border-width: 1px;
+    border-color: var(--mo-vibe-ghost);
+    border-radius: 0;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-input-label,
+.mo-theme-vibe-usage-matrix-dark .mud-input-label {
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-input-outlined:hover .mud-input-outlined-border, .mud-input-outlined.mud-input-focused .mud-input-outlined-border, .mud-input-outlined:focus-within .mud-input-outlined-border) {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.18);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-navmenu .mud-nav-link,
+.mo-theme-vibe-usage-matrix-dark .mud-navmenu .mud-nav-link {
+    margin: 0 8px 8px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 0;
+    color: var(--mo-vibe-ink-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-navmenu .mud-nav-link:hover,
+.mo-theme-vibe-usage-matrix-dark .mud-navmenu .mud-nav-link:hover {
+    background: var(--mo-vibe-panel-strong);
+    border-color: var(--mo-vibe-ghost);
+    color: var(--mo-vibe-ink-bright);
+    box-shadow: 0 0 16px rgba(0, 255, 65, 0.12);
+    transform: translateX(1px);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-navmenu .mud-nav-link.active,
+.mo-theme-vibe-usage-matrix-dark .mud-navmenu .mud-nav-link.active {
+    background: var(--mo-vibe-panel-strong);
+    border-color: var(--mud-palette-primary);
+    box-shadow: inset 2px 0 0 var(--mud-palette-primary);
+    color: var(--mo-vibe-ink-bright);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs) {
+    overflow: hidden;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before,
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted), .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):not(.mud-tooltip):not(.mud-snackbar), .mud-dialog, .mud-drawer, .theme-card, .mud-tabs)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(var(--mo-vibe-corner-ink) 0 0),
+        linear-gradient(var(--mo-vibe-corner-ink) 0 0),
+        linear-gradient(var(--mo-vibe-corner-ink) 0 0),
+        linear-gradient(var(--mo-vibe-corner-ink) 0 0);
+    background-repeat: no-repeat;
+    background-size:
+        var(--mo-vibe-corner-size) 1px,
+        1px var(--mo-vibe-corner-size),
+        var(--mo-vibe-corner-size) 1px,
+        1px var(--mo-vibe-corner-size);
+    background-position:
+        top 8px left 8px,
+        top 8px left 8px,
+        bottom 8px right 8px,
+        bottom 8px right 8px;
+    opacity: 0.78;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-table-container,
+.mo-theme-vibe-usage-matrix-dark .mud-table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-data-grid,
+.mo-theme-vibe-usage-matrix-dark .mud-data-grid {
+    overflow: visible;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-card:not(.mo-self-painted):hover, .mud-paper[class*="mud-elevation-"]:not(.mo-self-painted):not(.mud-popover):hover, .mud-table-container:hover, .mud-data-grid:hover, .theme-card:hover) {
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 58%, var(--mo-vibe-ghost));
+    box-shadow: 0 0 0 1px rgba(0, 255, 65, 0.10), 0 0 26px rgba(0, 255, 65, 0.12);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-table, .mud-data-grid),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-table, .mud-data-grid) {
+    background: transparent;
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-table-head th, .mud-data-grid-header-cell),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-table-head th, .mud-data-grid-header-cell) {
+    color: var(--mo-vibe-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-bottom-color: var(--mo-vibe-ghost);
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 92%, transparent);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-table-cell, .mud-data-grid-cell),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-table-cell, .mud-data-grid-cell) {
+    border-bottom-color: var(--mo-vibe-ghost);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-table-row:hover, .mud-data-grid-row:hover),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-table-row:hover, .mud-data-grid-row:hover) {
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 86%, transparent);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-vibe-usage-matrix-dark .mud-data-grid .column-header .column-options .sort-direction-icon,
+.mo-theme-vibe-usage-matrix-light .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-vibe-usage-matrix-dark .mud-data-grid .column-header .column-options .column-options-icon,
+.mo-theme-vibe-usage-matrix-light .mud-data-grid .column-header .column-options .drag-icon-options,
+.mo-theme-vibe-usage-matrix-dark .mud-data-grid .column-header .column-options .drag-icon-options {
+    opacity: 0.72;
+    color: var(--mo-vibe-ink-muted);
+}
+
+.mo-theme-vibe-usage-matrix-light .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label,
+.mo-theme-vibe-usage-matrix-dark .mud-data-grid .column-header .column-options .mud-menu .mud-icon-button-label {
+    opacity: 1;
+    color: var(--mo-vibe-ink-muted);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-data-grid .column-header:hover .column-options .sort-direction-icon, .mud-data-grid .column-header:hover .column-options .column-options-icon, .mud-data-grid .column-header:hover .column-options .drag-icon-options, .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-data-grid .column-header:hover .column-options .sort-direction-icon, .mud-data-grid .column-header:hover .column-options .column-options-icon, .mud-data-grid .column-header:hover .column-options .drag-icon-options, .mud-data-grid .column-header:hover .column-options .mud-menu .mud-icon-button-label) {
+    color: var(--mo-vibe-ink-bright);
+}
+
+.mo-theme-vibe-usage-matrix-light :is(.mud-data-grid .sort-direction-icon.mud-direction-asc, .mud-data-grid .sort-direction-icon.mud-direction-desc),
+.mo-theme-vibe-usage-matrix-dark :is(.mud-data-grid .sort-direction-icon.mud-direction-asc, .mud-data-grid .sort-direction-icon.mud-direction-desc) {
+    opacity: 1;
+    color: var(--mo-vibe-ink-bright);
+}
+
+.mo-theme-vibe-usage-matrix-light .theme-card,
+.mo-theme-vibe-usage-matrix-dark .theme-card {
+    background: var(--mo-vibe-panel);
+    border: 1px solid var(--mo-vibe-ghost);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.mo-theme-vibe-usage-matrix-light .theme-card:hover,
+.mo-theme-vibe-usage-matrix-dark .theme-card:hover {
+    transform: translateY(-1px);
+    background: var(--mo-vibe-panel-strong);
+    box-shadow: var(--mo-vibe-panel-shadow);
+}
+
+.mo-theme-vibe-usage-matrix-light .theme-card.selected,
+.mo-theme-vibe-usage-matrix-dark .theme-card.selected {
+    border-color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mo-vibe-panel-strong) 86%, transparent);
+}
+
+:root[data-theme="vibe-usage-matrix-light"] .mud-tooltip,
+:root[data-theme="vibe-usage-matrix-dark"] .mud-tooltip,
+.mo-theme-vibe-usage-matrix-light .mud-tooltip,
+.mo-theme-vibe-usage-matrix-dark .mud-tooltip {
+    background: var(--mo-vibe-panel-strong);
+    border: 1px solid var(--mo-vibe-ghost);
+    color: var(--mo-vibe-ink-bright);
+    box-shadow: var(--mo-vibe-panel-shadow);
+    position: absolute;
+    width: fit-content;
+    max-width: min(28rem, calc(100vw - 32px));
+    font-family: var(--mo-vibe-font);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    line-height: 1.45;
+    text-align: start;
+    white-space: normal;
+}
+
+:root[data-theme="vibe-usage-matrix-light"] .mud-tooltip.mud-tooltip-arrow::after,
+:root[data-theme="vibe-usage-matrix-dark"] .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-vibe-usage-matrix-light .mud-tooltip.mud-tooltip-arrow::after,
+.mo-theme-vibe-usage-matrix-dark .mud-tooltip.mud-tooltip-arrow::after {
+    border-top-color: var(--mo-vibe-panel-strong);
+}
+
+.mo-theme-vibe-usage-matrix-light ::-webkit-scrollbar-thumb,
+.mo-theme-vibe-usage-matrix-dark ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--mo-vibe-ink) 38%, transparent);
+    border-radius: 0;
+    border: 1px solid color-mix(in srgb, var(--mo-vibe-ink) 26%, transparent);
+}
+
+.mo-theme-vibe-usage-matrix-light ::-webkit-scrollbar-thumb:hover,
+.mo-theme-vibe-usage-matrix-dark ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--mo-vibe-ink) 54%, transparent);
+}

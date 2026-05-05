@@ -8,17 +8,17 @@ namespace Monica.UI.Theming;
 public abstract class ThemeDefinitionBase : IThemeDefinition
 {
     /// <summary>
-    /// Topic name
+    /// Theme identity.
     /// </summary>
-    public abstract string Name { get; }
+    public abstract MonicaThemeKind Kind { get; }
     
     /// <summary>
-    /// Topic display name
+    /// Theme display name.
     /// </summary>
     public abstract string DisplayName { get; }
     
     /// <summary>
-    /// Topic description
+    /// Theme description.
     /// </summary>
     public abstract string Description { get; }
     

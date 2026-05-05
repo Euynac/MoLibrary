@@ -8,7 +8,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public sealed class VibeUsageMatrixTheme : ThemeDefinitionBase
 {
-    public override string Name => "vibeusage-matrix";
+    public override MonicaThemeKind Kind => MonicaThemeKind.VibeUsageMatrix;
 
     public override string DisplayName => "Hacker Matrix";
 

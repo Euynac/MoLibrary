@@ -23,7 +23,7 @@ public sealed class MacaronSweetheartTheme : ThemeDefinitionBase
         "sans-serif"
     ];
 
-    public override string Name => "macaron-sweetheart";
+    public override MonicaThemeKind Kind => MonicaThemeKind.MacaronSweetheart;
 
     public override string DisplayName => "马卡龙甜心";
 

@@ -10,43 +10,43 @@
     "Dark": "深色",
     "Light": "浅色",
     "Options": {
-      "mudblazor": {
+      "MudBlazor": {
         "Name": "MudBlazor 默认",
         "Description": "保留原始 MudBlazor 风格"
       },
-      "default": {
+      "Default": {
         "Name": "默认主题",
         "Description": "基于白底、极简边框和柔和投影的现代 SaaS 设计风格"
       },
-      "hermes-teal": {
+      "HermesTeal": {
         "Name": "Hermes Teal",
         "Description": "参考 Hermes Agent Web UI 的深青色编辑感控制台风格"
       },
-      "vibeusage-matrix": {
+      "VibeUsageMatrix": {
         "Name": "黑客矩阵",
         "Description": "参考 VibeUsage 控制台的终端绿黑客矩阵风格"
       },
-      "material-design-3": {
+      "MaterialDesign3": {
         "Name": "Material Design 3",
         "Description": "基于 Material Design 3 token 的柔和表面、圆角形状和表现型排版"
       },
-      "fluent-design": {
+      "FluentDesign": {
         "Name": "Fluent Design",
         "Description": "Fluent Design 风格，包含 Mica 层次、亚克力弹层、Segoe 排版和柔和圆角控件"
       },
-      "fresh": {
+      "Fresh": {
         "Name": "小清新",
         "Description": "薄荷浅色调，清爽安静"
       },
-      "macaron-sweetheart": {
+      "MacaronSweetheart": {
         "Name": "马卡龙甜心",
         "Description": "粉嫩马卡龙色系，圆润俏皮的甜美手写风格"
       },
-      "ink-landscape": {
+      "InkLandscape": {
         "Name": "墨韵山水",
         "Description": "水墨留白风格，沉静克制"
       },
-      "zen-ink": {
+      "ZenInk": {
         "Name": "禅墨",
         "Description": "极简中国水墨画风格，大面积留白与笔触之美"
       }

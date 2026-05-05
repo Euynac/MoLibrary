@@ -7,7 +7,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public class MudBlazorDefaultTheme : ThemeDefinitionBase
 {
-    public override string Name => "mudblazor";
+    public override MonicaThemeKind Kind => MonicaThemeKind.MudBlazor;
     public override string DisplayName => "MudBlazor默认主题";
     public override string Description => "完全保持MudBlazor原始风格，无自定义样式";
     

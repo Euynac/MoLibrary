@@ -1,4 +1,5 @@
 using MudBlazor;
+using Monica.UI.Theming;
 
 namespace Monica.UI.Shell.State;
 
@@ -23,9 +24,16 @@ public interface IThemeState
     MudTheme CurrentTheme { get; }
 
     /// <summary>
-    /// Current topic name
+    /// Current theme identity.
     /// </summary>
-    string CurrentThemeName { get; set; }
+    MonicaThemeKind CurrentThemeKind { get; set; }
+
+    /// <summary>
+    /// Applies the selected theme and mode as one state transition.
+    /// </summary>
+    /// <param name="themeKind">Selected theme identity.</param>
+    /// <param name="isDarkMode">Whether the theme should use the dark palette.</param>
+    void SetTheme(MonicaThemeKind themeKind, bool isDarkMode);
 
     /// <summary>
     /// Switch theme mode (light and dark switching)

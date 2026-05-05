@@ -7,7 +7,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public class DefaultTheme : ThemeDefinitionBase
 {
-    public override string Name => "default";
+    public override MonicaThemeKind Kind => MonicaThemeKind.Default;
     public override string DisplayName => "默认主题";
     public override string Description => "基于白底、极简边框和柔和投影的现代 SaaS 设计风格";
     

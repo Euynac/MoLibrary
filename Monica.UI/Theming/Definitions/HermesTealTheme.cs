@@ -8,7 +8,7 @@ namespace Monica.UI.Theming.Definitions;
 /// </summary>
 public sealed class HermesTealTheme : ThemeDefinitionBase
 {
-    public override string Name => "hermes-teal";
+    public override MonicaThemeKind Kind => MonicaThemeKind.HermesTeal;
 
     public override string DisplayName => "Hermes Teal";
 

@@ -10,10 +10,9 @@ namespace Monica.UI.Shell.State;
 /// </summary>
 public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
 {
-    private bool _isDarkMode = false;
-    private MudTheme _currentTheme = ThemeCatalog.GetTheme("default").CreateTheme();
-    private string _currentThemeName = "default";
-    private readonly ModuleShellUIOption _options = options.Value;
+    private bool _isDarkMode = options.Value.DefaultDarkMode;
+    private MonicaThemeKind _currentThemeKind = ResolveThemeKind(options.Value.DefaultTheme);
+    private MudTheme _currentTheme = CreateThemeByKind(ResolveThemeKind(options.Value.DefaultTheme));
 
     public event Action? OnThemeChanged;
 
@@ -32,44 +31,51 @@ public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
 
     public MudTheme CurrentTheme => _currentTheme;
     
-    public string CurrentThemeName
+    public MonicaThemeKind CurrentThemeKind
     {
-        get => _currentThemeName;
+        get => _currentThemeKind;
         set
         {
-            var resolvedThemeName = ResolveThemeName(value);
-
-            if (_currentThemeName != resolvedThemeName)
-            {
-                _currentThemeName = resolvedThemeName;
-                _currentTheme = CreateThemeByName(resolvedThemeName);
-                OnThemeChanged?.Invoke();
-            }
+            SetTheme(value, _isDarkMode);
         }
+    }
+
+    public void SetTheme(MonicaThemeKind themeKind, bool isDarkMode)
+    {
+        var resolvedThemeKind = ResolveThemeKind(themeKind);
+        if (_currentThemeKind == resolvedThemeKind && _isDarkMode == isDarkMode)
+        {
+            return;
+        }
+
+        _currentThemeKind = resolvedThemeKind;
+        _isDarkMode = isDarkMode;
+        _currentTheme = CreateThemeByKind(resolvedThemeKind);
+        OnThemeChanged?.Invoke();
     }
 
     /// <summary>
     /// List of available themes
     /// </summary>
-    public static (string Name, string DisplayName, string Description)[] AvailableThemes 
+    public static (MonicaThemeKind Kind, string DisplayName, string Description)[] AvailableThemes 
         => ThemeCatalog.GetAvailableThemes();
 
     /// <summary>
-    /// Resolve the requested theme name to an available theme.
+    /// Resolve the requested theme identity to an available theme.
     /// </summary>
-    private static string ResolveThemeName(string themeName)
+    private static MonicaThemeKind ResolveThemeKind(MonicaThemeKind themeKind)
     {
-        return ThemeCatalog.ThemeExists(themeName)
-            ? themeName
-            : "default";
+        return ThemeCatalog.ThemeExists(themeKind)
+            ? themeKind
+            : MonicaThemeKind.Default;
     }
 
     /// <summary>
-    /// Create a theme based on its theme name.
+    /// Create a theme based on its theme identity.
     /// </summary>
-    private MudTheme CreateThemeByName(string themeName)
+    private static MudTheme CreateThemeByKind(MonicaThemeKind themeKind)
     {
-        return ThemeCatalog.GetTheme(themeName).CreateTheme();
+        return ThemeCatalog.GetTheme(themeKind).CreateTheme();
     }
 
 
@@ -87,7 +93,7 @@ public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
     public string GetThemeCssClass()
     {
         var mode = IsDarkMode ? "dark" : "light";
-        return $"mo-theme-{_currentThemeName}-{mode}";
+        return $"mo-theme-{_currentThemeKind.ToCssToken()}-{mode}";
     }
     
     /// <summary>
@@ -96,7 +102,7 @@ public class ThemeState(IOptions<ModuleShellUIOption> options) : IThemeState
     public string GetThemeDataAttribute()
     {
         var mode = IsDarkMode ? "dark" : "light";
-        return $"{_currentThemeName}-{mode}";
+        return $"{_currentThemeKind.ToCssToken()}-{mode}";
     }
 
     /// <summary>

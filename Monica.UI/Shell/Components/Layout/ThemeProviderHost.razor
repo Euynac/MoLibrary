@@ -3,6 +3,7 @@
 @inject IJSRuntime JSRuntime
 @using Monica.UI.Shell.State
 @using Monica.UI.Shell.Support
+@using Monica.UI.Theming
 @implements IAsyncDisposable
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" IsDarkMode="@ThemeService.IsDarkMode" />
@@ -35,10 +36,14 @@
             {
                 if (themeData != null)
                 {
-                    ThemeService.CurrentThemeName = themeData.ThemeName;
-                    ThemeService.IsDarkMode = themeData.IsDarkMode;
+                    ThemeService.SetTheme(themeData.ThemeKind, themeData.IsDarkMode);
                 }
             });
+
+            if (themeData is null)
+            {
+                await PersistCurrentThemeAsync();
+            }
 
             await _themeHelperModule.InvokeVoidAsync(
                 "setDocumentTheme", ThemeService.GetThemeDataAttribute());
@@ -52,8 +57,7 @@
 
     private async Task ApplyThemeChangeAsync()
     {
-        await BrowserStorage.SetAsync("theme:data", new ThemeData(
-            ThemeService.CurrentThemeName, ThemeService.IsDarkMode));
+        await PersistCurrentThemeAsync();
 
         if (_themeHelperModule != null)
         {
@@ -62,6 +66,12 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private Task PersistCurrentThemeAsync()
+    {
+        return BrowserStorage.SetAsync("theme:data", new ThemeData(
+            ThemeService.CurrentThemeKind, ThemeService.IsDarkMode));
     }
 
     public async ValueTask DisposeAsync()
@@ -94,5 +104,5 @@
         }
     }
 
-    private record ThemeData(string ThemeName, bool IsDarkMode);
+    private record ThemeData(MonicaThemeKind ThemeKind, bool IsDarkMode);
 }
