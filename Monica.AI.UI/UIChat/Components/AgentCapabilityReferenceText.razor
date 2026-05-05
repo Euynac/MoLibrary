@@ -1,0 +1,47 @@
+@using Monica.AI.AgentCapabilities.Models
+@using Monica.AI.UI.UIChat.Support
+
+<span class="capability-reference-text">
+    @foreach (var segment in Segments)
+    {
+        if (segment is { IsReference: true, Kind: not null })
+        {
+            <MudChip T="string"
+                     Size="Size.Small"
+                     Variant="Variant.Outlined"
+                     Color="@GetReferenceColor(segment.Kind.Value)"
+                     Icon="@GetReferenceIcon(segment.Kind.Value)"
+                     Class="capability-reference-token">
+                @GetReferenceLabel(segment.Kind.Value, segment.Text)
+            </MudChip>
+        }
+        else
+        {
+            @segment.Text
+        }
+    }
+</span>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+
+    private IReadOnlyList<AgentCapabilityReferenceTextSegment> Segments
+        => AgentCapabilityReferenceTokenSyntax.Parse(Text);
+
+    private static string GetReferenceIcon(AgentCapabilityKind kind)
+    {
+        return kind == AgentCapabilityKind.Skill
+            ? Icons.Material.Filled.AutoAwesome
+            : Icons.Material.Filled.AccountTree;
+    }
+
+    private static Color GetReferenceColor(AgentCapabilityKind kind)
+    {
+        return kind == AgentCapabilityKind.Skill ? Color.Primary : Color.Secondary;
+    }
+
+    private static string GetReferenceLabel(AgentCapabilityKind kind, string name)
+    {
+        return kind == AgentCapabilityKind.Skill ? $"skills:{name}" : $"mcp:{name}";
+    }
+}

@@ -120,7 +120,24 @@
                 @if (_lastTestResult is not null)
                 {
                     <MudAlert Severity="@(_lastTestResult.Success ? Severity.Success : Severity.Error)" Dense="true">
-                        @_lastTestResult.Message
+                        <div class="test-result">
+                            <MudText Typo="Typo.body2">@FormatConnectivityMessage(_lastTestResult)</MudText>
+                            @if (_lastTestResult.Success)
+                            {
+                                <MudText Typo="Typo.caption">
+                                    @L["Capabilities:Mcp:Dialog:DiscoveredTools", _lastTestResult.ToolCount]
+                                </MudText>
+                                @if (_lastTestResult.ToolNames?.Count > 0)
+                                {
+                                    <div class="test-tool-list">
+                                        @foreach (var toolName in _lastTestResult.ToolNames)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@toolName</MudChip>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
                     </MudAlert>
                 }
             </MudStack>
@@ -246,7 +263,7 @@
         else
         {
             _lastTestResult = connectivity;
-            Snackbar.Add(connectivity.Message, connectivity.Success ? Severity.Success : Severity.Error);
+            Snackbar.Add(FormatConnectivityMessage(connectivity), connectivity.Success ? Severity.Success : Severity.Error);
         }
 
         _isTesting = false;
@@ -291,6 +308,18 @@
     private void AddErrorSnackbar(string? message)
     {
         Snackbar.Add(string.IsNullOrWhiteSpace(message) ? L["Error:Generic"] : message, Severity.Error);
+    }
+
+    private string FormatConnectivityMessage(McpConnectivityTestResult result)
+    {
+        return result.Message switch
+        {
+            McpCapabilityMessageCode.Connectivity.ConnectedToEndpoint => L["Capabilities:Mcp:Connectivity:ConnectedToEndpoint", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.ConnectedAndListedTools => L["Capabilities:Mcp:Connectivity:ConnectedAndListedTools", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.LocalHttpDisplayUrlMissing => L["Capabilities:Mcp:Connectivity:LocalHttpDisplayUrlMissing", result.ToolCount],
+            McpCapabilityMessageCode.Connectivity.LocalStdioInProcessReady => L["Capabilities:Mcp:Connectivity:LocalStdioInProcessReady", result.ToolCount],
+            _ => result.Message
+        };
     }
 
     private sealed class HeaderRow(string name = "", string value = "")

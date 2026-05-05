@@ -170,6 +170,31 @@
     overflow-wrap: anywhere;
 }
 
+.skill-mcp-summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-background-gray);
+    min-width: 0;
+}
+
+.skill-mcp-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: min(320px, 100%);
+    flex: 1 1 320px;
+}
+
+.restart-hint {
+    flex-basis: 100%;
+}
+
 .skill-source-status {
     display: flex;
     flex-direction: column;

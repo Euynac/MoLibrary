@@ -18,13 +18,14 @@ public sealed class MonicaStdioMcpHostedService(
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!catalog.HasStdioServers)
+        var options = serverOptions.Value;
+        if (!catalog.HasStdioServers || options.ToolCollection is not { IsEmpty: false })
         {
             return;
         }
 
-        await using var transport = new StdioServerTransport(serverOptions.Value, loggerFactory);
-        await using var server = McpServer.Create(transport, serverOptions.Value, loggerFactory, serviceProvider);
+        await using var transport = new StdioServerTransport(options, loggerFactory);
+        await using var server = McpServer.Create(transport, options, loggerFactory, serviceProvider);
 
         try
         {

@@ -29,6 +29,10 @@ public sealed record AgentCapabilityEntryInfo
         string? mcpEndpointPath = null,
         string? mcpDisplayUrl = null,
         ExternalMcpClientProfile? mcpExternalProfile = null,
+        string? skillMcpServerName = null,
+        bool canExposeAsMcpServer = false,
+        bool isMcpServerExposureEnabled = false,
+        bool mcpServerExposureRequiresRestart = false,
         bool isUserManaged = false,
         string? discoveryError = null,
         AgentCapabilitySourceKind? sourceKind = null,
@@ -57,6 +61,10 @@ public sealed record AgentCapabilityEntryInfo
         McpEndpointPath = mcpEndpointPath;
         McpDisplayUrl = mcpDisplayUrl;
         McpExternalProfile = mcpExternalProfile;
+        SkillMcpServerName = skillMcpServerName;
+        CanExposeAsMcpServer = canExposeAsMcpServer;
+        IsMcpServerExposureEnabled = isMcpServerExposureEnabled;
+        McpServerExposureRequiresRestart = mcpServerExposureRequiresRestart;
         IsUserManaged = isUserManaged;
         DiscoveryError = discoveryError;
         SourceKind = sourceKind;
@@ -169,6 +177,26 @@ public sealed record AgentCapabilityEntryInfo
     public ExternalMcpClientProfile? McpExternalProfile { get; }
 
     /// <summary>
+    /// MCP server name generated from this skill when <see cref="CanExposeAsMcpServer" /> is enabled.
+    /// </summary>
+    public string? SkillMcpServerName { get; }
+
+    /// <summary>
+    /// Gets whether this skill can be exposed as an MCP server.
+    /// </summary>
+    public bool CanExposeAsMcpServer { get; }
+
+    /// <summary>
+    /// Gets whether this skill is configured to be exposed as an MCP server.
+    /// </summary>
+    public bool IsMcpServerExposureEnabled { get; }
+
+    /// <summary>
+    /// Gets whether changing MCP exposure requires a host restart before the MCP endpoint reflects it.
+    /// </summary>
+    public bool McpServerExposureRequiresRestart { get; }
+
+    /// <summary>
     /// Gets whether this capability can be edited from the runtime management UI.
     /// </summary>
     public bool IsUserManaged { get; }
@@ -179,9 +207,9 @@ public sealed record AgentCapabilityEntryInfo
     public string? DiscoveryError { get; }
 
     /// <summary>
-    /// Stable UI key used by management rows and slash chips.
+    /// Stable UI key used by management rows and slash candidates.
     /// </summary>
-    public string Key => AgentCapabilityReference.CreateKey(Kind, Name);
+    public string Key => AgentCapabilityKey.Create(Kind, Name);
 
     /// <summary>
     /// Converts this entry into a slash-command reference candidate.

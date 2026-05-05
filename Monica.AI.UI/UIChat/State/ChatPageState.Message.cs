@@ -32,9 +32,7 @@ public sealed partial class ChatPageState
             session =>
             {
                 session.ReasoningEnabled = ReasoningEnabled;
-                session.RuntimeContext = BuildRuntimeContext(
-                    SelectedKnowledgeBaseIds,
-                    request.CapabilityReferences);
+                session.RuntimeContext = BuildRuntimeContext(SelectedKnowledgeBaseIds);
             });
 
         await StartStreamingMessageAsync(resolvedSessionId, message);
@@ -134,7 +132,7 @@ public sealed partial class ChatPageState
         }
 
         ClearError();
-        await SendMessageAsync(new ChatSendRequest(LastMessage, []));
+        await SendMessageAsync(new ChatSendRequest(LastMessage));
     }
 
     private void EditMessage((AIChatMessage Message, string NewContent) args)

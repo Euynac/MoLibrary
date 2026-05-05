@@ -1,10 +1,6 @@
-using Monica.AI.AgentCapabilities.Models;
-
 namespace Monica.AI.UI.UIChat.Models;
 
 /// <summary>
-/// Message submitted from the chat composer, including explicit per-turn capability references.
+/// Message submitted from the chat composer.
 /// </summary>
-public sealed record ChatSendRequest(
-    string Message,
-    IReadOnlyList<AgentCapabilityReference> CapabilityReferences);
+public sealed record ChatSendRequest(string Message);

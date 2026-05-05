@@ -24,6 +24,18 @@
     align-items: center;
 }
 
+.test-result {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.test-tool-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
 @media (max-width: 720px) {
     .header-row {
         grid-template-columns: minmax(0, 1fr);

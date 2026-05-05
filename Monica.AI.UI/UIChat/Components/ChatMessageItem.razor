@@ -33,7 +33,9 @@
 
                     @* The bubble itself *@
                     <div class="message-content user-bubble">
-                        <MudText Typo="Typo.body1" Class="message-text">@Message.Content</MudText>
+                        <MudText Typo="Typo.body1" Class="message-text">
+                            <AgentCapabilityReferenceText Text="@Message.Content" />
+                        </MudText>
                         <div class="message-meta">
                             <MudText Typo="Typo.caption" Class="message-time">
                                 @Message.CreatedAt.ToLocalTime().ToString("HH:mm")

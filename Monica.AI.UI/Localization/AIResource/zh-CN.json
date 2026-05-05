@@ -508,6 +508,13 @@
     "Skill": {
       "External": "外部 Skill",
       "SourcePath": "来源路径",
+      "McpCapable": "可转 MCP",
+      "McpServerAvailable": "可转 MCP",
+      "McpServerEnabled": "MCP Server",
+      "McpServerTitle": "Skill 转 MCP Server",
+      "McpServerDescription": "将该 Skill 作为 MCP Server “{0}” 对外暴露。",
+      "McpServerToggle": "作为 MCP 暴露",
+      "McpServerRestartHint": "该设置已持久化。需要重启宿主后，MCP 端点注册才会体现变更。",
       "Sources": {
         "Title": "外部 Skill 来源",
         "Summary": "已从 {1} 个来源配置加载 {0} 个 Skill。",
@@ -545,7 +552,31 @@
         "AddHeader": "新增请求头",
         "NoHeaders": "未配置请求头。",
         "HeaderName": "请求头",
-        "HeaderValue": "值"
+        "HeaderValue": "值",
+        "DiscoveredTools": "发现 {0} 个工具"
+      },
+      "CopyConfig": "复制 Agent 配置",
+      "CopyConfigTooltip": "复制常见 Agent 可用的 MCP JSON 配置片段。",
+      "CopyConfigUnavailable": "该 MCP 条目没有可复制的 HTTP 端点。",
+      "CopyConfigSuccess": "已复制 MCP JSON 配置。",
+      "CopyConfigFailed": "复制 MCP JSON 配置失败。",
+      "Source": {
+        "LocalServer": "本地 MCP Server",
+        "SkillServer": "Skill 转 MCP",
+        "ExternalClient": "外部 MCP 客户端"
+      },
+      "Connectivity": {
+        "ConnectedToEndpoint": "连接成功，发现 {0} 个工具。",
+        "ConnectedAndListedTools": "连接成功并已列出工具，发现 {0} 个工具。",
+        "LocalHttpDisplayUrlMissing": "已发现本地 HTTP MCP Server，但未配置可用于网络探测的绝对显示 URL。当前进程内注册了 {0} 个工具。",
+        "LocalStdioInProcessReady": "已发现本地 stdio MCP Server。由于 Web UI 无法反连自身的 stdio 传输，已完成进程内就绪检查。当前注册了 {0} 个工具。"
+      },
+      "DisabledReason": {
+        "SkillMcpExposureDisabled": "该 Skill 转 MCP Server 已被持久化的 Skill MCP 暴露设置禁用。修改后需要重启宿主才会生效。",
+        "SkillServerNotAgentTool": "该 MCP Server 由 Skill 转换生成。它的工具已经通过 Skill 目录暴露给 Monica Agent，因此不会再通过 MCP 副本重复暴露给 Monica Agent。",
+        "NotAgentTool": "该 MCP 条目未配置为向 Monica Agent 暴露工具。",
+        "CatalogDisabled": "MCP 目录已被全局禁用。",
+        "EntryDisabled": "该 MCP 条目已在运行时能力设置中禁用。"
       }
     },
     "Tool": {

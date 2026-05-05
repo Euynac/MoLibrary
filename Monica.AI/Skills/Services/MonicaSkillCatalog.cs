@@ -92,6 +92,8 @@ public sealed class MonicaSkillCatalog(
                 skill.GetType().FullName,
                 skill.RequiredModules.Select(static module => module.Value).ToList(),
                 skill.IsEnabled,
+                skill.McpServerDefinition?.Name,
+                skill.McpServerDefinition?.EnabledByDefault ?? false,
                 new MonicaAgentSkillAdapter(skill, xmlDocumentationService),
                 AgentCapabilitySourceKind.CodeDefined,
                 null,
@@ -111,6 +113,8 @@ public sealed class MonicaSkillCatalog(
                 skill.GetType().FullName,
                 skill.RequiredModules.Select(static module => module.Value).ToList(),
                 skill.IsEnabled,
+                skill.McpServerDefinition?.Name,
+                skill.McpServerDefinition?.EnabledByDefault ?? false,
                 new MonicaAgentSkillAdapter(skill, xmlDocumentationService),
                 AgentCapabilitySourceKind.CodeDefined,
                 null,
@@ -128,6 +132,8 @@ public sealed class MonicaSkillCatalog(
             skill.GetType().FullName,
             skill.RequiredModules.Select(static module => module.Value).ToList(),
             skill.IsEnabled,
+            skill.McpServerDefinition?.Name,
+            skill.McpServerDefinition?.EnabledByDefault ?? false,
             new MonicaAgentSkillAdapter(skill, xmlDocumentationService),
             AgentCapabilitySourceKind.CodeDefined,
             null,
@@ -163,6 +169,8 @@ public sealed class MonicaSkillCatalog(
                     skill.GetType().FullName,
                     [],
                     true,
+                    null,
+                    false,
                     skill,
                     AgentCapabilitySourceKind.ExternalFile,
                     sourcePath,
@@ -223,6 +231,8 @@ public sealed class MonicaSkillCatalog(
         string? ImplementationType,
         IReadOnlyList<string> RequiredModules,
         bool IsBuiltInEnabled,
+        string? McpServerName,
+        bool IsMcpServerEnabledByDefault,
         AgentSkill AgentSkill,
         AgentCapabilitySourceKind SourceKind,
         string? SourcePath,
@@ -239,6 +249,7 @@ public sealed class MonicaSkillCatalog(
             var catalogEnabled = state.SkillsEnabled;
             var entryEnabled = state.IsEntryEnabled(AgentCapabilityKind.Skill, Definition.Name);
             var disabledReason = ResolveDisabledReason(catalogEnabled, entryEnabled);
+            var canExposeAsMcpServer = !string.IsNullOrWhiteSpace(McpServerName);
 
             return new AgentCapabilityEntryInfo(
                 AgentCapabilityKind.Skill,
@@ -261,6 +272,13 @@ public sealed class MonicaSkillCatalog(
                 resources.Select(resource => new AgentCapabilityResourceInfo(
                     resource.Name,
                     resource.Description)).ToList(),
+                skillMcpServerName: McpServerName,
+                canExposeAsMcpServer: canExposeAsMcpServer,
+                isMcpServerExposureEnabled: canExposeAsMcpServer
+                                            && state.IsSkillMcpServerEnabled(
+                                                Definition.Name,
+                                                IsMcpServerEnabledByDefault),
+                mcpServerExposureRequiresRestart: canExposeAsMcpServer,
                 sourceKind: SourceKind,
                 sourcePath: SourcePath);
         }
