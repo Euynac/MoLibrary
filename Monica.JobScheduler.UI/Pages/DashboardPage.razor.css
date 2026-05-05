@@ -29,6 +29,21 @@
     z-index: 100;
 }
 
+.refresh-indicator ::deep .mud-tooltip-root {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 0;
+}
+
+.refresh-indicator ::deep .mud-icon-root {
+    display: block;
+    flex: 0 0 auto;
+    line-height: 1;
+}
+
 .refresh-indicator ::deep .rotating {
     animation: rotate 1s linear infinite;
 }
