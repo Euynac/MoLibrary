@@ -466,6 +466,11 @@
       "InvalidModelsHint": "Model configuration is incomplete. Update the provider settings before using it.",
       "InvalidModelsLabel": "Missing models:",
       "NoSupportedModels": "No SupportedModels are configured.",
+      "ApiModeLabel": "OpenAI API",
+      "ApiMode": {
+        "Responses": "Responses API",
+        "Chat": "Chat API"
+      },
       "Status": {
         "ConfigurationError": "Configuration Error",
         "InvalidConfiguration": "Invalid Configuration",

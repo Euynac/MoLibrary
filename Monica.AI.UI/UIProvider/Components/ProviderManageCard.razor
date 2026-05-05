@@ -1,4 +1,6 @@
 @using Microsoft.Extensions.Localization
+@using Monica.AI.Providers
+@using Monica.AI.Providers.OpenAI
 @using Monica.AI.UI.Localization
 @inject IStringLocalizer<AIResource> L
 
@@ -96,6 +98,13 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary">模型数量</MudText>
                 <MudText Typo="Typo.body2">@Models.Count</MudText>
             </MudItem>
+            @if (TryGetOpenAIApiMode(out var openAIApiMode))
+            {
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["ProviderManage:Card:ApiModeLabel"]</MudText>
+                    <MudText Typo="Typo.body2">@GetOpenAIApiModeText(openAIApiMode)</MudText>
+                </MudItem>
+            }
         </MudGrid>
 
         <div class="prompt-block">
@@ -320,6 +329,30 @@
     private static string FormatValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "—" : value;
+    }
+
+    private bool TryGetOpenAIApiMode(out OpenAIProviderApiMode apiMode)
+    {
+        apiMode = default;
+
+        if (!string.Equals(Provider.ProviderType, "OpenAI", StringComparison.Ordinal)
+            || Provider.Metadata is not { } metadata
+            || !metadata.TryGetValue(OpenAIProvider.ApiModeMetadataKey, out var rawApiMode))
+        {
+            return false;
+        }
+
+        return Enum.TryParse(rawApiMode, ignoreCase: true, out apiMode);
+    }
+
+    private string GetOpenAIApiModeText(OpenAIProviderApiMode apiMode)
+    {
+        return apiMode switch
+        {
+            OpenAIProviderApiMode.Responses => L["ProviderManage:Card:ApiMode:Responses"],
+            OpenAIProviderApiMode.Chat => L["ProviderManage:Card:ApiMode:Chat"],
+            _ => apiMode.ToString()
+        };
     }
 
     private static string GetPromptPreview(string? prompt)

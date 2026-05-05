@@ -56,6 +56,12 @@ public class AIProviderInfo
     public IReadOnlyList<string>? ConfigurationErrors { get; init; }
 
     /// <summary>
+    /// Provider-specific metadata for diagnostics and UI display. Keys are stable string identifiers
+    /// owned by each provider implementation.
+    /// </summary>
+    public IReadOnlyDictionary<string, string>? Metadata { get; init; }
+
+    /// <summary>
     /// Indicates whether this is the default provider.
     /// </summary>
     public bool IsDefault { get; init; }

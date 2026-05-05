@@ -1,6 +1,7 @@
 using Microsoft.Extensions.AI;
 using Monica.AI.Abstractions;
 using Monica.AI.Models;
+using Monica.AI.Providers.OpenAI;
 using Monica.AI.Services;
 using Monica.AI.Services.Support;
 
@@ -85,6 +86,7 @@ internal sealed class DisabledAIProvider : IAIProvider
         IsValid = false,
         InvalidModels = _invalidModels,
         ConfigurationErrors = _configurationErrors,
+        Metadata = BuildMetadata(_options),
         IsDefault = _options.IsDefault,
         Icon = _icon,
         Status = AIProviderStatus.ConfigurationError,
@@ -140,5 +142,12 @@ internal sealed class DisabledAIProvider : IAIProvider
     private InvalidOperationException CreateDisabledException()
     {
         return new InvalidOperationException(AIProviderAvailabilityMessages.BuildProviderUnavailableMessage(Info));
+    }
+
+    private static IReadOnlyDictionary<string, string>? BuildMetadata(AIProviderOptions options)
+    {
+        return options is OpenAIProviderOptions openAIOptions
+            ? OpenAIProvider.BuildMetadata(openAIOptions)
+            : null;
     }
 }

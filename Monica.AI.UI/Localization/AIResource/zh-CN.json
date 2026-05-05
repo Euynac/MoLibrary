@@ -466,6 +466,11 @@
       "InvalidModelsHint": "模型配置不完整，请在使用前补全 Provider 配置。",
       "InvalidModelsLabel": "缺失模型:",
       "NoSupportedModels": "未配置 SupportedModels。",
+      "ApiModeLabel": "OpenAI API",
+      "ApiMode": {
+        "Responses": "Responses API",
+        "Chat": "Chat API"
+      },
       "Status": {
         "ConfigurationError": "配置错误",
         "InvalidConfiguration": "配置无效",

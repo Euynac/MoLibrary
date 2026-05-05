@@ -1,6 +1,22 @@
 namespace Monica.AI.Providers;
 
 /// <summary>
+/// OpenAI API surface used by the provider for chat requests.
+/// </summary>
+public enum OpenAIProviderApiMode
+{
+    /// <summary>
+    /// Use the OpenAI Responses API through the Microsoft.Extensions.AI adapter.
+    /// </summary>
+    Responses,
+
+    /// <summary>
+    /// Use the OpenAI Chat Completions API through the Microsoft.Extensions.AI adapter.
+    /// </summary>
+    Chat
+}
+
+/// <summary>
 /// Base class for AI provider configuration.
 /// </summary>
 public abstract class AIProviderOptions
@@ -51,6 +67,13 @@ public abstract class AIProviderOptions
 /// </summary>
 public class OpenAIProviderOptions : AIProviderOptions
 {
+    /// <summary>
+    /// API surface used for chat requests. Defaults to <see cref="OpenAIProviderApiMode.Responses"/>.
+    /// The Responses API is preferred because OpenAI prompt caching is automatic for eligible long
+    /// prompts and Responses can improve cache utilization for supported workloads.
+    /// </summary>
+    public OpenAIProviderApiMode ApiMode { get; set; } = OpenAIProviderApiMode.Responses;
+
     /// <summary>
     /// Organization ID (optional)
     /// </summary>
