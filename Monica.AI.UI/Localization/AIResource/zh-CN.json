@@ -87,6 +87,25 @@
       "NotFound": "未找到来源路径为 '{0}' 的 Markdown 文档。",
       "LoadFailed": "加载来源文档失败：{0}",
       "OpenFailed": "打开来源原文失败"
+    },
+    "Usage": {
+      "DialogTitle": "上下文与 Token 用量",
+      "ContextTooltip": "上下文窗口：{0}",
+      "ContextTooltipWithUsage": "上下文窗口：{0}，剩余 {1}",
+      "ContextWindow": "上下文窗口",
+      "LatestInput": "最近输入",
+      "Remaining": "剩余",
+      "Cached": "缓存",
+      "NoUsage": "最近一条助手消息尚未上报 Provider 用量。",
+      "Total": "合计",
+      "Column": {
+        "Request": "请求",
+        "Input": "输入",
+        "Output": "输出",
+        "Cached": "缓存",
+        "CacheHit": "缓存命中",
+        "Total": "总计"
+      }
     }
   },
   "Provider": {

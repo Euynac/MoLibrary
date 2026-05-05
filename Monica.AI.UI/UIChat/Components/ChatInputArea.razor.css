@@ -39,6 +39,15 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.input-area ::deep .input-context-button {
+    color: var(--mud-palette-text-secondary);
+    flex-shrink: 0;
+}
+
+.input-area ::deep .input-context-button:hover {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
 .input-area ::deep .input-action-button:hover {
     background-color: var(--mud-palette-action-default-hover);
 }

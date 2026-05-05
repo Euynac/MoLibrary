@@ -7,6 +7,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<AIResource> L
+@inject IDialogService DialogService
 
 <div class="input-area">
     <MudPaper Elevation="2" Class="input-container">
@@ -80,6 +81,11 @@
                 }
             </div>
             <div class="input-actions-right">
+                <MudTooltip Text="@BuildContextTooltip()">
+                    <MudIconButton Icon="@Icons.Material.Filled.PieChart"
+                                   Class="input-context-button"
+                                   OnClick="@ShowTokenUsageDialogAsync" />
+                </MudTooltip>
                 <ModelSelector
                     AvailableModels="@AvailableModels"
                     SelectedModelName="@ModelName"
@@ -123,6 +129,7 @@
     [Parameter] public bool SupportsReasoning { get; set; }
     [Parameter] public bool ReasoningEnabled { get; set; }
     [Parameter] public IReadOnlyList<AIModelInfo>? AvailableModels { get; set; }
+    [Parameter] public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages { get; set; } = [];
     [Parameter] public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; set; } = [];
     [Parameter] public EventCallback<bool> ReasoningEnabledChanged { get; set; }
     [Parameter] public EventCallback<ChatSendRequest> OnSend { get; set; }
@@ -147,6 +154,12 @@
     private int _highlightedCandidateIndex;
     private bool ShowSlashPicker => _slashPickerOpen && !IsSending;
     private string EditorContentEditable => IsSending ? "false" : "true";
+    private int ContextWindow => ChatProviderResolver.GetContextWindow(AvailableModels, ModelName);
+    private TokenUsage? LatestUsage => LatestRequestUsages.LastOrDefault()?.Usage;
+    private int LatestInputTokens => LatestUsage?.InputTokens ?? 0;
+    private double RemainingContextRatio => ContextWindow > 0
+        ? Math.Clamp((double)Math.Max(ContextWindow - LatestInputTokens, 0) / ContextWindow, 0, 1)
+        : 1;
 
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
@@ -207,6 +220,40 @@
     private async Task HandleCancel()
     {
         await OnCancel.InvokeAsync();
+    }
+
+    private async Task ShowTokenUsageDialogAsync()
+    {
+        var parameters = new DialogParameters
+        {
+            [nameof(ChatTokenUsageDialog.ModelName)] = ModelName,
+            [nameof(ChatTokenUsageDialog.ContextWindow)] = ContextWindow,
+            [nameof(ChatTokenUsageDialog.RequestUsages)] = LatestRequestUsages
+        };
+
+        await DialogService.ShowAsync<ChatTokenUsageDialog>(
+            L["Chat:Usage:DialogTitle"],
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
+    private string BuildContextTooltip()
+    {
+        return LatestInputTokens > 0
+            ? L["Chat:Usage:ContextTooltipWithUsage", FormatTokenCount(ContextWindow), FormatPercent(RemainingContextRatio)]
+            : L["Chat:Usage:ContextTooltip", FormatTokenCount(ContextWindow)];
+    }
+
+    private static string FormatTokenCount(int tokens)
+    {
+        return tokens >= 1_000_000
+            ? $"{tokens / 1_000_000d:0.#}M"
+            : $"{tokens / 1_000d:0.#}K";
+    }
+
+    private static string FormatPercent(double ratio)
+    {
+        return $"{ratio:P0}";
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

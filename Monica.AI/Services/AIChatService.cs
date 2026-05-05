@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -83,19 +84,13 @@ public class AIChatService(
         var chatClient = provider.GetChatClient(state.ModelName);
         var capabilityState = await capabilityStateStore.LoadAsync(ct);
         var newAgent = await CreateAgentAsync(chatClient, state.SystemPrompt, capabilityState, ct);
-        var newSession = await newAgent.CreateSessionAsync(ct);
-
-        // Copy chat history from old session to new session
         var oldHistory = state.ChatHistory;
-        if (oldHistory != null && oldHistory.Count > 0)
-        {
-            var newProvider = newAgent.GetService<InMemoryChatHistoryProvider>();
-            if (newProvider != null)
-            {
-                // Initialize the new session's state by setting messages directly
-                newProvider.SetMessages(newSession, new List<ChatMessage>(oldHistory));
-            }
-        }
+        var newSession = await CreateReplacementSessionAsync(
+            state.Agent,
+            state.Session,
+            newAgent,
+            ct);
+        CopyChatHistoryIfNeeded(newAgent, newSession, oldHistory);
 
         state.Agent = newAgent;
         state.Session = newSession;
@@ -255,5 +250,59 @@ public class AIChatService(
         {
             updateChannel.Complete(ex);
         }
+    }
+
+    private static async Task<AgentSession> CreateReplacementSessionAsync(
+        AIAgent oldAgent,
+        AgentSession oldSession,
+        AIAgent newAgent,
+        CancellationToken ct)
+    {
+        try
+        {
+            var serializedSession = await oldAgent.SerializeSessionAsync(
+                oldSession,
+                cancellationToken: ct);
+            return await newAgent.DeserializeSessionAsync(
+                serializedSession,
+                cancellationToken: ct);
+        }
+        catch (ArgumentException)
+        {
+            return await newAgent.CreateSessionAsync(ct);
+        }
+        catch (InvalidOperationException)
+        {
+            return await newAgent.CreateSessionAsync(ct);
+        }
+        catch (JsonException)
+        {
+            return await newAgent.CreateSessionAsync(ct);
+        }
+        catch (NotSupportedException)
+        {
+            return await newAgent.CreateSessionAsync(ct);
+        }
+    }
+
+    private static void CopyChatHistoryIfNeeded(
+        AIAgent newAgent,
+        AgentSession newSession,
+        IList<ChatMessage>? oldHistory)
+    {
+        if (oldHistory is not { Count: > 0 })
+        {
+            return;
+        }
+
+        var newProvider = newAgent.GetService<InMemoryChatHistoryProvider>();
+        if (newProvider is null || newProvider.GetMessages(newSession)?.Count > 0)
+        {
+            return;
+        }
+
+        // Preserve local history when the serialized session did not carry it,
+        // while keeping a deserialized Responses previous_response_id intact.
+        newProvider.SetMessages(newSession, [.. oldHistory]);
     }
 }

@@ -87,7 +87,11 @@ public class OpenAIProvider : IAIProvider
             throw new InvalidOperationException("OpenAI model is not configured.");
         }
 
-        var cacheKey = BuildChatClientCacheKey(_options.ApiMode, resolvedModel);
+        var cacheKey = BuildChatClientCacheKey(
+            _options.ApiMode,
+            resolvedModel,
+            _options.PromptCacheKey,
+            _options.PromptCacheRetention);
         return _chatClients.GetOrAdd(cacheKey, _ => CreateChatClient(resolvedModel));
     }
 
@@ -187,7 +191,7 @@ public class OpenAIProvider : IAIProvider
 
     private IChatClient CreateChatClient(string resolvedModel)
     {
-        return _options.ApiMode switch
+        var chatClient = _options.ApiMode switch
         {
 #pragma warning disable OPENAI001
             OpenAIProviderApiMode.Responses => _client.GetResponsesClient().AsIChatClient(resolvedModel),
@@ -195,11 +199,23 @@ public class OpenAIProvider : IAIProvider
             OpenAIProviderApiMode.Chat => _client.GetChatClient(resolvedModel).AsIChatClient(),
             _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_options.ApiMode}'.")
         };
+
+        return string.IsNullOrWhiteSpace(_options.PromptCacheKey)
+            ? chatClient
+            : new OpenAIPromptCacheChatClient(
+                chatClient,
+                _options.ApiMode,
+                _options.PromptCacheKey.Trim(),
+                _options.PromptCacheRetention);
     }
 
-    private static string BuildChatClientCacheKey(OpenAIProviderApiMode apiMode, string model)
+    private static string BuildChatClientCacheKey(
+        OpenAIProviderApiMode apiMode,
+        string model,
+        string? promptCacheKey,
+        OpenAIPromptCacheRetention? promptCacheRetention)
     {
-        return $"{apiMode}:{model}";
+        return $"{apiMode}:{model}:{promptCacheKey}:{promptCacheRetention}";
     }
 
     public void Dispose()

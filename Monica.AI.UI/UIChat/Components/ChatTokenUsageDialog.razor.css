@@ -1,0 +1,60 @@
+.token-usage-dialog-root {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+}
+
+.token-usage-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.token-usage-summary-main {
+    min-width: 0;
+}
+
+.token-usage-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.token-usage-progress {
+    flex-shrink: 0;
+}
+
+.token-usage-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.token-usage-metric {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.token-usage-table {
+    min-width: 100%;
+}
+
+.token-usage-request-cell {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+@media (max-width: 600px) {
+    .token-usage-summary {
+        align-items: flex-start;
+    }
+
+    .token-usage-metrics {
+        grid-template-columns: 1fr;
+    }
+}

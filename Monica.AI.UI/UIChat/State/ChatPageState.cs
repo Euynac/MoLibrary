@@ -132,6 +132,13 @@ public sealed partial class ChatPageState : IDisposable
         => CurrentSession?.Messages ?? (IReadOnlyList<AIChatMessage>)Array.Empty<AIChatMessage>();
 
     /// <summary>
+    /// Per-request token usage records for the latest assistant message.
+    /// </summary>
+    public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages
+        => CurrentMessages.LastOrDefault(message => message.Role == AIChatRole.Assistant)?.RequestUsages
+           ?? [];
+
+    /// <summary>
     /// Whether a request is currently in flight.
     /// </summary>
     public bool IsSending { get; private set; }
@@ -230,6 +237,7 @@ public sealed partial class ChatPageState : IDisposable
             ModelName = CurrentModelName,
             ShowProviderInfo = !ShowProviderSelector,
             AvailableModels = CurrentProviderModels,
+            LatestRequestUsages = LatestRequestUsages,
             ErrorMessage = ErrorMessage,
             CancellationToken = CancellationToken,
             EnableMarkdown = _options.EnableMarkdown,

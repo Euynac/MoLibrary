@@ -17,6 +17,23 @@ public enum OpenAIProviderApiMode
 }
 
 /// <summary>
+/// OpenAI prompt cache retention policy for eligible prompt prefixes.
+/// </summary>
+public enum OpenAIPromptCacheRetention
+{
+    /// <summary>
+    /// Use OpenAI's in-memory prompt cache retention policy.
+    /// </summary>
+    InMemory,
+
+    /// <summary>
+    /// Request OpenAI's extended 24-hour prompt cache retention policy.
+    /// Configure only for models that support extended prompt caching.
+    /// </summary>
+    TwentyFourHours
+}
+
+/// <summary>
 /// Base class for AI provider configuration.
 /// </summary>
 public abstract class AIProviderOptions
@@ -73,6 +90,21 @@ public class OpenAIProviderOptions : AIProviderOptions
     /// prompts and Responses can improve cache utilization for supported workloads.
     /// </summary>
     public OpenAIProviderApiMode ApiMode { get; set; } = OpenAIProviderApiMode.Responses;
+
+    /// <summary>
+    /// Stable OpenAI prompt cache routing key for requests that share the same long static prompt prefix.
+    /// This value is sent as <c>prompt_cache_key</c> for OpenAI chat requests. It can improve cache hit
+    /// rates by routing similar prefixes together, but it does not bypass OpenAI's minimum prompt length
+    /// or exact-prefix-match requirements. Avoid storing user-private data in this key.
+    /// </summary>
+    public string? PromptCacheKey { get; set; }
+
+    /// <summary>
+    /// Optional OpenAI prompt cache retention policy sent as <c>prompt_cache_retention</c>.
+    /// Leave unset to use OpenAI's model default. Set <see cref="OpenAIPromptCacheRetention.TwentyFourHours"/>
+    /// only for models that support extended prompt caching; unsupported models may reject the request.
+    /// </summary>
+    public OpenAIPromptCacheRetention? PromptCacheRetention { get; set; }
 
     /// <summary>
     /// Organization ID (optional)

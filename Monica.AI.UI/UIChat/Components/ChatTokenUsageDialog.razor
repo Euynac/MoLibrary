@@ -1,0 +1,134 @@
+@using Microsoft.Extensions.Localization
+@using Monica.AI.UI.Localization
+
+<MudDialog>
+    <DialogContent>
+        <div class="token-usage-dialog-root">
+            <div class="token-usage-summary">
+                <div class="token-usage-summary-main">
+                    <MudText Typo="Typo.overline" Class="token-usage-label">
+                        @L["Chat:Usage:ContextWindow"]
+                    </MudText>
+                    <MudText Typo="Typo.h6">
+                        @FormatTokenCount(ContextWindow)
+                    </MudText>
+                    @if (!string.IsNullOrWhiteSpace(ModelName))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @ModelName
+                        </MudText>
+                    }
+                </div>
+                <MudProgressCircular Value="@RemainingPercent"
+                                     Size="Size.Large"
+                                     Color="@RemainingColor"
+                                     Class="token-usage-progress">
+                    <ChildContent>
+                        <MudText Typo="Typo.caption">@FormatPercent(RemainingRatio)</MudText>
+                    </ChildContent>
+                </MudProgressCircular>
+            </div>
+
+            <div class="token-usage-metrics">
+                <div class="token-usage-metric">
+                    <MudText Typo="Typo.overline" Class="token-usage-label">
+                        @L["Chat:Usage:LatestInput"]
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1">@FormatNumber(LatestUsage?.InputTokens ?? 0)</MudText>
+                </div>
+                <div class="token-usage-metric">
+                    <MudText Typo="Typo.overline" Class="token-usage-label">
+                        @L["Chat:Usage:Remaining"]
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1">@FormatNumber(RemainingTokens)</MudText>
+                </div>
+                <div class="token-usage-metric">
+                    <MudText Typo="Typo.overline" Class="token-usage-label">
+                        @L["Chat:Usage:Cached"]
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1">@FormatNumber(LatestUsage?.CachedInputTokens ?? 0)</MudText>
+                </div>
+            </div>
+
+            @if (RequestUsages.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    @L["Chat:Usage:NoUsage"]
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable T="AIChatRequestUsage"
+                          Items="@RequestUsages"
+                          Dense="true"
+                          Hover="true"
+                          Class="token-usage-table">
+                    <HeaderContent>
+                        <MudTh>@L["Chat:Usage:Column:Request"]</MudTh>
+                        <MudTh>@L["Chat:Usage:Column:Input"]</MudTh>
+                        <MudTh>@L["Chat:Usage:Column:Output"]</MudTh>
+                        <MudTh>@L["Chat:Usage:Column:Cached"]</MudTh>
+                        <MudTh>@L["Chat:Usage:Column:CacheHit"]</MudTh>
+                        <MudTh>@L["Chat:Usage:Column:Total"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="usage">
+                        <MudTd DataLabel="@RequestColumnLabel">
+                            <div class="token-usage-request-cell">
+                                <MudText Typo="Typo.body2">#@usage.Sequence</MudText>
+                                @if (!string.IsNullOrWhiteSpace(usage.ResponseId))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @TrimIdentifier(usage.ResponseId)
+                                    </MudText>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="@InputColumnLabel">
+                            @FormatNumber(usage.Usage.InputTokens)
+                        </MudTd>
+                        <MudTd DataLabel="@OutputColumnLabel">
+                            @FormatNumber(usage.Usage.OutputTokens)
+                        </MudTd>
+                        <MudTd DataLabel="@CachedColumnLabel">
+                            @FormatNumber(usage.Usage.CachedInputTokens)
+                        </MudTd>
+                        <MudTd DataLabel="@CacheHitColumnLabel">
+                            @FormatPercent(usage.Usage.CachedInputRatio)
+                        </MudTd>
+                        <MudTd DataLabel="@TotalColumnLabel">
+                            @FormatNumber(usage.Usage.EffectiveTotalTokens)
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                <div class="token-usage-total">
+                    <MudText Typo="Typo.overline" Class="token-usage-label">
+                        @L["Chat:Usage:Total"]
+                    </MudText>
+                    <MudStack Row="true" Spacing="2" Class="token-usage-total-metrics">
+                        <MudText Typo="Typo.body2">
+                            @InputColumnLabel: @FormatNumber(AggregateUsage?.InputTokens ?? 0)
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @OutputColumnLabel: @FormatNumber(AggregateUsage?.OutputTokens ?? 0)
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @CachedColumnLabel: @FormatNumber(AggregateUsage?.CachedInputTokens ?? 0)
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @CacheHitColumnLabel: @FormatPercent(AggregateUsage?.CachedInputRatio ?? 0)
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @TotalColumnLabel: @FormatNumber(AggregateUsage?.EffectiveTotalTokens ?? 0)
+                        </MudText>
+                    </MudStack>
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">
+            @L["Common:Actions:Close"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>

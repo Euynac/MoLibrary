@@ -87,6 +87,25 @@
       "NotFound": "No markdown document matched source path '{0}'.",
       "LoadFailed": "Failed to load source document: {0}",
       "OpenFailed": "Failed to open the source preview"
+    },
+    "Usage": {
+      "DialogTitle": "Context and Token Usage",
+      "ContextTooltip": "Context window: {0}",
+      "ContextTooltipWithUsage": "Context window: {0}, {1} remaining",
+      "ContextWindow": "Context window",
+      "LatestInput": "Latest input",
+      "Remaining": "Remaining",
+      "Cached": "Cached",
+      "NoUsage": "No provider usage has been reported for the latest assistant message yet.",
+      "Total": "Total",
+      "Column": {
+        "Request": "Request",
+        "Input": "Input",
+        "Output": "Output",
+        "Cached": "Cached",
+        "CacheHit": "Cache hit",
+        "Total": "Total"
+      }
     }
   },
   "Provider": {

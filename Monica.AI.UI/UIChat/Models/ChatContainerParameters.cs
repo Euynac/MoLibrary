@@ -25,6 +25,7 @@ public sealed class ChatContainerParameters
     public string? ModelName { get; init; }
     public bool ShowProviderInfo { get; init; }
     public IReadOnlyList<AIModelInfo>? AvailableModels { get; init; }
+    public IReadOnlyList<AIChatRequestUsage> LatestRequestUsages { get; init; } = [];
 
     // Error handling
     public string? ErrorMessage { get; init; }

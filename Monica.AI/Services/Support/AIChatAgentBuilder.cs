@@ -59,6 +59,9 @@ public sealed class AIChatAgentBuilder(string? instructions)
     {
         return new ChatClientAgentOptions
         {
+            // Keep Responses previous_response_id and framework-managed history current after every
+            // model call inside the tool loop, not only after the whole agent run completes.
+            RequirePerServiceCallChatHistoryPersistence = true,
             ChatOptions = string.IsNullOrWhiteSpace(Instructions) && _tools.Count == 0
                 ? null
                 : new ChatOptions

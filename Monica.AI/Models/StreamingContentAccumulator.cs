@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Monica.AI.Services.Support;
 
@@ -29,15 +31,19 @@ public class StreamingContentAccumulator
     /// </summary>
     public List<ToolCallInfo> ToolCalls { get; } = new();
 
+    private readonly Dictionary<string, RequestUsageBuffer> _requestUsageBuffers = new(StringComparer.Ordinal);
+    private readonly List<RequestUsageBuffer> _requestUsageOrder = [];
+
     internal bool HasBufferedContent
         => !string.IsNullOrEmpty(FullContent)
            || !string.IsNullOrEmpty(FullReasoning)
-           || ToolCalls.Count > 0;
+           || ToolCalls.Count > 0
+           || _requestUsageOrder.Count > 0;
 
     /// <summary>
     /// Process a single AIContent item from the stream
     /// </summary>
-    public void ProcessContent(AIContent content)
+    public void ProcessContent(AIContent content, AgentResponseUpdate? update = null)
     {
         if (content is TextReasoningContent reasoning && !string.IsNullOrEmpty(reasoning.Text))
         {
@@ -59,6 +65,10 @@ public class StreamingContentAccumulator
         {
             ProcessFunctionResult(functionResult);
         }
+        else if (content is UsageContent usage)
+        {
+            ProcessUsage(usage, update);
+        }
     }
 
     /// <summary>
@@ -79,7 +89,11 @@ public class StreamingContentAccumulator
             ReasoningDurationSeconds = ReasoningStopwatch.Elapsed.TotalSeconds > 0
                 ? ReasoningStopwatch.Elapsed.TotalSeconds
                 : null,
-            ToolCalls = ToolCalls.Count > 0 ? ToolCalls : null
+            ToolCalls = ToolCalls.Count > 0 ? ToolCalls : null,
+            RequestUsages = _requestUsageOrder.Count > 0 ? BuildRequestUsages() : null,
+            Usage = _requestUsageOrder.Count > 0
+                ? TokenUsage.Sum(_requestUsageOrder.Select(buffer => CreateTokenUsage(buffer.UsageDetails)))
+                : null
         };
     }
 
@@ -92,6 +106,8 @@ public class StreamingContentAccumulator
         FullReasoning = string.Empty;
         ReasoningStopwatch.Reset();
         ToolCalls.Clear();
+        _requestUsageBuffers.Clear();
+        _requestUsageOrder.Clear();
     }
 
     internal void FailRunningToolCalls(Exception exception)
@@ -172,6 +188,110 @@ public class StreamingContentAccumulator
             StartedAt = completedAt,
             CompletedAt = completedAt
         });
+    }
+
+    private void ProcessUsage(UsageContent usage, AgentResponseUpdate? update)
+    {
+        if (usage.Details is null)
+        {
+            return;
+        }
+
+        var key = BuildRequestUsageKey(update);
+        if (!_requestUsageBuffers.TryGetValue(key, out var buffer))
+        {
+            buffer = new RequestUsageBuffer(_requestUsageOrder.Count + 1, update);
+            _requestUsageBuffers.Add(key, buffer);
+            _requestUsageOrder.Add(buffer);
+        }
+
+        buffer.Add(usage.Details, update);
+    }
+
+    private List<AIChatRequestUsage> BuildRequestUsages()
+    {
+        if (_requestUsageOrder.Count == 0)
+        {
+            return [];
+        }
+
+        return _requestUsageOrder
+            .Select(buffer => new AIChatRequestUsage
+            {
+                Sequence = buffer.Sequence,
+                CreatedAt = buffer.CreatedAt,
+                ResponseId = buffer.ResponseId,
+                MessageId = buffer.MessageId,
+                Usage = CreateTokenUsage(buffer.UsageDetails)
+            })
+            .ToList();
+    }
+
+    private static TokenUsage CreateTokenUsage(UsageDetails usage)
+    {
+        var inputTokens = ToTokenCount(usage.InputTokenCount);
+        var outputTokens = ToTokenCount(usage.OutputTokenCount);
+        var totalTokens = ToTokenCount(usage.TotalTokenCount);
+        return new TokenUsage
+        {
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            ReasoningTokens = ToTokenCount(usage.ReasoningTokenCount),
+            CachedInputTokens = ToTokenCount(usage.CachedInputTokenCount),
+            TotalTokens = totalTokens > 0 ? totalTokens : inputTokens + outputTokens
+        };
+    }
+
+    private static int ToTokenCount(long? value)
+    {
+        if (value is null or <= 0)
+        {
+            return 0;
+        }
+
+        return value > int.MaxValue ? int.MaxValue : (int)value.Value;
+    }
+
+    private static string BuildRequestUsageKey(AgentResponseUpdate? update)
+    {
+        if (!string.IsNullOrWhiteSpace(update?.MessageId))
+        {
+            return $"message:{update.MessageId}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(update?.ResponseId))
+        {
+            return $"response:{update.ResponseId}";
+        }
+
+        return update is null
+            ? "update:null"
+            : $"update:{RuntimeHelpers.GetHashCode(update)}";
+    }
+
+    private sealed class RequestUsageBuffer(int sequence, AgentResponseUpdate? update)
+    {
+        public int Sequence { get; } = sequence;
+
+        public DateTimeOffset CreatedAt { get; private set; } = update?.CreatedAt ?? DateTimeOffset.UtcNow;
+
+        public string? ResponseId { get; private set; } = update?.ResponseId;
+
+        public string? MessageId { get; private set; } = update?.MessageId;
+
+        public UsageDetails UsageDetails { get; } = new();
+
+        public void Add(UsageDetails details, AgentResponseUpdate? sourceUpdate)
+        {
+            UsageDetails.Add(details);
+            if (sourceUpdate?.CreatedAt is { } createdAt)
+            {
+                CreatedAt = createdAt;
+            }
+
+            ResponseId ??= sourceUpdate?.ResponseId;
+            MessageId ??= sourceUpdate?.MessageId;
+        }
     }
 
     private int FindMatchingFunctionCallIndex(FunctionCallContent functionCall, string? argumentsText)

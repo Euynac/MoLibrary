@@ -43,6 +43,12 @@ public class AIChatMessage
     public TokenUsage? Usage { get; set; }
 
     /// <summary>
+    /// Per-service-call token usage records captured while generating this assistant message.
+    /// Agent runs with tools can make multiple provider requests before producing the final answer.
+    /// </summary>
+    public List<AIChatRequestUsage>? RequestUsages { get; set; }
+
+    /// <summary>
     /// Reasoning/thinking content from the model (e.g., OpenAI o1, Claude extended thinking)
     /// </summary>
     public string? ReasoningContent { get; set; }
@@ -161,14 +167,94 @@ public class TokenUsage
     public int OutputTokens { get; init; }
 
     /// <summary>
-    /// Number of reasoning tokens.
+    /// Number of reasoning tokens reported by the provider.
+    /// These tokens are normally included in <see cref="OutputTokens"/>.
     /// </summary>
     public int ReasoningTokens { get; init; }
 
     /// <summary>
-    /// Total token count
+    /// Number of input tokens served from the provider prompt cache.
+    /// These tokens are included in <see cref="InputTokens"/>.
     /// </summary>
-    public int TotalTokens => InputTokens + OutputTokens + ReasoningTokens;
+    public int CachedInputTokens { get; init; }
+
+    /// <summary>
+    /// Total token count reported by the provider.
+    /// </summary>
+    public int TotalTokens { get; init; }
+
+    /// <summary>
+    /// Total token count to display when the provider omitted an explicit total.
+    /// </summary>
+    public int EffectiveTotalTokens => TotalTokens > 0 ? TotalTokens : InputTokens + OutputTokens;
+
+    /// <summary>
+    /// Fraction of input tokens served from the provider prompt cache.
+    /// </summary>
+    public double CachedInputRatio => InputTokens > 0 ? (double)CachedInputTokens / InputTokens : 0;
+
+    /// <summary>
+    /// Sum multiple usage records into one aggregate usage record.
+    /// </summary>
+    public static TokenUsage Sum(IEnumerable<TokenUsage> usages)
+    {
+        ArgumentNullException.ThrowIfNull(usages);
+
+        var inputTokens = 0;
+        var outputTokens = 0;
+        var reasoningTokens = 0;
+        var cachedInputTokens = 0;
+        var totalTokens = 0;
+
+        foreach (var usage in usages)
+        {
+            inputTokens += usage.InputTokens;
+            outputTokens += usage.OutputTokens;
+            reasoningTokens += usage.ReasoningTokens;
+            cachedInputTokens += usage.CachedInputTokens;
+            totalTokens += usage.EffectiveTotalTokens;
+        }
+
+        return new TokenUsage
+        {
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            ReasoningTokens = reasoningTokens,
+            CachedInputTokens = cachedInputTokens,
+            TotalTokens = totalTokens
+        };
+    }
+}
+
+/// <summary>
+/// Token usage for one underlying provider request made during an agent run.
+/// </summary>
+public sealed class AIChatRequestUsage
+{
+    /// <summary>
+    /// One-based order of the provider request within the assistant message generation.
+    /// </summary>
+    public int Sequence { get; init; }
+
+    /// <summary>
+    /// Time when the usage record was observed.
+    /// </summary>
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Provider response identifier, when the agent framework exposed one.
+    /// </summary>
+    public string? ResponseId { get; init; }
+
+    /// <summary>
+    /// Provider message identifier, when the agent framework exposed one.
+    /// </summary>
+    public string? MessageId { get; init; }
+
+    /// <summary>
+    /// Token usage reported for this provider request.
+    /// </summary>
+    public required TokenUsage Usage { get; init; }
 }
 
 /// <summary>
