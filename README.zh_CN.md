@@ -42,10 +42,8 @@
 - ModuleSystem 对运行中宿主的性能视图和依赖视图。
 - 运行时配置查看和主题切换。
 
-<!--
-将这段注释替换为 GitHub 上传 `/mnt/d/Desktop/demo.mp4` 后返回的 asset URL，保持裸链接：
-https://github.com/user-attachments/assets/...
--->
+
+https://github.com/user-attachments/assets/250e1e5f-0a78-4b8b-b832-756d682a01bd
 
 ## JobScheduler 代码示例
 
