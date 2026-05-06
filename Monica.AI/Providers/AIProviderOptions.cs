@@ -1,6 +1,39 @@
 namespace Monica.AI.Providers;
 
 /// <summary>
+/// OpenAI API surface used by the provider for chat requests.
+/// </summary>
+public enum OpenAIProviderApiMode
+{
+    /// <summary>
+    /// Use the OpenAI Responses API through the Microsoft.Extensions.AI adapter.
+    /// </summary>
+    Responses,
+
+    /// <summary>
+    /// Use the OpenAI Chat Completions API through the Microsoft.Extensions.AI adapter.
+    /// </summary>
+    Chat
+}
+
+/// <summary>
+/// OpenAI prompt cache retention policy for eligible prompt prefixes.
+/// </summary>
+public enum OpenAIPromptCacheRetention
+{
+    /// <summary>
+    /// Use OpenAI's in-memory prompt cache retention policy.
+    /// </summary>
+    InMemory,
+
+    /// <summary>
+    /// Request OpenAI's extended 24-hour prompt cache retention policy.
+    /// Configure only for models that support extended prompt caching.
+    /// </summary>
+    TwentyFourHours
+}
+
+/// <summary>
 /// Base class for AI provider configuration.
 /// </summary>
 public abstract class AIProviderOptions
@@ -51,6 +84,28 @@ public abstract class AIProviderOptions
 /// </summary>
 public class OpenAIProviderOptions : AIProviderOptions
 {
+    /// <summary>
+    /// API surface used for chat requests. Defaults to <see cref="OpenAIProviderApiMode.Responses"/>.
+    /// The Responses API is preferred because OpenAI prompt caching is automatic for eligible long
+    /// prompts and Responses can improve cache utilization for supported workloads.
+    /// </summary>
+    public OpenAIProviderApiMode ApiMode { get; set; } = OpenAIProviderApiMode.Responses;
+
+    /// <summary>
+    /// Stable OpenAI prompt cache routing key for requests that share the same long static prompt prefix.
+    /// This value is sent as <c>prompt_cache_key</c> for OpenAI chat requests. It can improve cache hit
+    /// rates by routing similar prefixes together, but it does not bypass OpenAI's minimum prompt length
+    /// or exact-prefix-match requirements. Avoid storing user-private data in this key.
+    /// </summary>
+    public string? PromptCacheKey { get; set; }
+
+    /// <summary>
+    /// Optional OpenAI prompt cache retention policy sent as <c>prompt_cache_retention</c>.
+    /// Leave unset to use OpenAI's model default. Set <see cref="OpenAIPromptCacheRetention.TwentyFourHours"/>
+    /// only for models that support extended prompt caching; unsupported models may reject the request.
+    /// </summary>
+    public OpenAIPromptCacheRetention? PromptCacheRetention { get; set; }
+
     /// <summary>
     /// Organization ID (optional)
     /// </summary>

@@ -118,7 +118,7 @@ public class ChatFacade(
 
                 foreach (var content in update.Contents)
                 {
-                    accumulator.ProcessContent(content);
+                    accumulator.ProcessContent(content, update);
                 }
 
                 yield return update;

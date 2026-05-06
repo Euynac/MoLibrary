@@ -16,17 +16,17 @@ public class ThemeDisplayTextProviderTests
     {
         var options = ThemeDisplayTextProvider.GetThemeOptions(_localizer);
 
-        options.Should().Contain(option => option.Name == "default" && option.DisplayName == "Theme:Options:default:Name" && option.Description == "Theme:Options:default:Description");
-        options.Should().Contain(option => option.Name == "material-design-3" && option.DisplayName == "Theme:Options:material-design-3:Name" && option.Description == "Theme:Options:material-design-3:Description");
-        options.Should().NotContain(option => option.Name == "clean-saas");
+        options.Should().Contain(option => option.Kind == MonicaThemeKind.Default && option.DisplayName == "Theme:Options:Default:Name" && option.Description == "Theme:Options:Default:Description");
+        options.Should().Contain(option => option.Kind == MonicaThemeKind.MaterialDesign3 && option.DisplayName == "Theme:Options:MaterialDesign3:Name" && option.Description == "Theme:Options:MaterialDesign3:Description");
+        options.Should().NotContain(option => option.DisplayName == "Theme:Options:clean-saas:Name");
     }
 
     [Fact]
     public void GetCurrentThemeSummary_ShouldUseLocalizedThemeNameAndMode()
     {
-        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(_localizer, "default", isDarkMode: true);
+        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(_localizer, MonicaThemeKind.Default, isDarkMode: true);
 
-        summary.Should().Be("Theme:Options:default:Name - Theme:Dark");
+        summary.Should().Be("Theme:Options:Default:Name - Theme:Dark");
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class ThemeDisplayTextProviderTests
     {
         var localizer = new MissingThemeNameLocalizer();
 
-        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(localizer, "ink-landscape", isDarkMode: false);
+        var summary = ThemeDisplayTextProvider.GetCurrentThemeSummary(localizer, MonicaThemeKind.InkLandscape, isDarkMode: false);
 
         summary.Should().Be("Ink Landscape - Theme:Light");
     }
@@ -46,7 +46,7 @@ public class ThemeDisplayTextProviderTests
 
         var options = ThemeDisplayTextProvider.GetThemeOptions(localizer);
 
-        options.Should().Contain(option => option.Name == "default" && option.Description == string.Empty);
+        options.Should().Contain(option => option.Kind == MonicaThemeKind.Default && option.Description == string.Empty);
     }
 
     private class FoundStringLocalizer : EchoStringLocalizer<SharedResource>
@@ -57,7 +57,7 @@ public class ThemeDisplayTextProviderTests
     private sealed class MissingThemeNameLocalizer : FoundStringLocalizer
     {
         public override LocalizedString this[string name]
-            => name == "Theme:Options:ink-landscape:Name"
+            => name == "Theme:Options:InkLandscape:Name"
                 ? new LocalizedString(name, name, resourceNotFound: true)
                 : base[name];
     }
@@ -65,7 +65,7 @@ public class ThemeDisplayTextProviderTests
     private sealed class MissingThemeDescriptionLocalizer : FoundStringLocalizer
     {
         public override LocalizedString this[string name]
-            => name == "Theme:Options:default:Description"
+            => name == "Theme:Options:Default:Description"
                 ? new LocalizedString(name, name, resourceNotFound: true)
                 : base[name];
     }

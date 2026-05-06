@@ -95,7 +95,7 @@
                     @if (Message.Usage != null)
                     {
                         <MudText Typo="Typo.caption" Class="message-tokens">
-                            @Message.Usage.TotalTokens tokens
+                            @FormatTokenUsage(Message.Usage)
                         </MudText>
                     }
                     <div class="message-actions">
@@ -197,6 +197,13 @@
     private void ToggleReasoningExpanded()
     {
         _reasoningExpanded = !_reasoningExpanded;
+    }
+
+    private static string FormatTokenUsage(TokenUsage usage)
+    {
+        return usage.CachedInputTokens > 0
+            ? $"{usage.EffectiveTotalTokens} tokens · {usage.CachedInputTokens} cached"
+            : $"{usage.EffectiveTotalTokens} tokens";
     }
 
     private async Task HandleMarkdownLinkClickAsync(object? parameter)

@@ -14,6 +14,11 @@ namespace Monica.AI.Providers.OpenAI;
 /// </summary>
 public class OpenAIProvider : IAIProvider
 {
+    /// <summary>
+    /// Metadata key that stores the configured OpenAI chat API surface.
+    /// </summary>
+    public const string ApiModeMetadataKey = "OpenAIApiMode";
+
     private const EAIProviderType ProviderKind = EAIProviderType.OpenAI;
     private readonly OpenAIProviderOptions _options;
     private readonly OpenAIClient _client;
@@ -68,6 +73,7 @@ public class OpenAIProvider : IAIProvider
         SupportedModels = _models,
         IsValid = _isValid,
         InvalidModels = _invalidModels,
+        Metadata = BuildMetadata(_options),
         IsDefault = _options.IsDefault,
         Icon = "openai"
     };
@@ -81,7 +87,12 @@ public class OpenAIProvider : IAIProvider
             throw new InvalidOperationException("OpenAI model is not configured.");
         }
 
-        return _chatClients.GetOrAdd(resolvedModel, name => _client.GetChatClient(name).AsIChatClient());
+        var cacheKey = BuildChatClientCacheKey(
+            _options.ApiMode,
+            resolvedModel,
+            _options.PromptCacheKey,
+            _options.PromptCacheRetention);
+        return _chatClients.GetOrAdd(cacheKey, _ => CreateChatClient(resolvedModel));
     }
 
     /// <inheritdoc />
@@ -163,6 +174,48 @@ public class OpenAIProvider : IAIProvider
     {
         _systemPrompt = systemPrompt;
         _options.SystemPrompt = systemPrompt;
+    }
+
+    /// <summary>
+    /// Builds OpenAI-specific provider metadata.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> BuildMetadata(OpenAIProviderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new Dictionary<string, string>
+        {
+            [ApiModeMetadataKey] = options.ApiMode.ToString()
+        };
+    }
+
+    private IChatClient CreateChatClient(string resolvedModel)
+    {
+        var chatClient = _options.ApiMode switch
+        {
+#pragma warning disable OPENAI001
+            OpenAIProviderApiMode.Responses => _client.GetResponsesClient().AsIChatClient(resolvedModel),
+#pragma warning restore OPENAI001
+            OpenAIProviderApiMode.Chat => _client.GetChatClient(resolvedModel).AsIChatClient(),
+            _ => throw new InvalidOperationException($"Unsupported OpenAI API mode '{_options.ApiMode}'.")
+        };
+
+        return string.IsNullOrWhiteSpace(_options.PromptCacheKey)
+            ? chatClient
+            : new OpenAIPromptCacheChatClient(
+                chatClient,
+                _options.ApiMode,
+                _options.PromptCacheKey.Trim(),
+                _options.PromptCacheRetention);
+    }
+
+    private static string BuildChatClientCacheKey(
+        OpenAIProviderApiMode apiMode,
+        string model,
+        string? promptCacheKey,
+        OpenAIPromptCacheRetention? promptCacheRetention)
+    {
+        return $"{apiMode}:{model}:{promptCacheKey}:{promptCacheRetention}";
     }
 
     public void Dispose()

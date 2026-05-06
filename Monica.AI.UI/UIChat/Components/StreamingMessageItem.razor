@@ -128,7 +128,7 @@
 
                 foreach (var content in update.Contents)
                 {
-                    _accumulator.ProcessContent(content);
+                    _accumulator.ProcessContent(content, update);
 
                     // Track reasoning state for UI
                     if (content is TextReasoningContent && _accumulator.ReasoningStopwatch.IsRunning)
