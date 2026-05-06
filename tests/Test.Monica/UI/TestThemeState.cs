@@ -1,4 +1,5 @@
 using Monica.UI.Shell.State;
+using Monica.UI.Theming;
 using MudBlazor;
 
 namespace Test.Monica.UI;
@@ -8,17 +9,50 @@ namespace Test.Monica.UI;
 /// </summary>
 public sealed class TestThemeState : IThemeState
 {
+    private bool _isDarkMode;
+    private MonicaThemeKind _currentThemeKind = MonicaThemeKind.Default;
+
     /// <inheritdoc />
     public event Action? OnThemeChanged;
 
     /// <inheritdoc />
-    public bool IsDarkMode { get; set; }
+    public bool IsDarkMode
+    {
+        get => _isDarkMode;
+        set
+        {
+            if (_isDarkMode == value)
+            {
+                return;
+            }
+
+            _isDarkMode = value;
+            OnThemeChanged?.Invoke();
+        }
+    }
 
     /// <inheritdoc />
     public MudTheme CurrentTheme { get; } = new();
 
     /// <inheritdoc />
-    public string CurrentThemeName { get; set; } = "test";
+    public MonicaThemeKind CurrentThemeKind
+    {
+        get => _currentThemeKind;
+        set => SetTheme(value, _isDarkMode);
+    }
+
+    /// <inheritdoc />
+    public void SetTheme(MonicaThemeKind themeKind, bool isDarkMode)
+    {
+        if (_currentThemeKind == themeKind && _isDarkMode == isDarkMode)
+        {
+            return;
+        }
+
+        _currentThemeKind = themeKind;
+        _isDarkMode = isDarkMode;
+        OnThemeChanged?.Invoke();
+    }
 
     /// <inheritdoc />
     public void ToggleTheme()

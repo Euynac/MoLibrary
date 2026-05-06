@@ -14,6 +14,8 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
     }
 
     let isPickerOpen = false;
+    let isComposing = false;
+    let hasPendingLocalInput = false;
     let currentValue = initialValue ?? "";
 
     editor.setAttribute("data-placeholder", placeholder ?? "");
@@ -21,16 +23,27 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
 
     const notifyInput = () => {
         currentValue = readEditorText(editor);
+        hasPendingLocalInput = true;
         const caretIndex = getCaretIndex(editor);
         dotNetRef.invokeMethodAsync("HandleComposerInput", currentValue, caretIndex);
     };
 
-    const handleInput = () => {
+    const handleInput = event => {
+        if (isComposing || event.isComposing) {
+            currentValue = readEditorText(editor);
+            return;
+        }
+
         notifyInput();
     };
 
     const handleKeyDown = event => {
         if (event.defaultPrevented) {
+            return;
+        }
+
+        if (isCompositionKey(event)) {
+            event.stopPropagation();
             return;
         }
 
@@ -51,6 +64,19 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
         }
     };
 
+    const handleCompositionStart = () => {
+        isComposing = true;
+    };
+
+    const handleCompositionEnd = () => {
+        isComposing = false;
+        setTimeout(() => {
+            if (!isComposing) {
+                notifyInput();
+            }
+        }, 0);
+    };
+
     const handlePaste = event => {
         const text = event.clipboardData?.getData("text/plain");
         if (text === undefined) {
@@ -63,6 +89,8 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
 
     editor.addEventListener("input", handleInput);
     editor.addEventListener("keydown", handleKeyDown);
+    editor.addEventListener("compositionstart", handleCompositionStart);
+    editor.addEventListener("compositionend", handleCompositionEnd);
     editor.addEventListener("paste", handlePaste);
 
     return {
@@ -72,13 +100,25 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
         setDisabled: value => {
             editor.setAttribute("contenteditable", value === true ? "false" : "true");
         },
-        setValue: (value, caretIndex, focus) => {
+        setValue: (value, caretIndex, focus, force) => {
             const nextValue = value ?? "";
+            if (isComposing && force !== true) {
+                return;
+            }
+
+            if (hasPendingLocalInput && nextValue !== currentValue && force !== true) {
+                return;
+            }
+
             if (nextValue !== currentValue || (nextValue.length > 0 && editor.childNodes.length === 0)) {
                 currentValue = nextValue;
+                hasPendingLocalInput = false;
                 renderEditor(editor, currentValue, normalizeCaret(caretIndex, currentValue));
             } else if (focus === true) {
+                hasPendingLocalInput = false;
                 setCaretIndex(editor, normalizeCaret(caretIndex, currentValue));
+            } else {
+                hasPendingLocalInput = false;
             }
 
             if (focus === true) {
@@ -88,9 +128,17 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
         dispose: () => {
             editor.removeEventListener("input", handleInput);
             editor.removeEventListener("keydown", handleKeyDown);
+            editor.removeEventListener("compositionstart", handleCompositionStart);
+            editor.removeEventListener("compositionend", handleCompositionEnd);
             editor.removeEventListener("paste", handlePaste);
         }
     };
+}
+
+function isCompositionKey(event) {
+    return event.isComposing
+        || event.key === "Process"
+        || event.keyCode === 229;
 }
 
 function shouldPreventPickerKey(event) {

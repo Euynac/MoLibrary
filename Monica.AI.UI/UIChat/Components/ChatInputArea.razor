@@ -221,7 +221,7 @@
         {
             await _keyboardController.InvokeVoidAsync("setPickerOpen", ShowSlashPicker);
             await _keyboardController.InvokeVoidAsync("setDisabled", IsSending);
-            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, false);
+            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, false, false);
         }
     }
 
@@ -283,6 +283,11 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        if (e.IsComposing)
+        {
+            return;
+        }
+
         if (ShowSlashPicker)
         {
             if (e.Key == "ArrowDown")
@@ -509,7 +514,7 @@
     {
         if (_keyboardController is not null)
         {
-            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, focus);
+            await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, focus, true);
         }
     }
 
