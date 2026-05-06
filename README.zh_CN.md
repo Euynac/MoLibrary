@@ -4,230 +4,151 @@
   <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
 
-
-
 <p align="center">
   <a href="https://github.com/Tairitsua/Monica/actions/workflows/unit-tests.yml"><img src="https://github.com/Tairitsua/Monica/actions/workflows/unit-tests.yml/badge.svg" alt="Unit Tests"></a>
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
-  <a href="https://github.com/molloryn/Monica/blob/main/LICENSE"><img src="https://img.shields.io/github/license/molloryn/Monica" alt="License"></a>
+  <a href="https://github.com/Tairitsua/Monica/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/Tairitsua/Monica" alt="License"></a>
   <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
-  <a href="https://deepwiki.com/molloryn/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://deepwiki.com/Tairitsua/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
-> ⚠️ **开发状态**：Monica 目前处于内部开发阶段，正在快速迭代中。API 可能会发生破坏性变更。文档正在积极完善中。目前不建议在生产环境中使用。
+<p align="center">
+  <a href="README.md">English</a> | 简体中文
+</p>
 
-面向前沿应用的模块化 .NET 基础设施。一个全面的框架，提供 30+ 个独立模块，涵盖从核心基础设施到 AI 集成的方方面面。
+> **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
+> Monica 将类型化的 DDD ProjectUnit、可组合的基础设施模块、内置仪表板和随仓库交付的 agent skills 组合在一起，让 AI 辅助的后端开发在规模变大后仍然可观察、可维护。
 
-## 语言
+> **开发状态**：当前仍处于内部开发和快速迭代阶段，API 仍可能出现破坏性变更，尚未准备好用于生产环境。
 
-[English](README.md) | 简体中文
+## 快速链接
 
-## 📖 概述
+- 文档站点：<https://monica.dpdns.org/>
+- Monica.Docs 示例仓库：<https://github.com/Tairitsua/Monica.Docs>
+- JobScheduler 指南：<https://monica.dpdns.org/markdown-docs?group=monica&document=modules%2Fjob-scheduler%2Findex.md&culture=zh-CN>
 
-Monica 是一个模块化的 .NET 基础设施库，专为灵活性和性能而设计。每个模块都可以独立使用，无需引入整个框架。通过统一的注册和配置模式，Monica 提供一致且高效的开发体验。
+## 为什么是 Monica
 
-**[📚 在线文档](https://monica.dpdns.org/) • [🚀 快速开始](https://monica.dpdns.org/docs/intro) • [📝 博客](https://monica.dpdns.org/blog)**
+- AI 可以很快产出代码，但如果没有统一规格，代码会在规模增长后变得脆弱且难以观测。
+- Monica 把基础设施本身变成规格：每个模块都通过同一套 `Mo.Add*()` 模式注册，每个后端功能都以类型化 ProjectUnit 来表达，而不是靠零散胶水代码拼接。
+- 仓库里的 `.claude/skills/` 和 `.agents/skills/` 会在 AI 写代码之前先教它 Monica 的写法。
 
-## ✨ 特性
+## 演示视频
 
-- **🧩 真正的模块化**：每个组件都是独立的 - 只使用您需要的模块，无需引入整个框架
-- **🔄 统一直觉的 API**：所有模块都遵循相同的注册和配置模式，使用 `Mo.Add*()` 约定
-- **⚡ 高性能**：
-  - 自动中间件注册，无需手动配置
-  - 防止重复注册 - 模块自动仅注册一次
-  - 优化的服务注册，减少反射开销
-  - 及时释放临时对象，最小化内存占用
-- **🔌 自动中间件解析**：无需手动管理中间件注册顺序
-- **🔍 依赖关系可视化**：主动警告潜在的注册失败和配置错误
-- **🎯 源代码生成器**：代码生成减少样板代码并提高性能
-- **🖥️ 全面的仪表板**：内置监控和管理 UI
-- **🌐 分布式优先设计**：原生支持分布式系统和微服务
-- **🔒 强类型**：充分利用 C# 类型系统实现编译时安全
+这段一分钟演示覆盖 Monica 面向运维的几个核心界面：
 
-## 📦 可用模块
+- JobScheduler 健康仪表板、最近活动、作业定义和手动执行。
+- Cron 表达式编辑，无需为后台作业手写管理页。
+- ModuleSystem 对运行中宿主的性能视图和依赖视图。
+- 运行时配置查看和主题切换。
 
-Monica 提供 30+ 个按类别组织的模块。标有 ⭐ 的模块是常用的核心模块。
+<!--
+将这段注释替换为 GitHub 上传 `/mnt/d/Desktop/demo.mp4` 后返回的 asset URL，保持裸链接：
+https://github.com/user-attachments/assets/...
+-->
 
-### 核心基础设施
-- **Core** ⭐ - 基础类型、工具和基础设施
-- **Tool** ⭐ - 常用工具和辅助函数
-- **DependencyInjection** - 增强的依赖注入功能
-
-### 领域驱动设计
-- **DomainDrivenDesign** - DDD 模式实现和基类
-- **AutoController** ⭐ - 从服务自动生成 API 控制器
-- **AutoModel** - 自动模型映射和转换
-
-### 数据访问
-- **Repository** ⭐ - 仓储模式实现，集成 EF Core
-- **StateStore** - 状态管理和持久化
-
-### 后台处理
-- **JobScheduler** ⭐ - 后台作业调度和执行，支持定时和触发作业
-
-### 配置
-- **Configuration** ⭐ - 增强的配置管理，支持验证和热重载
-
-### 通信
-- **DataChannel** - 数据流和基于通道的通信
-- **EventBus** - 事件驱动架构支持
-- **SignalR** - 实时通信扩展
-- **Dapr** ⭐ - Dapr 集成，用于分布式应用
-
-### 分布式系统
-- **ServiceDiscovery** - 服务注册和发现
-- **Locker** - 分布式锁机制
-- **Resilience** - 弹性模式（重试、熔断器等）
-
-### 安全
-- **Authority** - 身份验证和授权基础设施
-
-### AI 集成
-- **AI** ⭐ - AI 服务集成和抽象
-
-### 监控与可观测性
-- **Logging** - 增强的日志功能
-- **Profiling** - 性能分析和诊断
-- **Framework** - 框架级监控和指标
-
-### UI 组件
-- **UI** ⭐ - Blazor UI 组件和工具（基于 MudBlazor）
-- **Framework.UI** - 框架 UI 仪表板和管理面板
-
-### 实用工具
-- **Office** - Office 文档处理（Excel、Word 等）
-- **Validation** - 增强的验证框架
-
-> 📚 有关详细的模块描述、配置选项和使用示例，请参阅[在线文档](https://monica.dpdns.org/)。
-
-## 🚀 快速开始
-
-### 安装
-
-通过 NuGet 安装您需要的模块：
-
-```bash
-# 安装核心库
-dotnet add package Monica.Core
-
-# 安装仓储模块
-dotnet add package Monica.Repository
-
-# 安装作业调度器
-dotnet add package Monica.JobScheduler
-
-# 根据需要安装其他模块...
-```
-
-### 基本使用
-
-Monica 使用统一的模块化模式来注册和配置服务。所有模块都遵循 `Mo.Add*()` 约定：
+## JobScheduler 代码示例
 
 ```csharp
-using Monica;
+using Microsoft.Extensions.Logging;
+using Monica.JobScheduler.Abstractions;
+using Monica.JobScheduler.Annotations;
+using Monica.Modules;
 
-var builder = WebApplication.CreateBuilder(args);
+Mo.AddJobScheduler()
+    .UseInMemoryMetadataRepository()
+    .UseSchedulerScope("local-dev")
+    .UseInMemoryProvider();
 
-// 使用统一的 Mo.Add*() 模式注册模块
-Mo.AddJobScheduler(o =>
+[JobConfig(
+    JobName = "Heartbeat",
+    Description = "每五分钟写一次心跳日志。",
+    CronSchedule = "0 */5 * * * *")]
+public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 {
-    o.RecurringJobDebugMode = true;
-    o.TriggeredJobDebugMode = true;
-})
-.UseEfCoreMetadataRepository();
-
-Mo.AddConfiguration(o =>
-{
-    o.EnableHotReload = true;
-    o.ValidateOnStartup = true;
-});
-
-var app = builder.Build();
-app.Run();
+    public override Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Heartbeat job ran.");
+        return Task.CompletedTask;
+    }
+}
 ```
 
-> 💡 模块通常会返回一个 `ModuleGuide` 对象，用于通过流式 API 链进行进一步配置。
+- 定时作业和触发式作业使用同一套调度模型。
+- 仪表板地址是 `/job-scheduler`。
+- 并发控制、僵尸检测和持久化选项都已内置。
+- 需要浏览器运维界面时，再补上 `Mo.AddJobSchedulerUI()`。
 
-## 📚 核心概念
+## 仪表板、主题与国际化
+
+Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuration、DependencyInjection、ProjectUnits、ModuleSystem、AI 等。UI 层共用同一套主题契约，支持多个可切换主题，并内置 `en-US` + `zh-CN` 本地化资源。
+
+## 随仓库交付的 Agent Skills
+
+仓库已经内置了可直接使用的 skill pack，位于 `.claude/skills/` 和 `.agents/skills/`。
+
+- 框架入口：`monica-framework`、`monica-development`、`monica-architecture`、`monica-ui-development`、`monica-ui-design`、`monica-ui-audit`、`monica-docs-authoring`、`monica-requirement-design`、`monica-unit-testing`、`monica-ui-bridge-debug`
+- 基于 Monica 的应用系统入口：`monica-application`、`monica-application-microservice`、`monica-application-modular-monolith`、`monica-application-project-unit-development`
+- 辅助工作流：`code-simplifier`、`playwright-cli`、`subagent-progress-report`、`third-party-source-catalog`
+
+## 模块目录
+
+Monica 采用大量小而可组合的模块，而不是少数几个大型包。
+
+- 核心基础设施：`Core`、`Tool`、`DependencyInjection`、`ResultEnvelope`、`Mediator`、`JsonSerialization`、`Localization`
+- DDD 与应用流程：`ProjectUnits`、`AutoController`、`AutoModel`、`Repository`、`UnitOfWork`
+- 后台与运维：`JobScheduler`、`Configuration`、`Logging`、`ObservableInstance`、`HostedService`、`ServiceDiscovery`、`Locker`、`Resilience`
+- 通信与集成：`EventBus`、`SignalR`、`DataChannel`、`Dapr`、`Markdown`
+- AI 与分析：`AI`、`RAG`、`Framework`、`Framework.UI`、`AI.UI`、`JobScheduler.UI`、`Configuration.UI`、`DependencyInjection.UI`
+- 平台工具：`WebApi`、`Validation`、`Office`、`Profiling`、`DevOps`、`K8S`、`Git`、`FileOps`、`Utilities`
+
+> 以文档站点里的完整模块索引为准。
+
+## 架构速览
 
 ### 模块模式
 
-Monica 的架构围绕 `ModuleBase` 模式构建。每个模块由四个组件组成：
+- `Module{Name}Option`：公开配置入口
+- `Module{Name}Guide`：链式补充配置
+- `Module{Name}`：模块实现本体
+- `Module{Name}BuilderExtensions`：`Mo.Add*()` 入口
 
-1. **`Module{Name}Option`** - 模块的配置选项
-2. **`Module{Name}Guide`** - 用于额外配置的流式 API 向导
-3. **`Module{Name}`** - 核心实现，包含依赖注入和中间件设置
-4. **`Module{Name}BuilderExtensions`** - 面向用户的扩展方法（即 `Mo.Add*()` 方法）
+### ProjectUnit 模式
 
+用于约束 AI 能写什么的类型化 DDD 单元：`ApplicationService`、`RequestDto`、`DomainService`、`Entity`、`Repository`、`DomainEvent`、`DomainEventHandler`、`LocalEventHandler`、`Configuration`、`RecurringJob`、`TriggeredJob`。
 
-### 模块注册
+ProjectUnit 的详细约定可以在 `monica-application-project-unit-development` 和 Monica.Docs 的概念页里继续查看。
 
-所有模块都遵循一致的注册模式：
+## 技术栈
 
-```csharp
-Mo.Add{ModuleName}(options =>
-{
-    // 配置模块选项
-})
-.Use{Feature}()  // 可选：启用特定功能
-.With{Provider}(); // 可选：配置提供程序
-```
+- [.NET 10](https://github.com/dotnet/runtime)
+- [ASP.NET Core](https://github.com/dotnet/aspnetcore)
+- [Entity Framework Core](https://github.com/dotnet/efcore)
+- [MudBlazor](https://github.com/MudBlazor/MudBlazor)
+- [Mapster](https://github.com/MapsterMapper/Mapster)
+- [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
+- [Dapr](https://github.com/dapr/dapr)
+- [Serilog](https://github.com/serilog/serilog)
+- [FluentValidation](https://github.com/FluentValidation/FluentValidation)
+- [Polly](https://github.com/App-vNext/Polly)
 
-## 🏗️ 架构亮点
+## 贡献
 
-- **自动中间件注册**：中间件组件根据依赖关系自动按正确顺序注册
-- **智能依赖解析**：框架分析模块依赖关系并提供潜在问题的警告
-- **性能优化**：减少反射使用、优化服务注册和高效的资源管理
-- **仪表板集成**：许多模块包含用于监控和管理的内置仪表板
-- **可扩展性**：遵循相同模式，易于使用自定义模块进行扩展
+1. Fork 仓库。
+2. 创建分支。
+3. 提交修改。
+4. 提交 Pull Request。
 
-## 🛠️ 技术栈
+## 鸣谢
 
-- **.NET 10.0** - 最新的 .NET 运行时
-- **ASP.NET Core** - Web 框架
-- **Entity Framework Core** - 数据访问 ORM
-- **MudBlazor** - Blazor UI 组件库
-- **Mapster** - 对象映射
-- **内置 Mediator** - 提供 Monica 请求/处理器分发与管道行为
-- **Dapr** - 分布式应用运行时
-- **Serilog** - 结构化日志
-- **FluentValidation** - 验证框架
-- **Polly** - 弹性和瞬态故障处理
+Monica 的一小部分模块实现思路参考了 [ABP Framework](https://github.com/abpframework/abp)，该项目采用 LGPL-3.0 许可证。任何直接改编的代码都会保留其原始声明和许可证条款。Monica 是独立项目，与 ABP 没有关联关系。
 
-## 📖 文档
+## 许可证
 
-- **[在线文档](https://monica.dpdns.org/)** - 全面的指南和 API 参考
-- **模块 README** - 每个模块在其目录中都包含详细文档
-- **Claude Code 技能** - 使用 `/mo-development` 和 `/mo-ui-development` 技能获取开发指导
+MIT License。见 [LICENSE.txt](LICENSE.txt)。
 
-## ⚠️ 开发状态
+## 联系方式
 
-**重要**：Monica 目前处于活跃的内部开发阶段：
-
-- 🚧 **快速迭代**：API 可能会在没有通知的情况下发生破坏性变更
-- 📝 **文档**：正在积极改进和扩展
-- 🔬 **内部使用**：目前专为内部项目设计
-- ⚠️ **未准备好生产**：目前不建议在生产环境中使用
-- 🔄 **无向后兼容性**：在此阶段不保证向后兼容性
-
-我们建议在 Monica 正式稳定版本发布之前，不要在生产环境中使用。
-
-## 🤝 贡献
-
-我们欢迎贡献！要贡献：
-
-1. Fork 本仓库
-2. 创建您的功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 开启一个 Pull Request
-
-## 📄 许可证
-
-该项目采用 MIT 许可证 - 详情请查看 [LICENSE](LICENSE) 文件。
-
-## 📞 联系方式
-
-- **GitHub Issues**：[https://github.com/molloryn/Monica/issues](https://github.com/molloryn/Monica/issues)
-- **GitHub Discussions**：[https://github.com/molloryn/Monica/discussions](https://github.com/molloryn/Monica/discussions)
-- **文档网站**：[https://monica.dpdns.org/](https://monica.dpdns.org/)
+- Issues：<https://github.com/Tairitsua/Monica/issues>
+- Discussions：<https://github.com/Tairitsua/Monica/discussions>
+- 文档站点：<https://monica.dpdns.org/>
