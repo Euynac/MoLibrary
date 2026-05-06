@@ -43,10 +43,8 @@ The one-minute demo walks through the operator-facing parts of Monica:
 - ModuleSystem performance and dependency views for the running host.
 - Runtime configuration inspection and theme switching.
 
-<!--
-Replace this comment with the GitHub-uploaded `/mnt/d/Desktop/demo.mp4` asset URL as a bare URL:
-https://github.com/user-attachments/assets/...
--->
+
+https://github.com/user-attachments/assets/250e1e5f-0a78-4b8b-b832-756d682a01bd
 
 ## JobScheduler in Code
 
