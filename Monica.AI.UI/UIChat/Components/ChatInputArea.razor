@@ -82,9 +82,16 @@
             </div>
             <div class="input-actions-right">
                 <MudTooltip Text="@BuildContextTooltip()">
-                    <MudIconButton Icon="@Icons.Material.Filled.PieChart"
-                                   Class="input-context-button"
-                                   OnClick="@ShowTokenUsageDialogAsync" />
+                    <button type="button"
+                            class="input-context-button"
+                            @onclick="@ShowTokenUsageDialogAsync"
+                            aria-label="@BuildContextTooltip()">
+                        <MudProgressCircular Value="@RemainingPercent"
+                                             Size="Size.Small"
+                                             Color="@RemainingColor"
+                                             StrokeWidth="9"
+                                             Class="input-context-ring" />
+                    </button>
                 </MudTooltip>
                 <ModelSelector
                     AvailableModels="@AvailableModels"
@@ -160,6 +167,24 @@
     private double RemainingContextRatio => ContextWindow > 0
         ? Math.Clamp((double)Math.Max(ContextWindow - LatestInputTokens, 0) / ContextWindow, 0, 1)
         : 1;
+    private double RemainingPercent => RemainingContextRatio * 100;
+    private Color RemainingColor
+    {
+        get
+        {
+            if (RemainingContextRatio < 0.1)
+            {
+                return Color.Error;
+            }
+
+            if (RemainingContextRatio < 0.25)
+            {
+                return Color.Warning;
+            }
+
+            return Color.Primary;
+        }
+    }
 
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
