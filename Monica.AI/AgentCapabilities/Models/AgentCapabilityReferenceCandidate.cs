@@ -48,7 +48,7 @@ public sealed record AgentCapabilityReferenceCandidate
     public bool IsEnabled { get; }
 
     /// <summary>
-    /// Human-readable reason the candidate is unavailable, when disabled.
+    /// UI-localizable reason code or fallback display text explaining why the candidate is unavailable, when disabled.
     /// </summary>
     public string? DisabledReason { get; }
 

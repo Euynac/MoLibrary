@@ -81,6 +81,8 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
         services.TryAddSingleton<ILoadedModuleCatalog, ModuleRegistryLoadedModuleCatalog>();
         services.TryAddSingleton<MonicaSkillCatalog>();
         services.TryAddSingleton<MonicaAgentSkillsProviderFactory>();
+        services.TryAddSingleton(_ => option.CreateReadOnlyFileAccessOptions());
+        services.TryAddSingleton<ReadOnlyFileAccessService>();
 
         foreach (var registration in option.ExternalFileSkillRegistrations)
         {
@@ -95,6 +97,60 @@ public sealed class ModuleSkillSystem(ModuleSkillSystemOption option)
 public sealed class ModuleSkillSystemOption : ModuleOptions<ModuleSkillSystem>
 {
     internal List<ExternalFileSkillRegistration> ExternalFileSkillRegistrations { get; } = [];
+    internal List<ReadOnlyFileAccessRootRegistration> ReadOnlyFileAccessRoots { get; } = [];
+
+    /// <summary>
+    /// Ripgrep executable path used by the read-only file access skill. Defaults to <c>rg</c>, resolved from PATH.
+    /// Configure this when the host needs to use a bundled or non-standard ripgrep executable.
+    /// </summary>
+    public string ReadOnlyFileAccessRipgrepExecutablePath { get; set; } = "rg";
+
+    /// <summary>
+    /// Maximum seconds a ripgrep process launched by the read-only file access skill may run before cancellation.
+    /// Increase this only for very large configured roots where longer searches are expected.
+    /// </summary>
+    public int ReadOnlyFileAccessRipgrepTimeoutSeconds { get; set; } = 20;
+
+    /// <summary>
+    /// Maximum number of file-content lines returned by one read-only file access read call.
+    /// </summary>
+    public int ReadOnlyFileAccessMaxReadLines { get; set; } = 400;
+
+    /// <summary>
+    /// Default number of file-content lines returned by one read-only file access read call.
+    /// </summary>
+    public int ReadOnlyFileAccessDefaultReadLines { get; set; } = 160;
+
+    /// <summary>
+    /// Maximum token budget returned by one read-only file access read call after line-window selection.
+    /// </summary>
+    public int ReadOnlyFileAccessMaxReadTokens { get; set; } = 12000;
+
+    /// <summary>
+    /// Default token budget returned by one read-only file access read call after line-window selection.
+    /// </summary>
+    public int ReadOnlyFileAccessDefaultReadTokens { get; set; } = 6000;
+
+    /// <summary>
+    /// Maximum number of rows returned by one read-only file access search or file-listing call.
+    /// </summary>
+    public int ReadOnlyFileAccessMaxResults { get; set; } = 200;
+
+    /// <summary>
+    /// Default number of rows returned by one read-only file access search or file-listing call.
+    /// </summary>
+    public int ReadOnlyFileAccessDefaultResults { get; set; } = 50;
+
+    /// <summary>
+    /// Maximum ripgrep context lines allowed before and after each read-only file access search match.
+    /// </summary>
+    public int ReadOnlyFileAccessMaxSearchContextLines { get; set; } = 5;
+
+    /// <summary>
+    /// Maximum characters returned for one read-only file access search result line. Increase only when callers need
+    /// to inspect unusually long generated lines.
+    /// </summary>
+    public int ReadOnlyFileAccessMaxSearchLineCharacters { get; set; } = 500;
 
     /// <summary>
     /// Adds one or more file-based Agent Framework skill roots.
@@ -130,6 +186,41 @@ public sealed class ModuleSkillSystemOption : ModuleOptions<ModuleSkillSystem>
 
         ExternalFileSkillRegistrations.Add(
             new ExternalFileSkillRegistration(normalizedPaths, scriptRunner, options, usesSubprocessRunner));
+    }
+
+    /// <summary>
+    /// Adds a filesystem root that Monica agents may inspect through the built-in read-only file access skill.
+    /// </summary>
+    /// <param name="name">Stable root identifier used by skill tools. Root names are compared case-insensitively.</param>
+    /// <param name="path">Absolute path, or path relative to the running application directory, that agents may inspect.</param>
+    /// <param name="description">Optional human-readable purpose shown to agents when roots are listed.</param>
+    public void AddReadOnlyFileAccessRoot(string name, string path, string? description = null)
+    {
+        var registration = new ReadOnlyFileAccessRootRegistration(name, path, description);
+        if (ReadOnlyFileAccessRoots.Any(root => string.Equals(root.Name, registration.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Duplicate read-only file access root name '{registration.Name}'.");
+        }
+
+        ReadOnlyFileAccessRoots.Add(registration);
+    }
+
+    internal ReadOnlyFileAccessOptions CreateReadOnlyFileAccessOptions()
+    {
+        return new ReadOnlyFileAccessOptions
+        {
+            Roots = ReadOnlyFileAccessRoots.ToList(),
+            RipgrepExecutablePath = ReadOnlyFileAccessRipgrepExecutablePath,
+            RipgrepTimeoutSeconds = ReadOnlyFileAccessRipgrepTimeoutSeconds,
+            MaxReadLines = ReadOnlyFileAccessMaxReadLines,
+            DefaultReadLines = ReadOnlyFileAccessDefaultReadLines,
+            MaxReadTokens = ReadOnlyFileAccessMaxReadTokens,
+            DefaultReadTokens = ReadOnlyFileAccessDefaultReadTokens,
+            MaxResults = ReadOnlyFileAccessMaxResults,
+            DefaultResults = ReadOnlyFileAccessDefaultResults,
+            MaxSearchContextLines = ReadOnlyFileAccessMaxSearchContextLines,
+            MaxSearchLineCharacters = ReadOnlyFileAccessMaxSearchLineCharacters
+        };
     }
 }
 
@@ -211,6 +302,39 @@ public sealed class ModuleSkillSystemGuide
             MonicaSubprocessSkillScriptRunner.RunAsync,
             options,
             usesSubprocessRunner: true);
+    }
+
+    /// <summary>
+    /// Registers a filesystem root that Monica agents may inspect with the built-in read-only file access skill.
+    /// </summary>
+    /// <param name="name">Stable root identifier used by skill tools. Root names are compared case-insensitively.</param>
+    /// <param name="path">Absolute path, or path relative to the running application directory, that agents may inspect.</param>
+    /// <param name="description">Optional human-readable purpose shown to agents when roots are listed.</param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleSkillSystemGuide AddReadOnlyFileAccessRoot(
+        string name,
+        string path,
+        string? description = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        ConfigureModuleOption(
+            option => option.AddReadOnlyFileAccessRoot(name, path, description),
+            secondKey: name.Trim());
+        return this;
+    }
+
+    /// <summary>
+    /// Configures limits and ripgrep execution settings for the built-in read-only file access skill.
+    /// </summary>
+    /// <param name="configure">Configuration delegate for read-only file access options.</param>
+    /// <returns>The current guide instance.</returns>
+    public ModuleSkillSystemGuide ConfigureReadOnlyFileAccess(Action<ModuleSkillSystemOption> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        ConfigureModuleOption(configure);
+        return this;
     }
 
     private ModuleSkillSystemGuide AddFileSkillsCore(

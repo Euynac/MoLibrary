@@ -127,7 +127,7 @@ public sealed record AgentCapabilityEntryInfo
     public bool IsEnabled => IsBuiltInEnabled && IsCatalogEnabled && IsEntryEnabled && DisabledReason is null;
 
     /// <summary>
-    /// Human-readable reason the entry cannot currently be used.
+    /// UI-localizable reason code or fallback display text explaining why the entry cannot currently be used.
     /// </summary>
     public string? DisabledReason { get; }
 

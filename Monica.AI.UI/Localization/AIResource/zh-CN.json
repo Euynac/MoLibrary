@@ -539,6 +539,13 @@
       "McpServerDescription": "将该 Skill 作为 MCP Server “{0}” 对外暴露。",
       "McpServerToggle": "作为 MCP 暴露",
       "McpServerRestartHint": "该设置已持久化。需要重启宿主后，MCP 端点注册才会体现变更。",
+      "DisabledReason": {
+        "ImplementationDisabled": "该 Skill 报告自身尚未就绪，但没有提供更具体的原因。请检查 Skill 实现或模块配置。",
+        "ReadOnlyFileAccessNoRoots": "只读文件访问 Skill 已禁用，因为尚未配置任何允许访问的文件系统根目录。请通过 AddReadOnlyFileAccessRoot(name, path, description) 至少注册一个允许根目录。配置完成后，Agent 只能使用该根目录名称，并通过相对路径访问根目录内的文件。",
+        "CatalogDisabled": "Skill 目录已被全局禁用。",
+        "EntryDisabled": "该 Skill 已在运行时能力设置中禁用。",
+        "RequiredModulesMissing": "该 Skill 已禁用，因为缺少必需的 Monica 模块：{0}。"
+      },
       "Sources": {
         "Title": "外部 Skill 来源",
         "Summary": "已从 {1} 个来源配置加载 {0} 个 Skill。",

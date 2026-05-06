@@ -37,6 +37,15 @@ public abstract class Skill
     public virtual bool IsEnabled => true;
 
     /// <summary>
+    /// Gets a stable, UI-localizable reason code explaining why <see cref="IsEnabled"/> is <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Return <see langword="null"/> when the skill is enabled. Disabled skills should prefer stable message codes over
+    /// user-facing prose so management UIs can localize the reason.
+    /// </remarks>
+    public virtual string? DisabledReason => null;
+
+    /// <summary>
     /// Gets optional metadata that allows this skill to be exposed as a local MCP server.
     /// </summary>
     /// <remarks>

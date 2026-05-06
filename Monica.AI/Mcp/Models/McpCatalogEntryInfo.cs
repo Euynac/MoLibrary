@@ -110,7 +110,7 @@ public sealed record McpCatalogEntryInfo
     public bool IsAgentToolEnabled => IsBuiltInAgentToolEnabled && IsCatalogEnabled && IsEntryEnabled && DisabledReason is null;
 
     /// <summary>
-    /// Human-readable reason the entry cannot currently be exposed to Monica agents.
+    /// UI-localizable reason code or fallback display text explaining why the entry cannot currently be exposed to Monica agents.
     /// </summary>
     public string? DisabledReason { get; }
 

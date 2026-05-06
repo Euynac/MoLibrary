@@ -539,6 +539,13 @@
       "McpServerDescription": "Expose this skill externally as MCP server '{0}'.",
       "McpServerToggle": "Expose as MCP",
       "McpServerRestartHint": "This setting is persisted. Restart the host for MCP endpoint registration to reflect the change.",
+      "DisabledReason": {
+        "ImplementationDisabled": "This Skill reported that it is not ready, but it did not provide a more specific reason. Check the Skill implementation or module configuration.",
+        "ReadOnlyFileAccessNoRoots": "The read-only file access Skill is disabled because no filesystem roots are configured. Register at least one allowed root with AddReadOnlyFileAccessRoot(name, path, description). Agents can only use this Skill after a configured root exists, and all tool calls must use that root name with relative paths inside it.",
+        "CatalogDisabled": "The Skill catalog is globally disabled.",
+        "EntryDisabled": "This Skill is disabled in runtime capability settings.",
+        "RequiredModulesMissing": "This Skill is disabled because required Monica modules are not loaded: {0}."
+      },
       "Sources": {
         "Title": "External skill sources",
         "Summary": "{0} skill(s) loaded from {1} source registration(s).",

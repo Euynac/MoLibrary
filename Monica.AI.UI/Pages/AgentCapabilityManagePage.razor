@@ -816,8 +816,17 @@
 
     private string FormatDisabledReason(string disabledReason)
     {
+        if (SkillCapabilityMessageCode.DisabledReason.TryParseRequiredModulesMissing(disabledReason, out var missingModules))
+        {
+            return L["Capabilities:Skill:DisabledReason:RequiredModulesMissing", missingModules];
+        }
+
         return disabledReason switch
         {
+            SkillCapabilityMessageCode.DisabledReason.ImplementationDisabled => L["Capabilities:Skill:DisabledReason:ImplementationDisabled"],
+            SkillCapabilityMessageCode.DisabledReason.ReadOnlyFileAccessNoRoots => L["Capabilities:Skill:DisabledReason:ReadOnlyFileAccessNoRoots"],
+            SkillCapabilityMessageCode.DisabledReason.CatalogDisabled => L["Capabilities:Skill:DisabledReason:CatalogDisabled"],
+            SkillCapabilityMessageCode.DisabledReason.EntryDisabled => L["Capabilities:Skill:DisabledReason:EntryDisabled"],
             McpCapabilityMessageCode.DisabledReason.SkillMcpExposureDisabled => L["Capabilities:Mcp:DisabledReason:SkillMcpExposureDisabled"],
             McpCapabilityMessageCode.DisabledReason.SkillServerNotAgentTool => L["Capabilities:Mcp:DisabledReason:SkillServerNotAgentTool"],
             McpCapabilityMessageCode.DisabledReason.NotAgentTool => L["Capabilities:Mcp:DisabledReason:NotAgentTool"],

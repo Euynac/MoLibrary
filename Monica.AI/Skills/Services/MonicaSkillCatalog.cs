@@ -84,6 +84,10 @@ public sealed class MonicaSkillCatalog(
     {
         if (!skill.IsEnabled)
         {
+            var disabledReason = string.IsNullOrWhiteSpace(skill.DisabledReason)
+                ? SkillCapabilityMessageCode.DisabledReason.ImplementationDisabled
+                : skill.DisabledReason;
+
             logger.LogDebug("Skipping disabled AI skill '{SkillName}'.", skill.Definition.Name);
             return new SkillEntry(
                 skill.Definition.Name,
@@ -97,7 +101,7 @@ public sealed class MonicaSkillCatalog(
                 new MonicaAgentSkillAdapter(skill, xmlDocumentationService),
                 AgentCapabilitySourceKind.CodeDefined,
                 null,
-                "Disabled by the skill implementation.");
+                disabledReason);
         }
 
         var missing = skill.RequiredModules
@@ -137,7 +141,7 @@ public sealed class MonicaSkillCatalog(
             new MonicaAgentSkillAdapter(skill, xmlDocumentationService),
             AgentCapabilitySourceKind.CodeDefined,
             null,
-            "Required modules are not loaded: " + string.Join(", ", missing) + ".");
+            SkillCapabilityMessageCode.DisabledReason.RequiredModulesMissing(missing));
     }
 
     private static ExternalFileSkillCatalogSnapshot BuildExternalFileSnapshot(
@@ -292,10 +296,10 @@ public sealed class MonicaSkillCatalog(
 
             if (!catalogEnabled)
             {
-                return "The skill catalog is globally disabled.";
+                return SkillCapabilityMessageCode.DisabledReason.CatalogDisabled;
             }
 
-            return entryEnabled ? null : "This skill is disabled in runtime capability settings.";
+            return entryEnabled ? null : SkillCapabilityMessageCode.DisabledReason.EntryDisabled;
         }
     }
 
