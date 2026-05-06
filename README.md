@@ -4,231 +4,154 @@
   <img src="logo.png" alt="Monica Logo" width="200" />
 </p>
 
-
 <p align="center">
   <a href="https://github.com/Tairitsua/Monica/actions/workflows/unit-tests.yml"><img src="https://github.com/Tairitsua/Monica/actions/workflows/unit-tests.yml/badge.svg" alt="Unit Tests"></a>
   <a href="https://www.nuget.org/packages?q=Monica"><img src="https://img.shields.io/nuget/v/Monica.Core.svg" alt="NuGet"></a>
-  <a href="https://github.com/molloryn/Monica/blob/main/LICENSE"><img src="https://img.shields.io/github/license/molloryn/Monica" alt="License"></a>
+  <a href="https://github.com/Tairitsua/Monica/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/Tairitsua/Monica" alt="License"></a>
   <a href="https://monica.dpdns.org/"><img src="https://img.shields.io/badge/docs-online-brightgreen.svg" alt="Documentation"></a>
-  <a href="https://deepwiki.com/molloryn/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://deepwiki.com/Tairitsua/Monica"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
+<p align="center">
+  English | <a href="README.zh_CN.md">简体中文</a>
+</p>
+
+> **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
+> Monica combines typed DDD ProjectUnits, composable infrastructure modules, built-in dashboards, and bundled agent skills so AI-assisted backend work stays observable as it grows.
+
+> **Release candidate**: Monica 1.0.0-rc.1 is a pre-release for validation and feedback. Breaking changes may still happen before 1.0.0 stable.
+
+## Quick Links
+
+- Docs site: <https://monica.dpdns.org/>
+- Monica.Docs example repo: <https://github.com/Tairitsua/Monica.Docs>
+- JobScheduler guide: <https://monica.dpdns.org/markdown-docs?group=monica&document=modules%2Fjob-scheduler%2Findex.md&culture=zh-CN>
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 
+## Why Monica
 
-> ⚠️ **Development Status**: Monica is currently in internal development and undergoing rapid iteration. The API is subject to breaking changes. Documentation is being actively improved. Not recommended for production use at this time.
+- AI can produce code quickly, but without a shared spec the result becomes brittle and hard to observe as the system grows.
+- Monica turns infrastructure into the spec: every module registers through the same `Mo.Add*()` pattern, and every backend feature is expressed as typed ProjectUnits instead of ad hoc glue.
+- The bundled skills under `.claude/skills/` and `.agents/skills/` teach agents the Monica way before they write code.
 
-**Mo**dular .**N**ET **I**nfrastructure for **C**utting-edge **A**pps. A comprehensive framework providing 30+ independent modules covering everything from core infrastructure to AI integration.
+## Demo
 
-## Language
+The one-minute demo walks through the operator-facing parts of Monica:
 
-English | [简体中文](README.zh_CN.md)
+- JobScheduler health dashboard, recent activity, job definitions, and manual execution.
+- Cron expression editing without wiring a custom admin page by hand.
+- ModuleSystem performance and dependency views for the running host.
+- Runtime configuration inspection and theme switching.
 
-## 📖 Overview
 
-Monica is a modular .NET infrastructure library designed for flexibility and performance. Each module can be used independently without requiring the entire framework. Through unified registration and configuration patterns, Monica provides a consistent and efficient development experience.
+https://github.com/user-attachments/assets/250e1e5f-0a78-4b8b-b832-756d682a01bd
 
-**[📚 Documentation](https://monica.dpdns.org/) • [🚀 Quick Start](https://monica.dpdns.org/docs/intro) • [📝 Blog](https://monica.dpdns.org/blog)**
-
-## ✨ Features
-
-- **🧩 True Modularity**: Each component is independent - use only what you need without pulling in the entire framework
-- **🔄 Unified Intuitive API**: All modules follow the same registration and configuration patterns with the `Mo.Add*()` convention
-- **⚡ High Performance**:
-  - Automatic middleware registration without manual configuration
-  - Prevents duplicate registrations - modules auto-register only once
-  - Optimized service registration with reduced reflection overhead
-  - Timely disposal of temporary objects to minimize memory footprint
-- **🔌 Auto Middleware Resolution**: No need to manually manage middleware registration order
-- **🔍 Dependency Visualization**: Proactive warnings for potential registration failures and misconfigurations
-- **🎯 Source Generators**: Code generation for reduced boilerplate and improved performance
-- **🖥️ Comprehensive Dashboards**: Built-in UI for monitoring and management
-- **🌐 Distributed-First Design**: Native support for distributed systems and microservices
-- **🔒 Strong Typing**: Full leverage of C# type system for compile-time safety
-
-## 📦 Available Modules
-
-Monica provides 30+ modules organized by category. Modules marked with ⭐ are commonly used core modules.
-
-### Core Infrastructure
-- **Core** ⭐ - Fundamental types, utilities, and base infrastructure
-- **Tool** ⭐ - Common utilities and helper functions
-- **DependencyInjection** - Enhanced dependency injection capabilities
-
-### Domain-Driven Design
-- **DomainDrivenDesign** - DDD pattern implementations and base classes
-- **AutoController** ⭐ - Automatic API controller generation from services
-- **AutoModel** - Automatic model mapping and transformation
-
-### Data Access
-- **Repository** ⭐ - Repository pattern implementation with EF Core integration
-- **StateStore** - State management and persistence
-
-### Background Processing
-- **JobScheduler** ⭐ - Background job scheduling and execution with recurring and triggered jobs
-
-### Configuration
-- **Configuration** ⭐ - Enhanced configuration management with validation and hot-reload
-
-### Communication
-- **DataChannel** - Data streaming and channel-based communication
-- **EventBus** - Event-driven architecture support
-- **SignalR** - Real-time communication extensions
-- **Dapr** ⭐ - Dapr integration for distributed applications
-
-### Distributed Systems
-- **ServiceDiscovery** - Service registration and discovery
-- **Locker** - Distributed locking mechanisms
-- **Resilience** - Resilience patterns (retry, circuit breaker, etc.)
-
-### Security
-- **Authority** - Authentication and authorization infrastructure
-
-### AI Integration
-- **AI** ⭐ - AI service integration and abstractions
-
-### Monitoring & Observability
-- **Logging** - Enhanced logging capabilities
-- **Profiling** - Performance profiling and diagnostics
-- **Framework** - Framework-level monitoring and metrics
-
-### UI Components
-- **UI** ⭐ - Blazor UI components and utilities (MudBlazor-based)
-- **Framework.UI** - Framework UI dashboards and admin panels
-
-### Utilities
-- **Office** - Office document processing (Excel, Word, etc.)
-- **Validation** - Enhanced validation framework
-
-> 📚 For detailed module descriptions, configuration options, and usage examples, see the [online documentation](https://monica.dpdns.org/).
-
-## 🚀 Quick Start
-
-### Installation
-
-Install the modules you need via NuGet:
-
-```bash
-# Install core library
-dotnet add package Monica.Core
-
-# Install repository module
-dotnet add package Monica.Repository
-
-# Install job scheduler
-dotnet add package Monica.JobScheduler
-
-# Install other modules as needed...
-```
-
-### Basic Usage
-
-Monica uses a unified modular pattern for registering and configuring services. All modules follow the `Mo.Add*()` convention:
+## JobScheduler in Code
 
 ```csharp
-using Monica;
+using Microsoft.Extensions.Logging;
+using Monica.JobScheduler.Abstractions;
+using Monica.JobScheduler.Annotations;
+using Monica.Modules;
 
-var builder = WebApplication.CreateBuilder(args);
+Mo.AddJobScheduler()
+    .UseInMemoryMetadataRepository()
+    .UseSchedulerScope("local-dev")
+    .UseInMemoryProvider();
 
-// Register modules with the unified Mo.Add*() pattern
-Mo.AddJobScheduler(o =>
+[JobConfig(
+    JobName = "Heartbeat",
+    Description = "Writes a heartbeat every five minutes.",
+    CronSchedule = "0 */5 * * * *")]
+public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 {
-    o.RecurringJobDebugMode = true;
-    o.TriggeredJobDebugMode = true;
-})
-.UseEfCoreMetadataRepository();
-
-Mo.AddConfiguration(o =>
-{
-    o.EnableHotReload = true;
-    o.ValidateOnStartup = true;
-});
-
-var app = builder.Build();
-app.Run();
+    public override Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Heartbeat job ran.");
+        return Task.CompletedTask;
+    }
+}
 ```
 
-> 💡 Modules typically return a `ModuleGuide` object for further configuration through fluent API chaining.
+- Recurring and triggered jobs share one scheduling model.
+- The dashboard lives at `/job-scheduler`.
+- Concurrency guards, zombie detection, and persistence options are built in.
+- Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard and job detail views.
 
-## 📚 Core Concepts
+## Dashboards, Themes, and i18n
+
+Monica ships multiple operational Blazor UIs on top of `Monica.UI`: JobScheduler, Configuration, DependencyInjection, ProjectUnits, ModuleSystem, AI, and more. The UI layer shares the same theme contract, several swappable theme variants, and shipped `en-US` + `zh-CN` localization resources.
+
+## Bundled Agent Skills
+
+The repo includes ready-to-use skill packs in `.claude/skills/` and `.agents/skills/`.
+
+- Framework entry points: `monica-framework`, `monica-development`, `monica-architecture`, `monica-ui-development`, `monica-ui-design`, `monica-ui-audit`, `monica-docs-authoring`, `monica-requirement-design`, `monica-unit-testing`, `monica-ui-bridge-debug`
+- Application entry points: `monica-application`, `monica-application-microservice`, `monica-application-modular-monolith`, `monica-application-project-unit-development`
+- Supporting workflows: `code-simplifier`, `playwright-cli`, `subagent-progress-report`, `third-party-source-catalog`
+
+## Module Catalog
+
+Monica is organized as many small composable modules rather than a few large packages.
+
+- Core infrastructure: `Core`, `Tool`, `DependencyInjection`, `ResultEnvelope`, `Mediator`, `JsonSerialization`, `Localization`
+- DDD and application flow: `ProjectUnits`, `AutoController`, `AutoModel`, `Repository`, `UnitOfWork`
+- Background and ops: `JobScheduler`, `Configuration`, `Logging`, `ObservableInstance`, `HostedService`, `ServiceDiscovery`, `Locker`, `Resilience`
+- Communication and integration: `EventBus`, `SignalR`, `DataChannel`, `Dapr`, `Markdown`
+- AI and analysis: `AI`, `RAG`, `Framework`, `Framework.UI`, `AI.UI`, `JobScheduler.UI`, `Configuration.UI`, `DependencyInjection.UI`
+- Platform utilities: `WebApi`, `Validation`, `Office`, `Profiling`, `DevOps`, `K8S`, `Git`, `FileOps`, `Utilities`
+
+> See the full module index in the docs site for the current authoritative list.
+
+## Architecture at a Glance
 
 ### Module Pattern
 
-Monica's architecture is built around the `ModuleBase` pattern. Each module consists of four components:
+- `Module{Name}Option`: public configuration surface
+- `Module{Name}Guide`: fluent follow-up configuration
+- `Module{Name}`: the module implementation
+- `Module{Name}BuilderExtensions`: the `Mo.Add*()` entry point
 
-1. **`Module{Name}Option`** - Configuration options for the module
-2. **`Module{Name}Guide`** - Fluent API guide for additional configuration
-3. **`Module{Name}`** - Core implementation with dependency injection and middleware setup
-4. **`Module{Name}BuilderExtensions`** - User-facing extension methods (the `Mo.Add*()` methods)
+### ProjectUnit Pattern
 
-### Module Registration
+Typed DDD building blocks that define what AI is allowed to write: `ApplicationService`, `RequestDto`, `DomainService`, `Entity`, `Repository`, `DomainEvent`, `DomainEventHandler`, `LocalEventHandler`, `Configuration`, `RecurringJob`, `TriggeredJob`.
 
-All modules follow a consistent registration pattern:
+ProjectUnit guidance lives in `monica-application-project-unit-development` and in the Monica.Docs concept pages that explain the same vocabulary in context.
 
-```csharp
-Mo.Add{ModuleName}(options =>
-{
-    // Configure module options
-})
-.Use{Feature}()  // Optional: Enable specific features
-.With{Provider}(); // Optional: Configure providers
-```
+## Technology Stack
 
-## 🏗️ Architecture Highlights
+- [.NET 10](https://github.com/dotnet/runtime)
+- [ASP.NET Core](https://github.com/dotnet/aspnetcore)
+- [Entity Framework Core](https://github.com/dotnet/efcore)
+- [MudBlazor](https://github.com/MudBlazor/MudBlazor)
+- [Mapster](https://github.com/MapsterMapper/Mapster)
+- [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
+- [Dapr](https://github.com/dapr/dapr)
+- [Serilog](https://github.com/serilog/serilog)
+- [FluentValidation](https://github.com/FluentValidation/FluentValidation)
+- [Polly](https://github.com/App-vNext/Polly)
 
-- **Automatic Middleware Registration**: Middleware components are automatically registered in the correct order based on dependencies
-- **Smart Dependency Resolution**: The framework analyzes module dependencies and provides warnings for potential issues
-- **Performance Optimizations**: Reduced reflection usage, optimized service registration, and efficient resource management
-- **Dashboard Integration**: Many modules include built-in dashboards for monitoring and management
-- **Extensibility**: Easy to extend with custom modules following the same patterns
+## Contributing
 
-## 🛠️ Technology Stack
+1. Fork the repository.
+2. Create a branch.
+3. Commit your changes.
+4. Open a pull request.
 
-- **.NET 10.0** - Latest .NET runtime
-- **ASP.NET Core** - Web framework
-- **Entity Framework Core** - ORM for data access
-- **MudBlazor** - Blazor UI component library
-- **Mapster** - Object mapping
-- **Built-in Mediator** - Request/handler dispatch with Monica pipeline behaviors
-- **Dapr** - Distributed application runtime
-- **Serilog** - Structured logging
-- **FluentValidation** - Validation framework
-- **Polly** - Resilience and transient-fault-handling
+Full contribution and release guidance is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 📖 Documentation
+## Acknowledgements
 
-- **[Online Documentation](https://monica.dpdns.org/)** - Comprehensive guides and API reference
-- **Module READMEs** - Each module includes detailed documentation in its directory
-- **Claude Code Skills** - Use `/mo-development` and `/mo-ui-development` skills for development guidance
+A small subset of Monica modules was informed by the [ABP Framework](https://github.com/abpframework/abp), which is licensed under LGPL-3.0. Any directly adapted code keeps its original notices and license terms. Monica is an independent project and is not affiliated with ABP.
 
-## ⚠️ Development Status
+## License
 
-**Important**: Monica is currently in active internal development:
+MIT License. See [LICENSE.txt](LICENSE.txt).
 
-- 🚧 **Rapid Iteration**: The API is subject to breaking changes without notice
-- 📝 **Documentation**: Being actively improved and expanded
-- 🔬 **Internal Use**: Currently designed for internal projects
-- ⚠️ **Not Production-Ready**: Not recommended for production use at this time
-- 🔄 **No Backward Compatibility**: Backward compatibility is not guaranteed during this phase
+## Contact
 
-We recommend waiting for the official stable release before using Monica in production environments.
-
-## 🤝 Contributing
-
-We welcome contributions! To contribute:
-
-1. Fork this repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📞 Contact
-
-- **GitHub Issues**: [https://github.com/molloryn/Monica/issues](https://github.com/molloryn/Monica/issues)
-- **GitHub Discussions**: [https://github.com/molloryn/Monica/discussions](https://github.com/molloryn/Monica/discussions)
-- **Documentation**: [https://monica.dpdns.org/](https://monica.dpdns.org/)
+- Issues: <https://github.com/Tairitsua/Monica/issues>
+- Discussions: <https://github.com/Tairitsua/Monica/discussions>
+- Docs: <https://monica.dpdns.org/>
+- Security: [SECURITY.md](SECURITY.md)

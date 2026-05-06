@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and design discussions
+    url: https://github.com/Tairitsua/Monica/discussions
+    about: Use Discussions for questions, ideas, and broad design topics.
+  - name: Security vulnerability
+    url: https://github.com/Tairitsua/Monica/security
+    about: Please use private vulnerability reporting when available.

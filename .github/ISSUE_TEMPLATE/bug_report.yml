@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible Monica bug.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include enough detail for maintainers to reproduce the issue.
+  - type: input
+    id: package
+    attributes:
+      label: Affected package or module
+      placeholder: Monica.JobScheduler, Monica.Repository, Monica.UI, etc.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Monica version
+      placeholder: 1.0.0-rc.1
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or exception details
+      render: text
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, .NET SDK version, database/provider, browser if UI-related
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues before opening this report.
+          required: true
+        - label: This is not a security vulnerability report.
+          required: true
