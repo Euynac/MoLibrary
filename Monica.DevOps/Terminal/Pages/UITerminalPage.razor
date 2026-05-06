@@ -1,0 +1,618 @@
+@using Monica.DevOps.Localization
+@using Monica.DevOps.Terminal.Facades
+@using Monica.DevOps.Terminal.Models
+@using Monica.UI.Shell.Support
+@using Microsoft.JSInterop
+@attribute [Route(PAGE_URL)]
+@implements IAsyncDisposable
+@inject TerminalFacade TerminalFacade
+@inject IBrowserStorage BrowserStorage
+@inject IStringLocalizer<TerminalResource> L
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<PageTitle>@L["Page:DocumentTitle"]</PageTitle>
+
+<div class="terminal-page">
+    <MudContainer MaxWidth="MaxWidth.False" Class="terminal-page__container pa-4">
+        <div class="terminal-page__content">
+            <div class="page-banner">
+                <MudPaper Elevation="0">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.overline" Class="page-eyebrow">@L["Page:Eyebrow"]</MudText>
+                        <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
+                    </MudStack>
+                </MudPaper>
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="terminal-state">
+                    <MudPaper Elevation="0">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Typo="Typo.h6">@L["States:Loading"]</MudText>
+                    </MudPaper>
+                </div>
+            }
+            else
+            {
+                <div class="terminal-layout">
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" lg="8">
+                            <div class="terminal-panel">
+                                <MudPaper Elevation="0">
+                                    <div class="terminal-panel__content">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                                            <MudStack Spacing="0">
+                                                <MudText Typo="Typo.subtitle1">@L["Labels:WorkingDirectory"]</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(_activeSession?.WorkingDirectory ?? L["States:NoSession"])</MudText>
+                                            </MudStack>
+
+                                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                <MudButton Variant="Variant.Outlined"
+                                                           StartIcon="@Icons.Material.Filled.Add"
+                                                           Disabled="@_isRunning"
+                                                           OnClick="CreateSessionAsync">
+                                                    @L["Actions:NewSession"]
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           StartIcon="@Icons.Material.Filled.Close"
+                                                           Disabled="@(_isRunning || _activeSession is null)"
+                                                           OnClick="CloseSessionAsync">
+                                                    @L["Actions:CloseSession"]
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                                           Disabled="@_isRunning"
+                                                           OnClick="ClearOutput">
+                                                    @L["Actions:Clear"]
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+
+                                        <div class="terminal-output" @ref="_terminalOutputRef">
+                                            @if (_activeSession?.Output.Count is null or 0)
+                                            {
+                                                <div class="terminal-output__empty">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Color="Color.Secondary" />
+                                                    <MudText Typo="Typo.body2">@L["States:NoOutput"]</MudText>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var line in _activeSession.Output)
+                                                {
+                                                    <div class="@GetOutputLineClass(line)">
+                                                        <span class="terminal-output__prefix">@GetOutputPrefix(line)</span>
+                                                        <span class="terminal-output__text">@line.Text</span>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+
+                                        <div class="terminal-command-area">
+                                            <div class="terminal-command-row">
+                                                <MudTextField @ref="_commandInputField"
+                                                              T="string"
+                                                              Class="terminal-command-input"
+                                                              Label="@L["Labels:Command"]"
+                                                              Placeholder="@L["Input:Placeholder"]"
+                                                              Variant="Variant.Outlined"
+                                                              Margin="Margin.Dense"
+                                                              Immediate="true"
+                                                              Lines="1"
+                                                              Disabled="@(_isRunning || _activeSession is null)"
+                                                              @bind-Value="_commandInput"
+                                                              OnKeyDown="HandleCommandKeyDownAsync" />
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Primary"
+                                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                                           Disabled="@(!CanRunCommand)"
+                                                           OnClick="RunCommandAsync">
+                                                    @L["Actions:Run"]
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Color="Color.Warning"
+                                                           StartIcon="@Icons.Material.Filled.Stop"
+                                                           Disabled="@(!_isRunning)"
+                                                           OnClick="CancelCommandAsync">
+                                                    @L["Actions:Cancel"]
+                                                </MudButton>
+                                            </div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="terminal-command-helper">
+                                                @L["Input:Helper"]
+                                            </MudText>
+                                        </div>
+                                    </div>
+                                </MudPaper>
+                            </div>
+                        </MudItem>
+
+                        <MudItem xs="12" lg="4">
+                            <div class="terminal-side">
+                                <MudPaper Elevation="0">
+                                    <div class="terminal-side__content">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.subtitle1">@L["Labels:Session"]</MudText>
+                                            <MudSelect T="string"
+                                                       Value="_activeSessionId"
+                                                       ValueChanged="SelectSessionAsync"
+                                                       ToStringFunc="GetSessionDisplayName"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense"
+                                                       Disabled="@_isRunning">
+                                                @foreach (var session in _sessions)
+                                                {
+                                                    <MudSelectItem T="string" Value="@session.Id">@session.Name</MudSelectItem>
+                                                }
+                                            </MudSelect>
+
+                                            <MudDivider />
+
+                                            <MudText Typo="Typo.subtitle1">@L["Labels:Status"]</MudText>
+                                            <MudChip T="string"
+                                                     Value="@(_isRunning.ToString())"
+                                                     Color="@(_isRunning ? Color.Warning : Color.Success)"
+                                                     Variant="Variant.Outlined">
+                                                @(_isRunning ? L["States:Running"] : L["States:Ready"])
+                                            </MudChip>
+
+                                            @if (_activeSession?.LastResult is not null)
+                                            {
+                                                <div class="terminal-meta-grid">
+                                                    <span>@L["Labels:ExitCode"]</span>
+                                                    <strong>@_activeSession.LastResult.ExitCode</strong>
+                                                    <span>@L["Labels:Duration"]</span>
+                                                    <strong>@FormatDuration(_activeSession.LastResult.Duration)</strong>
+                                                </div>
+                                            }
+
+                                            <MudDivider />
+
+                                            <MudText Typo="Typo.subtitle1">@L["Labels:OperatingSystem"]</MudText>
+                                            @if (_environment is not null)
+                                            {
+                                                <div class="terminal-meta-grid">
+                                                    <span>@L["Labels:OperatingSystem"]</span>
+                                                    <strong>@_environment.OperatingSystemFamily</strong>
+                                                    <span>@L["Labels:Architecture"]</span>
+                                                    <strong>@_environment.Architecture</strong>
+                                                    <span>@L["Labels:Runtime"]</span>
+                                                    <strong>@_environment.RuntimeIdentifier</strong>
+                                                    <span>@L["Labels:Shell"]</span>
+                                                    <strong>@_environment.ShellPath</strong>
+                                                    <span>@L["Labels:BaseDirectory"]</span>
+                                                    <strong>@_environment.ApplicationBaseDirectory</strong>
+                                                </div>
+                                            }
+
+                                            @if (_activeSession?.History.Count > 0)
+                                            {
+                                                <MudDivider />
+                                                <MudText Typo="Typo.subtitle1">@L["Labels:History"]</MudText>
+                                                <div class="terminal-history">
+                                                    @foreach (var command in _activeSession.History.AsEnumerable().Reverse().Take(12))
+                                                    {
+                                                        <button type="button"
+                                                                class="terminal-history__item"
+                                                                disabled="@_isRunning"
+                                                                @onclick="@(() => UseHistoryCommand(command))">
+                                                            @command
+                                                        </button>
+                                                    }
+                                                </div>
+                                            }
+                                        </MudStack>
+                                    </div>
+                                </MudPaper>
+                            </div>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            }
+        </div>
+    </MudContainer>
+</div>
+
+@code {
+    public const string PAGE_URL = "/ui/terminal";
+    private const string TERMINAL_OWNER_ID_STORAGE_KEY = "terminal:owner-id";
+
+    private bool _isLoading = true;
+    private bool _isRunning;
+    private string _commandInput = string.Empty;
+    private string? _terminalOwnerId;
+    private string? _activeSessionId;
+    private TerminalEnvironmentInfo? _environment;
+    private List<TerminalSession> _sessions = [];
+    private ElementReference _terminalOutputRef;
+    private MudTextField<string>? _commandInputField;
+    private IJSObjectReference? _jsModule;
+    private bool _focusCommandAfterRender;
+    private bool _scrollOutputAfterRender;
+
+    private TerminalSession? _activeSession => _sessions.FirstOrDefault(session => session.Id == _activeSessionId);
+
+    private bool CanRunCommand =>
+        !_isRunning &&
+        _activeSession is not null &&
+        !string.IsNullOrWhiteSpace(_commandInput);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await EnsureJsModuleAsync();
+            await InitializeAsync();
+            return;
+        }
+
+        if (_scrollOutputAfterRender)
+        {
+            _scrollOutputAfterRender = false;
+            await ScrollOutputToBottomAsync();
+        }
+
+        if (_focusCommandAfterRender)
+        {
+            _focusCommandAfterRender = false;
+            await FocusCommandInputAsync();
+        }
+    }
+
+    private async Task InitializeAsync()
+    {
+        _isLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await EnsureTerminalOwnerIdAsync();
+
+            if ((await TerminalFacade.GetEnvironmentAsync()).IsFailed(out var environmentError, out var environment))
+            {
+                Snackbar.Add(environmentError, Severity.Error);
+                return;
+            }
+
+            _environment = environment;
+            if (!await LoadSessionsAsync())
+            {
+                return;
+            }
+
+            if (_sessions.Count == 0)
+            {
+                await CreateSessionAsync();
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<bool> LoadSessionsAsync()
+    {
+        if (_terminalOwnerId is null)
+        {
+            return false;
+        }
+
+        if ((await TerminalFacade.GetSessionsAsync(_terminalOwnerId)).IsFailed(out var error, out var sessions))
+        {
+            Snackbar.Add(error, Severity.Error);
+            return false;
+        }
+
+        _sessions = sessions.ToList();
+        if (_activeSessionId is null || _sessions.All(session => session.Id != _activeSessionId))
+        {
+            _activeSessionId = _sessions.FirstOrDefault()?.Id;
+        }
+
+        return true;
+    }
+
+    private async Task EnsureTerminalOwnerIdAsync()
+    {
+        if (_terminalOwnerId is not null)
+        {
+            return;
+        }
+
+        var ownerId = await BrowserStorage.GetAsync<string?>(TERMINAL_OWNER_ID_STORAGE_KEY, null);
+        if (!IsValidOwnerId(ownerId))
+        {
+            ownerId = Guid.NewGuid().ToString("N");
+            await BrowserStorage.SetAsync(TERMINAL_OWNER_ID_STORAGE_KEY, ownerId);
+        }
+
+        _terminalOwnerId = ownerId;
+    }
+
+    private async Task CreateSessionAsync()
+    {
+        if (_terminalOwnerId is null)
+        {
+            return;
+        }
+
+        var response = await TerminalFacade.CreateSessionAsync(_terminalOwnerId, new TerminalSessionCreateRequest
+        {
+            WorkingDirectory = _activeSession?.WorkingDirectory
+        });
+
+        if (response.IsFailed(out var error, out var session))
+        {
+            Snackbar.Add(error, Severity.Error);
+            return;
+        }
+
+        _sessions.Insert(0, session);
+        _activeSessionId = session.Id;
+        RequestCommandFocus();
+    }
+
+    private async Task CloseSessionAsync()
+    {
+        if (_activeSessionId is null)
+        {
+            return;
+        }
+
+        if (_terminalOwnerId is null)
+        {
+            return;
+        }
+
+        if ((await TerminalFacade.CloseSessionAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        {
+            Snackbar.Add(error, Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["Messages:SessionClosed"], Severity.Info);
+        _sessions.RemoveAll(session => session.Id == _activeSessionId);
+        _activeSessionId = _sessions.FirstOrDefault()?.Id;
+        RequestCommandFocus();
+
+        if (_activeSessionId is null)
+        {
+            await CreateSessionAsync();
+        }
+    }
+
+    private Task SelectSessionAsync(string sessionId)
+    {
+        _activeSessionId = sessionId;
+        RequestCommandFocus();
+        RequestOutputScroll();
+        return Task.CompletedTask;
+    }
+
+    private async Task RunCommandAsync()
+    {
+        if (!CanRunCommand || _activeSessionId is null || _terminalOwnerId is null)
+        {
+            return;
+        }
+
+        var command = _commandInput.Trim();
+        _commandInput = string.Empty;
+        _isRunning = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var response = await TerminalFacade.ExecuteCommandAsync(_terminalOwnerId, _activeSessionId, new TerminalCommandRequest
+            {
+                Command = command
+            }, AppendCommandOutputAsync);
+
+            if (response.IsFailed(out var error, out var result))
+            {
+                Snackbar.Add(error, Severity.Error);
+                RequestOutputScroll();
+                return;
+            }
+
+            if (result.Canceled || result.TimedOut)
+            {
+                Snackbar.Add(
+                    result.TimedOut ? L["States:TimedOut"] : L["States:Canceled"],
+                    Severity.Warning);
+            }
+
+            await LoadSessionsAsync();
+        }
+        finally
+        {
+            _isRunning = false;
+            RequestCommandFocus();
+            RequestOutputScroll();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CancelCommandAsync()
+    {
+        if (_activeSessionId is null || _terminalOwnerId is null)
+        {
+            return;
+        }
+
+        if ((await TerminalFacade.CancelCommandAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        {
+            Snackbar.Add(error, Severity.Error);
+        }
+    }
+
+    private async Task HandleCommandKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !args.ShiftKey)
+        {
+            await RunCommandAsync();
+        }
+    }
+
+    private async Task ClearOutput()
+    {
+        if (_activeSessionId is null || _terminalOwnerId is null)
+        {
+            return;
+        }
+
+        if ((await TerminalFacade.ClearOutputAsync(_terminalOwnerId, _activeSessionId)).IsFailed(out var error))
+        {
+            Snackbar.Add(error, Severity.Error);
+            return;
+        }
+
+        _activeSession?.ClearOutput();
+        RequestCommandFocus();
+    }
+
+    private void UseHistoryCommand(string command)
+    {
+        _commandInput = command;
+        RequestCommandFocus();
+    }
+
+    private ValueTask AppendCommandOutputAsync(TerminalOutputLine line, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return new ValueTask(InvokeAsync(() =>
+        {
+            RequestOutputScroll();
+            StateHasChanged();
+        }));
+    }
+
+    private void RequestCommandFocus()
+    {
+        _focusCommandAfterRender = true;
+    }
+
+    private void RequestOutputScroll()
+    {
+        _scrollOutputAfterRender = true;
+    }
+
+    private string? GetSessionDisplayName(string? sessionId)
+    {
+        if (sessionId is null)
+        {
+            return null;
+        }
+
+        return _sessions.FirstOrDefault(session => session.Id == sessionId)?.Name ?? sessionId;
+    }
+
+    private async Task FocusCommandInputAsync()
+    {
+        if (_commandInputField is null || _isRunning || _activeSession is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _commandInputField.FocusAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task ScrollOutputToBottomAsync()
+    {
+        await EnsureJsModuleAsync();
+        if (_jsModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _jsModule.InvokeVoidAsync("scrollToBottom", _terminalOutputRef);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task EnsureJsModuleAsync()
+    {
+        if (_jsModule is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Monica.DevOps/Terminal/Pages/UITerminalPage.razor.js");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _jsModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private static string GetOutputLineClass(TerminalOutputLine line)
+        => $"terminal-output__line terminal-output__line--{line.Stream}";
+
+    private static string GetOutputPrefix(TerminalOutputLine line)
+    {
+        return line.Stream switch
+        {
+            TerminalOutputStreams.Input => ">",
+            TerminalOutputStreams.Stderr => "!",
+            TerminalOutputStreams.System => "#",
+            _ => "$"
+        };
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+        => duration.TotalSeconds < 1
+            ? $"{duration.TotalMilliseconds:N0} ms"
+            : $"{duration.TotalSeconds:N2} s";
+
+    private static bool IsValidOwnerId(string? ownerId)
+        => ownerId is not null && Guid.TryParseExact(ownerId, "N", out _);
+}

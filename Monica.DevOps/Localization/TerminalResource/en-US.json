@@ -1,0 +1,50 @@
+{
+  "Page": {
+    "DocumentTitle": "Terminal",
+    "Title": "Terminal",
+    "Subtitle": "Run local commands from the Monica host process environment.",
+    "Eyebrow": "Local process"
+  },
+  "Actions": {
+    "Run": "Run",
+    "Cancel": "Cancel",
+    "Clear": "Clear",
+    "NewSession": "New Session",
+    "CloseSession": "Close Session",
+    "Refresh": "Refresh"
+  },
+  "Labels": {
+    "Session": "Session",
+    "WorkingDirectory": "Working directory",
+    "Shell": "Shell",
+    "OperatingSystem": "OS",
+    "Architecture": "Architecture",
+    "Runtime": "Runtime",
+    "BaseDirectory": "Base directory",
+    "Command": "Command",
+    "History": "History",
+    "ExitCode": "Exit code",
+    "Duration": "Duration",
+    "Status": "Status"
+  },
+  "States": {
+    "Loading": "Loading terminal...",
+    "Ready": "Ready",
+    "Running": "Running",
+    "NoSession": "No terminal session is active.",
+    "NoOutput": "Run a command to see output here.",
+    "Canceled": "Canceled",
+    "TimedOut": "Timed out"
+  },
+  "Messages": {
+    "CreateSessionFailed": "Failed to create terminal session.",
+    "LoadEnvironmentFailed": "Failed to load terminal environment.",
+    "RunCommandFailed": "Failed to run command.",
+    "CancelFailed": "Failed to cancel command.",
+    "SessionClosed": "Terminal session closed."
+  },
+  "Input": {
+    "Placeholder": "Enter a command",
+    "Helper": "Commands run on the Monica host using the detected shell."
+  }
+}

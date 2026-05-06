@@ -1,0 +1,50 @@
+{
+  "Page": {
+    "DocumentTitle": "终端",
+    "Title": "终端",
+    "Subtitle": "在 Monica 宿主进程环境中执行本地命令。",
+    "Eyebrow": "本地进程"
+  },
+  "Actions": {
+    "Run": "运行",
+    "Cancel": "取消",
+    "Clear": "清空",
+    "NewSession": "新建会话",
+    "CloseSession": "关闭会话",
+    "Refresh": "刷新"
+  },
+  "Labels": {
+    "Session": "会话",
+    "WorkingDirectory": "工作目录",
+    "Shell": "Shell",
+    "OperatingSystem": "操作系统",
+    "Architecture": "架构",
+    "Runtime": "运行时",
+    "BaseDirectory": "基础目录",
+    "Command": "命令",
+    "History": "历史",
+    "ExitCode": "退出码",
+    "Duration": "耗时",
+    "Status": "状态"
+  },
+  "States": {
+    "Loading": "正在加载终端...",
+    "Ready": "就绪",
+    "Running": "运行中",
+    "NoSession": "当前没有活动终端会话。",
+    "NoOutput": "运行命令后会在这里显示输出。",
+    "Canceled": "已取消",
+    "TimedOut": "已超时"
+  },
+  "Messages": {
+    "CreateSessionFailed": "创建终端会话失败。",
+    "LoadEnvironmentFailed": "加载终端环境失败。",
+    "RunCommandFailed": "运行命令失败。",
+    "CancelFailed": "取消命令失败。",
+    "SessionClosed": "终端会话已关闭。"
+  },
+  "Input": {
+    "Placeholder": "输入命令",
+    "Helper": "命令会使用检测到的 Shell 在 Monica 宿主机上运行。"
+  }
+}

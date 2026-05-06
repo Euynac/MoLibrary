@@ -107,6 +107,9 @@
     "FileOps": {
       "Title": "FileOps Workspace"
     },
+    "Terminal": {
+      "Title": "Terminal"
+    },
     "K8S": {
       "Title": "K8S Operations"
     },

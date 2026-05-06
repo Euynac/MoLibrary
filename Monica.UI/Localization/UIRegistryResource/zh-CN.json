@@ -107,6 +107,9 @@
     "FileOps": {
       "Title": "文件运维工作区"
     },
+    "Terminal": {
+      "Title": "终端"
+    },
     "K8S": {
       "Title": "K8S 运维"
     },

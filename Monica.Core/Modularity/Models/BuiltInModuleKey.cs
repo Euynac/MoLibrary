@@ -207,6 +207,14 @@ public enum BuiltInModuleKey
     /// </summary>
     FileOpsUI,
     /// <summary>
+    /// Local terminal command execution module.
+    /// </summary>
+    Terminal,
+    /// <summary>
+    /// Local terminal command execution UI module.
+    /// </summary>
+    TerminalUI,
+    /// <summary>
     /// Practical utility module that provides connectivity probing and text transformation services.
     /// </summary>
     Utilities,
