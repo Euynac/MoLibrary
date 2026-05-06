@@ -13,7 +13,6 @@
 		<DevelopmentDependency>true</DevelopmentDependency>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<IncludeSymbols>false</IncludeSymbols>
-		<Version>0.1.0-preview.4</Version>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackBuildTaskAssets</TargetsForTfmSpecificContentInPackage>
 		<PackageDescription>Source generator for automatic RPC controller generation in Monica framework, enabling seamless API endpoint creation from service interfaces.</PackageDescription>
 	</PropertyGroup>
@@ -41,7 +40,7 @@
 
 	<Target Name="PackBuildTaskAssets">
 	  <MSBuild Projects="..\Monica.Generators.AutoController.BuildTasks\Monica.Generators.AutoController.BuildTasks.csproj"
-	           Targets="Build"
+	           Targets="$(PackBuildTaskTarget)"
 	           RemoveProperties="TargetFramework;TargetFrameworks"
 	           Properties="Configuration=$(Configuration);TargetFramework=net10.0" />
 
@@ -51,5 +50,10 @@
 	    </TfmSpecificPackageFile>
 	  </ItemGroup>
 	</Target>
+
+	<PropertyGroup>
+		<PackBuildTaskTarget Condition="'$(NoBuild)' == 'true'">GetTargetPath</PackBuildTaskTarget>
+		<PackBuildTaskTarget Condition="'$(PackBuildTaskTarget)' == ''">Build</PackBuildTaskTarget>
+	</PropertyGroup>
 
 </Project>

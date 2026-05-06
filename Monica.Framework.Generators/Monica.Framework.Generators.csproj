@@ -11,6 +11,8 @@
 	<PropertyGroup>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<DevelopmentDependency>true</DevelopmentDependency>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<IncludeSymbols>false</IncludeSymbols>
 		<PackageDescription>Source generators for Monica framework, providing code generation capabilities for modules and infrastructure components.</PackageDescription>
 	</PropertyGroup>
 

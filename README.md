@@ -19,13 +19,14 @@
 > **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
 > Monica combines typed DDD ProjectUnits, composable infrastructure modules, built-in dashboards, and bundled agent skills so AI-assisted backend work stays observable as it grows.
 
-> **Development status**: internal development, rapid iteration, and breaking changes are still expected. It is not production-ready yet.
+> **Release candidate**: Monica 1.0.0-rc.1 is a pre-release for validation and feedback. Breaking changes may still happen before 1.0.0 stable.
 
 ## Quick Links
 
 - Docs site: <https://monica.dpdns.org/>
 - Monica.Docs example repo: <https://github.com/Tairitsua/Monica.Docs>
 - JobScheduler guide: <https://monica.dpdns.org/markdown-docs?group=monica&document=modules%2Fjob-scheduler%2Findex.md&culture=zh-CN>
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 
 ## Why Monica
@@ -138,6 +139,8 @@ ProjectUnit guidance lives in `monica-application-project-unit-development` and 
 3. Commit your changes.
 4. Open a pull request.
 
+Full contribution and release guidance is in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Acknowledgements
 
 A small subset of Monica modules was informed by the [ABP Framework](https://github.com/abpframework/abp), which is licensed under LGPL-3.0. Any directly adapted code keeps its original notices and license terms. Monica is an independent project and is not affiliated with ABP.
@@ -151,3 +154,4 @@ MIT License. See [LICENSE.txt](LICENSE.txt).
 - Issues: <https://github.com/Tairitsua/Monica/issues>
 - Discussions: <https://github.com/Tairitsua/Monica/discussions>
 - Docs: <https://monica.dpdns.org/>
+- Security: [SECURITY.md](SECURITY.md)

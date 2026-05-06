@@ -1,7 +1,7 @@
 # Monica.DataChannel
 
 [![NuGet](https://img.shields.io/nuget/v/Monica.DataChannel.svg)](https://www.nuget.org/packages/Monica.DataChannel/)
-[![License](https://img.shields.io/github/license/molloryn/Monica.DataChannel.svg)](LICENSE)
+[![License](https://img.shields.io/github/license/Tairitsua/Monica.svg)](../LICENSE.txt)
 
 A lightweight, flexible ETL (Extract, Transform, Load) framework for .NET applications, designed to simplify system integration through a pipeline-based data exchange approach.
 
@@ -209,4 +209,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. 
+Contributions are welcome! Please feel free to submit a Pull Request.

@@ -19,13 +19,14 @@
 > **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
 > Monica 将类型化的 DDD ProjectUnit、可组合的基础设施模块、内置仪表板和随仓库交付的 agent skills 组合在一起，让 AI 辅助的后端开发在规模变大后仍然可观察、可维护。
 
-> **开发状态**：当前仍处于内部开发和快速迭代阶段，API 仍可能出现破坏性变更，尚未准备好用于生产环境。
+> **候选版本**：Monica 1.0.0-rc.1 是用于验证和反馈的预发布版本。在 1.0.0 稳定版之前仍可能出现破坏性变更。
 
 ## 快速链接
 
 - 文档站点：<https://monica.dpdns.org/>
 - Monica.Docs 示例仓库：<https://github.com/Tairitsua/Monica.Docs>
 - JobScheduler 指南：<https://monica.dpdns.org/markdown-docs?group=monica&document=modules%2Fjob-scheduler%2Findex.md&culture=zh-CN>
+- 更新日志：[CHANGELOG.md](CHANGELOG.md)
 
 ## 为什么是 Monica
 
@@ -137,6 +138,8 @@ ProjectUnit 的详细约定可以在 `monica-application-project-unit-developmen
 3. 提交修改。
 4. 提交 Pull Request。
 
+完整贡献和发布说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 ## 鸣谢
 
 Monica 的一小部分模块实现思路参考了 [ABP Framework](https://github.com/abpframework/abp)，该项目采用 LGPL-3.0 许可证。任何直接改编的代码都会保留其原始声明和许可证条款。Monica 是独立项目，与 ABP 没有关联关系。
@@ -150,3 +153,4 @@ MIT License。见 [LICENSE.txt](LICENSE.txt)。
 - Issues：<https://github.com/Tairitsua/Monica/issues>
 - Discussions：<https://github.com/Tairitsua/Monica/discussions>
 - 文档站点：<https://monica.dpdns.org/>
+- 安全：[SECURITY.md](SECURITY.md)

@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to package, for example 1.0.0-rc.1"
+        required: true
+        type: string
+      publish_nuget:
+        description: "Publish packages to NuGet"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, pack, and release
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIGURATION: Release
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            Directory.Build.props
+            Monica.slnx
+            tests/Directory.Build.props
+            tests/Directory.Packages.props
+            **/*.csproj
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+
+          if [[ -z "${VERSION}" ]]; then
+            echo "Version is required." >&2
+            exit 1
+          fi
+
+          if [[ "${VERSION}" == *"-"* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "prerelease=${PRERELEASE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore solution
+        run: dotnet restore Monica.slnx
+
+      - name: Build solution
+        run: dotnet build Monica.slnx --configuration "${CONFIGURATION}" --no-restore -m -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Test solution
+        run: dotnet test Monica.slnx --configuration "${CONFIGURATION}" --no-build --verbosity minimal --logger "trx;LogFilePrefix=release-tests" --results-directory tests/TestResults -m
+
+      - name: Pack packages
+        run: dotnet pack Monica.slnx --configuration "${CONFIGURATION}" --no-build --output artifacts/packages -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: monica-packages-${{ steps.version.outputs.version }}
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
+
+      - name: Publish to NuGet
+        if: ${{ env.NUGET_API_KEY != '' && (github.event_name == 'push' || inputs.publish_nuget) }}
+        run: dotnet nuget push "artifacts/packages/*.nupkg" --api-key "${NUGET_API_KEY}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Monica ${{ steps.version.outputs.version }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg

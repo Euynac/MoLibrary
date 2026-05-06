@@ -1,90 +1,68 @@
 # Monica Framework
 
-Monica is a **Mo**dular .**N**ET **I**nfrastructure for **C**utting-edge **A**pps. Designed for flexibility and performance. Each module can be used independently without requiring the entire framework.
+Monica is **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
 
-## Features
+It provides typed DDD ProjectUnits, composable infrastructure modules, built-in Blazor dashboards, and bundled agent skills so AI-assisted backend work remains observable as a codebase grows.
 
-- **Modular Architecture**: Use only the modules you need
-- **High Performance**: Optimized for .NET 10.0
-- **Comprehensive**: Covers common infrastructure needs
-- **Well Documented**: XML documentation included
+## Release Status
+
+`1.0.0-rc.1` is a release candidate for validation and feedback before the stable `1.0.0` release. Breaking changes may still happen before the stable release.
 
 ## Installation
 
+Install only the modules you need:
+
 ```bash
-dotnet add package Monica.Core --version 0.1.0-preview.1
+dotnet add package Monica.Core --version 1.0.0-rc.1
+dotnet add package Monica.JobScheduler --version 1.0.0-rc.1
+dotnet add package Monica.JobScheduler.UI --version 1.0.0-rc.1
 ```
 
-## Quick Start
+## JobScheduler Example
 
 ```csharp
-using Monica.Core;
+using Microsoft.Extensions.Logging;
+using Monica.JobScheduler.Abstractions;
+using Monica.JobScheduler.Annotations;
+using Monica.Modules;
 
-// Your code here
+Mo.AddJobScheduler()
+    .UseInMemoryMetadataRepository()
+    .UseSchedulerScope("local-dev")
+    .UseInMemoryProvider();
+
+[JobConfig(
+    JobName = "Heartbeat",
+    Description = "Writes a heartbeat every five minutes.",
+    CronSchedule = "0 */5 * * * *")]
+public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
+{
+    public override Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Heartbeat job ran.");
+        return Task.CompletedTask;
+    }
+}
 ```
 
-## Available Modules
+Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard.
 
-### Core Infrastructure
-- **Monica.Core** - Fundamental types and base infrastructure
-- **Monica.Tool** - Common utilities and helper functions
-- **Monica.DependencyInjection** - Enhanced dependency injection
+## Module Families
 
-### Data Access
-- **Monica.Repository** - Repository pattern with EF Core
-- **Monica.StateStore** - State management abstractions
-- **Monica.StateStore.StackExchange** - Redis state store
-
-### Background Processing
-- **Monica.JobScheduler** - Job scheduling with cron support
-- **Monica.JobScheduler.EfCore** - EF Core metadata repository
-
-### UI Components (Blazor + MudBlazor)
-- **Monica.UI** - Blazor UI components
-- **Monica.Framework.UI** - Framework dashboards
-- **Monica.Configuration.UI** - Configuration management UI
-- **Monica.JobScheduler.UI** - Job scheduler UI
-- **Monica.StateStore.UI** - State store monitoring UI
-- **Monica.AI.UI** - AI service management UI
-
-### Integration
-- **Monica.AI** - AI service integration (OpenAI, Anthropic)
-- **Monica.Dapr** - Dapr integration
-- **Monica.DataChannel** - Kafka/ActiveMQ messaging
-- **Monica.EventBus** - Event bus abstractions
-- **Monica.SignalR** - SignalR integration
-
-### Infrastructure
-- **Monica.Authority** - Authentication and authorization
-- **Monica.AutoModel** - Automatic model generation
-- **Monica.Configuration** - Configuration management
-- **Monica.WebApi** - Web API infrastructure
-- **Monica.Locker** - Distributed locking
-- **Monica.Logging** - Structured logging with Serilog
-- **Monica.Office** - Excel operations
-- **Monica.Profiling** - Performance profiling
-- **Monica.ServiceDiscovery** - Service discovery
-- **Monica.Resilience** - Resilience patterns
-### Code Generation
-- **Monica.Framework.Generators** - Framework source generators
-- **Monica.Generators.AutoController** - AutoController plus build-integrated RPC metadata and client generation
-
-### Meta Package
-- **Monica.Framework** - Complete framework bundle
+- Core infrastructure: `Monica.Core`, `Monica.Tool`, `Monica.DependencyInjection`
+- DDD and application flow: `Monica.Core`, `Monica.Repository`, `Monica.WebApi`, `Monica.AutoModel`
+- Background and ops: `Monica.JobScheduler`, `Monica.Configuration`, `Monica.Logging`, `Monica.StateStore`
+- UI modules: `Monica.UI`, `Monica.Framework.UI`, `Monica.JobScheduler.UI`, `Monica.Configuration.UI`
+- AI and integration: `Monica.AI`, `Monica.Dapr`, `Monica.EventBus`, `Monica.SignalR`
+- Code generation: `Monica.Framework.Generators`, `Monica.Generators.AutoController`
 
 ## Documentation
 
-For detailed documentation, visit: https://github.com/molloryn/Monica
+- Documentation site: https://monica.dpdns.org/
+- Repository: https://github.com/Tairitsua/Monica
+- Example docs host: https://github.com/Tairitsua/Monica.Docs
+- Issues: https://github.com/Tairitsua/Monica/issues
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Support
-
-- Repository: https://github.com/molloryn/Monica
-- Issues: https://github.com/molloryn/Monica/issues
-
-## Preview Release
-
-This is a preview release (0.1.0-preview.1) for early testing and feedback. APIs may change in future releases.
+MIT License. See `LICENSE.txt` in the repository.

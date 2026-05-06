@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
-    <Version>0.1.0-preview.1</Version>
+    <Version>1.0.0-rc.1</Version>
     <Authors>Momean</Authors>
     <Company>Momean</Company>
     <Product>Monica Framework</Product>
@@ -20,9 +20,9 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
     <!-- Repository Information -->
-    <RepositoryUrl>https://github.com/molloryn/Monica.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Tairitsua/Monica.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageProjectUrl>https://github.com/molloryn/Monica</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Tairitsua/Monica</PackageProjectUrl>
 
     <!-- Package Icon -->
     <PackageIcon>logo.png</PackageIcon>
@@ -31,10 +31,10 @@
     <PackageReadmeFile>PACKAGE_README.md</PackageReadmeFile>
 
     <!-- Package Tags -->
-    <PackageTags>monica;jobscheduler;modular;recurringjob</PackageTags>
+    <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Initial preview release of Monica framework. This is a prerelease version for early testing and feedback.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0.0-rc.1 release candidate for validation and feedback before the stable 1.0.0 release. Includes typed ProjectUnits, composable infrastructure modules, built-in dashboards, JobScheduler, configuration, AI integration, and bundled agent skills.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>
