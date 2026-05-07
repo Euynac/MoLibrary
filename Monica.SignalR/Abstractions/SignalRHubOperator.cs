@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.SignalR;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Authority.Identity.Extensions;
 using Monica.SignalR.Models;
+using Monica.SignalR.Services;
+using Monica.SignalR.Services.Support;
 
 namespace Monica.SignalR.Abstractions;
 
@@ -13,8 +15,9 @@ namespace Monica.SignalR.Abstractions;
 /// <typeparam name="THub">The hub type.</typeparam>
 public class CurrentUserSignalRHubOperator<TContract, THub>(
     IHubContext<THub, TContract> hubContext,
-    ISignalRConnectionRegistry connectionRegistry)
-    : SignalRHubOperator<TContract, THub, ICurrentUser>(hubContext, connectionRegistry)
+    ISignalRConnectionRegistry connectionRegistry,
+    SignalRSendDiagnosticsService sendDiagnosticsService)
+    : SignalRHubOperator<TContract, THub, ICurrentUser>(hubContext, connectionRegistry, sendDiagnosticsService)
     where TContract : class, ISignalRHubContract
     where THub : SignalRHub<TContract>
 {
@@ -33,14 +36,23 @@ public class CurrentUserSignalRHubOperator<TContract, THub>(
 /// <typeparam name="TUser">The application user projection used by the caller.</typeparam>
 public abstract class SignalRHubOperator<TContract, THub, TUser>(
     IHubContext<THub, TContract> hubContext,
-    ISignalRConnectionRegistry connectionRegistry)
+    ISignalRConnectionRegistry connectionRegistry,
+    SignalRSendDiagnosticsService sendDiagnosticsService)
     : ISignalRHubOperator<TContract, TUser>
     where TContract : class, ISignalRHubContract
     where THub : SignalRHub<TContract>
     where TUser : ICurrentUser
 {
+    private readonly IHubClients<TContract> _clients = sendDiagnosticsService.IsEnabled
+        ? new SignalRSendDiagnosticsHubClients<TContract>(
+            hubContext.Clients,
+            sendDiagnosticsService,
+            typeof(THub).Name,
+            sendDiagnosticsService.IncludeTargetIdentifiers)
+        : hubContext.Clients;
+
     /// <inheritdoc />
-    public IHubClients<TContract> Clients => hubContext.Clients;
+    public IHubClients<TContract> Clients => _clients;
 
     /// <inheritdoc />
     public IGroupManager Groups => hubContext.Groups;

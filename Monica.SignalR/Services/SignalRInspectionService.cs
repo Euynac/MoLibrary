@@ -13,7 +13,8 @@ namespace Monica.SignalR.Services;
 internal sealed class SignalRInspectionService(
     IOptions<ModuleSignalROption> signalROptions,
     SignalRHubMetadataReader hubMetadataReader,
-    ISignalRConnectionRegistry connectionRegistry)
+    ISignalRConnectionRegistry connectionRegistry,
+    SignalRSendDiagnosticsService sendDiagnosticsService)
 {
     private readonly ModuleSignalROption _signalROption = signalROptions.Value;
 
@@ -47,5 +48,13 @@ internal sealed class SignalRInspectionService(
                         StringComparer.Ordinal)
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Returns a snapshot of Monica-observed SignalR server-to-client send activity.
+    /// </summary>
+    public SignalRSendDiagnosticsSnapshot GetSendDiagnostics()
+    {
+        return sendDiagnosticsService.GetSnapshot();
     }
 }

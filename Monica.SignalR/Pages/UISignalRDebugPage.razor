@@ -47,6 +47,9 @@
     <SignalRConnectedUsers ConnectedUsers="@PageState.ConnectedUsers"
                            OnRefreshClicked="LoadConnectedUsersAsync" />
 
+    <SignalRSendDiagnostics Snapshot="@PageState.SendDiagnostics"
+                            OnRefreshClicked="LoadSendDiagnosticsAsync" />
+
     <SignalRMethodListener HubMethods="@PageState.HubMethods"
                            IsConnected="@PageState.ConnectionState.IsConnected"
                            OnToggleMethodListener="ToggleMethodListenerAsync"
@@ -113,6 +116,19 @@
             success
                 ? L["Pages:SignalRDebug:Notifications:LoadConnectedUsersSuccess"].Value
                 : L["Pages:SignalRDebug:Notifications:LoadConnectedUsersFailed"].Value,
+            success ? Severity.Success : Severity.Error);
+    }
+
+    /// <summary>
+    /// Loads SignalR send diagnostics for the debug page.
+    /// </summary>
+    private async Task LoadSendDiagnosticsAsync()
+    {
+        var success = await PageState.LoadSendDiagnosticsAsync();
+        SnackBar.Add(
+            success
+                ? L["Pages:SignalRDebug:Notifications:LoadSendDiagnosticsSuccess"].Value
+                : L["Pages:SignalRDebug:Notifications:LoadSendDiagnosticsFailed"].Value,
             success ? Severity.Success : Severity.Error);
     }
 

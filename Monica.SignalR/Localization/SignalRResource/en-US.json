@@ -12,6 +12,8 @@
         "LoadHubsFailed": "Failed to load hub metadata.",
         "LoadConnectedUsersSuccess": "Connected user information loaded successfully.",
         "LoadConnectedUsersFailed": "Failed to load connected user information.",
+        "LoadSendDiagnosticsSuccess": "SignalR send diagnostics loaded successfully.",
+        "LoadSendDiagnosticsFailed": "Failed to load SignalR send diagnostics.",
         "ConnectSuccess": "SignalR connection established successfully.",
         "ConnectFailed": "Failed to connect to SignalR.",
         "DisconnectSuccess": "SignalR connection closed.",
@@ -78,6 +80,29 @@
       "ClaimType": "Claim Type",
       "ClaimValue": "Claim Value",
       "Close": "Close"
+    },
+    "SendDiagnostics": {
+      "Title": "Send Diagnostics",
+      "Refresh": "Refresh",
+      "NotLoaded": "Send diagnostics have not been loaded.",
+      "Disabled": "Send diagnostics are disabled. Enable ModuleSignalROption.EnableSendDiagnostics to capture Monica-observed send counters.",
+      "Empty": "No observed send activity has been recorded yet.",
+      "Summary": {
+        "Pending": "Pending",
+        "Started": "Started",
+        "Completed": "Completed",
+        "Failed": "Failed"
+      },
+      "Columns": {
+        "Method": "Method",
+        "Target": "Target",
+        "Pending": "Pending",
+        "Started": "Started",
+        "Failed": "Failed",
+        "LastDuration": "Last",
+        "MaxDuration": "Max",
+        "AverageDuration": "Average"
+      }
     },
     "MethodListener": {
       "Title": "Hub Method Listeners",

@@ -12,6 +12,8 @@
         "LoadHubsFailed": "加载 Hub 元数据失败。",
         "LoadConnectedUsersSuccess": "已成功加载已连接用户信息。",
         "LoadConnectedUsersFailed": "加载已连接用户信息失败。",
+        "LoadSendDiagnosticsSuccess": "已成功加载 SignalR 发送诊断信息。",
+        "LoadSendDiagnosticsFailed": "加载 SignalR 发送诊断信息失败。",
         "ConnectSuccess": "SignalR 连接成功。",
         "ConnectFailed": "SignalR 连接失败。",
         "DisconnectSuccess": "SignalR 连接已断开。",
@@ -78,6 +80,29 @@
       "ClaimType": "Claim 类型",
       "ClaimValue": "Claim 值",
       "Close": "关闭"
+    },
+    "SendDiagnostics": {
+      "Title": "发送诊断",
+      "Refresh": "刷新",
+      "NotLoaded": "尚未加载发送诊断信息。",
+      "Disabled": "发送诊断当前未启用。请启用 ModuleSignalROption.EnableSendDiagnostics 以采集 Monica 观测到的发送计数。",
+      "Empty": "尚未记录到发送活动。",
+      "Summary": {
+        "Pending": "积压中",
+        "Started": "已开始",
+        "Completed": "已完成",
+        "Failed": "失败"
+      },
+      "Columns": {
+        "Method": "方法",
+        "Target": "目标",
+        "Pending": "积压中",
+        "Started": "已开始",
+        "Failed": "失败",
+        "LastDuration": "最近耗时",
+        "MaxDuration": "最大耗时",
+        "AverageDuration": "平均耗时"
+      }
     },
     "MethodListener": {
       "Title": "Hub 方法监听",

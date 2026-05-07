@@ -1,0 +1,130 @@
+@using Monica.SignalR.Models
+@inject IStringLocalizer<SignalRResource> L
+
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h5">@L["UISignalR:SendDiagnostics:Title"]</MudText>
+        <MudButton OnClick="OnRefreshClicked"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   Color="Color.Primary"
+                   Size="Size.Small"
+                   Variant="Variant.Outlined">
+            @L["UISignalR:SendDiagnostics:Refresh"]
+        </MudButton>
+    </div>
+
+    @if (Snapshot is null)
+    {
+        <MudAlert Severity="Severity.Info">@L["UISignalR:SendDiagnostics:NotLoaded"]</MudAlert>
+    }
+    else if (!Snapshot.IsEnabled)
+    {
+        <MudAlert Severity="Severity.Warning">@L["UISignalR:SendDiagnostics:Disabled"]</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary">
+            @Snapshot.Description
+        </MudText>
+
+        <MudGrid Class="mb-3">
+            <MudItem xs="6" sm="3">
+                <MudText Typo="Typo.caption">@L["UISignalR:SendDiagnostics:Summary:Pending"]</MudText>
+                <MudText Typo="Typo.h6">@Snapshot.PendingSendCount</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudText Typo="Typo.caption">@L["UISignalR:SendDiagnostics:Summary:Started"]</MudText>
+                <MudText Typo="Typo.h6">@Snapshot.TotalStartedCount</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudText Typo="Typo.caption">@L["UISignalR:SendDiagnostics:Summary:Completed"]</MudText>
+                <MudText Typo="Typo.h6">@Snapshot.TotalCompletedCount</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudText Typo="Typo.caption">@L["UISignalR:SendDiagnostics:Summary:Failed"]</MudText>
+                <MudText Typo="Typo.h6">@Snapshot.TotalFailedCount</MudText>
+            </MudItem>
+        </MudGrid>
+
+        @if (TopMetrics.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["UISignalR:SendDiagnostics:Empty"]</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@TopMetrics"
+                      Dense="true"
+                      Hover="true"
+                      Breakpoint="Breakpoint.Sm"
+                      T="SignalRSendMetricInfo">
+                <HeaderContent>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Method"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Target"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Pending"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Started"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Failed"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:LastDuration"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Method"]">
+                        <MudText Typo="Typo.body2">@context.HubName.@context.MethodName</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Target"]">
+                        <MudText Typo="Typo.body2">@FormatTarget(context)</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Pending"]">
+                        <MudText Typo="Typo.body2">@context.PendingSendCount</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Started"]">
+                        <MudText Typo="Typo.body2">@context.StartedCount</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Failed"]">
+                        <MudText Typo="Typo.body2">@context.FailedCount</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:LastDuration"]">
+                        <MudText Typo="Typo.body2">@FormatDuration(context.LastDurationMilliseconds)</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]">
+                        <MudText Typo="Typo.body2">@FormatDuration(context.MaxDurationMilliseconds)</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]">
+                        <MudText Typo="Typo.body2">@FormatDuration(context.AverageDurationMilliseconds)</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Gets or sets the latest SignalR send diagnostics snapshot.
+    /// </summary>
+    [Parameter] public SignalRSendDiagnosticsSnapshot? Snapshot { get; set; }
+
+    /// <summary>
+    /// Gets or sets the refresh callback.
+    /// </summary>
+    [Parameter] public EventCallback OnRefreshClicked { get; set; }
+
+    private IReadOnlyList<SignalRSendMetricInfo> TopMetrics => Snapshot?.Metrics
+        .OrderByDescending(metric => metric.PendingSendCount)
+        .ThenByDescending(metric => metric.MaxDurationMilliseconds)
+        .Take(10)
+        .ToList() ?? [];
+
+    private static string FormatDuration(double milliseconds)
+    {
+        return $"{milliseconds:0.###} ms";
+    }
+
+    private static string FormatTarget(SignalRSendMetricInfo metric)
+    {
+        var summary = $"{metric.TargetKind} ({metric.TargetCount})";
+        return metric.TargetIdentifiers.Count == 0
+            ? summary
+            : $"{summary}: {string.Join(", ", metric.TargetIdentifiers)}";
+    }
+}

@@ -96,6 +96,11 @@ public sealed class SignalRDebugPageState(
     public List<SignalRConnectedUserInfo> ConnectedUsers { get; } = [];
 
     /// <summary>
+    /// Gets the latest server-side send diagnostics snapshot.
+    /// </summary>
+    public SignalRSendDiagnosticsSnapshot? SendDiagnostics { get; private set; }
+
+    /// <summary>
     /// Gets the current connection state.
     /// </summary>
     public SignalRConnectionState ConnectionState { get; private set; } = new();
@@ -121,6 +126,7 @@ public sealed class SignalRDebugPageState(
 
         await LoadHubsAsync();
         await LoadConnectedUsersAsync();
+        await LoadSendDiagnosticsAsync();
 
         SyncFromJsClient();
         NotifyStateChanged();
@@ -164,6 +170,22 @@ public sealed class SignalRDebugPageState(
 
         ConnectedUsers.Clear();
         ConnectedUsers.AddRange(users);
+        NotifyStateChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// Loads the current server-side send diagnostics snapshot from the SignalR facade.
+    /// </summary>
+    public async Task<bool> LoadSendDiagnosticsAsync()
+    {
+        var result = await signalRFacade.GetSendDiagnosticsAsync();
+        if (result.IsFailed(out _, out var snapshot) || snapshot is null)
+        {
+            return false;
+        }
+
+        SendDiagnostics = snapshot;
         NotifyStateChanged();
         return true;
     }

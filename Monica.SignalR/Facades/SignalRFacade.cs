@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.SignalR.Models;
 using Monica.SignalR.Services;
@@ -27,7 +28,7 @@ public sealed class SignalRFacade(
         {
             logger.LogError(ex, "Failed to get SignalR hub metadata.");
             return Task.FromResult<Res<List<SignalRHubInfo>>>(Res.Fail(
-                $"Failed to get SignalR hub metadata: {ex.Message}",
+                $"Failed to get SignalR hub metadata: {ex.GetMessageRecursively()}",
                 ResStatus.InternalError));
         }
     }
@@ -46,7 +47,26 @@ public sealed class SignalRFacade(
         {
             logger.LogError(ex, "Failed to get connected SignalR users.");
             return Task.FromResult<Res<List<SignalRConnectedUserInfo>>>(Res.Fail(
-                $"Failed to get connected SignalR users: {ex.Message}",
+                $"Failed to get connected SignalR users: {ex.GetMessageRecursively()}",
+                ResStatus.InternalError));
+        }
+    }
+
+    /// <summary>
+    /// Gets Monica-observed SignalR server-to-client send diagnostics.
+    /// </summary>
+    public Task<Res<SignalRSendDiagnosticsSnapshot>> GetSendDiagnosticsAsync()
+    {
+        try
+        {
+            var inspectionService = serviceProvider.GetRequiredService<SignalRInspectionService>();
+            return Task.FromResult(Res.Ok(inspectionService.GetSendDiagnostics()));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get SignalR send diagnostics.");
+            return Task.FromResult<Res<SignalRSendDiagnosticsSnapshot>>(Res.Fail(
+                $"Failed to get SignalR send diagnostics: {ex.GetMessageRecursively()}",
                 ResStatus.InternalError));
         }
     }

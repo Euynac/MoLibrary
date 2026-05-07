@@ -82,6 +82,16 @@ public class ModuleSignalR(ModuleSignalROption option)
                 .WithTags(tagName)
                 .WithSummary("Gets all currently connected SignalR users.")
                 .WithDescription("Returns current SignalR connections including connection identifiers, user identity information, and claims.");
+
+            endpoints.MapGet("/signalr/send-diagnostics",
+                async ([FromServices] SignalRFacade facade) =>
+                {
+                    return (await facade.GetSendDiagnosticsAsync()).GetResponse();
+                })
+                .WithName("Get SignalR send diagnostics")
+                .WithTags(tagName)
+                .WithSummary("Gets Monica-observed SignalR server-to-client send diagnostics.")
+                .WithDescription("Returns pending send task counters, durations, and failures observed by Monica's SignalR operator wrappers. The counters are not ASP.NET Core SignalR private transport queue depth.");
         });
     }
 }
@@ -183,6 +193,24 @@ public class ModuleSignalROption : MinimalApiModuleOptions<ModuleSignalR>
     /// Gets the mapped hub registrations used by inspection endpoints and the debug UI.
     /// </summary>
     internal List<SignalRHubRegistration> HubRegistrations { get; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Monica should capture low-overhead server-to-client send counters.
+    /// </summary>
+    /// <remarks>
+    /// The counters measure send tasks observed by Monica's SignalR hub operators. They do not expose ASP.NET Core SignalR's
+    /// private per-connection transport queues.
+    /// </remarks>
+    public bool EnableSendDiagnostics { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether send diagnostics should retain explicit connection, group, or user identifiers.
+    /// </summary>
+    /// <remarks>
+    /// The default is <see langword="false"/> to avoid retaining sensitive identifiers in diagnostic snapshots.
+    /// Enable this only in trusted diagnostic environments.
+    /// </remarks>
+    public bool IncludeSendDiagnosticTargetIdentifiers { get; set; }
 }
 
 /// <summary>
