@@ -118,7 +118,7 @@ public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
 
     private static void ConfigureMetrics(MeterProviderBuilder metrics, ModuleOpenTelemetryOption option)
     {
-        foreach (var pattern in option.MeterPatterns.Where(static pattern => !string.IsNullOrWhiteSpace(pattern)).Distinct(StringComparer.Ordinal))
+        foreach (var pattern in option.GetSdkMeterPatterns())
         {
             metrics.AddMeter(pattern);
         }
@@ -227,6 +227,20 @@ public class ModuleOpenTelemetryGuide
     }
 
     /// <summary>
+    /// Controls whether Monica's in-process collector subscribes to meters implied by enabled built-in SDK instrumentations.
+    /// </summary>
+    /// <param name="enabled">
+    /// <see langword="true"/> to include the ASP.NET Core, HttpClient, and runtime meters selected by the instrumentation flags;
+    /// <see langword="false"/> to collect only <see cref="ModuleOpenTelemetryOption.MeterPatterns"/>.
+    /// </param>
+    /// <returns>The current guide for fluent chaining.</returns>
+    public ModuleOpenTelemetryGuide UseInstrumentationMetersInProcessCollector(bool enabled = true)
+    {
+        ConfigureModuleOption(option => option.IncludeInstrumentationMetersInProcessCollector = enabled);
+        return this;
+    }
+
+    /// <summary>
     /// Adds another meter name or wildcard pattern to the OpenTelemetry subscription list.
     /// </summary>
     /// <param name="pattern">Meter name or wildcard pattern such as <c>System.*</c>.</param>
@@ -249,6 +263,10 @@ public class ModuleOpenTelemetryGuide
 /// </summary>
 public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelemetry>
 {
+    private static readonly string[] AspNetCoreInstrumentationMeterPatterns = ["Microsoft.AspNetCore.*"];
+    private static readonly string[] HttpClientInstrumentationMeterPatterns = ["System.Net.Http", "System.Net.NameResolution"];
+    private static readonly string[] RuntimeInstrumentationMeterPatterns = ["System.Runtime", "OpenTelemetry.Instrumentation.Runtime"];
+
     /// <summary>
     /// Gets or sets the OpenTelemetry resource service name. Defaults to <c>Monica</c>.
     /// Configure this to the concrete host application name shown in APM tools.
@@ -267,8 +285,9 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
     public string? DeploymentEnvironment { get; set; }
 
     /// <summary>
-    /// Gets meter names or wildcard patterns subscribed by both the OpenTelemetry SDK and Monica's in-process collector.
-    /// Defaults to <c>Monica.*</c>, which captures every first-party Monica meter.
+    /// Gets custom meter names or wildcard patterns subscribed by the OpenTelemetry SDK and Monica's in-process collector.
+    /// Defaults to <c>Monica.*</c>, which captures every first-party Monica meter. Built-in instrumentation meters are
+    /// added to the in-process collector separately when <see cref="IncludeInstrumentationMetersInProcessCollector"/> is enabled.
     /// </summary>
     public List<string> MeterPatterns { get; set; } = ["Monica.*"];
 
@@ -286,6 +305,14 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
     /// Gets or sets whether runtime metrics instrumentation is enabled. Defaults to <see langword="true"/>.
     /// </summary>
     public bool IncludeRuntimeInstrumentation { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the in-process collector should also subscribe to the built-in meters implied by enabled SDK
+    /// instrumentation flags. Defaults to <see langword="true"/>, so the dashboard shows ASP.NET Core, HttpClient,
+    /// and runtime metrics when those instrumentations are enabled. Set to <see langword="false"/> when the dashboard
+    /// should only display meters listed in <see cref="MeterPatterns"/>.
+    /// </summary>
+    public bool IncludeInstrumentationMetersInProcessCollector { get; set; } = true;
 
     /// <summary>
     /// Gets or sets whether the OTLP metrics exporter is enabled.
@@ -339,4 +366,67 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
     /// Gets or sets how often observable instruments are sampled by the in-process collector.
     /// </summary>
     public TimeSpan ObservableInstrumentInterval { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Gets the normalized custom meter patterns supplied to the OpenTelemetry SDK through <c>AddMeter</c>.
+    /// Built-in instrumentation meters are activated through their dedicated SDK instrumentation calls.
+    /// </summary>
+    /// <returns>The distinct, non-empty SDK meter patterns in configured order.</returns>
+    public IReadOnlyList<string> GetSdkMeterPatterns()
+    {
+        return NormalizeMeterPatterns(MeterPatterns);
+    }
+
+    /// <summary>
+    /// Gets the normalized meter patterns used by Monica's in-process collector.
+    /// </summary>
+    /// <returns>
+    /// The custom meter patterns plus built-in instrumentation meters selected by the enabled instrumentation flags.
+    /// An empty list intentionally means the collector accepts every published meter.
+    /// </returns>
+    public IReadOnlyList<string> GetInProcessCollectorMeterPatterns()
+    {
+        var patterns = NormalizeMeterPatterns(MeterPatterns);
+        if (patterns.Count == 0 || !IncludeInstrumentationMetersInProcessCollector)
+        {
+            return patterns;
+        }
+
+        if (IncludeAspNetCoreInstrumentation)
+        {
+            AddMeterPatterns(patterns, AspNetCoreInstrumentationMeterPatterns);
+        }
+
+        if (IncludeHttpClientInstrumentation)
+        {
+            AddMeterPatterns(patterns, HttpClientInstrumentationMeterPatterns);
+        }
+
+        if (IncludeRuntimeInstrumentation)
+        {
+            AddMeterPatterns(patterns, RuntimeInstrumentationMeterPatterns);
+        }
+
+        return patterns;
+    }
+
+    private static List<string> NormalizeMeterPatterns(IEnumerable<string> patterns)
+    {
+        return patterns
+            .Where(static pattern => !string.IsNullOrWhiteSpace(pattern))
+            .Select(static pattern => pattern.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static void AddMeterPatterns(List<string> target, IReadOnlyList<string> source)
+    {
+        foreach (var pattern in source)
+        {
+            if (!target.Contains(pattern, StringComparer.Ordinal))
+            {
+                target.Add(pattern);
+            }
+        }
+    }
 }

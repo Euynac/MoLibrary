@@ -17,6 +17,7 @@ public sealed class InProcessMetricsCollector(
     : IHostedService, IDisposable
 {
     private readonly ModuleOpenTelemetryOption _option = options.Value;
+    private readonly IReadOnlyList<string> _meterPatterns = options.Value.GetInProcessCollectorMeterPatterns();
     private readonly MeterListener _listener = new();
     private readonly Dictionary<Instrument, InstrumentState> _states = [];
     private readonly object _gate = new();
@@ -48,7 +49,7 @@ public sealed class InProcessMetricsCollector(
 
         logger.LogInformation(
             "Monica OpenTelemetry in-process metrics collector started for meter patterns: {MeterPatterns}",
-            string.Join(", ", _option.MeterPatterns));
+            string.Join(", ", _meterPatterns));
 
         return Task.CompletedTask;
     }
@@ -86,7 +87,7 @@ public sealed class InProcessMetricsCollector(
                 ServiceVersion = _option.ServiceVersion,
                 DeploymentEnvironment = _option.DeploymentEnvironment,
                 TimestampUtc = DateTimeOffset.UtcNow,
-                MeterPatterns = _option.MeterPatterns.ToList(),
+                MeterPatterns = _meterPatterns.ToList(),
                 SamplesPerSeries = _option.SamplesPerSeries,
                 MaxTagSetsPerInstrument = _option.MaxTagSetsPerInstrument,
                 Instruments = _states.Values
@@ -114,7 +115,7 @@ public sealed class InProcessMetricsCollector(
 
     private void OnInstrumentPublished(Instrument instrument, MeterListener listener)
     {
-        if (!MeterPatternMatcher.IsMatch(instrument.Meter.Name, _option.MeterPatterns))
+        if (!MeterPatternMatcher.IsMatch(instrument.Meter.Name, _meterPatterns))
         {
             return;
         }
