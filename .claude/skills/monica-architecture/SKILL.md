@@ -18,6 +18,7 @@ Other skills reference this skill:
 **Adding UI to an existing module?** → Choose Mixed (lightweight UI) or Standalone (complex UI).
 **Module getting large?** → Use the Features Pattern when a real sub-domain boundary emerges. File count is only a secondary signal.
 **Need developer-facing attributes?** → Place in `Annotations/` (public layer).
+**Need telemetry metrics?** → Place metric-specific files in `Metrics/`; use `$monica-opentelemetry` for implementation rules.
 **Page file getting large?** → Check the Page Decomposition Rules.
 **Unsure where a file goes?** → Check the Standard Layer Names table.
 **Unsure if something is public or internal?** → Check the Visibility Rules table.
@@ -65,6 +66,7 @@ Other Module             ──→ Abstractions + Models (public) ←── Serv
 - `Annotations/` — developer-facing attributes for declarative configuration
 - `Models/` — shared data contracts
 - `Facades/` — host-facing `Res<T>` entry points for API/UI/host code
+- `Metrics/` — metric name constants when hosts need to subscribe to a module meter
 - `Events/` — public domain or integration events
 - `Exceptions/` — module-specific public exceptions when part of the contract
 - `Extensions/` — only when intentionally exposed as integration helpers
@@ -73,6 +75,7 @@ Other Module             ──→ Abstractions + Models (public) ←── Serv
 - `Abstractions/Internal/` — internal-only contracts
 - `Models/Internal/` — internal-only data types
 - `Services/` — all implementation logic
+- `Metrics/` — metric instruments, app-owned metric state, and instrumentation adapters by default
 - `Providers/` — pluggable strategy implementations
 
 The `Internal/` sub-folder convention makes this boundary visible in the directory structure.
@@ -209,6 +212,7 @@ Those are separate tasks requiring explicit user approval.
 | `Facades/` | Thin orchestration, returns `Res<T>` | Public |
 | `Services/` | Implementation logic | Private |
 | `Services/Support/` | Registry, Resolver, Coordinator, Policy, Factory — use prefix naming to group | Private |
+| `Metrics/` | .NET metric names, instruments, app-owned metric state, and instrumentation adapters | Mixed |
 | `Providers/` | Pluggable strategy implementations | Private |
 | `Modules/` | Module registration units | Public |
 | `Extensions/` | Extension methods | Depends on usage |
@@ -217,6 +221,10 @@ Those are separate tasks requiring explicit user approval.
 | `Utils/` | Pure utility functions | Private |
 
 Group files within a layer using **prefix naming** by default. Introduce sub-folders only when that improves scanability (see Folder Depth & Grouping Rules above).
+
+### Metrics Layer Rules
+
+Use `Metrics/` for module telemetry names, metric owner services, app-owned metric state, and instrumentation adapters. Keep dashboard cards, profiling pages, and UI metric displays in the UI folders. For OpenTelemetry-compatible implementation rules, instrument choices, registration, and tag policy, use `$monica-opentelemetry`.
 
 ## Infrastructure Module Template
 
@@ -243,6 +251,7 @@ Monica.{Name}/
 │       ├── {Group}Resolver.cs           # e.g., ChunkerResolver.cs
 │       ├── {Group}Coordinator.cs        # e.g., IndexCoordinator.cs
 │       └── {Group}Policy.cs             # e.g., PermissionPolicy.cs
+├── Metrics/                             # (optional, telemetry metrics; see $monica-opentelemetry)
 ├── Providers/
 │   └── {ProviderName}/                  # (replaceable unit — sub-folder allowed)
 │       └── {Name}Provider.cs
@@ -288,6 +297,7 @@ Monica.{Name}/
 │   ├── Abstractions/
 │   ├── Models/
 │   ├── Facades/
+│   ├── Metrics/
 │   └── Services/
 │       └── Support/                     # Prefix naming inside, no sub-folders
 ├── {FeatureB}/

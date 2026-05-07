@@ -248,8 +248,7 @@
         "ModuleCategory": "Module Category",
         "ModuleCapability": "Module Capability",
         "RuntimeMode": "Runtime Mode",
-        "ModuleStatus": "Status",
-        "NodeDetails": "Node Details"
+        "ModuleStatus": "Status"
       },
       "States": {
         "Exists": "Exists",
@@ -307,7 +306,6 @@
         "GraphControls": "Loading graph controls...",
         "DependencyGraph": "Loading dependency graph...",
         "Legend": "Loading legend...",
-        "NodeDetails": "Loading node details...",
         "Default": "Loading..."
       }
     },

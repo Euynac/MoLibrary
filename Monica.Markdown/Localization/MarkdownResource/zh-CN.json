@@ -4,9 +4,6 @@
       "Title": "Markdown 文档库"
     }
   },
-  "Categories": {
-    "Documentation": "文档"
-  },
   "MarkdownViewer": {
     "Actions": {
       "Refresh": "刷新"

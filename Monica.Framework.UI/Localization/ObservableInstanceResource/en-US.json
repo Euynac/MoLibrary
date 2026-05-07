@@ -72,21 +72,14 @@
       "ExceptionMessage": "Message",
       "ExceptionTime": "Time",
       "InstanceKey": "Instance Key",
-      "CurrentLogLevel": "Current Log Level",
-      "NoLogLevel": "No log level",
-      "CurrentStateType": "Current State Type",
-      "StateChanges": "State Changes",
       "HistoryEntries": "History Entries",
       "ExceptionStatus": "Exception Status",
-      "StateHistory": "State History",
-      "ExceptionRecords": "Exception Records",
       "InstanceName": "Instance Name",
       "GroupId": "Group ID",
       "OverallHealth": "Overall Health",
       "StateValue": "State Value",
       "StateChangedAt": "State Changed At",
       "RunningDuration": "Running Duration",
-      "LogLevelDistribution": "Log Level Distribution",
       "AverageHistory": "Average History",
       "HealthRate": "Health Rate",
       "HealthyInstanceRatio": "Ratio of instances without exceptions",
@@ -97,7 +90,6 @@
     "Labels": {
       "Unknown": "Unknown",
       "Ungrouped": "Ungrouped",
-      "None": "None",
       "RunningDuration": "Running {0}",
       "LogLevel": "Log level: {0}",
       "StateType": "Type: {0}"
@@ -158,17 +150,10 @@
       "UnhealthyInstances": "Unhealthy Instances",
       "UnknownHealth": "Unknown State",
       "TotalStateChanges": "Total State Changes",
-      "TotalExceptions": "Total Exceptions",
-      "ExceptionRate": "Exception Rate",
-      "GroupedInstances": "Grouped Instances",
-      "AverageHistoryLength": "Average History Length",
-      "CriticalErrors": "Critical Errors"
+      "TotalExceptions": "Total Exceptions"
     },
     "Sections": {
-      "LogLevelDistribution": "Log Level Distribution",
-      "AdditionalMetrics": "Additional Metrics",
-      "TopTypes": "Top Type Distribution",
-      "TopGroups": "Top Group Distribution"
+      "LogLevelDistribution": "Log Level Distribution"
     }
   },
   "Filter": {
@@ -180,14 +165,10 @@
       "Group": "Group",
       "GroupPlaceholder": "Filter by group ID",
       "HealthState": "Health State",
-      "LogLevel": "Log Level",
-      "RegisteredFrom": "Registered From",
-      "RegisteredTo": "Registered To"
+      "LogLevel": "Log Level"
     },
     "Options": {
       "All": "All",
-      "AllHealthStates": "All health states",
-      "AllLogLevels": "All log levels",
       "CriticalErrorOnly": "Critical/Error Only",
       "UnhealthyOnly": "Unhealthy Only",
       "QuickFilters": "Quick Filters:"
@@ -196,19 +177,10 @@
   "Detail": {
     "Title": "Instance Details",
     "Sections": {
-      "BasicInfo": "Basic Information",
-      "StateInfo": "State Information",
-      "RuntimeStatistics": "Runtime Statistics",
-      "StateHistory": "State History",
-      "Exceptions": "Exceptions",
       "Identity": "Identity Information",
       "Health": "Health State",
       "CurrentState": "Current State",
       "Statistics": "Statistics"
-    },
-    "Actions": {
-      "LoadHistory": "Load History",
-      "LoadExceptions": "Load Exceptions"
     },
     "Messages": {
       "LoadHistoryFailed": "Failed to load history: {0}",

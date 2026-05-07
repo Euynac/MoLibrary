@@ -34,7 +34,6 @@
     "Filters": {
       "SearchLabel": "搜索",
       "SearchPlaceholder": "按服务、实现、程序集或键进行搜索",
-      "ScopeLabel": "范围",
       "SourceLabel": "来源",
       "LifetimeLabel": "生命周期",
       "MarkersLabel": "标记",
@@ -110,8 +109,7 @@
         "ExposedServices": "暴露服务",
         "Issues": "问题",
         "RewriteKind": "改写方式",
-        "InterceptorTypes": "拦截器类型",
-        "RewriteReason": "改写原因"
+        "InterceptorTypes": "拦截器类型"
       },
       "Formats": {
         "CachedProviderInjection": "缓存服务提供器注入：{0}"

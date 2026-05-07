@@ -282,11 +282,12 @@ See:
 - For page content, use the module-local resource marker and JSON files.
 - For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
 - When adding a new page to navigation, add the corresponding `Pages:*:Title` key to `UIRegistryResource` in addition to the page module resource when needed.
+- Every i18n change must finish by running the validator in strict mode from the repository root. The result must have zero JSON integrity errors, missing keys, invalid UI registry keys, unused keys, and language sync issues. Do not treat a non-strict "PASSED" result with unused-key warnings as acceptable.
 
 Validation command:
 
 ```bash
-python scripts/validate_localization.py
+python .agents/skills/monica-ui-development/scripts/validate_localization.py --strict
 ```
 
 See:

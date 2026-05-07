@@ -55,7 +55,7 @@ public class ModuleMarkdownUI(ModuleMarkdownUIOption option)
                 MarkdownViewerLocation.PAGE_URL,
                 "Pages:MarkdownDocuments:Title",
                 Icons.Material.Filled.MenuBook,
-                "Categories:KnowledgeRetrieval",
+                "Categories:Documentation",
                 addToNav: true,
                 navOrder: 50));
         }

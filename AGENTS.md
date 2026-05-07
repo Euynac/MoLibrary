@@ -52,6 +52,10 @@ You have access to MCP tools called `microsoft_docs_search`, `microsoft_docs_fet
 
 When handling questions around how to work with native Microsoft technologies, such as C#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, the `dotnet` runtime - please use these tools for research purposes when dealing with specific / narrowly defined questions that may occur.
 
+## Git Commit Requests
+
+When the user asks you to commit changes, read the repository's current commit message guidance first, especially the Conventional Commit rules in `CONTRIBUTING.md`, and use a commit message that follows that policy.
+
 ## Coding Annotations
 
 - All code annotations (comments, XML doc comments, `<summary>`, `<param>`, `<returns>`, etc.) must be written in English.

@@ -260,7 +260,6 @@
       "DocumentCount": "Documents",
       "ChunkCount": "Chunks",
       "SelectPrompt": "Select a knowledge base to view details",
-      "NewPlaceholder": "New KB name...",
       "EmptyHint": "No knowledge bases yet. Create one above.",
       "DocsCount": "{0} docs",
       "ChunksCount": "{0} chunks"
@@ -331,12 +330,9 @@
       "NoPendingDocuments": "No pending documents to index"
     },
     "DocumentSelection": {
-      "Title": "Select Documents to Index",
       "SelectAll": "Select All",
       "DeselectAll": "Deselect All",
-      "Selected": "{0} selected",
-      "AddToQueue": "Add to Queue",
-      "Indexed": "Indexed"
+      "Selected": "{0} selected"
     },
     "ChunkViewer": {
       "Title": "Document Chunks",
@@ -359,17 +355,9 @@
       }
     },
     "Indexing": {
-      "Title": "Indexing",
       "MarkdownGroup": "Markdown Group",
-      "SelectGroup": "Select a group...",
-      "TargetKB": "Target Knowledge Base",
-      "SelectKB": "Select a KB...",
-      "IndexNow": "Index Now",
-      "Indexing": "Indexing...",
-      "UploadDocument": "Upload Document",
       "UploadFile": "Upload Document",
       "ClickToUpload": "Click to upload",
-      "ChooseFile": "Choose File",
       "FileTooLarge": "File is too large (max 10MB)"
     },
     "Search": {

@@ -1,6 +1,6 @@
 ---
 name: monica-ui-bridge-debug
-description: Orchestrate Monica UI inspection, debugging, and refinement through a user-provided bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
+description: Orchestrate Monica UI inspection, debugging, and refinement through a bridge ASP.NET Core project. Use when Monica has no standalone entry point and Codex must launch a bridge service on a user-provided or discovered URL/port, choose between a simple single-agent bridge workflow and a delegated sub-agent workflow, capture browser artifacts with Playwright, and implement Monica UI fixes under $monica-ui-development. Use simple mode for narrow tasks or when the user requests simple mode. Use $subagent-progress-report for complex work or when the user requests sub-agent mode.
 ---
 
 # Monica UI Bridge Debug
@@ -14,14 +14,16 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
 - Use `$subagent-progress-report` whenever the selected workflow is delegated sub-agent mode.
 
-## Required user inputs
+## Inputs to collect or resolve
 
-Request these inputs before bridge-based UI testing starts:
+Collect or derive these inputs before bridge-based UI testing starts:
 
 1. Bridge implementation project directory, for example `..\SomeApp\src\Services\Sample\SampleService.API`
-2. Bridge service base URL, for example `http://localhost:5092`
+2. Bridge service base URL when the user already knows it, for example `http://localhost:5092`
 3. Target page route or enough module context to discover the page route from the ModuleUI page
 4. The actual UI task to inspect, fix, or implement
+
+The bridge service base URL is optional user input. If it is missing, derive it from project launch configuration, an existing project-owned listener, or a newly selected unused local port. Do not stop to ask for a base URL unless no reasonable URL can be discovered or selected.
 
 Do not hardcode any bridge project path or service URL inside the workflow.
 
@@ -86,13 +88,14 @@ If a meaningful design choice needs user confirmation, ask as soon as the decisi
 
 1. Collect the required inputs.
 2. Create the task folder with the `$planning-with-files` setup script only.
-3. Place screenshots, snapshots, bridge logs, and readiness files in that task folder.
-4. Launch the bridge service with `scripts/bridge_service.py run`.
-5. Wait for readiness with `scripts/bridge_service.py wait-ready`.
-6. Open the full page URL with `$playwright-cli` and capture artifacts.
-7. Implement Monica UI changes under `$monica-ui-development` rules.
-8. Restart the bridge service with the same script when verification requires a rebuild.
-9. Leave the bridge service running after success so the user can inspect it.
+3. Resolve the bridge service URL from user input, launch settings, an existing project-owned listener, or an unused local port.
+4. Place screenshots, snapshots, bridge logs, and readiness files in that task folder.
+5. Launch the bridge service with `scripts/bridge_service.py run`.
+6. Wait for readiness with `scripts/bridge_service.py wait-ready`.
+7. Open the full page URL with `$playwright-cli` and capture artifacts.
+8. Implement Monica UI changes under `$monica-ui-development` rules.
+9. Restart the bridge service with the same script when verification requires a rebuild.
+10. Leave the bridge service running after success so the user can inspect it.
 
 ### Delegated sub-agent mode
 
@@ -157,6 +160,15 @@ When delegated sub-agent mode is selected:
 ### 4. Bridge service startup script
 
 Use the bundled Python script instead of ad-hoc shell snippets.
+
+Resolve `<bridge-service-url>` before launch:
+
+1. If the user supplied a base URL, use it.
+2. Otherwise inspect `Properties/launchSettings.json` in the bridge project and use the first HTTP URL with an explicit port from `applicationUrl`.
+3. Otherwise look for an existing listener whose process command line clearly references the selected bridge project and use that listener's port.
+4. Otherwise choose an unused localhost port and construct `http://localhost:<port>`.
+
+The helper still requires `--service-url`, but that value may be agent-discovered. A selected localhost URL is passed through to `dotnet run -- --urls`, so the bridge starts on the discovered port instead of silently using its default launch profile port.
 
 Launch:
 
@@ -239,7 +251,7 @@ If strict log-marker enforcement is required, add `--strict-marker` to `wait-rea
 
 After readiness succeeds, build the page URL from:
 
-- user-provided service base URL
+- resolved service base URL
 - target page route from the relevant ModuleUI page
 
 Then use `$playwright-cli` to inspect and capture the page.
@@ -308,7 +320,7 @@ Otherwise report it as unconfirmed instead of as a verified UI error.
 
 ## Quick checklist
 
-- [ ] Collect bridge project directory and bridge service URL from the user
+- [ ] Collect bridge project directory and resolve the bridge service URL from user input, launch settings, an existing owned listener, or an unused local port
 - [ ] Select simple mode or delegated sub-agent mode before launch
 - [ ] Create a new task folder with `$planning-with-files`
 - [ ] Skip the three planning files in simple mode

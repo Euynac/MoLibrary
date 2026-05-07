@@ -146,11 +146,11 @@ def should_bind_all_interfaces(service_url: str) -> bool:
     return not address.is_loopback and str(address) != "0.0.0.0"
 
 
-def build_bind_url(service_url: str) -> str | None:
-    if not should_bind_all_interfaces(service_url):
-        return None
+def build_bind_url(service_url: str) -> str:
     parsed = urlparse(service_url)
-    return f"{parsed.scheme}://0.0.0.0:{parsed.port}"
+    if should_bind_all_interfaces(service_url):
+        return f"{parsed.scheme}://0.0.0.0:{parsed.port}"
+    return service_url
 
 
 def normalize_probe_path(probe_path: str | None) -> str:

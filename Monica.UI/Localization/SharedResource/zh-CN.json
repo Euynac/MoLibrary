@@ -248,8 +248,7 @@
         "ModuleCategory": "模块类别",
         "ModuleCapability": "模块能力",
         "RuntimeMode": "运行模式",
-        "ModuleStatus": "状态",
-        "NodeDetails": "节点详情"
+        "ModuleStatus": "状态"
       },
       "States": {
         "Exists": "存在",
@@ -307,7 +306,6 @@
         "GraphControls": "加载图表控制...",
         "DependencyGraph": "加载依赖关系图...",
         "Legend": "加载图例...",
-        "NodeDetails": "加载节点详情...",
         "Default": "加载中..."
       }
     },

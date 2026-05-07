@@ -260,7 +260,6 @@
       "DocumentCount": "文档数",
       "ChunkCount": "块数",
       "SelectPrompt": "选择一个知识库以查看详情",
-      "NewPlaceholder": "新知识库名称...",
       "EmptyHint": "暂无知识库。请在上方创建一个。",
       "DocsCount": "{0} 文档",
       "ChunksCount": "{0} 块"
@@ -331,12 +330,9 @@
       "NoPendingDocuments": "没有待处理的文档"
     },
     "DocumentSelection": {
-      "Title": "选择要索引的文档",
       "SelectAll": "全选",
       "DeselectAll": "取消全选",
-      "Selected": "已选择 {0} 个",
-      "AddToQueue": "添加到队列",
-      "Indexed": "已索引"
+      "Selected": "已选择 {0} 个"
     },
     "ChunkViewer": {
       "Title": "文档分块",
@@ -359,17 +355,9 @@
       }
     },
     "Indexing": {
-      "Title": "索引",
       "MarkdownGroup": "Markdown 组",
-      "SelectGroup": "选择组...",
-      "TargetKB": "目标知识库",
-      "SelectKB": "选择知识库...",
-      "IndexNow": "立即索引",
-      "Indexing": "索引中...",
-      "UploadDocument": "上传文档",
       "UploadFile": "上传文档",
       "ClickToUpload": "点击上传",
-      "ChooseFile": "选择文件",
       "FileTooLarge": "文件过大（最大 10MB）"
     },
     "Search": {

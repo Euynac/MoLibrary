@@ -34,7 +34,6 @@
     "Filters": {
       "SearchLabel": "Search",
       "SearchPlaceholder": "Search by service, implementation, assembly, or key",
-      "ScopeLabel": "Scope",
       "SourceLabel": "Source",
       "LifetimeLabel": "Lifetime",
       "MarkersLabel": "Markers",
@@ -110,8 +109,7 @@
         "ExposedServices": "Exposed services",
         "Issues": "Issues",
         "RewriteKind": "Rewrite kind",
-        "InterceptorTypes": "Interceptor types",
-        "RewriteReason": "Rewrite reason"
+        "InterceptorTypes": "Interceptor types"
       },
       "Formats": {
         "CachedProviderInjection": "Cached provider injection: {0}"

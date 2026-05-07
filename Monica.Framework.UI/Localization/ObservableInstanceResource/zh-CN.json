@@ -72,21 +72,14 @@
       "ExceptionMessage": "消息",
       "ExceptionTime": "时间",
       "InstanceKey": "实例键",
-      "CurrentLogLevel": "当前日志级别",
-      "NoLogLevel": "无日志级别",
-      "CurrentStateType": "当前状态类型",
-      "StateChanges": "状态变更",
       "HistoryEntries": "历史记录",
       "ExceptionStatus": "异常状态",
-      "StateHistory": "状态历史",
-      "ExceptionRecords": "异常记录",
       "InstanceName": "实例名称",
       "GroupId": "组ID",
       "OverallHealth": "总体健康",
       "StateValue": "状态值",
       "StateChangedAt": "状态变更时间",
       "RunningDuration": "运行时长",
-      "LogLevelDistribution": "日志级别分布",
       "AverageHistory": "平均历史记录",
       "HealthRate": "健康率",
       "HealthyInstanceRatio": "无异常实例占比",
@@ -97,7 +90,6 @@
     "Labels": {
       "Unknown": "未知",
       "Ungrouped": "未分组",
-      "None": "无",
       "RunningDuration": "运行 {0}",
       "LogLevel": "日志级别: {0}",
       "StateType": "类型: {0}"
@@ -158,17 +150,10 @@
       "UnhealthyInstances": "不健康实例",
       "UnknownHealth": "未知状态",
       "TotalStateChanges": "总状态变更",
-      "TotalExceptions": "总异常数",
-      "ExceptionRate": "异常率",
-      "GroupedInstances": "分组实例",
-      "AverageHistoryLength": "平均历史长度",
-      "CriticalErrors": "严重错误"
+      "TotalExceptions": "总异常数"
     },
     "Sections": {
-      "LogLevelDistribution": "日志级别分布",
-      "AdditionalMetrics": "附加指标",
-      "TopTypes": "Top 类型分布",
-      "TopGroups": "Top 组分布"
+      "LogLevelDistribution": "日志级别分布"
     }
   },
   "Filter": {
@@ -180,14 +165,10 @@
       "Group": "组",
       "GroupPlaceholder": "按组 ID 筛选",
       "HealthState": "健康状态",
-      "LogLevel": "日志级别",
-      "RegisteredFrom": "注册开始时间",
-      "RegisteredTo": "注册结束时间"
+      "LogLevel": "日志级别"
     },
     "Options": {
       "All": "全部",
-      "AllHealthStates": "所有健康状态",
-      "AllLogLevels": "所有日志级别",
       "CriticalErrorOnly": "仅严重/错误",
       "UnhealthyOnly": "仅不健康",
       "QuickFilters": "快速筛选:"
@@ -196,19 +177,10 @@
   "Detail": {
     "Title": "实例详情",
     "Sections": {
-      "BasicInfo": "基本信息",
-      "StateInfo": "状态信息",
-      "RuntimeStatistics": "运行统计",
-      "StateHistory": "状态历史",
-      "Exceptions": "异常记录",
       "Identity": "身份信息",
       "Health": "健康状态",
       "CurrentState": "当前状态",
       "Statistics": "统计信息"
-    },
-    "Actions": {
-      "LoadHistory": "加载历史",
-      "LoadExceptions": "加载异常"
     },
     "Messages": {
       "LoadHistoryFailed": "加载历史失败: {0}",

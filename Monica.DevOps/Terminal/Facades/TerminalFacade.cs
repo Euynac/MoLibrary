@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
+using Monica.DevOps.Localization;
 using Monica.DevOps.Terminal.Models;
 using Monica.DevOps.Terminal.Services;
 
@@ -11,7 +13,8 @@ namespace Monica.DevOps.Terminal.Facades;
 /// </summary>
 public sealed class TerminalFacade(
     TerminalSessionService sessionService,
-    ILogger<TerminalFacade> logger)
+    ILogger<TerminalFacade> logger,
+    IStringLocalizer<TerminalResource> localizer)
 {
     /// <summary>
     /// Gets the local terminal environment.
@@ -20,7 +23,7 @@ public sealed class TerminalFacade(
     public Task<Res<TerminalEnvironmentInfo>> GetEnvironmentAsync()
         => ExecuteAsync(
             () => Task.FromResult(sessionService.GetEnvironment()),
-            "Failed to load terminal environment.");
+            localizer["Messages:LoadEnvironmentFailed"].Value);
 
     /// <summary>
     /// Gets active terminal sessions for the requested owner.
@@ -41,7 +44,7 @@ public sealed class TerminalFacade(
     public Task<Res<TerminalSession>> CreateSessionAsync(string ownerKey, TerminalSessionCreateRequest? request = null)
         => ExecuteAsync(
             () => Task.FromResult(sessionService.CreateSession(ownerKey, request)),
-            "Failed to create terminal session.");
+            localizer["Messages:CreateSessionFailed"].Value);
 
     /// <summary>
     /// Closes an owner-scoped terminal session.
@@ -73,7 +76,7 @@ public sealed class TerminalFacade(
                 return Task.CompletedTask;
             },
             "Terminal command cancellation requested.",
-            "Failed to cancel terminal command.");
+            localizer["Messages:CancelFailed"].Value);
 
     /// <summary>
     /// Clears retained output for an owner-scoped terminal session.
@@ -108,7 +111,7 @@ public sealed class TerminalFacade(
         CancellationToken ct = default)
         => ExecuteAsync(
             () => sessionService.ExecuteCommandAsync(ownerKey, sessionId, request, outputCallback, ct),
-            "Failed to execute terminal command.");
+            localizer["Messages:RunCommandFailed"].Value);
 
     private async Task<Res<T>> ExecuteAsync<T>(
         Func<Task<T>> action,

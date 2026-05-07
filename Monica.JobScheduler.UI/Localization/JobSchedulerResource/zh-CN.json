@@ -100,8 +100,6 @@
       "SearchPlaceholder": "作业键 / 作业名称 / 来源项目",
       "SourceProject": "来源项目",
       "SourceProjectSelected": "已选 {0} 个来源",
-      "JobKey": "作业键",
-      "JobName": "作业名称",
       "Badges": "筛选",
       "LastExecutionFailed": "上次执行出错"
     },
@@ -165,13 +163,10 @@
     "Filters": {
       "Search": "搜索",
       "SearchPlaceholder": "作业键 / 实例ID",
-      "JobKey": "作业键",
-      "InstanceId": "实例ID",
       "State": "状态",
       "TimeRange": "时间范围",
       "StartTime": "开始时间",
       "EndTime": "结束时间",
-      "AllStates": "全部",
       "Custom": "自定义",
       "LastHour": "最近1小时",
       "Last24Hours": "最近24小时",
@@ -415,8 +410,7 @@
       "AllNormal": "所有任务执行正常"
     },
     "Messages": {
-      "LoadFailed": "加载统计数据失败",
-      "PartialFailed": "部分统计数据计算失败"
+      "LoadFailed": "加载统计数据失败"
     }
   },
   "Dialogs": {
@@ -524,10 +518,7 @@
       "BuildExpressionFailed": "构建表达式失败: {0}",
       "SourceExpressionInvalid": "源表达式无效: {0}",
       "QuartzFormatMustHave6Parts": "Quartz 格式必须严格包含 6 段。",
-      "FormatConversionFailed": "格式转换失败: {0}",
-      "BuildDashboardFailed": "构建仪表盘数据失败: {0}",
-      "BuildRecentActivitiesFailed": "构建最近活动失败: {0}",
-      "FindProblemJobsFailed": "查找问题任务失败: {0}"
+      "FormatConversionFailed": "格式转换失败: {0}"
     }
   },
   "Components": {
@@ -589,8 +580,7 @@
       "FormatConversionFailed": "格式转换失败: {0}",
       "DescriptionParseFailed": "解析描述失败: {0}",
       "CalculateOccurrencesFailed": "计算执行时间失败: {0}",
-      "BuildExpressionFailed": "生成表达式失败",
-      "BuildExpressionFailedWithMessage": "生成表达式失败: {0}"
+      "BuildExpressionFailed": "生成表达式失败"
     },
     "CronExpressionDisplay": {
       "Parsing": "解析中..."

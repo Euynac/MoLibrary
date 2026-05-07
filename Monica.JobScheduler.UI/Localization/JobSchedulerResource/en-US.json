@@ -100,8 +100,6 @@
       "SearchPlaceholder": "Job key / job name / source project",
       "SourceProject": "Source Project",
       "SourceProjectSelected": "{0} sources selected",
-      "JobKey": "Job Key",
-      "JobName": "Job Name",
       "Badges": "Filters",
       "LastExecutionFailed": "Last execution failed"
     },
@@ -165,13 +163,10 @@
     "Filters": {
       "Search": "Search",
       "SearchPlaceholder": "Job key / instance ID",
-      "JobKey": "Job Key",
-      "InstanceId": "Instance ID",
       "State": "State",
       "TimeRange": "Time Range",
       "StartTime": "Start Time",
       "EndTime": "End Time",
-      "AllStates": "All",
       "Custom": "Custom",
       "LastHour": "Last Hour",
       "Last24Hours": "Last 24 Hours",
@@ -415,8 +410,7 @@
       "AllNormal": "All jobs executing normally"
     },
     "Messages": {
-      "LoadFailed": "Failed to load statistics",
-      "PartialFailed": "Some statistics calculations failed"
+      "LoadFailed": "Failed to load statistics"
     }
   },
   "Dialogs": {
@@ -524,10 +518,7 @@
       "BuildExpressionFailed": "Failed to build expression: {0}",
       "SourceExpressionInvalid": "Source expression is invalid: {0}",
       "QuartzFormatMustHave6Parts": "Quartz format must contain exactly 6 parts.",
-      "FormatConversionFailed": "Format conversion failed: {0}",
-      "BuildDashboardFailed": "Failed to build dashboard data: {0}",
-      "BuildRecentActivitiesFailed": "Failed to build recent activities: {0}",
-      "FindProblemJobsFailed": "Failed to find problem jobs: {0}"
+      "FormatConversionFailed": "Format conversion failed: {0}"
     }
   },
   "Components": {
@@ -589,8 +580,7 @@
       "FormatConversionFailed": "Format conversion failed: {0}",
       "DescriptionParseFailed": "Failed to parse description: {0}",
       "CalculateOccurrencesFailed": "Failed to calculate execution times: {0}",
-      "BuildExpressionFailed": "Failed to build expression",
-      "BuildExpressionFailedWithMessage": "Failed to build expression: {0}"
+      "BuildExpressionFailed": "Failed to build expression"
     },
     "CronExpressionDisplay": {
       "Parsing": "Parsing..."
