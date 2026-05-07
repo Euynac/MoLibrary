@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Monica.JobScheduler.UI\Monica.JobScheduler.UI.csproj" />
+  </ItemGroup>
+
+</Project>

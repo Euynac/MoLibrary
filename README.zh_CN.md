@@ -74,9 +74,9 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 ```
 
 - 定时作业和触发式作业使用同一套调度模型。
-- 仪表板地址是 `/job-scheduler`。
 - 并发控制、僵尸检测和持久化选项都已内置。
-- 需要浏览器运维界面时，再补上 `Mo.AddJobSchedulerUI()`。
+- 需要浏览器运维界面时，再补上 `Mo.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源；普通 Console 宿主适合只跑调度任务，但不能承载仪表板。
+- 最小可运行参考见 [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal)，它演示了如何用最少 ASP.NET Core 宿主在 `/job-scheduler` 跑起 JobScheduler + JobScheduler UI。
 
 ## 仪表板、主题与国际化
 
