@@ -14,6 +14,7 @@ using Monica.Repository.GuidGeneration.Abstractions;
 using Monica.Repository.GuidGeneration.Models;
 using Monica.Repository.GuidGeneration.Services;
 using Monica.Repository.Persistence.Abstractions;
+using Monica.Repository.Persistence.Metrics;
 using Monica.Repository.Persistence.Services;
 using Monica.Repository.Persistence.Services.Support;
 
@@ -42,6 +43,13 @@ public class ModuleRepository(ModuleRepositoryOption option)
     {
         services.AddOptions<SequentialGuidGeneratorOptions>();
         services.TryAddTransient<IGuidGenerator, SequentialGuidGenerator>();
+
+        if (option.EnableEfCoreConnectionMetrics)
+        {
+            services.AddMetrics();
+            services.TryAddSingleton<EfCoreConnectionMetrics>();
+            services.TryAddSingleton<EfCoreConnectionMetricsInterceptor>();
+        }
     }
 
     public override void ClaimDependencies()
@@ -67,7 +75,8 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
             {
                 case DbContextProviderType.ContextFactory:
                     // Register EF Core factory and wrap it with our provider interface
-                    context.Services.AddDbContextFactory<TDbContext>(optionsAction);
+                    context.Services.AddDbContextFactory<TDbContext>(
+                        (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
                     context.Services.AddTransient<TDbContext>(serviceProvider =>
                         serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>().CreateDbContext());
                     context.Services.AddSingleton(
@@ -84,13 +93,15 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
             // Only register factory separately if not using ContextFactory provider type
             if (context.ModuleOption.UseDbContextFactory && dbContextProviderType != DbContextProviderType.ContextFactory)
             {
-                context.Services.AddDbContextFactory<TDbContext>(optionsAction);
+                context.Services.AddDbContextFactory<TDbContext>(
+                    (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
             }
 
             // Only register DbContext if not using ContextFactory (factory pattern doesn't need scoped DbContext)
             if (dbContextProviderType != DbContextProviderType.ContextFactory)
             {
-                context.Services.AddDbContext<TDbContext>(optionsAction);
+                context.Services.AddDbContext<TDbContext>(
+                    (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
             }
 
             //TODO Use Module to optimize automatic registration
@@ -101,7 +112,7 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 var builder = new DbContextOptionsBuilder<TDbContext>()
                     .UseLoggerFactory(serviceProvider.GetRequiredService<ILoggerFactory>())
                     .UseApplicationServiceProvider(serviceProvider);
-                optionsAction?.Invoke(serviceProvider, builder);
+                ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction);
                 return builder.Options;
             });
 
@@ -111,6 +122,20 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
                 .AddTransient<IDbContextDatabaseManager<TDbContext>, DbContextDatabaseManager<TDbContext>>();
         }, secondKey: typeof(TDbContext).Name);
         return this;
+    }
+
+    private static void ConfigureDbContextOptions(
+        ModuleRepositoryOption option,
+        IServiceProvider serviceProvider,
+        DbContextOptionsBuilder builder,
+        Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
+    {
+        optionsAction(serviceProvider, builder);
+
+        if (option.EnableEfCoreConnectionMetrics)
+        {
+            builder.AddInterceptors(serviceProvider.GetRequiredService<EfCoreConnectionMetricsInterceptor>());
+        }
     }
 }
 
@@ -131,6 +156,15 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
     /// Whether to enable sensitive data logging. The default is null, which means it is enabled when the environment is Development.
     /// </summary>
     public bool? EnableSensitiveDataLogging { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether Repository should emit EF Core connection lifecycle metrics.
+    /// </summary>
+    /// <remarks>
+    /// Enable this when a host wants to collect Repository persistence metrics through <c>System.Diagnostics.Metrics</c>
+    /// and an OpenTelemetry-compatible exporter. Monica emits the metrics but does not configure any exporter.
+    /// </remarks>
+    public bool EnableEfCoreConnectionMetrics { get; set; }
 
     /// <summary>
     /// Disable the entity <see cref="IHasEntitySelfConfig{TEntity}"/> function, which can be turned off when not in use
