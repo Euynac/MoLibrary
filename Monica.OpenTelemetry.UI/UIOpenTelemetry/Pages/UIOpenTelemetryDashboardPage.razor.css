@@ -3,6 +3,14 @@
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
+    min-width: 0;
+}
+
+.opentelemetry-page ::deep .opentelemetry-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
 }
 
 .opentelemetry-page ::deep .dashboard-banner,
@@ -14,11 +22,24 @@
     background-color: var(--mud-palette-surface);
 }
 
+.opentelemetry-page ::deep .dashboard-banner {
+    overflow: hidden;
+}
+
 .banner-title {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1rem;
+    min-width: 0;
+}
+
+.banner-title > div {
+    min-width: 0;
+}
+
+.banner-title ::deep .mud-typography {
+    overflow-wrap: anywhere;
 }
 
 .banner-stats {
@@ -28,11 +49,20 @@
     margin-top: 1rem;
 }
 
-.filter-bar {
+.banner-stats > div {
+    min-width: 0;
+}
+
+.banner-stats ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.opentelemetry-page ::deep .filter-bar {
     display: grid;
     grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1.5fr) minmax(10rem, 0.8fr) auto;
     gap: 0.75rem;
     align-items: center;
+    min-width: 0;
 }
 
 .filter-actions {
@@ -42,7 +72,7 @@
     justify-content: flex-end;
 }
 
-.status-panel {
+.opentelemetry-page ::deep .status-panel {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -67,7 +97,7 @@
 }
 
 @media (max-width: 960px) {
-    .filter-bar {
+    .opentelemetry-page ::deep .filter-bar {
         grid-template-columns: 1fr;
     }
 

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Monica.Core.Results;
 using Monica.OpenTelemetry.InProcessCollector.Facades;
 using Monica.OpenTelemetry.InProcessCollector.Models;
@@ -167,16 +166,13 @@ public sealed class OpenTelemetryDashboardPageState(OpenTelemetryFacade facade) 
     }
 
     /// <summary>
-    /// Serializes the current snapshot as indented JSON for clipboard export.
+    /// Serializes a compact current-state JSON view for clipboard export.
     /// </summary>
     public string ExportJson()
     {
         return Snapshot is null
             ? string.Empty
-            : JsonSerializer.Serialize(Snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                WriteIndented = true
-            });
+            : OpenTelemetryJsonSummaryExporter.Export(Snapshot);
     }
 
     /// <summary>

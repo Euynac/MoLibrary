@@ -20,10 +20,6 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
 
     public bool IsHistogram => Kind.Equals("Histogram", StringComparison.Ordinal);
 
-    public bool StoresDeltaMeasurements =>
-        Kind.Equals("Counter", StringComparison.Ordinal) ||
-        Kind.Equals("UpDownCounter", StringComparison.Ordinal);
-
     public void Record(double value, ReadOnlySpan<KeyValuePair<string, object?>> tags)
     {
         var normalizedTags = NormalizeTags(tags);
@@ -45,8 +41,7 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
                         key,
                         normalizedTags,
                         option.SamplesPerSeries,
-                        IsHistogram,
-                        StoresDeltaMeasurements);
+                        IsHistogram);
                     _series[key] = buffer;
                 }
             }

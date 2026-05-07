@@ -1,4 +1,3 @@
-@using System.Globalization
 @inject IStringLocalizer<OpenTelemetryUIResource> L
 
 <MudTable T="TagSetSamples" Items="@TagSets" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
@@ -27,8 +26,8 @@
                 }
             </div>
         </MudTd>
-        <MudTd DataLabel="@L["Table:Current"]">@FormatValue(context.CurrentValue)</MudTd>
-        <MudTd DataLabel="@L["Table:Delta"]">@FormatSignedValue(context.Delta)</MudTd>
+        <MudTd DataLabel="@L["Table:Current"]">@FormatValue(context.CurrentValue, Unit)</MudTd>
+        <MudTd DataLabel="@L["Table:Delta"]">@FormatSignedValue(context.Delta, Unit)</MudTd>
         <MudTd DataLabel="@L["Table:Samples"]">@context.Samples.Count</MudTd>
         <MudTd DataLabel="@L["Table:Updated"]">@context.LastUpdatedUtc.ToLocalTime().ToString("HH:mm:ss")</MudTd>
     </RowTemplate>
@@ -41,15 +40,19 @@
     [Parameter]
     public IReadOnlyList<TagSetSamples> TagSets { get; set; } = [];
 
-    private static string FormatValue(double value)
+    /// <summary>
+    /// Gets or sets the unit declared by the owning metric instrument.
+    /// </summary>
+    [Parameter]
+    public string? Unit { get; set; }
+
+    private static string FormatValue(double value, string? unit)
     {
-        return value.ToString("G5", CultureInfo.InvariantCulture);
+        return MetricValueFormatter.Format(value, unit);
     }
 
-    private static string FormatSignedValue(double value)
+    private static string FormatSignedValue(double value, string? unit)
     {
-        return value >= 0
-            ? "+" + value.ToString("G5", CultureInfo.InvariantCulture)
-            : value.ToString("G5", CultureInfo.InvariantCulture);
+        return value >= 0 ? "+" + FormatValue(value, unit) : "-" + FormatValue(Math.Abs(value), unit);
     }
 }

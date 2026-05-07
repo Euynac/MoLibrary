@@ -1,13 +1,17 @@
 .instrument-card {
     height: 100%;
+    min-width: 0;
 }
 
 .instrument-card ::deep .instrument-card-surface {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     padding: 1rem;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 8px;
     background-color: var(--mud-palette-surface);
+    overflow: hidden;
 }
 
 .instrument-header {
@@ -15,6 +19,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
+    min-width: 0;
 }
 
 .instrument-title {
@@ -43,19 +48,23 @@
     gap: 1rem;
     align-items: end;
     margin-top: 1rem;
+    min-width: 0;
 }
 
 .sparkline {
-    position: relative;
+    display: block;
+    width: 100%;
     height: 3.5rem;
     margin-top: 1rem;
     border-bottom: 1px solid var(--mud-palette-lines-default);
+    overflow: hidden;
 }
 
-.sparkline span {
-    position: absolute;
-    display: block;
-    height: 2px;
-    transform-origin: left center;
-    background-color: var(--mud-palette-primary);
+.sparkline polyline {
+    fill: none;
+    stroke: var(--mud-palette-primary);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }

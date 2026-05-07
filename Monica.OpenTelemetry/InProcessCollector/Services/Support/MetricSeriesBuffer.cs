@@ -9,14 +9,12 @@ internal sealed class MetricSeriesBuffer(
     string key,
     IReadOnlyDictionary<string, string> tags,
     int capacity,
-    bool isHistogram,
-    bool storesDeltaMeasurements)
+    bool isHistogram)
 {
     private readonly MetricPointSnapshot[] _samples = new MetricPointSnapshot[Math.Max(1, capacity)];
     private readonly object _gate = new();
     private int _count;
     private int _nextIndex;
-    private double _runningValue;
 
     public string Key { get; } = key;
 
@@ -26,12 +24,6 @@ internal sealed class MetricSeriesBuffer(
     {
         lock (_gate)
         {
-            if (storesDeltaMeasurements)
-            {
-                _runningValue += value;
-                value = _runningValue;
-            }
-
             _samples[_nextIndex] = new MetricPointSnapshot(timestampUtc, value);
             _nextIndex = (_nextIndex + 1) % _samples.Length;
             _count = Math.Min(_count + 1, _samples.Length);

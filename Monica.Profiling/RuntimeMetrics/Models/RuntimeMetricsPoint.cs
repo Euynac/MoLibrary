@@ -1,139 +1,159 @@
 namespace Monica.Profiling.RuntimeMetrics.Models;
 
 /// <summary>
-/// In-memory data points - for real-time monitoring and trending
+/// Runtime metric sample used for real-time monitoring and trending.
 /// </summary>
 public class RuntimeMetricsPoint
 {
     /// <summary>
-    /// Timestamp
+    /// Gets the UTC timestamp when this runtime sample was captured.
     /// </summary>
     public DateTime Timestamp { get; init; }
 
     /// <summary>
-    /// GC heap size (MB)
+    /// Gets the GC heap size in bytes.
     /// </summary>
-    public double GcHeapSizeMB { get; init; }
+    public double GcHeapSizeBytes { get; init; }
 
     /// <summary>
-    /// Allocation rate (bytes/second)
+    /// Gets the allocation rate in bytes per second.
     /// </summary>
-    public double AllocationRateBps { get; init; }
+    public double AllocationRateBytesPerSecond { get; init; }
 
     /// <summary>
-    /// Gen0 size (bytes)
+    /// Gets the Gen 0 heap size in bytes.
     /// </summary>
     public double Gen0SizeBytes { get; init; }
 
     /// <summary>
-    /// Gen1 size (bytes)
+    /// Gets the Gen 1 heap size in bytes.
     /// </summary>
     public double Gen1SizeBytes { get; init; }
 
     /// <summary>
-    /// Gen2 size (bytes)
+    /// Gets the Gen 2 heap size in bytes.
     /// </summary>
     public double Gen2SizeBytes { get; init; }
 
     /// <summary>
-    /// LOH (Large Object Heap) size (bytes)
+    /// Gets the large object heap size in bytes.
     /// </summary>
     public double LohSizeBytes { get; init; }
 
     /// <summary>
-    /// POH (Pinned Object Heap) size (bytes)
+    /// Gets the pinned object heap size in bytes.
     /// </summary>
     public double PohSizeBytes { get; init; }
 
     /// <summary>
-    /// GC time proportion (%)
+    /// Gets the percentage of time spent in GC since the last GC.
     /// </summary>
     public double TimeInGcPercent { get; init; }
 
     /// <summary>
-    /// GC fragmentation rate (%)
+    /// Gets the GC fragmentation percentage.
     /// </summary>
-    public double GcFragmentation { get; init; }
+    public double GcFragmentationPercent { get; init; }
 
     /// <summary>
-    /// Working set (MB)
+    /// Gets the process working set in bytes.
     /// </summary>
-    public double WorkingSetMB { get; init; }
+    public double WorkingSetBytes { get; init; }
 
     /// <summary>
-    /// CPU usage (%)
+    /// Gets the process CPU usage percentage.
     /// </summary>
     public double CpuUsagePercent { get; init; }
 
     /// <summary>
-    /// Number of threads
+    /// Gets the ThreadPool thread count.
     /// </summary>
     public int ThreadCount { get; init; }
 
     /// <summary>
-    /// Gen0 recycling times (increment)
+    /// Gets the Gen 0 GC count increment for the sample interval.
     /// </summary>
     public double Gen0GcCount { get; init; }
 
     /// <summary>
-    /// Gen1 recycling times (increment)
+    /// Gets the Gen 1 GC count increment for the sample interval.
     /// </summary>
     public double Gen1GcCount { get; init; }
 
     /// <summary>
-    /// Gen2 recycling times (incremental)
+    /// Gets the Gen 2 GC count increment for the sample interval.
     /// </summary>
     public double Gen2GcCount { get; init; }
+
+    /// <summary>
+    /// Gets the GC heap size in megabytes for UI compatibility.
+    /// </summary>
+    public double GcHeapSizeMB => GcHeapSizeBytes / 1_000_000d;
+
+    /// <summary>
+    /// Gets the allocation rate in bytes per second for UI compatibility.
+    /// </summary>
+    public double AllocationRateBps => AllocationRateBytesPerSecond;
+
+    /// <summary>
+    /// Gets the GC fragmentation percentage for UI compatibility.
+    /// </summary>
+    public double GcFragmentation => GcFragmentationPercent;
+
+    /// <summary>
+    /// Gets the process working set in megabytes for UI compatibility.
+    /// </summary>
+    public double WorkingSetMB => WorkingSetBytes / 1_000_000d;
 }
 
 /// <summary>
-/// Memory trend data
+/// Runtime metrics trend retained in memory.
 /// </summary>
 public class RuntimeMetricsTrend
 {
     /// <summary>
-    /// List of data points
+    /// Gets retained data points.
     /// </summary>
     public List<RuntimeMetricsPoint> DataPoints { get; init; } = [];
 
     /// <summary>
-    /// Maximum historical points
+    /// Gets the maximum historical points retained by the collector.
     /// </summary>
     public int MaxHistoryPoints { get; init; }
 
     /// <summary>
-    /// Sampling interval (milliseconds)
+    /// Gets the sampling interval in milliseconds.
     /// </summary>
     public int SampleIntervalMs { get; init; }
 
     /// <summary>
-    /// start time
+    /// Gets the first retained sample timestamp.
     /// </summary>
     public DateTime? StartTime => DataPoints.Count > 0 ? DataPoints[0].Timestamp : null;
 
     /// <summary>
-    /// end time
+    /// Gets the last retained sample timestamp.
     /// </summary>
     public DateTime? EndTime => DataPoints.Count > 0 ? DataPoints[^1].Timestamp : null;
 
     /// <summary>
-    /// Average heap size (MB)
+    /// Gets the average GC heap size in mebibytes.
     /// </summary>
     public double AverageHeapSizeMB => DataPoints.Count > 0
         ? DataPoints.Average(p => p.GcHeapSizeMB)
         : 0;
 
     /// <summary>
-    /// Maximum heap size (MB)
+    /// Gets the maximum GC heap size in mebibytes.
     /// </summary>
     public double MaxHeapSizeMB => DataPoints.Count > 0
         ? DataPoints.Max(p => p.GcHeapSizeMB)
         : 0;
 
     /// <summary>
-    /// Average allocation rate (bytes/second)
+    /// Gets the average allocation rate in bytes per second.
     /// </summary>
     public double AverageAllocationRate => DataPoints.Count > 0
-        ? DataPoints.Average(p => p.AllocationRateBps)
+        ? DataPoints.Average(p => p.AllocationRateBytesPerSecond)
         : 0;
 }

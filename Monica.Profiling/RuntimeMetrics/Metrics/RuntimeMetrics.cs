@@ -84,13 +84,13 @@ internal sealed class RuntimeMetrics
     private Measurement<double>[] ObserveGcHeapSize()
     {
         var point = GetCurrentPoint();
-        return point is null ? [] : [new(point.GcHeapSizeMB * 1024 * 1024)];
+        return point is null ? [] : [new(point.GcHeapSizeBytes)];
     }
 
     private Measurement<double>[] ObserveAllocationRate()
     {
         var point = GetCurrentPoint();
-        return point is null ? [] : [new(point.AllocationRateBps)];
+        return point is null ? [] : [new(point.AllocationRateBytesPerSecond)];
     }
 
     private Measurement<double>[] ObserveGcGenerationSizes()
@@ -120,13 +120,13 @@ internal sealed class RuntimeMetrics
     private Measurement<double>[] ObserveGcFragmentation()
     {
         var point = GetCurrentPoint();
-        return point is null ? [] : [new(point.GcFragmentation)];
+        return point is null ? [] : [new(point.GcFragmentationPercent)];
     }
 
     private Measurement<double>[] ObserveWorkingSet()
     {
         var point = GetCurrentPoint();
-        return point is null ? [] : [new(point.WorkingSetMB * 1024 * 1024)];
+        return point is null ? [] : [new(point.WorkingSetBytes)];
     }
 
     private Measurement<double>[] ObserveCpuUsage()

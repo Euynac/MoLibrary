@@ -1,6 +1,5 @@
 using System.Diagnostics.Metrics;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Modularity.Models.Internal;
 using Monica.Core.Modularity.Services;
 using Monica.Core.Modularity.Services.Support;
 
@@ -11,7 +10,6 @@ namespace Monica.Core.Modularity.Metrics;
 /// </summary>
 internal sealed class ModuleInitMetrics
 {
-    private const string MODULE_TAG_NAME = "monica.module";
     private const string PHASE_TAG_NAME = "phase";
 
     /// <summary>
@@ -25,7 +23,7 @@ internal sealed class ModuleInitMetrics
             ModuleInitMetricNames.Duration,
             ObserveModuleInitDurations,
             unit: "s",
-            description: "Latest known Monica module initialization duration.");
+            description: "Monica module initialization duration by phase.");
 
         meter.CreateObservableGauge(
             ModuleInitMetricNames.Errors,
@@ -34,49 +32,39 @@ internal sealed class ModuleInitMetrics
             description: "Current Monica module initialization errors.");
     }
 
-    private Measurement<double>[] ObserveModuleInitDurations()
+    private static Measurement<double>[] ObserveModuleInitDurations()
     {
         return ModuleRegistry.ModuleSnapshots
-            .SelectMany(snapshot =>
-            {
-                var phaseDurations = ModuleInitializationProfiler
-                    .GetModuleProfile(snapshot.ModuleType)
-                    ?.GetPhaseDurations();
-
-                return phaseDurations is null
-                    ? []
-                    : phaseDurations.Select(phaseDuration => new Measurement<double>(
-                        phaseDuration.Value / 1000d,
-                        new KeyValuePair<string, object?>(MODULE_TAG_NAME, snapshot.ModuleKey.ToString()),
-                        new KeyValuePair<string, object?>(PHASE_TAG_NAME, FormatPhase(phaseDuration.Key))));
-            })
+            .Select(snapshot => ModuleInitializationProfiler.GetModuleProfile(snapshot.ModuleType))
+            .OfType<ModuleProfileInfo>()
+            .SelectMany(static profile => profile.GetPhaseDurations())
+            .Where(static phaseDuration => phaseDuration.Value > 0)
+            .GroupBy(static phaseDuration => FormatPhase(phaseDuration.Key))
+            .Select(static group => CreateDurationMeasurement(
+                group.Key,
+                group.Sum(static phaseDuration => phaseDuration.Value) / 1000d))
             .ToArray();
     }
 
-    private Measurement<long>[] ObserveModuleInitErrors()
+    private static Measurement<long>[] ObserveModuleInitErrors()
     {
         return ModuleRegistry.ModuleRegisterErrors
-            .GroupBy(error => new ModuleErrorKey(ResolveModuleName(error), FormatPhase(error.Phase)))
+            .GroupBy(static error => FormatPhase(error.Phase))
             .Select(group => new Measurement<long>(
                 group.Count(),
-                new KeyValuePair<string, object?>(MODULE_TAG_NAME, group.Key.Module),
-                new KeyValuePair<string, object?>(PHASE_TAG_NAME, group.Key.Phase)))
+                new KeyValuePair<string, object?>(PHASE_TAG_NAME, group.Key)))
             .ToArray();
     }
 
-    private static string ResolveModuleName(ModuleRegistrationError error)
+    private static Measurement<double> CreateDurationMeasurement(string phase, double value)
     {
-        return ModuleRegistry.ModuleSnapshots
-            .FirstOrDefault(snapshot => snapshot.ModuleType == error.ModuleType)
-            ?.ModuleKey
-            .ToString()
-            ?? error.ModuleType.Name;
+        return new Measurement<double>(
+            value,
+            new KeyValuePair<string, object?>(PHASE_TAG_NAME, phase));
     }
 
     private static string FormatPhase(ModulePhase? phase)
     {
         return phase?.ToString().ToLowerInvariant() ?? "unknown";
     }
-
-    private readonly record struct ModuleErrorKey(string Module, string Phase);
 }
