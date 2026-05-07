@@ -2,9 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Authority.Identity.Extensions;
+using Monica.SignalR.Metrics;
 using Monica.SignalR.Models;
-using Monica.SignalR.Services;
-using Monica.SignalR.Services.Support;
 
 namespace Monica.SignalR.Abstractions;
 
@@ -16,8 +15,8 @@ namespace Monica.SignalR.Abstractions;
 public class CurrentUserSignalRHubOperator<TContract, THub>(
     IHubContext<THub, TContract> hubContext,
     ISignalRConnectionRegistry connectionRegistry,
-    SignalRSendDiagnosticsService sendDiagnosticsService)
-    : SignalRHubOperator<TContract, THub, ICurrentUser>(hubContext, connectionRegistry, sendDiagnosticsService)
+    SignalRSendMetrics sendMetrics)
+    : SignalRHubOperator<TContract, THub, ICurrentUser>(hubContext, connectionRegistry, sendMetrics)
     where TContract : class, ISignalRHubContract
     where THub : SignalRHub<TContract>
 {
@@ -37,18 +36,18 @@ public class CurrentUserSignalRHubOperator<TContract, THub>(
 public abstract class SignalRHubOperator<TContract, THub, TUser>(
     IHubContext<THub, TContract> hubContext,
     ISignalRConnectionRegistry connectionRegistry,
-    SignalRSendDiagnosticsService sendDiagnosticsService)
+    SignalRSendMetrics sendMetrics)
     : ISignalRHubOperator<TContract, TUser>
     where TContract : class, ISignalRHubContract
     where THub : SignalRHub<TContract>
     where TUser : ICurrentUser
 {
-    private readonly IHubClients<TContract> _clients = sendDiagnosticsService.IsEnabled
-        ? new SignalRSendDiagnosticsHubClients<TContract>(
+    private readonly IHubClients<TContract> _clients = sendMetrics.IsEnabled
+        ? new SignalRSendMetricsHubClients<TContract>(
             hubContext.Clients,
-            sendDiagnosticsService,
+            sendMetrics,
             typeof(THub).Name,
-            sendDiagnosticsService.IncludeTargetIdentifiers)
+            sendMetrics.IncludeTargetIdentifiers)
         : hubContext.Clients;
 
     /// <inheritdoc />

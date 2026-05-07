@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
+using Monica.Core.HostedService.Metrics;
 using Monica.Core.HostedService.Services;
 using Monica.Core.HostedService.Services.Support;
 using Monica.Core.Modularity;
@@ -57,6 +59,7 @@ public class ModuleHostedService(ModuleHostedServiceOption option)
         services.AddSingleton<HostedServiceCheckpointCoordinator>();
         services.AddSingleton<IHostedServiceCheckpointObserver>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
         services.AddSingleton<IMoHostedServiceCheckpointCoordinator>(provider => provider.GetRequiredService<HostedServiceCheckpointCoordinator>());
+        services.TryAddSingleton<HostedServiceMetrics>();
         services.AddSingleton<HostedServiceRegistryInitializer>();
     }
 

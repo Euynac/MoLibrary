@@ -1,6 +1,6 @@
 using Monica.SignalR.Models;
 
-namespace Monica.SignalR.Services.Support;
+namespace Monica.SignalR.Metrics;
 
 /// <summary>
 /// Describes a SignalR client target selected by <see cref="Microsoft.AspNetCore.SignalR.IHubClients{T}"/>.

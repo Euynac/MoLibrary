@@ -1,36 +1,35 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using Monica.SignalR.Models;
 
-namespace Monica.SignalR.Services.Support;
+namespace Monica.SignalR.Metrics;
 
 /// <summary>
 /// Dispatch proxy that records observed strongly typed SignalR client invocations.
 /// </summary>
-internal sealed class SignalRClientProxyDispatch<TContract> : DispatchProxy
+internal sealed class SignalRSendMetricsDispatch<TContract> : DispatchProxy
     where TContract : class
 {
     private TContract? _inner;
-    private SignalRSendDiagnosticsService? _diagnostics;
+    private SignalRSendMetrics? _metrics;
     private string? _hubName;
     private SignalRSendTarget? _target;
-    private static readonly MethodInfo _trackGenericTaskMethod = typeof(SignalRClientProxyDispatch<TContract>)
+    private static readonly MethodInfo _trackGenericTaskMethod = typeof(SignalRSendMetricsDispatch<TContract>)
         .GetMethod(nameof(TrackGenericTask), BindingFlags.Static | BindingFlags.NonPublic)
-        ?? throw new InvalidOperationException("The SignalR diagnostics generic task tracker could not be resolved.");
+        ?? throw new InvalidOperationException("The SignalR metrics generic task tracker could not be resolved.");
 
     /// <summary>
     /// Creates a tracked strongly typed SignalR client proxy.
     /// </summary>
     public static TContract Create(
         TContract inner,
-        SignalRSendDiagnosticsService diagnostics,
+        SignalRSendMetrics metrics,
         string hubName,
         SignalRSendTarget target)
     {
-        var proxy = DispatchProxy.Create<TContract, SignalRClientProxyDispatch<TContract>>();
-        var dispatch = (SignalRClientProxyDispatch<TContract>)(object)proxy;
+        var proxy = DispatchProxy.Create<TContract, SignalRSendMetricsDispatch<TContract>>();
+        var dispatch = (SignalRSendMetricsDispatch<TContract>)(object)proxy;
         dispatch._inner = inner;
-        dispatch._diagnostics = diagnostics;
+        dispatch._metrics = metrics;
         dispatch._hubName = hubName;
         dispatch._target = target;
         return proxy;
@@ -39,9 +38,9 @@ internal sealed class SignalRClientProxyDispatch<TContract> : DispatchProxy
     /// <inheritdoc />
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
-        if (_inner is null || _diagnostics is null || _hubName is null || _target is null)
+        if (_inner is null || _metrics is null || _hubName is null || _target is null)
         {
-            throw new InvalidOperationException("The SignalR diagnostics proxy was not initialized.");
+            throw new InvalidOperationException("The SignalR metrics proxy was not initialized.");
         }
 
         if (targetMethod is null)
@@ -49,7 +48,7 @@ internal sealed class SignalRClientProxyDispatch<TContract> : DispatchProxy
             throw new InvalidOperationException("The SignalR client method cannot be resolved.");
         }
 
-        var operation = _diagnostics.StartObservedSend(_hubName, targetMethod.Name, _target);
+        var operation = _metrics.StartObservedSend(_hubName, targetMethod.Name, _target);
         object? result;
 
         try
@@ -58,13 +57,13 @@ internal sealed class SignalRClientProxyDispatch<TContract> : DispatchProxy
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            operation.Complete(failed: true);
+            operation.Complete(ex.InnerException);
             ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
             throw;
         }
-        catch
+        catch (Exception ex)
         {
-            operation.Complete(failed: true);
+            operation.Complete(ex);
             throw;
         }
 
@@ -84,37 +83,37 @@ internal sealed class SignalRClientProxyDispatch<TContract> : DispatchProxy
             }
         }
 
-        operation.Complete(failed: false);
+        operation.Complete();
         return result;
     }
 
-    private static async Task TrackTask(Task task, SignalRSendDiagnosticsOperation operation)
+    private static async Task TrackTask(Task task, SignalRSendMetricOperation operation)
     {
         try
         {
             await task.ConfigureAwait(false);
-            operation.Complete(failed: false);
+            operation.Complete();
         }
-        catch
+        catch (Exception ex)
         {
-            operation.Complete(failed: true);
+            operation.Complete(ex);
             throw;
         }
     }
 
     private static async Task<TResult> TrackGenericTask<TResult>(
         Task<TResult> task,
-        SignalRSendDiagnosticsOperation operation)
+        SignalRSendMetricOperation operation)
     {
         try
         {
             var result = await task.ConfigureAwait(false);
-            operation.Complete(failed: false);
+            operation.Complete();
             return result;
         }
-        catch
+        catch (Exception ex)
         {
-            operation.Complete(failed: true);
+            operation.Complete(ex);
             throw;
         }
     }

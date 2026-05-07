@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Authority.Identity.Abstractions;
 using Monica.Core;
 using Monica.Core.JsonSerialization.Services;
@@ -15,6 +16,7 @@ using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.SignalR.Abstractions;
 using Monica.SignalR.Facades;
+using Monica.SignalR.Metrics;
 using Monica.SignalR.Services;
 using Monica.SignalR.Services.Support;
 using SignalRSwaggerGen;
@@ -55,6 +57,7 @@ public class ModuleSignalR(ModuleSignalROption option)
         services.AddScoped<SignalRInspectionService>();
         services.AddSingleton<SignalRHubMetadataReader>();
         services.AddSingleton<ISignalRConnectionRegistry, SignalRConnectionRegistry>();
+        services.TryAddSingleton<SignalRSendMetrics>();
     }
 
     public override void ConfigureEndpoints(IApplicationBuilder app)
@@ -195,13 +198,13 @@ public class ModuleSignalROption : MinimalApiModuleOptions<ModuleSignalR>
     internal List<SignalRHubRegistration> HubRegistrations { get; } = [];
 
     /// <summary>
-    /// Gets or sets a value indicating whether Monica should capture low-overhead server-to-client send counters.
+    /// Gets or sets a value indicating whether Monica should capture low-overhead server-to-client send metrics.
     /// </summary>
     /// <remarks>
     /// The counters measure send tasks observed by Monica's SignalR hub operators. They do not expose ASP.NET Core SignalR's
     /// private per-connection transport queues.
     /// </remarks>
-    public bool EnableSendDiagnostics { get; set; }
+    public bool EnableSendMetrics { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether send diagnostics should retain explicit connection, group, or user identifiers.

@@ -1,3 +1,4 @@
+using Monica.DataChannel.Metrics;
 using Monica.DataChannel.Pipeline;
 
 namespace Monica.DataChannel.Middlewares;
@@ -6,7 +7,7 @@ namespace Monica.DataChannel.Middlewares;
 /// Example middleware that counts messages.
 /// Inherits from <see cref="PipelineInfoDisplayMiddlewareBase"/> and tracks message totals by category.
 /// </summary>
-public class MessageCounterMiddleware : PipelineInfoDisplayMiddlewareBase
+public class MessageCounterMiddleware(MessageMetrics metrics) : PipelineInfoDisplayMiddlewareBase
 {
     /// <summary>
     /// Key for the total message counter.
@@ -64,6 +65,11 @@ public class MessageCounterMiddleware : PipelineInfoDisplayMiddlewareBase
             if (IsErrorMessage(context))
             {
                 IncrementCounter(ERROR_MESSAGES_KEY);
+                metrics.RecordFailure(context.Source);
+            }
+            else
+            {
+                metrics.RecordSuccess(context.Source);
             }
             
             return context;
@@ -72,6 +78,7 @@ public class MessageCounterMiddleware : PipelineInfoDisplayMiddlewareBase
         {
             // Record middleware failures.
             IncrementCounter(ERROR_MESSAGES_KEY);
+            metrics.RecordFailure(context.Source);
             SetInfo("最后异常", ex.Message);
             SetInfo("最后异常时间", DateTime.Now);
 

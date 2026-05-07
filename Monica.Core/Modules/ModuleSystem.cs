@@ -1,10 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Facades;
 using Monica.Core.Modularity.Diagnostics.Services;
+using Monica.Core.Modularity.Metrics;
 using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
@@ -39,6 +41,8 @@ public class ModuleSystem(ModuleSystemOption option)
     {
         services.AddSingleton<IModuleSystemInspectionService, ModuleSystemInspectionService>();
         services.AddSingleton<ModuleDiagnosticsFacade>();
+        services.TryAddSingleton<ModuleInitMetrics>();
+        services.AddHostedService<ModuleInitMetricsActivationService>();
     }
 }
 

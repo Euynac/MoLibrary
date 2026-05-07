@@ -85,7 +85,7 @@
       "Title": "Send Diagnostics",
       "Refresh": "Refresh",
       "NotLoaded": "Send diagnostics have not been loaded.",
-      "Disabled": "Send diagnostics are disabled. Enable ModuleSignalROption.EnableSendDiagnostics to capture Monica-observed send counters.",
+      "Disabled": "Send metrics are disabled. Enable ModuleSignalROption.EnableSendMetrics to capture Monica-observed send counters.",
       "Empty": "No observed send activity has been recorded yet.",
       "Summary": {
         "Pending": "Pending",

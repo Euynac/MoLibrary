@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using Monica.SignalR.Models;
 
-namespace Monica.SignalR.Services.Support;
+namespace Monica.SignalR.Metrics;
 
 /// <summary>
-/// Mutable counter storage for one observed SignalR send metric.
+/// Mutable app-owned state for one SignalR send snapshot row.
 /// </summary>
 internal sealed class SignalRSendMetric(
-    SignalRSendDiagnosticsKey key,
+    SignalRSendMetricKey key,
     IReadOnlyList<string> targetIdentifiers)
 {
     private long _pendingSendCount;
@@ -34,9 +34,10 @@ internal sealed class SignalRSendMetric(
     /// <summary>
     /// Marks a send as completed or failed.
     /// </summary>
-    public void Finish(long startTimestamp, bool failed)
+    public TimeSpan Finish(long startTimestamp, bool failed)
     {
-        var elapsedTicks = Stopwatch.GetElapsedTime(startTimestamp).Ticks;
+        var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+        var elapsedTicks = elapsed.Ticks;
 
         Interlocked.Decrement(ref _pendingSendCount);
         Interlocked.Add(ref _totalDurationTicks, elapsedTicks);
@@ -53,6 +54,7 @@ internal sealed class SignalRSendMetric(
         }
 
         UpdateMaxDuration(elapsedTicks);
+        return elapsed;
     }
 
     /// <summary>
@@ -83,6 +85,14 @@ internal sealed class SignalRSendMetric(
             LastStartedAtUtc = ToUtcDateTime(Interlocked.Read(ref _lastStartedAtUtcTicks)),
             LastCompletedAtUtc = ToUtcDateTime(Interlocked.Read(ref _lastCompletedAtUtcTicks))
         };
+    }
+
+    /// <summary>
+    /// Reads the current pending send count.
+    /// </summary>
+    public long GetPendingSendCount()
+    {
+        return Interlocked.Read(ref _pendingSendCount);
     }
 
     private void UpdateMaxDuration(long elapsedTicks)

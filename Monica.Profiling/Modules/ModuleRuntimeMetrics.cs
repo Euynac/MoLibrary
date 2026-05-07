@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -10,6 +11,7 @@ using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.Profiling.RuntimeMetrics.Facades;
+using Monica.Profiling.RuntimeMetrics.Metrics;
 using Monica.Profiling.RuntimeMetrics.Providers.EventCounters;
 using Monica.Profiling.RuntimeMetrics.Services;
 
@@ -46,7 +48,9 @@ public class ModuleRuntimeMetrics(ModuleRuntimeMetricsOption option)
         services.AddSingleton(_ => new RuntimeMetricsCollector(
             maxHistoryPoints: Option.MaxHistoryPoints,
             sampleIntervalMs: Option.SampleIntervalMs));
+        services.TryAddSingleton<RuntimeMetrics>();
         services.AddSingleton<RuntimeMetricsService>();
+        services.AddHostedService<RuntimeMetricsActivationService>();
         services.AddScoped(sp => new RuntimeMetricsFacade(
             sp.GetRequiredService<RuntimeMetricsService>(),
             sp.GetRequiredService<ILogger<RuntimeMetricsFacade>>()));

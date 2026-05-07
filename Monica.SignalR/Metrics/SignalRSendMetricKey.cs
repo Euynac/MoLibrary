@@ -1,11 +1,11 @@
 using Monica.SignalR.Models;
 
-namespace Monica.SignalR.Services.Support;
+namespace Monica.SignalR.Metrics;
 
 /// <summary>
-/// Stable aggregation key for observed SignalR sends.
+/// Stable aggregation key for Monica-observed SignalR send snapshot state.
 /// </summary>
-internal readonly record struct SignalRSendDiagnosticsKey(
+internal readonly record struct SignalRSendMetricKey(
     string HubName,
     string MethodName,
     SignalRSendTargetKind TargetKind,

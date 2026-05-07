@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Monica.Authority.Identity.Models;
 using Monica.Modules;
 using Monica.SignalR.Abstractions;
+using Monica.SignalR.Metrics;
 using Monica.SignalR.Models;
 using Monica.SignalR.Services.Support;
 
@@ -14,7 +15,7 @@ internal sealed class SignalRInspectionService(
     IOptions<ModuleSignalROption> signalROptions,
     SignalRHubMetadataReader hubMetadataReader,
     ISignalRConnectionRegistry connectionRegistry,
-    SignalRSendDiagnosticsService sendDiagnosticsService)
+    SignalRSendMetrics sendMetrics)
 {
     private readonly ModuleSignalROption _signalROption = signalROptions.Value;
 
@@ -55,6 +56,6 @@ internal sealed class SignalRInspectionService(
     /// </summary>
     public SignalRSendDiagnosticsSnapshot GetSendDiagnostics()
     {
-        return sendDiagnosticsService.GetSnapshot();
+        return sendMetrics.GetSnapshot();
     }
 }

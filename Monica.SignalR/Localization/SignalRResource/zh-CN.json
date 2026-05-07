@@ -85,7 +85,7 @@
       "Title": "发送诊断",
       "Refresh": "刷新",
       "NotLoaded": "尚未加载发送诊断信息。",
-      "Disabled": "发送诊断当前未启用。请启用 ModuleSignalROption.EnableSendDiagnostics 以采集 Monica 观测到的发送计数。",
+      "Disabled": "发送指标当前未启用。请启用 ModuleSignalROption.EnableSendMetrics 以采集 Monica 观测到的发送计数。",
       "Empty": "尚未记录到发送活动。",
       "Summary": {
         "Pending": "积压中",

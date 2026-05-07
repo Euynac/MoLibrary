@@ -3,12 +3,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Monica.Core.HostedService.Abstractions;
 using Monica.Core.HostedService.Abstractions.Internal;
+using Monica.Core.HostedService.Metrics;
 
 namespace Monica.Core.HostedService.Services;
 
 internal sealed class HostedServiceRegistryInitializer(
     IHostedServiceRegistryWriter registryWriter,
     IHostedServiceCheckpointObserver checkpointObserver,
+    HostedServiceMetrics metrics,
     ILogger<HostedServiceRegistryInitializer> logger)
 {
     public void Initialize(IServiceProvider services)
@@ -30,6 +32,7 @@ internal sealed class HostedServiceRegistryInitializer(
                 }
 
                 checkpointObserver.Observe(hostedService);
+                metrics.Observe(hostedService);
             }
         }
         catch (Exception ex)

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -11,6 +12,7 @@ using Monica.Core.Results;
 using Monica.DataChannel;
 using Monica.DataChannel.Abstractions;
 using Monica.DataChannel.Facades;
+using Monica.DataChannel.Metrics;
 using Monica.DataChannel.Services;
 
 // ReSharper disable once CheckNamespace
@@ -25,6 +27,7 @@ public class ModuleDataChannel(ModuleDataChannelOption option)
     {
         DataChannelCentral.Setting = Option;
         services.AddSingleton<IDataChannelManager, DataChannelManager>();
+        services.TryAddSingleton<MessageMetrics>();
         services.AddScoped<DataChannelFacade>();
         // Add the hosted service for channel initialization
         services.AddHostedService<DataChannelInitializerService>();

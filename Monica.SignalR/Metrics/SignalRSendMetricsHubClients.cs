@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.SignalR;
 using Monica.SignalR.Models;
 
-namespace Monica.SignalR.Services.Support;
+namespace Monica.SignalR.Metrics;
 
 /// <summary>
 /// Wraps strongly typed SignalR hub clients and instruments returned client proxies.
 /// </summary>
-internal sealed class SignalRSendDiagnosticsHubClients<TContract>(
+internal sealed class SignalRSendMetricsHubClients<TContract>(
     IHubClients<TContract> inner,
-    SignalRSendDiagnosticsService diagnostics,
+    SignalRSendMetrics metrics,
     string hubName,
     bool includeTargetIdentifiers)
     : IHubClients<TContract>
@@ -87,8 +87,8 @@ internal sealed class SignalRSendDiagnosticsHubClients<TContract>(
 
     private TContract Track(TContract clientProxy, SignalRSendTarget target)
     {
-        return diagnostics.IsEnabled
-            ? SignalRClientProxyDispatch<TContract>.Create(clientProxy, diagnostics, hubName, target)
+        return metrics.IsEnabled
+            ? SignalRSendMetricsDispatch<TContract>.Create(clientProxy, metrics, hubName, target)
             : clientProxy;
     }
 }
