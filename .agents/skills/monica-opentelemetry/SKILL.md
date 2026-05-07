@@ -76,10 +76,13 @@ internal sealed class EfCoreConnectionMetrics(IMeterFactory meterFactory)
 Register metric owners as singleton:
 
 ```csharp
-services.AddMetrics();
 services.TryAddSingleton<EfCoreConnectionMetrics>();
 services.TryAddSingleton<EfCoreConnectionMetricsInterceptor>();
 ```
+
+## Host Bootstrap
+
+`IMeterFactory` is auto-registered by `Microsoft.Extensions.Hosting` in .NET 8+ and by ASP.NET Core hosts. Monica modules just register their metric owners with `TryAddSingleton<TMetrics>()`. Call `services.AddMetrics()` only in non-Hosting scenarios such as bare `ServiceCollection` test fixtures.
 
 Expose a module option when instrumentation has non-trivial overhead or attaches framework adapters:
 
@@ -139,6 +142,8 @@ Snapshot models
 ```
 
 For UI diagnostics like SignalR pending sends, keep the state owner cohesive and expose snapshots through a Facade. Emit OpenTelemetry-compatible metrics from the same owner only when useful.
+
+Keep app-owned fields only when an `ObservableGauge`, snapshot model, or Monica runtime behavior reads them. Do not duplicate `Counter<T>` values into local `Interlocked` fields just because the event also increments.
 
 ## Performance Rules
 

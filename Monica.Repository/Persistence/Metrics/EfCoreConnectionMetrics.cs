@@ -25,11 +25,6 @@ internal sealed class EfCoreConnectionMetrics
     private readonly Counter<long> _connectionEvents;
     private long _connectionCreatingCount;
     private long _connectionCreatedCount;
-    private long _connectionClosingCount;
-    private long _connectionClosedCount;
-    private long _connectionFailedCount;
-    private long _connectionOpeningCount;
-    private long _connectionOpenedCount;
     private long _connectionDisposingCount;
     private long _connectionDisposedCount;
 
@@ -75,7 +70,6 @@ internal sealed class EfCoreConnectionMetrics
     /// </summary>
     public void RecordConnectionClosing()
     {
-        Interlocked.Increment(ref _connectionClosingCount);
         RecordConnectionEvent(EVENT_CLOSING);
     }
 
@@ -84,7 +78,6 @@ internal sealed class EfCoreConnectionMetrics
     /// </summary>
     public void RecordConnectionClosed()
     {
-        Interlocked.Increment(ref _connectionClosedCount);
         RecordConnectionEvent(EVENT_CLOSED);
     }
 
@@ -93,7 +86,6 @@ internal sealed class EfCoreConnectionMetrics
     /// </summary>
     public void RecordConnectionFailed()
     {
-        Interlocked.Increment(ref _connectionFailedCount);
         RecordConnectionEvent(EVENT_FAILED);
     }
 
@@ -102,7 +94,6 @@ internal sealed class EfCoreConnectionMetrics
     /// </summary>
     public void RecordConnectionOpening()
     {
-        Interlocked.Increment(ref _connectionOpeningCount);
         RecordConnectionEvent(EVENT_OPENING);
     }
 
@@ -111,7 +102,6 @@ internal sealed class EfCoreConnectionMetrics
     /// </summary>
     public void RecordConnectionOpened()
     {
-        Interlocked.Increment(ref _connectionOpenedCount);
         RecordConnectionEvent(EVENT_OPENED);
     }
 

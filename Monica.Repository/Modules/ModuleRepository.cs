@@ -46,7 +46,6 @@ public class ModuleRepository(ModuleRepositoryOption option)
 
         if (option.EnableEfCoreConnectionMetrics)
         {
-            services.AddMetrics();
             services.TryAddSingleton<EfCoreConnectionMetrics>();
             services.TryAddSingleton<EfCoreConnectionMetricsInterceptor>();
         }
