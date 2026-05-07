@@ -94,19 +94,36 @@
 }
 
 .composer-editor ::deep .composer-reference-token {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     max-width: 100%;
+    min-height: 24px;
     margin: 0 2px;
-    padding: 1px 8px;
+    padding: 0 8px 0 6px;
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 999px;
-    background-color: var(--mud-palette-action-default-hover);
+    background-color: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     font-size: 0.8125rem;
-    line-height: 1.7;
-    vertical-align: baseline;
+    line-height: 1;
+    vertical-align: middle;
     user-select: all;
+}
+
+.composer-editor ::deep .composer-reference-token-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    fill: currentColor;
+}
+
+.composer-editor ::deep .composer-reference-token-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .composer-editor ::deep .composer-reference-token.skills {

@@ -199,7 +199,7 @@ public sealed partial class ChatPageState : IDisposable
     public List<string> SelectedKnowledgeBaseIds { get; private set; } = [];
 
     /// <summary>
-    /// Slash-command candidates for explicit Skill and MCP references.
+    /// Reference-completion candidates for explicit Skill and MCP references.
     /// </summary>
     public IReadOnlyList<AgentCapabilityReferenceCandidate> CapabilityCandidates { get; private set; } = [];
 

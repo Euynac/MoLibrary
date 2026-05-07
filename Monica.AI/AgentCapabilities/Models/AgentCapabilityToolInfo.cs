@@ -6,7 +6,7 @@ namespace Monica.AI.AgentCapabilities.Models;
 public sealed record AgentCapabilityToolInfo
 {
     /// <summary>
-    /// Creates tool metadata for management and slash-command UI.
+    /// Creates tool metadata for management and reference-completion UI.
     /// </summary>
     public AgentCapabilityToolInfo(
         string name,

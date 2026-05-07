@@ -43,7 +43,7 @@ public sealed class AgentCapabilityFacade(
     }
 
     /// <summary>
-    /// Gets slash-command candidates from enabled and disabled capabilities.
+    /// Gets reference-completion candidates from enabled and disabled capabilities.
     /// </summary>
     public async Task<Res<IReadOnlyList<AgentCapabilityReferenceCandidate>>> GetReferenceCandidatesAsync(
         string? query = null,

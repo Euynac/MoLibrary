@@ -1,12 +1,12 @@
 namespace Monica.AI.AgentCapabilities.Models;
 
 /// <summary>
-/// Describes a slash-command candidate that can be inserted into a chat message as an inline reference token.
+/// Describes a reference-completion candidate that can be inserted into a chat message as an inline reference token.
 /// </summary>
 public sealed record AgentCapabilityReferenceCandidate
 {
     /// <summary>
-    /// Creates a slash-command reference candidate.
+    /// Creates a reference-completion candidate.
     /// </summary>
     public AgentCapabilityReferenceCandidate(
         AgentCapabilityKind kind,

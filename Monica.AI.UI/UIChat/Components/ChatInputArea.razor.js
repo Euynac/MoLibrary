@@ -2,7 +2,7 @@ const SKILL_PREFIX = "[$skills:";
 const MCP_PREFIX = "[$mcp:";
 const TOKEN_END = "]";
 
-export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder) {
+export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder, referenceIcons) {
     const editor = root?.querySelector("[data-composer-editor]");
     if (!editor) {
         return {
@@ -19,7 +19,7 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
     let currentValue = initialValue ?? "";
 
     editor.setAttribute("data-placeholder", placeholder ?? "");
-    renderEditor(editor, currentValue, currentValue.length);
+    renderEditor(editor, currentValue, currentValue.length, referenceIcons);
 
     const notifyInput = () => {
         currentValue = readEditorText(editor);
@@ -113,7 +113,7 @@ export function initComposerKeyboard(root, dotNetRef, initialValue, placeholder)
             if (nextValue !== currentValue || (nextValue.length > 0 && editor.childNodes.length === 0)) {
                 currentValue = nextValue;
                 hasPendingLocalInput = false;
-                renderEditor(editor, currentValue, normalizeCaret(caretIndex, currentValue));
+                renderEditor(editor, currentValue, normalizeCaret(caretIndex, currentValue), referenceIcons);
             } else if (focus === true) {
                 hasPendingLocalInput = false;
                 setCaretIndex(editor, normalizeCaret(caretIndex, currentValue));
@@ -149,12 +149,12 @@ function shouldPreventPickerKey(event) {
         || (event.key === "Enter" && !event.shiftKey);
 }
 
-function renderEditor(editor, value, caretIndex) {
-    editor.replaceChildren(...createEditorNodes(value));
+function renderEditor(editor, value, caretIndex, referenceIcons) {
+    editor.replaceChildren(...createEditorNodes(value, referenceIcons));
     setCaretIndex(editor, normalizeCaret(caretIndex, value));
 }
 
-function createEditorNodes(value) {
+function createEditorNodes(value, referenceIcons) {
     const nodes = [];
     for (const segment of parseReferenceSegments(value)) {
         if (segment.kind === null) {
@@ -162,15 +162,44 @@ function createEditorNodes(value) {
             continue;
         }
 
-        const badge = document.createElement("span");
-        badge.className = `composer-reference-token ${segment.kind}`;
-        badge.contentEditable = "false";
-        badge.dataset.token = segment.token;
-        badge.textContent = `${segment.kind}:${segment.text}`;
-        nodes.push(badge);
+        nodes.push(createReferenceTokenNode(segment, referenceIcons));
     }
 
     return nodes;
+}
+
+function createReferenceTokenNode(segment, referenceIcons) {
+    const badge = document.createElement("span");
+    badge.className = `composer-reference-token ${segment.kind}`;
+    badge.contentEditable = "false";
+    badge.dataset.token = segment.token;
+
+    const icon = createReferenceIconNode(referenceIcons?.[segment.kind]);
+    if (icon !== null) {
+        badge.appendChild(icon);
+    }
+
+    const label = document.createElement("span");
+    label.className = "composer-reference-token-label";
+    label.textContent = `${segment.kind}:${segment.text}`;
+    badge.appendChild(label);
+
+    return badge;
+}
+
+function createReferenceIconNode(pathData) {
+    if (!pathData) {
+        return null;
+    }
+
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNamespace, "svg");
+    svg.setAttribute("class", "composer-reference-token-icon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.innerHTML = pathData;
+    return svg;
 }
 
 function parseReferenceSegments(value) {

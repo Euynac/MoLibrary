@@ -21,7 +21,7 @@
                  aria-label="@_placeholderText"
                  @onkeydown="@HandleKeyDown">
             </div>
-            <MudPopover Open="@ShowSlashPicker"
+            <MudPopover Open="@ShowReferencePicker"
                         AnchorOrigin="Origin.TopLeft"
                         TransformOrigin="Origin.BottomLeft"
                         Class="mo-ai-capability-popover"
@@ -153,14 +153,19 @@
     private DotNetObjectReference<ChatInputArea>? _dotNetRef;
     private bool _wasSending;
     private string _placeholderText = string.Empty;
-    private bool _slashPickerOpen;
-    private string _slashQuery = string.Empty;
-    private int _slashStartIndex = -1;
-    private int _slashEndIndex = -1;
+    private bool _referencePickerOpen;
+    private string _referenceQuery = string.Empty;
+    private int _referenceStartIndex = -1;
+    private int _referenceEndIndex = -1;
     private int _caretIndex;
     private int _highlightedCandidateIndex;
-    private bool ShowSlashPicker => _slashPickerOpen && !IsSending;
+    private bool ShowReferencePicker => _referencePickerOpen && !IsSending;
     private string EditorContentEditable => IsSending ? "false" : "true";
+    private static readonly IReadOnlyDictionary<string, string> REFERENCE_ICONS = new Dictionary<string, string>
+    {
+        ["skills"] = Icons.Material.Filled.AutoAwesome,
+        ["mcp"] = Icons.Material.Filled.AccountTree
+    };
     private int ContextWindow => ChatProviderResolver.GetContextWindow(AvailableModels, ModelName);
     private TokenUsage? LatestUsage => LatestRequestUsages.LastOrDefault()?.Usage;
     private int LatestInputTokens => LatestUsage?.InputTokens ?? 0;
@@ -189,7 +194,7 @@
     private IReadOnlyList<AgentCapabilityReferenceCandidate> FilteredCapabilityCandidates =>
         CapabilityCandidates
             .Where(IsCandidateAvailable)
-            .Where(MatchesSlashQuery)
+            .Where(MatchesReferenceQuery)
             .Take(8)
             .ToList();
 
@@ -204,7 +209,7 @@
         {
             InputText = string.Empty;
             _caretIndex = 0;
-            CloseSlashPicker();
+            CloseReferencePicker();
         }
 
         _wasSending = IsSending;
@@ -219,7 +224,7 @@
 
         if (_keyboardController is not null)
         {
-            await _keyboardController.InvokeVoidAsync("setPickerOpen", ShowSlashPicker);
+            await _keyboardController.InvokeVoidAsync("setPickerOpen", ShowReferencePicker);
             await _keyboardController.InvokeVoidAsync("setDisabled", IsSending);
             await _keyboardController.InvokeVoidAsync("setValue", InputText, _caretIndex, false, false);
         }
@@ -234,7 +239,7 @@
         InputText = string.Empty;
         _caretIndex = 0;
         await SyncEditorAsync(focus: false);
-        CloseSlashPicker();
+        CloseReferencePicker();
 
         // Ensure component renders with empty value before parent re-renders
         StateHasChanged();
@@ -288,7 +293,7 @@
             return;
         }
 
-        if (ShowSlashPicker)
+        if (ShowReferencePicker)
         {
             if (e.Key == "ArrowDown")
             {
@@ -318,7 +323,7 @@
 
             if (e.Key == "Escape")
             {
-                CloseSlashPicker();
+                CloseReferencePicker();
                 StateHasChanged();
                 return;
             }
@@ -345,7 +350,8 @@
                 _inputTopRef,
                 _dotNetRef,
                 InputText,
-                _placeholderText);
+                _placeholderText,
+                REFERENCE_ICONS);
         }
         catch (JSException)
         {
@@ -358,38 +364,64 @@
     {
         InputText = value ?? string.Empty;
         _caretIndex = Math.Clamp(caretIndex, 0, InputText.Length);
-        UpdateSlashPicker();
+        UpdateReferencePicker();
         return InvokeAsync(StateHasChanged);
     }
 
-    private void UpdateSlashPicker()
+    private void UpdateReferencePicker()
     {
         var searchEnd = Math.Clamp(_caretIndex, 0, InputText.Length);
         if (searchEnd == 0)
         {
-            CloseSlashPicker();
+            CloseReferencePicker();
             return;
         }
 
-        var slashIndex = InputText.LastIndexOf('/', searchEnd - 1, searchEnd);
-        if (slashIndex < 0)
+        var triggerIndex = FindReferenceTriggerIndex(searchEnd);
+        if (triggerIndex < 0)
         {
-            CloseSlashPicker();
+            CloseReferencePicker();
             return;
         }
 
-        var query = InputText[(slashIndex + 1)..searchEnd];
+        var query = InputText[(triggerIndex + 1)..searchEnd];
         if (query.Any(char.IsWhiteSpace))
         {
-            CloseSlashPicker();
+            CloseReferencePicker();
             return;
         }
 
-        _slashQuery = query;
-        _slashStartIndex = slashIndex;
-        _slashEndIndex = searchEnd;
-        _slashPickerOpen = true;
+        _referenceQuery = query;
+        _referenceStartIndex = triggerIndex;
+        _referenceEndIndex = searchEnd;
+        _referencePickerOpen = true;
         _highlightedCandidateIndex = Math.Clamp(_highlightedCandidateIndex, 0, Math.Max(FilteredCapabilityCandidates.Count - 1, 0));
+    }
+
+    private int FindReferenceTriggerIndex(int searchEnd)
+    {
+        for (var index = searchEnd - 1; index >= 0; index--)
+        {
+            var character = InputText[index];
+            if (char.IsWhiteSpace(character))
+            {
+                return -1;
+            }
+
+            if (character is '/' or '$' && !IsStoredReferenceTokenPrefix(index))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private bool IsStoredReferenceTokenPrefix(int triggerIndex)
+    {
+        return InputText[triggerIndex] == '$'
+               && triggerIndex > 0
+               && InputText[triggerIndex - 1] == '[';
     }
 
     private void MoveHighlight(int delta)
@@ -418,53 +450,53 @@
     private async Task CompleteCandidate(AgentCapabilityReferenceCandidate candidate)
     {
         InsertReferenceToken(candidate);
-        CloseSlashPicker();
+        CloseReferencePicker();
         StateHasChanged();
         await FocusAsync();
     }
 
     private void InsertReferenceToken(AgentCapabilityReferenceCandidate candidate)
     {
-        var slashIndex = _slashStartIndex >= 0 && _slashStartIndex < InputText.Length
-            ? _slashStartIndex
-            : InputText.LastIndexOf('/');
-        if (slashIndex < 0)
+        var triggerIndex = _referenceStartIndex >= 0 && _referenceStartIndex < InputText.Length
+            ? _referenceStartIndex
+            : FindReferenceTriggerIndex(InputText.Length);
+        if (triggerIndex < 0)
         {
             return;
         }
 
-        var tokenEndIndex = _slashEndIndex >= slashIndex && _slashEndIndex <= InputText.Length
-            ? _slashEndIndex
-            : slashIndex + 1;
+        var tokenEndIndex = _referenceEndIndex >= triggerIndex && _referenceEndIndex <= InputText.Length
+            ? _referenceEndIndex
+            : triggerIndex + 1;
 
         var token = AgentCapabilityReferenceTokenSyntax.Create(candidate.Kind, candidate.Name);
-        var prefix = InputText[..slashIndex];
+        var prefix = InputText[..triggerIndex];
         var suffix = InputText[tokenEndIndex..];
         var separator = suffix.Length == 0 || char.IsWhiteSpace(suffix[0]) ? string.Empty : " ";
         InputText = prefix + token + separator + suffix;
         _caretIndex = prefix.Length + token.Length + separator.Length;
     }
 
-    private void CloseSlashPicker()
+    private void CloseReferencePicker()
     {
-        _slashPickerOpen = false;
-        _slashQuery = string.Empty;
-        _slashStartIndex = -1;
-        _slashEndIndex = -1;
+        _referencePickerOpen = false;
+        _referenceQuery = string.Empty;
+        _referenceStartIndex = -1;
+        _referenceEndIndex = -1;
         _highlightedCandidateIndex = 0;
     }
 
-    private bool MatchesSlashQuery(AgentCapabilityReferenceCandidate candidate)
+    private bool MatchesReferenceQuery(AgentCapabilityReferenceCandidate candidate)
     {
-        if (string.IsNullOrWhiteSpace(_slashQuery))
+        if (string.IsNullOrWhiteSpace(_referenceQuery))
         {
             return true;
         }
 
-        return Contains(candidate.Name, _slashQuery)
-               || Contains(candidate.Description, _slashQuery)
-               || candidate.ToolNames.Any(tool => Contains(tool, _slashQuery))
-               || Contains(candidate.Kind.ToString(), _slashQuery);
+        return Contains(candidate.Name, _referenceQuery)
+               || Contains(candidate.Description, _referenceQuery)
+               || candidate.ToolNames.Any(tool => Contains(tool, _referenceQuery))
+               || Contains(candidate.Kind.ToString(), _referenceQuery);
     }
 
     private bool IsCandidateAvailable(AgentCapabilityReferenceCandidate candidate)

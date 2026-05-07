@@ -8,7 +8,7 @@ namespace Monica.AI.AgentCapabilities.Models;
 public sealed record AgentCapabilityEntryInfo
 {
     /// <summary>
-    /// Creates capability metadata for management and slash-command UI.
+    /// Creates capability metadata for management and reference-completion UI.
     /// </summary>
     public AgentCapabilityEntryInfo(
         AgentCapabilityKind kind,
@@ -207,12 +207,12 @@ public sealed record AgentCapabilityEntryInfo
     public string? DiscoveryError { get; }
 
     /// <summary>
-    /// Stable UI key used by management rows and slash candidates.
+    /// Stable UI key used by management rows and reference-completion candidates.
     /// </summary>
     public string Key => AgentCapabilityKey.Create(Kind, Name);
 
     /// <summary>
-    /// Converts this entry into a slash-command reference candidate.
+    /// Converts this entry into a reference-completion candidate.
     /// </summary>
     public AgentCapabilityReferenceCandidate ToReferenceCandidate()
     {
