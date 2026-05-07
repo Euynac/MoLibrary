@@ -35,7 +35,6 @@
     "TagSets": "Tag 组合",
     "Delta": "变化",
     "Latest": "最新值",
-    "Description": "说明",
     "NoSamples": "无样本"
   },
   "Table": {
@@ -60,8 +59,5 @@
     "Title": "溢出",
     "Message": "Tag 组合数量超过 MaxTagSetsPerInstrument，部分序列未显示。",
     "DroppedSamples": "已丢弃 {0} 个样本"
-  },
-  "Nav": {
-    "Title": "OpenTelemetry 指标"
   }
 }

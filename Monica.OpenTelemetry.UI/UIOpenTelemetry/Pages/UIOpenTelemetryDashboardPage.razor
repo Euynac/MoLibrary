@@ -7,39 +7,39 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<PageTitle>@L["Page.Title"]</PageTitle>
+<PageTitle>@L["Page:Title"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.False" Class="opentelemetry-page">
     <MudPaper Class="dashboard-banner" Elevation="0">
         <div class="banner-title">
             <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Large" Color="Color.Primary" />
             <div>
-                <MudText Typo="Typo.h4">@L["Page.Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page.Subtitle"]</MudText>
+                <MudText Typo="Typo.h4">@L["Page:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page:Subtitle"]</MudText>
             </div>
         </div>
 
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-            @L["Banner.PerInstanceHint"]
+            @L["Banner:PerInstanceHint"]
         </MudAlert>
 
         @if (PageState.Snapshot is not null)
         {
             <div class="banner-stats">
                 <div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Service"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Service"]</MudText>
                     <MudText Typo="Typo.subtitle2">@PageState.Snapshot.ServiceName</MudText>
                 </div>
                 <div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.CapturedAt"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:CapturedAt"]</MudText>
                     <MudText Typo="Typo.subtitle2">@PageState.Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</MudText>
                 </div>
                 <div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Meters"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Meters"]</MudText>
                     <MudText Typo="Typo.subtitle2">@PageState.GetMeterNames().Count</MudText>
                 </div>
                 <div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Instruments"]</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner:Instruments"]</MudText>
                     <MudText Typo="Typo.subtitle2">@PageState.Snapshot.Instruments.Count</MudText>
                 </div>
             </div>
@@ -50,11 +50,11 @@
         <MudSelect T="string"
                    Value="@PageState.MeterPrefixFilter"
                    ValueChanged="SetMeterFilter"
-                   Label="@L["Filter.MeterPrefix"]"
+                   Label="@L["Filter:MeterPrefix"]"
                    Variant="Variant.Outlined"
                    Dense="true"
                    Margin="Margin.Dense">
-            <MudSelectItem T="string" Value="@string.Empty">@L["Filter.AllMeters"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@string.Empty">@L["Filter:AllMeters"]</MudSelectItem>
             @foreach (var meterName in PageState.GetMeterNames())
             {
                 <MudSelectItem T="string" Value="@meterName">@meterName</MudSelectItem>
@@ -64,7 +64,7 @@
         <MudTextField T="string"
                       Value="@PageState.InstrumentNameFilter"
                       ValueChanged="SetInstrumentFilter"
-                      Label="@L["Filter.InstrumentName"]"
+                      Label="@L["Filter:InstrumentName"]"
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
                       Adornment="Adornment.Start"
@@ -73,13 +73,13 @@
         <MudSelect T="string"
                    Value="@AutoRefreshValue"
                    ValueChanged="SetAutoRefresh"
-                   Label="@L["Filter.AutoRefresh"]"
+                   Label="@L["Filter:AutoRefresh"]"
                    Variant="Variant.Outlined"
                    Dense="true"
                    Margin="Margin.Dense">
-            <MudSelectItem T="string" Value="@AUTO_REFRESH_OFF">@L["Filter.RefreshOff"]</MudSelectItem>
-            <MudSelectItem T="string" Value="@AUTO_REFRESH_1S">@L["Filter.Refresh1s"]</MudSelectItem>
-            <MudSelectItem T="string" Value="@AUTO_REFRESH_5S">@L["Filter.Refresh5s"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_OFF">@L["Filter:RefreshOff"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_1S">@L["Filter:Refresh1s"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_5S">@L["Filter:Refresh5s"]</MudSelectItem>
         </MudSelect>
 
         <div class="filter-actions">
@@ -88,21 +88,21 @@
                        StartIcon="@Icons.Material.Filled.Refresh"
                        OnClick="RefreshAsync"
                        Disabled="@PageState.IsLoading">
-                @L["Action.Refresh"]
+                @L["Action:Refresh"]
             </MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.ContentCopy"
                        OnClick="CopyPrometheusAsync"
                        Disabled="@(PageState.Snapshot is null)">
-                @L["Action.CopyAsPrometheus"]
+                @L["Action:CopyAsPrometheus"]
             </MudButton>
             <MudButton Variant="Variant.Outlined"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.DataObject"
                        OnClick="CopyJsonAsync"
                        Disabled="@(PageState.Snapshot is null)">
-                @L["Action.CopyAsJson"]
+                @L["Action:CopyAsJson"]
             </MudButton>
         </div>
     </MudPaper>
@@ -111,7 +111,7 @@
     {
         <MudPaper Class="status-panel" Elevation="0">
             <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status.Loading"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status:Loading"]</MudText>
         </MudPaper>
     }
     else if (!string.IsNullOrWhiteSpace(PageState.Error))
@@ -120,7 +120,7 @@
     }
     else if (PageState.FilteredInstruments().Count == 0)
     {
-        <MudAlert Severity="Severity.Info">@L["Status.Empty"]</MudAlert>
+        <MudAlert Severity="Severity.Info">@L["Status:Empty"]</MudAlert>
     }
     else
     {
@@ -185,7 +185,7 @@
         var result = await PageState.LoadAsync();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? L["Status.Empty"].Value, Severity.Error);
+            Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
         }
     }
 
@@ -194,7 +194,7 @@
         var result = await PageState.RefreshAsync();
         if (result.IsFailed(out var error))
         {
-            Snackbar.Add(error.Message ?? L["Status.Empty"].Value, Severity.Error);
+            Snackbar.Add(error.Message ?? L["Status:Empty"].Value, Severity.Error);
         }
     }
 
@@ -238,11 +238,11 @@
         try
         {
             var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", text);
-            Snackbar.Add(success ? L["Status.Copied"].Value : L["Status.CopyFailed"].Value, success ? Severity.Success : Severity.Error);
+            Snackbar.Add(success ? L["Status:Copied"].Value : L["Status:CopyFailed"].Value, success ? Severity.Success : Severity.Error);
         }
         catch
         {
-            Snackbar.Add(L["Status.CopyFailed"].Value, Severity.Error);
+            Snackbar.Add(L["Status:CopyFailed"].Value, Severity.Error);
         }
     }
 

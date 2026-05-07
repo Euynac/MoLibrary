@@ -10,10 +10,10 @@
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Instrument.Kind</MudChip>
                     @if (!string.IsNullOrWhiteSpace(Instrument.Unit))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@L["Instrument.Unit"]: @Instrument.Unit</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@L["Instrument:Unit"]: @Instrument.Unit</MudChip>
                     }
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
-                        @L["Instrument.TagSets"]: @Instrument.TagSets.Count
+                        @L["Instrument:TagSets"]: @Instrument.TagSets.Count
                     </MudChip>
                 </div>
             </div>
@@ -29,11 +29,11 @@
 
         <div class="instrument-value-row">
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.Latest"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument:Latest"]</MudText>
                 <MudText Typo="Typo.h5">@FormatValue(Instrument.CurrentValue)</MudText>
             </div>
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.Delta"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument:Delta"]</MudText>
                 <MudText Typo="Typo.subtitle1">@FormatSignedValue(Instrument.Delta)</MudText>
             </div>
         </div>
@@ -49,7 +49,7 @@
         }
         else
         {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.NoSamples"]</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument:NoSamples"]</MudText>
         }
     </MudPaper>
 </div>

@@ -6,30 +6,42 @@
     <MudPaper Class="histogram-panel" Elevation="0">
         <div class="histogram-summary">
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.Count"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Count"]</MudText>
                 <MudText Typo="Typo.subtitle1">@Histogram.Count</MudText>
             </div>
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.Average"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Average"]</MudText>
                 <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Average)</MudText>
             </div>
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P50"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Min"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Min)</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:Max"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Max)</MudText>
+            </div>
+        </div>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">@L["Histogram:Percentiles"]</MudText>
+        <div class="histogram-summary">
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P50"]</MudText>
                 <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P50)</MudText>
             </div>
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P95"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P95"]</MudText>
                 <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P95)</MudText>
             </div>
             <div>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P99"]</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram:P99"]</MudText>
                 <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P99)</MudText>
             </div>
         </div>
 
         <MudDivider Class="my-3" />
 
-        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Histogram.Distribution"]</MudText>
+        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Histogram:Distribution"]</MudText>
         <div class="bucket-list">
             @foreach (var bucket in Histogram.Buckets)
             {

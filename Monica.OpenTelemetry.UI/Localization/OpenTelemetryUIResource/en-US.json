@@ -35,7 +35,6 @@
     "TagSets": "Tag sets",
     "Delta": "Delta",
     "Latest": "Latest",
-    "Description": "Description",
     "NoSamples": "No samples"
   },
   "Table": {
@@ -60,8 +59,5 @@
     "Title": "Overflow",
     "Message": "Tag-set count exceeded MaxTagSetsPerInstrument; some series are not displayed.",
     "DroppedSamples": "{0} samples dropped"
-  },
-  "Nav": {
-    "Title": "OpenTelemetry Metrics"
   }
 }

@@ -2,16 +2,16 @@
 
 @if (Overflow)
 {
-    <MudTooltip Text="@L["Overflow.Message"]">
+    <MudTooltip Text="@L["Overflow:Message"]">
         <MudChip T="string"
                  Size="Size.Small"
                  Color="Color.Warning"
                  Variant="Variant.Outlined"
                  Icon="@Icons.Material.Filled.Warning">
-            @L["Overflow.Title"]
+            @L["Overflow:Title"]
             @if (DroppedSamples > 0)
             {
-                <span class="overflow-count">@L["Overflow.DroppedSamples", DroppedSamples]</span>
+                <span class="overflow-count">@L["Overflow:DroppedSamples", DroppedSamples]</span>
             }
         </MudChip>
     </MudTooltip>
