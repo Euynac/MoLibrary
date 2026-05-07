@@ -63,6 +63,10 @@ public enum BuiltInModuleKey
     /// </summary>
     RuntimeMetrics,
     /// <summary>
+    /// OpenTelemetry SDK wiring and in-process metrics snapshot module.
+    /// </summary>
+    OpenTelemetry,
+    /// <summary>
     /// Memory diagnostics module.
     /// </summary>
     MemoryDiagnostics,
@@ -107,6 +111,10 @@ public enum BuiltInModuleKey
     /// Runtime metrics UI module.
     /// </summary>
     RuntimeMetricsUI,
+    /// <summary>
+    /// OpenTelemetry metrics dashboard UI module.
+    /// </summary>
+    OpenTelemetryUI,
     /// <summary>
     /// Memory analysis UI module.
     /// </summary>

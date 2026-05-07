@@ -1,0 +1,99 @@
+@using System.Globalization
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+<div class="instrument-card">
+    <MudPaper Class="instrument-card-surface" Elevation="1">
+        <div class="instrument-header">
+            <div class="instrument-title">
+                <MudText Typo="Typo.subtitle1">@Instrument.Name</MudText>
+                <div class="instrument-meta">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Instrument.Kind</MudChip>
+                    @if (!string.IsNullOrWhiteSpace(Instrument.Unit))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@L["Instrument.Unit"]: @Instrument.Unit</MudChip>
+                    }
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
+                        @L["Instrument.TagSets"]: @Instrument.TagSets.Count
+                    </MudChip>
+                </div>
+            </div>
+            <OverflowBadge Overflow="@Instrument.Overflow" DroppedSamples="@Instrument.DroppedSamples" />
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Instrument.Description))
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="instrument-description">
+                @Instrument.Description
+            </MudText>
+        }
+
+        <div class="instrument-value-row">
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.Latest"]</MudText>
+                <MudText Typo="Typo.h5">@FormatValue(Instrument.CurrentValue)</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.Delta"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatSignedValue(Instrument.Delta)</MudText>
+            </div>
+        </div>
+
+        @if (PrimarySamples.Count > 1)
+        {
+            <div class="sparkline" aria-hidden="true">
+                @for (var i = 0; i < PrimarySamples.Count - 1; i++)
+                {
+                    <span style="@BuildSparklineSegmentStyle(i)"></span>
+                }
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Instrument.NoSamples"]</MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    /// <summary>
+    /// Gets or sets the instrument rendered by this card.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public InstrumentSnapshot Instrument { get; set; } = null!;
+
+    private IReadOnlyList<MetricPointSnapshot> PrimarySamples =>
+        Instrument.TagSets.FirstOrDefault()?.Samples ?? [];
+
+    private string BuildSparklineSegmentStyle(int index)
+    {
+        var samples = PrimarySamples;
+        if (samples.Count < 2)
+        {
+            return string.Empty;
+        }
+
+        var values = samples.Select(static sample => sample.Value).ToArray();
+        var min = values.Min();
+        var max = values.Max();
+        var range = max.Equals(min) ? 1 : max - min;
+        var x1 = (double)index / (samples.Count - 1) * 100;
+        var x2 = (double)(index + 1) / (samples.Count - 1) * 100;
+        var y1 = 100 - (values[index] - min) / range * 100;
+        var y2 = 100 - (values[index + 1] - min) / range * 100;
+        var length = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
+        var angle = Math.Atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        return string.Create(CultureInfo.InvariantCulture, $"left:{x1:F3}%;top:{y1:F3}%;width:{length:F3}%;transform:rotate({angle:F3}deg);");
+    }
+
+    private static string FormatValue(double value)
+    {
+        return value.ToString("G4", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatSignedValue(double value)
+    {
+        return value >= 0
+            ? "+" + value.ToString("G4", CultureInfo.InvariantCulture)
+            : value.ToString("G4", CultureInfo.InvariantCulture);
+    }
+}

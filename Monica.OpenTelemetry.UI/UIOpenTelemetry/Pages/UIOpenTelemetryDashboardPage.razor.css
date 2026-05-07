@@ -1,0 +1,77 @@
+.opentelemetry-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.opentelemetry-page ::deep .dashboard-banner,
+.opentelemetry-page ::deep .filter-bar,
+.opentelemetry-page ::deep .status-panel {
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.banner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.banner-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.filter-bar {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1.5fr) minmax(10rem, 0.8fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.status-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 10rem;
+}
+
+.meter-groups ::deep .mud-expand-panel {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.instrument-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1rem;
+}
+
+.instrument-details {
+    margin-top: 1rem;
+}
+
+@media (max-width: 960px) {
+    .filter-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+        justify-content: flex-start;
+    }
+}

@@ -1,0 +1,67 @@
+{
+  "Page": {
+    "Title": "OpenTelemetry 指标",
+    "Subtitle": "用于调试和离线排查的进程内快照"
+  },
+  "Banner": {
+    "PerInstanceHint": "仅当前实例、仅内存保留。生产环境需要配置 OTLP 或 Prometheus。",
+    "Service": "服务",
+    "CapturedAt": "采集时间",
+    "Meters": "Meter 数",
+    "Instruments": "指标数"
+  },
+  "Filter": {
+    "MeterPrefix": "Meter",
+    "AllMeters": "全部 Meter",
+    "InstrumentName": "指标名包含",
+    "AutoRefresh": "自动刷新",
+    "RefreshOff": "关闭",
+    "Refresh1s": "1 秒",
+    "Refresh5s": "5 秒"
+  },
+  "Action": {
+    "Refresh": "刷新",
+    "CopyAsPrometheus": "复制为 Prometheus 文本",
+    "CopyAsJson": "复制为 JSON"
+  },
+  "Status": {
+    "Loading": "正在加载指标...",
+    "Empty": "尚未采集到指标样本。",
+    "Copied": "已复制到剪贴板。",
+    "CopyFailed": "复制失败。"
+  },
+  "Instrument": {
+    "Unit": "单位",
+    "TagSets": "Tag 组合",
+    "Delta": "变化",
+    "Latest": "最新值",
+    "Description": "说明",
+    "NoSamples": "无样本"
+  },
+  "Table": {
+    "Tags": "Tags",
+    "Current": "当前值",
+    "Delta": "变化",
+    "Updated": "更新时间",
+    "Samples": "样本数"
+  },
+  "Histogram": {
+    "Distribution": "分布",
+    "Percentiles": "百分位",
+    "Count": "数量",
+    "Average": "平均值",
+    "Min": "最小值",
+    "Max": "最大值",
+    "P50": "P50",
+    "P95": "P95",
+    "P99": "P99"
+  },
+  "Overflow": {
+    "Title": "溢出",
+    "Message": "Tag 组合数量超过 MaxTagSetsPerInstrument，部分序列未显示。",
+    "DroppedSamples": "已丢弃 {0} 个样本"
+  },
+  "Nav": {
+    "Title": "OpenTelemetry 指标"
+  }
+}

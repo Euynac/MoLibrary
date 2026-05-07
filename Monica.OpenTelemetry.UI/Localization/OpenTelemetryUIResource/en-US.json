@@ -1,0 +1,67 @@
+{
+  "Page": {
+    "Title": "OpenTelemetry Metrics",
+    "Subtitle": "In-process snapshot for debugging and offline use"
+  },
+  "Banner": {
+    "PerInstanceHint": "Per-instance, in-memory only. For production retention, configure OTLP or Prometheus.",
+    "Service": "Service",
+    "CapturedAt": "Captured",
+    "Meters": "Meters",
+    "Instruments": "Instruments"
+  },
+  "Filter": {
+    "MeterPrefix": "Meter",
+    "AllMeters": "All meters",
+    "InstrumentName": "Instrument name contains",
+    "AutoRefresh": "Auto refresh",
+    "RefreshOff": "Off",
+    "Refresh1s": "1 second",
+    "Refresh5s": "5 seconds"
+  },
+  "Action": {
+    "Refresh": "Refresh",
+    "CopyAsPrometheus": "Copy as Prometheus text",
+    "CopyAsJson": "Copy as JSON"
+  },
+  "Status": {
+    "Loading": "Loading metrics...",
+    "Empty": "No metric samples have been collected yet.",
+    "Copied": "Copied to clipboard.",
+    "CopyFailed": "Copy failed."
+  },
+  "Instrument": {
+    "Unit": "Unit",
+    "TagSets": "Tag sets",
+    "Delta": "Delta",
+    "Latest": "Latest",
+    "Description": "Description",
+    "NoSamples": "No samples"
+  },
+  "Table": {
+    "Tags": "Tags",
+    "Current": "Current",
+    "Delta": "Delta",
+    "Updated": "Updated",
+    "Samples": "Samples"
+  },
+  "Histogram": {
+    "Distribution": "Distribution",
+    "Percentiles": "Percentiles",
+    "Count": "Count",
+    "Average": "Average",
+    "Min": "Min",
+    "Max": "Max",
+    "P50": "P50",
+    "P95": "P95",
+    "P99": "P99"
+  },
+  "Overflow": {
+    "Title": "Overflow",
+    "Message": "Tag-set count exceeded MaxTagSetsPerInstrument; some series are not displayed.",
+    "DroppedSamples": "{0} samples dropped"
+  },
+  "Nav": {
+    "Title": "OpenTelemetry Metrics"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "Module": {
+    "DisplayName": "OpenTelemetry"
+  },
+  "Snapshot": {
+    "ReadFailed": "Failed to read OpenTelemetry in-process metrics snapshot: {0}"
+  }
+}

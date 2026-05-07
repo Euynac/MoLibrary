@@ -1,0 +1,256 @@
+@attribute [Route(PAGE_URL)]
+@using Monica.OpenTelemetry.UI.UIOpenTelemetry.Components
+@using Monica.OpenTelemetry.UI.UIOpenTelemetry.State
+@inject OpenTelemetryDashboardPageState PageState
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>@L["Page.Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="opentelemetry-page">
+    <MudPaper Class="dashboard-banner" Elevation="0">
+        <div class="banner-title">
+            <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Large" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h4">@L["Page.Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Page.Subtitle"]</MudText>
+            </div>
+        </div>
+
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            @L["Banner.PerInstanceHint"]
+        </MudAlert>
+
+        @if (PageState.Snapshot is not null)
+        {
+            <div class="banner-stats">
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Service"]</MudText>
+                    <MudText Typo="Typo.subtitle2">@PageState.Snapshot.ServiceName</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.CapturedAt"]</MudText>
+                    <MudText Typo="Typo.subtitle2">@PageState.Snapshot.TimestampUtc.ToLocalTime().ToString("HH:mm:ss")</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Meters"]</MudText>
+                    <MudText Typo="Typo.subtitle2">@PageState.GetMeterNames().Count</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Banner.Instruments"]</MudText>
+                    <MudText Typo="Typo.subtitle2">@PageState.Snapshot.Instruments.Count</MudText>
+                </div>
+            </div>
+        }
+    </MudPaper>
+
+    <MudPaper Class="filter-bar" Elevation="0">
+        <MudSelect T="string"
+                   Value="@PageState.MeterPrefixFilter"
+                   ValueChanged="SetMeterFilter"
+                   Label="@L["Filter.MeterPrefix"]"
+                   Variant="Variant.Outlined"
+                   Dense="true"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@string.Empty">@L["Filter.AllMeters"]</MudSelectItem>
+            @foreach (var meterName in PageState.GetMeterNames())
+            {
+                <MudSelectItem T="string" Value="@meterName">@meterName</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTextField T="string"
+                      Value="@PageState.InstrumentNameFilter"
+                      ValueChanged="SetInstrumentFilter"
+                      Label="@L["Filter.InstrumentName"]"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" />
+
+        <MudSelect T="string"
+                   Value="@AutoRefreshValue"
+                   ValueChanged="SetAutoRefresh"
+                   Label="@L["Filter.AutoRefresh"]"
+                   Variant="Variant.Outlined"
+                   Dense="true"
+                   Margin="Margin.Dense">
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_OFF">@L["Filter.RefreshOff"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_1S">@L["Filter.Refresh1s"]</MudSelectItem>
+            <MudSelectItem T="string" Value="@AUTO_REFRESH_5S">@L["Filter.Refresh5s"]</MudSelectItem>
+        </MudSelect>
+
+        <div class="filter-actions">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="RefreshAsync"
+                       Disabled="@PageState.IsLoading">
+                @L["Action.Refresh"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ContentCopy"
+                       OnClick="CopyPrometheusAsync"
+                       Disabled="@(PageState.Snapshot is null)">
+                @L["Action.CopyAsPrometheus"]
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.DataObject"
+                       OnClick="CopyJsonAsync"
+                       Disabled="@(PageState.Snapshot is null)">
+                @L["Action.CopyAsJson"]
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    @if (PageState.IsLoading && PageState.Snapshot is null)
+    {
+        <MudPaper Class="status-panel" Elevation="0">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Status.Loading"]</MudText>
+        </MudPaper>
+    }
+    else if (!string.IsNullOrWhiteSpace(PageState.Error))
+    {
+        <MudAlert Severity="Severity.Error">@PageState.Error</MudAlert>
+    }
+    else if (PageState.FilteredInstruments().Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@L["Status.Empty"]</MudAlert>
+    }
+    else
+    {
+        <MudExpansionPanels Class="meter-groups" MultiExpansion="true" Elevation="0">
+            @foreach (var meterGroup in PageState.FilteredInstrumentGroups())
+            {
+                <MudExpansionPanel Text="@meterGroup.Key" Expanded="true">
+                    <div class="instrument-grid">
+                        @foreach (var instrument in meterGroup)
+                        {
+                            <InstrumentCard Instrument="@instrument" />
+                        }
+                    </div>
+
+                    @foreach (var instrument in meterGroup.Where(static item => item.TagSets.Count > 0))
+                    {
+                        <MudExpansionPanels Class="instrument-details" MultiExpansion="true" Elevation="0">
+                            <MudExpansionPanel Text="@instrument.Name">
+                                @if (instrument.Kind.Equals("Histogram", StringComparison.Ordinal))
+                                {
+                                    @foreach (var tagSet in instrument.TagSets.Where(static tagSet => tagSet.Histogram is not null))
+                                    {
+                                        <HistogramView Histogram="@tagSet.Histogram" />
+                                    }
+                                }
+
+                                <TagSetTable TagSets="@instrument.TagSets" />
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+    }
+</MudContainer>
+
+@code {
+    /// <summary>
+    /// Route used by the OpenTelemetry metrics dashboard.
+    /// </summary>
+    public const string PAGE_URL = "/opentelemetry-dashboard";
+
+    private const string AUTO_REFRESH_OFF = "off";
+    private const string AUTO_REFRESH_1S = "1s";
+    private const string AUTO_REFRESH_5S = "5s";
+
+    private string AutoRefreshValue => PageState.AutoRefreshInterval switch
+    {
+        null => AUTO_REFRESH_OFF,
+        { TotalSeconds: <= 1.5 } => AUTO_REFRESH_1S,
+        _ => AUTO_REFRESH_5S
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        PageState.StateChanged += HandleStateChanged;
+        var result = await PageState.LoadAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? L["Status.Empty"].Value, Severity.Error);
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        var result = await PageState.RefreshAsync();
+        if (result.IsFailed(out var error))
+        {
+            Snackbar.Add(error.Message ?? L["Status.Empty"].Value, Severity.Error);
+        }
+    }
+
+    private Task SetMeterFilter(string value)
+    {
+        PageState.MeterPrefixFilter = value;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task SetInstrumentFilter(string value)
+    {
+        PageState.InstrumentNameFilter = value;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task SetAutoRefresh(string value)
+    {
+        PageState.SetAutoRefreshInterval(value switch
+        {
+            AUTO_REFRESH_1S => TimeSpan.FromSeconds(1),
+            AUTO_REFRESH_5S => TimeSpan.FromSeconds(5),
+            _ => null
+        });
+        return Task.CompletedTask;
+    }
+
+    private async Task CopyPrometheusAsync()
+    {
+        await CopyAsync(PageState.ExportPrometheusText());
+    }
+
+    private async Task CopyJsonAsync()
+    {
+        await CopyAsync(PageState.ExportJson());
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try
+        {
+            var success = await JSRuntime.InvokeAsync<bool>("MoClipboard.copyText", text);
+            Snackbar.Add(success ? L["Status.Copied"].Value : L["Status.CopyFailed"].Value, success ? Severity.Success : Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add(L["Status.CopyFailed"].Value, Severity.Error);
+        }
+    }
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        PageState.StateChanged -= HandleStateChanged;
+        PageState.Dispose();
+    }
+}

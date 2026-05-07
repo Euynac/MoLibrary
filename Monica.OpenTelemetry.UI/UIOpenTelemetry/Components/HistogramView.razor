@@ -1,0 +1,67 @@
+@using System.Globalization
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+@if (Histogram is not null)
+{
+    <MudPaper Class="histogram-panel" Elevation="0">
+        <div class="histogram-summary">
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.Count"]</MudText>
+                <MudText Typo="Typo.subtitle1">@Histogram.Count</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.Average"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.Average)</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P50"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P50)</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P95"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P95)</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Histogram.P99"]</MudText>
+                <MudText Typo="Typo.subtitle1">@FormatValue(Histogram.P99)</MudText>
+            </div>
+        </div>
+
+        <MudDivider Class="my-3" />
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">@L["Histogram.Distribution"]</MudText>
+        <div class="bucket-list">
+            @foreach (var bucket in Histogram.Buckets)
+            {
+                <div class="bucket-row">
+                    <div class="bucket-label">@FormatValue(bucket.LowerBound) - @FormatValue(bucket.UpperBound)</div>
+                    <div class="bucket-bar">
+                        <span style="@BuildBucketStyle(bucket.Count)"></span>
+                    </div>
+                    <div class="bucket-count">@bucket.Count</div>
+                </div>
+            }
+        </div>
+    </MudPaper>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the histogram snapshot to render.
+    /// </summary>
+    [Parameter]
+    public HistogramSnapshot? Histogram { get; set; }
+
+    private long MaxBucketCount => Math.Max(1, Histogram?.Buckets.Max(static bucket => bucket.Count) ?? 1);
+
+    private string BuildBucketStyle(long count)
+    {
+        var width = count * 100d / MaxBucketCount;
+        return string.Create(CultureInfo.InvariantCulture, $"width:{width:F2}%;");
+    }
+
+    private static string FormatValue(double value)
+    {
+        return value.ToString("G4", CultureInfo.InvariantCulture);
+    }
+}

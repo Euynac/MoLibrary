@@ -1,0 +1,32 @@
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+@if (Overflow)
+{
+    <MudTooltip Text="@L["Overflow.Message"]">
+        <MudChip T="string"
+                 Size="Size.Small"
+                 Color="Color.Warning"
+                 Variant="Variant.Outlined"
+                 Icon="@Icons.Material.Filled.Warning">
+            @L["Overflow.Title"]
+            @if (DroppedSamples > 0)
+            {
+                <span class="overflow-count">@L["Overflow.DroppedSamples", DroppedSamples]</span>
+            }
+        </MudChip>
+    </MudTooltip>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets whether the related instrument has exceeded its retained tag-set bound.
+    /// </summary>
+    [Parameter]
+    public bool Overflow { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many samples were dropped after overflow started.
+    /// </summary>
+    [Parameter]
+    public long DroppedSamples { get; set; }
+}

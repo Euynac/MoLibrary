@@ -1,0 +1,50 @@
+.histogram-panel {
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.histogram-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: 1rem;
+}
+
+.bucket-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.bucket-row {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 2fr) minmax(3rem, auto);
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.bucket-label {
+    overflow-wrap: anywhere;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+}
+
+.bucket-bar {
+    height: 0.625rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background-color: var(--mud-palette-background-gray);
+}
+
+.bucket-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--mud-palette-primary);
+}
+
+.bucket-count {
+    text-align: right;
+    color: var(--mud-palette-text-secondary);
+}

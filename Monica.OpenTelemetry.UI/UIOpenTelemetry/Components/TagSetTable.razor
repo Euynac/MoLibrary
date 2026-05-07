@@ -1,0 +1,55 @@
+@using System.Globalization
+@inject IStringLocalizer<OpenTelemetryUIResource> L
+
+<MudTable T="TagSetSamples" Items="@TagSets" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+    <HeaderContent>
+        <MudTh>@L["Table.Tags"]</MudTh>
+        <MudTh>@L["Table.Current"]</MudTh>
+        <MudTh>@L["Table.Delta"]</MudTh>
+        <MudTh>@L["Table.Samples"]</MudTh>
+        <MudTh>@L["Table.Updated"]</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="@L["Table.Tags"]">
+            <div class="tag-list">
+                @if (context.Tags.Count == 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">-</MudText>
+                }
+                else
+                {
+                    @foreach (var tag in context.Tags)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                            @tag.Key=@tag.Value
+                        </MudChip>
+                    }
+                }
+            </div>
+        </MudTd>
+        <MudTd DataLabel="@L["Table.Current"]">@FormatValue(context.CurrentValue)</MudTd>
+        <MudTd DataLabel="@L["Table.Delta"]">@FormatSignedValue(context.Delta)</MudTd>
+        <MudTd DataLabel="@L["Table.Samples"]">@context.Samples.Count</MudTd>
+        <MudTd DataLabel="@L["Table.Updated"]">@context.LastUpdatedUtc.ToLocalTime().ToString("HH:mm:ss")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    /// <summary>
+    /// Gets or sets tag-set samples displayed in the table.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<TagSetSamples> TagSets { get; set; } = [];
+
+    private static string FormatValue(double value)
+    {
+        return value.ToString("G5", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatSignedValue(double value)
+    {
+        return value >= 0
+            ? "+" + value.ToString("G5", CultureInfo.InvariantCulture)
+            : value.ToString("G5", CultureInfo.InvariantCulture);
+    }
+}

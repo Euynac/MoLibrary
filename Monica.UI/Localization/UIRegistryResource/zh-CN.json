@@ -44,6 +44,9 @@
     "RuntimeMetrics": {
       "Title": "运行时指标"
     },
+    "OpenTelemetryMetrics": {
+      "Title": "OpenTelemetry 指标"
+    },
     "MemoryAnalysis": {
       "Title": "内存分析"
     },

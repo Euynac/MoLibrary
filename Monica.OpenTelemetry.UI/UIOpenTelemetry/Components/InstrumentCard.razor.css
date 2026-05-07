@@ -1,0 +1,61 @@
+.instrument-card {
+    height: 100%;
+}
+
+.instrument-card ::deep .instrument-card-surface {
+    height: 100%;
+    padding: 1rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background-color: var(--mud-palette-surface);
+}
+
+.instrument-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.instrument-title {
+    min-width: 0;
+}
+
+.instrument-title ::deep .mud-typography {
+    overflow-wrap: anywhere;
+}
+
+.instrument-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+}
+
+.instrument-description {
+    margin-top: 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+.instrument-value-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(6rem, auto);
+    gap: 1rem;
+    align-items: end;
+    margin-top: 1rem;
+}
+
+.sparkline {
+    position: relative;
+    height: 3.5rem;
+    margin-top: 1rem;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.sparkline span {
+    position: absolute;
+    display: block;
+    height: 2px;
+    transform-origin: left center;
+    background-color: var(--mud-palette-primary);
+}
