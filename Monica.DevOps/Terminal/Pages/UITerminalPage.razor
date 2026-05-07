@@ -37,6 +37,11 @@
             }
             else
             {
+                var activeSession = _activeSession;
+                var outputLines = activeSession?.GetOutputSnapshot() ?? Array.Empty<TerminalOutputLine>();
+                var historyCommands = activeSession?.GetHistorySnapshot() ?? Array.Empty<string>();
+                var lastResult = activeSession?.LastResult;
+
                 <div class="terminal-layout">
                     <MudGrid Spacing="2">
                         <MudItem xs="12" lg="8">
@@ -46,7 +51,7 @@
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
                                             <MudStack Spacing="0">
                                                 <MudText Typo="Typo.subtitle1">@L["Labels:WorkingDirectory"]</MudText>
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(_activeSession?.WorkingDirectory ?? L["States:NoSession"])</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(activeSession?.WorkingDirectory ?? L["States:NoSession"])</MudText>
                                             </MudStack>
 
                                             <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
@@ -58,7 +63,7 @@
                                                 </MudButton>
                                                 <MudButton Variant="Variant.Outlined"
                                                            StartIcon="@Icons.Material.Filled.Close"
-                                                           Disabled="@(_isRunning || _activeSession is null)"
+                                                           Disabled="@(_isRunning || activeSession is null)"
                                                            OnClick="CloseSessionAsync">
                                                     @L["Actions:CloseSession"]
                                                 </MudButton>
@@ -72,7 +77,7 @@
                                         </MudStack>
 
                                         <div class="terminal-output" @ref="_terminalOutputRef">
-                                            @if (_activeSession?.Output.Count is null or 0)
+                                            @if (outputLines.Count == 0)
                                             {
                                                 <div class="terminal-output__empty">
                                                     <MudIcon Icon="@Icons.Material.Filled.Terminal" Color="Color.Secondary" />
@@ -81,7 +86,7 @@
                                             }
                                             else
                                             {
-                                                @foreach (var line in _activeSession.Output)
+                                                @foreach (var line in outputLines)
                                                 {
                                                     <div class="@GetOutputLineClass(line)">
                                                         <span class="terminal-output__prefix">@GetOutputPrefix(line)</span>
@@ -102,7 +107,7 @@
                                                               Margin="Margin.Dense"
                                                               Immediate="true"
                                                               Lines="1"
-                                                              Disabled="@(_isRunning || _activeSession is null)"
+                                                              Disabled="@(_isRunning || activeSession is null)"
                                                               @bind-Value="_commandInput"
                                                               OnKeyDown="HandleCommandKeyDownAsync" />
                                                 <MudButton Variant="Variant.Filled"
@@ -158,13 +163,13 @@
                                                 @(_isRunning ? L["States:Running"] : L["States:Ready"])
                                             </MudChip>
 
-                                            @if (_activeSession?.LastResult is not null)
+                                            @if (lastResult is not null)
                                             {
                                                 <div class="terminal-meta-grid">
                                                     <span>@L["Labels:ExitCode"]</span>
-                                                    <strong>@_activeSession.LastResult.ExitCode</strong>
+                                                    <strong>@lastResult.ExitCode</strong>
                                                     <span>@L["Labels:Duration"]</span>
-                                                    <strong>@FormatDuration(_activeSession.LastResult.Duration)</strong>
+                                                    <strong>@FormatDuration(lastResult.Duration)</strong>
                                                 </div>
                                             }
 
@@ -187,12 +192,12 @@
                                                 </div>
                                             }
 
-                                            @if (_activeSession?.History.Count > 0)
+                                            @if (historyCommands.Count > 0)
                                             {
                                                 <MudDivider />
                                                 <MudText Typo="Typo.subtitle1">@L["Labels:History"]</MudText>
                                                 <div class="terminal-history">
-                                                    @foreach (var command in _activeSession.History.AsEnumerable().Reverse().Take(12))
+                                                    @foreach (var command in historyCommands.Reverse().Take(12))
                                                     {
                                                         <button type="button"
                                                                 class="terminal-history__item"

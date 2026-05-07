@@ -88,8 +88,7 @@ public sealed class TerminalSessionService(
             return;
         }
 
-        session.ActiveCommand?.CancellationTokenSource.Cancel();
-        session.ActiveCommand = null;
+        session.CancelActiveCommand();
     }
 
     /// <summary>
@@ -100,7 +99,7 @@ public sealed class TerminalSessionService(
     public void CancelCommand(string ownerKey, string sessionId)
     {
         var session = GetSession(ownerKey, sessionId);
-        session.ActiveCommand?.CancellationTokenSource.Cancel();
+        session.CancelActiveCommand();
     }
 
     /// <summary>
@@ -111,11 +110,8 @@ public sealed class TerminalSessionService(
     public void ClearOutput(string ownerKey, string sessionId)
     {
         var session = GetSession(ownerKey, sessionId);
-        lock (session)
-        {
-            session.ClearOutput();
-            session.LastActivityAt = DateTimeOffset.Now;
-        }
+        session.ClearOutput();
+        session.LastActivityAt = DateTimeOffset.Now;
     }
 
     /// <summary>
@@ -142,12 +138,11 @@ public sealed class TerminalSessionService(
             throw new ArgumentException("Command text is required.", nameof(request));
         }
 
-        lock (session)
+        using var commandCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var runningCommand = new TerminalRunningCommand(commandCts);
+        if (!session.TryBeginCommand(runningCommand))
         {
-            if (session.ActiveCommand is not null)
-            {
-                throw new InvalidOperationException("A command is already running in this terminal session.");
-            }
+            throw new InvalidOperationException("A command is already running in this terminal session.");
         }
 
         session.AddHistory(command, MaxHistoryEntries);
@@ -157,30 +152,21 @@ public sealed class TerminalSessionService(
             Text = command,
             Timestamp = DateTimeOffset.Now
         };
-        lock (session)
-        {
-            session.AddOutput(inputLine, MaxOutputLines);
-        }
+        session.AddOutput(inputLine, MaxOutputLines);
         if (outputCallback is not null)
         {
             await outputCallback(inputLine, ct);
         }
 
-        if (TryApplyChangeDirectory(session, command, out var cdResult))
-        {
-            AppendResultOutput(session, cdResult);
-            session.LastResult = cdResult;
-            return cdResult;
-        }
-
-        using var commandCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        lock (session)
-        {
-            session.ActiveCommand = new TerminalRunningCommand(commandCts);
-        }
-
         try
         {
+            if (TryApplyChangeDirectory(session, command, out var cdResult))
+            {
+                AppendResultOutput(session, cdResult);
+                session.LastResult = cdResult;
+                return cdResult;
+            }
+
             var result = await commandRunner.ExecuteAsync(
                 command,
                 session.WorkingDirectory,
@@ -193,10 +179,7 @@ public sealed class TerminalSessionService(
         }
         finally
         {
-            lock (session)
-            {
-                session.ActiveCommand = null;
-            }
+            session.EndCommand(runningCommand);
         }
     }
 
@@ -307,10 +290,7 @@ public sealed class TerminalSessionService(
     {
         return async (line, cancellationToken) =>
         {
-            lock (session)
-            {
-                session.AddOutput(line, MaxOutputLines);
-            }
+            session.AddOutput(line, MaxOutputLines);
 
             if (outputCallback is not null)
             {
@@ -321,12 +301,9 @@ public sealed class TerminalSessionService(
 
     private void AppendResultOutput(TerminalSession session, TerminalCommandResult result)
     {
-        lock (session)
+        foreach (var line in result.Output)
         {
-            foreach (var line in result.Output)
-            {
-                session.AddOutput(line, MaxOutputLines);
-            }
+            session.AddOutput(line, MaxOutputLines);
         }
     }
 

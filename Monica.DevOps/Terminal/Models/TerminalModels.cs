@@ -5,6 +5,12 @@ namespace Monica.DevOps.Terminal.Models;
 /// </summary>
 public sealed class TerminalSession
 {
+    private readonly object _stateLock = new();
+    private readonly List<string> _history = [];
+    private readonly List<TerminalOutputLine> _output = [];
+    private TerminalCommandResult? _lastResult;
+    private TerminalRunningCommand? _activeCommand;
+
     /// <summary>
     /// Gets or sets the stable session identifier.
     /// </summary>
@@ -33,22 +39,80 @@ public sealed class TerminalSession
     /// <summary>
     /// Gets the commands previously submitted to this session.
     /// </summary>
-    public List<string> History { get; } = [];
+    public IReadOnlyList<string> History => GetHistorySnapshot();
 
     /// <summary>
     /// Gets the output lines retained for this session across UI session switches.
     /// </summary>
-    public List<TerminalOutputLine> Output { get; } = [];
+    public IReadOnlyList<TerminalOutputLine> Output => GetOutputSnapshot();
 
     /// <summary>
     /// Gets or sets the latest completed command result for this session.
     /// </summary>
-    public TerminalCommandResult? LastResult { get; set; }
+    public TerminalCommandResult? LastResult
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _lastResult;
+            }
+        }
+        set
+        {
+            lock (_stateLock)
+            {
+                _lastResult = value;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets a value indicating whether a command is currently running.
     /// </summary>
     public bool IsRunning => ActiveCommand is not null;
+
+    /// <summary>
+    /// Attempts to mark a command as active for this session.
+    /// </summary>
+    /// <param name="runningCommand">Running command state to attach.</param>
+    /// <returns><see langword="true"/> when the command was attached; otherwise another command is already running.</returns>
+    internal bool TryBeginCommand(TerminalRunningCommand runningCommand)
+    {
+        lock (_stateLock)
+        {
+            if (_activeCommand is not null)
+            {
+                return false;
+            }
+
+            _activeCommand = runningCommand;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Clears the active command when it matches the supplied command instance.
+    /// </summary>
+    /// <param name="runningCommand">Running command instance to clear.</param>
+    internal void EndCommand(TerminalRunningCommand runningCommand)
+    {
+        lock (_stateLock)
+        {
+            if (ReferenceEquals(_activeCommand, runningCommand))
+            {
+                _activeCommand = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cancels the active command when one is running.
+    /// </summary>
+    internal void CancelActiveCommand()
+    {
+        ActiveCommand?.CancellationTokenSource.Cancel();
+    }
 
     /// <summary>
     /// Records a submitted command and trims retained history to the configured limit.
@@ -57,18 +121,21 @@ public sealed class TerminalSession
     /// <param name="maxHistoryEntries">Maximum retained command history entries.</param>
     public void AddHistory(string command, int maxHistoryEntries)
     {
-        if (maxHistoryEntries <= 0)
+        lock (_stateLock)
         {
-            return;
-        }
+            if (maxHistoryEntries <= 0)
+            {
+                return;
+            }
 
-        History.Add(command);
-        if (History.Count <= maxHistoryEntries)
-        {
-            return;
-        }
+            _history.Add(command);
+            if (_history.Count <= maxHistoryEntries)
+            {
+                return;
+            }
 
-        History.RemoveRange(0, History.Count - maxHistoryEntries);
+            _history.RemoveRange(0, _history.Count - maxHistoryEntries);
+        }
     }
 
     /// <summary>
@@ -78,13 +145,16 @@ public sealed class TerminalSession
     /// <param name="maxOutputLines">Maximum retained output lines.</param>
     public void AddOutput(TerminalOutputLine line, int maxOutputLines)
     {
-        if (maxOutputLines <= 0)
+        lock (_stateLock)
         {
-            return;
-        }
+            if (maxOutputLines <= 0)
+            {
+                return;
+            }
 
-        Output.Add(line);
-        TrimOutput(maxOutputLines);
+            _output.Add(line);
+            TrimOutput(maxOutputLines);
+        }
     }
 
     /// <summary>
@@ -92,20 +162,47 @@ public sealed class TerminalSession
     /// </summary>
     public void ClearOutput()
     {
-        Output.Clear();
-        LastResult = null;
+        lock (_stateLock)
+        {
+            _output.Clear();
+            _lastResult = null;
+        }
+    }
+
+    /// <summary>
+    /// Creates a stable copy of retained command history for rendering or external enumeration.
+    /// </summary>
+    /// <returns>A snapshot of retained command history.</returns>
+    public IReadOnlyList<string> GetHistorySnapshot()
+    {
+        lock (_stateLock)
+        {
+            return [.._history];
+        }
+    }
+
+    /// <summary>
+    /// Creates a stable copy of retained output for rendering or external enumeration.
+    /// </summary>
+    /// <returns>A snapshot of retained output lines.</returns>
+    public IReadOnlyList<TerminalOutputLine> GetOutputSnapshot()
+    {
+        lock (_stateLock)
+        {
+            return [.._output];
+        }
     }
 
     private void TrimOutput(int maxOutputLines)
     {
-        if (Output.Count <= maxOutputLines)
+        if (_output.Count <= maxOutputLines)
         {
             return;
         }
 
-        var removedCount = Output.Count - maxOutputLines + 1;
-        Output.RemoveRange(0, removedCount);
-        Output.Insert(0, new TerminalOutputLine
+        var removedCount = _output.Count - maxOutputLines + 1;
+        _output.RemoveRange(0, removedCount);
+        _output.Insert(0, new TerminalOutputLine
         {
             Stream = TerminalOutputStreams.System,
             Text = $"Session output truncated. Removed {removedCount} earlier line(s).",
@@ -113,7 +210,23 @@ public sealed class TerminalSession
         });
     }
 
-    internal TerminalRunningCommand? ActiveCommand { get; set; }
+    private TerminalRunningCommand? ActiveCommand
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _activeCommand;
+            }
+        }
+        set
+        {
+            lock (_stateLock)
+            {
+                _activeCommand = value;
+            }
+        }
+    }
 }
 
 /// <summary>
