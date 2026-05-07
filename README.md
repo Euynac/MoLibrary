@@ -75,9 +75,9 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 ```
 
 - Recurring and triggered jobs share one scheduling model.
-- The dashboard lives at `/job-scheduler`.
 - Concurrency guards, zombie detection, and persistence options are built in.
-- Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard and job detail views.
+- Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard and job detail views. The UI requires an ASP.NET Core web host because it serves Blazor routes and static web assets; a plain console host is enough for scheduler-only jobs, but not for the dashboard.
+- See [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal) for the smallest verified ASP.NET Core host that runs JobScheduler + JobScheduler UI at `/job-scheduler`.
 
 ## Dashboards, Themes, and i18n
 
