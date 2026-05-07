@@ -30,6 +30,22 @@ When running `dotnet` from WSL with a Windows `dotnet` executable, use Windows p
 4. Keep public XML documentation accurate for developer-facing APIs.
 5. Run the relevant build and test commands before opening the pull request.
 
+## Commit Messages
+
+Release notes are generated from commit messages between release tags. Commits that affect package behavior, public APIs, documentation, or migration guidance should use Conventional Commit prefixes:
+
+```text
+feat: add module-level metrics
+fix: preserve Res<string> facade data
+docs: update module registration guide
+refactor: simplify JobScheduler state model
+feat!: remove obsolete configuration API
+```
+
+Use `feat:` for new capabilities, `fix:` for bug fixes, `docs:` for documentation, `refactor:` for behavior-preserving restructuring, `perf:` for performance work, `build:` for build or packaging changes, `ci:` for workflow changes, `test:` for test-only changes, and `chore:` for maintenance. `feature:` is accepted as an alias, but `feat:` is preferred.
+
+Breaking changes must use `!` after the type or a `BREAKING CHANGE:` footer. Direct commits to the release branch are allowed only when they follow the same format or are intentionally non-release maintenance.
+
 ## Coding Standards
 
 - Use English for code comments, XML documentation, and developer-facing annotations.
@@ -47,7 +63,7 @@ git tag v1.0.0-rc.1
 git push origin v1.0.0-rc.1
 ```
 
-The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, and creates a GitHub pre-release for `*-rc.*` tags.
+The release workflow builds, tests, packs, uploads package artifacts, publishes to NuGet when configured, generates release notes from commit prefixes with `git-cliff`, and creates a GitHub pre-release for `*-rc.*` tags.
 
 ## Security Issues
 

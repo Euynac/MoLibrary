@@ -55,8 +55,10 @@ jobs:
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
+            CURRENT_REF="$(git rev-list -n 1 "${GITHUB_REF_NAME}")"
           else
             VERSION="${{ inputs.version }}"
+            CURRENT_REF="${GITHUB_SHA}"
           fi
 
           if [[ -z "${VERSION}" ]]; then
@@ -72,6 +74,28 @@ jobs:
 
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "prerelease=${PRERELEASE}" >> "${GITHUB_OUTPUT}"
+          echo "tag_name=v${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "target_commitish=${CURRENT_REF}" >> "${GITHUB_OUTPUT}"
+
+          if PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${CURRENT_REF}^" 2>/dev/null)"; then
+            RELEASE_NOTES_RANGE="${PREVIOUS_TAG}..${CURRENT_REF}"
+          else
+            RELEASE_NOTES_RANGE="${CURRENT_REF}"
+          fi
+
+          echo "release_notes_args=${RELEASE_NOTES_RANGE} --tag v${VERSION} --strip header" >> "${GITHUB_OUTPUT}"
+
+      - name: Generate release notes
+        id: release_notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          version: v2.13.1
+          config: cliff.toml
+          args: ${{ steps.version.outputs.release_notes_args }}
+          github_token: ${{ github.token }}
+        env:
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_REPO: ${{ github.repository }}
 
       - name: Restore solution
         run: dotnet restore Monica.slnx
@@ -102,8 +126,10 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: Monica ${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          target_commitish: ${{ steps.version.outputs.target_commitish }}
           prerelease: ${{ steps.version.outputs.prerelease }}
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
           files: |
             artifacts/packages/*.nupkg
             artifacts/packages/*.snupkg
