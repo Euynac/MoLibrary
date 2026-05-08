@@ -67,7 +67,7 @@ public class LeaderElectionService(
         var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderGained?.Invoke(this, new LeaderGainedEvent
         {
-            ServiceName = serviceStatus.ServiceName,
+            AppId = serviceStatus.AppId,
             InstanceId = serviceStatus.InstanceId,
             BecomeLeaderTime = becomeTime
         });
@@ -104,7 +104,7 @@ public class LeaderElectionService(
         var serviceStatus = clientInfo.GetServiceStatus();
         OnLeaderLost?.Invoke(this, new LeaderLostEvent
         {
-            ServiceName = serviceStatus.ServiceName,
+            AppId = serviceStatus.AppId,
             InstanceId = serviceStatus.InstanceId,
             LostTime = lostTime,
             Reason = reason

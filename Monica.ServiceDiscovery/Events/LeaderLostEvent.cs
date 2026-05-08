@@ -37,9 +37,9 @@ public enum LeaderLostReason
 public class LeaderLostEvent
 {
     /// <summary>
-    /// Service name
+    /// Application identifier that lost leadership.
     /// </summary>
-    public required string ServiceName { get; init; }
+    public required string AppId { get; init; }
 
     /// <summary>
     /// Instance ID

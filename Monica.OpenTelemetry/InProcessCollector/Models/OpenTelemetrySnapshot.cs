@@ -8,12 +8,12 @@ public sealed class OpenTelemetrySnapshot
     /// <summary>
     /// Gets the service name configured for the OpenTelemetry resource.
     /// </summary>
-    public required string ServiceName { get; init; }
+    public required string ResourceServiceName { get; init; }
 
     /// <summary>
     /// Gets the optional service version configured for the OpenTelemetry resource.
     /// </summary>
-    public string? ServiceVersion { get; init; }
+    public string? ResourceServiceVersion { get; init; }
 
     /// <summary>
     /// Gets the optional deployment environment configured for the OpenTelemetry resource.

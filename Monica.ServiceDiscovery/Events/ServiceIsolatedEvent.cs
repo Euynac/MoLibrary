@@ -6,9 +6,9 @@ namespace Monica.ServiceDiscovery.Events;
 public class ServiceIsolatedEvent
 {
     /// <summary>
-    /// Service name
+    /// Application identifier of the isolated service instance.
     /// </summary>
-    public required string ServiceName { get; init; }
+    public required string AppId { get; init; }
 
     /// <summary>
     /// Instance ID

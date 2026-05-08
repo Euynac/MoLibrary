@@ -205,7 +205,7 @@ public static class ModuleRegistry
 
         // 3. Allow modules to inspect and transform discovered business types.
         ModuleInitializationProfiler.StartPhase(nameof(ModulePhase.IterateBusinessTypes));
-        var businessTypes = Mo.Options.GlobalTypeFinder.GetTypes()
+        var businessTypes = Mo.TypeFinder.GetTypes()
             .Where(static type => !type.IsDefined(typeof(ExcludeFromBusinessTypeDiscoveryAttribute), inherit: false));
         var needToIterate = false;
         foreach (var module in snapshots.Where(p => p.RegisterInfo.ModulePhase == ModulePhase.ConfigureServices))
@@ -337,7 +337,7 @@ public static class ModuleRegistry
         ModuleInitializationProfiler.StopPhase(nameof(ModulePhase.ConfigureEndpoints));
         ModuleInitializationProfiler.StopModuleSystem();
 
-        if (Mo.Options.EnableLoggingModuleSummary)
+        if (Mo.ModuleSystem.EnableSummaryLog)
         {
             // Log performance summary details
             Logger.LogInformation("Module system performance summary:\n{PerformanceSummary}",

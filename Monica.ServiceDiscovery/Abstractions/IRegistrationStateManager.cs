@@ -59,7 +59,7 @@ public interface IRegistrationStateManager
     Task<List<InstanceState>> GetAllLeaderInstancesAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Forcefully delete the Leader Key of the specified service (for management/debugging)
+    /// Forcefully delete the Leader Key of the specified application (for management/debugging).
     /// </summary>
-    Task ForceDeleteLeaderKeyAsync(string serviceName, CancellationToken ct = default);
+    Task ForceDeleteLeaderKeyAsync(string appId, CancellationToken ct = default);
 }

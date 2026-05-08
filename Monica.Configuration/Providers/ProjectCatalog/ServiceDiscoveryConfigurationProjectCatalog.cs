@@ -21,7 +21,7 @@ public class ServiceDiscoveryConfigurationProjectCatalog : IConfigurationProject
      
         _domainTitleCache = new Lazy<Dictionary<string, string>>(LoadDomainTitles);
         _currentDomainName = new Lazy<string>(() => clientInfo.GetServiceStatus().DomainName ?? "Unknown");
-        _currentAppId = new Lazy<string>(() => clientInfo.GetServiceStatus().ServiceName);
+        _currentAppId = new Lazy<string>(() => clientInfo.GetServiceStatus().AppId);
     }
 
     public string CurrentDomainName => _currentDomainName.Value;

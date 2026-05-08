@@ -105,7 +105,7 @@ public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
 
     private static void ConfigureResource(ResourceBuilder resource, ModuleOpenTelemetryOption option)
     {
-        resource.AddService(option.ServiceName, serviceVersion: option.ServiceVersion);
+        resource.AddService(option.GetResourceServiceName(), serviceVersion: option.GetResourceServiceVersion());
 
         if (!string.IsNullOrWhiteSpace(option.DeploymentEnvironment))
         {
@@ -268,16 +268,27 @@ public class ModuleOpenTelemetryOption : MinimalApiModuleOptions<ModuleOpenTelem
     private static readonly string[] RuntimeInstrumentationMeterPatterns = ["System.Runtime", "OpenTelemetry.Instrumentation.Runtime"];
 
     /// <summary>
-    /// Gets or sets the OpenTelemetry resource service name. Defaults to <c>Monica</c>.
-    /// Configure this to the concrete host application name shown in APM tools.
+    /// Gets or sets the OpenTelemetry resource service name.
+    /// When not configured, the module uses the application defaults configured through <see cref="Mo.ConfigApplication"/>
+    /// and resolves to the project name.
     /// </summary>
-    public string ServiceName { get; set; } = "Monica";
+    public string? ResourceServiceName { get; set; }
 
     /// <summary>
     /// Gets or sets the optional OpenTelemetry resource service version.
-    /// Configure this when exported metrics should be grouped by deployed application version.
+    /// When not configured, the module uses the application version configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
-    public string? ServiceVersion { get; set; }
+    public string? ResourceServiceVersion { get; set; }
+
+    /// <summary>
+    /// Resolves the OpenTelemetry resource service name.
+    /// </summary>
+    public string GetResourceServiceName() => Mo.Application.ResolveProjectName(ResourceServiceName);
+
+    /// <summary>
+    /// Resolves the OpenTelemetry resource service version.
+    /// </summary>
+    public string? GetResourceServiceVersion() => Mo.Application.ResolveAppVersion(ResourceServiceVersion);
 
     /// <summary>
     /// Gets or sets the optional deployment environment resource attribute, such as <c>Development</c> or <c>Production</c>.

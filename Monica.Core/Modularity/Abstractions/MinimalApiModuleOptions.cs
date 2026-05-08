@@ -8,6 +8,6 @@ public class MinimalApiModuleOptions<TModule> : ModuleOptions<TModule>, IMinimal
     /// </summary>
     public string? ApiGroup { get; set; }
     public bool? IsMinimalApiDisabled { get; set; }
-    public string GetApiGroupName() => ApiGroup ?? Mo.Options.DefaultModuleApiGroupName ?? typeof(TModule).Name;
-    public bool GetIsMinimalApiDisabled() => IsMinimalApiDisabled ?? Mo.Options.DefaultMinimalApiDisabled ?? false;
+    public string GetApiGroupName() => ApiGroup ?? Mo.ModuleSystem.DefaultApiGroupName ?? typeof(TModule).Name;
+    public bool GetIsMinimalApiDisabled() => IsMinimalApiDisabled ?? Mo.ModuleSystem.DefaultMinimalApiDisabled ?? false;
 }

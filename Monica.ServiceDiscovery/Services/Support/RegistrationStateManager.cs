@@ -32,12 +32,12 @@ public class RegistrationStateManager(
     /// Get registration key
     /// </summary>
     private string GetRegistrationKey() =>
-        $"{(clientInfo.GetServiceStatus() is { } status ? $"{status.ServiceName}:{status.InstanceId}" : throw new InvalidOperationException("InstanceId is required"))}";
+        $"{(clientInfo.GetServiceStatus() is { } status ? $"{status.AppId}:{status.InstanceId}" : throw new InvalidOperationException("InstanceId is required"))}";
 
     /// <summary>
     /// Get Leader Key
     /// </summary>
-    private string GetLeaderKey() => clientInfo.GetServiceStatus().ServiceName;
+    private string GetLeaderKey() => clientInfo.GetServiceStatus().AppId;
 
     public async Task<RegistrationResult> RegisterOrHeartbeatAsync(CancellationToken ct = default)
     {
@@ -123,7 +123,7 @@ public class RegistrationStateManager(
             {
                 InstanceId = serviceStatus.InstanceId,
                 BecomeLeaderTime = now,
-                ServiceName = serviceStatus.ServiceName
+                AppId = serviceStatus.AppId
             };
 
             // Try to save only if Key does not exist
@@ -163,7 +163,7 @@ public class RegistrationStateManager(
             {
                 InstanceId = serviceStatus.InstanceId,
                 BecomeLeaderTime = now,
-                ServiceName = serviceStatus.ServiceName
+                AppId = serviceStatus.AppId
             };
 
             var (success, newETag) = await stateStore.TrySaveStateWithETagAsync(
@@ -209,16 +209,16 @@ public class RegistrationStateManager(
         }
     }
 
-    public async Task ForceDeleteLeaderKeyAsync(string serviceName, CancellationToken ct = default)
+    public async Task ForceDeleteLeaderKeyAsync(string appId, CancellationToken ct = default)
     {
         try
         {
-            await stateStore.DeleteStateAsync(LEADER_PREFIX + serviceName, ct);
-            logger.LogInformation("已强制删除 Leader Key: {ServiceName}", serviceName);
+            await stateStore.DeleteStateAsync(LEADER_PREFIX + appId, ct);
+            logger.LogInformation("已强制删除 Leader Key: {AppId}", appId);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "强制删除 Leader Key 失败: {ServiceName}", serviceName);
+            logger.LogError(ex, "强制删除 Leader Key 失败: {AppId}", appId);
             throw;
         }
     }
@@ -274,8 +274,8 @@ public class RegistrationStateManager(
 
             // Step 3: Build the key list of InstanceState
             var instanceKeys = leaderStates.Values
-                .Where(ls => ls != null && !string.IsNullOrEmpty(ls.ServiceName))
-                .Select(ls => REG_PREFIX + $"{ls!.ServiceName}:{ls.InstanceId}")
+                .Where(ls => ls != null && !string.IsNullOrEmpty(ls.AppId))
+                .Select(ls => REG_PREFIX + $"{ls!.AppId}:{ls.InstanceId}")
                 .ToList();
 
             if (instanceKeys.Count == 0)

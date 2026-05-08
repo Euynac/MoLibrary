@@ -63,7 +63,7 @@ public sealed class RegistryLeaderInfo
     public DateTime BecomeLeaderTime { get; init; }
 
     /// <summary>
-    /// Gets the leader service name.
+    /// Gets the leader application identifier.
     /// </summary>
-    public string? ServiceName { get; init; }
+    public string? AppId { get; init; }
 }

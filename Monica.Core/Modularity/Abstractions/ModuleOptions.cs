@@ -9,7 +9,7 @@ public class ModuleOptions<TModule> : IModuleOptions<TModule> where TModule : IM
     /// <summary>
     /// Logger used during module registration and initialization.
     /// </summary>
-    public ILogger Logger { get; set; } = LogManager.For<TModule>(Mo.Options.DefaultModuleLogLevel);
+    public ILogger Logger { get; set; } = LogManager.For<TModule>(Mo.ModuleSystem.DefaultLogLevel);
 
     /// <summary>
     /// Disables the module instead of throwing when registration fails.

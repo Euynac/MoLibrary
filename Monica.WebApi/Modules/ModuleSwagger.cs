@@ -74,21 +74,23 @@ public class ModuleSwaggerOption : ModuleOptions<ModuleSwagger>
 
     /// <summary>
     /// Application name used by the Swagger UI title and the default business document title.
+    /// When not configured, Swagger uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
-    public string? AppName { get; set; } = "ApplicationName";
+    public string? AppName { get; set; }
 
     /// <summary>
     /// OpenAPI version stamped onto every registered Swagger document. Defaults to <c>v1</c>.
+    /// This API version is intentionally independent from application release or display versions.
     /// </summary>
-    public string Version { get; set; } = "v1";
+    public string? ApiVersion { get; set; }
 
     /// <summary>
-    /// Route segment of the primary business document. When not set, the Swagger module falls back to <see cref="Version"/>.
+    /// Route segment of the primary business document. When not set, the Swagger module falls back to <see cref="ApiVersion"/>.
     /// </summary>
     public string? BusinessDocumentName { get; set; }
 
     /// <summary>
-    /// Display title of the primary business document. When not set, the Swagger module uses <c>{AppName} API</c> or <c>Business API</c>.
+    /// Display title of the primary business document. When not set, the Swagger module uses the resolved application name.
     /// </summary>
     public string? BusinessDocumentTitle { get; set; }
 

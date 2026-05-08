@@ -192,7 +192,7 @@ public static class ModuleErrorRegistry
             // Check if the module has DisableModuleIfHasException set
             var moduleOption = requestInfo.ModuleOption;
 
-            if (moduleOption.DisableModuleIfHasException ?? Mo.Options.DisableModuleIfHasException)
+            if (moduleOption.DisableModuleIfHasException ?? Mo.ModuleSystem.DisableOnRegistrationError)
             {
                 // Disable the module
                 if (ModuleStateRegistry.DisableModule(requestInfo))

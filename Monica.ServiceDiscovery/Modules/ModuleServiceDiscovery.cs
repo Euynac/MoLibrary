@@ -310,21 +310,25 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
 
     /// <summary>
     /// Subdomain name (optional).
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
     public string? DomainName { get; set; }
 
     /// <summary>
-    /// Unique microservice identifier (defaults to the entry assembly name).
+    /// Unique application identifier.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
     public string? AppId { get; set; }
 
     /// <summary>
-    /// Display name of the microservice (defaults to the entry assembly name).
+    /// Display name of the application.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
     public string? AppName { get; set; }
 
     /// <summary>
-    /// Project name (defaults to the entry assembly name).
+    /// Project name.
+    /// When not configured, ServiceDiscovery uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
     public string? ProjectName { get; set; }
 
@@ -344,6 +348,7 @@ public class ModuleServiceDiscoveryOption : MinimalApiModuleOptions<ModuleServic
 
     /// <summary>
     /// Release version (custom version identifier).
+    /// When not configured, ServiceDiscovery uses the application version configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
     public string? ReleaseVersion { get; set; }
 

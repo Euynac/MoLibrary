@@ -6,9 +6,9 @@ namespace Monica.ServiceDiscovery.Events;
 public class LeaderGainedEvent
 {
     /// <summary>
-    /// Service name
+    /// Application identifier that owns leadership.
     /// </summary>
-    public required string ServiceName { get; init; }
+    public required string AppId { get; init; }
 
     /// <summary>
     /// Instance ID

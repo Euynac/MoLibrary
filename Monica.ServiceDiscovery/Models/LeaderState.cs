@@ -16,7 +16,7 @@ public class LeaderState
     public DateTime BecomeLeaderTime { get; set; }
 
     /// <summary>
-    /// Service name
+    /// Application identifier that owns the leader key.
     /// </summary>
-    public string? ServiceName { get; set; }
+    public string? AppId { get; set; }
 }

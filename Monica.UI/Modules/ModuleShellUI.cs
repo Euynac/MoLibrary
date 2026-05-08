@@ -222,19 +222,38 @@ public class ModuleShellUIOption : ModuleOptions<ModuleShellUI>
 #endif
 
     /// <summary>
-    /// App bar name
+    /// Application name displayed in the shell app bar.
+    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
-    public string UIAppBarName { get; set; } = nameof(Monica);
+    public string? AppName { get; set; }
 
     /// <summary>
-    /// Application ID (Optional, used as a prefix to the version badge)
+    /// Application identifier displayed before the version badge.
+    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
-    public string? UIAppId { get; set; }
+    public string? AppId { get; set; }
 
     /// <summary>
-    /// Application version number
+    /// Application version displayed in the shell.
+    /// When not configured, the shell uses the application defaults configured through <see cref="Mo.ConfigApplication"/>
+    /// and finally <c>v1.0</c>.
     /// </summary>
-    public string UIAppVersion { get; set; } = "v1.0";
+    public string? AppVersion { get; set; }
+
+    /// <summary>
+    /// Resolves the application name displayed in the shell app bar.
+    /// </summary>
+    public string GetAppName() => Mo.Application.ResolveAppName(AppName, nameof(Monica));
+
+    /// <summary>
+    /// Resolves the application identifier displayed before the version badge.
+    /// </summary>
+    public string GetAppId() => Mo.Application.ResolveAppId(AppId);
+
+    /// <summary>
+    /// Resolves the application version displayed in the shell.
+    /// </summary>
+    public string GetAppVersion() => Mo.Application.ResolveAppVersion(AppVersion, "v1.0")!;
 
     /// <summary>
     /// Enables UI debug diagnostics, including Blazor circuit detailed errors and SignalR hub detailed errors.

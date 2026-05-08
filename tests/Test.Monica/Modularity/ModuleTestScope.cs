@@ -24,7 +24,7 @@ public sealed class ModuleTestScope : IDisposable
     {
         Reset();
 
-        Mo.Options.ConfigTypeFinder(options =>
+        Mo.ConfigTypeDiscovery(options =>
         {
             options.ExcludeDefault();
             if (assemblies.Length > 0)
@@ -61,7 +61,7 @@ public sealed class ModuleTestScope : IDisposable
         }
 
         Reset();
-        Mo.Options.ConfigTypeFinder();
+        Mo.ConfigTypeDiscovery();
         _disposed = true;
     }
 

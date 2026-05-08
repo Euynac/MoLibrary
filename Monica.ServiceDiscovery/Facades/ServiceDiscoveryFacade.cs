@@ -185,11 +185,11 @@ public sealed class ServiceDiscoveryFacade(
         }
     }
 
-    public async Task<Res> ForceDeleteLeaderAsync(string serviceName)
+    public async Task<Res> ForceDeleteLeaderAsync(string appId)
     {
         try
         {
-            await queryService.ForceDeleteLeaderAsync(serviceName);
+            await queryService.ForceDeleteLeaderAsync(appId);
             return Res.Ok();
         }
         catch (InvalidOperationException)
@@ -198,7 +198,7 @@ public sealed class ServiceDiscoveryFacade(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to force delete leader for service {ServiceName}.", serviceName);
+            logger.LogError(ex, "Failed to force delete leader for application {AppId}.", appId);
             return Res.Fail(localizer["Service:Errors:ForceDeleteLeaderFailed", ex.Message].Value);
         }
     }

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
+using Monica.Core;
 using Monica.Core.Modularity.Models;
 using Monica.Modules;
 using Monica.WebApi.Swagger.Models;
@@ -36,7 +37,7 @@ internal sealed class SwaggerDocumentCatalog
 
     public IReadOnlyList<SwaggerDocumentDefinition> Documents => _documents;
 
-    public string DocumentVersion => NormalizeOrDefault(_option.Version, DefaultDocumentVersion);
+    public string DocumentVersion => NormalizeOrDefault(_option.ApiVersion, DefaultDocumentVersion);
 
     public OpenApiInfo GetOpenApiInfo(SwaggerDocumentDefinition document)
     {
@@ -129,9 +130,10 @@ internal sealed class SwaggerDocumentCatalog
             return _option.BusinessDocumentTitle.Trim();
         }
 
-        return string.IsNullOrWhiteSpace(_option.AppName)
+        var appName = Mo.Application.ResolveAppName(_option.AppName);
+        return string.IsNullOrWhiteSpace(appName)
             ? DefaultBusinessDocumentTitle
-            : $"{_option.AppName.Trim()} API";
+            : $"{appName} API";
     }
 
     private static string NormalizeOrDefault(string? value, string fallback)

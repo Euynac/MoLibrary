@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
+using Monica.Core;
 using Monica.Modules;
 using Monica.ServiceDiscovery.Abstractions;
 using Monica.ServiceDiscovery.Models;
@@ -90,17 +91,18 @@ public class DefaultServiceDiscoveryClientInfo(
     {
         var entryAssembly = Assembly.GetEntryAssembly();
         var assemblyName = entryAssembly?.GetName().Name ?? "Unknown";
+        var application = Mo.Application;
 
         return new InstanceState
         {
-            ServiceName = options.AppId ?? assemblyName,
+            AppId = application.ResolveAppId(options.AppId, assemblyName),
             InstanceId = options.FromInstance ?? GenerateFromInstance(),
-            AppName = options.AppName ?? assemblyName,
-            ProjectName = options.ProjectName ?? assemblyName,
-            DomainName = options.DomainName,
+            AppName = application.ResolveAppName(options.AppName, assemblyName),
+            ProjectName = application.ResolveProjectName(options.ProjectName, assemblyName),
+            DomainName = application.ResolveDomainName(options.DomainName),
             BuildTime = ResolveBuildTimeUtc(options.BuildTime, entryAssembly),
             AssemblyVersion = options.AssemblyVersion ?? GetAssemblyVersion(entryAssembly),
-            ReleaseVersion = options.ReleaseVersion,
+            ReleaseVersion = application.ResolveAppVersion(options.ReleaseVersion),
             DependentSubDomains = options.DependentSubDomains,
             RegistrationTime = DateTime.MinValue,  // 将在 CloneInstanceState 中使用本地状态覆盖
             LastHeartbeatTime = DateTime.MinValue   // 将在 CloneInstanceState 中使用本地状态覆盖
@@ -190,7 +192,7 @@ public class DefaultServiceDiscoveryClientInfo(
     {
         return new InstanceState
         {
-            ServiceName = original.ServiceName,
+            AppId = original.AppId,
             InstanceId = original.InstanceId,
             AppName = original.AppName,
             ProjectName = original.ProjectName,

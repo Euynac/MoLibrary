@@ -7,7 +7,7 @@ namespace Monica.ServiceDiscovery.Models;
 public class EvictedInstanceInfo
 {
     public required string InstanceId { get; set; }
-    public required string ServiceName { get; set; }
+    public required string AppId { get; set; }
     public required string AppName { get; set; }
     public required string ProjectName { get; set; }
     public string? DomainName { get; set; }
@@ -28,7 +28,7 @@ public class EvictedInstanceInfo
         return new InstanceState
         {
             InstanceId = InstanceId,
-            ServiceName = ServiceName,
+            AppId = AppId,
             AppName = AppName,
             ProjectName = ProjectName,
             DomainName = DomainName,

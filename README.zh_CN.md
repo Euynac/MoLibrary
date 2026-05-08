@@ -78,6 +78,25 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 - 需要浏览器运维界面时，再补上 `Mo.AddJobSchedulerUI()`。UI 需要 ASP.NET Core Web 宿主来提供 Blazor 路由和静态资源；普通 Console 宿主适合只跑调度任务，但不能承载仪表板。
 - 最小可运行参考见 [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal)，它演示了如何用最少 ASP.NET Core 宿主在 `/job-scheduler` 跑起 JobScheduler + JobScheduler UI。
 
+## 全局配置
+
+在注册模块之前，通过根级 `Mo.Config*()` 方法配置 Monica 全局默认值：
+
+```csharp
+Mo.ConfigApplication(options =>
+{
+    options.AppName = "My Application";
+    options.AppId = "my-application";
+});
+
+Mo.ConfigModuleSystem(options =>
+{
+    options.DefaultApiGroupName = "基础功能";
+});
+```
+
+模块自身配置仍然优先于这些全局默认值。
+
 ## 仪表板、主题与国际化
 
 Monica.UI 之上还提供多个运维型 Blazor UI：JobScheduler、Configuration、DependencyInjection、ProjectUnits、ModuleSystem、AI 等。UI 层共用同一套主题契约，支持多个可切换主题，并内置 `en-US` + `zh-CN` 本地化资源。

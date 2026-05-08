@@ -39,16 +39,16 @@ public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscove
                 continue;
             }
 
-            if (!_evictedInstances.TryGetValue(previousInstance.ServiceName, out var queue))
+            if (!_evictedInstances.TryGetValue(previousInstance.AppId, out var queue))
             {
                 queue = new Queue<EvictedInstanceInfo>();
-                _evictedInstances[previousInstance.ServiceName] = queue;
+                _evictedInstances[previousInstance.AppId] = queue;
             }
 
             queue.Enqueue(new EvictedInstanceInfo
             {
                 InstanceId = previousInstance.InstanceId,
-                ServiceName = previousInstance.ServiceName,
+                AppId = previousInstance.AppId,
                 AppName = previousInstance.AppName,
                 ProjectName = previousInstance.ProjectName,
                 DomainName = previousInstance.DomainName,
@@ -87,5 +87,5 @@ public sealed class ServiceInstanceEvictionTracker(IOptions<ModuleServiceDiscove
     }
 
     private static string BuildInstanceKey(InstanceState instance)
-        => $"{instance.ServiceName}:{instance.InstanceId}";
+        => $"{instance.AppId}:{instance.InstanceId}";
 }

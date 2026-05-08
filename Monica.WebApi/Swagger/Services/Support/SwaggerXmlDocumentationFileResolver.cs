@@ -15,7 +15,7 @@ internal static class SwaggerXmlDocumentationFileResolver
         var documentAssemblies = (option.DocumentAssemblies ?? []).ToList();
         if (!option.DisableAutoIncludeModuleSystemRelatedAsDocumentAssembly)
         {
-            documentAssemblies.AddRange(Mo.Options.GlobalTypeFinder.GetAssemblies().Select(p => p.GetName().Name!));
+            documentAssemblies.AddRange(Mo.TypeFinder.GetAssemblies().Select(p => p.GetName().Name!));
         }
 
         var xmlFilePaths = new List<string>();

@@ -20,9 +20,9 @@ public class InstanceState
     public ServiceStatus Status { get; set; }
 
     /// <summary>
-    /// Service name (corresponding to AppId)
+    /// Application identifier used as the service registration key.
     /// </summary>
-    public required string ServiceName { get; set; }
+    public required string AppId { get; set; }
 
     /// <summary>
     /// Instance ID (corresponding to FromInstance)

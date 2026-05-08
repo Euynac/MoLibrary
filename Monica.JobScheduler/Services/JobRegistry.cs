@@ -114,7 +114,7 @@ public class JobRegistry(
 
         logger.LogInformation("Starting job definition reconciliation for {Count} current job(s)", currentDefinitions.Count);
 
-        var currentProjectName = options.Value.ProjectName;
+        var currentProjectName = options.Value.GetProjectName();
 
         // Get all existing non-deleted job definitions from cache (initializes cache if needed)
         var existingDefinitions = await cacheService.GetAllDefinitionsAsync(cancellationToken);

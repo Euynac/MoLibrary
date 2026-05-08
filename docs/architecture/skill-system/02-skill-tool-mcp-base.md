@@ -43,7 +43,7 @@ public interface IBusinessTypeIterator
 }
 ```
 
-Modules opt in by implementing this interface. Monica's `ModuleRegistry` runs the iteration phase **after `ConfigureServices` and before `PostConfigureServices`**, feeding it the type set produced by `Mo.Options.GlobalTypeFinder.GetTypes()`. Each iterator inspects each type, builds its own metadata, and `yield return`s the type so downstream iterators see the same stream.
+Modules opt in by implementing this interface. Monica's `ModuleRegistry` runs the iteration phase **after `ConfigureServices` and before `PostConfigureServices`**, feeding it the type set produced by `Mo.TypeFinder.GetTypes()`. Each iterator inspects each type, builds its own metadata, and `yield return`s the type so downstream iterators see the same stream.
 
 Canonical consumer: `Monica.JobScheduler/Modules/ModuleJobScheduler.cs` (lines 54–77), which filters for `IRecurringJob` / `ITriggeredJob<T>`, reads `[JobConfig]`, builds `JobDefinition`, registers the type as transient, and forwards definitions to `JobRegistrationHostedService`. Doc 02 reuses this exact shape.
 
@@ -556,7 +556,7 @@ Helper `IsAssignableToOpenGeneric` walks the inheritance chain to detect `MoSkil
 A hosted service activated at startup:
 
 1. Resolves all registered `AgentSkill` services.
-2. Filters by `IsEnabled` and `RequiredModules` — for each `MoSkill<TSelf>` instance, drop it when any required module is not in the loaded module set (the loaded set is available through `Mo.Options` or the module registry).
+2. Filters by `IsEnabled` and `RequiredModules` — for each `MoSkill<TSelf>` instance, drop it when any required module is not in the loaded module set (the loaded set is available through the module registry).
 3. Calls `new AgentSkillsProviderBuilder().UseSkills(filtered).Build()` and registers the result as a singleton `AgentSkillsProvider` for the chat agent factory to consume.
 
 Same flow for `AITool` (active tools list passed to the agent builder via `AIChatAgentBuilder.AddTool` — see §8).

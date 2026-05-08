@@ -364,7 +364,7 @@ public class ModuleSystemInspectionService : IModuleSystemInspectionService
     /// </summary>
     public TypeFinderAssemblyAnalysis GetAssemblyAnalysis()
     {
-        return Mo.Options.GlobalTypeFinder.GetAssemblyAnalysis();
+        return Mo.TypeFinder.GetAssemblyAnalysis();
     }
 
     #region Private Helpers

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Services;
 using Monica.Core.TypeDiscovery.Abstractions;
@@ -10,6 +9,28 @@ namespace Monica.Core;
 
 public static class Mo
 {
+    private static readonly MonicaApplicationOptions APPLICATION = new();
+    private static readonly MonicaModuleSystemOptions MODULE_SYSTEM = new();
+    private static ITypeFinder? _typeFinder;
+
+    /// <summary>
+    /// Gets the shared Monica application identity defaults used by modules when their own options do not override them.
+    /// Configure these defaults with <see cref="ConfigApplication"/>.
+    /// </summary>
+    public static IMonicaApplicationOptions Application => APPLICATION;
+
+    /// <summary>
+    /// Gets shared Monica module-system defaults.
+    /// Configure these defaults with <see cref="ConfigModuleSystem"/>.
+    /// </summary>
+    public static IMonicaModuleSystemOptions ModuleSystem => MODULE_SYSTEM;
+
+    /// <summary>
+    /// Gets the global domain type finder used by the module system.
+    /// Configure it with <see cref="ConfigTypeDiscovery"/>.
+    /// </summary>
+    public static ITypeFinder TypeFinder => _typeFinder ??= new DomainTypeFinder(new TypeFinderOptions());
+
     /// <summary>
     /// Registers already-loaded modules immediately.
     /// Use this when some modules must be available during registration, such as configuration or logging.
@@ -22,53 +43,39 @@ public static class Mo
         ModuleRegistry.RegisterServices(builder);
     }
 
-    public static class Options
+    /// <summary>
+    /// Configures shared Monica application identity defaults.
+    /// Module-specific options still take precedence over these global defaults.
+    /// </summary>
+    /// <param name="configure">The callback that mutates application identity defaults.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
+    public static void ConfigApplication(Action<MonicaApplicationOptions> configure)
     {
-        /// <summary>
-        /// Gets or sets the default log level used by modules.
-        /// </summary>
-        public static LogLevel DefaultModuleLogLevel { get; set; } = LogLevel.Information;
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(APPLICATION);
+    }
 
-        /// <summary>
-        /// Gets or sets whether a module should be disabled instead of throwing when registration fails.
-        /// When enabled, the system logs the failure and skips the module for the rest of the application lifetime
-        /// instead of aborting startup.
-        /// </summary>
-        public static bool DisableModuleIfHasException { get; set; }
+    /// <summary>
+    /// Configures shared Monica module-system defaults.
+    /// Module-specific options still take precedence over these global defaults.
+    /// </summary>
+    /// <param name="configure">The callback that mutates module-system defaults.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
+    public static void ConfigModuleSystem(Action<MonicaModuleSystemOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(MODULE_SYSTEM);
+    }
 
-        /// <summary>
-        /// Gets or sets whether module execution summary logs are emitted after module system initialization.
-        /// </summary>
-        public static bool EnableLoggingModuleSummary { get; set; }
-
-        /// <summary>
-        /// Gets or sets the default Swagger group name for modules that expose endpoints.
-        /// The module name is used when this value is not set.
-        /// </summary>
-        public static string? DefaultModuleApiGroupName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the default Minimal API disabled state for modules.
-        /// When this value is <see langword="null"/>, modules use their own defaults.
-        /// </summary>
-        public static bool? DefaultMinimalApiDisabled { get; set; }
-
-        /// <summary>
-        /// Gets the global domain type finder used by the module system.
-        /// </summary>
-        public static ITypeFinder GlobalTypeFinder => _globalTypeFinder ??= new DomainTypeFinder(new TypeFinderOptions());
-
-        private static ITypeFinder? _globalTypeFinder;
-
-        /// <summary>
-        /// Rebuilds the global domain type finder with an optional configuration callback.
-        /// </summary>
-        /// <param name="configure">An optional callback that customizes the type finder options before creation.</param>
-        public static void ConfigTypeFinder(Action<TypeFinderOptions>? configure = null)
-        {
-            var option = new TypeFinderOptions();
-            configure?.Invoke(option);
-            _globalTypeFinder = new DomainTypeFinder(option);
-        }
+    /// <summary>
+    /// Rebuilds the global domain type finder with an optional configuration callback.
+    /// Calling this without a callback resets type discovery to default <see cref="TypeFinderOptions"/>.
+    /// </summary>
+    /// <param name="configure">An optional callback that customizes the type finder options before creation.</param>
+    public static void ConfigTypeDiscovery(Action<TypeFinderOptions>? configure = null)
+    {
+        var option = new TypeFinderOptions();
+        configure?.Invoke(option);
+        _typeFinder = new DomainTypeFinder(option);
     }
 }

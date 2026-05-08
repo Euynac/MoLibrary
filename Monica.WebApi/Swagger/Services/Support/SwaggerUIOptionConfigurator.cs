@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Monica.Modules;
 using Swashbuckle.AspNetCore.SwaggerUI;
+using Monica.Core;
 
 namespace Monica.WebApi.Swagger.Services.Support;
 
@@ -21,7 +22,7 @@ internal static class SwaggerUIOptionConfigurator
                 documentCatalog.GetSwaggerEndpointDisplayName(document));
         }
 
-        options.DocumentTitle = option.AppName ?? "Swagger UI";
+        options.DocumentTitle = Mo.Application.ResolveAppName(option.AppName, "Swagger UI");
         options.RoutePrefix = option.RoutePrefix;
 
         option.ExtendSwaggerUIAction?.Invoke(options);

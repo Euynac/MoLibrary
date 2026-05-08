@@ -127,7 +127,7 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
                 {
                     InstanceId = leaderState.InstanceId,
                     BecomeLeaderTime = leaderState.BecomeLeaderTime,
-                    ServiceName = leaderState.ServiceName
+                    AppId = leaderState.AppId
                 }
         };
     }
@@ -145,9 +145,9 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
         return true;
     }
 
-    public async Task ForceDeleteLeaderAsync(string serviceName)
+    public async Task ForceDeleteLeaderAsync(string appId)
     {
-        await GetStateManager().ForceDeleteLeaderKeyAsync(serviceName);
+        await GetStateManager().ForceDeleteLeaderKeyAsync(appId);
     }
 
     public Task<List<InstanceState>> GetRegisteredInstancesAsync()
@@ -169,13 +169,13 @@ public sealed class ServiceDiscoveryQueryService(IServiceProvider serviceProvide
     private static List<RegisteredServiceStatus> ConvertToRegisteredServiceStatus(List<InstanceState> instances)
     {
         return instances
-            .GroupBy(instance => instance.ServiceName, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(instance => instance.AppId, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var firstInstance = group.First();
                 return new RegisteredServiceStatus
                 {
-                    AppId = firstInstance.ServiceName,
+                    AppId = firstInstance.AppId,
                     AppName = firstInstance.AppName,
                     DomainName = firstInstance.DomainName,
                     ProjectName = firstInstance.ProjectName,

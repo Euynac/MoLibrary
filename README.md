@@ -79,6 +79,25 @@ public sealed class HeartbeatJob(ILogger<HeartbeatJob> logger) : RecurringJob
 - Add `Mo.AddJobSchedulerUI()` when you want the browser dashboard and job detail views. The UI requires an ASP.NET Core web host because it serves Blazor routes and static web assets; a plain console host is enough for scheduler-only jobs, but not for the dashboard.
 - See [`examples/JobSchedulerMinimal`](examples/JobSchedulerMinimal) for the smallest verified ASP.NET Core host that runs JobScheduler + JobScheduler UI at `/job-scheduler`.
 
+## Global Configuration
+
+Configure Monica-wide defaults through root `Mo.Config*()` methods before registering modules:
+
+```csharp
+Mo.ConfigApplication(options =>
+{
+    options.AppName = "My Application";
+    options.AppId = "my-application";
+});
+
+Mo.ConfigModuleSystem(options =>
+{
+    options.DefaultApiGroupName = "Core";
+});
+```
+
+Module options still take precedence over these global defaults.
+
 ## Dashboards, Themes, and i18n
 
 Monica ships multiple operational Blazor UIs on top of `Monica.UI`: JobScheduler, Configuration, DependencyInjection, ProjectUnits, ModuleSystem, AI, and more. The UI layer shares the same theme contract, several swappable theme variants, and shipped `en-US` + `zh-CN` localization resources.

@@ -72,7 +72,7 @@ public class LocalConfigurationProjectCatalog : IConfigurationProjectCatalog
     private string ResolveCurrentAppId(IServiceProvider serviceProvider)
     {
         var clientInfo = serviceProvider.GetService<IServiceDiscoveryClientInfo>();
-        var serviceName = clientInfo?.GetServiceStatus().ServiceName;
-        return string.IsNullOrWhiteSpace(serviceName) ? _currentProjectName.Value : serviceName;
+        var appId = clientInfo?.GetServiceStatus().AppId;
+        return string.IsNullOrWhiteSpace(appId) ? _currentProjectName.Value : appId;
     }
 }

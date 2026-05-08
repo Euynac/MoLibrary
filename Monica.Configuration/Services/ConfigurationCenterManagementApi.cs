@@ -59,7 +59,7 @@ public class ConfigurationCenterManagementApi(
     public override async Task<Res<ConfigurationUpdateResult>> UpdateConfigAsync(ConfigurationUpdateRequest req)
     {
         _cache = default;
-        var curAppid = clientInfo.GetServiceStatus().ServiceName;
+        var curAppid = clientInfo.GetServiceStatus().AppId;
         if (curAppid == req.AppId)
             return await base.UpdateConfigAsync(req);
         
@@ -75,12 +75,12 @@ public class ConfigurationCenterManagementApi(
 
         // Get all instances from the state manager
         var instances = await stateManager.GetAllLeaderInstancesAsync();
-        var curAppid = clientInfo.GetServiceStatus().ServiceName;
+        var curAppid = clientInfo.GetServiceStatus().AppId;
         // Extract AppIds, ordered by build time (newest first) so newest version is selected in Distinct
         var list = instances
-            .Where(p=>p.ServiceName != curAppid)
+            .Where(p=>p.AppId != curAppid)
             .OrderByDescending(i => i.BuildTime)
-            .Select(i => i.ServiceName)
+            .Select(i => i.AppId)
             .ToList();
 
         if ((await invoker.GetRegisteredServicesConfigsAsync(list)).IsFailed(out var error, out var statusList)) return error;

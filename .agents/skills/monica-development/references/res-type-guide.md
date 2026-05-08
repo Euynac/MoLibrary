@@ -242,34 +242,18 @@ endpoints.MapGet("/users/{id}", async (int id, IUserService userService) =>
 return Res.Ok(data).AppendMessage("Operation completed successfully").GetResponse();
 ```
 
-Use `GetResponse()` when you want Monica's standard wire contract (`message`, `status`, `data`, `metadata`).
-
-For external APIs that should expose a custom response shape without changing `Res` itself, implement a projector and opt into `GetProjectedResponse(...)`:
+Use `GetResponse()` when you want Monica's standard wire contract (`message`, `status`, `data`, `metadata`). Configure top-level result-envelope JSON field names through the ResultEnvelope module:
 
 ```csharp
-public sealed record PublicApiRes(string Msg, ResStatus Status, object? Payload, object? Extra);
-
-public sealed class PublicApiResProjector : IResultProjector<PublicApiRes>
-{
-    public PublicApiRes Project(IResultEnvelope response)
+Mo.AddResultEnvelope()
+    .UseResultFieldNames(fields =>
     {
-        var payload = response.GetType().GetProperty(nameof(Res<object>.Data))?.GetValue(response);
+        fields.Message = "msg";
+        fields.Status = "status";
+        fields.Metadata = "extra";
+    });
 
-        return new PublicApiRes(
-            response.Message ?? string.Empty,
-            response.Status,
-            payload,
-            response.Metadata);
-    }
-}
-
-Mo.Options.ResultProjector = new PublicApiResProjector();
-
-// Controller
-return result.GetProjectedResponse(this);
-
-// Minimal API
-return result.GetProjectedResponse(httpContext);
+return result.GetResponse();
 ```
 
 ## Summary Table

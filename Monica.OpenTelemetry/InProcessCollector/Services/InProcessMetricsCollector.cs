@@ -83,8 +83,8 @@ public sealed class InProcessMetricsCollector(
         {
             return new OpenTelemetrySnapshot
             {
-                ServiceName = _option.ServiceName,
-                ServiceVersion = _option.ServiceVersion,
+                ResourceServiceName = _option.GetResourceServiceName(),
+                ResourceServiceVersion = _option.GetResourceServiceVersion(),
                 DeploymentEnvironment = _option.DeploymentEnvironment,
                 TimestampUtc = DateTimeOffset.UtcNow,
                 MeterPatterns = _meterPatterns.ToList(),

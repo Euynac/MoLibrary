@@ -192,7 +192,7 @@ public class ModuleJobScheduler(ModuleJobSchedulerOption option)
             MaxExecutionTimeout = attribute?.MaxExecutionTimeout ?? TimeSpan.FromHours(1),
             IsDisabled = attribute?.IsDisabledBridge ?? false,
             JobClrType = jobType,
-            FromProject = Option.ProjectName
+            FromProject = Option.GetProjectName()
         };
 
         // Extract recurring job specific properties
@@ -336,10 +336,19 @@ public class ModuleJobSchedulerOption : ModuleOptions<ModuleJobScheduler>
 
     /// <summary>
     /// The project name used for job reconciliation and identification.
-    /// Default: Entry Assembly Name.
+    /// When not configured, JobScheduler uses the application defaults configured through <see cref="Mo.ConfigApplication"/>.
     /// </summary>
-    public string ProjectName { get; set; } = Assembly.GetEntryAssembly()?.GetName().Name
-        ?? throw new InvalidOperationException("Entry assembly must have name for project identification.");
+    public string? ProjectName { get; set; }
+
+    /// <summary>
+    /// Resolves the project name used for job reconciliation and identification.
+    /// </summary>
+    public string GetProjectName()
+    {
+        return Mo.Application.ResolveProjectName(
+            ProjectName,
+            Assembly.GetEntryAssembly()?.GetName().Name);
+    }
 
     /// <summary>
     /// Disables automatic recurring job scheduling when enabled.
