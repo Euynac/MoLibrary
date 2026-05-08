@@ -46,20 +46,20 @@
             </MudItem>
         </MudGrid>
 
-        @if (TopMetrics.Count == 0)
+        @if (TopMethodMetrics.Count == 0)
         {
             <MudAlert Severity="Severity.Info">@L["UISignalR:SendDiagnostics:Empty"]</MudAlert>
         }
         else
         {
-            <MudTable Items="@TopMetrics"
+            <MudTable Items="@TopMethodMetrics"
                       Dense="true"
                       Hover="true"
                       Breakpoint="Breakpoint.Sm"
-                      T="SignalRSendMetricInfo">
+                      T="SignalRSendMethodMetricInfo">
                 <HeaderContent>
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:Method"]</MudTh>
-                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:Target"]</MudTh>
+                    <MudTh>@L["UISignalR:SendDiagnostics:Columns:TargetBreakdown"]</MudTh>
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:Pending"]</MudTh>
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:Started"]</MudTh>
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:Failed"]</MudTh>
@@ -67,32 +67,87 @@
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]</MudTh>
                     <MudTh>@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]</MudTh>
                 </HeaderContent>
-                <RowTemplate>
+                <RowTemplate Context="methodMetric">
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Method"]">
-                        <MudText Typo="Typo.body2">@context.HubName.@context.MethodName</MudText>
+                        <MudText Typo="Typo.body2">@FormatMethod(methodMetric)</MudText>
                     </MudTd>
-                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Target"]">
-                        <MudText Typo="Typo.body2">@FormatTarget(context)</MudText>
+                    <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:TargetBreakdown"]">
+                        <div class="d-flex align-center">
+                            <MudTooltip Text="@GetDetailsToggleLabel(methodMetric)">
+                                <MudIconButton Icon="@GetDetailsToggleIcon(methodMetric)"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               OnClick="@(() => ToggleMethodDetails(methodMetric))" />
+                            </MudTooltip>
+                            <MudText Typo="Typo.body2">@methodMetric.TargetMetricCount</MudText>
+                        </div>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Pending"]">
-                        <MudText Typo="Typo.body2">@context.PendingSendCount</MudText>
+                        <MudText Typo="Typo.body2">@methodMetric.PendingSendCount</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Started"]">
-                        <MudText Typo="Typo.body2">@context.StartedCount</MudText>
+                        <MudText Typo="Typo.body2">@methodMetric.StartedCount</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Failed"]">
-                        <MudText Typo="Typo.body2">@context.FailedCount</MudText>
+                        <MudText Typo="Typo.body2">@methodMetric.FailedCount</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:LastDuration"]">
-                        <MudText Typo="Typo.body2">@FormatDuration(context.LastDurationMilliseconds)</MudText>
+                        <MudText Typo="Typo.body2">@FormatDuration(methodMetric.LastDurationMilliseconds)</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]">
-                        <MudText Typo="Typo.body2">@FormatDuration(context.MaxDurationMilliseconds)</MudText>
+                        <MudText Typo="Typo.body2">@FormatDuration(methodMetric.MaxDurationMilliseconds)</MudText>
                     </MudTd>
                     <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]">
-                        <MudText Typo="Typo.body2">@FormatDuration(context.AverageDurationMilliseconds)</MudText>
+                        <MudText Typo="Typo.body2">@FormatDuration(methodMetric.AverageDurationMilliseconds)</MudText>
                     </MudTd>
                 </RowTemplate>
+                <ChildRowContent Context="methodMetric">
+                    @if (IsMethodExpanded(methodMetric) && methodMetric.TargetMetrics.Count > 0)
+                    {
+                        <MudTr>
+                            <td colspan="8" class="mud-table-cell">
+                                <MudTable Items="@methodMetric.TargetMetrics"
+                                          Dense="true"
+                                          Hover="true"
+                                          Breakpoint="Breakpoint.Sm"
+                                          T="SignalRSendMetricInfo">
+                                    <HeaderContent>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:Target"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:Pending"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:Started"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:Failed"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:LastDuration"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]</MudTh>
+                                        <MudTh>@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate Context="targetMetric">
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Target"]">
+                                            <MudText Typo="Typo.body2">@FormatTarget(targetMetric)</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Pending"]">
+                                            <MudText Typo="Typo.body2">@targetMetric.PendingSendCount</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Started"]">
+                                            <MudText Typo="Typo.body2">@targetMetric.StartedCount</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:Failed"]">
+                                            <MudText Typo="Typo.body2">@targetMetric.FailedCount</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:LastDuration"]">
+                                            <MudText Typo="Typo.body2">@FormatDuration(targetMetric.LastDurationMilliseconds)</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:MaxDuration"]">
+                                            <MudText Typo="Typo.body2">@FormatDuration(targetMetric.MaxDurationMilliseconds)</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="@L["UISignalR:SendDiagnostics:Columns:AverageDuration"]">
+                                            <MudText Typo="Typo.body2">@FormatDuration(targetMetric.AverageDurationMilliseconds)</MudText>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </td>
+                        </MudTr>
+                    }
+                </ChildRowContent>
             </MudTable>
         }
     }
@@ -109,7 +164,9 @@
     /// </summary>
     [Parameter] public EventCallback OnRefreshClicked { get; set; }
 
-    private IReadOnlyList<SignalRSendMetricInfo> TopMetrics => Snapshot?.Metrics
+    private readonly HashSet<string> _expandedMethodKeys = new(StringComparer.Ordinal);
+
+    private IReadOnlyList<SignalRSendMethodMetricInfo> TopMethodMetrics => Snapshot?.MethodMetrics
         .OrderByDescending(metric => metric.PendingSendCount)
         .ThenByDescending(metric => metric.MaxDurationMilliseconds)
         .Take(10)
@@ -120,11 +177,98 @@
         return $"{milliseconds:0.###} ms";
     }
 
-    private static string FormatTarget(SignalRSendMetricInfo metric)
+    private static string FormatMethod(SignalRSendMethodMetricInfo metric)
     {
-        var summary = $"{metric.TargetKind} ({metric.TargetCount})";
-        return metric.TargetIdentifiers.Count == 0
-            ? summary
-            : $"{summary}: {string.Join(", ", metric.TargetIdentifiers)}";
+        return $"{metric.HubName}.{metric.MethodName}";
+    }
+
+    private string GetDetailsToggleIcon(SignalRSendMethodMetricInfo metric)
+    {
+        return IsMethodExpanded(metric)
+            ? Icons.Material.Filled.ExpandLess
+            : Icons.Material.Filled.ExpandMore;
+    }
+
+    private string GetDetailsToggleLabel(SignalRSendMethodMetricInfo metric)
+    {
+        return IsMethodExpanded(metric)
+            ? L["UISignalR:SendDiagnostics:Details:Collapse"].Value
+            : L["UISignalR:SendDiagnostics:Details:Expand"].Value;
+    }
+
+    private bool IsMethodExpanded(SignalRSendMethodMetricInfo metric)
+    {
+        return _expandedMethodKeys.Contains(CreateMethodKey(metric));
+    }
+
+    private void ToggleMethodDetails(SignalRSendMethodMetricInfo metric)
+    {
+        var key = CreateMethodKey(metric);
+        if (!_expandedMethodKeys.Add(key))
+        {
+            _expandedMethodKeys.Remove(key);
+        }
+    }
+
+    private static string CreateMethodKey(SignalRSendMethodMetricInfo metric)
+    {
+        return $"{metric.HubName}\u001f{metric.MethodName}";
+    }
+
+    private string FormatTarget(SignalRSendMetricInfo metric)
+    {
+        return metric.TargetKind switch
+        {
+            SignalRSendTargetKind.All => L["UISignalR:SendDiagnostics:Targets:AllClients"].Value,
+            SignalRSendTargetKind.AllExcept => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:AllExceptIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:AllExceptCount",
+                metric),
+            SignalRSendTargetKind.Client => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:ClientIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:ClientCount",
+                metric),
+            SignalRSendTargetKind.Clients => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:ClientsIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:ClientsCount",
+                metric),
+            SignalRSendTargetKind.Group => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:GroupIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:GroupCount",
+                metric),
+            SignalRSendTargetKind.Groups => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:GroupsIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:GroupsCount",
+                metric),
+            SignalRSendTargetKind.GroupExcept => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:GroupExceptIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:GroupExceptCount",
+                metric),
+            SignalRSendTargetKind.User => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:UserIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:UserCount",
+                metric),
+            SignalRSendTargetKind.Users => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:UsersIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:UsersCount",
+                metric),
+            _ => FormatIdentifierTarget(
+                "UISignalR:SendDiagnostics:Targets:UnknownIdentifiers",
+                "UISignalR:SendDiagnostics:Targets:UnknownCount",
+                metric)
+        };
+    }
+
+    private string FormatIdentifierTarget(
+        string identifiersKey,
+        string countKey,
+        SignalRSendMetricInfo metric)
+    {
+        if (metric.TargetIdentifiers.Count > 0)
+        {
+            return L[identifiersKey, string.Join(", ", metric.TargetIdentifiers)].Value;
+        }
+
+        return L[countKey, metric.TargetCount].Value;
     }
 }

@@ -42,9 +42,102 @@ public sealed class SignalRSendDiagnosticsSnapshot
     public long TotalFailedCount { get; init; }
 
     /// <summary>
-    /// Gets or sets the observed method and target metrics.
+    /// Gets or sets the method-level send metrics used by the default debug UI view.
     /// </summary>
+    /// <remarks>
+    /// These rows are aggregated by hub name and client contract method name. Use
+    /// <see cref="SignalRSendMethodMetricInfo.TargetMetrics"/> or <see cref="Metrics"/> when target-level
+    /// details are needed.
+    /// </remarks>
+    public List<SignalRSendMethodMetricInfo> MethodMetrics { get; init; } = [];
+
+    /// <summary>
+    /// Gets or sets the observed target-level metrics retained for drill-down diagnostics.
+    /// </summary>
+    /// <remarks>
+    /// Target-level rows are useful for diagnosing hot users, groups, or connection selections, but they do not
+    /// represent SignalR private transport queue depth.
+    /// </remarks>
     public List<SignalRSendMetricInfo> Metrics { get; init; } = [];
+}
+
+/// <summary>
+/// Aggregated send diagnostics for a hub method across all observed target selections.
+/// </summary>
+public sealed class SignalRSendMethodMetricInfo
+{
+    /// <summary>
+    /// Gets or sets the hub type name that emitted the sends.
+    /// </summary>
+    public required string HubName { get; init; }
+
+    /// <summary>
+    /// Gets or sets the strongly typed client contract method name.
+    /// </summary>
+    public required string MethodName { get; init; }
+
+    /// <summary>
+    /// Gets or sets the number of target-level metric rows represented by this method summary.
+    /// </summary>
+    /// <remarks>
+    /// This is a diagnostics row count, not a recipient count, online connection count, or SignalR internal queue
+    /// depth.
+    /// </remarks>
+    public int TargetMetricCount { get; init; }
+
+    /// <summary>
+    /// Gets or sets the current number of in-flight send tasks for this method.
+    /// </summary>
+    public long PendingSendCount { get; init; }
+
+    /// <summary>
+    /// Gets or sets the total number of observed send tasks started for this method.
+    /// </summary>
+    public long StartedCount { get; init; }
+
+    /// <summary>
+    /// Gets or sets the total number of observed send tasks completed successfully for this method.
+    /// </summary>
+    public long CompletedCount { get; init; }
+
+    /// <summary>
+    /// Gets or sets the total number of observed send tasks that failed for this method.
+    /// </summary>
+    public long FailedCount { get; init; }
+
+    /// <summary>
+    /// Gets or sets the last observed send duration in milliseconds from the most recent target-level metric.
+    /// </summary>
+    public double LastDurationMilliseconds { get; init; }
+
+    /// <summary>
+    /// Gets or sets the maximum observed send duration in milliseconds across all target-level metrics.
+    /// </summary>
+    public double MaxDurationMilliseconds { get; init; }
+
+    /// <summary>
+    /// Gets or sets the weighted average observed send duration in milliseconds across completed and failed sends.
+    /// </summary>
+    public double AverageDurationMilliseconds { get; init; }
+
+    /// <summary>
+    /// Gets or sets the UTC time when a send was last started for this method.
+    /// </summary>
+    public DateTime? LastStartedAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets or sets the UTC time when a send last completed or failed for this method.
+    /// </summary>
+    public DateTime? LastCompletedAtUtc { get; init; }
+
+    /// <summary>
+    /// Gets or sets the target-level metrics that make up this method summary.
+    /// </summary>
+    /// <remarks>
+    /// These rows preserve the underlying target selections so a method-level backlog can still be traced to
+    /// specific users, groups, or connection selections when target identifier capture is enabled.
+    /// </remarks>
+    public List<SignalRSendMetricInfo> TargetMetrics { get; init; } = [];
 }
 
 /// <summary>
@@ -68,12 +161,16 @@ public sealed class SignalRSendMetricInfo
     public SignalRSendTargetKind TargetKind { get; init; }
 
     /// <summary>
-    /// Gets or sets the number of explicit target identifiers supplied for this target selection.
+    /// Gets or sets the number of explicit target or exclusion identifiers supplied for this target selection.
     /// </summary>
+    /// <remarks>
+    /// This value is not an online recipient count, connected client count, or SignalR internal queue depth.
+    /// <see cref="SignalRSendTargetKind.All"/> has no explicit target identifiers, so the value is zero.
+    /// </remarks>
     public int TargetCount { get; init; }
 
     /// <summary>
-    /// Gets or sets the explicit target identifiers when target identifier capture is enabled.
+    /// Gets or sets the explicit target or exclusion identifiers when target identifier capture is enabled.
     /// </summary>
     public List<string> TargetIdentifiers { get; init; } = [];
 

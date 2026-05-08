@@ -96,12 +96,38 @@
       "Columns": {
         "Method": "Method",
         "Target": "Target",
+        "TargetBreakdown": "Target rows",
         "Pending": "Pending",
         "Started": "Started",
         "Failed": "Failed",
         "LastDuration": "Last",
         "MaxDuration": "Max",
         "AverageDuration": "Average"
+      },
+      "Details": {
+        "Expand": "Show target rows",
+        "Collapse": "Hide target rows"
+      },
+      "Targets": {
+        "AllClients": "All clients",
+        "AllExceptIdentifiers": "All clients except: {0}",
+        "AllExceptCount": "All clients except targets: {0}",
+        "ClientIdentifiers": "Client: {0}",
+        "ClientCount": "Client targets: {0}",
+        "ClientsIdentifiers": "Clients: {0}",
+        "ClientsCount": "Client targets: {0}",
+        "GroupIdentifiers": "Group: {0}",
+        "GroupCount": "Group targets: {0}",
+        "GroupsIdentifiers": "Groups: {0}",
+        "GroupsCount": "Group targets: {0}",
+        "GroupExceptIdentifiers": "Group except: {0}",
+        "GroupExceptCount": "Group except targets: {0}",
+        "UserIdentifiers": "User target: {0}",
+        "UserCount": "User targets: {0}",
+        "UsersIdentifiers": "User targets: {0}",
+        "UsersCount": "User targets: {0}",
+        "UnknownIdentifiers": "Target: {0}",
+        "UnknownCount": "Target identifiers: {0}"
       }
     },
     "MethodListener": {

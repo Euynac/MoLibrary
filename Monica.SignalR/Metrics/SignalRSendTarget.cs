@@ -18,8 +18,12 @@ internal sealed class SignalRSendTarget
     public IReadOnlyList<string> Identifiers { get; init; } = [];
 
     /// <summary>
-    /// Gets the number of explicit target identifiers supplied for this target selection.
+    /// Gets the number of explicit target or exclusion identifiers supplied for this target selection.
     /// </summary>
+    /// <remarks>
+    /// This is not a recipient count or connected client count. <see cref="SignalRSendTargetKind.All"/> has no
+    /// explicit target identifiers, so the value is zero.
+    /// </remarks>
     public int TargetCount { get; init; }
 
     /// <summary>

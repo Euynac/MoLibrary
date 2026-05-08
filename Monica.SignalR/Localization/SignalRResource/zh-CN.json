@@ -96,12 +96,38 @@
       "Columns": {
         "Method": "方法",
         "Target": "目标",
+        "TargetBreakdown": "目标明细",
         "Pending": "积压中",
         "Started": "已开始",
         "Failed": "失败",
         "LastDuration": "最近耗时",
         "MaxDuration": "最大耗时",
         "AverageDuration": "平均耗时"
+      },
+      "Details": {
+        "Expand": "显示目标明细",
+        "Collapse": "隐藏目标明细"
+      },
+      "Targets": {
+        "AllClients": "全部客户端",
+        "AllExceptIdentifiers": "全部客户端，排除：{0}",
+        "AllExceptCount": "排除目标数：{0}",
+        "ClientIdentifiers": "连接：{0}",
+        "ClientCount": "连接目标数：{0}",
+        "ClientsIdentifiers": "连接：{0}",
+        "ClientsCount": "连接目标数：{0}",
+        "GroupIdentifiers": "分组：{0}",
+        "GroupCount": "分组目标数：{0}",
+        "GroupsIdentifiers": "分组：{0}",
+        "GroupsCount": "分组目标数：{0}",
+        "GroupExceptIdentifiers": "分组排除：{0}",
+        "GroupExceptCount": "分组排除目标数：{0}",
+        "UserIdentifiers": "用户目标：{0}",
+        "UserCount": "用户目标数：{0}",
+        "UsersIdentifiers": "用户目标：{0}",
+        "UsersCount": "用户目标数：{0}",
+        "UnknownIdentifiers": "目标：{0}",
+        "UnknownCount": "目标标识数：{0}"
       }
     },
     "MethodListener": {

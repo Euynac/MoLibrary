@@ -107,6 +107,7 @@ public sealed class SignalRSendMetrics
             TotalStartedCount = metrics.Sum(metric => metric.StartedCount),
             TotalCompletedCount = metrics.Sum(metric => metric.CompletedCount),
             TotalFailedCount = metrics.Sum(metric => metric.FailedCount),
+            MethodMetrics = CreateMethodMetrics(metrics),
             Metrics = metrics
         };
     }
@@ -191,6 +192,56 @@ public sealed class SignalRSendMetrics
     private static string FormatTargetKind(SignalRSendTargetKind targetKind)
     {
         return targetKind.ToString().ToLowerInvariant();
+    }
+
+    private static List<SignalRSendMethodMetricInfo> CreateMethodMetrics(IReadOnlyList<SignalRSendMetricInfo> metrics)
+    {
+        return metrics
+            .GroupBy(metric => new { metric.HubName, metric.MethodName })
+            .Select(group => CreateMethodMetric(group.Key.HubName, group.Key.MethodName, group.ToList()))
+            .OrderByDescending(metric => metric.PendingSendCount)
+            .ThenByDescending(metric => metric.MaxDurationMilliseconds)
+            .ThenBy(metric => metric.HubName, StringComparer.Ordinal)
+            .ThenBy(metric => metric.MethodName, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static SignalRSendMethodMetricInfo CreateMethodMetric(
+        string hubName,
+        string methodName,
+        List<SignalRSendMetricInfo> targetMetrics)
+    {
+        var lastStartedMetric = targetMetrics
+            .Where(metric => metric.LastStartedAtUtc.HasValue)
+            .MaxBy(metric => metric.LastStartedAtUtc);
+        var lastCompletedMetric = targetMetrics
+            .Where(metric => metric.LastCompletedAtUtc.HasValue)
+            .MaxBy(metric => metric.LastCompletedAtUtc);
+        var finishedCount = targetMetrics.Sum(metric => metric.CompletedCount + metric.FailedCount);
+        var totalAverageDuration = targetMetrics.Sum(metric =>
+            metric.AverageDurationMilliseconds * (metric.CompletedCount + metric.FailedCount));
+
+        return new SignalRSendMethodMetricInfo
+        {
+            HubName = hubName,
+            MethodName = methodName,
+            TargetMetricCount = targetMetrics.Count,
+            PendingSendCount = targetMetrics.Sum(metric => metric.PendingSendCount),
+            StartedCount = targetMetrics.Sum(metric => metric.StartedCount),
+            CompletedCount = targetMetrics.Sum(metric => metric.CompletedCount),
+            FailedCount = targetMetrics.Sum(metric => metric.FailedCount),
+            LastDurationMilliseconds = lastCompletedMetric?.LastDurationMilliseconds ?? 0,
+            MaxDurationMilliseconds = targetMetrics.Max(metric => metric.MaxDurationMilliseconds),
+            AverageDurationMilliseconds = finishedCount == 0 ? 0 : totalAverageDuration / finishedCount,
+            LastStartedAtUtc = lastStartedMetric?.LastStartedAtUtc,
+            LastCompletedAtUtc = lastCompletedMetric?.LastCompletedAtUtc,
+            TargetMetrics = targetMetrics
+                .OrderByDescending(metric => metric.PendingSendCount)
+                .ThenByDescending(metric => metric.MaxDurationMilliseconds)
+                .ThenBy(metric => metric.TargetKind)
+                .ThenBy(metric => metric.TargetCount)
+                .ToList()
+        };
     }
 }
 
