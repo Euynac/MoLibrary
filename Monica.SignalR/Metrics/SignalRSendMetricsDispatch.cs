@@ -6,7 +6,7 @@ namespace Monica.SignalR.Metrics;
 /// <summary>
 /// Dispatch proxy that records observed strongly typed SignalR client invocations.
 /// </summary>
-internal sealed class SignalRSendMetricsDispatch<TContract> : DispatchProxy
+internal class SignalRSendMetricsDispatch<TContract> : DispatchProxy
     where TContract : class
 {
     private TContract? _inner;
