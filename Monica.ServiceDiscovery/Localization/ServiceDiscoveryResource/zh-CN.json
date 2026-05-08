@@ -89,7 +89,7 @@
       "ProjectName": "项目名称",
       "RegistrationTime": "注册时间",
       "ReleaseVersion": "发布版本",
-      "ServiceName": "服务名称"
+      "AppId": "App ID"
     },
     "HeaderTitle": "当前实例信息",
     "Sections": {

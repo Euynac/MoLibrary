@@ -11,6 +11,7 @@ This skill defines the canonical architecture for all Monica modules. It is the 
 Other skills reference this skill:
 - `monica-development` — for module registration, Res type, service patterns
 - `monica-ui-development` — for UI component, page, and styling patterns
+- `monica-ui-localization` — for UI localization resources and validation
 
 ## Quick Decision Guide
 

@@ -11,6 +11,7 @@ Use this skill when Monica UI work must be verified through a separate runnable 
 
 - Use `$planning-with-files` to create a new task folder for every bridge run.
 - Use `$monica-ui-development` for every Monica Blazor UI implementation or style change.
+- Use `$monica-ui-localization` for any UI text, localization resource, navigation/AppBar key, or i18n validation change.
 - Use `$playwright-cli` for browser inspection, snapshots, and screenshots.
 - Use `$subagent-progress-report` whenever the selected workflow is delegated sub-agent mode.
 

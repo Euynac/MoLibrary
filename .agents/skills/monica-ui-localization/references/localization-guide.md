@@ -326,7 +326,7 @@ Summary:
 ```yaml
 - name: Validate Localization
   run: |
-    python <path-to-monica-ui-development-skill>/scripts/validate_localization.py --strict --json
+    python <path-to-monica-ui-localization-skill>/scripts/validate_localization.py --strict --json
 ```
 
 ## Troubleshooting

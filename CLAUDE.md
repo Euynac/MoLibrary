@@ -28,6 +28,11 @@ Invoke when:
 
 **Current MudBlazor version**: 9.0.0 (migrated from 8.9.0)
 
+### /monica-ui-localization
+
+Invoke when:
+- Adding, changing, reviewing, or validating Monica UI localization/i18n, user-facing text, `IStringLocalizer<TResource>` usage, `RegisterLocalizedComponent(...)` keys, or `zh-CN`/`en-US` resources
+
 ## UI Theme Color Contract
 
 - First-party Monica UI colors must use `--mud-palette-*` first, or the small supplemental `--mo-color-*` contract defined in `Monica.UI/wwwroot/css/mo-theme-main.css` when MudBlazor palette roles are not expressive enough.

@@ -1,7 +1,7 @@
 ---
 name: monica-ui-development
-description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, implement browser storage with IBrowserStorage, or implement localization/i18n patterns in Monica UI modules.
-version: 2.11.0
+description: This skill should be used when the user asks to create or modify Blazor UI components, build MudBlazor pages, style MudBlazor components, fix CSS isolation, customize themes, migrate to MudBlazor v9, validate MudBlazor CSS variables, or implement browser storage with IBrowserStorage.
+version: 2.12.0
 ---
 
 # Monica UI Development Guide
@@ -272,27 +272,7 @@ See:
 
 ## Localization (i18n)
 
-- Do not hardcode user-facing text.
-- Use decentralized module resources with marker class + JSON resource files.
-- Keep module resource marker classes and JSON folders under the project root `Localization/` directory.
-- Prefer nested JSON objects and access them with colon-separated keys such as `Page:Title` or `RuntimeConfigDialog:Intro`.
-- Do not use flat dot-style keys such as `Page.Title` for new Monica UI work.
-- Prefer dependency-injected `IStringLocalizer<TResource>` in Razor components, pages, dialogs, state classes, support services, and any DI-created service. Use `LocalizationManager.Get/For` only where DI is not available, such as static helpers, view-model computed properties created outside DI, and module registration or endpoint metadata that must be built outside a service instance.
-- Keep `zh-CN.json` and `en-US.json` synchronized.
-- For page content, use the module-local resource marker and JSON files.
-- For `RegisterLocalizedComponent(...)` navigation/AppBar text, `displayNameKey` and `categoryKey` must exist in `Monica.UI/Localization/UIRegistryResource/*.json`, because the UI registry resolves them with `IStringLocalizer<UIRegistryResource>`.
-- When adding a new page to navigation, add the corresponding `Pages:*:Title` key to `UIRegistryResource` in addition to the page module resource when needed.
-- Every i18n change must finish by running the validator in strict mode from the repository root. The result must have zero JSON integrity errors, missing keys, invalid UI registry keys, unused keys, and language sync issues. Do not treat a non-strict "PASSED" result with unused-key warnings as acceptable.
-
-Validation command:
-
-```bash
-python .claude/skills/monica-ui-development/scripts/validate_localization.py --strict
-```
-
-See:
-
-`references/localization-guide.md`
+For any Monica UI localization/i18n work, also use `$monica-ui-localization`. That skill owns resource structure, `IStringLocalizer<TResource>` usage, UI registry keys, language synchronization, and the strict validation workflow.
 
 ## Service Error Handling in Components
 
@@ -309,7 +289,6 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `references/theme-authoring-pitfalls.md`
 - `references/auto-refresh-page-pattern.md`
 - `references/browser-storage-guide.md`
-- `references/localization-guide.md`
 - `references/offline-requirements.md`
 - `.tmp/monica-ui-development/mudblazor-css-variables.json` (real available CSS variable list, generated)
 - `references/mudblazor-css-variables.md` (semantic usage guide, manually maintained)
@@ -320,7 +299,6 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - `scripts/check_mudblazor_source.py` - Resolve MudBlazor source through `third-party-source-catalog` and verify that the required source marker exists.
 - `scripts/sync_mud_css_variables.py` - Initialize/update real MudBlazor CSS variable JSON into `.tmp/monica-ui-development/mudblazor-css-variables.json`.
 - `scripts/validate_mud_css_variables.py` - Validate MudBlazor variable usage in CSS/Razor files and apply safe auto-fixes using the generated `.tmp` variable list by default.
-- `scripts/validate_localization.py` - Validate localization keys (missing/unused/sync) and verify `RegisterLocalizedComponent` keys against `UIRegistryResource`.
 - `scripts/font_downloader.py` - Download fonts for offline usage.
 
 ## Quick Checklist
@@ -334,8 +312,7 @@ For `Res/Res<T>` usage, `IResultEnvelope`, and the `IsFailed` pattern in UI serv
 - [ ] Run CSS variable validation when styling changes
 - [ ] Use `IBrowserStorage` for browser persistence
 - [ ] Keep AppBar height and viewport compensation in the shell layout, not in page CSS
-- [ ] Use localization for all user-facing text
-- [ ] Add AppBar/navigation keys to `UIRegistryResource` when using `RegisterLocalizedComponent`
+- [ ] Use `$monica-ui-localization` for any user-facing text or i18n resource changes
 
 ## Page Complexity Checklist
 

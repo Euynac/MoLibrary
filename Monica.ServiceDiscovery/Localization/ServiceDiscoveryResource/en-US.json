@@ -89,7 +89,7 @@
       "ProjectName": "Project name",
       "RegistrationTime": "Registration time",
       "ReleaseVersion": "Release version",
-      "ServiceName": "Service name"
+      "AppId": "App ID"
     },
     "HeaderTitle": "Current instance",
     "Sections": {

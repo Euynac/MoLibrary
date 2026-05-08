@@ -11,7 +11,8 @@ Use this skill as the entry point for work on Monica itself: infrastructure modu
 
 - Module architecture, folder boundaries, Facades, Providers, public/internal placement, page decomposition: use `$monica-architecture`.
 - Module registration, `Res` and `Res<T>`, services, Guide methods, hosted services, runtime module behavior: use `$monica-development`.
-- Blazor or MudBlazor implementation, CSS isolation, themes, localization, browser storage: use `$monica-ui-development`.
+- Blazor or MudBlazor implementation, CSS isolation, themes, browser storage: use `$monica-ui-development`.
+- Monica UI localization/i18n resources, hardcoded user-facing text, UI registry keys, and localization validation: use `$monica-ui-localization`.
 - UI concept design or interactive HTML prototypes before implementation: use `$monica-ui-design`.
 - Theme-first component compliance and hardcoded-style audits: use `$monica-ui-audit`.
 - Monica user documentation, module docs, guides, and zh-CN documentation: use `$monica-docs-authoring`.

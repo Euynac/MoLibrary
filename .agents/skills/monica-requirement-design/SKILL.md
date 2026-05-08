@@ -123,6 +123,7 @@ To understand the current module landscape, scan directories matching `Monica.*/
 
 - **monica-development** — Module patterns, Res type, hosted services
 - **monica-ui-development** — UI module structure, Blazor components, MudBlazor
+- **monica-ui-localization** — UI localization resources and validation workflow
 
 ## Additional Resources
 
