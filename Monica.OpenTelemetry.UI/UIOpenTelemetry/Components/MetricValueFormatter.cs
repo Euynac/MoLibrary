@@ -21,35 +21,35 @@ internal static class MetricValueFormatter
     private static readonly IReadOnlyDictionary<string, UnitLabel> UnitLabels =
         new Dictionary<string, UnitLabel>(StringComparer.Ordinal)
         {
-            [UNIT_SECONDS] = new("Seconds", "seconds"),
-            [UNIT_BYTES] = new("Bytes", "bytes"),
-            [UNIT_BYTES_PER_SECOND] = new("BytesPerSecond", "bytes/second"),
-            [UNIT_PERCENT] = new("Percent", "percent"),
-            ["assembly"] = new("Assembly", "assemblies"),
-            ["challenge"] = new("AuthenticationChallenge", "authentication challenges"),
-            ["circuit"] = new("Circuit", "circuits"),
-            ["collection"] = new("Collection", "collections"),
-            ["collections"] = new("Collections", "collections"),
-            ["connection"] = new("Connection", "connections"),
-            ["contention"] = new("Contention", "contentions"),
-            ["cpu"] = new("Cpu", "CPUs"),
-            ["elements"] = new("Elements", "elements"),
-            ["errors"] = new("Errors", "errors"),
-            ["exception"] = new("Exception", "exceptions"),
-            ["forbid"] = new("AuthenticationForbid", "forbid actions"),
-            ["handshake"] = new("Handshake", "handshakes"),
-            ["match_attempt"] = new("RoutingMatchAttempt", "routing match attempts"),
-            ["method"] = new("Method", "methods"),
-            ["request"] = new("Request", "requests"),
-            ["route"] = new("Route", "routes"),
-            ["services"] = new("Services", "services"),
-            ["sign_in"] = new("SignIn", "sign-ins"),
-            ["sign_out"] = new("SignOut", "sign-outs"),
-            ["thread"] = new("Thread", "threads"),
-            ["threads"] = new("Threads", "threads"),
-            ["timer"] = new("Timer", "timers"),
-            ["transitions"] = new("Transitions", "transitions"),
-            ["work_item"] = new("WorkItem", "work items")
+            [UNIT_SECONDS] = new("UnitDisplay:Seconds", "seconds"),
+            [UNIT_BYTES] = new("UnitDisplay:Bytes", "bytes"),
+            [UNIT_BYTES_PER_SECOND] = new("UnitDisplay:BytesPerSecond", "bytes/second"),
+            [UNIT_PERCENT] = new("UnitDisplay:Percent", "percent"),
+            ["assembly"] = new("UnitDisplay:Assembly", "assemblies"),
+            ["challenge"] = new("UnitDisplay:AuthenticationChallenge", "authentication challenges"),
+            ["circuit"] = new("UnitDisplay:Circuit", "circuits"),
+            ["collection"] = new("UnitDisplay:Collection", "collections"),
+            ["collections"] = new("UnitDisplay:Collections", "collections"),
+            ["connection"] = new("UnitDisplay:Connection", "connections"),
+            ["contention"] = new("UnitDisplay:Contention", "contentions"),
+            ["cpu"] = new("UnitDisplay:Cpu", "CPUs"),
+            ["elements"] = new("UnitDisplay:Elements", "elements"),
+            ["errors"] = new("UnitDisplay:Errors", "errors"),
+            ["exception"] = new("UnitDisplay:Exception", "exceptions"),
+            ["forbid"] = new("UnitDisplay:AuthenticationForbid", "forbid actions"),
+            ["handshake"] = new("UnitDisplay:Handshake", "handshakes"),
+            ["match_attempt"] = new("UnitDisplay:RoutingMatchAttempt", "routing match attempts"),
+            ["method"] = new("UnitDisplay:Method", "methods"),
+            ["request"] = new("UnitDisplay:Request", "requests"),
+            ["route"] = new("UnitDisplay:Route", "routes"),
+            ["services"] = new("UnitDisplay:Services", "services"),
+            ["sign_in"] = new("UnitDisplay:SignIn", "sign-ins"),
+            ["sign_out"] = new("UnitDisplay:SignOut", "sign-outs"),
+            ["thread"] = new("UnitDisplay:Thread", "threads"),
+            ["threads"] = new("UnitDisplay:Threads", "threads"),
+            ["timer"] = new("UnitDisplay:Timer", "timers"),
+            ["transitions"] = new("UnitDisplay:Transitions", "transitions"),
+            ["work_item"] = new("UnitDisplay:WorkItem", "work items")
         };
 
     public static string Format(
@@ -178,7 +178,7 @@ internal static class MetricValueFormatter
             return fallback;
         }
 
-        var localized = localizer[$"UnitDisplay:{resourceKey}"];
+        var localized = localizer[resourceKey];
         return localized.ResourceNotFound ? fallback : localized.Value;
     }
 
