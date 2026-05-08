@@ -46,6 +46,18 @@ Use `feat:` for new capabilities, `fix:` for bug fixes, `docs:` for documentatio
 
 Breaking changes must use `!` after the type or a `BREAKING CHANGE:` footer. Direct commits to the release branch are allowed only when they follow the same format or are intentionally non-release maintenance.
 
+Before committing, check whether the diff is breaking from a consumer's point of view. A change is breaking when existing host applications, module authors, package consumers, documented examples, or automation may need to change code, configuration, routes, serialized data, package references, or operational assumptions.
+
+Breaking-change indicators include renamed or removed public APIs, option properties, guide methods, builder extensions, annotations, abstractions, models, modules, facades, configuration keys, endpoints, response shapes, package IDs, documented usage, default behavior, validation rules, exception behavior, persistence formats, service discovery identity, OpenTelemetry resource identity, or Swagger document naming.
+
+Use both forms for clarity when a breaking change exists:
+
+```text
+feat!: add global Monica configuration defaults
+
+BREAKING CHANGE: replace Mo.Options with root Mo.ConfigApplication, Mo.ConfigModuleSystem, and Mo.ConfigTypeDiscovery APIs; module option identity defaults now resolve through shared Monica application settings.
+```
+
 ## Coding Standards
 
 - Use English for code comments, XML documentation, and developer-facing annotations.
