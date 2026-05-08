@@ -21,8 +21,8 @@ internal static class OpenTelemetryJsonSummaryExporter
     private static SnapshotSummary CreateSummary(OpenTelemetrySnapshot snapshot)
     {
         return new SnapshotSummary(
-            snapshot.ServiceName,
-            snapshot.ServiceVersion,
+            snapshot.ResourceServiceName,
+            snapshot.ResourceServiceVersion,
             snapshot.DeploymentEnvironment,
             snapshot.TimestampUtc,
             snapshot.MeterPatterns,
