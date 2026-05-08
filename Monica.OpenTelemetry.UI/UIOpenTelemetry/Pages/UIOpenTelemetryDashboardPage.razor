@@ -146,7 +146,7 @@
                                             {
                                                 @foreach (var tagSet in instrument.TagSets.Where(static tagSet => tagSet.Histogram is not null))
                                                 {
-                                                    <HistogramView Histogram="@tagSet.Histogram" />
+                                                    <HistogramView Histogram="@tagSet.Histogram" Unit="@instrument.Unit" />
                                                 }
                                             }
 

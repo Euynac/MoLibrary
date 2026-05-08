@@ -9,12 +9,13 @@ internal sealed class MetricSeriesBuffer(
     string key,
     IReadOnlyDictionary<string, string> tags,
     int capacity,
-    bool isHistogram)
+    MetricSeriesAggregationMode aggregationMode)
 {
     private readonly MetricPointSnapshot[] _samples = new MetricPointSnapshot[Math.Max(1, capacity)];
     private readonly object _gate = new();
     private int _count;
     private int _nextIndex;
+    private double _runningValue;
 
     public string Key { get; } = key;
 
@@ -24,7 +25,7 @@ internal sealed class MetricSeriesBuffer(
     {
         lock (_gate)
         {
-            _samples[_nextIndex] = new MetricPointSnapshot(timestampUtc, value);
+            _samples[_nextIndex] = new MetricPointSnapshot(timestampUtc, GetStoredValue(value));
             _nextIndex = (_nextIndex + 1) % _samples.Length;
             _count = Math.Min(_count + 1, _samples.Length);
         }
@@ -47,9 +48,22 @@ internal sealed class MetricSeriesBuffer(
                 Delta = delta,
                 LastUpdatedUtc = lastUpdated,
                 Samples = ordered,
-                Histogram = isHistogram ? HistogramAggregator.Build(ordered) : null
+                Histogram = aggregationMode == MetricSeriesAggregationMode.Histogram
+                    ? HistogramAggregator.Build(ordered)
+                    : null
             };
         }
+    }
+
+    private double GetStoredValue(double measurement)
+    {
+        if (aggregationMode != MetricSeriesAggregationMode.CumulativeDelta)
+        {
+            return measurement;
+        }
+
+        _runningValue += measurement;
+        return _runningValue;
     }
 
     private List<MetricPointSnapshot> GetOrderedSamples()
@@ -64,4 +78,25 @@ internal sealed class MetricSeriesBuffer(
 
         return ordered;
     }
+}
+
+/// <summary>
+/// Defines how raw <see cref="System.Diagnostics.Metrics.MeterListener"/> measurements become retained series values.
+/// </summary>
+internal enum MetricSeriesAggregationMode
+{
+    /// <summary>
+    /// Retains each measurement as-is. Used by gauges, observable instruments, and histograms.
+    /// </summary>
+    LatestMeasurement,
+
+    /// <summary>
+    /// Treats each non-observable counter measurement as a delta and stores the running value.
+    /// </summary>
+    CumulativeDelta,
+
+    /// <summary>
+    /// Retains raw recorded values and builds approximate histogram statistics from the retained sample window.
+    /// </summary>
+    Histogram
 }

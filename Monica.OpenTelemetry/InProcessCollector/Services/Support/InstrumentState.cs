@@ -18,7 +18,7 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
 
     public string Kind { get; } = InstrumentKindResolver.Resolve(instrument);
 
-    public bool IsHistogram => Kind.Equals("Histogram", StringComparison.Ordinal);
+    private MetricSeriesAggregationMode AggregationMode { get; } = ResolveAggregationMode(instrument);
 
     public void Record(double value, ReadOnlySpan<KeyValuePair<string, object?>> tags)
     {
@@ -41,13 +41,28 @@ internal sealed class InstrumentState(Instrument instrument, ModuleOpenTelemetry
                         key,
                         normalizedTags,
                         option.SamplesPerSeries,
-                        IsHistogram);
+                        AggregationMode);
                     _series[key] = buffer;
                 }
             }
         }
 
         buffer.Add(DateTimeOffset.UtcNow, value);
+    }
+
+    private static MetricSeriesAggregationMode ResolveAggregationMode(Instrument instrument)
+    {
+        if (instrument.IsObservable)
+        {
+            return MetricSeriesAggregationMode.LatestMeasurement;
+        }
+
+        return InstrumentKindResolver.Resolve(instrument) switch
+        {
+            "Counter" or "UpDownCounter" => MetricSeriesAggregationMode.CumulativeDelta,
+            "Histogram" => MetricSeriesAggregationMode.Histogram,
+            _ => MetricSeriesAggregationMode.LatestMeasurement
+        };
     }
 
     public InstrumentSnapshot Snapshot()

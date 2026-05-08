@@ -9,7 +9,7 @@
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Instrument.Kind</MudChip>
                     @if (!string.IsNullOrWhiteSpace(Instrument.Unit))
                     {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@L["Instrument:Unit"]: @Instrument.Unit</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@GetUnitCaption()</MudChip>
                     }
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text">
                         @L["Instrument:TagSets"]: @Instrument.TagSets.Count
@@ -86,11 +86,20 @@
 
     private string FormatValue(double value)
     {
-        return MetricValueFormatter.Format(value, Instrument.Unit);
+        return MetricValueFormatter.Format(value, Instrument.Unit, L);
     }
 
     private string FormatSignedValue(double value)
     {
         return value >= 0 ? "+" + FormatValue(value) : "-" + FormatValue(Math.Abs(value));
+    }
+
+    private string GetUnitCaption()
+    {
+        var captionKey = MetricValueFormatter.IsCountUnit(Instrument.Unit)
+            ? "Instrument:CountUnit"
+            : "Instrument:Unit";
+
+        return $"{L[captionKey]}: {MetricValueFormatter.FormatUnitLabel(Instrument.Unit, L)}";
     }
 }

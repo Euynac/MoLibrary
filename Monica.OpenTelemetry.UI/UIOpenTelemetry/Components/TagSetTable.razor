@@ -26,8 +26,8 @@
                 }
             </div>
         </MudTd>
-        <MudTd DataLabel="@L["Table:Current"]">@FormatValue(context.CurrentValue, Unit)</MudTd>
-        <MudTd DataLabel="@L["Table:Delta"]">@FormatSignedValue(context.Delta, Unit)</MudTd>
+        <MudTd DataLabel="@L["Table:Current"]">@FormatValue(context.CurrentValue)</MudTd>
+        <MudTd DataLabel="@L["Table:Delta"]">@FormatSignedValue(context.Delta)</MudTd>
         <MudTd DataLabel="@L["Table:Samples"]">@context.Samples.Count</MudTd>
         <MudTd DataLabel="@L["Table:Updated"]">@context.LastUpdatedUtc.ToLocalTime().ToString("HH:mm:ss")</MudTd>
     </RowTemplate>
@@ -46,13 +46,13 @@
     [Parameter]
     public string? Unit { get; set; }
 
-    private static string FormatValue(double value, string? unit)
+    private string FormatValue(double value)
     {
-        return MetricValueFormatter.Format(value, unit);
+        return MetricValueFormatter.Format(value, Unit, L);
     }
 
-    private static string FormatSignedValue(double value, string? unit)
+    private string FormatSignedValue(double value)
     {
-        return value >= 0 ? "+" + FormatValue(value, unit) : "-" + FormatValue(Math.Abs(value), unit);
+        return value >= 0 ? "+" + FormatValue(value) : "-" + FormatValue(Math.Abs(value));
     }
 }

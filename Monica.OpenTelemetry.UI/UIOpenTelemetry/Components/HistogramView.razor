@@ -64,6 +64,12 @@
     [Parameter]
     public HistogramSnapshot? Histogram { get; set; }
 
+    /// <summary>
+    /// Gets or sets the unit declared by the owning metric instrument.
+    /// </summary>
+    [Parameter]
+    public string? Unit { get; set; }
+
     private long MaxBucketCount => Math.Max(1, Histogram?.Buckets.Max(static bucket => bucket.Count) ?? 1);
 
     private string BuildBucketStyle(long count)
@@ -72,8 +78,8 @@
         return string.Create(CultureInfo.InvariantCulture, $"width:{width:F2}%;");
     }
 
-    private static string FormatValue(double value)
+    private string FormatValue(double value)
     {
-        return value.ToString("G4", CultureInfo.InvariantCulture);
+        return MetricValueFormatter.Format(value, Unit, L);
     }
 }
