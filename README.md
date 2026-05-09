@@ -19,7 +19,7 @@
 > **Mo**dular **.N**ET **I**nfrastructure for **C#** **A**I-era backends.
 > Monica combines typed DDD ProjectUnits, composable infrastructure modules, built-in dashboards, and bundled agent skills so AI-assisted backend work stays observable as it grows.
 
-> **Release candidate**: Monica 1.0.0-rc.1 is a pre-release for validation and feedback. Breaking changes may still happen before 1.0.0 stable.
+> **Release candidate**: Monica 1.0.0-rc.2 is a pre-release for validation and feedback. Breaking changes may still happen before 1.0.0 stable.
 
 ## Quick Links
 

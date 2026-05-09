@@ -4,6 +4,24 @@ All notable changes to Monica are documented in this file.
 
 This project follows semantic versioning for public NuGet packages. Release candidates may still include breaking changes before the stable `1.0.0` release.
 
+## [1.0.0-rc.2] - 2026-05-09
+
+### Added
+
+- Global Monica application defaults, including the root `Mo.ConfigApplication(...)` API.
+- Monica endpoint metadata and endpoint port constraints for Monica-owned routes.
+- OpenTelemetry metrics dashboards and in-process collector support.
+- SignalR send diagnostics with method-level metrics and target drill-downs.
+- Terminal and read-only file access capabilities for AI-assisted workflows.
+- Monica UI localization skill guidance and validation support.
+
+### Fixed
+
+- Static web asset behavior for NuGet package consumers.
+- UI shell setup for static web assets.
+- Snapshot summary resource service name and version display.
+- SignalR dispatch proxy compatibility by allowing runtime proxy derivation.
+
 ## [1.0.0-rc.1] - 2026-05-06
 
 ### Added

@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition="'$(IsPackable)' != 'false'">
     <!-- Package Metadata -->
-    <Version>1.0.0-rc.1</Version>
+    <Version>1.0.0-rc.2</Version>
     <Authors>Momean</Authors>
     <Company>Momean</Company>
     <Product>Monica Framework</Product>
@@ -34,7 +34,7 @@
     <PackageTags>monica;dotnet;aspnetcore;blazor;mudblazor;ddd;ai-agent;jobscheduler;modular;recurringjob</PackageTags>
 
     <!-- Package Release Notes -->
-    <PackageReleaseNotes>Monica 1.0.0-rc.1 release candidate for validation and feedback before the stable 1.0.0 release. Includes typed ProjectUnits, composable infrastructure modules, built-in dashboards, JobScheduler, configuration, AI integration, and bundled agent skills.</PackageReleaseNotes>
+    <PackageReleaseNotes>Monica 1.0.0-rc.2 release candidate for validation and feedback before the stable 1.0.0 release. Adds global Monica application defaults, endpoint metadata and port constraints, OpenTelemetry metrics dashboards, SignalR diagnostics, UI localization improvements, and NuGet static web asset fixes.</PackageReleaseNotes>
 
     <!-- Symbol Packages -->
     <IncludeSymbols>true</IncludeSymbols>

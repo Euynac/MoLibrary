@@ -6,16 +6,16 @@ It provides typed DDD ProjectUnits, composable infrastructure modules, built-in 
 
 ## Release Status
 
-`1.0.0-rc.1` is a release candidate for validation and feedback before the stable `1.0.0` release. Breaking changes may still happen before the stable release.
+`1.0.0-rc.2` is a release candidate for validation and feedback before the stable `1.0.0` release. Breaking changes may still happen before the stable release.
 
 ## Installation
 
 Install only the modules you need:
 
 ```bash
-dotnet add package Monica.Core --version 1.0.0-rc.1
-dotnet add package Monica.JobScheduler --version 1.0.0-rc.1
-dotnet add package Monica.JobScheduler.UI --version 1.0.0-rc.1
+dotnet add package Monica.Core --version 1.0.0-rc.2
+dotnet add package Monica.JobScheduler --version 1.0.0-rc.2
+dotnet add package Monica.JobScheduler.UI --version 1.0.0-rc.2
 ```
 
 ## JobScheduler Example
