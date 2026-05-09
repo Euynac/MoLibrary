@@ -54,24 +54,23 @@ public class ModuleShellUI(ModuleShellUIOption option)
             .AddResource<SharedResource>();
     }
 
+    /// <inheritdoc />
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        if (builder is WebApplicationBuilder webBuilder && builder.Environment.IsStaging())
+        if (builder is not WebApplicationBuilder webBuilder)
         {
-            // Important pitfall:
-            // UseStaticWebAssets is useful for debugging static resources (CSS/JS) from referenced RCLs in Visual Studio,
-            // but it can cause 404 behavior in certain build/debug combinations and must not be relied on for production.
-            // In production, static web assets should come from published output (`dotnet publish`).
-            // https://github.com/MudBlazor/MudBlazor/issues/2793
-            webBuilder.WebHost.UseStaticWebAssets();
-            // In local/testing scenarios, generated static-web-asset mappings can be inspected via .StaticWebAssets.xml.
-            // In production publish output, dependent static web assets are copied into the deployed wwwroot content.
-            // https://learn.microsoft.com/en-us/aspnet/core/razor-pages/ui-class?view=aspnetcore-8.0&tabs=visual-studio#consume-content-from-a-referenced-rcl
-            
-            // If `/_framework/blazor.web.js` returns 404 in Debug, one possible cause is static-web-asset setup.
-            // Another cause is an unexpected environment (for example, launchSettings.json not being applied).
-            // Also verify `<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>` in the host .csproj when needed.
+            return;
         }
+
+        if (builder.Environment.IsProduction())
+        {
+            return;
+        }
+
+        // Monica UI modules are Razor class libraries and are commonly consumed only through NuGet packages.
+        // Loading static web assets in the builder phase lets ASP.NET Core discover package-provided framework and
+        // component assets before the shell maps static asset endpoints in local, staging, or other non-production hosts.
+        webBuilder.WebHost.UseStaticWebAssets();
     }
 
     /// <summary>
