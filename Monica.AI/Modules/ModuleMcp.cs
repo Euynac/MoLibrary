@@ -11,6 +11,7 @@ using Monica.AI.Services.Support.ModuleCatalog;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Skills;
 
@@ -143,7 +144,8 @@ public sealed class ModuleMcp(ModuleMcpOption option)
 
         UseEndpoints(app, endpoints =>
         {
-            endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern());
+            endpoints.MapMcp(Option.CreateHttpEndpointRoutePattern())
+                .WithMonicaEndpoint();
         });
     }
 }

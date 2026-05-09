@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 
 namespace Monica.Core.Modularity.Abstractions;
@@ -124,7 +125,7 @@ public abstract class WebModuleBase<TModuleSelf, TModuleOption, TModuleGuide>(TM
         {
             // Stamp Monica-owned Minimal APIs once at the module boundary so Swagger can classify them without assembly scanning.
             var monicaEndpoints = endpoints.MapGroup(string.Empty)
-                .WithMetadata(MonicaMinimalApiMetadata.Instance);
+                .WithMonicaEndpoint();
             configure(monicaEndpoints);
         });
     }

@@ -17,6 +17,7 @@ using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
 
@@ -292,7 +293,7 @@ public class ModuleAIGuide : WebModuleGuide<ModuleAI, ModuleAIOption, ModuleAIGu
             // Get all providers
             endpoints.MapGet($"{routePrefix}/providers", () =>
                 TypedResults.Ok(providerFactory.GetAllProviderInfos()))
-                .WithMetadata(MonicaMinimalApiMetadata.Instance);
+                .WithMonicaEndpoint();
 
             // Note: Session management endpoints removed as sessions are now managed by UI layer.
             // API endpoints should be stateless and not manage sessions.

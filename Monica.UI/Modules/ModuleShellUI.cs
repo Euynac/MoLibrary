@@ -8,6 +8,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.UI.Localization;
 using Monica.UI.Pages;
@@ -118,7 +119,8 @@ public class ModuleShellUI(ModuleShellUIOption option)
     {
         var webApp = RequireWebApplication(app);
 
-        webApp.MapStaticAssets();  // .NET 9 support
+        webApp.MapStaticAssets()
+            .WithMonicaEndpoint(MonicaEndpointKind.StaticAsset);  // .NET 9 support
 
         // Antiforgery middleware must stay in the routed pipeline.
         app.UseAntiforgery();
@@ -134,12 +136,13 @@ public class ModuleShellUI(ModuleShellUIOption option)
             var fromPath = redirect.Key;
             var toPath = redirect.Value;
             webApp.MapGet(fromPath, () => Results.LocalRedirect(toPath))
-                .WithMetadata(MonicaMinimalApiMetadata.Instance);
+                .WithMonicaEndpoint(MonicaEndpointKind.Ui);
         }
 
         webApp.MapRazorComponents<AppShell>()
             .AddInteractiveServerRenderMode()
-            .AddAdditionalAssemblies(registry.GetAdditionalAssemblies());
+            .AddAdditionalAssemblies(registry.GetAdditionalAssemblies())
+            .WithMonicaEndpoint(MonicaEndpointKind.Ui);
         // Huge pitfall: if AddAdditionalAssemblies is missing here, pressing F5 refresh may return 404,
         // while navigation through Router may still work.
     }

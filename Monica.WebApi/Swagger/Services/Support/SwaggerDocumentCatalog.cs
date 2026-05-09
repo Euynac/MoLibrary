@@ -201,7 +201,8 @@ internal sealed class SwaggerDocumentCatalog
 
     private static bool IsMonicaEndpoint(ApiDescription description)
     {
-        return description.ActionDescriptor.EndpointMetadata.Any(static metadata => metadata is MonicaMinimalApiMetadata);
+        return description.ActionDescriptor.EndpointMetadata.Any(static metadata =>
+            metadata is MonicaMinimalApiMetadata or MonicaEndpointMetadata);
     }
 
     private static void ValidateDocumentNames(IReadOnlyList<SwaggerDocumentDefinition> documents)

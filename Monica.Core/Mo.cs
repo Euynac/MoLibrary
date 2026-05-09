@@ -65,6 +65,16 @@ public static class Mo
     {
         ArgumentNullException.ThrowIfNull(configure);
         configure(MODULE_SYSTEM);
+        MODULE_SYSTEM.Validate();
+    }
+
+    /// <summary>
+    /// Validates the shared Monica module-system defaults.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a configured module-system value is outside its valid range.</exception>
+    internal static void ValidateModuleSystem()
+    {
+        MODULE_SYSTEM.Validate();
     }
 
     /// <summary>

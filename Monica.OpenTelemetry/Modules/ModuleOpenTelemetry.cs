@@ -7,6 +7,7 @@ using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.OpenTelemetry.InProcessCollector.Facades;
@@ -84,7 +85,7 @@ public class ModuleOpenTelemetry(ModuleOpenTelemetryOption option)
             if (Option.UsePrometheusEndpoint)
             {
                 endpoints.MapPrometheusScrapingEndpoint(Option.PrometheusEndpointPath)
-                    .WithMetadata(MonicaMinimalApiMetadata.Instance);
+                    .WithMonicaEndpoint();
             }
 
             if (!Option.EnableInProcessCollector)

@@ -12,6 +12,7 @@ using Monica.Core.JsonSerialization.Services.Support;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Extensions;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Results;
 using Monica.SignalR.Abstractions;
@@ -179,7 +180,7 @@ public class ModuleSignalRGuide : WebModuleGuide<ModuleSignalR, ModuleSignalROpt
             context.ApplicationBuilder.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<THub>(pattern)
-                    .WithMetadata(MonicaMinimalApiMetadata.Instance);
+                    .WithMonicaEndpoint(MonicaEndpointKind.Ui);
             });
         }, secondKey: typeof(THub).Name);
 

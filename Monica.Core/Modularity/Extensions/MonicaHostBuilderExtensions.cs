@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using Monica.Core;
 using Monica.Core.Modularity.Services;
 
 namespace Monica.Core.Modularity.Extensions;
@@ -14,6 +15,7 @@ public static class MonicaHostBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        Mo.ValidateModuleSystem();
         ModuleRegistry.RegisterServices(builder);
         return builder;
     }
