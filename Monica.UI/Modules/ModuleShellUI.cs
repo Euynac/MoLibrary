@@ -62,9 +62,14 @@ public class ModuleShellUI(ModuleShellUIOption option)
             return;
         }
 
+        if (builder.Environment.IsProduction())
+        {
+            return;
+        }
+
         // Monica UI modules are Razor class libraries and are commonly consumed only through NuGet packages.
         // Loading static web assets in the builder phase lets ASP.NET Core discover package-provided framework and
-        // component assets before the shell maps static asset endpoints and Razor components.
+        // component assets before the shell maps static asset endpoints in local, staging, or other non-production hosts.
         webBuilder.WebHost.UseStaticWebAssets();
     }
 
