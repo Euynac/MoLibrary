@@ -8,5 +8,5 @@ public interface IHasModificationTime
     /// <summary>
     /// The last modified time for this entity.
     /// </summary>
-    DateTime? LastModificationTime { get; }
+    DateTime? LastModificationTime { get; }//TODO rename to last modified time. 
 }
