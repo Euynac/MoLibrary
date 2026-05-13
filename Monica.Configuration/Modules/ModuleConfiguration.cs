@@ -46,10 +46,9 @@ public static class ModuleConfigurationBuilderExtensions
 /// <summary>
 /// Monica configuration module.
 /// </summary>
-/// <param name="option">The module options.</param>
 [ModuleKey(BuiltInModuleKey.Configuration)]
-public sealed class ModuleConfiguration(ModuleConfigurationOption option)
-    : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
+public sealed class ModuleConfiguration
+    : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>, IBusinessTypeIterator
 {
     private static readonly MethodInfo ADD_OPTIONS_METHOD = GetRequiredGenericMethod(
         typeof(OptionsServiceCollectionExtensions),
@@ -67,9 +66,26 @@ public sealed class ModuleConfiguration(ModuleConfigurationOption option)
         [typeof(OptionsBuilder<>)]);
 
     private readonly ConfigurationDefinitionRegistry _definitionRegistry = new();
-    private readonly ConfigurationSchemaHasher _schemaHasher = new();
+    private readonly ConfigurationSchemaHasher _schemaHasher;
+    private readonly ConfigurationDefinitionScanner _definitionScanner;
     private IConfiguration? _configuration;
     private IServiceCollection? _services;
+
+    /// <summary>
+    /// Creates a Monica configuration module instance.
+    /// </summary>
+    /// <param name="option">The module options.</param>
+    public ModuleConfiguration(ModuleConfigurationOption option)
+        : this(option, new ConfigurationSchemaHasher())
+    {
+    }
+
+    private ModuleConfiguration(ModuleConfigurationOption option, ConfigurationSchemaHasher schemaHasher)
+        : base(option)
+    {
+        _schemaHasher = schemaHasher;
+        _definitionScanner = new ConfigurationDefinitionScanner(_schemaHasher);
+    }
 
     /// <inheritdoc />
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
@@ -82,7 +98,7 @@ public sealed class ModuleConfiguration(ModuleConfigurationOption option)
     {
         _services = services;
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
-        services.TryAddSingleton<IConfigurationDefinitionScanner, ConfigurationDefinitionScanner>();
+        services.TryAddSingleton<IConfigurationDefinitionScanner>(_definitionScanner);
         services.TryAddSingleton<IConfigurationBootstrapReader, ConfigurationBootstrapReader>();
         services.TryAddSingleton<IConfigurationSensitiveValueProtector, ConfigurationSensitiveValueProtector>();
         services.TryAddSingleton<IConfigurationSourceStateTracker, ConfigurationSourceStateTracker>();
@@ -102,7 +118,7 @@ public sealed class ModuleConfiguration(ModuleConfigurationOption option)
         services.TryAddSingleton<MonicaConfigurationProviderAccessor>();
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.TryAddSingleton<IConfigurationValueSource, MemoryConfigurationValueSource>();
-        services.AddScoped<ConfigurationFacade>();
+        services.TryAddSingleton<ConfigurationFacade>();
     }
 
     /// <inheritdoc />
@@ -122,7 +138,7 @@ public sealed class ModuleConfiguration(ModuleConfigurationOption option)
 
     private void RegisterConfigurationType(Type optionsType, ConfigurationAttribute attribute)
     {
-        var definition = new ConfigurationDefinitionScanner(_schemaHasher).Scan(optionsType);
+        var definition = _definitionScanner.Scan(optionsType);
         _definitionRegistry.Register(definition);
         RegisterOptionsBinding(optionsType, attribute, definition.SectionPath);
     }

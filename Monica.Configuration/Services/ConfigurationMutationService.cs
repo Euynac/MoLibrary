@@ -2,6 +2,7 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
+using Monica.Configuration.Utils;
 
 namespace Monica.Configuration.Services;
 
@@ -12,6 +13,7 @@ internal sealed class ConfigurationMutationService(
     IConfigurationDefinitionRegistry definitionRegistry,
     IEnumerable<IConfigurationValueSource> sources,
     ConfigurationValidationCoordinator validationCoordinator,
+    ConfigurationPathProjector pathProjector,
     IConfigurationReloadCoordinator reloadCoordinator,
     IEnumerable<IConfigurationChangeBroadcaster> broadcasters)
     : IConfigurationMutationService
@@ -22,7 +24,17 @@ internal sealed class ConfigurationMutationService(
         var definition = definitionRegistry.GetRequired(request.DefinitionKey);
         validationCoordinator.Validate(definition, request);
         var source = ResolveSource(request.TargetSourceKey);
-        var result = await source.MutateAsync(request, cancellationToken);
+        var targetNode = ResolveTargetNode(definition, request.LogicalPath);
+        var mutation = new ConfigurationSourceMutation
+        {
+            Request = request,
+            Definition = definition,
+            TargetNode = targetNode,
+            SourceKey = source.Descriptor.SourceKey,
+            ConfigurationPath = pathProjector.Project(definition.SectionPath, request.LogicalPath),
+            Granularity = ResolveGranularity(request, targetNode)
+        };
+        var result = await source.MutateAsync(mutation, cancellationToken);
         await reloadCoordinator.ReloadAsync(cancellationToken);
 
         var notification = new ConfigurationChangeNotification
@@ -55,5 +67,39 @@ internal sealed class ConfigurationMutationService(
             .Where(x => x.Descriptor.IsWritable)
             .OrderByDescending(x => x.Descriptor.Priority)
             .First();
+    }
+
+    private static ConfigurationNodeDefinition ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
+    {
+        var current = definition.Root;
+        foreach (var segment in logicalPath.Segments)
+        {
+            current = ResolveChild(current, segment)
+                ?? throw new Exceptions.ConfigurationValidationFailedException(
+                    $"Logical path '{logicalPath}' does not exist in definition '{definition.DefinitionKey}'.");
+        }
+
+        return current;
+    }
+
+    private static ConfigurationNodeDefinition? ResolveChild(ConfigurationNodeDefinition current, ConfigurationPathSegment segment)
+    {
+        return segment switch
+        {
+            PropertySegment property => current.Children.FirstOrDefault(child =>
+                string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+            DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+            ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+            _ => null
+        };
+    }
+
+    private static ConfigurationOverrideGranularity ResolveGranularity(
+        ConfigurationMutationRequest request,
+        ConfigurationNodeDefinition targetNode)
+    {
+        return request.MutationKind == ConfigurationMutationKind.Replace || targetNode.NodeKind != ConfigurationNodeKind.Scalar
+            ? ConfigurationOverrideGranularity.Container
+            : ConfigurationOverrideGranularity.Scalar;
     }
 }

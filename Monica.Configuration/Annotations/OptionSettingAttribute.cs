@@ -47,7 +47,7 @@ public sealed class OptionSettingAttribute : Attribute
     /// <summary>
     /// Gets or sets an optional reload behavior override for this node.
     /// </summary>
-    public ConfigurationReloadBehavior? ReloadBehavior { get; set; }
+    public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.Inherit;
 
     /// <summary>
     /// Gets or sets the property name used as stable identity for list items.

@@ -16,14 +16,14 @@ internal sealed class ConfigurationMergeEngine : IConfigurationMergeEngine
         var ordered = sourceSets
             .OrderByDescending(x => x.Source.Priority)
             .ToArray();
-        var removedSubtrees = new List<(string DefinitionKey, LogicalPath Path)>();
+        var coveredSubtrees = new List<(string DefinitionKey, LogicalPath Path)>();
         var effective = new Dictionary<(string DefinitionKey, string Path), ConfigurationValueOverride>();
 
         foreach (var sourceSet in ordered)
         {
             foreach (var value in sourceSet.Overrides)
             {
-                if (removedSubtrees.Any(x =>
+                if (coveredSubtrees.Any(x =>
                         string.Equals(x.DefinitionKey, value.DefinitionKey, StringComparison.OrdinalIgnoreCase)
                         && ConfigurationPathTokenizer.StartsWith(value.LogicalPath, x.Path)))
                 {
@@ -32,7 +32,7 @@ internal sealed class ConfigurationMergeEngine : IConfigurationMergeEngine
 
                 if (value.State == ConfigurationValueState.RemovedSubtree)
                 {
-                    removedSubtrees.Add((value.DefinitionKey, value.LogicalPath));
+                    coveredSubtrees.Add((value.DefinitionKey, value.LogicalPath));
                     continue;
                 }
 
@@ -42,7 +42,10 @@ internal sealed class ConfigurationMergeEngine : IConfigurationMergeEngine
                 }
 
                 var key = (value.DefinitionKey, value.LogicalPath.ToCanonicalString());
-                effective.TryAdd(key, value);
+                if (effective.TryAdd(key, value) && value.Granularity == ConfigurationOverrideGranularity.Container)
+                {
+                    coveredSubtrees.Add((value.DefinitionKey, value.LogicalPath));
+                }
             }
         }
 

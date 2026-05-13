@@ -47,6 +47,29 @@ public sealed record LogicalPath(IReadOnlyList<ConfigurationPathSegment> Segment
         return ConfigurationPathFormatter.Format(this);
     }
 
+    /// <inheritdoc />
+    public bool Equals(LogicalPath? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        return other is not null && Segments.SequenceEqual(other.Segments);
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var segment in Segments)
+        {
+            hash.Add(segment);
+        }
+
+        return hash.ToHashCode();
+    }
+
     /// <summary>
     /// Parses a canonical string into a structured logical path.
     /// </summary>

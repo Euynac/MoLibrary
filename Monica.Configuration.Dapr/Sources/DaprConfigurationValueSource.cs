@@ -32,7 +32,7 @@ public sealed class DaprConfigurationValueSource : IConfigurationValueSource
     }
 
     /// <inheritdoc />
-    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
+    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationSourceMutation mutation, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Dapr configuration source is read-only.");
     }

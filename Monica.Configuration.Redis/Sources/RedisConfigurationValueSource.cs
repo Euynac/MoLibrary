@@ -32,7 +32,7 @@ public sealed class RedisConfigurationValueSource : IConfigurationValueSource
     }
 
     /// <inheritdoc />
-    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
+    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationSourceMutation mutation, CancellationToken cancellationToken)
     {
         throw new NotImplementedException("Redis value mutation is reserved for the Redis implementation phase.");
     }

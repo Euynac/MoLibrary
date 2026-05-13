@@ -48,7 +48,7 @@ public sealed record ConfigurationDefinition
     /// <summary>
     /// Gets the default reload behavior for the definition.
     /// </summary>
-    public ConfigurationReloadBehavior ReloadBehavior { get; init; }
+    public ConfigurationReloadBehavior ReloadBehavior { get; init; } = ConfigurationReloadBehavior.OnlineReloadable;
 
     /// <summary>
     /// Gets the root node of the configuration schema tree.

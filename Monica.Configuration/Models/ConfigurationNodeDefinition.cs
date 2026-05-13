@@ -16,6 +16,16 @@ public sealed record ConfigurationNodeDefinition
     public required string Name { get; init; }
 
     /// <summary>
+    /// Gets the human-readable node name shown in management tools.
+    /// </summary>
+    public string? DisplayName { get; init; }
+
+    /// <summary>
+    /// Gets the developer-facing description shown in management tools and generated documentation.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Gets the node path relative to the definition root.
     /// </summary>
     public required LogicalPath RelativePath { get; init; }

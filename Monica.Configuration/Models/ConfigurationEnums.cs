@@ -33,8 +33,24 @@ public enum ConfigurationValueKind
 /// </summary>
 public enum ConfigurationReloadBehavior
 {
+    /// <summary>
+    /// Inherits the reload behavior from the owning definition or parent node.
+    /// </summary>
+    Inherit,
+
+    /// <summary>
+    /// The value can be applied by reloading configuration in the running process.
+    /// </summary>
     OnlineReloadable,
+
+    /// <summary>
+    /// The value is read dynamically but requires a process restart before it is observed safely.
+    /// </summary>
     RequiresRestart,
+
+    /// <summary>
+    /// The value is intentionally fixed after startup and should not be treated as hot-reloadable.
+    /// </summary>
     StaticAfterStartup
 }
 

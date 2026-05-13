@@ -37,9 +37,13 @@ internal sealed class ConfigurationSourceChainService(
                 DisplayName = source.Descriptor.DisplayName,
                 Kind = source.Descriptor.Kind,
                 Priority = source.Descriptor.Priority,
-                HasValue = value is not null,
+                HasValue = value?.State == ConfigurationValueState.Active,
                 IsSensitive = false,
-                DisplayValue = value is null ? null : codec.ToConfigurationString(value.Value),
+                DisplayValue = value is null
+                    ? null
+                    : value.Granularity == ConfigurationOverrideGranularity.Container
+                        ? value.Value.PlainJson
+                        : codec.ToConfigurationString(value.Value),
                 LastModifiedTime = value?.LastModifiedTime
             });
         }

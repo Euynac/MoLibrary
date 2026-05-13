@@ -31,7 +31,7 @@ public sealed class EnvironmentConfigurationValueSource : IConfigurationValueSou
     }
 
     /// <inheritdoc />
-    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
+    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationSourceMutation mutation, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Environment configuration source is read-only.");
     }

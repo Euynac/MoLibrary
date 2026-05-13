@@ -10,6 +10,9 @@ namespace Monica.Configuration.Utils;
 public static class ConfigurationPathFormatter
 {
     private const char ESCAPE_CHAR = '\\';
+    private const char DICTIONARY_KEY_PREFIX = '$';
+    private const char LIST_ITEM_KEY_PREFIX = '#';
+    private const char LIST_INDEX_PREFIX = '@';
 
     /// <summary>
     /// Formats a structured logical path to a canonical string.
@@ -31,13 +34,22 @@ public static class ConfigurationPathFormatter
                     builder.Append(Escape(property.Name));
                     break;
                 case DictionaryKeySegment dictionaryKey:
-                    builder.Append('[').Append(Escape(dictionaryKey.Key)).Append(']');
+                    builder.Append('[')
+                        .Append(DICTIONARY_KEY_PREFIX)
+                        .Append(Escape(dictionaryKey.Key))
+                        .Append(']');
                     break;
                 case ListItemKeySegment itemKey:
-                    builder.Append('[').Append(Escape(itemKey.ItemKey)).Append(']');
+                    builder.Append('[')
+                        .Append(LIST_ITEM_KEY_PREFIX)
+                        .Append(Escape(itemKey.ItemKey))
+                        .Append(']');
                     break;
                 case ListIndexSegment index:
-                    builder.Append('[').Append(index.Index).Append(']');
+                    builder.Append('[')
+                        .Append(LIST_INDEX_PREFIX)
+                        .Append(index.Index)
+                        .Append(']');
                     break;
             }
         }
@@ -71,10 +83,7 @@ public static class ConfigurationPathFormatter
             if (current == '[')
             {
                 AddPropertySegment(segments, token);
-                var bracketValue = ReadBracketValue(canonical, ref i);
-                segments.Add(int.TryParse(bracketValue, out var index)
-                    ? new ListIndexSegment(index)
-                    : new DictionaryKeySegment(bracketValue));
+                segments.Add(ParseBracketSegment(ReadBracketValue(canonical, ref i)));
                 continue;
             }
 
@@ -123,6 +132,23 @@ public static class ConfigurationPathFormatter
         }
 
         throw new ConfigurationPathFormatException($"Path '{canonical}' contains an unterminated bracket segment.");
+    }
+
+    private static ConfigurationPathSegment ParseBracketSegment(string value)
+    {
+        if (value.Length == 0)
+        {
+            throw new ConfigurationPathFormatException("Bracket segment cannot be empty.");
+        }
+
+        return value[0] switch
+        {
+            DICTIONARY_KEY_PREFIX => new DictionaryKeySegment(value[1..]),
+            LIST_ITEM_KEY_PREFIX => new ListItemKeySegment(value[1..]),
+            LIST_INDEX_PREFIX when int.TryParse(value[1..], out var index) => new ListIndexSegment(index),
+            LIST_INDEX_PREFIX => throw new ConfigurationPathFormatException($"List index segment '{value}' is not a valid integer."),
+            _ => new DictionaryKeySegment(value)
+        };
     }
 
     private static string Escape(string value)

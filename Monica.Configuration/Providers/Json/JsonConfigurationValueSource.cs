@@ -31,7 +31,7 @@ public sealed class JsonConfigurationValueSource : IConfigurationValueSource
     }
 
     /// <inheritdoc />
-    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken)
+    public Task<ConfigurationMutationResult> MutateAsync(ConfigurationSourceMutation mutation, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("JSON configuration source is read-only in the Phase 1 scaffold.");
     }

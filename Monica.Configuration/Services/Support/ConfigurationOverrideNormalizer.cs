@@ -12,6 +12,14 @@ internal sealed class ConfigurationOverrideNormalizer : IConfigurationOverrideNo
     /// <inheritdoc />
     public IReadOnlyList<ConfigurationValueOverride> Normalize(IReadOnlyList<ConfigurationValueOverride> overrides)
     {
+        return overrides
+            .GroupBy(x => x.SourceKey, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(group => NormalizeSource(group.ToArray()))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ConfigurationValueOverride> NormalizeSource(IReadOnlyList<ConfigurationValueOverride> overrides)
+    {
         var ordered = overrides
             .OrderBy(x => x.LogicalPath.Depth)
             .ThenBy(x => x.LogicalPath.ToCanonicalString(), StringComparer.Ordinal)

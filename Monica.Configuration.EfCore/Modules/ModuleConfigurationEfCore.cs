@@ -6,9 +6,11 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Services;
 using Monica.Configuration.EfCore.Sources;
+using Monica.Repository;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
+using Monica.Core.Modularity.Models;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
@@ -29,7 +31,6 @@ public static class ModuleConfigurationEfCoreBuilderExtensions
         Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         new ModuleConfigurationEfCoreGuide().Register().UseDbContext(optionsAction);
-        guide.AddValueSource<DatabaseConfigurationValueSource>();
         return guide;
     }
 }
@@ -51,6 +52,11 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Replace(ServiceDescriptor.Scoped<IConfigurationDefinitionPublisher, EfCoreConfigurationDefinitionPublisher>());
+        services.TryAddSingleton<DatabaseConfigurationValueSource>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, DatabaseConfigurationValueSource>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationHistorySource, DatabaseConfigurationValueSource>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
         services.AddSingleton<IHostedService, ConfigurationDefinitionPublishingHostedService>();
     }
 }
@@ -61,6 +67,12 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
 public sealed class ModuleConfigurationEfCoreGuide
     : ModuleGuide<ModuleConfigurationEfCore, ModuleConfigurationEfCoreOption, ModuleConfigurationEfCoreGuide>
 {
+    /// <inheritdoc />
+    protected override string[] GetRequestedConfigMethodKeys()
+    {
+        return [nameof(UseDbContext)];
+    }
+
     /// <summary>
     /// Registers the configuration DbContext.
     /// </summary>
@@ -68,10 +80,9 @@ public sealed class ModuleConfigurationEfCoreGuide
     /// <returns>The module guide.</returns>
     public ModuleConfigurationEfCoreGuide UseDbContext(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
-        ConfigureServices(context =>
-        {
-            context.Services.AddDbContext<ConfigurationDbContext>(optionsAction);
-        });
+        DependsOnModule<ModuleRepositoryGuide>().Register()
+            .AddRepositoryDbContext<ConfigurationDbContext>(optionsAction, DbContextProviderType.ContextFactory);
+        ConfigureEmpty();
         return this;
     }
 }

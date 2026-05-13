@@ -55,6 +55,8 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
         {
             NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
             Name = name,
+            DisplayName = option?.DisplayName,
+            Description = option?.Description,
             RelativePath = path,
             ConfigurationPath = configurationPath,
             ClrTypeName = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
@@ -62,7 +64,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
             ValueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(type) : null,
             IsNullable = IsNullable(type),
             IsSensitive = option?.IsSensitive is true,
-            ReloadBehavior = option?.ReloadBehavior,
+            ReloadBehavior = ResolveReloadBehavior(option),
             DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                 ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior)
                 : null,
@@ -114,6 +116,8 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
         {
             NodeKey = option?.NodeKey ?? path.ToCanonicalString(),
             Name = nodeName,
+            DisplayName = option?.DisplayName,
+            Description = option?.Description,
             RelativePath = path,
             ConfigurationPath = configurationPath,
             ClrTypeName = propertyType.AssemblyQualifiedName ?? propertyType.FullName ?? propertyType.Name,
@@ -121,7 +125,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
             ValueKind = nodeKind == ConfigurationNodeKind.Scalar ? GetValueKind(propertyType) : null,
             IsNullable = IsNullable(property),
             IsSensitive = option?.IsSensitive is true,
-            ReloadBehavior = option?.ReloadBehavior,
+            ReloadBehavior = ResolveReloadBehavior(option),
             DictionaryTemplate = nodeKind == ConfigurationNodeKind.Dictionary
                 ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
                 : null,
@@ -332,5 +336,12 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
     private static decimal? ToDecimal(object? value)
     {
         return value is null ? null : Convert.ToDecimal(value);
+    }
+
+    private static ConfigurationReloadBehavior? ResolveReloadBehavior(OptionSettingAttribute? option)
+    {
+        return option is null || option.ReloadBehavior == ConfigurationReloadBehavior.Inherit
+            ? null
+            : option.ReloadBehavior;
     }
 }

@@ -47,4 +47,66 @@ internal sealed class ConfigurationStoredValueCodec
             _ => document.RootElement.GetRawText()
         };
     }
+
+    /// <summary>
+    /// Converts a stored value into flat Microsoft configuration key/value pairs.
+    /// </summary>
+    /// <param name="configurationPath">The root configuration path.</param>
+    /// <param name="value">The stored value.</param>
+    /// <returns>The projected key/value pairs.</returns>
+    public IReadOnlyDictionary<string, string?> ToConfigurationValues(string configurationPath, ConfigurationStoredValue value)
+    {
+        if (value.Kind != ConfigurationStoredValueKind.PlainJson || value.PlainJson is null)
+        {
+            return new Dictionary<string, string?>
+            {
+                [configurationPath] = ToConfigurationString(value)
+            };
+        }
+
+        using var document = JsonDocument.Parse(value.PlainJson);
+        var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        Flatten(configurationPath, document.RootElement, values);
+        return values;
+    }
+
+    private static void Flatten(string path, JsonElement element, IDictionary<string, string?> values)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    Flatten($"{path}:{property.Name}", property.Value, values);
+                }
+                break;
+            case JsonValueKind.Array:
+                var index = 0;
+                foreach (var item in element.EnumerateArray())
+                {
+                    Flatten($"{path}:{index}", item, values);
+                    index++;
+                }
+                break;
+            case JsonValueKind.String:
+                values[path] = element.GetString();
+                break;
+            case JsonValueKind.Number:
+                values[path] = element.GetRawText();
+                break;
+            case JsonValueKind.True:
+                values[path] = "true";
+                break;
+            case JsonValueKind.False:
+                values[path] = "false";
+                break;
+            case JsonValueKind.Null:
+            case JsonValueKind.Undefined:
+                values[path] = null;
+                break;
+            default:
+                values[path] = element.GetRawText();
+                break;
+        }
+    }
 }

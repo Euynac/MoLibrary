@@ -4,16 +4,25 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Services;
 
 /// <summary>
-/// Default history service. Provider-backed history is added by persistent sources.
+/// Default history service that aggregates history-capable sources.
 /// </summary>
-internal sealed class ConfigurationHistoryService : IConfigurationHistoryService
+internal sealed class ConfigurationHistoryService(IEnumerable<IConfigurationHistorySource> historySources) : IConfigurationHistoryService
 {
     /// <inheritdoc />
-    public Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoryAsync(
+    public async Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoryAsync(
         string definitionKey,
         LogicalPath logicalPath,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult<IReadOnlyList<ConfigurationValueHistory>>([]);
+        var histories = new List<ConfigurationValueHistory>();
+        foreach (var source in historySources)
+        {
+            histories.AddRange(await source.GetHistoryAsync(definitionKey, logicalPath, cancellationToken));
+        }
+
+        return histories
+            .OrderByDescending(history => history.ModifiedTime)
+            .ThenByDescending(history => history.Version)
+            .ToArray();
     }
 }

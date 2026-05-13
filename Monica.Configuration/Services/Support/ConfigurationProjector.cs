@@ -20,14 +20,15 @@ internal sealed class ConfigurationProjector(
         var definitionsByKey = definitions.ToDictionary(x => x.DefinitionKey, StringComparer.OrdinalIgnoreCase);
         return values
             .Where(value => definitionsByKey.ContainsKey(value.DefinitionKey))
-            .Select(value =>
+            .SelectMany(value =>
             {
                 var definition = definitionsByKey[value.DefinitionKey];
-                return new ProjectedConfigurationKey
+                var configurationPath = value.Override.ConfigurationPath ?? pathProjector.Project(definition.SectionPath, value.LogicalPath);
+                return codec.ToConfigurationValues(configurationPath, value.Override.Value).Select(projected => new ProjectedConfigurationKey
                 {
-                    Key = value.Override.ConfigurationPath ?? pathProjector.Project(definition.SectionPath, value.LogicalPath),
-                    Value = codec.ToConfigurationString(value.Override.Value)
-                };
+                    Key = projected.Key,
+                    Value = projected.Value
+                });
             })
             .ToArray();
     }

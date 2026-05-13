@@ -25,14 +25,18 @@ public interface IConfigurationValueSource
     /// <param name="definitionKey">The definition key.</param>
     /// <param name="logicalPath">The logical path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The override, or null when the source has none.</returns>
+    /// <returns>The effective override for the path in this source, or null when the source has none.</returns>
     Task<ConfigurationValueOverride?> GetAsync(string definitionKey, LogicalPath logicalPath, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Mutates this source.
+    /// Mutates this source atomically.
     /// </summary>
-    /// <param name="request">The mutation request.</param>
+    /// <param name="mutation">The resolved source mutation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The mutation result.</returns>
-    Task<ConfigurationMutationResult> MutateAsync(ConfigurationMutationRequest request, CancellationToken cancellationToken);
+    /// <remarks>
+    /// Writable sources own store-level invariant enforcement. A source must not persist an active
+    /// container snapshot and active descendant leaf overrides for the same definition at the same time.
+    /// </remarks>
+    Task<ConfigurationMutationResult> MutateAsync(ConfigurationSourceMutation mutation, CancellationToken cancellationToken);
 }
