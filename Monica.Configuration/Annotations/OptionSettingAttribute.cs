@@ -1,51 +1,56 @@
+using Monica.Configuration.Models;
+
 namespace Monica.Configuration.Annotations;
 
+/// <summary>
+/// Adds Monica-specific metadata to a configuration property without replacing standard .NET validation attributes.
+/// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public class OptionSettingAttribute : Attribute
+public sealed class OptionSettingAttribute : Attribute
 {
+    /// <summary>
+    /// Initializes a new option setting attribute.
+    /// </summary>
     public OptionSettingAttribute()
     {
-        
     }
 
-    public OptionSettingAttribute(string title)
+    /// <summary>
+    /// Initializes a new option setting attribute with a display name.
+    /// </summary>
+    /// <param name="displayName">The display name shown in management tools.</param>
+    public OptionSettingAttribute(string displayName)
     {
-        Title = title;
+        DisplayName = displayName;
     }
 
     /// <summary>
-    /// Log format string. Use {0} as the value placeholder.
+    /// Gets or sets a stable node key that survives CLR property renames.
     /// </summary>
-    public string? LoggingFormat { get; set; }
+    public string? NodeKey { get; set; }
 
     /// <summary>
-    /// Option title displayed on the Dashboard.
+    /// Gets or sets the display name shown in management tools.
     /// </summary>
-    public string? Title { get; set; }
+    public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Option description.
+    /// Gets or sets the developer-facing description shown in management tools.
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Marks the option as sensitive and therefore write-only in management surfaces.
-    /// Sensitive options are masked in dashboards, history, diagnostics, and logs.
-    /// This flag does not encrypt the underlying provider value at rest.
+    /// Gets or sets whether the value is sensitive and must be redacted outside the final options binding path.
     /// </summary>
     public bool IsSensitive { get; set; }
 
     /// <summary>
-    /// Marks the option as offline-only, meaning a service restart is required to apply changes.
+    /// Gets or sets an optional reload behavior override for this node.
     /// </summary>
-    public bool IsOffline
-    {
-        get => _IsOffline ?? false;
-        set => _IsOffline = value;
-    }
+    public ConfigurationReloadBehavior? ReloadBehavior { get; set; }
 
     /// <summary>
-    /// Backing field for <see cref="IsOffline"/>.
+    /// Gets or sets the property name used as stable identity for list items.
     /// </summary>
-    internal bool? _IsOffline { get; set; }
+    public string? ListItemKeyPropertyName { get; set; }
 }

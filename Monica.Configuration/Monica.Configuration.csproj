@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageDescription>Dynamic configuration management for Monica framework with support for runtime configuration updates and distributed configuration sources.</PackageDescription>
+    <PackageDescription>Schema-first dynamic configuration module for Monica with runtime mutation, source-chain diagnostics, and Microsoft.Extensions.Configuration projection.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
-    <ProjectReference Include="..\Monica.ServiceDiscovery\Monica.ServiceDiscovery.csproj" />
   </ItemGroup>
 </Project>

@@ -1,22 +1,18 @@
 using System.Reflection;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Monica.Configuration;
+using Microsoft.Extensions.Options;
+using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
-using Monica.Configuration.Annotations;
-using Monica.Configuration.Extensions;
+using Monica.Configuration.Bootstrap;
 using Monica.Configuration.Facades;
+using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
-using Monica.Configuration.Models.Internal;
-using Monica.Configuration.Providers.History;
-using Monica.Configuration.Providers.JsonFile;
-using Monica.Configuration.Providers.ProjectCatalog;
+using Monica.Configuration.Projection;
+using Monica.Configuration.Providers.Memory;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
 using Monica.Core;
@@ -24,18 +20,22 @@ using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Models;
-using Monica.Core.Results;
 
 // ReSharper disable once CheckNamespace
 namespace Monica.Modules;
 
+/// <summary>
+/// Builder extensions for the Monica.Configuration module.
+/// </summary>
 public static class ModuleConfigurationBuilderExtensions
 {
     extension(Mo)
     {
         /// <summary>
-        /// Configures the Configuration module.
+        /// Registers the schema-first Monica configuration module.
         /// </summary>
+        /// <param name="action">Optional module option configuration.</param>
+        /// <returns>The module guide.</returns>
         public static ModuleConfigurationGuide AddConfiguration(Action<ModuleConfigurationOption>? action = null)
         {
             return new ModuleConfigurationGuide().Register(action);
@@ -43,267 +43,185 @@ public static class ModuleConfigurationBuilderExtensions
     }
 }
 
+/// <summary>
+/// Monica configuration module.
+/// </summary>
+/// <param name="option">The module options.</param>
 [ModuleKey(BuiltInModuleKey.Configuration)]
-public class ModuleConfiguration(ModuleConfigurationOption option) : WebModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
+public sealed class ModuleConfiguration(ModuleConfigurationOption option)
+    : ModuleBase<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>(option), IBusinessTypeIterator
 {
-    private IServiceCollection _services = null!;
-    private MethodInfo _method = null!;
+    private static readonly MethodInfo ADD_OPTIONS_METHOD = GetRequiredGenericMethod(
+        typeof(OptionsServiceCollectionExtensions),
+        nameof(OptionsServiceCollectionExtensions.AddOptions),
+        [typeof(IServiceCollection)]);
 
+    private static readonly MethodInfo BIND_METHOD = GetRequiredGenericMethod(
+        typeof(OptionsBuilderConfigurationExtensions),
+        nameof(OptionsBuilderConfigurationExtensions.Bind),
+        [typeof(OptionsBuilder<>), typeof(IConfiguration), typeof(Action<>)]);
+
+    private static readonly MethodInfo VALIDATE_DATA_ANNOTATIONS_METHOD = GetRequiredGenericMethod(
+        typeof(OptionsBuilderDataAnnotationsExtensions),
+        nameof(OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations),
+        [typeof(OptionsBuilder<>)]);
+
+    private readonly ConfigurationDefinitionRegistry _definitionRegistry = new();
+    private readonly ConfigurationSchemaHasher _schemaHasher = new();
+    private IConfiguration? _configuration;
+    private IServiceCollection? _services;
+
+    /// <inheritdoc />
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
-        Option.AppConfiguration ??= builder.Configuration;
+        _configuration = builder.Configuration;
     }
 
+    /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
-        ConfigurationRuntime.Setting = Option;
-        ConfigurationRuntime.AppConfiguration = GetAppConfiguration();
-
-        services.AddOptions();
-        services.AddSingleton<IConfigurationCatalog, ConfigurationCatalogService>();
-        services.TryAddSingleton<IConfigurationProjectCatalog, LocalConfigurationProjectCatalog>();
-        services.TryAddTransient<IConfigurationHistoryStore, MemoryConfigurationHistoryStore>();
-        services.TryAddSingleton<IConfigurationValueWriter, JsonFileConfigurationWriter>();
-        services.TryAddSingleton<LocalConfigurationManagementApi>();
-        services.TryAddSingleton<IConfigurationManagementApi>(provider =>
-            provider.GetRequiredService<LocalConfigurationManagementApi>());
-        services.TryAddSingleton<IConfigurationDashboardContext, LocalConfigurationDashboardContext>();
+        services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
+        services.TryAddSingleton<IConfigurationDefinitionScanner, ConfigurationDefinitionScanner>();
+        services.TryAddSingleton<IConfigurationBootstrapReader, ConfigurationBootstrapReader>();
+        services.TryAddSingleton<IConfigurationSensitiveValueProtector, ConfigurationSensitiveValueProtector>();
+        services.TryAddSingleton<IConfigurationSourceStateTracker, ConfigurationSourceStateTracker>();
+        services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
+        services.TryAddSingleton<IConfigurationSourceChainService, ConfigurationSourceChainService>();
+        services.TryAddSingleton<IConfigurationMutationService, ConfigurationMutationService>();
+        services.TryAddSingleton<IConfigurationOverrideNormalizer, ConfigurationOverrideNormalizer>();
+        services.TryAddSingleton<IConfigurationOverrideAggregator, ConfigurationOverrideAggregator>();
+        services.TryAddSingleton<IConfigurationMergeEngine, ConfigurationMergeEngine>();
+        services.TryAddSingleton<IConfigurationProjector, ConfigurationProjector>();
+        services.TryAddSingleton<IConfigurationReloadCoordinator, ConfigurationProviderReloadCoordinator>();
+        services.TryAddSingleton(_schemaHasher);
+        services.TryAddSingleton<ConfigurationStoredValueCodec>();
+        services.TryAddSingleton<ConfigurationValidationCoordinator>();
+        services.TryAddSingleton<ConfigurationPathProjector>();
+        services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
+        services.TryAddSingleton<MonicaConfigurationProviderAccessor>();
+        services.TryAddSingleton<ConfigurationMetricsRecorder>();
+        services.TryAddSingleton<IConfigurationValueSource, MemoryConfigurationValueSource>();
         services.AddScoped<ConfigurationFacade>();
-
-        // if (Option is { UseDaprProvider: true, AppConfiguration: ConfigurationManager manager})
-        // {
-        //     Logger.LogDebug($"[ConfigurationDescriptor] Using Dapr Configuration Provider. StoreName: {Option.DaprStoreName}");
-        //     // TODO: 1) Consider JsonSerializer for configuration serialization storage. 2) Use a singleton DaprClient.
-        //     var client = new DaprClientBuilder().Build();
-        //     manager.AddDaprConfigurationStore(Option.DaprStoreName!, [], client,
-        //         TimeSpan.FromSeconds(10));
-        //     manager.AddStreamingDaprConfigurationStore(Option.DaprStoreName!, [], client,
-        //         TimeSpan.FromSeconds(10));
-        // }
-
-        //use reflection to call AddOptions<T> and Bind
-        var method = typeof(OptionsServiceCollectionExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Where(m => m is { Name: "AddOptions", IsGenericMethod: true }).SingleOrDefault(m =>
-            {
-                var parameters = m.GetParameters();
-                return parameters.Length == 1 && parameters[0].ParameterType == typeof(IServiceCollection);
-            });
-
-        if (method == null)
-        {
-            throw new InvalidOperationException("AddOptions<T> method is not found.");
-        }
-
-        _method = method;
-    }
-  
-    public override void PostConfigureServices(IServiceCollection services)
-    {
-        // Important behavior: when option properties are List/Array and multiple configuration sources exist,
-        // .NET appends elements instead of replacing them. This is by design. See dotnet/runtime #36384.
-        ConfigurationRuntime.Setting.SetOtherSourceAction?.Invoke(ConfigurationRuntime.AppConfiguration);
-        ConfigurationRegistration.RefreshProviders();
     }
 
+    /// <inheritdoc />
     public IEnumerable<Type> IterateBusinessTypes(IEnumerable<Type> types)
     {
         foreach (var type in types)
         {
-            // Keep the full business type stream available for downstream modules such as auto-controllers,
-            // localization, and other discovery-based features.
-            if (type.IsClass && type.GetCustomAttribute<ConfigurationAttribute>(false) is
+            if (type is { IsClass: true, IsAbstract: false }
+                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is { IsSubConfiguration: false } attribute)
             {
-                IsSubConfiguration: false
-            }
-            )
-            {
-                RegisterConfigurationType(type);
+                RegisterConfigurationType(type, attribute);
             }
 
             yield return type;
         }
     }
 
-    private void RegisterConfigurationType(Type configType)
+    private void RegisterConfigurationType(Type optionsType, ConfigurationAttribute attribute)
     {
-        var card = new ConfigurationRegistration(configType);
-        var provider = new LocalJsonFileProvider(card);
-        provider.GenAndRegisterConfigurationFiles();
-        ConfigurationRegistration.Register(card);
+        var definition = new ConfigurationDefinitionScanner(_schemaHasher).Scan(optionsType);
+        _definitionRegistry.Register(definition);
+        RegisterOptionsBinding(optionsType, attribute, definition.SectionPath);
+    }
 
-        var configAttr = card.Configuration.Info;
-        Logger.LogDebug($"AddOptions<{configType.Name}>");
-        dynamic optionsBuilder = _method.MakeGenericMethod(configType).Invoke(null, [_services])!;
-
-        var configAction = new Action<BinderOptions>(o =>
+    private void RegisterOptionsBinding(Type optionsType, ConfigurationAttribute attribute, string sectionPath)
+    {
+        if (_services is null)
         {
-            o.ErrorOnUnknownConfiguration =
-                configAttr.ErrorOnUnknownConfiguration ?? Option.ErrorOnUnknownConfiguration;
-            o.BindNonPublicProperties = configAttr.BindNonPublicProperties ?? false;
-        });
-        if (configAttr.Section is { } section)
-        {
-            Logger.LogDebug($"Bind<{configType.Name}> to {section} (with section name)");
-            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, GetAppConfiguration().GetSection(section),
-                configAction);
-        }
-        else
-        {
-            Logger.LogDebug($"Bind<{configType.Name}> (without section name)");
-            ConfigurationOptionsBuilderExtensions.Bind(optionsBuilder, GetAppConfiguration(),
-                configAction);
+            throw new InvalidOperationException($"{nameof(ModuleConfiguration)} services have not been configured.");
         }
 
-        OptionsBuilderDataAnnotationsExtensions.ValidateDataAnnotations(optionsBuilder);
-    }
-
-    private IConfigurationManager GetAppConfiguration()
-    {
-        return Option.AppConfiguration ?? throw new InvalidOperationException(
-            $"{nameof(ModuleConfigurationOption.AppConfiguration)} is not initialized. Register Monica with an IHostApplicationBuilder so the Configuration module can use builder.Configuration, or set a custom configuration manager explicitly.");
-    }
-
-    public override void ConfigureEndpoints(IApplicationBuilder app)
-    {
-        UseEndpoints(app, endpoints =>
+        if (_configuration is null)
         {
-            endpoints.MapGet(ConfigurationRoutes.DashboardConfigHistory,
-                    async ([FromQuery] string? key, [FromQuery] string? appid, [FromQuery] DateTime? start,
-                        [FromQuery] DateTime? end, [FromServices] ConfigurationFacade facade) =>
-                    {
-                        return (await facade.GetConfigHistoryAsync(key, appid, start, end)).GetResponse();
-                    })
-                .WithName("获取配置类历史");
+            throw new InvalidOperationException(
+                $"{nameof(ModuleConfiguration)} requires an {nameof(IHostApplicationBuilder)} configuration instance. Call builder.UseMonica() after registering modules.");
+        }
 
-            endpoints.MapPost(ConfigurationRoutes.DashboardConfigRollback,
-                    async ([FromBody] ConfigurationRollbackRequest req, [FromServices] ConfigurationFacade facade) =>
-                    {
-                        return (await facade.RollbackConfigAsync(req.Key, req.AppId, req.Version)).GetResponse();
-                    })
-                .WithName("回滚配置类");
+        var optionsBuilder = ADD_OPTIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [_services])
+            ?? throw new InvalidOperationException($"Failed to create OptionsBuilder for '{optionsType.FullName}'.");
 
-            endpoints.MapPost(ConfigurationRoutes.DashboardConfigUpdate, async (ConfigurationUpdateRequest req,
-                    [FromServices] ConfigurationFacade facade) =>
-                {
-                    return (await facade.UpdateConfigAsync(req)).GetResponse();
-                })
-                .WithName("更新指定配置");
-
-            endpoints.MapGet(ConfigurationRoutes.DashboardOptionItemStatus,
-                    async ([FromQuery] string? appid, [FromQuery] string key,
-                        [FromServices] ConfigurationFacade facade) =>
-                    {
-                        return (await facade.GetOptionItemAsync(appid, key)).GetResponse();
-                    })
-                .WithName("获取指定配置状态");
-
-            endpoints.MapGet(ConfigurationRoutes.DashboardAllConfigStatus, async (
-                    [FromServices] ConfigurationFacade facade,
-                    [FromQuery] string? mode,
-                    [FromQuery] bool onlyCurDomain = false) =>
-                {
-                    return (await facade.GetConfigsAsync(mode, onlyCurDomain)).GetResponse();
-                })
-                .WithName("获取所有微服务配置状态");
+        var configurationSection = _configuration.GetSection(sectionPath);
+        var binderOptions = new Action<BinderOptions>(binder =>
+        {
+            binder.BindNonPublicProperties = attribute.BindNonPublicProperties;
+            binder.ErrorOnUnknownConfiguration = attribute.ErrorOnUnknownConfiguration || Option.ErrorOnUnknownConfiguration;
         });
+
+        BIND_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection, binderOptions]);
+        VALIDATE_DATA_ANNOTATIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder]);
     }
 
-   
+    private static MethodInfo GetRequiredGenericMethod(Type extensionType, string methodName, IReadOnlyList<Type> parameterTypeDefinitions)
+    {
+        return extensionType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .SingleOrDefault(method => MatchesGenericMethod(method, methodName, parameterTypeDefinitions))
+            ?? throw new InvalidOperationException($"Required method '{extensionType.FullName}.{methodName}' was not found.");
+    }
+
+    private static bool MatchesGenericMethod(MethodInfo method, string methodName, IReadOnlyList<Type> parameterTypeDefinitions)
+    {
+        if (!method.IsGenericMethodDefinition || method.Name != methodName)
+        {
+            return false;
+        }
+
+        var parameters = method.GetParameters();
+        if (parameters.Length != parameterTypeDefinitions.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var actual = parameters[i].ParameterType;
+            var expected = parameterTypeDefinitions[i];
+            if (actual.IsGenericType)
+            {
+                actual = actual.GetGenericTypeDefinition();
+            }
+
+            if (actual != expected)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
-public class ModuleConfigurationGuide : WebModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
+/// <summary>
+/// Fluent guide for Monica.Configuration.
+/// </summary>
+public sealed class ModuleConfigurationGuide
+    : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
     /// <summary>
-    /// Configures the history store used for configuration update and rollback records.
+    /// Registers a custom configuration value source.
     /// </summary>
-    public ModuleConfigurationGuide ConfigCustomStore<TStore>()
-        where TStore : class, IConfigurationHistoryStore
+    /// <typeparam name="TSource">The source implementation type.</typeparam>
+    /// <returns>The module guide.</returns>
+    public ModuleConfigurationGuide AddValueSource<TSource>()
+        where TSource : class, IConfigurationValueSource
     {
-        ConfigureServices(context => { context.Services.AddTransient<IConfigurationHistoryStore, TStore>(); },
-            ModuleRegistrationOrder.PreConfig);
+        ConfigureServices(context =>
+        {
+            context.Services.AddSingleton<IConfigurationValueSource, TSource>();
+        }, secondKey: typeof(TSource).FullName);
         return this;
     }
 }
 
-public class ModuleConfigurationOption : MinimalApiModuleOptions<ModuleConfiguration>
+/// <summary>
+/// Module options for Monica.Configuration.
+/// </summary>
+public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
 {
-
     /// <summary>
-    /// When false (the default), no exceptions are thrown when a configuration key is found for which the
-    /// provided model object does not have an appropriate property which matches the key's name.
-    /// When true, an <see cref="InvalidOperationException"/> is thrown with a description
-    /// of the missing properties.
+    /// Gets or sets whether options binding should fail when configuration contains keys not represented by the target options type.
     /// </summary>
-    /// <remarks>
-    /// This checks whether every key in a given dictionary maps to a property on the target configuration type.
-    /// It is intended for explicit source-to-type mapping rather than host-level configuration binding.
-    /// </remarks>
     public bool ErrorOnUnknownConfiguration { get; set; }
-
-    /// <summary>
-    /// Throws when a configuration type is not annotated with <see cref="ConfigurationAttribute"/>.
-    /// By default, this is disabled and only logs an error.
-    /// </summary>
-    public bool ErrorOnNoTagConfigAttribute { get; set; }
-    /// <summary>
-    /// Requires configuration properties to also use <see cref="OptionSettingAttribute"/>
-    /// when <see cref="ConfigurationAttribute"/> is applied; otherwise throws an exception.
-    /// </summary>
-    public bool ErrorOnNoTagOptionAttribute { get; set; }
-
-    /// <summary>
-    /// Enables configuration-read logging.
-    /// TODO: Not implemented yet; planned via dynamic setter interception.
-    /// </summary>
-    public bool EnableReadConfigLogging { get; set; }
-
-    /// <summary>
-    /// Enables configuration-registration logging.
-    /// </summary>
-    public bool EnableConfigRegisterLogging { get; set; }
-
-    /// <summary>
-    /// Gets or sets the application configuration manager used to bind discovered configuration types
-    /// and append generated configuration sources.
-    /// When not configured, the module uses <see cref="IHostApplicationBuilder.Configuration"/>.
-    /// Set this only when the module should bind against a custom configuration manager.
-    /// </summary>
-    public IConfigurationManager? AppConfiguration { get; set; }
-
-    /// <summary>
-    /// Allows logging option values even when <see cref="OptionSettingAttribute"/> is missing.
-    /// </summary>
-    public bool EnableLoggingWithoutOptionSetting { get; set; }
-
-    #region Configuration File Management
-
-    /// <summary>
-    /// Generates and manages configuration files per configuration type
-    /// (created under the runtime path).
-    /// </summary>
-    public bool GenerateFileForEachOption { get; set; }
-
-    /// <summary>
-    /// Parent folder for generated configuration files.
-    /// </summary>
-    public string? GenerateOptionFileParentDirectory { get; set; } = "configs";
-    
-    /// <summary>
-    /// Specifies how removed properties in configuration types are handled.
-    /// </summary>
-    public LocalJsonFileProvider.RemovedPropertyHandling RemovedPropertyHandling { get; set; } = LocalJsonFileProvider.RemovedPropertyHandling.Comment;
-    #endregion
-
-    /// <summary>
-    /// Adds additional configuration sources with higher precedence.
-    /// Precedence follows read order: later sources override earlier duplicate keys.
-    /// Default read rules:
-    /// <para></para>JsonDocumentOptions options = new JsonDocumentOptions()
-    /// <para></para>{
-    /// <para></para>  CommentHandling = JsonCommentHandling.Skip,
-    /// <para></para>  AllowTrailingCommas = true
-    /// <para></para>};
-    /// </summary>
-    public Action<IConfigurationManager>? SetOtherSourceAction { get; set; }
 }

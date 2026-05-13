@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageDescription>EF Core persistence provider for Monica.Configuration definitions, overrides, history, and source state.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
+    <ProjectReference Include="..\Monica.Repository\Monica.Repository.csproj" />
+  </ItemGroup>
+</Project>

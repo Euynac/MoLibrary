@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageDescription>Redis value source and change notification transport for Monica.Configuration.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
+    <ProjectReference Include="..\Monica.StateStore.StackExchange\Monica.StateStore.StackExchange.csproj" />
+  </ItemGroup>
+</Project>

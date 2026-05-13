@@ -1,84 +1,101 @@
+using Monica.Configuration.Models;
+
 namespace Monica.Configuration.Annotations;
 
+/// <summary>
+/// Marks a CLR options type as a Monica-managed configuration definition.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class)]
-public class ConfigurationAttribute : Attribute
+public sealed class ConfigurationAttribute : Attribute
 {
-    /// <summary>
-    /// Custom configuration section name used for JSON-based configuration binding.
-    /// If empty, the type name is used as the default section name.
-    /// </summary>
-    public string? Section { get; internal set; }
+    private string? _sectionPath;
 
     /// <summary>
-    /// Disables section-based binding and treats this configuration type as isolated key-value options.
-    /// TODO: File-based editing for isolated-node configuration is not supported yet.
-    /// </summary>
-    public bool DisableSection { get; set; }
-
-    /// <summary>
-    /// Indicates whether this configuration should be hidden from Dashboard UI. (Not implemented yet)
-    /// <para>Dashboard hierarchy: Domain -> Service -> Configuration Type, with versioning at service-configuration level.</para>
-    /// </summary>
-    public bool HideFromDashboard { get; set; }
-
-    /// <summary>
-    /// Configuration display name shown on Dashboard.
-    /// </summary>
-    public string? Title { get; set; }
-
-    /// <summary>
-    /// Configuration category for Dashboard grouping, typically constrained by custom constants.
-    /// </summary>
-    public string? Type { get; set; }
-
-    /// <summary>
-    /// Configuration description.
-    /// </summary>
-    public string? Description { get; set; }
-
-    /// <summary>
-    /// Indicates whether this is a sub-configuration dependent on a parent configuration.
-    /// </summary>
-    public bool IsSubConfiguration { get; set; }
-
-    /// <summary>
-    /// Indicates options under this configuration are offline-only and require restart to take effect.
-    /// </summary>
-    public bool IsOffline
-    {
-        get => _IsOffline ?? false;
-        set => _IsOffline = value;
-    }
-
-    internal bool? _IsOffline { get; set; }
-    /// <summary>
-    /// Initializes a configuration attribute using type name as section name.
+    /// Initializes a new configuration attribute without an explicit section path.
+    /// The scanner will derive the binding section from the type identity.
     /// </summary>
     public ConfigurationAttribute()
     {
     }
 
     /// <summary>
-    /// Initializes a configuration attribute with an explicit section name.
+    /// Initializes a new configuration attribute with an explicit binding section path.
     /// </summary>
-    /// <param name="section"></param>
-    public ConfigurationAttribute(string section)
+    /// <param name="sectionPath">The root Microsoft configuration section path.</param>
+    public ConfigurationAttribute(string sectionPath)
     {
-        Section = section;
+        _sectionPath = sectionPath;
     }
 
-    // The following options map to official OptionBinder behavior.
     /// <summary>
-    /// When false (the default), the binder will only attempt to set public properties.
-    /// If true, the binder will attempt to set all non read-only properties.
+    /// Gets the root Microsoft configuration section path.
     /// </summary>
-    public bool? BindNonPublicProperties { get; set; }
+    public string? SectionPath
+    {
+        get => _sectionPath;
+        set => _sectionPath = value;
+    }
 
     /// <summary>
-    /// When false (the default), no exceptions are thrown when a configuration key is found for which the
-    /// provided model object does not have an appropriate property which matches the key's name.
-    /// When true, an <see cref="System.InvalidOperationException"/> is thrown with a description
-    /// of the missing properties.
+    /// Gets the compatibility section path used by earlier Monica configuration APIs.
     /// </summary>
-    public bool? ErrorOnUnknownConfiguration { get; set; }
+    public string? Section
+    {
+        get => _sectionPath;
+        set => _sectionPath = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the stable definition key. When omitted, the scanner derives one from the CLR type.
+    /// </summary>
+    public string? DefinitionKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name shown in management tools.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a compatibility display title used by Monica project-unit discovery.
+    /// </summary>
+    public string? Title
+    {
+        get => DisplayName;
+        set => DisplayName = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the developer-facing description shown in generated documentation.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the type is only a nested sub-configuration and not a root options definition.
+    /// </summary>
+    public bool IsSubConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owning Monica module or application component.
+    /// </summary>
+    public string? OwnerModule { get; set; }
+
+    /// <summary>
+    /// Gets or sets a developer-defined category used for grouping configuration definitions.
+    /// </summary>
+    public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default reload behavior for nodes under this definition.
+    /// </summary>
+    public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.OnlineReloadable;
+
+    /// <summary>
+    /// Gets or sets whether the binder should also bind non-public properties for this options type.
+    /// </summary>
+    public bool BindNonPublicProperties { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether binding should fail when a configuration key has no matching options property.
+    /// </summary>
+    public bool ErrorOnUnknownConfiguration { get; set; }
 }

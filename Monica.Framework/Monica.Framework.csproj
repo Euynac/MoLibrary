@@ -26,9 +26,6 @@
 	  <ProjectReference Include="..\Monica.AI\Monica.AI.csproj" />
 	  <ProjectReference Include="..\Monica.Authority\Monica.Authority.csproj" />
 	  <ProjectReference Include="..\Monica.AutoModel\Monica.AutoModel.csproj" />
-	  <ProjectReference Include="..\Monica.Configuration.UI\Monica.Configuration.UI.csproj">
-	    <TreatAsUsed>true</TreatAsUsed>
-	  </ProjectReference>
 	  <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj">
 	    <TreatAsUsed>true</TreatAsUsed>
 	  </ProjectReference>
