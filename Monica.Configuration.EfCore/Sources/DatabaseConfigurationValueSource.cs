@@ -120,7 +120,12 @@ public sealed class DatabaseConfigurationValueSource(IDbContextProvider<Configur
                 ConfigurationPath = container.ConfigurationPath ?? ProjectConfigurationPath(mutation.Definition.SectionPath, containerPath)
             };
             var oldContainerValue = ToStoredValue(container);
-            var patchedValue = _snapshotEditor.Patch(oldContainerValue, containerPath, request.LogicalPath, request.Value);
+            var patchedValue = _snapshotEditor.Patch(
+                oldContainerValue,
+                mutation.Definition,
+                containerPath,
+                request.LogicalPath,
+                request.Value);
             UpsertOverride(container, containerMutation, containerPath, patchedValue, ConfigurationValueState.Active, ConfigurationOverrideGranularity.Container, version, now);
             AddHistory(dbContext, containerMutation, containerPath, ConfigurationMutationKind.Set, patchedValue, oldContainerValue, ConfigurationValueState.Active, ConfigurationOverrideGranularity.Container, version, now);
             return CreateResult(mutation, version, now);
@@ -184,7 +189,11 @@ public sealed class DatabaseConfigurationValueSource(IDbContextProvider<Configur
                 ConfigurationPath = container.ConfigurationPath ?? ProjectConfigurationPath(mutation.Definition.SectionPath, containerPath)
             };
             var oldValue = ToStoredValue(container);
-            var patchedValue = _snapshotEditor.Remove(oldValue, containerPath, request.LogicalPath);
+            var patchedValue = _snapshotEditor.Remove(
+                oldValue,
+                mutation.Definition,
+                containerPath,
+                request.LogicalPath);
             UpsertOverride(container, containerMutation, containerPath, patchedValue, ConfigurationValueState.Active, ConfigurationOverrideGranularity.Container, version, now);
             AddHistory(dbContext, containerMutation, containerPath, ConfigurationMutationKind.Remove, patchedValue, oldValue, ConfigurationValueState.Active, ConfigurationOverrideGranularity.Container, version, now);
             return CreateResult(mutation, version, now);

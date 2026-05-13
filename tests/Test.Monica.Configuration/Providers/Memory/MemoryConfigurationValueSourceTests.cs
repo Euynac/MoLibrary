@@ -47,8 +47,8 @@ public class MemoryConfigurationValueSourceTests
     {
         var cancellationToken = Xunit.TestContext.Current.CancellationToken;
         var source = new MemoryConfigurationValueSource();
-        var containerPath = LogicalPath.FromProperties("Services");
-        var descendantPath = LogicalPath.FromProperties("Services", "Name");
+        var containerPath = TestConfigurationFactory.ServiceItemPath("billing");
+        var descendantPath = containerPath.Append(new PropertySegment("Name"));
 
         await source.MutateAsync(Mutation(
             containerPath,
@@ -73,8 +73,8 @@ public class MemoryConfigurationValueSourceTests
     {
         var cancellationToken = Xunit.TestContext.Current.CancellationToken;
         var source = new MemoryConfigurationValueSource();
-        var containerPath = LogicalPath.FromProperties("Services");
-        var descendantPath = LogicalPath.FromProperties("Services", "Name");
+        var containerPath = TestConfigurationFactory.ServiceItemPath("billing");
+        var descendantPath = containerPath.Append(new PropertySegment("Name"));
 
         await source.MutateAsync(Mutation(
             containerPath,
@@ -87,6 +87,81 @@ public class MemoryConfigurationValueSourceTests
         value.Should().NotBeNull();
         value!.LogicalPath.Should().Be(containerPath);
         value.Granularity.Should().Be(ConfigurationOverrideGranularity.Container);
+    }
+
+    [Fact]
+    public async Task MutateAsync_WhenWholeListContainerCoversStableItemTarget_ShouldPatchListSnapshot()
+    {
+        var cancellationToken = Xunit.TestContext.Current.CancellationToken;
+        var source = new MemoryConfigurationValueSource();
+        var containerPath = LogicalPath.FromProperties("Services");
+        var descendantPath = TestConfigurationFactory.ServiceItemPath("main").Append(new PropertySegment("ConnectionString"));
+
+        await source.MutateAsync(Mutation(
+            containerPath,
+            ConfigurationStoredValue.Plain("""[{"Name":"main","ConnectionString":"old"},{"Name":"logs","ConnectionString":"old"}]"""),
+            ConfigurationMutationKind.Replace,
+            ConfigurationOverrideGranularity.Container), cancellationToken);
+
+        await source.MutateAsync(Mutation(
+            descendantPath,
+            ConfigurationStoredValue.Plain("\"new\"")), cancellationToken);
+
+        var values = await source.LoadAsync(cancellationToken);
+        values.Should().ContainSingle();
+        values[0].LogicalPath.Should().Be(containerPath);
+        values[0].Value.PlainJson.Should().Be(
+            """[{"Name":"main","ConnectionString":"new"},{"Name":"logs","ConnectionString":"old"}]""");
+    }
+
+    [Fact]
+    public async Task MutateAsync_WhenContainerReplaceFollowsLeaf_ShouldRemoveDescendantLeaf()
+    {
+        var cancellationToken = Xunit.TestContext.Current.CancellationToken;
+        var source = new MemoryConfigurationValueSource();
+        var containerPath = TestConfigurationFactory.ServiceMapPath("billing");
+        var descendantPath = TestConfigurationFactory.ConnectedDbPath("billing", "main").Append(new PropertySegment("ConnectionString"));
+
+        await source.MutateAsync(Mutation(
+            descendantPath,
+            ConfigurationStoredValue.Plain("\"leaf\"")), cancellationToken);
+
+        await source.MutateAsync(Mutation(
+            containerPath,
+            ConfigurationStoredValue.Plain("""{"ConnectedDbs":[{"Name":"main","ConnectionString":"container"}]}"""),
+            ConfigurationMutationKind.Replace,
+            ConfigurationOverrideGranularity.Container), cancellationToken);
+
+        var values = await source.LoadAsync(cancellationToken);
+        values.Should().ContainSingle();
+        values[0].LogicalPath.Should().Be(containerPath);
+        values[0].Granularity.Should().Be(ConfigurationOverrideGranularity.Container);
+        values[0].Value.PlainJson.Should().Be("""{"ConnectedDbs":[{"Name":"main","ConnectionString":"container"}]}""");
+    }
+
+    [Fact]
+    public async Task MutateAsync_WhenDictionaryContainerCoversStableListItemTarget_ShouldPatchDictionarySnapshot()
+    {
+        var cancellationToken = Xunit.TestContext.Current.CancellationToken;
+        var source = new MemoryConfigurationValueSource();
+        var containerPath = LogicalPath.FromProperties("ServiceMap");
+        var descendantPath = TestConfigurationFactory.ConnectedDbPath("billing", "main").Append(new PropertySegment("ConnectionString"));
+
+        await source.MutateAsync(Mutation(
+            containerPath,
+            ConfigurationStoredValue.Plain("""{"billing":{"ConnectedDbs":[{"Name":"main","ConnectionString":"old"}]}}"""),
+            ConfigurationMutationKind.Replace,
+            ConfigurationOverrideGranularity.Container), cancellationToken);
+
+        await source.MutateAsync(Mutation(
+            descendantPath,
+            ConfigurationStoredValue.Plain("\"new\"")), cancellationToken);
+
+        var values = await source.LoadAsync(cancellationToken);
+        values.Should().ContainSingle();
+        values[0].LogicalPath.Should().Be(containerPath);
+        values[0].Value.PlainJson.Should().Be(
+            """{"billing":{"ConnectedDbs":[{"Name":"main","ConnectionString":"new"}]}}""");
     }
 
     [Fact]

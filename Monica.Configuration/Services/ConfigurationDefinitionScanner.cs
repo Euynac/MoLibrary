@@ -69,7 +69,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
                 ? BuildDictionaryTemplate(type, path, configurationPath, inheritedReloadBehavior)
                 : null,
             ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(type, option, path, configurationPath, inheritedReloadBehavior)
+                ? BuildListTemplate(type, path, configurationPath, inheritedReloadBehavior)
                 : null,
             Children = children,
             ValidationRules = GetValidationRules(type.GetCustomAttributes<ValidationAttribute>())
@@ -130,7 +130,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
                 ? BuildDictionaryTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
                 : null,
             ListTemplate = nodeKind == ConfigurationNodeKind.List
-                ? BuildListTemplate(propertyType, option, path, configurationPath, inheritedReloadBehavior)
+                ? BuildListTemplate(propertyType, path, configurationPath, inheritedReloadBehavior)
                 : null,
             Children = children,
             ValidationRules = GetValidationRules(property.GetCustomAttributes<ValidationAttribute>())
@@ -168,7 +168,6 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
 
     private static ConfigurationListTemplate BuildListTemplate(
         Type listType,
-        OptionSettingAttribute? option,
         LogicalPath listPath,
         string configurationPath,
         ConfigurationReloadBehavior inheritedReloadBehavior)
@@ -176,7 +175,7 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
         var itemType = GetEnumerableItemType(listType) ?? typeof(object);
         return new ConfigurationListTemplate
         {
-            ItemKeyPropertyName = option?.ListItemKeyPropertyName,
+            ItemKeyPropertyName = ResolveListItemKeyPropertyName(itemType),
             ItemTemplate = ScanNode(
                 itemType,
                 "Item",
@@ -184,6 +183,37 @@ internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher h
                 string.IsNullOrWhiteSpace(configurationPath) ? "*" : $"{configurationPath}:*",
                 inheritedReloadBehavior)
         };
+    }
+
+    private static string? ResolveListItemKeyPropertyName(Type itemType)
+    {
+        var keyProperties = itemType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(property => property.GetCustomAttribute<OptionSettingAttribute>()?.IsListItemKey is true)
+            .ToArray();
+
+        if (keyProperties.Length == 0)
+        {
+            return null;
+        }
+
+        if (keyProperties.Length > 1)
+        {
+            var propertyNames = string.Join(", ", keyProperties.Select(property => property.Name));
+            throw new InvalidOperationException(
+                $"List item type '{itemType.FullName}' declares multiple list item key properties: {propertyNames}.");
+        }
+
+        var keyProperty = keyProperties[0];
+        if (keyProperty.GetMethod is null
+            || !keyProperty.GetMethod.IsPublic
+            || keyProperty.GetIndexParameters().Length > 0
+            || GetNodeKind(keyProperty.PropertyType) != ConfigurationNodeKind.Scalar)
+        {
+            throw new InvalidOperationException(
+                $"List item key property '{itemType.FullName}.{keyProperty.Name}' must be a public scalar property.");
+        }
+
+        return GetConfigurationPropertyName(keyProperty);
     }
 
     private static ConfigurationNodeKind GetNodeKind(Type type)

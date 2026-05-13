@@ -19,4 +19,10 @@ internal sealed record MergedNodeValue
     /// Gets the effective override.
     /// </summary>
     public required ConfigurationValueOverride Override { get; init; }
+
+    /// <summary>
+    /// Gets the priority of the source that produced <see cref="Override"/>.
+    /// Higher values win when multiple logical values project to the same Microsoft configuration key.
+    /// </summary>
+    public int SourcePriority { get; init; }
 }

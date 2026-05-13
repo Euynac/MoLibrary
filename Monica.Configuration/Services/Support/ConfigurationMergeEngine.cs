@@ -17,7 +17,7 @@ internal sealed class ConfigurationMergeEngine : IConfigurationMergeEngine
             .OrderByDescending(x => x.Source.Priority)
             .ToArray();
         var coveredSubtrees = new List<(string DefinitionKey, LogicalPath Path)>();
-        var effective = new Dictionary<(string DefinitionKey, string Path), ConfigurationValueOverride>();
+        var effective = new Dictionary<(string DefinitionKey, string Path), MergedNodeValue>();
 
         foreach (var sourceSet in ordered)
         {
@@ -42,20 +42,19 @@ internal sealed class ConfigurationMergeEngine : IConfigurationMergeEngine
                 }
 
                 var key = (value.DefinitionKey, value.LogicalPath.ToCanonicalString());
-                if (effective.TryAdd(key, value) && value.Granularity == ConfigurationOverrideGranularity.Container)
+                if (effective.TryAdd(key, new MergedNodeValue
+                    {
+                        DefinitionKey = value.DefinitionKey,
+                        LogicalPath = value.LogicalPath,
+                        Override = value,
+                        SourcePriority = sourceSet.Source.Priority
+                    }) && value.Granularity == ConfigurationOverrideGranularity.Container)
                 {
                     coveredSubtrees.Add((value.DefinitionKey, value.LogicalPath));
                 }
             }
         }
 
-        return effective.Values
-            .Select(value => new MergedNodeValue
-            {
-                DefinitionKey = value.DefinitionKey,
-                LogicalPath = value.LogicalPath,
-                Override = value
-            })
-            .ToArray();
+        return effective.Values.ToArray();
     }
 }

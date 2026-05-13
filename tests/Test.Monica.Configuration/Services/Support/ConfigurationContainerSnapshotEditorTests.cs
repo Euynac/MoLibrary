@@ -16,8 +16,9 @@ public class ConfigurationContainerSnapshotEditorTests
 
         var patched = editor.Patch(
             container,
-            LogicalPath.FromProperties("Services"),
-            LogicalPath.FromProperties("Services", "Nested", "Enabled"),
+            TestConfigurationFactory.Definition(),
+            TestConfigurationFactory.ServiceItemPath("billing"),
+            TestConfigurationFactory.ServiceItemPath("billing").Append(new PropertySegment("Nested")).Append(new PropertySegment("Enabled")),
             ConfigurationStoredValue.Plain("true"));
 
         patched.PlainJson.Should().Be("""{"Name":"billing","Nested":{"Enabled":true}}""");
@@ -31,8 +32,9 @@ public class ConfigurationContainerSnapshotEditorTests
 
         var patched = editor.Remove(
             container,
-            LogicalPath.FromProperties("Services"),
-            LogicalPath.FromProperties("Services", "Nested", "Enabled"));
+            TestConfigurationFactory.Definition(),
+            TestConfigurationFactory.ServiceItemPath("billing"),
+            TestConfigurationFactory.ServiceItemPath("billing").Append(new PropertySegment("Nested")).Append(new PropertySegment("Enabled")));
 
         patched.PlainJson.Should().Be("""{"Name":"billing","Nested":{}}""");
     }
@@ -44,10 +46,80 @@ public class ConfigurationContainerSnapshotEditorTests
 
         var act = () => editor.Patch(
             ConfigurationStoredValue.Plain("""{"Name":"billing"}"""),
-            LogicalPath.FromProperties("Services"),
-            LogicalPath.FromProperties("Services"),
+            TestConfigurationFactory.Definition(),
+            TestConfigurationFactory.ServiceItemPath("billing"),
+            TestConfigurationFactory.ServiceItemPath("billing"),
             ConfigurationStoredValue.Plain("\"payments\""));
 
         act.Should().Throw<ConfigurationValidationFailedException>();
+    }
+
+    [Fact]
+    public void Patch_WhenWholeListSnapshotUsesStableItemKey_ShouldPatchMatchingArrayItem()
+    {
+        var editor = new ConfigurationContainerSnapshotEditor();
+        var container = ConfigurationStoredValue.Plain(
+            """[{"Name":"main","ConnectionString":"old"},{"Name":"logs","ConnectionString":"old"}]""");
+
+        var patched = editor.Patch(
+            container,
+            TestConfigurationFactory.Definition(),
+            LogicalPath.FromProperties("Services"),
+            TestConfigurationFactory.ServiceItemPath("main").Append(new PropertySegment("ConnectionString")),
+            ConfigurationStoredValue.Plain("\"new\""));
+
+        patched.PlainJson.Should().Be(
+            """[{"Name":"main","ConnectionString":"new"},{"Name":"logs","ConnectionString":"old"}]""");
+    }
+
+    [Fact]
+    public void Patch_WhenWholeListSnapshotDoesNotContainStableItemKey_ShouldAppendNewArrayItem()
+    {
+        var editor = new ConfigurationContainerSnapshotEditor();
+        var container = ConfigurationStoredValue.Plain("""[{"Name":"logs","ConnectionString":"old"}]""");
+
+        var patched = editor.Patch(
+            container,
+            TestConfigurationFactory.Definition(),
+            LogicalPath.FromProperties("Services"),
+            TestConfigurationFactory.ServiceItemPath("main").Append(new PropertySegment("ConnectionString")),
+            ConfigurationStoredValue.Plain("\"new\""));
+
+        patched.PlainJson.Should().Be(
+            """[{"Name":"logs","ConnectionString":"old"},{"Name":"main","ConnectionString":"new"}]""");
+    }
+
+    [Fact]
+    public void Remove_WhenWholeListSnapshotUsesStableItemKey_ShouldRemoveMatchingArrayItem()
+    {
+        var editor = new ConfigurationContainerSnapshotEditor();
+        var container = ConfigurationStoredValue.Plain(
+            """[{"Name":"main","ConnectionString":"old"},{"Name":"logs","ConnectionString":"old"}]""");
+
+        var patched = editor.Remove(
+            container,
+            TestConfigurationFactory.Definition(),
+            LogicalPath.FromProperties("Services"),
+            TestConfigurationFactory.ServiceItemPath("main"));
+
+        patched.PlainJson.Should().Be("""[{"Name":"logs","ConnectionString":"old"}]""");
+    }
+
+    [Fact]
+    public void Patch_WhenDictionaryContainerSnapshotCoversDescendant_ShouldPatchDictionaryEntry()
+    {
+        var editor = new ConfigurationContainerSnapshotEditor();
+        var container = ConfigurationStoredValue.Plain(
+            """{"billing":{"ConnectedDbs":[{"Name":"main","ConnectionString":"old"}]}}""");
+
+        var patched = editor.Patch(
+            container,
+            TestConfigurationFactory.Definition(),
+            LogicalPath.FromProperties("ServiceMap"),
+            TestConfigurationFactory.ConnectedDbPath("billing", "main").Append(new PropertySegment("ConnectionString")),
+            ConfigurationStoredValue.Plain("\"new\""));
+
+        patched.PlainJson.Should().Be(
+            """{"billing":{"ConnectedDbs":[{"Name":"main","ConnectionString":"new"}]}}""");
     }
 }

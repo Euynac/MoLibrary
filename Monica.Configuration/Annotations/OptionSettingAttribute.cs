@@ -50,7 +50,8 @@ public sealed class OptionSettingAttribute : Attribute
     public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.Inherit;
 
     /// <summary>
-    /// Gets or sets the property name used as stable identity for list items.
+    /// Gets or sets whether this scalar property is the stable identity for items inside a list.
+    /// Exactly one property on a list item type may set this value to <see langword="true"/>.
     /// </summary>
-    public string? ListItemKeyPropertyName { get; set; }
+    public bool IsListItemKey { get; set; }
 }

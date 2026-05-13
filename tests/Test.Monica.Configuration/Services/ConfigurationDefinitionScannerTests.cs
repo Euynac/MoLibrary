@@ -73,6 +73,41 @@ public class ConfigurationDefinitionScannerTests
             .Which.Max.Should().Be(64);
     }
 
+    [Fact]
+    public void Scan_WhenListItemPropertyIsMarkedAsKey_ShouldUsePropertyConfigurationNameAsItemKey()
+    {
+        var scanner = CreateScanner();
+
+        var definition = scanner.Scan(typeof(ListOptions));
+
+        var items = definition.Root.Children.Single(x => x.Name == nameof(ListOptions.Items));
+        items.ListTemplate.Should().NotBeNull();
+        items.ListTemplate!.ItemKeyPropertyName.Should().Be("id");
+        items.ListTemplate.SupportsPerItemMutation.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Scan_WhenListItemTypeHasMultipleKeyProperties_ShouldThrowInvalidOperationException()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(MultipleKeyListOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*declares multiple list item key properties*");
+    }
+
+    [Fact]
+    public void Scan_WhenListItemKeyPropertyIsNotScalar_ShouldThrowInvalidOperationException()
+    {
+        var scanner = CreateScanner();
+
+        var act = () => scanner.Scan(typeof(ComplexKeyListOptions));
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must be a public scalar property*");
+    }
+
     private static ConfigurationDefinitionScanner CreateScanner()
     {
         return new ConfigurationDefinitionScanner(new ConfigurationSchemaHasher());
@@ -96,5 +131,50 @@ public class ConfigurationDefinitionScannerTests
             NodeKey = "sample.apiKey",
             ReloadBehavior = ConfigurationReloadBehavior.RequiresRestart)]
         public string? ApiKey { get; set; }
+    }
+
+    [Configuration("Sample:List", DefinitionKey = "test.list")]
+    private sealed class ListOptions
+    {
+        public List<ListItemOptions> Items { get; set; } = [];
+    }
+
+    private sealed class ListItemOptions
+    {
+        [OptionSetting(IsListItemKey = true)]
+        [ConfigurationKeyName("id")]
+        public string Name { get; set; } = "";
+    }
+
+    [Configuration("Sample:MultipleKeys", DefinitionKey = "test.multipleKeys")]
+    private sealed class MultipleKeyListOptions
+    {
+        public List<MultipleKeyItemOptions> Items { get; set; } = [];
+    }
+
+    private sealed class MultipleKeyItemOptions
+    {
+        [OptionSetting(IsListItemKey = true)]
+        public string Name { get; set; } = "";
+
+        [OptionSetting(IsListItemKey = true)]
+        public string Code { get; set; } = "";
+    }
+
+    [Configuration("Sample:ComplexKey", DefinitionKey = "test.complexKey")]
+    private sealed class ComplexKeyListOptions
+    {
+        public List<ComplexKeyItemOptions> Items { get; set; } = [];
+    }
+
+    private sealed class ComplexKeyItemOptions
+    {
+        [OptionSetting(IsListItemKey = true)]
+        public NestedKeyOptions Key { get; set; } = new();
+    }
+
+    private sealed class NestedKeyOptions
+    {
+        public string Value { get; set; } = "";
     }
 }

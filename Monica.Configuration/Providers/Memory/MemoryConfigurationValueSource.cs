@@ -87,7 +87,12 @@ public sealed class MemoryConfigurationValueSource : IConfigurationValueSource
         var container = FindCoveringContainer(request.DefinitionKey, request.LogicalPath);
         if (container is not null)
         {
-            var patchedValue = _snapshotEditor.Patch(container.Value, container.LogicalPath, request.LogicalPath, request.Value);
+            var patchedValue = _snapshotEditor.Patch(
+                container.Value,
+                mutation.Definition,
+                container.LogicalPath,
+                request.LogicalPath,
+                request.Value);
             _values[(container.DefinitionKey, container.LogicalPath.ToCanonicalString())] = CreateOverride(
                 mutation with
                 {
@@ -150,7 +155,11 @@ public sealed class MemoryConfigurationValueSource : IConfigurationValueSource
         var container = FindCoveringContainer(request.DefinitionKey, request.LogicalPath);
         if (container is not null)
         {
-            var patchedValue = _snapshotEditor.Remove(container.Value, container.LogicalPath, request.LogicalPath);
+            var patchedValue = _snapshotEditor.Remove(
+                container.Value,
+                mutation.Definition,
+                container.LogicalPath,
+                request.LogicalPath);
             _values[(container.DefinitionKey, container.LogicalPath.ToCanonicalString())] = CreateOverride(
                 mutation with
                 {

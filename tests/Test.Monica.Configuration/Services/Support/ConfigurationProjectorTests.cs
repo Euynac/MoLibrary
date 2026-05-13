@@ -76,6 +76,76 @@ public class ConfigurationProjectorTests
         ]);
     }
 
+    [Fact]
+    public void Project_WhenWholeListSnapshotExists_ShouldResolveListItemKeysFromSnapshotItems()
+    {
+        var projector = CreateProjector();
+        var listSnapshot = TestConfigurationFactory.Override(
+            LogicalPath.FromProperties("Services"),
+            json: """[{"Name":"main","ConnectionString":"Server=main"},{"Name":"logs","ConnectionString":"Server=logs"}]""",
+            granularity: ConfigurationOverrideGranularity.Container);
+        var leaf = TestConfigurationFactory.Override(
+            TestConfigurationFactory.ServiceItemPath("main").Append(new PropertySegment("Nested")).Append(new PropertySegment("Enabled")),
+            json: "true");
+
+        var projected = projector.Project(
+            [TestConfigurationFactory.Definition()],
+            [Merged(listSnapshot), Merged(leaf)]);
+
+        projected.Should().ContainEquivalentOf(new ProjectedConfigurationKey
+        {
+            Key = "Test:App:Services:0:Nested:Enabled",
+            Value = "true"
+        });
+    }
+
+    [Fact]
+    public void Project_WhenDictionaryContainerContainsStableListItems_ShouldResolveNestedListItemKeys()
+    {
+        var projector = CreateProjector();
+        var dictionarySnapshot = TestConfigurationFactory.Override(
+            LogicalPath.FromProperties("ServiceMap"),
+            json: """{"billing":{"ConnectedDbs":[{"Name":"main","ConnectionString":"Server=main"}]}}""",
+            granularity: ConfigurationOverrideGranularity.Container);
+        var leaf = TestConfigurationFactory.Override(
+            TestConfigurationFactory.ConnectedDbPath("billing", "main").Append(new PropertySegment("ConnectionString")),
+            json: "\"Server=override\"");
+
+        var projected = projector.Project(
+            [TestConfigurationFactory.Definition()],
+            [Merged(dictionarySnapshot), Merged(leaf)]);
+
+        projected.Should().ContainEquivalentOf(new ProjectedConfigurationKey
+        {
+            Key = "Test:App:ServiceMap:billing:ConnectedDbs:0:ConnectionString",
+            Value = "Server=override"
+        });
+    }
+
+    [Fact]
+    public void Project_WhenHigherPriorityLeafOverlapsLowerPriorityContainer_ShouldEmitHigherPriorityFlatValue()
+    {
+        var projector = CreateProjector();
+        var listSnapshot = TestConfigurationFactory.Override(
+            LogicalPath.FromProperties("Services"),
+            json: """[{"Name":"main","ConnectionString":"Server=container"}]""",
+            granularity: ConfigurationOverrideGranularity.Container);
+        var leaf = TestConfigurationFactory.Override(
+            TestConfigurationFactory.ServiceItemPath("main").Append(new PropertySegment("ConnectionString")),
+            sourceKey: "memory:high",
+            json: "\"Server=leaf\"");
+
+        var projected = projector.Project(
+            [TestConfigurationFactory.Definition()],
+            [
+                Merged(listSnapshot, sourcePriority: 100),
+                Merged(leaf, sourcePriority: 200)
+            ]);
+
+        projected.Should().ContainSingle(item => item.Key == "Test:App:Services:0:ConnectionString")
+            .Which.Value.Should().Be("Server=leaf");
+    }
+
     private static ConfigurationProjector CreateProjector()
     {
         return new ConfigurationProjector(
@@ -84,13 +154,14 @@ public class ConfigurationProjectorTests
             new PassThroughSensitiveValueProtector());
     }
 
-    private static MergedNodeValue Merged(ConfigurationValueOverride value)
+    private static MergedNodeValue Merged(ConfigurationValueOverride value, int sourcePriority = 100)
     {
         return new MergedNodeValue
         {
             DefinitionKey = value.DefinitionKey,
             LogicalPath = value.LogicalPath,
-            Override = value
+            Override = value,
+            SourcePriority = sourcePriority
         };
     }
 }

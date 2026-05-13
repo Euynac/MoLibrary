@@ -152,7 +152,12 @@ public sealed class RedisConfigurationValueSource : IConfigurationValueSource, I
         var container = FindCoveringContainer(values, request.DefinitionKey, request.LogicalPath);
         if (container is not null)
         {
-            var patched = _snapshotEditor.Patch(container.Value, container.LogicalPath, request.LogicalPath, request.Value);
+            var patched = _snapshotEditor.Patch(
+                container.Value,
+                mutation.Definition,
+                container.LogicalPath,
+                request.LogicalPath,
+                request.Value);
             Upsert(values, CreateOverride(
                 mutation with { ConfigurationPath = container.ConfigurationPath ?? mutation.ConfigurationPath },
                 container.LogicalPath,
@@ -214,7 +219,11 @@ public sealed class RedisConfigurationValueSource : IConfigurationValueSource, I
         var container = FindCoveringContainer(values, request.DefinitionKey, request.LogicalPath);
         if (container is not null)
         {
-            var patched = _snapshotEditor.Remove(container.Value, container.LogicalPath, request.LogicalPath);
+            var patched = _snapshotEditor.Remove(
+                container.Value,
+                mutation.Definition,
+                container.LogicalPath,
+                request.LogicalPath);
             Upsert(values, CreateOverride(
                 mutation with { ConfigurationPath = container.ConfigurationPath ?? mutation.ConfigurationPath },
                 container.LogicalPath,
