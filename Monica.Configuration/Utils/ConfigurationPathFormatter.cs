@@ -145,9 +145,10 @@ public static class ConfigurationPathFormatter
         {
             DICTIONARY_KEY_PREFIX => new DictionaryKeySegment(value[1..]),
             LIST_ITEM_KEY_PREFIX => new ListItemKeySegment(value[1..]),
-            LIST_INDEX_PREFIX when int.TryParse(value[1..], out var index) => new ListIndexSegment(index),
+            LIST_INDEX_PREFIX when int.TryParse(value[1..], out var index) && index >= 0 => new ListIndexSegment(index),
             LIST_INDEX_PREFIX => throw new ConfigurationPathFormatException($"List index segment '{value}' is not a valid integer."),
-            _ => new DictionaryKeySegment(value)
+            _ => throw new ConfigurationPathFormatException(
+                $"Bracket segment '{value}' must start with '{DICTIONARY_KEY_PREFIX}', '{LIST_ITEM_KEY_PREFIX}', or '{LIST_INDEX_PREFIX}'.")
         };
     }
 

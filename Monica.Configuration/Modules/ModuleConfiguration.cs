@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -12,6 +13,8 @@ using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
+using Monica.Configuration.Providers.Environment;
+using Monica.Configuration.Providers.Json;
 using Monica.Configuration.Providers.Memory;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
@@ -58,7 +61,7 @@ public sealed class ModuleConfiguration
     private static readonly MethodInfo BIND_METHOD = GetRequiredGenericMethod(
         typeof(OptionsBuilderConfigurationExtensions),
         nameof(OptionsBuilderConfigurationExtensions.Bind),
-        [typeof(OptionsBuilder<>), typeof(IConfiguration), typeof(Action<>)]);
+        [typeof(OptionsBuilder<>), typeof(IConfiguration)]);
 
     private static readonly MethodInfo VALIDATE_DATA_ANNOTATIONS_METHOD = GetRequiredGenericMethod(
         typeof(OptionsBuilderDataAnnotationsExtensions),
@@ -97,8 +100,12 @@ public sealed class ModuleConfiguration
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
+        services.AddDataProtection();
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
         services.TryAddSingleton<IConfigurationDefinitionScanner>(_definitionScanner);
+        services.TryAddSingleton<BootstrapJsonReader>();
+        services.TryAddSingleton<BootstrapEnvironmentReader>();
+        services.TryAddSingleton<BootstrapSourcePipeline>();
         services.TryAddSingleton<IConfigurationBootstrapReader, ConfigurationBootstrapReader>();
         services.TryAddSingleton<IConfigurationSensitiveValueProtector, ConfigurationSensitiveValueProtector>();
         services.TryAddSingleton<IConfigurationSourceStateTracker, ConfigurationSourceStateTracker>();
@@ -117,7 +124,10 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
         services.TryAddSingleton<MonicaConfigurationProviderAccessor>();
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
-        services.TryAddSingleton<IConfigurationValueSource, MemoryConfigurationValueSource>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, JsonConfigurationValueSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, EnvironmentConfigurationValueSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, MemoryConfigurationValueSource>());
+        services.AddHostedService<ConfigurationSourceWatchHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
     }
 
@@ -127,7 +137,7 @@ public sealed class ModuleConfiguration
         foreach (var type in types)
         {
             if (type is { IsClass: true, IsAbstract: false }
-                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is { IsSubConfiguration: false } attribute)
+                && type.GetCustomAttribute<ConfigurationAttribute>(inherit: false) is { } attribute)
             {
                 RegisterConfigurationType(type, attribute);
             }
@@ -140,10 +150,10 @@ public sealed class ModuleConfiguration
     {
         var definition = _definitionScanner.Scan(optionsType);
         _definitionRegistry.Register(definition);
-        RegisterOptionsBinding(optionsType, attribute, definition.SectionPath);
+        RegisterOptionsBinding(optionsType, definition.SectionPath);
     }
 
-    private void RegisterOptionsBinding(Type optionsType, ConfigurationAttribute attribute, string sectionPath)
+    private void RegisterOptionsBinding(Type optionsType, string sectionPath)
     {
         if (_services is null)
         {
@@ -160,13 +170,7 @@ public sealed class ModuleConfiguration
             ?? throw new InvalidOperationException($"Failed to create OptionsBuilder for '{optionsType.FullName}'.");
 
         var configurationSection = _configuration.GetSection(sectionPath);
-        var binderOptions = new Action<BinderOptions>(binder =>
-        {
-            binder.BindNonPublicProperties = attribute.BindNonPublicProperties;
-            binder.ErrorOnUnknownConfiguration = attribute.ErrorOnUnknownConfiguration || Option.ErrorOnUnknownConfiguration;
-        });
-
-        BIND_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection, binderOptions]);
+        BIND_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder, configurationSection]);
         VALIDATE_DATA_ANNOTATIONS_METHOD.MakeGenericMethod(optionsType).Invoke(null, [optionsBuilder]);
     }
 
@@ -225,7 +229,7 @@ public sealed class ModuleConfigurationGuide
     {
         ConfigureServices(context =>
         {
-            context.Services.AddSingleton<IConfigurationValueSource, TSource>();
+            context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, TSource>());
         }, secondKey: typeof(TSource).FullName);
         return this;
     }
@@ -234,10 +238,4 @@ public sealed class ModuleConfigurationGuide
 /// <summary>
 /// Module options for Monica.Configuration.
 /// </summary>
-public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>
-{
-    /// <summary>
-    /// Gets or sets whether options binding should fail when configuration contains keys not represented by the target options type.
-    /// </summary>
-    public bool ErrorOnUnknownConfiguration { get; set; }
-}
+public sealed class ModuleConfigurationOption : ModuleOptions<ModuleConfiguration>;

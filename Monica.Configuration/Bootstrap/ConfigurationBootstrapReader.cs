@@ -7,14 +7,14 @@ namespace Monica.Configuration.Bootstrap;
 /// <summary>
 /// Basic bootstrap reader that binds from already projected flat values.
 /// </summary>
-internal sealed class ConfigurationBootstrapReader : IConfigurationBootstrapReader
+internal sealed class ConfigurationBootstrapReader(BootstrapSourcePipeline pipeline) : IConfigurationBootstrapReader
 {
     /// <inheritdoc />
     public Task<IReadOnlyDictionary<string, string?>> ReadFlatValuesAsync(
         IReadOnlyList<ConfigurationDefinition> definitions,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult<IReadOnlyDictionary<string, string?>>(new Dictionary<string, string?>());
+        return pipeline.ReadAsync(definitions, cancellationToken);
     }
 
     /// <inheritdoc />

@@ -104,11 +104,11 @@ public sealed class ConfigurationContainerSnapshotEditor
 
     private static JsonNode GetOrCreateChild(JsonNode current, ConfigurationPathSegment segment, ConfigurationPathSegment nextSegment)
     {
-        var shouldCreateArray = nextSegment is ListIndexSegment;
+        var shouldCreateArray = nextSegment is ListIndexSegment or ListItemKeySegment;
         return current switch
         {
             JsonObject currentObject => GetOrCreateObjectChild(currentObject, segment.Value, shouldCreateArray),
-            JsonArray currentArray when int.TryParse(segment.Value, out var index) => GetOrCreateArrayChild(currentArray, index, shouldCreateArray),
+            JsonArray currentArray when TryGetArrayIndex(segment, out var index) => GetOrCreateArrayChild(currentArray, index, shouldCreateArray),
             _ => throw new ConfigurationValidationFailedException($"Cannot patch through JSON node '{segment.Value}'.")
         };
     }
@@ -118,7 +118,7 @@ public sealed class ConfigurationContainerSnapshotEditor
         return current switch
         {
             JsonObject currentObject => currentObject[segment.Value],
-            JsonArray currentArray when int.TryParse(segment.Value, out var index)
+            JsonArray currentArray when TryGetArrayIndex(segment, out var index)
                                         && index >= 0
                                         && index < currentArray.Count => currentArray[index],
             _ => null
@@ -157,7 +157,7 @@ public sealed class ConfigurationContainerSnapshotEditor
             case JsonObject currentObject:
                 currentObject[segment.Value] = value;
                 break;
-            case JsonArray currentArray when int.TryParse(segment.Value, out var index):
+            case JsonArray currentArray when TryGetArrayIndex(segment, out var index):
                 EnsureArraySize(currentArray, index);
                 currentArray[index] = value;
                 break;
@@ -173,11 +173,26 @@ public sealed class ConfigurationContainerSnapshotEditor
             case JsonObject currentObject:
                 currentObject.Remove(segment.Value);
                 break;
-            case JsonArray currentArray when int.TryParse(segment.Value, out var index)
+            case JsonArray currentArray when TryGetArrayIndex(segment, out var index)
                                          && index >= 0
                                          && index < currentArray.Count:
                 currentArray[index] = null;
                 break;
+        }
+    }
+
+    private static bool TryGetArrayIndex(ConfigurationPathSegment segment, out int index)
+    {
+        switch (segment)
+        {
+            case ListIndexSegment listIndex:
+                index = listIndex.Index;
+                return true;
+            case ListItemKeySegment listItem when int.TryParse(listItem.ItemKey, out index) && index >= 0:
+                return true;
+            default:
+                index = -1;
+                return false;
         }
     }
 

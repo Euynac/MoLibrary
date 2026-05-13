@@ -49,6 +49,7 @@ public sealed class ModuleConfigurationDapr(ModuleConfigurationDaprOption option
     public override void ClaimDependencies()
     {
         DependsOnModule<ModuleConfigurationGuide>().Register();
+        DependsOnModule<ModuleDaprClientGuide>().Register();
     }
 
     /// <inheritdoc />
@@ -68,4 +69,25 @@ public sealed class ModuleConfigurationDaprGuide
 /// <summary>
 /// Module options for Dapr configuration integration.
 /// </summary>
-public sealed class ModuleConfigurationDaprOption : ModuleOptions<ModuleConfigurationDapr>;
+public sealed class ModuleConfigurationDaprOption : ModuleOptions<ModuleConfigurationDapr>
+{
+    /// <summary>
+    /// Gets or sets the Dapr configuration store component name.
+    /// </summary>
+    public string StoreName { get; set; } = "configurationstore";
+
+    /// <summary>
+    /// Gets or sets metadata sent to the Dapr configuration store.
+    /// </summary>
+    public Dictionary<string, string> Metadata { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets the Dapr pub/sub component name used for change notifications.
+    /// </summary>
+    public string PubSubName { get; set; } = "pubsub";
+
+    /// <summary>
+    /// Gets or sets the topic used for configuration change notifications.
+    /// </summary>
+    public string NotificationTopic { get; set; } = "monica.configuration.changes";
+}

@@ -32,11 +32,11 @@ public class ConfigurationPathFormatterTests
     }
 
     [Fact]
-    public void Parse_WhenLegacyBracketSegmentHasNoPrefix_ShouldTreatItAsDictionaryKey()
+    public void Parse_WhenBracketSegmentHasNoPrefix_ShouldThrowPathFormatException()
     {
-        var parsed = ConfigurationPathFormatter.Parse("Services[123]");
+        var act = () => ConfigurationPathFormatter.Parse("Services[123]");
 
-        parsed.Segments.Should().Equal(new PropertySegment("Services"), new DictionaryKeySegment("123"));
+        act.Should().Throw<ConfigurationPathFormatException>();
     }
 
     [Fact]

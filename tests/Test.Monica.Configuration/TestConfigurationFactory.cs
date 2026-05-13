@@ -73,15 +73,21 @@ internal static class TestConfigurationFactory
             Children =
             [
                 ScalarNode("WorkerId", typeof(int), ConfigurationValueKind.Integer),
-                ObjectNode("Services",
-                [
-                    ScalarNode("Name", typeof(string), ConfigurationValueKind.String),
-                    ScalarNode("ConnectionString", typeof(string), ConfigurationValueKind.String),
-                    ObjectNode("Nested",
-                    [
-                        ScalarNode("Enabled", typeof(bool), ConfigurationValueKind.Boolean)
-                    ])
-                ])
+                ListNode(
+                    "Services",
+                    ObjectNode(
+                        "Item",
+                        [
+                            ScalarNode("Name", typeof(string), ConfigurationValueKind.String),
+                            ScalarNode("ConnectionString", typeof(string), ConfigurationValueKind.String),
+                            ObjectNode("Nested",
+                            [
+                                ScalarNode("Enabled", typeof(bool), ConfigurationValueKind.Boolean)
+                            ])
+                        ],
+                        new LogicalPath([new PropertySegment("Services"), new ListItemKeySegment("*")]),
+                        "Test:App:Services:*"),
+                    "Name")
             ]
         };
     }
@@ -91,7 +97,8 @@ internal static class TestConfigurationFactory
         Type type,
         ConfigurationValueKind valueKind,
         LogicalPath? path = null,
-        string? configurationPath = null)
+        string? configurationPath = null,
+        bool isSensitive = false)
     {
         var relativePath = path ?? LogicalPath.FromProperties(name);
         return new ConfigurationNodeDefinition
@@ -103,7 +110,8 @@ internal static class TestConfigurationFactory
             ClrTypeName = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
             NodeKind = ConfigurationNodeKind.Scalar,
             ValueKind = valueKind,
-            IsNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null
+            IsNullable = !type.IsValueType || Nullable.GetUnderlyingType(type) is not null,
+            IsSensitive = isSensitive
         };
     }
 
@@ -124,6 +132,31 @@ internal static class TestConfigurationFactory
             NodeKind = ConfigurationNodeKind.Object,
             IsNullable = true,
             Children = children
+        };
+    }
+
+    public static ConfigurationNodeDefinition ListNode(
+        string name,
+        ConfigurationNodeDefinition itemTemplate,
+        string? itemKeyPropertyName,
+        LogicalPath? path = null,
+        string? configurationPath = null)
+    {
+        var relativePath = path ?? LogicalPath.FromProperties(name);
+        return new ConfigurationNodeDefinition
+        {
+            NodeKey = relativePath.ToCanonicalString(),
+            Name = name,
+            RelativePath = relativePath,
+            ConfigurationPath = configurationPath ?? $"Test:App:{name}",
+            ClrTypeName = typeof(List<object>).AssemblyQualifiedName!,
+            NodeKind = ConfigurationNodeKind.List,
+            IsNullable = true,
+            ListTemplate = new ConfigurationListTemplate
+            {
+                ItemKeyPropertyName = itemKeyPropertyName,
+                ItemTemplate = itemTemplate
+            }
         };
     }
 }

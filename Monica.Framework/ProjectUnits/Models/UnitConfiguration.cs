@@ -88,7 +88,7 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
 
     protected override bool VerifyTypeConstrain()
     {
-        return Type.IsClass && Type.GetCustomAttribute<ConfigurationAttribute>() is {IsSubConfiguration: false};
+        return Type.IsClass && Type.GetCustomAttribute<ConfigurationAttribute>() is not null;
     }
 
     protected override ProjectUnitNamingRule? DefaultConventionOption()
@@ -108,7 +108,7 @@ public class UnitConfiguration(Type type) : ProjectUnit(type, EProjectUnitType.C
         {
             if (context.Type.GetCustomAttribute<ConfigurationAttribute>() is {} info)
             {
-                unit.Title = info.Title ?? unit.Title;
+                unit.Title = info.DisplayName ?? unit.Title;
                 unit.Description = info.Description ?? unit.Description;
             }
         }

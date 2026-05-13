@@ -37,15 +37,6 @@ public sealed class ConfigurationAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets the compatibility section path used by earlier Monica configuration APIs.
-    /// </summary>
-    public string? Section
-    {
-        get => _sectionPath;
-        set => _sectionPath = value;
-    }
-
-    /// <summary>
     /// Gets or sets the stable definition key. When omitted, the scanner derives one from the CLR type.
     /// </summary>
     public string? DefinitionKey { get; set; }
@@ -56,23 +47,9 @@ public sealed class ConfigurationAttribute : Attribute
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Gets or sets a compatibility display title used by Monica project-unit discovery.
-    /// </summary>
-    public string? Title
-    {
-        get => DisplayName;
-        set => DisplayName = value;
-    }
-
-    /// <summary>
     /// Gets or sets the developer-facing description shown in generated documentation.
     /// </summary>
     public string? Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the type is only a nested sub-configuration and not a root options definition.
-    /// </summary>
-    public bool IsSubConfiguration { get; set; }
 
     /// <summary>
     /// Gets or sets the owning Monica module or application component.
@@ -89,13 +66,4 @@ public sealed class ConfigurationAttribute : Attribute
     /// </summary>
     public ConfigurationReloadBehavior ReloadBehavior { get; set; } = ConfigurationReloadBehavior.OnlineReloadable;
 
-    /// <summary>
-    /// Gets or sets whether the binder should also bind non-public properties for this options type.
-    /// </summary>
-    public bool BindNonPublicProperties { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether binding should fail when a configuration key has no matching options property.
-    /// </summary>
-    public bool ErrorOnUnknownConfiguration { get; set; }
 }

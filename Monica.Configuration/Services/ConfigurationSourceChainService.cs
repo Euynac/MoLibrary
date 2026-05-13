@@ -10,7 +10,8 @@ namespace Monica.Configuration.Services;
 internal sealed class ConfigurationSourceChainService(
     IConfigurationDefinitionRegistry definitions,
     IEnumerable<IConfigurationValueSource> sources,
-    ConfigurationStoredValueCodec codec)
+    ConfigurationStoredValueCodec codec,
+    IConfigurationSensitiveValueProtector sensitiveValueProtector)
     : IConfigurationSourceChainService
 {
     /// <inheritdoc />
@@ -20,6 +21,8 @@ internal sealed class ConfigurationSourceChainService(
         CancellationToken cancellationToken)
     {
         var definition = definitions.GetRequired(definitionKey);
+        var targetNode = ResolveTargetNode(definition, logicalPath);
+        var isSensitive = targetNode?.IsSensitive is true;
         var sourceValues = new List<ConfigurationSourceValue>();
         ConfigurationValueOverride? effective = null;
 
@@ -38,12 +41,12 @@ internal sealed class ConfigurationSourceChainService(
                 Kind = source.Descriptor.Kind,
                 Priority = source.Descriptor.Priority,
                 HasValue = value?.State == ConfigurationValueState.Active,
-                IsSensitive = false,
-                DisplayValue = value is null
+                IsSensitive = isSensitive,
+                DisplayValue = value is null || isSensitive
                     ? null
                     : value.Granularity == ConfigurationOverrideGranularity.Container
                         ? value.Value.PlainJson
-                        : codec.ToConfigurationString(value.Value),
+                        : codec.ToConfigurationString(sensitiveValueProtector.Unprotect(value.Value)),
                 LastModifiedTime = value?.LastModifiedTime
             });
         }
@@ -56,5 +59,28 @@ internal sealed class ConfigurationSourceChainService(
             Sources = sourceValues,
             EffectiveSourceKey = effective?.SourceKey
         };
+    }
+
+    private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
+    {
+        var current = definition.Root;
+        foreach (var segment in logicalPath.Segments)
+        {
+            current = segment switch
+            {
+                PropertySegment property => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
     }
 }

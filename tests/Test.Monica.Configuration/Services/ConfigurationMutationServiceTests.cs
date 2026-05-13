@@ -1,9 +1,13 @@
+using System.Diagnostics.Metrics;
 using AwesomeAssertions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
+using Monica.Configuration.Exceptions;
+using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
+using Test.Monica.Configuration.Services.Support;
 using Xunit;
 
 namespace Test.Monica.Configuration.Services;
@@ -86,17 +90,37 @@ public class ConfigurationMutationServiceTests
             registry,
             sources,
             new ConfigurationValidationCoordinator(),
+            new PassThroughSensitiveValueProtector(),
             new ConfigurationPathProjector(),
             reloadCoordinator ?? new RecordingReloadCoordinator(),
-            broadcasters ?? []);
+            broadcasters ?? [],
+            new ConfigurationMetricsRecorder(new RecordingMeterFactory()));
     }
 
-    private static ConfigurationMutationRequest Request(string? targetSourceKey = null)
+    [Fact]
+    public async Task MutateAsync_WhenLogicalPathUsesListIndex_ShouldRejectMutation()
+    {
+        var cancellationToken = Xunit.TestContext.Current.CancellationToken;
+        var source = new RecordingValueSource("memory:target", 100);
+        var service = CreateService([source]);
+        var request = Request(logicalPath: new LogicalPath(
+        [
+            new PropertySegment("Services"),
+            new ListIndexSegment(0),
+            new PropertySegment("Name")
+        ]));
+
+        var act = () => service.MutateAsync(request, cancellationToken);
+
+        await act.Should().ThrowAsync<ConfigurationValidationFailedException>();
+    }
+
+    private static ConfigurationMutationRequest Request(string? targetSourceKey = null, LogicalPath? logicalPath = null)
     {
         return new ConfigurationMutationRequest
         {
             DefinitionKey = TestConfigurationFactory.DefinitionKey,
-            LogicalPath = LogicalPath.FromProperties("WorkerId"),
+            LogicalPath = logicalPath ?? LogicalPath.FromProperties("WorkerId"),
             MutationKind = ConfigurationMutationKind.Set,
             Value = ConfigurationStoredValue.Plain("12"),
             TargetSourceKey = targetSourceKey,
@@ -176,6 +200,18 @@ public class ConfigurationMutationServiceTests
         {
             Notifications.Add(notification);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingMeterFactory : IMeterFactory
+    {
+        public Meter Create(MeterOptions options)
+        {
+            return new Meter(options);
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

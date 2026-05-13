@@ -19,4 +19,9 @@ public static class ConfigurationMetrics
     /// Gets the reload latency histogram name.
     /// </summary>
     public const string ReloadLatency = "monica.configuration.reload.latency";
+
+    /// <summary>
+    /// Gets the mutation failure counter name.
+    /// </summary>
+    public const string MutationFailureCount = "monica.configuration.mutation.failure.count";
 }
