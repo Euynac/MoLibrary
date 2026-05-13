@@ -5,12 +5,64 @@ using Monica.Repository.UnitOfWork.Models;
 
 namespace Monica.Repository.UnitOfWork.Services;
 
+/// <summary>
+/// Default ambient unit-of-work manager.
+/// </summary>
 public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
     : IUnitOfWorkManager
 {
-    public IUnitOfWork? Current => GetCurrentByChecking();
     private readonly AsyncLocal<IUnitOfWork?> _currentUow = new();
 
+    public IUnitOfWork? Current => GetCurrentByChecking();
+
+    public IUnitOfWork BeginScope(UnitOfWorkScopeOptions? options = null)
+    {
+        var scopeOptions = options ?? new UnitOfWorkScopeOptions();
+        var currentUow = Current;
+        if (currentUow != null && !scopeOptions.RequiresNew)
+        {
+            return new ChildUnitOfWork(currentUow);
+        }
+
+        return CreateNewUnitOfWork(scopeOptions);
+    }
+
+    public async Task RunAsync(
+        Func<Task> work,
+        UnitOfWorkScopeOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var unitOfWork = BeginScope(options);
+        try
+        {
+            await work();
+            await unitOfWork.CompleteAsync(cancellationToken);
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task<T> RunAsync<T>(
+        Func<Task<T>> work,
+        UnitOfWorkScopeOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var unitOfWork = BeginScope(options);
+        try
+        {
+            var result = await work();
+            await unitOfWork.CompleteAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
 
     public void SetUnitOfWork(IUnitOfWork? unitOfWork)
     {
@@ -19,69 +71,42 @@ public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
 
     private IUnitOfWork? GetCurrentByChecking()
     {
-        var uow = _currentUow.Value;
+        var unitOfWork = _currentUow.Value;
 
-        //Skip reserved unit of work
-        while (uow != null && (uow.IsDisposed || uow.IsCompleted))
+        while (unitOfWork is IUnitOfWorkInternals { IsDisposed: true } or { IsCompleted: true })
         {
-            uow = uow.Outer;
+            unitOfWork = ((IUnitOfWorkInternals)unitOfWork).Outer;
         }
-
-        return uow;
-    }
-
-    public IUnitOfWork Begin(UnitOfWorkOptions options, bool requiresNew = false)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        var currentUow = Current;
-        if (currentUow != null && !requiresNew)
-        {
-            return new ChildUnitOfWork(currentUow);
-        }
-
-        var unitOfWork = CreateNewUnitOfWork();
-        unitOfWork.Initialize(options);
 
         return unitOfWork;
     }
 
-    public IUnitOfWork Begin(bool requiresNew = false)
-    {
-        return Begin(new UnitOfWorkOptions(), requiresNew);
-    }
-
-    public IUnitOfWork BeginTransaction()
-    {
-        return Begin(new UnitOfWorkOptions { IsTransactional = true }, true);
-    }
-
-    private IUnitOfWork CreateNewUnitOfWork()
+    private IUnitOfWork CreateNewUnitOfWork(UnitOfWorkScopeOptions options)
     {
         var scope = serviceScopeFactory.CreateScope();
         try
         {
             var outerUow = Current;
+            var unitOfWork = ActivatorUtilities.CreateInstance<UnitOfWork>(
+                scope.ServiceProvider,
+                options);
 
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-
-            unitOfWork.SetOuter(outerUow);
+            ((IUnitOfWorkInternals)unitOfWork).SetOuter(outerUow);
 
             SetUnitOfWork(unitOfWork);
 
-            unitOfWork.OnDisposed(() =>
+            ((IUnitOfWorkInternals)unitOfWork).OnDisposed(() =>
             {
                 SetUnitOfWork(outerUow);
-                // ReSharper disable once AccessToDisposedClosure
                 scope.Dispose();
             });
 
             return unitOfWork;
         }
-        catch(Exception ex) 
+        catch (Exception exception)
         {
             scope.Dispose();
-            ex.ReThrow();
+            exception.ReThrow();
             throw;
         }
     }

@@ -7,15 +7,27 @@ using Monica.Repository.UnitOfWork.Models;
 
 namespace Monica.Repository.UnitOfWork.Services;
 
-public class UnitOfWork(
+/// <summary>
+/// Default unit-of-work implementation.
+/// </summary>
+internal sealed class UnitOfWork(
+    UnitOfWorkScopeOptions options,
     ICachedServiceProvider serviceProvider,
     IAsyncLocalEventPublisher publisher,
     ILogger<UnitOfWork> logger)
-    : IUnitOfWork
+    : IUnitOfWork, IUnitOfWorkInternals
 {
+    private readonly Dictionary<string, DbContext> _dbContexts = [];
+    private readonly List<Func<Task>> _completedHandlers = [];
+    private readonly List<Action> _disposedHandlers = [];
+    private Exception? _exception;
+    private bool _isCompleting;
+    private bool _isRolledBack;
+    private AsyncEventBuffer? _eventBuffer;
+
     public Guid Id { get; } = Guid.NewGuid();
 
-    public UnitOfWorkOptions Options { get; private set; } = null!;
+    public UnitOfWorkScopeOptions Options { get; } = options;
 
     public IUnitOfWork? Outer { get; private set; }
 
@@ -23,50 +35,27 @@ public class UnitOfWork(
 
     public bool IsCompleted { get; private set; }
 
-    protected List<Func<Task>> CompletedHandlers { get; } = [];
-    protected List<Action> DisposedHandlers { get; } = [];
-
     public ICachedServiceProvider CachedServiceProvider { get; } = serviceProvider;
 
-    public Dictionary<string, object?> Items { get; } = [];
-
-    private readonly Dictionary<string, DbContext> _dbContexts = [];
-
-    private Exception? _exception;
-    private bool _isCompleting;
-    private bool _isRolledBack;
-
-    public virtual void Initialize(UnitOfWorkOptions options)
-    {
-        if (Options != null)
-        {
-            throw new Exception("This unit of work has already been initialized.");
-        }
-
-        Options = options;
-    }
-
-
-    public virtual void SetOuter(IUnitOfWork? outer)
+    public void SetOuter(IUnitOfWork? outer)
     {
         Outer = outer;
     }
 
-    public virtual async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         if (_isRolledBack)
         {
             return;
         }
 
-        foreach (var dbContext in _dbContexts)
+        foreach (var dbContext in _dbContexts.Values)
         {
-            await dbContext.Value.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 
-
-    public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
+    public async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
         if (_isRolledBack)
         {
@@ -79,30 +68,31 @@ public class UnitOfWork(
         {
             _isCompleting = true;
             await SaveChangesAsync(cancellationToken);
-
             await publisher.FlushEventBuffer();
             await CommitTransactionsAsync(cancellationToken);
             await OnCompletedAsync();
             IsCompleted = true;
             _isCompleting = false;
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _exception = ex;
+            _exception = exception;
             try
             {
                 await RollbackAllAsync(cancellationToken);
             }
             catch (Exception rollbackException)
             {
-                logger.LogError(rollbackException, "An error occurred while rolling back the unit of work after a completion failure.");
+                logger.LogError(
+                    rollbackException,
+                    "An error occurred while rolling back the unit of work after a completion failure.");
             }
 
-            ex.ReThrow();
+            exception.ReThrow();
         }
     }
 
-    public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
         if (_isRolledBack)
         {
@@ -110,91 +100,26 @@ public class UnitOfWork(
         }
 
         await RollbackAllAsync(cancellationToken);
-
         _isRolledBack = true;
     }
 
     public void OnDisposed(Action handler)
     {
-        DisposedHandlers.Add(handler);
+        _disposedHandlers.Add(handler);
     }
 
-    public virtual void OnCompleted(Func<Task> handler)
+    public void OnCompleted(Func<Task> handler)
     {
-        CompletedHandlers.Add(handler);
+        _completedHandlers.Add(handler);
     }
 
-    protected virtual async Task OnCompletedAsync()
-    {
-        foreach (var handler in CompletedHandlers)
-        {
-            await handler.Invoke();
-        }
-    }
-
-    protected virtual void OnFailed()
-    {
-    }
-
-    protected virtual void OnDisposed()
-    {
-        foreach (var handler in DisposedHandlers)
-        {
-            handler.Invoke();
-        }
-    }
-
-    public virtual void Dispose()
-    {
-        try
-        {
-            if (IsDisposed) // This can also be triggered once when the scoped ServiceProvider is disposed.
-            {
-                return;
-            }
-
-            if (!IsCompleted || _exception != null)
-            {
-                OnFailed();
-            }
-
-            // In CreateDbContextWithTransactionAsync, disposing an uncommitted transaction usually triggers an automatic rollback.
-            // After rollback, the transaction is already finished and should not be committed again.
-            // Forcibly terminating the process may also trigger rollback when the DB detects a disconnected client (not always reliable in practice).
-            OnDisposed();
-
-            IsDisposed = true;
-
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, $"Exception occur when {nameof(UnitOfWork)} is disposing!");
-        }
-        finally
-        {
-            try
-            {
-                //dispose all db contexts
-                foreach (var dbContext in _dbContexts.Values)
-                {
-                    dbContext.Dispose(); // Disposing the DbContext usually rolls back uncommitted transactions.
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, $"Exception occur when {nameof(UnitOfWork)} is try disposing all related DbContexts!");
-            }
-           
-        }
-    }
-
-    public virtual void AttachDbContext<TDbContext>(TDbContext dbContext)
+    public void AttachDbContext<TDbContext>(TDbContext dbContext)
         where TDbContext : DbContext
     {
         _dbContexts[typeof(TDbContext).FullName!] = dbContext;
     }
 
-    public virtual TDbContext? TryGetDbContext<TDbContext>()
+    public TDbContext? TryGetDbContext<TDbContext>()
         where TDbContext : DbContext
     {
         return _dbContexts.TryGetValue(typeof(TDbContext).FullName!, out var dbContext)
@@ -202,19 +127,92 @@ public class UnitOfWork(
             : null;
     }
 
-    private void PreventMultipleComplete()
+    public AsyncEventBuffer? GetEventBuffer()
     {
-        if (IsCompleted || _isCompleting)
+        return _eventBuffer;
+    }
+
+    public AsyncEventBuffer GetOrCreateEventBuffer()
+    {
+        return _eventBuffer ??= new AsyncEventBuffer();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (IsDisposed)
         {
-            if (_exception != null)
+            return;
+        }
+
+        try
+        {
+            if (!IsCompleted || _exception != null)
             {
-                throw new Exception($"Completion has already been requested for this unit of work. but has error:{_exception.Message}, see inner exception for detail", _exception);
+                await RollbackAsync();
+                OnFailed();
             }
-            throw new Exception("Completion has already been requested for this unit of work. Detect has multiple thread to manipulate this unit of work");
+
+            OnDisposed();
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Exception occurred while disposing {UnitOfWorkType}.", nameof(UnitOfWork));
+        }
+        finally
+        {
+            IsDisposed = true;
+            DisposeDbContexts();
         }
     }
 
-    protected virtual async Task RollbackAllAsync(CancellationToken cancellationToken)
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    public override string ToString()
+    {
+        return $"[UnitOfWork {Id}]";
+    }
+
+    private async Task OnCompletedAsync()
+    {
+        foreach (var handler in _completedHandlers)
+        {
+            await handler.Invoke();
+        }
+    }
+
+    private void OnFailed()
+    {
+    }
+
+    private void OnDisposed()
+    {
+        foreach (var handler in _disposedHandlers)
+        {
+            handler.Invoke();
+        }
+    }
+
+    private void PreventMultipleComplete()
+    {
+        if (!IsCompleted && !_isCompleting)
+        {
+            return;
+        }
+
+        if (_exception != null)
+        {
+            throw new Exception(
+                $"Completion has already been requested for this unit of work, but it failed: {_exception.Message}. See inner exception for detail.",
+                _exception);
+        }
+
+        throw new Exception("Completion has already been requested for this unit of work.");
+    }
+
+    private async Task RollbackAllAsync(CancellationToken cancellationToken)
     {
         if (!Options.IsTransactional)
         {
@@ -223,11 +221,14 @@ public class UnitOfWork(
 
         foreach (var dbContext in _dbContexts.Values)
         {
-            await dbContext.Database.RollbackTransactionAsync(cancellationToken);
+            if (dbContext.Database.CurrentTransaction != null)
+            {
+                await dbContext.Database.RollbackTransactionAsync(cancellationToken);
+            }
         }
     }
 
-    protected virtual async Task CommitTransactionsAsync(CancellationToken cancellationToken)
+    private async Task CommitTransactionsAsync(CancellationToken cancellationToken)
     {
         if (!Options.IsTransactional)
         {
@@ -237,12 +238,25 @@ public class UnitOfWork(
         foreach (var dbContext in _dbContexts.Values)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
-            await dbContext.Database.CommitTransactionAsync(cancellationToken);
+            if (dbContext.Database.CurrentTransaction != null)
+            {
+                await dbContext.Database.CommitTransactionAsync(cancellationToken);
+            }
         }
     }
 
-    public override string ToString()
+    private void DisposeDbContexts()
     {
-        return $"[UnitOfWork {Id}]";
+        try
+        {
+            foreach (var dbContext in _dbContexts.Values)
+            {
+                dbContext.Dispose();
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Exception occurred while disposing DbContexts attached to {UnitOfWorkType}.", nameof(UnitOfWork));
+        }
     }
 }

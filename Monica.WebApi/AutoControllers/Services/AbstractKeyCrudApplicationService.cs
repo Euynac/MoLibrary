@@ -197,7 +197,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // Important: IAsyncEnumerable loses AsyncLocal values; by the time execution reaches this method, the ambient state is already gone.
-        using var uow = UnitOfWorkManager.Begin();
+        await using var uow = UnitOfWorkManager.BeginScope();
         var query = await CreateFilteredQueryAsync(input);
         
         await foreach (var dto in InnerGetListStreamAsync<TGetListOutputDto>(input, query, cancellationToken))
@@ -258,7 +258,10 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found</exception>
     protected virtual async Task<TEntity> GetEntityByIdAsync(TKey id)
     {
-        var entity = await ApplyInclude(await Repository.GetQueryableAsync()).OrderBy(e => e.Id).FirstOrDefaultAsync(e => e.Id!.Equals(id));
+        var query = ApplyInclude(Repository.Query())
+            .OrderBy(e => e.Id);
+
+        var entity = await query.FirstOrDefaultAsync(e => e.Id!.Equals(id));
         if (entity == null)
         {
             throw new EntityNotFoundException(typeof(TEntity), id);
@@ -279,7 +282,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     {
         var entity = MapToEntity(input);
 
-        await Repository.InsertAsync(entity, autoSave: true);
+        await Repository.InsertAsync(entity);
 
         return await MapToGetOutputDtoAsync(entity);
     }
@@ -324,9 +327,6 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
         var entity = await GetEntityByIdAsync(id);
         //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
         MapToEntity(input, entity);
-
-        // TODO: This update call may be unnecessary because change tracking is already enabled; SaveChanges alone might be enough.
-        await Repository.UpdateAsync(entity, autoSave: true);
 
         return await MapToGetOutputDtoAsync(entity);
     }
@@ -567,12 +567,13 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IRepository<TEntity, TKey>? repository = null)
     {
         repository ??= Repository;
-        var queryable = WithDetail() ? await repository.WithDetailsAsync() : await repository.GetQueryableAsync();
-        queryable = queryable.AsNoTracking();
+        var query = repository.Query().AsNoTracking();
+        if (WithDetail())
+        {
+            query = query.WithDetails();
+        }
 
-        queryable = ApplyListInclude(queryable, input);
-
-        queryable = await ApplyCustomFilterQueryAsync(input, queryable);
+        query = ApplyListInclude(query, input);
 
         if (input is IHasRequestFilter filterRequest)
         {
@@ -581,19 +582,37 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
                 var result = AutoModel.GetNormalizedResult(filterRequest.Filter);
                 if (result.Context.Tokens.Any(p => p.FieldInfo?.ReflectionName == nameof(IHasSoftDelete.IsDeleted)))
                 {
-                    queryable = repository.DisableSoftDeleteFilter(queryable); // Important: this was observed to stop working with sharded tables.
+                    query = query.IgnoreSoftDeleteFilter(); // Important: this was observed to stop working with sharded tables.
                 }
+
+                var queryable = await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync());
                 queryable = AutoModel.ApplyFilter(queryable, result);
+
+                if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
+                {
+                    queryable = AutoModel.ApplyFuzzy(queryable, filterRequest.Fuzzy, filterRequest.FuzzyColumns);
+                }
+
+                return await ApplyClientSideFilterAsync(input, queryable);
             }
+
             if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
+            {
+                var queryable = await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync());
                 queryable = AutoModel.ApplyFuzzy(queryable, filterRequest.Fuzzy, filterRequest.FuzzyColumns);
+                return await ApplyClientSideFilterAsync(input, queryable);
+            }
         }
 
+        return await ApplyClientSideFilterAsync(input, await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync()));
+    }
 
+    private async Task<IQueryable<TEntity>> ApplyClientSideFilterAsync(TGetListInput input, IQueryable<TEntity> queryable)
+    {
         var clientSideMethod = ApplyCustomFilterQueryClientSideAsync(input);
         if (clientSideMethod != null)
         {
-            queryable = (await queryable.AsAsyncEnumerable().Where(clientSideMethod).ToListAsync()).AsQueryable();
+            return (await queryable.AsAsyncEnumerable().Where(clientSideMethod).ToListAsync()).AsQueryable();
         }
 
         return queryable;
@@ -621,21 +640,21 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <summary>
     /// Applies Include clauses when executing <c>GetList</c>.
     /// </summary>
-    /// <param name="queryable">The query to extend with Include clauses.</param>
+    /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <param name="input">The input used for the list query.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IQueryable<TEntity> ApplyListInclude(IQueryable<TEntity> queryable, TGetListInput input)
+    protected virtual IRepositoryQuery<TEntity> ApplyListInclude(IRepositoryQuery<TEntity> query, TGetListInput input)
     {
-        return queryable;
+        return query;
     }
     /// <summary>
     /// Applies Include clauses when loading entity details for <c>Get</c>.
     /// </summary>
-    /// <param name="queryable">The query to extend with Include clauses.</param>
+    /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IQueryable<TEntity> ApplyInclude(IQueryable<TEntity> queryable)
+    protected virtual IRepositoryQuery<TEntity> ApplyInclude(IRepositoryQuery<TEntity> query)
     {
-        return queryable;
+        return query;
     }
 
     protected virtual IQueryable<TEntity> FilterByKeyset(IQueryable<TEntity> queryable, string cursor)
