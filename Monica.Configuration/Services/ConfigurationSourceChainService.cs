@@ -47,7 +47,8 @@ internal sealed class ConfigurationSourceChainService(
                     : value.Granularity == ConfigurationOverrideGranularity.Container
                         ? value.Value.PlainJson
                         : codec.ToConfigurationString(sensitiveValueProtector.Unprotect(value.Value)),
-                LastModifiedTime = value?.LastModifiedTime
+                LastModifiedTime = value?.LastModifiedTime,
+                Version = value?.Version
             });
         }
 

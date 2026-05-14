@@ -44,4 +44,9 @@ public sealed record ConfigurationSourceValue
     /// Gets the last modification time.
     /// </summary>
     public DateTimeOffset? LastModifiedTime { get; init; }
+
+    /// <summary>
+    /// Gets the optimistic concurrency version for the source value.
+    /// </summary>
+    public long? Version { get; init; }
 }

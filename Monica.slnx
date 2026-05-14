@@ -22,6 +22,7 @@
   <Project Path="Monica.Configuration.Dapr/Monica.Configuration.Dapr.csproj" />
   <Project Path="Monica.Configuration.EfCore/Monica.Configuration.EfCore.csproj" />
   <Project Path="Monica.Configuration.Redis/Monica.Configuration.Redis.csproj" />
+  <Project Path="Monica.Configuration.UI/Monica.Configuration.UI.csproj" />
   <Project Path="Monica.Configuration/Monica.Configuration.csproj" />
   <Project Path="Monica.Core/Monica.Core.csproj" />
   <Project Path="Monica.Dapr/Monica.Dapr.csproj" />

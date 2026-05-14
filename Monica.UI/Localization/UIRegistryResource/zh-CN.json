@@ -38,8 +38,20 @@
     "DataChannelManage": {
       "Title": "DataChannel管理"
     },
-    "ConfigurationDashboard": {
-      "Title": "配置面板"
+    "ConfigurationOverview": {
+      "Title": "配置总览"
+    },
+    "ConfigurationDefinitionDetail": {
+      "Title": "配置定义详情"
+    },
+    "ConfigurationValueDetail": {
+      "Title": "配置值详情"
+    },
+    "ConfigurationMutationEditor": {
+      "Title": "配置修改编辑器"
+    },
+    "ConfigurationHistory": {
+      "Title": "配置历史"
     },
     "RuntimeMetrics": {
       "Title": "运行时指标"

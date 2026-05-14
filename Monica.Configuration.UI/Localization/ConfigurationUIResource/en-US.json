@@ -1,0 +1,134 @@
+{
+  "Categories": {
+    "Configuration": "Configuration"
+  },
+  "Pages": {
+    "ConfigurationOverview": {
+      "Title": "Configuration Overview"
+    },
+    "ConfigurationDefinitionDetail": {
+      "Title": "Definition Detail"
+    },
+    "ConfigurationValueDetail": {
+      "Title": "Value and Source Detail"
+    },
+    "ConfigurationMutationEditor": {
+      "Title": "Mutation Editor"
+    },
+    "ConfigurationHistory": {
+      "Title": "History"
+    }
+  },
+  "Overview": {
+    "SearchPlaceholder": "Search by key, name, module, or section",
+    "Refresh": "Refresh",
+    "OpenDefinition": "Open definition",
+    "OpenValue": "Open value",
+    "OpenHistory": "Open history",
+    "OpenMutation": "Mutate value",
+    "Columns": {
+      "Key": "Definition key",
+      "DisplayName": "Display name",
+      "SectionPath": "Section path",
+      "OwnerModule": "Owner module",
+      "SchemaVersion": "Schema version"
+    },
+    "States": {
+      "Loading": "Loading configuration definitions...",
+      "Empty": "No configuration definitions found."
+    }
+  },
+  "Detail": {
+    "Basic": {
+      "Key": "Definition key",
+      "Type": "CLR type",
+      "SectionPath": "Section path",
+      "OwnerModule": "Owner module",
+      "SchemaVersion": "Schema version",
+      "SchemaHash": "Schema hash",
+      "ReloadBehavior": "Reload behavior"
+    },
+    "Tree": {
+      "Title": "Schema tree"
+    },
+    "Node": {
+      "Title": "Node inspector",
+      "Path": "Logical path",
+      "ConfigurationPath": "Configuration path",
+      "NodeKind": "Node kind",
+      "ValueKind": "Value kind",
+      "Nullable": "Nullable",
+      "Sensitive": "Sensitive",
+      "ValidationRules": "Validation rules"
+    }
+  },
+  "Value": {
+    "Path": "Logical path",
+    "Load": "Load value",
+    "SourceChain": "Source chain",
+    "Effective": "Effective value",
+    "Mutate": "Edit value",
+    "States": {
+      "Loading": "Loading value details...",
+      "Empty": "No value was found for this path."
+    }
+  },
+  "Mutation": {
+    "DefinitionKey": "Definition key",
+    "LogicalPath": "Logical path",
+    "SourceKey": "Target source key",
+    "MutationKind": "Mutation kind",
+    "ReloadBehavior": "Reload behavior",
+    "ExpectedSchemaVersion": "Expected schema version",
+    "ExpectedValueVersion": "Expected value version",
+    "Apply": "Apply mutation",
+    "Reset": "Reset",
+    "RawJson": "Raw JSON",
+    "Structured": "Structured",
+    "Kinds": {
+      "Set": "Set",
+      "Remove": "Remove",
+      "Replace": "Replace"
+    },
+    "Hints": {
+      "RequiresRestart": "Requires restart",
+      "StaticAfterStartup": "Static after startup"
+    },
+    "States": {
+      "Success": "Mutation applied successfully."
+    }
+  },
+  "History": {
+    "Title": "History",
+    "States": {
+      "Loading": "Loading history...",
+      "Empty": "No history records were found."
+    },
+    "Columns": {
+      "Time": "Modified time",
+      "Source": "Source",
+      "Kind": "Mutation kind",
+      "Granularity": "Granularity",
+      "State": "State",
+      "Version": "Version"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Refresh": "Refresh",
+      "Back": "Back",
+      "Search": "Search"
+    },
+    "States": {
+      "Loading": "Loading...",
+      "Empty": "No data available.",
+      "NotFound": "Not found."
+    },
+    "Errors": {
+      "LoadFailed": "Failed to load data",
+      "MutationFailed": "Failed to apply mutation",
+      "InvalidPath": "Invalid logical path",
+      "InvalidJson": "Invalid JSON"
+    }
+  }
+}

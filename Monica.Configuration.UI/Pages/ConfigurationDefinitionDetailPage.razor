@@ -1,0 +1,213 @@
+@attribute [Route(PAGE_URL)]
+@inject ConfigurationFacade Facade
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationDefinitionDetail:Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-page-shell">
+    @if (_isLoading)
+    {
+        <MudPaper Class="pa-6 configuration-state-shell" Outlined="true">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>@L["Common:States:Loading"]</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else if (_definition is null)
+    {
+        <MudAlert Severity="Severity.Warning">@L["Common:States:NotFound"]</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="4">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4">@_definition.DisplayName</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@_definition.DefinitionKey</MudText>
+                        </MudStack>
+                        <MudButton Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                                   OnClick="GoBack">
+                            @L["Common:Actions:Back"]
+                        </MudButton>
+                    </MudStack>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:Key"]</MudText>
+                            <MudText>@_definition.DefinitionKey</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:Type"]</MudText>
+                            <MudText Style="overflow-wrap:anywhere;">@_definition.ClrTypeName</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:SectionPath"]</MudText>
+                            <MudText>@_definition.SectionPath</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:OwnerModule"]</MudText>
+                            <MudText>@_definition.OwnerModule</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:SchemaVersion"]</MudText>
+                            <MudText>@_definition.SchemaVersion</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:ReloadBehavior"]</MudText>
+                            <MudText>@_definition.ReloadBehavior</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Detail:Basic:SchemaHash"]</MudText>
+                            <MudText Style="overflow-wrap:anywhere;">@_definition.SchemaHash</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h6">@L["Detail:Tree:Title"]</MudText>
+                            <MudTreeView T="ConfigurationNodeDefinition"
+                                         Items="@_treeItems"
+                                         SelectedValue="@_selectedNode"
+                                         SelectedValueChanged="OnSelectedNodeChanged"
+                                         Hover="true"
+                                         Dense="true"
+                                         Ripple="false">
+                                <ItemTemplate>
+                                    <MudTreeViewItem T="ConfigurationNodeDefinition"
+                                                     Value="@context.Value"
+                                                     Text="@GetNodeLabel(context.Value)"
+                                                     Items="@context.Children" />
+                                </ItemTemplate>
+                            </MudTreeView>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4" Outlined="true">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h6">@L["Detail:Node:Title"]</MudText>
+                            @if (_selectedNode is null)
+                            {
+                                <MudText Color="Color.Secondary">@L["Common:States:Empty"]</MudText>
+                            }
+                            else
+                            {
+                                <MudStack Spacing="1">
+                                    <MudText><strong>@L["Detail:Node:Path"]:</strong> @_selectedNode.RelativePath</MudText>
+                                    <MudText><strong>@L["Detail:Node:ConfigurationPath"]:</strong> @_selectedNode.ConfigurationPath</MudText>
+                                    <MudText><strong>@L["Detail:Node:NodeKind"]:</strong> @_selectedNode.NodeKind</MudText>
+                                    <MudText><strong>@L["Detail:Node:ValueKind"]:</strong> @_selectedNode.ValueKind</MudText>
+                                    <MudText><strong>@L["Detail:Node:Nullable"]:</strong> @_selectedNode.IsNullable</MudText>
+                                    <MudText><strong>@L["Detail:Node:Sensitive"]:</strong> @_selectedNode.IsSensitive</MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.subtitle2">@L["Detail:Node:ValidationRules"]</MudText>
+                                    @if (_selectedNode.ValidationRules.Count == 0)
+                                    {
+                                        <MudText Color="Color.Secondary">@L["Common:States:Empty"]</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                            @foreach (var rule in _selectedNode.ValidationRules)
+                                            {
+                                                <MudChip T="string" Size="Size.Small">@rule.GetType().Name</MudChip>
+                                            }
+                                        </MudStack>
+                                    }
+                                </MudStack>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudStack>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/configuration/{definitionKey}";
+
+    [Parameter] public string DefinitionKey { get; set; } = string.Empty;
+
+    private ConfigurationDefinition? _definition;
+    private readonly List<ConfigurationNodeTreeItem> _treeItems = [];
+    private ConfigurationNodeDefinition? _selectedNode;
+    private bool _isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        var result = await Facade.GetDefinitionAsync(DefinitionKey);
+        if (result.IsFailed(out var error, out var detail))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _definition = null;
+            _treeItems.Clear();
+            _selectedNode = null;
+            _isLoading = false;
+            return;
+        }
+
+        _definition = detail.Definition;
+        _treeItems.Clear();
+        _treeItems.AddRange(BuildTreeItems(_definition.Root));
+        _selectedNode = _definition.Root;
+        _isLoading = false;
+    }
+
+    private static List<ConfigurationNodeTreeItem> BuildTreeItems(ConfigurationNodeDefinition node)
+    {
+        return [BuildTreeItem(node)];
+    }
+
+    private static ConfigurationNodeTreeItem BuildTreeItem(ConfigurationNodeDefinition node)
+    {
+        return new ConfigurationNodeTreeItem
+        {
+            Value = node,
+            Text = node.DisplayName ?? node.Name,
+            LogicalPathLabel = node.RelativePath.ToString(),
+            SummaryLabel = node.NodeKind.ToString(),
+            Expanded = true,
+            Children = node.Children.Select(BuildTreeItem).ToArray()
+        };
+    }
+
+    private string GetNodeLabel(ConfigurationNodeDefinition? node)
+    {
+        if (node is null)
+        {
+            return L["Common:States:Empty"];
+        }
+
+        return string.IsNullOrWhiteSpace(node.DisplayName)
+            ? node.Name
+            : $"{node.DisplayName} ({node.Name})";
+    }
+
+    private Task OnSelectedNodeChanged(ConfigurationNodeDefinition? value)
+    {
+        _selectedNode = value;
+        return Task.CompletedTask;
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo(ConfigurationUiRoutes.OVERVIEW_ROUTE);
+    }
+}

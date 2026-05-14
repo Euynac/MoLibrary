@@ -1,0 +1,134 @@
+@attribute [Route(PAGE_URL)]
+@inject ConfigurationFacade Facade
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationHistory:Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-page-shell">
+    <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h4">@L["Pages:ConfigurationHistory:Title"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@DefinitionKey</MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack">
+            @L["Common:Actions:Back"]
+        </MudButton>
+    </MudStack>
+
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.End" Spacing="2">
+            <MudTextField T="string"
+                          @bind-Value="_pathText"
+                          Label="@L["Value:Path"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Class="configuration-path-input" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Search"
+                       OnClick="LoadAsync">
+                @L["Common:Actions:Search"]
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudPaper Class="pa-6 configuration-state-shell" Outlined="true">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>@L["History:States:Loading"]</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else if (_history.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
+    }
+    else
+    {
+        <MudTable T="ConfigurationValueHistory" Items="@_history" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>@L["History:Columns:Time"]</MudTh>
+                <MudTh>@L["History:Columns:Source"]</MudTh>
+                <MudTh>@L["History:Columns:Kind"]</MudTh>
+                <MudTh>@L["History:Columns:Granularity"]</MudTh>
+                <MudTh>@L["History:Columns:State"]</MudTh>
+                <MudTh>@L["History:Columns:Version"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                <MudTd DataLabel="@L["History:Columns:Source"]">@context.SourceKey</MudTd>
+                <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                <MudTd DataLabel="@L["History:Columns:Granularity"]">@context.Granularity</MudTd>
+                <MudTd DataLabel="@L["History:Columns:State"]">@context.State</MudTd>
+                <MudTd DataLabel="@L["History:Columns:Version"]">@context.Version</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = "/configuration/{definitionKey}/history";
+
+    [Parameter] public string DefinitionKey { get; set; } = string.Empty;
+
+    private string _pathText = string.Empty;
+    private LogicalPath _logicalPath = LogicalPath.Root;
+    private readonly List<ConfigurationValueHistory> _history = [];
+    private bool _isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _logicalPath = ConfigurationUiRoutes.ReadPath(NavigationManager.Uri);
+        _pathText = _logicalPath.ToCanonicalString();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (!TryParsePath(out var logicalPath))
+        {
+            return;
+        }
+
+        _logicalPath = logicalPath;
+        _isLoading = true;
+        var result = await Facade.GetHistoryAsync(DefinitionKey, _logicalPath);
+        if (result.IsFailed(out var error, out var history))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _history.Clear();
+            _isLoading = false;
+            return;
+        }
+
+        _history.Clear();
+        _history.AddRange(history);
+        _isLoading = false;
+    }
+
+    private bool TryParsePath(out LogicalPath logicalPath)
+    {
+        try
+        {
+            logicalPath = LogicalPath.Parse(_pathText);
+            _pathText = logicalPath.ToCanonicalString();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logicalPath = _logicalPath;
+            Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
+            return false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo(ConfigurationUiRoutes.Value(DefinitionKey, _logicalPath));
+    }
+}

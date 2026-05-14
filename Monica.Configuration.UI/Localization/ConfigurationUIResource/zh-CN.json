@@ -1,0 +1,134 @@
+{
+  "Categories": {
+    "Configuration": "配置"
+  },
+  "Pages": {
+    "ConfigurationOverview": {
+      "Title": "配置总览"
+    },
+    "ConfigurationDefinitionDetail": {
+      "Title": "定义详情"
+    },
+    "ConfigurationValueDetail": {
+      "Title": "值与来源详情"
+    },
+    "ConfigurationMutationEditor": {
+      "Title": "修改编辑器"
+    },
+    "ConfigurationHistory": {
+      "Title": "历史记录"
+    }
+  },
+  "Overview": {
+    "SearchPlaceholder": "按 key、名称、模块或 section 搜索",
+    "Refresh": "刷新",
+    "OpenDefinition": "打开定义",
+    "OpenValue": "打开值",
+    "OpenHistory": "打开历史",
+    "OpenMutation": "修改值",
+    "Columns": {
+      "Key": "定义 Key",
+      "DisplayName": "显示名称",
+      "SectionPath": "Section 路径",
+      "OwnerModule": "所属模块",
+      "SchemaVersion": "Schema 版本"
+    },
+    "States": {
+      "Loading": "正在加载配置定义...",
+      "Empty": "未找到配置定义。"
+    }
+  },
+  "Detail": {
+    "Basic": {
+      "Key": "定义 Key",
+      "Type": "CLR 类型",
+      "SectionPath": "Section 路径",
+      "OwnerModule": "所属模块",
+      "SchemaVersion": "Schema 版本",
+      "SchemaHash": "Schema 哈希",
+      "ReloadBehavior": "重载行为"
+    },
+    "Tree": {
+      "Title": "Schema 树"
+    },
+    "Node": {
+      "Title": "节点检查器",
+      "Path": "逻辑路径",
+      "ConfigurationPath": "配置路径",
+      "NodeKind": "节点类型",
+      "ValueKind": "值类型",
+      "Nullable": "可空",
+      "Sensitive": "敏感",
+      "ValidationRules": "验证规则"
+    }
+  },
+  "Value": {
+    "Path": "逻辑路径",
+    "Load": "加载值",
+    "SourceChain": "来源链",
+    "Effective": "有效值",
+    "Mutate": "编辑值",
+    "States": {
+      "Loading": "正在加载值详情...",
+      "Empty": "该路径没有找到值。"
+    }
+  },
+  "Mutation": {
+    "DefinitionKey": "定义 Key",
+    "LogicalPath": "逻辑路径",
+    "SourceKey": "目标来源 Key",
+    "MutationKind": "修改类型",
+    "ReloadBehavior": "重载行为",
+    "ExpectedSchemaVersion": "期望 Schema 版本",
+    "ExpectedValueVersion": "期望值版本",
+    "Apply": "应用修改",
+    "Reset": "重置",
+    "RawJson": "原始 JSON",
+    "Structured": "结构化",
+    "Kinds": {
+      "Set": "设置",
+      "Remove": "移除",
+      "Replace": "替换"
+    },
+    "Hints": {
+      "RequiresRestart": "需要重启",
+      "StaticAfterStartup": "启动后静态"
+    },
+    "States": {
+      "Success": "修改已成功应用。"
+    }
+  },
+  "History": {
+    "Title": "历史记录",
+    "States": {
+      "Loading": "正在加载历史记录...",
+      "Empty": "未找到历史记录。"
+    },
+    "Columns": {
+      "Time": "修改时间",
+      "Source": "来源",
+      "Kind": "修改类型",
+      "Granularity": "粒度",
+      "State": "状态",
+      "Version": "版本"
+    }
+  },
+  "Common": {
+    "Actions": {
+      "Refresh": "刷新",
+      "Back": "返回",
+      "Search": "搜索"
+    },
+    "States": {
+      "Loading": "加载中...",
+      "Empty": "暂无数据。",
+      "NotFound": "未找到。"
+    },
+    "Errors": {
+      "LoadFailed": "加载失败",
+      "MutationFailed": "应用修改失败",
+      "InvalidPath": "逻辑路径无效",
+      "InvalidJson": "JSON 无效"
+    }
+  }
+}

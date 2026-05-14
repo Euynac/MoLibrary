@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <GenerateStaticWebAssetsManifest>true</GenerateStaticWebAssetsManifest>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageDescription>Operator console for Monica.Configuration, providing inspection, mutation, and history workflows for managed configuration.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Configuration\Monica.Configuration.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\**\*.json" />
+  </ItemGroup>
+
+</Project>
