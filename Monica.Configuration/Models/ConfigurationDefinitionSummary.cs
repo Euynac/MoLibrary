@@ -21,6 +21,11 @@ public sealed record ConfigurationDefinitionSummary
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// Gets the assembly-qualified CLR type name of the owning options type.
+    /// </summary>
+    public required string ClrTypeName { get; init; }
+
+    /// <summary>
     /// Gets the owning module.
     /// </summary>
     public string? OwnerModule { get; init; }

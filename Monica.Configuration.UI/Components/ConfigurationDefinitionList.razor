@@ -39,7 +39,7 @@
                                              OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
                                     <MudStack Spacing="0">
                                         <MudText Typo="Typo.body2">@definition.DisplayName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@definition.DefinitionKey</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetOptionsTypeName(definition)</MudText>
                                     </MudStack>
                                 </MudListItem>
                             }
@@ -91,6 +91,7 @@
             : Definitions.Where(definition =>
                 definition.DefinitionKey.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                 || definition.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || definition.ClrTypeName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                 || definition.SectionPath.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
                 || (definition.OwnerModule?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
 
@@ -103,5 +104,12 @@
     {
         SearchText = value;
         return SearchTextChanged.InvokeAsync(value);
+    }
+
+    private static string GetOptionsTypeName(ConfigurationDefinitionSummary definition)
+    {
+        var typeName = definition.ClrTypeName.Split(',', 2)[0];
+        var lastSeparator = Math.Max(typeName.LastIndexOf('.'), typeName.LastIndexOf('+'));
+        return lastSeparator >= 0 ? typeName[(lastSeparator + 1)..] : typeName;
     }
 }

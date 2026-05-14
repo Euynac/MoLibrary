@@ -60,12 +60,13 @@
 }
 
 .configuration-definition-list-scroll ::deep .mud-list-item {
-    align-items: flex-start;
+    align-items: center;
 }
 
 .configuration-definition-list-scroll ::deep .mud-list-item-icon {
     flex: 0 0 auto;
-    margin-top: 2px;
+    align-self: center;
+    margin-top: 0;
 }
 
 .configuration-definition-list-scroll ::deep .mud-list-item-text {

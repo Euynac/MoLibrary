@@ -34,6 +34,7 @@ public sealed class ConfigurationFacade(
                 DefinitionKey = definition.DefinitionKey,
                 SectionPath = definition.SectionPath,
                 DisplayName = definition.DisplayName,
+                ClrTypeName = definition.ClrTypeName,
                 OwnerModule = definition.OwnerModule,
                 SchemaVersion = definition.SchemaVersion
             })
