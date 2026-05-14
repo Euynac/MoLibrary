@@ -87,6 +87,7 @@
     private string? _error;
     private string? _lastNodePath;
     private string? _lastEffectiveDisplayValue;
+    private bool _lastIsModified;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
 
@@ -108,14 +109,33 @@
     {
         var displayValue = EffectiveValue?.DisplayValue ?? string.Empty;
         var nodePath = Node.RelativePath.ToCanonicalString();
-        if (string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal)
-            && string.Equals(_lastEffectiveDisplayValue, displayValue, StringComparison.Ordinal))
+
+        var pathChanged = !string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal);
+        var displayChanged = !string.Equals(_lastEffectiveDisplayValue, displayValue, StringComparison.Ordinal);
+        var modifiedChanged = _lastIsModified != IsModified;
+        if (!pathChanged && !displayChanged && !modifiedChanged)
         {
             return;
         }
 
+        if (pathChanged || !IsModified)
+        {
+            SyncFromEffectiveValue(displayValue, resetSensitiveVisibility: pathChanged);
+        }
+
         _lastNodePath = nodePath;
         _lastEffectiveDisplayValue = displayValue;
+        _lastIsModified = IsModified;
+    }
+
+    private void SyncFromEffectiveValue(string displayValue, bool resetSensitiveVisibility)
+    {
+        if (resetSensitiveVisibility)
+        {
+            _showSensitive = false;
+        }
+
+        _error = null;
         _textValue = displayValue;
         _boolValue = bool.TryParse(displayValue, out var parsedBool) && parsedBool;
         _decimalValue = decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDecimal)
