@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Exceptions;
+using Monica.Repository.Persistence.Models;
 using Monica.Repository.UnitOfWork.Abstractions;
 
 namespace Monica.Repository.Persistence.Services;
@@ -21,9 +22,220 @@ public class EfRepository<TDbContext, TEntity>(
     where TEntity : class, IEntity
 {
     /// <inheritdoc />
-    public override IRepositoryQuery<TEntity> Query()
+    public override IRepositoryRead<TEntity> AsTracking()
     {
-        return new EfRepositoryQuery<TEntity>(CreateBaseQueryAsync, this);
+        return CreateReadScope().AsTracking();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> AsNoTracking()
+    {
+        return CreateReadScope().AsNoTracking();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    {
+        return CreateReadScope().Where(predicate);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Include(Expression<Func<TEntity, object?>> selector)
+    {
+        return CreateReadScope().Include(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Include(string navigationPath)
+    {
+        return CreateReadScope().Include(navigationPath);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> WithDetails()
+    {
+        return CreateReadScope().WithDetails();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> IgnoreSoftDeleteFilter()
+    {
+        return CreateReadScope().IgnoreSoftDeleteFilter();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> IgnoreQueryFilters()
+    {
+        return CreateReadScope().IgnoreQueryFilters();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> OrderBy<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().OrderBy(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> OrderByDescending<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().OrderByDescending(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> ThenBy<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().ThenBy(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> ThenByDescending<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().ThenByDescending(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Skip(int count)
+    {
+        return CreateReadScope().Skip(count);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Take(int count)
+    {
+        return CreateReadScope().Take(count);
+    }
+
+    /// <inheritdoc />
+    public override async Task<List<TEntity>> GetListAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<List<TEntity>> GetListAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetListAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FindAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FindAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> GetAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FirstOrDefaultAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> FirstAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> FirstAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> SingleOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().SingleOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().AnyAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<bool> AnyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().AnyAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<int> CountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().CountAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().LongCountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<long> LongCountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().LongCountAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetPagedListAsync(page, pageSize, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetPagedListAsync(page, pageSize, predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override Task<IQueryable<TEntity>> GetQueryableAsync()
+    {
+        return CreateReadScope().GetQueryableAsync();
     }
 
     /// <inheritdoc />
@@ -110,21 +322,11 @@ public class EfRepository<TDbContext, TEntity>(
     }
 
     /// <inheritdoc />
-    public override async Task<TEntity?> FindAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        CancellationToken cancellationToken = default)
-    {
-        return await Query().SingleOrDefaultAsync(predicate, cancellationToken);
-    }
-
-    /// <inheritdoc />
     public override async Task DeleteAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
     {
-        var entities = await Query()
-            .Where(predicate)
-            .ToListAsync(cancellationToken);
+        var entities = await AsTracking().GetListAsync(predicate, cancellationToken);
 
         await DeleteManyAsync(entities, cancellationToken);
     }
@@ -170,6 +372,11 @@ public class EfRepository<TDbContext, TEntity>(
     {
         return (await GetDbSetAsync()).AsQueryable();
     }
+
+    private IRepositoryRead<TEntity> CreateReadScope()
+    {
+        return new EfRepositoryRead<TEntity>(CreateBaseQueryAsync, this);
+    }
 }
 
 /// <summary>
@@ -197,21 +404,20 @@ public class EfRepository<TDbContext, TEntity, TKey>(
     /// <inheritdoc />
     public virtual async Task<TEntity?> FindAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        return await Query()
-            .OrderBy(entity => entity.Id)
+        return await OrderBy(entity => entity.Id)
             .FirstOrDefaultAsync(entity => entity.Id!.Equals(id), cancellationToken);
     }
 
     /// <inheritdoc />
     public virtual async Task<bool> ExistsAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        return await Query().AnyAsync(entity => entity.Id!.Equals(id), cancellationToken);
+        return await AnyAsync(entity => entity.Id!.Equals(id), cancellationToken);
     }
 
     /// <inheritdoc />
     public virtual async Task DeleteAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        var entity = await FindAsync(id, cancellationToken);
+        var entity = await AsTracking().FirstOrDefaultAsync(entity => entity.Id!.Equals(id), cancellationToken);
         if (entity == null)
         {
             return;

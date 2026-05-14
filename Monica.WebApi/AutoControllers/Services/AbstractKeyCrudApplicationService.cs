@@ -258,7 +258,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found</exception>
     protected virtual async Task<TEntity> GetEntityByIdAsync(TKey id)
     {
-        var query = ApplyInclude(Repository.Query())
+        var query = ApplyInclude(Repository)
             .OrderBy(e => e.Id);
 
         var entity = await query.FirstOrDefaultAsync(e => e.Id!.Equals(id));
@@ -324,7 +324,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <returns>The updated entity as a DTO</returns>
     public virtual async Task<TGetOutputDto> UpdateAsync(TKey id, TUpdateInput input)
     {
-        var entity = await GetEntityByIdAsync(id);
+        var entity = await GetTrackedEntityByIdAsync(id);
         //TODO: Check if input has id different than given id and normalize if it's default value, throw ex otherwise
         MapToEntity(input, entity);
 
@@ -537,6 +537,26 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     #region Customization
 
     /// <summary>
+    /// Loads an entity by ID in tracking mode for mutation flows.
+    /// </summary>
+    /// <param name="id">The entity ID.</param>
+    /// <returns>The tracked entity.</returns>
+    /// <exception cref="EntityNotFoundException">Thrown when an entity with the specified ID is not found.</exception>
+    protected virtual async Task<TEntity> GetTrackedEntityByIdAsync(TKey id)
+    {
+        var query = ApplyInclude(Repository.AsTracking())
+            .OrderBy(e => e.Id);
+
+        var entity = await query.FirstOrDefaultAsync(e => e.Id!.Equals(id));
+        if (entity == null)
+        {
+            throw new EntityNotFoundException(typeof(TEntity), id);
+        }
+
+        return entity;
+    }
+
+    /// <summary>
     /// Validates or further processes the response DTO list before it is returned.
     /// </summary>
     /// <param name="input">The input used for the list query.</param>
@@ -567,7 +587,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     protected virtual async Task<IQueryable<TEntity>> CreateFilteredQueryAsync(TGetListInput input, IRepository<TEntity, TKey>? repository = null)
     {
         repository ??= Repository;
-        var query = repository.Query().AsNoTracking();
+        var query = (IRepositoryRead<TEntity>)repository;
         if (WithDetail())
         {
             query = query.WithDetails();
@@ -585,7 +605,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
                     query = query.IgnoreSoftDeleteFilter(); // Important: this was observed to stop working with sharded tables.
                 }
 
-                var queryable = await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync());
+                var queryable = await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync());
                 queryable = AutoModel.ApplyFilter(queryable, result);
 
                 if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
@@ -598,13 +618,13 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
 
             if (!string.IsNullOrEmpty(filterRequest.Fuzzy))
             {
-                var queryable = await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync());
+                var queryable = await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync());
                 queryable = AutoModel.ApplyFuzzy(queryable, filterRequest.Fuzzy, filterRequest.FuzzyColumns);
                 return await ApplyClientSideFilterAsync(input, queryable);
             }
         }
 
-        return await ApplyClientSideFilterAsync(input, await ApplyCustomFilterQueryAsync(input, await query.AsQueryableAsync()));
+        return await ApplyClientSideFilterAsync(input, await ApplyCustomFilterQueryAsync(input, await query.GetQueryableAsync()));
     }
 
     private async Task<IQueryable<TEntity>> ApplyClientSideFilterAsync(TGetListInput input, IQueryable<TEntity> queryable)
@@ -643,7 +663,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <param name="input">The input used for the list query.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IRepositoryQuery<TEntity> ApplyListInclude(IRepositoryQuery<TEntity> query, TGetListInput input)
+    protected virtual IRepositoryRead<TEntity> ApplyListInclude(IRepositoryRead<TEntity> query, TGetListInput input)
     {
         return query;
     }
@@ -652,7 +672,7 @@ public abstract class AbstractKeyCrudApplicationService<TEntity, TGetOutputDto, 
     /// </summary>
     /// <param name="query">The repository query to extend with Include clauses.</param>
     /// <returns>The query after Include clauses have been applied.</returns>
-    protected virtual IRepositoryQuery<TEntity> ApplyInclude(IRepositoryQuery<TEntity> query)
+    protected virtual IRepositoryRead<TEntity> ApplyInclude(IRepositoryRead<TEntity> query)
     {
         return query;
     }

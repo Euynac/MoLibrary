@@ -14,26 +14,9 @@ namespace Monica.Repository.Persistence.Abstractions;
 /// Repository write methods stage changes on the underlying DbContext. Call <see cref="SaveChangesAsync"/>
 /// to flush changes explicitly, or rely on an active unit of work to flush and commit at completion.
 /// </remarks>
-public interface IRepository<TEntity> : IRepositoryFeatures, ITransientDependency
+public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFeatures, ITransientDependency
     where TEntity : class, IEntity
 {
-    /// <summary>
-    /// Creates a deferred query builder for this repository.
-    /// </summary>
-    IRepositoryQuery<TEntity> Query();
-
-    /// <summary>
-    /// Finds a single entity matching the predicate.
-    /// </summary>
-    /// <returns>The matching entity, or <see langword="null"/> when no entity matches.</returns>
-    Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets a single entity matching the predicate.
-    /// </summary>
-    /// <exception cref="Persistence.Exceptions.EntityNotFoundException">Thrown when no entity matches.</exception>
-    Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-
     /// <summary>
     /// Stages a new entity for insertion.
     /// </summary>

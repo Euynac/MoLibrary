@@ -23,9 +23,9 @@ public static class RepositoryKeyExtensions
             return;
         }
 
-        var entities = await repository.Query()
-            .Where(entity => idArray.Contains(entity.Id))
-            .ToListAsync(cancellationToken);
+        var entities = await repository
+            .AsTracking()
+            .GetListAsync(entity => idArray.Contains(entity.Id), cancellationToken);
 
         await repository.DeleteManyAsync(entities, cancellationToken);
     }
