@@ -126,9 +126,12 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
         services.TryAddSingleton<MonicaConfigurationProviderAccessor>();
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
+        services.TryAddSingleton<MemoryConfigurationMutationGroupSource>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, JsonConfigurationValueSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, EnvironmentConfigurationValueSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, MemoryConfigurationValueSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationMutationGroupSource, MemoryConfigurationMutationGroupSource>(
+            serviceProvider => serviceProvider.GetRequiredService<MemoryConfigurationMutationGroupSource>()));
         services.AddHostedService<ConfigurationSourceWatchHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
     }
