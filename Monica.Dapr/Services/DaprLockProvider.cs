@@ -44,9 +44,9 @@ public sealed class DaprLockProvider(
             waitTimeoutSource.Token);
         var token = linkedSource.Token;
 
-        try
+        while (true)
         {
-            while (true)
+            try
             {
                 var lockResponse = await client.TryLockAsync(
                     DistributedLockDaprOptions.StoreName,
@@ -63,15 +63,63 @@ public sealed class DaprLockProvider(
                 // Dapr returns null when another owner still holds the lock, so we retry until timeout/cancellation.
                 await Task.Delay(RetryDelay, token);
             }
+            catch (Exception ex) when (IsTransientLockException(ex))
+            {
+                logger.LogWarning(ex, "Transient failure while acquiring Dapr distributed lock {LockKey}.", normalizedKey);
+                if (!await DelayBeforeRetryAsync(token))
+                {
+                    return null;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogDebug("Timed out acquiring Dapr distributed lock {LockKey}.", normalizedKey);
+                return null;
+            }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    }
+
+    private static async Task<bool> DelayBeforeRetryAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            return null;
+            await Task.Delay(RetryDelay, cancellationToken);
+            return true;
         }
         catch (OperationCanceledException)
         {
-            logger.LogDebug("Timed out acquiring Dapr distributed lock {LockKey}.", normalizedKey);
-            return null;
+            return false;
         }
+    }
+
+    private static bool IsTransientLockException(Exception ex)
+    {
+        for (var current = ex; current != null; current = current.InnerException)
+        {
+            var message = current.Message;
+            if (message.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("i/o timeout", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("deadline", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("temporarily", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var typeName = current.GetType().Name;
+            if (typeName.Contains("Timeout", StringComparison.OrdinalIgnoreCase) ||
+                typeName.Contains("Socket", StringComparison.OrdinalIgnoreCase) ||
+                typeName.Contains("RpcException", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
