@@ -59,6 +59,10 @@
     gap: 0.75rem;
 }
 
+.configuration-definition-list-footer ::deep .mud-stack {
+    align-items: center;
+}
+
 .configuration-definition-list-scroll ::deep .mud-list-item {
     align-items: center;
 }
