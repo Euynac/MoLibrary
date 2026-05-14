@@ -85,6 +85,8 @@
     private TimeSpan? _timeValue;
     private bool _showSensitive;
     private string? _error;
+    private string? _lastNodePath;
+    private string? _lastEffectiveDisplayValue;
 
     private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
 
@@ -105,6 +107,15 @@
     protected override void OnParametersSet()
     {
         var displayValue = EffectiveValue?.DisplayValue ?? string.Empty;
+        var nodePath = Node.RelativePath.ToCanonicalString();
+        if (string.Equals(_lastNodePath, nodePath, StringComparison.Ordinal)
+            && string.Equals(_lastEffectiveDisplayValue, displayValue, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastNodePath = nodePath;
+        _lastEffectiveDisplayValue = displayValue;
         _textValue = displayValue;
         _boolValue = bool.TryParse(displayValue, out var parsedBool) && parsedBool;
         _decimalValue = decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDecimal)

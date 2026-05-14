@@ -10,6 +10,16 @@
             <MudStack Spacing="1">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <MudText Typo="Typo.subtitle2">@DisplayName</MudText>
+                    @if (!string.IsNullOrWhiteSpace(Node.Description))
+                    {
+                        <MudTooltip Text="@Node.Description">
+                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                           Size="Size.Small"
+                                           Color="Color.Info"
+                                           Variant="Variant.Text"
+                                           Class="configuration-description-button" />
+                        </MudTooltip>
+                    }
                     @if (Node.IsSensitive)
                     {
                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">@L["State:Value:Sensitive"]</MudChip>

@@ -1,14 +1,106 @@
 .configuration-state-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-state-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-state-layout {
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-state-header {
+    flex: 0 0 auto;
+}
+
+.configuration-state-page ::deep .configuration-state-grid {
+    align-items: stretch;
+    flex: 1 1 auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-state-grid > .mud-grid-item {
+    display: flex;
     height: 100%;
     min-height: 0;
 }
 
-.configuration-state-layout,
-.configuration-state-grid,
-.configuration-state-left,
-.configuration-state-right,
-.configuration-definition-shell {
+.configuration-state-page ::deep .configuration-state-left,
+.configuration-state-page ::deep .configuration-state-right,
+.configuration-state-page ::deep .configuration-definition-shell {
+    flex: 1 1 auto;
+    align-self: stretch;
+    height: 100%;
+    max-height: 100%;
     min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-state-left {
+    flex: 0 0 25%;
+    max-width: 25%;
+}
+
+.configuration-state-page ::deep .configuration-state-right {
+    flex: 1 1 0;
+    max-width: 75%;
+}
+
+.configuration-state-page ::deep .configuration-definition-shell {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.configuration-state-page ::deep .configuration-definition-content,
+.configuration-state-page ::deep .configuration-detail-grid,
+.configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item,
+.configuration-state-page ::deep .configuration-detail-left,
+.configuration-state-page ::deep .configuration-detail-right {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.configuration-state-page ::deep .configuration-definition-content,
+.configuration-state-page ::deep .configuration-detail-grid {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-definition-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.configuration-state-page ::deep .configuration-detail-grid {
+    align-items: stretch;
+}
+
+.configuration-state-page ::deep .configuration-detail-grid > .mud-grid-item {
+    display: flex;
+    align-self: stretch;
+    height: 100%;
 }
 
 .configuration-loading {
@@ -19,8 +111,43 @@
     gap: 1rem;
 }
 
-.configuration-tree-panel,
-.configuration-values-panel {
-    max-height: 70vh;
+.configuration-state-page ::deep .configuration-tree-panel,
+.configuration-state-page ::deep .configuration-values-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
     overflow: auto;
+}
+
+.configuration-state-page ::deep .configuration-detail-left {
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.configuration-state-page ::deep .configuration-detail-right {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+@media (max-width: 959.98px) {
+    .configuration-state-page,
+    .configuration-state-page ::deep .configuration-state-container,
+    .configuration-state-page ::deep .configuration-state-layout,
+    .configuration-state-page ::deep .configuration-state-grid,
+    .configuration-state-page ::deep .configuration-definition-shell,
+    .configuration-state-page ::deep .configuration-tree-panel,
+    .configuration-state-page ::deep .configuration-values-panel {
+        height: auto;
+        max-height: none;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .configuration-state-page ::deep .configuration-state-left,
+    .configuration-state-page ::deep .configuration-state-right {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
 }

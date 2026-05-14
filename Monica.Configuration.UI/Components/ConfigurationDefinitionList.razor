@@ -1,73 +1,79 @@
 @using Monica.Configuration.UI.Localization
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<MudPaper Outlined="true" Class="pa-3 configuration-definition-list">
-    <MudStack Spacing="2">
-        <MudTextField T="string"
-                      Value="@SearchText"
-                      ValueChanged="OnSearchChanged"
-                      Placeholder="@L["State:SearchPlaceholder"]"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Immediate="true"
-                      Adornment="Adornment.Start"
-                      AdornmentIcon="@Icons.Material.Filled.Search" />
+<div class="configuration-definition-list-shell">
+    <MudPaper Outlined="true" Class="pa-3 configuration-definition-list">
+        <div class="configuration-definition-list-content">
+            <MudTextField T="string"
+                          Value="@SearchText"
+                          ValueChanged="OnSearchChanged"
+                          Placeholder="@L["State:SearchPlaceholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
 
-        @if (Definitions.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
-        }
-        else if (!FilteredDefinitions.Any())
-        {
-            <MudAlert Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
-        }
-        else
-        {
-            <MudList T="ConfigurationDefinitionSummary" Dense="true">
-                @foreach (var group in FilteredDefinitions.GroupBy(x => string.IsNullOrWhiteSpace(x.OwnerModule) ? L["State:Definitions:Ungrouped"].Value : x.OwnerModule!)
-                             .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+            <div class="configuration-definition-list-scroll">
+                @if (Definitions.Count == 0)
                 {
-                    <MudListSubheader>@group.Key</MudListSubheader>
-                    @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
-                    {
-                        <MudListItem T="ConfigurationDefinitionSummary"
-                                     Value="@definition"
-                                     Icon="@Icons.Material.Filled.Settings"
-                                     Class="@(IsSelected(definition) ? "selected-definition" : null)"
-                                     OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
-                            <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@definition.DisplayName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@definition.DefinitionKey</MudText>
-                            </MudStack>
-                        </MudListItem>
-                    }
+                    <MudAlert Severity="Severity.Info">@L["State:Definitions:Empty"]</MudAlert>
                 }
-            </MudList>
-        }
+                else if (!FilteredDefinitions.Any())
+                {
+                    <MudAlert Severity="Severity.Info">@L["State:Definitions:NoMatches"]</MudAlert>
+                }
+                else
+                {
+                    <MudList T="ConfigurationDefinitionSummary" Dense="true">
+                        @foreach (var group in FilteredDefinitions.GroupBy(x => string.IsNullOrWhiteSpace(x.OwnerModule) ? L["State:Definitions:Ungrouped"].Value : x.OwnerModule!)
+                                     .OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+                        {
+                            <MudListSubheader>@group.Key</MudListSubheader>
+                            @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <MudListItem T="ConfigurationDefinitionSummary"
+                                             Value="@definition"
+                                             Icon="@Icons.Material.Filled.Settings"
+                                             Class="@(IsSelected(definition) ? "selected-definition" : null)"
+                                             OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2">@definition.DisplayName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@definition.DefinitionKey</MudText>
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        }
+                    </MudList>
+                }
+            </div>
 
-        <MudDivider />
+            <div class="configuration-definition-list-footer">
+                <MudDivider />
 
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
-            <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-                @PendingCount
-            </MudChip>
-            <MudStack Row="true" Spacing="1">
-                <MudTooltip Text="@L["State:Actions:UndoAll"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Undo"
-                                   Disabled="@(PendingCount == 0)"
-                                   OnClick="UndoAll" />
-                </MudTooltip>
-                <MudTooltip Text="@L["State:Actions:SaveGroup"]">
-                    <MudIconButton Icon="@Icons.Material.Filled.Save"
-                                   Color="Color.Primary"
-                                   Variant="Variant.Filled"
-                                   Disabled="@(PendingCount == 0)"
-                                   OnClick="SaveGroup" />
-                </MudTooltip>
-            </MudStack>
-        </MudStack>
-    </MudStack>
-</MudPaper>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                    <MudChip T="int" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                        @PendingCount
+                    </MudChip>
+                    <MudStack Row="true" Spacing="1">
+                        <MudTooltip Text="@L["State:Actions:UndoAll"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                           Disabled="@(PendingCount == 0)"
+                                           OnClick="UndoAll" />
+                        </MudTooltip>
+                        <MudTooltip Text="@L["State:Actions:SaveGroup"]">
+                            <MudIconButton Icon="@Icons.Material.Filled.Save"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Filled"
+                                           Disabled="@(PendingCount == 0)"
+                                           OnClick="SaveGroup" />
+                        </MudTooltip>
+                    </MudStack>
+                </MudStack>
+            </div>
+        </div>
+    </MudPaper>
+</div>
 
 @code {
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
