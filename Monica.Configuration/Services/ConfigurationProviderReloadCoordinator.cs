@@ -1,5 +1,4 @@
 using Monica.Configuration.Abstractions.Internal;
-using Monica.Configuration.Metrics;
 using Monica.Configuration.Projection;
 
 namespace Monica.Configuration.Services;
@@ -7,9 +6,7 @@ namespace Monica.Configuration.Services;
 /// <summary>
 /// Coordinates reloads for the active Monica configuration provider.
 /// </summary>
-internal sealed class ConfigurationProviderReloadCoordinator(
-    MonicaConfigurationProviderAccessor accessor,
-    ConfigurationMetricsRecorder metricsRecorder)
+internal sealed class ConfigurationProviderReloadCoordinator(MonicaConfigurationProviderAccessor accessor)
     : IConfigurationReloadCoordinator
 {
     /// <inheritdoc />
@@ -20,8 +17,6 @@ internal sealed class ConfigurationProviderReloadCoordinator(
             return;
         }
 
-        var started = TimeProvider.System.GetTimestamp();
         await accessor.Provider.ReloadAsync(cancellationToken);
-        metricsRecorder.RecordReloadLatency(TimeProvider.System.GetElapsedTime(started));
     }
 }

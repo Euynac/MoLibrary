@@ -71,6 +71,7 @@ public sealed class ModuleConfiguration
     private readonly ConfigurationDefinitionRegistry _definitionRegistry = new();
     private readonly ConfigurationSchemaHasher _schemaHasher;
     private readonly ConfigurationDefinitionScanner _definitionScanner;
+    private readonly MonicaConfigurationProviderAccessor _providerAccessor = new();
     private IConfiguration? _configuration;
     private IServiceCollection? _services;
 
@@ -94,6 +95,10 @@ public sealed class ModuleConfiguration
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
         _configuration = builder.Configuration;
+        // This appends Monica's merged projection after the host's default providers.
+        // If callers add more Microsoft configuration providers later, their ordering relative to Monica
+        // should become an explicit module option or guide method instead of relying on call order.
+        builder.Configuration.Add(new MonicaConfigurationSource(_providerAccessor));
     }
 
     /// <inheritdoc />
@@ -124,7 +129,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationValidationCoordinator>();
         services.TryAddSingleton<ConfigurationPathProjector>();
         services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
-        services.TryAddSingleton<MonicaConfigurationProviderAccessor>();
+        services.TryAddSingleton(_providerAccessor);
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
         services.TryAddSingleton<MemoryConfigurationMutationGroupSource>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, JsonConfigurationValueSource>());
@@ -132,6 +137,7 @@ public sealed class ModuleConfiguration
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, MemoryConfigurationValueSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationMutationGroupSource, MemoryConfigurationMutationGroupSource>(
             serviceProvider => serviceProvider.GetRequiredService<MemoryConfigurationMutationGroupSource>()));
+        services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
         services.AddHostedService<ConfigurationSourceWatchHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
     }

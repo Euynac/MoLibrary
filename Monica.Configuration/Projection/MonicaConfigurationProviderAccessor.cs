@@ -6,6 +6,11 @@ namespace Monica.Configuration.Projection;
 internal sealed class MonicaConfigurationProviderAccessor
 {
     /// <summary>
+    /// Gets or sets the final application service provider used to resolve Monica configuration services.
+    /// </summary>
+    public IServiceProvider? ServiceProvider { get; set; }
+
+    /// <summary>
     /// Gets or sets the active provider.
     /// </summary>
     public MonicaConfigurationProvider? Provider { get; set; }
