@@ -38,20 +38,17 @@
     "DataChannelManage": {
       "Title": "DataChannel Management"
     },
-    "ConfigurationOverview": {
-      "Title": "Configuration Overview"
-    },
-    "ConfigurationDefinitionDetail": {
-      "Title": "Configuration Definition Detail"
-    },
-    "ConfigurationValueDetail": {
-      "Title": "Configuration Value Detail"
-    },
-    "ConfigurationMutationEditor": {
-      "Title": "Configuration Mutation Editor"
+    "ConfigurationState": {
+      "Title": "Configuration State"
     },
     "ConfigurationHistory": {
       "Title": "Configuration History"
+    },
+    "ConfigurationDebug": {
+      "Title": "Configuration Debug"
+    },
+    "ConfigurationProviders": {
+      "Title": "Configuration Providers"
     },
     "RuntimeMetrics": {
       "Title": "Runtime Metrics"

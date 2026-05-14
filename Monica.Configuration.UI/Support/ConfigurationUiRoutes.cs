@@ -11,40 +11,40 @@ internal static class ConfigurationUiRoutes
     private const string PATH_QUERY_KEY = "path";
 
     /// <summary>
-    /// Gets the overview route.
+    /// Gets the configuration state route.
     /// </summary>
-    public const string OVERVIEW_ROUTE = "/configuration";
+    public const string STATE_ROUTE = "/configuration/state";
 
     /// <summary>
-    /// Builds the definition detail route.
+    /// Gets the configuration history route.
     /// </summary>
-    public static string Definition(string definitionKey)
-    {
-        return $"/configuration/{Uri.EscapeDataString(definitionKey)}";
-    }
+    public const string HISTORY_ROUTE = "/configuration/history";
 
     /// <summary>
-    /// Builds the value detail route.
+    /// Gets the configuration debug route.
     /// </summary>
-    public static string Value(string definitionKey, LogicalPath? logicalPath = null)
-    {
-        return WithPath($"{Definition(definitionKey)}/value", logicalPath);
-    }
+    public const string DEBUG_ROUTE = "/configuration/debug";
 
     /// <summary>
-    /// Builds the mutation editor route.
+    /// Gets the configuration providers route.
     /// </summary>
-    public static string Edit(string definitionKey, LogicalPath? logicalPath = null)
-    {
-        return WithPath($"{Definition(definitionKey)}/edit", logicalPath);
-    }
+    public const string PROVIDERS_ROUTE = "/configuration/providers";
 
     /// <summary>
-    /// Builds the history route.
+    /// Builds the history route for an optional target.
     /// </summary>
-    public static string History(string definitionKey, LogicalPath? logicalPath = null)
+    /// <param name="definitionKey">Definition key filter.</param>
+    /// <param name="logicalPath">Logical path filter.</param>
+    /// <returns>The history route.</returns>
+    public static string History(string? definitionKey = null, LogicalPath? logicalPath = null)
     {
-        return WithPath($"{Definition(definitionKey)}/history", logicalPath);
+        var route = HISTORY_ROUTE;
+        if (!string.IsNullOrWhiteSpace(definitionKey))
+        {
+            route = QueryHelpers.AddQueryString(route, "definitionKey", definitionKey);
+        }
+
+        return WithPath(route, logicalPath);
     }
 
     /// <summary>

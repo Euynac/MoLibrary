@@ -87,19 +87,69 @@ public sealed class DatabaseConfigurationValueSource(IDbContextProvider<Configur
         LogicalPath logicalPath,
         CancellationToken cancellationToken)
     {
-        var canonicalPath = logicalPath.ToCanonicalString();
+        return await QueryHistoryAsync(null, null, definitionKey, logicalPath, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationValueHistory>> QueryHistoryAsync(
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        LogicalPath? logicalPath,
+        string? mutationGroupId,
+        CancellationToken cancellationToken)
+    {
         var dbContext = await dbContextProvider.GetDbContextAsync();
-        var entities = await dbContext.ConfigurationValueHistories
+        var query = dbContext.ConfigurationValueHistories
             .AsNoTracking()
-            .Where(history =>
-                history.SourceKey == Descriptor.SourceKey
-                && history.DefinitionKey == definitionKey
-                && history.LogicalPath == canonicalPath)
+            .Where(history => history.SourceKey == Descriptor.SourceKey);
+
+        if (from is not null)
+        {
+            query = query.Where(history => history.ModifiedTime >= from);
+        }
+
+        if (to is not null)
+        {
+            query = query.Where(history => history.ModifiedTime <= to);
+        }
+
+        if (!string.IsNullOrWhiteSpace(definitionKey))
+        {
+            query = query.Where(history => history.DefinitionKey == definitionKey);
+        }
+
+        if (logicalPath is not null)
+        {
+            var canonicalPath = logicalPath.ToCanonicalString();
+            query = query.Where(history => history.LogicalPath == canonicalPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(mutationGroupId))
+        {
+            query = query.Where(history => history.MutationGroupId == mutationGroupId);
+        }
+
+        var entities = await query
             .OrderByDescending(history => history.ModifiedTime)
             .ThenByDescending(history => history.Version)
             .ToListAsync(cancellationToken);
 
         return entities.Select(ToHistory).ToArray();
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
+    {
+        var dbContext = await dbContextProvider.GetDbContextAsync();
+        var entity = await dbContext.ConfigurationValueHistories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(history =>
+                history.SourceKey == Descriptor.SourceKey
+                && history.HistoryId == historyId,
+                cancellationToken);
+
+        return entity is null ? null : ToHistory(entity);
     }
 
     private async Task<ConfigurationMutationResult> ApplySetAsync(
@@ -366,7 +416,8 @@ public sealed class DatabaseConfigurationValueSource(IDbContextProvider<Configur
             ModifiedTime = now,
             ModifierId = mutation.Request.Context.ModifierId,
             ModifierName = mutation.Request.Context.ModifierName,
-            Reason = mutation.Request.Context.Reason
+            Reason = mutation.Request.Context.Reason,
+            MutationGroupId = mutation.Request.Context.MutationGroupId
         });
     }
 
@@ -409,7 +460,8 @@ public sealed class DatabaseConfigurationValueSource(IDbContextProvider<Configur
             ModifiedTime = entity.ModifiedTime,
             ModifierId = entity.ModifierId,
             ModifierName = entity.ModifierName,
-            Reason = entity.Reason
+            Reason = entity.Reason,
+            MutationGroupId = entity.MutationGroupId
         };
     }
 

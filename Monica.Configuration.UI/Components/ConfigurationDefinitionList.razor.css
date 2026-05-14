@@ -1,0 +1,9 @@
+.configuration-definition-list {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+}
+
+.configuration-definition-list ::deep .selected-definition {
+    background-color: var(--mud-palette-action-default-hover);
+}

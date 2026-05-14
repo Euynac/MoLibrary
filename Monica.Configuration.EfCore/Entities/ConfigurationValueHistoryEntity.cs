@@ -38,4 +38,6 @@ public sealed class ConfigurationValueHistoryEntity
     public string? ModifierName { get; set; }
 
     public string? Reason { get; set; }
+
+    public string? MutationGroupId { get; set; }
 }

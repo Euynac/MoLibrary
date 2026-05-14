@@ -19,12 +19,44 @@ internal sealed class ConfigurationHistoryService(IEnumerable<IConfigurationHist
         LogicalPath logicalPath,
         CancellationToken cancellationToken)
     {
+        return await QueryHistoryAsync(null, null, definitionKey, logicalPath, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ConfigurationValueHistory>> QueryHistoryAsync(
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        LogicalPath? logicalPath,
+        string? mutationGroupId,
+        CancellationToken cancellationToken)
+    {
         var histories = new List<ConfigurationValueHistory>();
         foreach (var source in historySources)
         {
-            histories.AddRange(await source.GetHistoryAsync(definitionKey, logicalPath, cancellationToken));
+            histories.AddRange(await source.QueryHistoryAsync(from, to, definitionKey, logicalPath, mutationGroupId, cancellationToken));
         }
 
+        return Sort(histories);
+    }
+
+    /// <inheritdoc />
+    public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
+    {
+        foreach (var source in historySources)
+        {
+            var history = await source.GetHistoryByIdAsync(historyId, cancellationToken);
+            if (history is not null)
+            {
+                return history;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<ConfigurationValueHistory> Sort(IEnumerable<ConfigurationValueHistory> histories)
+    {
         return histories
             .OrderByDescending(history => history.ModifiedTime)
             .ThenByDescending(history => history.Version)

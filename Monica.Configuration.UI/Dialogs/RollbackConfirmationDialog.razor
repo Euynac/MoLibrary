@@ -1,0 +1,116 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                @(IsGroupRollback ? L["Rollback:GroupWarning"] : L["Rollback:SingleWarning"])
+            </MudAlert>
+
+            <MudTextField T="string"
+                          @bind-Value="_reason"
+                          Label="@L["Group:Reason"]"
+                          Variant="Variant.Outlined"
+                          Lines="2" />
+
+            @if (HistoryRow is not null)
+            {
+                <MudTable T="ConfigurationValueHistory" Items="@SingleRows" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>@L["State:Columns:Path"]</MudTh>
+                        <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                        <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                        <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context.OldValue)</MudTd>
+                        <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context.NewValue)</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+
+            @if (_saving)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Warning"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Restore"
+                   OnClick="RollbackAsync"
+                   Disabled="_saving">
+            @L["Rollback:Confirm"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public ConfigurationValueHistory? HistoryRow { get; set; }
+    [Parameter] public ConfigurationMutationGroup? Group { get; set; }
+
+    private string? _reason;
+    private string? _error;
+    private bool _saving;
+
+    private bool IsGroupRollback => Group is not null;
+
+    private IReadOnlyList<ConfigurationValueHistory> SingleRows => HistoryRow is null ? [] : [HistoryRow];
+
+    private async Task RollbackAsync()
+    {
+        _saving = true;
+        _error = null;
+
+        if (Group is not null)
+        {
+            var result = await Facade.RollbackGroupAsync(Group.GroupId, _reason);
+            if (result.IsFailed(out var error, out _))
+            {
+                _error = error.Message;
+                _saving = false;
+                return;
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        if (HistoryRow is null)
+        {
+            _error = L["Common:States:NotFound"];
+            _saving = false;
+            return;
+        }
+
+        var singleResult = await Facade.RollbackHistoryAsync(HistoryRow.HistoryId, _reason);
+        if (singleResult.IsFailed(out var singleError, out _))
+        {
+            _error = singleError.Message;
+            _saving = false;
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private static string? DisplayValue(ConfigurationStoredValue? value)
+    {
+        return value?.PlainJson ?? value?.SecretReference ?? value?.ProtectedPayload;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

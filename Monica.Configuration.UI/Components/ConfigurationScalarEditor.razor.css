@@ -1,0 +1,7 @@
+.configuration-scalar-editor {
+    border-radius: var(--mud-default-borderradius);
+}
+
+.configuration-scalar-editor.modified-input {
+    background-color: var(--mo-color-state-warning-soft-background);
+}

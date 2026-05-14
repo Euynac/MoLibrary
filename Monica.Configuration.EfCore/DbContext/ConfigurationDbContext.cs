@@ -19,6 +19,8 @@ public sealed class ConfigurationDbContext(
 
     public DbSet<ConfigurationValueHistoryEntity> ConfigurationValueHistories => Set<ConfigurationValueHistoryEntity>();
 
+    public DbSet<ConfigurationMutationGroupEntity> ConfigurationMutationGroups => Set<ConfigurationMutationGroupEntity>();
+
     public DbSet<ConfigurationSourceStateEntity> ConfigurationSourceStates => Set<ConfigurationSourceStateEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -35,6 +37,11 @@ public sealed class ConfigurationDbContext(
         modelBuilder.Entity<ConfigurationValueHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .HasIndex(x => new { x.DefinitionKey, x.SourceKey, x.PathDepth, x.ModifiedTime });
+        modelBuilder.Entity<ConfigurationValueHistoryEntity>()
+            .HasIndex(x => x.MutationGroupId);
+        modelBuilder.Entity<ConfigurationMutationGroupEntity>().HasKey(x => x.GroupId);
+        modelBuilder.Entity<ConfigurationMutationGroupEntity>()
+            .HasIndex(x => x.CreatedTime);
         modelBuilder.Entity<ConfigurationSourceStateEntity>().HasKey(x => x.SourceKey);
     }
 }

@@ -3,74 +3,65 @@
     "Configuration": "配置"
   },
   "Pages": {
-    "ConfigurationOverview": {
-      "Title": "配置总览"
-    },
-    "ConfigurationDefinitionDetail": {
-      "Title": "定义详情"
-    },
-    "ConfigurationValueDetail": {
-      "Title": "值与来源详情"
-    },
-    "ConfigurationMutationEditor": {
-      "Title": "修改编辑器"
+    "ConfigurationState": {
+      "Title": "配置状态"
     },
     "ConfigurationHistory": {
-      "Title": "历史记录"
-    }
-  },
-  "Overview": {
-    "SearchPlaceholder": "按 key、名称、模块或 section 搜索",
-    "Refresh": "刷新",
-    "OpenDefinition": "打开定义",
-    "OpenValue": "打开值",
-    "OpenHistory": "打开历史",
-    "OpenMutation": "修改值",
-    "Columns": {
-      "Key": "定义 Key",
-      "DisplayName": "显示名称",
-      "SectionPath": "Section 路径",
-      "OwnerModule": "所属模块",
-      "SchemaVersion": "Schema 版本"
+      "Title": "配置历史"
     },
-    "States": {
-      "Loading": "正在加载配置定义...",
-      "Empty": "未找到配置定义。"
+    "ConfigurationDebug": {
+      "Title": "配置调试"
+    },
+    "ConfigurationProviders": {
+      "Title": "配置来源"
     }
   },
-  "Detail": {
-    "Basic": {
-      "Key": "定义 Key",
-      "Type": "CLR 类型",
-      "SectionPath": "Section 路径",
-      "OwnerModule": "所属模块",
-      "SchemaVersion": "Schema 版本",
-      "SchemaHash": "Schema 哈希",
-      "ReloadBehavior": "重载行为"
+  "State": {
+    "Subtitle": "查看受管配置定义，暂存修改，并作为一个审计组保存。",
+    "SearchPlaceholder": "搜索配置定义",
+    "Definitions": {
+      "Empty": "未找到配置定义。",
+      "NoMatches": "没有配置定义匹配当前搜索。",
+      "SelectPrompt": "请选择一个配置定义。",
+      "Ungrouped": "未分组"
     },
     "Tree": {
-      "Title": "Schema 树"
+      "Title": "Schema 树",
+      "Root": "根节点"
     },
-    "Node": {
-      "Title": "节点检查器",
-      "Path": "逻辑路径",
-      "ConfigurationPath": "配置路径",
-      "NodeKind": "节点类型",
-      "ValueKind": "值类型",
-      "Nullable": "可空",
+    "Actions": {
+      "SaveGroup": "保存修改组",
+      "UndoAll": "撤销全部",
+      "Undo": "撤销",
+      "EditComplex": "编辑复杂值"
+    },
+    "Columns": {
+      "Definition": "配置定义",
+      "Path": "路径",
+      "OldValue": "旧值",
+      "NewValue": "新值"
+    },
+    "Value": {
       "Sensitive": "敏感",
-      "ValidationRules": "验证规则"
+      "Required": "必填",
+      "RestartNeeded": "需要重启",
+      "NoSource": "无来源值",
+      "SourceSummary": "来自 {0}"
+    },
+    "Editor": {
+      "SensitivePlaceholder": "已配置。留空表示不修改密钥。",
+      "Required": "值不能为空。",
+      "InvalidPattern": "值不符合要求的格式。",
+      "OutOfRange": "值超出允许范围。",
+      "TooLong": "值过长。",
+      "TooShort": "值过短。"
     }
   },
   "Value": {
     "Path": "逻辑路径",
-    "Load": "加载值",
     "SourceChain": "来源链",
-    "Effective": "有效值",
-    "Mutate": "编辑值",
     "States": {
-      "Loading": "正在加载值详情...",
-      "Empty": "该路径没有找到值。"
+      "Empty": "没有值。"
     }
   },
   "Mutation": {
@@ -79,45 +70,102 @@
     "SourceKey": "目标来源 Key",
     "MutationKind": "修改类型",
     "ReloadBehavior": "重载行为",
-    "ExpectedSchemaVersion": "期望 Schema 版本",
     "ExpectedValueVersion": "期望值版本",
-    "Apply": "应用修改",
-    "Reset": "重置",
     "RawJson": "原始 JSON",
-    "Structured": "结构化",
     "Kinds": {
       "Set": "设置",
       "Remove": "移除",
       "Replace": "替换"
-    },
-    "Hints": {
-      "RequiresRestart": "需要重启",
-      "StaticAfterStartup": "启动后静态"
-    },
-    "States": {
-      "Success": "修改已成功应用。"
     }
   },
   "History": {
     "Title": "历史记录",
+    "Subtitle": "审计单次修改和持久化修改组。",
+    "Tabs": {
+      "Mutations": "按修改",
+      "Groups": "按组"
+    },
+    "Filters": {
+      "From": "开始",
+      "To": "结束"
+    },
     "States": {
-      "Loading": "正在加载历史记录...",
       "Empty": "未找到历史记录。"
     },
     "Columns": {
-      "Time": "修改时间",
+      "Time": "时间",
       "Source": "来源",
-      "Kind": "修改类型",
-      "Granularity": "粒度",
+      "Kind": "类型",
       "State": "状态",
       "Version": "版本"
+    }
+  },
+  "Group": {
+    "Label": "组标签",
+    "Reason": "原因",
+    "DefaultLabel": "修改 {0}",
+    "SaveCount": "保存 {0} 个修改",
+    "Saved": "配置修改组已保存。",
+    "Empty": "未找到修改组。",
+    "MutationCount": "修改数",
+    "Definitions": "配置定义",
+    "Status": "状态",
+    "ViewHistory": "查看组历史",
+    "HistoryLoaded": "已加载 {0} 的历史。",
+    "StatusValues": {
+      "Applied": "已应用",
+      "PartiallyApplied": "部分应用",
+      "RolledBack": "已回滚"
+    }
+  },
+  "Rollback": {
+    "SingleTitle": "回滚修改",
+    "GroupTitle": "回滚修改组",
+    "SingleWarning": "这会应用一条新的修改，将该历史记录恢复到之前的值。",
+    "GroupWarning": "这会按修改组的反向顺序应用回滚修改。如果其中一条失败，回滚组会被标记为部分应用。",
+    "Confirm": "回滚",
+    "Success": "回滚已完成。"
+  },
+  "Debug": {
+    "Subtitle": "查看当前 Microsoft configuration debug 输出。",
+    "SearchPlaceholder": "搜索调试视图",
+    "Empty": "调试视图为空。"
+  },
+  "Providers": {
+    "Subtitle": "查看已注册配置来源及其运行状态。",
+    "SearchPlaceholder": "搜索配置来源",
+    "Empty": "未找到配置来源。",
+    "Capabilities": {
+      "Writable": "可写",
+      "Watch": "监听",
+      "History": "历史"
+    },
+    "State": {
+      "Succeeded": "正常",
+      "Failed": "失败",
+      "Unknown": "尚无重载状态记录。"
+    },
+    "Actions": {
+      "LoadOverrides": "加载覆盖值"
+    },
+    "OverridesLoaded": "已从 {1} 加载 {0} 个覆盖值。"
+  },
+  "Dialogs": {
+    "SaveGroup": {
+      "Title": "保存配置修改组"
+    },
+    "ComplexEditor": {
+      "Title": "编辑复杂值",
+      "JsonHelper": "Phase 1 对对象、字典和列表节点支持原始 JSON 编辑。"
     }
   },
   "Common": {
     "Actions": {
       "Refresh": "刷新",
       "Back": "返回",
-      "Search": "搜索"
+      "Search": "搜索",
+      "Cancel": "取消",
+      "Stage": "暂存"
     },
     "States": {
       "Loading": "加载中...",
@@ -126,9 +174,7 @@
     },
     "Errors": {
       "LoadFailed": "加载失败",
-      "MutationFailed": "应用修改失败",
-      "InvalidPath": "逻辑路径无效",
-      "InvalidJson": "JSON 无效"
+      "InvalidPath": "逻辑路径无效"
     }
   }
 }

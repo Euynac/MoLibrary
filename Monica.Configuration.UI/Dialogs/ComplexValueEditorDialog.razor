@@ -1,0 +1,151 @@
+@using System.Text.Json
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="@ReloadSeverity" Variant="Variant.Outlined">
+                @L["Mutation:ReloadBehavior"]: @EffectiveReloadBehavior
+            </MudAlert>
+
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string"
+                                  Value="@Definition.DefinitionKey"
+                                  Label="@L["Mutation:DefinitionKey"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string"
+                                  Value="@Node.RelativePath.ToCanonicalString()"
+                                  Label="@L["Mutation:LogicalPath"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  ReadOnly="true" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="ConfigurationMutationKind"
+                               @bind-Value="_mutationKind"
+                               Label="@L["Mutation:MutationKind"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Set">@L["Mutation:Kinds:Set"]</MudSelectItem>
+                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Remove">@L["Mutation:Kinds:Remove"]</MudSelectItem>
+                        <MudSelectItem T="ConfigurationMutationKind" Value="@ConfigurationMutationKind.Replace">@L["Mutation:Kinds:Replace"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string"
+                                  @bind-Value="_targetSourceKey"
+                                  Label="@L["Mutation:SourceKey"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudNumericField T="long?"
+                                     @bind-Value="_valueVersion"
+                                     Label="@L["Mutation:ExpectedValueVersion"]"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+
+            <MudTextField T="string"
+                          @bind-Value="_jsonText"
+                          Label="@L["Mutation:RawJson"]"
+                          Variant="Variant.Outlined"
+                          Lines="20"
+                          FullWidth="true"
+                          Error="@(!string.IsNullOrWhiteSpace(_error))"
+                          ErrorText="@_error"
+                          HelperText="@L["Dialogs:ComplexEditor:JsonHelper"]" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="Apply">
+            @L["Common:Actions:Stage"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationDefinition Definition { get; set; } = null!;
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+
+    private string _jsonText = "{}";
+    private string _targetSourceKey = string.Empty;
+    private ConfigurationMutationKind _mutationKind = ConfigurationMutationKind.Replace;
+    private long? _valueVersion;
+    private string? _error;
+
+    private ConfigurationReloadBehavior EffectiveReloadBehavior =>
+        Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
+            ? behavior
+            : Definition.ReloadBehavior;
+
+    private Severity ReloadSeverity => EffectiveReloadBehavior is ConfigurationReloadBehavior.RequiresRestart or ConfigurationReloadBehavior.StaticAfterStartup
+        ? Severity.Warning
+        : Severity.Info;
+
+    protected override void OnInitialized()
+    {
+        _targetSourceKey = EffectiveValue?.EffectiveSourceKey ?? string.Empty;
+        _valueVersion = EffectiveValue?.Version;
+        if (!string.IsNullOrWhiteSpace(EffectiveValue?.DisplayValue))
+        {
+            _jsonText = EffectiveValue.DisplayValue!;
+        }
+    }
+
+    private void Apply()
+    {
+        var json = string.IsNullOrWhiteSpace(_jsonText) ? "null" : _jsonText;
+        try
+        {
+            using var _ = JsonDocument.Parse(json);
+            _error = null;
+        }
+        catch (JsonException ex)
+        {
+            _error = ex.Message;
+            return;
+        }
+
+        var change = new PendingChange
+        {
+            DefinitionKey = Definition.DefinitionKey,
+            DefinitionDisplayName = Definition.DisplayName,
+            LogicalPath = Node.RelativePath,
+            NodeDisplayName = string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!,
+            MutationKind = _mutationKind,
+            NewValue = _mutationKind == ConfigurationMutationKind.Remove
+                ? ConfigurationStoredValue.Null
+                : ConfigurationStoredValue.Plain(json),
+            OriginalDisplayValue = EffectiveValue?.DisplayValue,
+            NewDisplayValue = _mutationKind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : json,
+            TargetSourceKey = string.IsNullOrWhiteSpace(_targetSourceKey) ? null : _targetSourceKey,
+            ExpectedSchemaVersion = Definition.SchemaVersion,
+            ExpectedValueVersion = _valueVersion,
+            IsSensitive = Node.IsSensitive,
+            NodeKind = Node.NodeKind,
+            ValueKind = Node.ValueKind,
+            ReloadBehavior = EffectiveReloadBehavior
+        };
+
+        MudDialog.Close(DialogResult.Ok(change));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

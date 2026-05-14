@@ -19,4 +19,9 @@ public sealed record ConfigurationMutationContext
     /// Gets the mutation reason.
     /// </summary>
     public string? Reason { get; init; }
+
+    /// <summary>
+    /// Gets the persisted mutation group identity that this mutation belongs to.
+    /// </summary>
+    public string? MutationGroupId { get; init; }
 }

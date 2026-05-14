@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.UI.Localization;
 using Monica.Configuration.UI.Pages;
+using Monica.Configuration.UI.State;
 using Monica.Configuration.UI.Support;
 using Monica.Core;
 using Monica.Core.Modularity;
@@ -51,45 +52,45 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
         DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry =>
             {
-                registry.RegisterLocalizedComponent<ConfigurationOverviewPage>(
-                    ConfigurationUiRoutes.OVERVIEW_ROUTE,
-                    "Pages:ConfigurationOverview:Title",
-                    Icons.Material.Filled.Settings,
+                registry.RegisterLocalizedComponent<ConfigurationStatePage>(
+                    ConfigurationUiRoutes.STATE_ROUTE,
+                    "Pages:ConfigurationState:Title",
+                    Icons.Material.Filled.Tune,
                     "Categories:Configuration",
                     addToNav: true,
-                    navOrder: 20,
+                    navOrder: 10,
                     navLinkMatch: NavLinkMatch.All);
 
-                registry.RegisterLocalizedComponent<ConfigurationDefinitionDetailPage>(
-                    "/configuration/{definitionKey}",
-                    "Pages:ConfigurationDefinitionDetail:Title",
-                    Icons.Material.Filled.AccountTree,
-                    "Categories:Configuration");
-
-                registry.RegisterLocalizedComponent<ConfigurationValueDetailPage>(
-                    "/configuration/{definitionKey}/value",
-                    "Pages:ConfigurationValueDetail:Title",
-                    Icons.Material.Filled.DataObject,
-                    "Categories:Configuration");
-
-                registry.RegisterLocalizedComponent<ConfigurationMutationEditorPage>(
-                    "/configuration/{definitionKey}/edit",
-                    "Pages:ConfigurationMutationEditor:Title",
-                    Icons.Material.Filled.Edit,
-                    "Categories:Configuration");
-
                 registry.RegisterLocalizedComponent<ConfigurationHistoryPage>(
-                    "/configuration/{definitionKey}/history",
+                    ConfigurationUiRoutes.HISTORY_ROUTE,
                     "Pages:ConfigurationHistory:Title",
                     Icons.Material.Filled.History,
-                    "Categories:Configuration");
+                    "Categories:Configuration",
+                    addToNav: true,
+                    navOrder: 20);
+
+                registry.RegisterLocalizedComponent<ConfigurationDebugPage>(
+                    ConfigurationUiRoutes.DEBUG_ROUTE,
+                    "Pages:ConfigurationDebug:Title",
+                    Icons.Material.Filled.BugReport,
+                    "Categories:Configuration",
+                    addToNav: true,
+                    navOrder: 30);
+
+                registry.RegisterLocalizedComponent<ConfigurationProvidersPage>(
+                    ConfigurationUiRoutes.PROVIDERS_ROUTE,
+                    "Pages:ConfigurationProviders:Title",
+                    Icons.Material.Filled.Storage,
+                    "Categories:Configuration",
+                    addToNav: true,
+                    navOrder: 40);
             });
     }
 
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ConfigurationUiState>();
+        services.AddScoped<ConfigurationStateStore>();
     }
 }
 

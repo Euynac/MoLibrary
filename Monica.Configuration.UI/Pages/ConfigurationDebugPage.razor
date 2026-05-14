@@ -1,0 +1,93 @@
+@attribute [Route(PAGE_URL)]
+@inject ConfigurationFacade Facade
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationDebug:Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-debug-page">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h4">@L["Pages:ConfigurationDebug:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Debug:Subtitle"]</MudText>
+            </MudStack>
+            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+            </MudTooltip>
+        </MudStack>
+
+        <MudPaper Outlined="true" Class="pa-3">
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Placeholder="@L["Debug:SearchPlaceholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudPaper>
+
+        @if (_loading)
+        {
+            <MudPaper Outlined="true" Class="pa-6 configuration-debug-loading">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>@L["Common:States:Loading"]</MudText>
+            </MudPaper>
+        }
+        else if (_lines.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["Debug:Empty"]</MudAlert>
+        }
+        else
+        {
+            <MudPaper Outlined="true" Class="configuration-debug-view">
+                @foreach (var line in FilteredLines)
+                {
+                    <div class="debug-line @(IsMatch(line) ? "debug-line-match" : null)">@line</div>
+                }
+            </MudPaper>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = ConfigurationUiRoutes.DEBUG_ROUTE;
+
+    private readonly List<string> _lines = [];
+    private string _searchText = string.Empty;
+    private bool _loading = true;
+
+    private IEnumerable<string> FilteredLines =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? _lines
+            : _lines.Where(IsMatch);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var result = await Facade.GetDebugViewAsync();
+        if (result.IsFailed(out var error, out var debugView))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _lines.Clear();
+            _loading = false;
+            return;
+        }
+
+        _lines.Clear();
+        _lines.AddRange((debugView ?? string.Empty).Split(Environment.NewLine));
+        _loading = false;
+    }
+
+    private bool IsMatch(string line)
+    {
+        return string.IsNullOrWhiteSpace(_searchText)
+               || line.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+    }
+}

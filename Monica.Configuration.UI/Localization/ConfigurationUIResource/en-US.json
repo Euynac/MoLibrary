@@ -3,74 +3,65 @@
     "Configuration": "Configuration"
   },
   "Pages": {
-    "ConfigurationOverview": {
-      "Title": "Configuration Overview"
-    },
-    "ConfigurationDefinitionDetail": {
-      "Title": "Definition Detail"
-    },
-    "ConfigurationValueDetail": {
-      "Title": "Value and Source Detail"
-    },
-    "ConfigurationMutationEditor": {
-      "Title": "Mutation Editor"
+    "ConfigurationState": {
+      "Title": "Configuration State"
     },
     "ConfigurationHistory": {
-      "Title": "History"
-    }
-  },
-  "Overview": {
-    "SearchPlaceholder": "Search by key, name, module, or section",
-    "Refresh": "Refresh",
-    "OpenDefinition": "Open definition",
-    "OpenValue": "Open value",
-    "OpenHistory": "Open history",
-    "OpenMutation": "Mutate value",
-    "Columns": {
-      "Key": "Definition key",
-      "DisplayName": "Display name",
-      "SectionPath": "Section path",
-      "OwnerModule": "Owner module",
-      "SchemaVersion": "Schema version"
+      "Title": "Configuration History"
     },
-    "States": {
-      "Loading": "Loading configuration definitions...",
-      "Empty": "No configuration definitions found."
+    "ConfigurationDebug": {
+      "Title": "Configuration Debug"
+    },
+    "ConfigurationProviders": {
+      "Title": "Configuration Providers"
     }
   },
-  "Detail": {
-    "Basic": {
-      "Key": "Definition key",
-      "Type": "CLR type",
-      "SectionPath": "Section path",
-      "OwnerModule": "Owner module",
-      "SchemaVersion": "Schema version",
-      "SchemaHash": "Schema hash",
-      "ReloadBehavior": "Reload behavior"
+  "State": {
+    "Subtitle": "Inspect managed definitions, stage edits, and save them as one audited group.",
+    "SearchPlaceholder": "Search definitions",
+    "Definitions": {
+      "Empty": "No configuration definitions were found.",
+      "NoMatches": "No definitions match the current search.",
+      "SelectPrompt": "Select a configuration definition.",
+      "Ungrouped": "Ungrouped"
     },
     "Tree": {
-      "Title": "Schema tree"
+      "Title": "Schema tree",
+      "Root": "Root"
     },
-    "Node": {
-      "Title": "Node inspector",
-      "Path": "Logical path",
-      "ConfigurationPath": "Configuration path",
-      "NodeKind": "Node kind",
-      "ValueKind": "Value kind",
-      "Nullable": "Nullable",
+    "Actions": {
+      "SaveGroup": "Save group",
+      "UndoAll": "Undo all",
+      "Undo": "Undo",
+      "EditComplex": "Edit complex value"
+    },
+    "Columns": {
+      "Definition": "Definition",
+      "Path": "Path",
+      "OldValue": "Old value",
+      "NewValue": "New value"
+    },
+    "Value": {
       "Sensitive": "Sensitive",
-      "ValidationRules": "Validation rules"
+      "Required": "Required",
+      "RestartNeeded": "Restart needed",
+      "NoSource": "No source value",
+      "SourceSummary": "From {0}"
+    },
+    "Editor": {
+      "SensitivePlaceholder": "Configured. Leave empty to avoid changing the secret.",
+      "Required": "Value is required.",
+      "InvalidPattern": "Value does not match the required pattern.",
+      "OutOfRange": "Value is outside the allowed range.",
+      "TooLong": "Value is too long.",
+      "TooShort": "Value is too short."
     }
   },
   "Value": {
     "Path": "Logical path",
-    "Load": "Load value",
     "SourceChain": "Source chain",
-    "Effective": "Effective value",
-    "Mutate": "Edit value",
     "States": {
-      "Loading": "Loading value details...",
-      "Empty": "No value was found for this path."
+      "Empty": "No value."
     }
   },
   "Mutation": {
@@ -79,45 +70,102 @@
     "SourceKey": "Target source key",
     "MutationKind": "Mutation kind",
     "ReloadBehavior": "Reload behavior",
-    "ExpectedSchemaVersion": "Expected schema version",
     "ExpectedValueVersion": "Expected value version",
-    "Apply": "Apply mutation",
-    "Reset": "Reset",
     "RawJson": "Raw JSON",
-    "Structured": "Structured",
     "Kinds": {
       "Set": "Set",
       "Remove": "Remove",
       "Replace": "Replace"
-    },
-    "Hints": {
-      "RequiresRestart": "Requires restart",
-      "StaticAfterStartup": "Static after startup"
-    },
-    "States": {
-      "Success": "Mutation applied successfully."
     }
   },
   "History": {
     "Title": "History",
+    "Subtitle": "Audit individual mutations and persisted mutation groups.",
+    "Tabs": {
+      "Mutations": "By mutation",
+      "Groups": "By group"
+    },
+    "Filters": {
+      "From": "From",
+      "To": "To"
+    },
     "States": {
-      "Loading": "Loading history...",
       "Empty": "No history records were found."
     },
     "Columns": {
-      "Time": "Modified time",
+      "Time": "Time",
       "Source": "Source",
-      "Kind": "Mutation kind",
-      "Granularity": "Granularity",
+      "Kind": "Kind",
       "State": "State",
       "Version": "Version"
+    }
+  },
+  "Group": {
+    "Label": "Group label",
+    "Reason": "Reason",
+    "DefaultLabel": "Changes {0}",
+    "SaveCount": "Save {0} changes",
+    "Saved": "Configuration group saved.",
+    "Empty": "No mutation groups were found.",
+    "MutationCount": "Mutations",
+    "Definitions": "Definitions",
+    "Status": "Status",
+    "ViewHistory": "View group history",
+    "HistoryLoaded": "Loaded history for {0}.",
+    "StatusValues": {
+      "Applied": "Applied",
+      "PartiallyApplied": "Partially applied",
+      "RolledBack": "Rolled back"
+    }
+  },
+  "Rollback": {
+    "SingleTitle": "Roll Back Mutation",
+    "GroupTitle": "Roll Back Group",
+    "SingleWarning": "This will apply a new mutation that restores the previous value for this history row.",
+    "GroupWarning": "This will apply rollback mutations in reverse group order. If one mutation fails, the rollback group will be partial.",
+    "Confirm": "Roll back",
+    "Success": "Rollback completed."
+  },
+  "Debug": {
+    "Subtitle": "View the current Microsoft configuration debug output.",
+    "SearchPlaceholder": "Search debug view",
+    "Empty": "The debug view is empty."
+  },
+  "Providers": {
+    "Subtitle": "Inspect registered configuration sources and their runtime state.",
+    "SearchPlaceholder": "Search providers",
+    "Empty": "No configuration providers were found.",
+    "Capabilities": {
+      "Writable": "Writable",
+      "Watch": "Watch",
+      "History": "History"
+    },
+    "State": {
+      "Succeeded": "Healthy",
+      "Failed": "Failed",
+      "Unknown": "No reload state recorded."
+    },
+    "Actions": {
+      "LoadOverrides": "Load overrides"
+    },
+    "OverridesLoaded": "Loaded {0} overrides from {1}."
+  },
+  "Dialogs": {
+    "SaveGroup": {
+      "Title": "Save Configuration Group"
+    },
+    "ComplexEditor": {
+      "Title": "Edit Complex Value",
+      "JsonHelper": "Phase 1 supports raw JSON editing for object, dictionary, and list nodes."
     }
   },
   "Common": {
     "Actions": {
       "Refresh": "Refresh",
       "Back": "Back",
-      "Search": "Search"
+      "Search": "Search",
+      "Cancel": "Cancel",
+      "Stage": "Stage"
     },
     "States": {
       "Loading": "Loading...",
@@ -126,9 +174,7 @@
     },
     "Errors": {
       "LoadFailed": "Failed to load data",
-      "MutationFailed": "Failed to apply mutation",
-      "InvalidPath": "Invalid logical path",
-      "InvalidJson": "Invalid JSON"
+      "InvalidPath": "Invalid logical path"
     }
   }
 }

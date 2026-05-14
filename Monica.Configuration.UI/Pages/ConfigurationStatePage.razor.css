@@ -1,0 +1,26 @@
+.configuration-state-page {
+    height: 100%;
+    min-height: 0;
+}
+
+.configuration-state-layout,
+.configuration-state-grid,
+.configuration-state-left,
+.configuration-state-right,
+.configuration-definition-shell {
+    min-height: 0;
+}
+
+.configuration-loading {
+    display: flex;
+    min-height: 16rem;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.configuration-tree-panel,
+.configuration-values-panel {
+    max-height: 70vh;
+    overflow: auto;
+}

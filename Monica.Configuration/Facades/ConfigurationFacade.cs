@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
+using Monica.Tool.Extensions;
 
 namespace Monica.Configuration.Facades;
 
@@ -13,7 +15,12 @@ public sealed class ConfigurationFacade(
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMutationService mutationService,
     IConfigurationHistoryService historyService,
-    IConfigurationSourceChainService sourceChainService)
+    IConfigurationSourceChainService sourceChainService,
+    IConfigurationMutationGroupService mutationGroupService,
+    IConfigurationRollbackService rollbackService,
+    IConfigurationSourceStateTracker sourceStateTracker,
+    IEnumerable<IConfigurationValueSource> valueSources,
+    IConfiguration configuration)
 {
     /// <summary>
     /// Gets all configuration definition summaries.
@@ -79,6 +86,122 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
+    /// Gets the display-safe effective value for one configuration path.
+    /// </summary>
+    /// <param name="definitionKey">The definition key.</param>
+    /// <param name="logicalPath">The logical path.</param>
+    /// <returns>The effective value, if one exists.</returns>
+    public async Task<Res<ConfigurationEffectiveValue>> GetEffectiveValueAsync(string definitionKey, LogicalPath logicalPath)
+    {
+        try
+        {
+            var chain = await sourceChainService.GetSourceChainAsync(definitionKey, logicalPath, CancellationToken.None);
+            var effective = chain.Sources.FirstOrDefault(source =>
+                string.Equals(source.SourceKey, chain.EffectiveSourceKey, StringComparison.OrdinalIgnoreCase));
+
+            return new ConfigurationEffectiveValue
+            {
+                DefinitionKey = definitionKey,
+                LogicalPath = logicalPath,
+                ConfigurationPath = chain.ConfigurationPath,
+                DisplayValue = effective?.DisplayValue,
+                EffectiveSourceKey = chain.EffectiveSourceKey,
+                IsSensitive = effective?.IsSensitive ?? chain.Sources.Any(source => source.IsSensitive),
+                Version = effective?.Version
+            };
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get effective configuration value: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets registered configuration value source descriptors.
+    /// </summary>
+    /// <returns>The source descriptors.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationSourceDescriptor>>> GetSourcesAsync()
+    {
+        try
+        {
+            IReadOnlyList<ConfigurationSourceDescriptor> sources = valueSources
+                .Select(source => source.Descriptor)
+                .OrderByDescending(source => source.Priority)
+                .ThenBy(source => source.SourceKey, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return Task.FromResult(Res.Ok(sources));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceDescriptor>>>(
+                Res.Fail($"Failed to get configuration sources: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets all runtime source states currently known by this process.
+    /// </summary>
+    /// <returns>The source states.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationSourceState>>> GetSourceStatesAsync()
+    {
+        try
+        {
+            return Task.FromResult(Res.Ok(sourceStateTracker.GetStates()));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceState>>>(
+                Res.Fail($"Failed to get configuration source states: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets the current Microsoft configuration debug view.
+    /// </summary>
+    /// <returns>The debug view text.</returns>
+    public Task<Res<string>> GetDebugViewAsync()
+    {
+        try
+        {
+            var debugView = configuration is IConfigurationRoot root
+                ? root.GetDebugView()
+                : configuration.AsEnumerable().OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(pair => $"{pair.Key}={pair.Value}")
+                    .JoinAsString(Environment.NewLine);
+
+            return Task.FromResult(Res.Ok<string>(debugView));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult<Res<string>>(Res.Fail($"Failed to get configuration debug view: {ex.GetMessageRecursively()}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets all overrides currently exposed by one value source.
+    /// </summary>
+    /// <param name="sourceKey">The source key.</param>
+    /// <returns>The source overrides.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationValueOverride>>> GetSourceOverridesAsync(string sourceKey)
+    {
+        try
+        {
+            var source = valueSources.FirstOrDefault(candidate =>
+                string.Equals(candidate.Descriptor.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase));
+            if (source is null)
+            {
+                return Res.Fail($"Configuration source '{sourceKey}' was not found.");
+            }
+
+            return Res.Ok(await source.LoadAsync(CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration source overrides: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
     /// Mutates a configuration value.
     /// </summary>
     /// <param name="request">The mutation request.</param>
@@ -111,6 +234,195 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Res.Fail($"Failed to get configuration value history: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Queries mutation history across definitions and paths.
+    /// </summary>
+    /// <param name="from">Earliest modification time to include.</param>
+    /// <param name="to">Latest modification time to include.</param>
+    /// <param name="definitionKey">Definition key filter.</param>
+    /// <param name="logicalPath">Logical path filter.</param>
+    /// <param name="mutationGroupId">Mutation group filter.</param>
+    /// <returns>The matching history rows.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationValueHistory>>> QueryHistoryAsync(
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        string? definitionKey = null,
+        LogicalPath? logicalPath = null,
+        string? mutationGroupId = null)
+    {
+        try
+        {
+            return Res.Ok(await historyService.QueryHistoryAsync(from, to, definitionKey, logicalPath, mutationGroupId, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to query configuration value history: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Creates a persisted mutation group.
+    /// </summary>
+    /// <param name="label">The group label.</param>
+    /// <param name="reason">The optional mutation reason.</param>
+    /// <param name="context">Optional audit context.</param>
+    /// <returns>The created group.</returns>
+    public async Task<Res<ConfigurationMutationGroup>> BeginMutationGroupAsync(
+        string label,
+        string? reason,
+        ConfigurationMutationContext? context = null)
+    {
+        try
+        {
+            return Res.Ok(await mutationGroupService.BeginAsync(label, reason, context ?? new ConfigurationMutationContext(), CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to begin configuration mutation group: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Marks a persisted mutation group as fully applied.
+    /// </summary>
+    /// <param name="groupId">The group identity.</param>
+    /// <param name="mutationCount">The number of applied mutations.</param>
+    /// <param name="definitionKeys">The distinct touched definition keys.</param>
+    /// <returns>Operation result.</returns>
+    public async Task<Res> CompleteMutationGroupAsync(string groupId, int mutationCount, IReadOnlyList<string> definitionKeys)
+    {
+        try
+        {
+            await mutationGroupService.CompleteAsync(groupId, mutationCount, definitionKeys, CancellationToken.None);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to complete configuration mutation group: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Marks a persisted mutation group as partially applied.
+    /// </summary>
+    /// <param name="groupId">The group identity.</param>
+    /// <param name="successfulCount">The number of successful mutations.</param>
+    /// <param name="definitionKeys">The distinct touched definition keys.</param>
+    /// <returns>Operation result.</returns>
+    public async Task<Res> MarkMutationGroupPartialAsync(string groupId, int successfulCount, IReadOnlyList<string> definitionKeys)
+    {
+        try
+        {
+            await mutationGroupService.MarkPartialAsync(groupId, successfulCount, definitionKeys, CancellationToken.None);
+            return Res.Ok();
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to mark configuration mutation group partial: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Lists mutation groups.
+    /// </summary>
+    /// <param name="from">Earliest creation time to include.</param>
+    /// <param name="to">Latest creation time to include.</param>
+    /// <param name="definitionKey">Definition key filter.</param>
+    /// <returns>The matching groups.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationMutationGroup>>> GetMutationGroupsAsync(
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        string? definitionKey = null)
+    {
+        try
+        {
+            return Res.Ok(await mutationGroupService.ListAsync(from, to, definitionKey, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration mutation groups: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets one mutation group.
+    /// </summary>
+    /// <param name="groupId">The group identity.</param>
+    /// <returns>The group.</returns>
+    public async Task<Res<ConfigurationMutationGroup>> GetMutationGroupAsync(string groupId)
+    {
+        try
+        {
+            var group = await mutationGroupService.GetAsync(groupId, CancellationToken.None);
+            return group is null
+                ? Res.Fail($"Configuration mutation group '{groupId}' was not found.")
+                : Res.Ok(group);
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration mutation group: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Gets history rows for a mutation group.
+    /// </summary>
+    /// <param name="groupId">The group identity.</param>
+    /// <returns>The group history rows.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationValueHistory>>> GetGroupHistoryAsync(string groupId)
+    {
+        try
+        {
+            return Res.Ok(await mutationGroupService.GetGroupHistoryAsync(groupId, CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to get configuration mutation group history: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Rolls one history row back to its previous value.
+    /// </summary>
+    /// <param name="historyId">The history record identity.</param>
+    /// <param name="reason">Optional rollback reason.</param>
+    /// <returns>The rollback mutation result.</returns>
+    public async Task<Res<ConfigurationMutationResult>> RollbackHistoryAsync(string historyId, string? reason = null)
+    {
+        try
+        {
+            return Res.Ok(await rollbackService.RollbackHistoryAsync(
+                historyId,
+                new ConfigurationMutationContext { Reason = reason },
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to roll back configuration history: {ex.GetMessageRecursively()}");
+        }
+    }
+
+    /// <summary>
+    /// Rolls one mutation group back in reverse history order.
+    /// </summary>
+    /// <param name="groupId">The group identity.</param>
+    /// <param name="reason">Optional rollback reason.</param>
+    /// <returns>The rollback mutation results.</returns>
+    public async Task<Res<IReadOnlyList<ConfigurationMutationResult>>> RollbackGroupAsync(string groupId, string? reason = null)
+    {
+        try
+        {
+            return Res.Ok(await rollbackService.RollbackGroupAsync(
+                groupId,
+                new ConfigurationMutationContext { Reason = reason },
+                CancellationToken.None));
+        }
+        catch (Exception ex)
+        {
+            return Res.Fail($"Failed to roll back configuration mutation group: {ex.GetMessageRecursively()}");
         }
     }
 }

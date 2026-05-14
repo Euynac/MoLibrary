@@ -6,6 +6,7 @@ using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Services;
 using Monica.Configuration.EfCore.Sources;
+using Monica.Configuration.EfCore.Sources.Internal;
 using Monica.Repository;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -52,11 +53,15 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Replace(ServiceDescriptor.Scoped<IConfigurationDefinitionPublisher, EfCoreConfigurationDefinitionPublisher>());
+        services.TryAddSingleton<ConfigurationMutationGroupEfRepository>();
         services.TryAddSingleton<DatabaseConfigurationValueSource>();
+        services.TryAddSingleton<EfCoreMutationGroupSource>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, DatabaseConfigurationValueSource>(
             serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationHistorySource, DatabaseConfigurationValueSource>(
             serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationMutationGroupSource, EfCoreMutationGroupSource>(
+            serviceProvider => serviceProvider.GetRequiredService<EfCoreMutationGroupSource>()));
         services.AddSingleton<IHostedService, ConfigurationDefinitionPublishingHostedService>();
     }
 }

@@ -84,4 +84,9 @@ public sealed record ConfigurationValueHistory
     /// Gets the optional mutation reason.
     /// </summary>
     public string? Reason { get; init; }
+
+    /// <summary>
+    /// Gets the mutation group identity when this history row was applied as part of a batch.
+    /// </summary>
+    public string? MutationGroupId { get; init; }
 }

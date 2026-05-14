@@ -1,0 +1,316 @@
+@attribute [Route(PAGE_URL)]
+@implements IDisposable
+@inject ConfigurationFacade Facade
+@inject ConfigurationStateStore StateStore
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationState:Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-state-page">
+    <MudStack Spacing="3" Class="configuration-state-layout">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h4">@L["Pages:ConfigurationState:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["State:Subtitle"]</MudText>
+            </MudStack>
+            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                               Variant="Variant.Outlined"
+                               OnClick="LoadDefinitionsAsync" />
+            </MudTooltip>
+        </MudStack>
+
+        @if (_loadingDefinitions)
+        {
+            <MudPaper Outlined="true" Class="pa-6 configuration-loading">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText>@L["Common:States:Loading"]</MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudGrid Spacing="3" Class="configuration-state-grid">
+                <MudItem xs="12" md="3" Class="configuration-state-left">
+                    <ConfigurationDefinitionList Definitions="@_definitions"
+                                                 SelectedDefinition="@_selectedSummary"
+                                                 SelectedDefinitionChanged="SelectDefinitionAsync"
+                                                 SearchText="@_searchText"
+                                                 SearchTextChanged="OnSearchChanged"
+                                                 PendingCount="@_pendingCount"
+                                                 SaveGroup="OpenSaveGroupDialog"
+                                                 UndoAll="UndoAll" />
+                </MudItem>
+
+                <MudItem xs="12" md="9" Class="configuration-state-right">
+                    @if (_selectedDefinition is null)
+                    {
+                        <MudAlert Severity="Severity.Info">@L["State:Definitions:SelectPrompt"]</MudAlert>
+                    }
+                    else
+                    {
+                        <MudPaper Outlined="true" Class="pa-3 configuration-definition-shell">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.h5">@_selectedDefinition.DisplayName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedDefinition.DefinitionKey</MudText>
+                                    </MudStack>
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                        @if (!string.IsNullOrWhiteSpace(_selectedDefinition.OwnerModule))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_selectedDefinition.OwnerModule</MudChip>
+                                        }
+                                        <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@_selectedDefinition.SchemaVersion</MudChip>
+                                        <MudChip T="ConfigurationReloadBehavior" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedDefinition.ReloadBehavior</MudChip>
+                                    </MudStack>
+                                </MudStack>
+
+                                @if (_loadingDefinition)
+                                {
+                                    <MudProgressLinear Indeterminate="true" />
+                                }
+                                else
+                                {
+                                    <MudGrid Spacing="3">
+                                        <MudItem xs="12" lg="4">
+                                            <MudPaper Outlined="true" Class="pa-3 configuration-tree-panel">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">@L["State:Tree:Title"]</MudText>
+                                                <MudTreeView T="ConfigurationNodeDefinition"
+                                                             Items="@_treeItems"
+                                                             SelectedValue="@_selectedNode"
+                                                             SelectedValueChanged="OnSelectedNodeChanged"
+                                                             Hover="true"
+                                                             Dense="true"
+                                                             Ripple="false">
+                                                    <ItemTemplate>
+                                                        <MudTreeViewItem T="ConfigurationNodeDefinition"
+                                                                         Value="@context.Value"
+                                                                         Text="@GetNodeLabel(context.Value)"
+                                                                         Items="@context.Children" />
+                                                    </ItemTemplate>
+                                                </MudTreeView>
+                                            </MudPaper>
+                                        </MudItem>
+
+                                        <MudItem xs="12" lg="8">
+                                            <MudStack Spacing="2" Class="configuration-values-panel">
+                                                @foreach (var node in VisibleNodes)
+                                                {
+                                                    <ConfigurationValueRow Definition="@_selectedDefinition"
+                                                                           Node="@node"
+                                                                           EffectiveValue="@GetEffectiveValue(node)"
+                                                                           Changed="RefreshPendingCount" />
+                                                }
+                                            </MudStack>
+                                        </MudItem>
+                                    </MudGrid>
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    }
+                </MudItem>
+            </MudGrid>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = ConfigurationUiRoutes.STATE_ROUTE;
+
+    private readonly List<ConfigurationDefinitionSummary> _definitions = [];
+    private readonly List<ConfigurationNodeTreeItem> _treeItems = [];
+    private readonly Dictionary<LogicalPath, ConfigurationEffectiveValue> _effectiveValues = [];
+    private ConfigurationDefinitionSummary? _selectedSummary;
+    private ConfigurationDefinition? _selectedDefinition;
+    private ConfigurationNodeDefinition? _selectedNode;
+    private string _searchText = string.Empty;
+    private bool _loadingDefinitions = true;
+    private bool _loadingDefinition;
+    private int _pendingCount;
+
+    private IEnumerable<ConfigurationNodeDefinition> VisibleNodes
+    {
+        get
+        {
+            if (_selectedNode is null)
+            {
+                return [];
+            }
+
+            if (_selectedNode.NodeKind == ConfigurationNodeKind.Scalar)
+            {
+                return [_selectedNode];
+            }
+
+            var leaves = EnumerateNodes(_selectedNode).Where(node => node.NodeKind == ConfigurationNodeKind.Scalar).ToArray();
+            return leaves.Length == 0 ? [_selectedNode] : leaves;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        StateStore.Changed += OnStateStoreChanged;
+        await LoadDefinitionsAsync();
+    }
+
+    public void Dispose()
+    {
+        StateStore.Changed -= OnStateStoreChanged;
+    }
+
+    private async Task LoadDefinitionsAsync()
+    {
+        _loadingDefinitions = true;
+        var result = await Facade.GetDefinitionsAsync();
+        if (result.IsFailed(out var error, out var definitions))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _definitions.Clear();
+            _loadingDefinitions = false;
+            return;
+        }
+
+        _definitions.Clear();
+        _definitions.AddRange(definitions);
+        _loadingDefinitions = false;
+
+        if (_selectedSummary is null && _definitions.Count > 0)
+        {
+            await SelectDefinitionAsync(_definitions[0]);
+        }
+    }
+
+    private async Task SelectDefinitionAsync(ConfigurationDefinitionSummary summary)
+    {
+        _selectedSummary = summary;
+        _loadingDefinition = true;
+        _effectiveValues.Clear();
+        var result = await Facade.GetDefinitionAsync(summary.DefinitionKey);
+        if (result.IsFailed(out var error, out var detail))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _selectedDefinition = null;
+            _selectedNode = null;
+            _treeItems.Clear();
+            _loadingDefinition = false;
+            return;
+        }
+
+        _selectedDefinition = detail.Definition;
+        _treeItems.Clear();
+        _treeItems.Add(BuildTreeItem(_selectedDefinition.Root));
+        _selectedNode = _selectedDefinition.Root;
+        await LoadEffectiveValuesAsync();
+        _loadingDefinition = false;
+    }
+
+    private async Task LoadEffectiveValuesAsync()
+    {
+        if (_selectedDefinition is null)
+        {
+            return;
+        }
+
+        foreach (var node in EnumerateNodes(_selectedDefinition.Root).Where(node => node.NodeKind == ConfigurationNodeKind.Scalar))
+        {
+            var result = await Facade.GetEffectiveValueAsync(_selectedDefinition.DefinitionKey, node.RelativePath);
+            if (!result.IsFailed(out _, out var effectiveValue))
+            {
+                _effectiveValues[node.RelativePath] = effectiveValue;
+            }
+        }
+    }
+
+    private ConfigurationEffectiveValue? GetEffectiveValue(ConfigurationNodeDefinition node)
+    {
+        return _effectiveValues.GetValueOrDefault(node.RelativePath);
+    }
+
+    private static ConfigurationNodeTreeItem BuildTreeItem(ConfigurationNodeDefinition node)
+    {
+        return new ConfigurationNodeTreeItem
+        {
+            Value = node,
+            Text = string.IsNullOrWhiteSpace(node.DisplayName) ? node.Name : node.DisplayName,
+            LogicalPathLabel = node.RelativePath.ToCanonicalString(),
+            SummaryLabel = node.NodeKind.ToString(),
+            Expanded = node.RelativePath.Depth < 2,
+            Children = node.Children.Select(BuildTreeItem).ToArray()
+        };
+    }
+
+    private static IEnumerable<ConfigurationNodeDefinition> EnumerateNodes(ConfigurationNodeDefinition node)
+    {
+        yield return node;
+        foreach (var child in node.Children)
+        {
+            foreach (var descendant in EnumerateNodes(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
+
+    private string GetNodeLabel(ConfigurationNodeDefinition? node)
+    {
+        if (node is null)
+        {
+            return L["Common:States:Empty"];
+        }
+
+        return node.RelativePath.Depth == 0
+            ? L["State:Tree:Root"]
+            : string.IsNullOrWhiteSpace(node.DisplayName) ? node.Name : $"{node.DisplayName} ({node.Name})";
+    }
+
+    private Task OnSelectedNodeChanged(ConfigurationNodeDefinition? node)
+    {
+        _selectedNode = node;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSearchChanged(string searchText)
+    {
+        _searchText = searchText;
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenSaveGroupDialog()
+    {
+        var changes = StateStore.GetPending();
+        var parameters = new DialogParameters<SaveMutationGroupDialog>();
+        parameters.Add(dialog => dialog.Changes, changes);
+        var dialog = await DialogService.ShowAsync<SaveMutationGroupDialog>(L["Dialogs:SaveGroup:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        });
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            StateStore.Clear();
+            await LoadEffectiveValuesAsync();
+            Snackbar.Add(L["Group:Saved"], Severity.Success);
+        }
+    }
+
+    private Task UndoAll()
+    {
+        StateStore.Clear();
+        return Task.CompletedTask;
+    }
+
+    private Task RefreshPendingCount()
+    {
+        _pendingCount = StateStore.GetPending().Count;
+        return Task.CompletedTask;
+    }
+
+    private void OnStateStoreChanged()
+    {
+        _pendingCount = StateStore.GetPending().Count;
+        _ = InvokeAsync(StateHasChanged);
+    }
+}

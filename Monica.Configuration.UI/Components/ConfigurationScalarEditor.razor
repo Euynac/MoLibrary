@@ -1,0 +1,218 @@
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@using Monica.Configuration.UI.Localization
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-scalar-editor @(IsModified ? "modified-input" : null)">
+    @if (Node.ValueKind == ConfigurationValueKind.Boolean)
+    {
+        <MudSwitch T="bool"
+                   Value="@_boolValue"
+                   ValueChanged="OnBoolChanged"
+                   Color="Color.Primary" />
+    }
+    else if (IsNumeric)
+    {
+        <MudNumericField T="decimal?"
+                         Value="@_decimalValue"
+                         ValueChanged="OnDecimalChanged"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Immediate="true"
+                         Error="@(!string.IsNullOrWhiteSpace(_error))"
+                         ErrorText="@_error" />
+    }
+    else if (Node.ValueKind == ConfigurationValueKind.DateTime)
+    {
+        <MudDatePicker Date="@_dateValue"
+                       DateChanged="OnDateChanged"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Editable="true" />
+    }
+    else if (Node.ValueKind == ConfigurationValueKind.TimeSpan)
+    {
+        <MudTimePicker Time="@_timeValue"
+                       TimeChanged="OnTimeChanged"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Editable="true" />
+    }
+    else if (EnumValues.Count > 0)
+    {
+        <MudSelect T="string"
+                   Value="@_textValue"
+                   ValueChanged="OnTextChanged"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            @foreach (var value in EnumValues)
+            {
+                <MudSelectItem T="string" Value="@value">@value</MudSelectItem>
+            }
+        </MudSelect>
+    }
+    else
+    {
+        <MudTextField T="string"
+                      Value="@_textValue"
+                      ValueChanged="OnTextChanged"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      InputType="@TextInputType"
+                      Placeholder="@Placeholder"
+                      Error="@(!string.IsNullOrWhiteSpace(_error))"
+                      ErrorText="@_error"
+                      Adornment="@(Node.IsSensitive ? Adornment.End : Adornment.None)"
+                      AdornmentIcon="@SensitiveAdornmentIcon"
+                      OnAdornmentClick="ToggleSensitiveVisibility"
+                      oncopy="@(Node.IsSensitive ? "return false" : null)"
+                      oncut="@(Node.IsSensitive ? "return false" : null)" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
+    [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
+    [Parameter] public bool IsModified { get; set; }
+    [Parameter] public EventCallback<ConfigurationScalarEditResult> ValueChanged { get; set; }
+
+    private string _textValue = string.Empty;
+    private bool _boolValue;
+    private decimal? _decimalValue;
+    private DateTime? _dateValue;
+    private TimeSpan? _timeValue;
+    private bool _showSensitive;
+    private string? _error;
+
+    private bool IsNumeric => Node.ValueKind is ConfigurationValueKind.Integer or ConfigurationValueKind.Decimal or ConfigurationValueKind.Floating;
+
+    private IReadOnlyList<string> EnumValues =>
+        Node.ValidationRules.OfType<AllowedValuesRule>().FirstOrDefault()?.Values
+        ?? ExtractRegexEnumValues();
+
+    private InputType TextInputType => Node.IsSensitive && !_showSensitive ? InputType.Password : InputType.Text;
+
+    private string? SensitiveAdornmentIcon => Node.IsSensitive
+        ? _showSensitive ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility
+        : null;
+
+    private string? Placeholder => Node.IsSensitive && string.IsNullOrWhiteSpace(_textValue)
+        ? L["State:Editor:SensitivePlaceholder"].Value
+        : null;
+
+    protected override void OnParametersSet()
+    {
+        var displayValue = EffectiveValue?.DisplayValue ?? string.Empty;
+        _textValue = displayValue;
+        _boolValue = bool.TryParse(displayValue, out var parsedBool) && parsedBool;
+        _decimalValue = decimal.TryParse(displayValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDecimal)
+            ? parsedDecimal
+            : null;
+        _dateValue = DateTime.TryParse(displayValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate)
+            ? parsedDate
+            : null;
+        _timeValue = TimeSpan.TryParse(displayValue, CultureInfo.InvariantCulture, out var parsedTime)
+            ? parsedTime
+            : null;
+    }
+
+    private async Task OnTextChanged(string value)
+    {
+        _textValue = value;
+        await EmitAsync(value);
+    }
+
+    private async Task OnBoolChanged(bool value)
+    {
+        _boolValue = value;
+        await EmitAsync(value ? "true" : "false", rawJson: value ? "true" : "false");
+    }
+
+    private async Task OnDecimalChanged(decimal? value)
+    {
+        _decimalValue = value;
+        await EmitAsync(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, rawJson: value?.ToString(CultureInfo.InvariantCulture) ?? "null");
+    }
+
+    private async Task OnDateChanged(DateTime? value)
+    {
+        _dateValue = value;
+        var text = value?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
+        await EmitAsync(text);
+    }
+
+    private async Task OnTimeChanged(TimeSpan? value)
+    {
+        _timeValue = value;
+        await EmitAsync(value?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty);
+    }
+
+    private async Task EmitAsync(string displayValue, string? rawJson = null)
+    {
+        if (!Validate(displayValue))
+        {
+            return;
+        }
+
+        rawJson ??= JsonSerializer.Serialize(displayValue);
+        await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
+        {
+            StoredValue = ConfigurationStoredValue.Plain(rawJson),
+            DisplayValue = displayValue
+        });
+    }
+
+    private bool Validate(string value)
+    {
+        _error = null;
+
+        if (Node.ValidationRules.OfType<RequiredRule>().Any() && string.IsNullOrWhiteSpace(value))
+        {
+            _error = L["State:Editor:Required"];
+            return false;
+        }
+
+        foreach (var rule in Node.ValidationRules)
+        {
+            switch (rule)
+            {
+                case RegexRule regexRule when !string.IsNullOrWhiteSpace(value) && !Regex.IsMatch(value, regexRule.Pattern):
+                    _error = rule.ErrorMessage ?? L["State:Editor:InvalidPattern"];
+                    return false;
+                case RangeRule rangeRule when decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue):
+                    if (rangeRule.Min is not null && decimalValue < rangeRule.Min || rangeRule.Max is not null && decimalValue > rangeRule.Max)
+                    {
+                        _error = rule.ErrorMessage ?? L["State:Editor:OutOfRange"];
+                        return false;
+                    }
+                    break;
+                case MaxLengthRule maxLengthRule when value.Length > maxLengthRule.Max:
+                    _error = rule.ErrorMessage ?? L["State:Editor:TooLong"];
+                    return false;
+                case MinLengthRule minLengthRule when value.Length < minLengthRule.Min:
+                    _error = rule.ErrorMessage ?? L["State:Editor:TooShort"];
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private IReadOnlyList<string> ExtractRegexEnumValues()
+    {
+        var pattern = Node.ValidationRules.OfType<RegexRule>().FirstOrDefault()?.Pattern;
+        if (string.IsNullOrWhiteSpace(pattern) || !pattern.StartsWith("^(", StringComparison.Ordinal) || !pattern.EndsWith(")$", StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        return pattern[2..^2].Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private void ToggleSensitiveVisibility()
+    {
+        _showSensitive = !_showSensitive;
+    }
+}

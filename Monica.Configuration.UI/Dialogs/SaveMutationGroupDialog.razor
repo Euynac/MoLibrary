@@ -1,0 +1,151 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField T="string"
+                          @bind-Value="_label"
+                          Label="@L["Group:Label"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Required="true" />
+            <MudTextField T="string"
+                          @bind-Value="_reason"
+                          Label="@L["Group:Reason"]"
+                          Variant="Variant.Outlined"
+                          Lines="2" />
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <MudAlert Severity="Severity.Error">@_error</MudAlert>
+            }
+
+            <MudTable T="PendingChange" Items="@Changes" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>@L["State:Columns:Definition"]</MudTh>
+                    <MudTh>@L["State:Columns:Path"]</MudTh>
+                    <MudTh>@L["History:Columns:Kind"]</MudTh>
+                    <MudTh>@L["State:Columns:OldValue"]</MudTh>
+                    <MudTh>@L["State:Columns:NewValue"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="@L["State:Columns:Definition"]">@context.DefinitionDisplayName</MudTd>
+                    <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                    <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                    <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context, context.OriginalDisplayValue)</MudTd>
+                    <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context, context.NewDisplayValue)</MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            @if (_saving)
+            {
+                <MudProgressLinear Indeterminate="true" />
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_saving">@L["Common:Actions:Cancel"]</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="SaveAsync"
+                   Disabled="@(_saving || Changes.Count == 0 || string.IsNullOrWhiteSpace(_label))">
+            @L["Group:SaveCount", Changes.Count]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<PendingChange> Changes { get; set; } = [];
+
+    private string _label = string.Empty;
+    private string? _reason;
+    private string? _error;
+    private bool _saving;
+
+    protected override void OnInitialized()
+    {
+        _label = string.Format(L["Group:DefaultLabel"], DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm"));
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Changes.Count == 0)
+        {
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+
+        var beginResult = await Facade.BeginMutationGroupAsync(_label, _reason, new ConfigurationMutationContext { Reason = _reason });
+        if (beginResult.IsFailed(out var beginError, out var group))
+        {
+            _error = beginError.Message;
+            _saving = false;
+            return;
+        }
+
+        var successCount = 0;
+        var definitionKeys = new List<string>();
+
+        foreach (var change in Changes)
+        {
+            var request = new ConfigurationMutationRequest
+            {
+                DefinitionKey = change.DefinitionKey,
+                LogicalPath = change.LogicalPath,
+                MutationKind = change.MutationKind,
+                Value = change.NewValue,
+                TargetSourceKey = change.TargetSourceKey,
+                ExpectedSchemaVersion = change.ExpectedSchemaVersion,
+                ExpectedValueVersion = change.ExpectedValueVersion,
+                Context = new ConfigurationMutationContext
+                {
+                    MutationGroupId = group.GroupId,
+                    Reason = _reason
+                }
+            };
+
+            var result = await Facade.MutateAsync(request);
+            if (result.IsFailed(out var error, out _))
+            {
+                await Facade.MarkMutationGroupPartialAsync(group.GroupId, successCount, definitionKeys);
+                _error = error.Message;
+                _saving = false;
+                return;
+            }
+
+            successCount++;
+            definitionKeys.Add(change.DefinitionKey);
+        }
+
+        var completeResult = await Facade.CompleteMutationGroupAsync(group.GroupId, successCount, definitionKeys);
+        if (completeResult.IsFailed(out var completeError))
+        {
+            _error = completeError.Message;
+            _saving = false;
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(group));
+    }
+
+    private string DisplayValue(PendingChange change, string? value)
+    {
+        if (change.IsSensitive)
+        {
+            return L["State:Value:Sensitive"];
+        }
+
+        return string.IsNullOrWhiteSpace(value) ? L["Value:States:Empty"] : value;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

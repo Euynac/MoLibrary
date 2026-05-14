@@ -112,6 +112,8 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
         services.TryAddSingleton<IConfigurationSourceChainService, ConfigurationSourceChainService>();
         services.TryAddSingleton<IConfigurationMutationService, ConfigurationMutationService>();
+        services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
+        services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
         services.TryAddSingleton<IConfigurationOverrideNormalizer, ConfigurationOverrideNormalizer>();
         services.TryAddSingleton<IConfigurationOverrideAggregator, ConfigurationOverrideAggregator>();
         services.TryAddSingleton<IConfigurationMergeEngine, ConfigurationMergeEngine>();

@@ -24,4 +24,30 @@ public interface IConfigurationHistorySource
     /// newest-first ordering when possible; the orchestration service performs the final combined ordering.
     /// </returns>
     Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoryAsync(string definitionKey, LogicalPath logicalPath, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets history rows using optional filters across definitions and paths.
+    /// </summary>
+    /// <param name="from">Earliest modification time to include.</param>
+    /// <param name="to">Latest modification time to include.</param>
+    /// <param name="definitionKey">Definition key filter.</param>
+    /// <param name="logicalPath">Logical path filter.</param>
+    /// <param name="mutationGroupId">Mutation group filter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching history rows.</returns>
+    Task<IReadOnlyList<ConfigurationValueHistory>> QueryHistoryAsync(
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        string? definitionKey,
+        LogicalPath? logicalPath,
+        string? mutationGroupId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets one history row by identity.
+    /// </summary>
+    /// <param name="historyId">The history record identity.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The history row, or null when not found.</returns>
+    Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken);
 }

@@ -106,3 +106,24 @@ public enum ConfigurationOverrideGranularity
     Scalar,
     Container
 }
+
+/// <summary>
+/// Describes the lifecycle state of a persisted mutation group.
+/// </summary>
+public enum ConfigurationMutationGroupStatus
+{
+    /// <summary>
+    /// All mutations in the group were applied successfully.
+    /// </summary>
+    Applied,
+
+    /// <summary>
+    /// Only part of the group was applied successfully.
+    /// </summary>
+    PartiallyApplied,
+
+    /// <summary>
+    /// A later rollback group was applied for this group.
+    /// </summary>
+    RolledBack
+}

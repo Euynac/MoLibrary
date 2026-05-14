@@ -1,134 +1,324 @@
 @attribute [Route(PAGE_URL)]
 @inject ConfigurationFacade Facade
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <PageTitle>@L["Pages:ConfigurationHistory:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="configuration-page-shell">
-    <MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-        <MudStack Spacing="0">
-            <MudText Typo="Typo.h4">@L["Pages:ConfigurationHistory:Title"]</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@DefinitionKey</MudText>
-        </MudStack>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBack">
-            @L["Common:Actions:Back"]
-        </MudButton>
-    </MudStack>
-
-    <MudPaper Class="pa-4 mb-4" Outlined="true">
-        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.End" Spacing="2">
-            <MudTextField T="string"
-                          @bind-Value="_pathText"
-                          Label="@L["Value:Path"]"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Immediate="true"
-                          Class="configuration-path-input" />
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Search"
-                       OnClick="LoadAsync">
-                @L["Common:Actions:Search"]
-            </MudButton>
-        </MudStack>
-    </MudPaper>
-
-    @if (_isLoading)
-    {
-        <MudPaper Class="pa-6 configuration-state-shell" Outlined="true">
-            <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                <MudProgressCircular Indeterminate="true" />
-                <MudText>@L["History:States:Loading"]</MudText>
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-history-page">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h4">@L["Pages:ConfigurationHistory:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["History:Subtitle"]</MudText>
             </MudStack>
+            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+            </MudTooltip>
+        </MudStack>
+
+        <MudPaper Outlined="true" Class="pa-3">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="3">
+                    <MudSelect T="string"
+                               @bind-Value="_definitionKey"
+                               Label="@L["State:Columns:Definition"]"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true">
+                        @foreach (var definition in _definitions)
+                        {
+                            <MudSelectItem T="string" Value="@definition.DefinitionKey">@definition.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudTextField T="string"
+                                  @bind-Value="_pathText"
+                                  Label="@L["Value:Path"]"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudDatePicker @bind-Date="_fromDate"
+                                   Label="@L["History:Filters:From"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Editable="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudDatePicker @bind-Date="_toDate"
+                                   Label="@L["History:Filters:To"]"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Editable="true" />
+                </MudItem>
+            </MudGrid>
         </MudPaper>
-    }
-    else if (_history.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
-    }
-    else
-    {
-        <MudTable T="ConfigurationValueHistory" Items="@_history" Dense="true" Hover="true" Elevation="0">
-            <HeaderContent>
-                <MudTh>@L["History:Columns:Time"]</MudTh>
-                <MudTh>@L["History:Columns:Source"]</MudTh>
-                <MudTh>@L["History:Columns:Kind"]</MudTh>
-                <MudTh>@L["History:Columns:Granularity"]</MudTh>
-                <MudTh>@L["History:Columns:State"]</MudTh>
-                <MudTh>@L["History:Columns:Version"]</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                <MudTd DataLabel="@L["History:Columns:Source"]">@context.SourceKey</MudTd>
-                <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
-                <MudTd DataLabel="@L["History:Columns:Granularity"]">@context.Granularity</MudTd>
-                <MudTd DataLabel="@L["History:Columns:State"]">@context.State</MudTd>
-                <MudTd DataLabel="@L["History:Columns:Version"]">@context.Version</MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+
+        <MudTabs Rounded="true" ApplyEffectsToContainer="true">
+            <MudTabPanel Text="@L["History:Tabs:Mutations"]" Icon="@Icons.Material.Filled.List">
+                @if (_loading)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_history.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">@L["History:States:Empty"]</MudAlert>
+                }
+                else
+                {
+                    <MudTable T="ConfigurationValueHistory" Items="@FilteredHistory" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>@L["History:Columns:Time"]</MudTh>
+                            <MudTh>@L["State:Columns:Definition"]</MudTh>
+                            <MudTh>@L["State:Columns:Path"]</MudTh>
+                            <MudTh>@L["History:Columns:Source"]</MudTh>
+                            <MudTh>@L["History:Columns:Kind"]</MudTh>
+                            <MudTh>@L["Group:Label"]</MudTh>
+                            <MudTh />
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.DefinitionKey)</MudTd>
+                            <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Source"]">@context.SourceKey</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
+                            <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.MutationGroupId)</MudTd>
+                            <MudTd>
+                                <MudTooltip Text="@L["Rollback:Confirm"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="() => RollbackHistoryAsync(context)" />
+                                </MudTooltip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="@L["History:Tabs:Groups"]" Icon="@Icons.Material.Filled.Folder">
+                @if (_loading)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_groups.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">@L["Group:Empty"]</MudAlert>
+                }
+                else
+                {
+                    <MudTable T="ConfigurationMutationGroup" Items="@_groups" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>@L["Group:Label"]</MudTh>
+                            <MudTh>@L["History:Columns:Time"]</MudTh>
+                            <MudTh>@L["Group:MutationCount"]</MudTh>
+                            <MudTh>@L["Group:Definitions"]</MudTh>
+                            <MudTh>@L["Group:Status"]</MudTh>
+                            <MudTh />
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@L["Group:Label"]">@context.Label</MudTd>
+                            <MudTd DataLabel="@L["History:Columns:Time"]">@context.CreatedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                            <MudTd DataLabel="@L["Group:MutationCount"]">@context.MutationCount</MudTd>
+                            <MudTd DataLabel="@L["Group:Definitions"]">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                    @foreach (var definitionKey in context.DefinitionKeys)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@DefinitionDisplay(definitionKey)</MudChip>
+                                    }
+                                </MudStack>
+                            </MudTd>
+                            <MudTd DataLabel="@L["Group:Status"]">@StatusText(context.Status)</MudTd>
+                            <MudTd>
+                                <MudStack Row="true" Spacing="1">
+                                    <MudTooltip Text="@L["Group:ViewHistory"]">
+                                        <MudIconButton Icon="@Icons.Material.Filled.List"
+                                                       Size="Size.Small"
+                                                       OnClick="() => ShowGroupHistoryAsync(context)" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="@L["Rollback:Confirm"]">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                                       Size="Size.Small"
+                                                       Color="Color.Warning"
+                                                       Disabled="@(context.Status == ConfigurationMutationGroupStatus.RolledBack)"
+                                                       OnClick="() => RollbackGroupAsync(context)" />
+                                    </MudTooltip>
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    </MudStack>
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = "/configuration/{definitionKey}/history";
+    public const string PAGE_URL = ConfigurationUiRoutes.HISTORY_ROUTE;
 
-    [Parameter] public string DefinitionKey { get; set; } = string.Empty;
-
-    private string _pathText = string.Empty;
-    private LogicalPath _logicalPath = LogicalPath.Root;
+    private readonly List<ConfigurationDefinitionSummary> _definitions = [];
     private readonly List<ConfigurationValueHistory> _history = [];
-    private bool _isLoading = true;
+    private readonly List<ConfigurationMutationGroup> _groups = [];
+    private string? _definitionKey;
+    private string _pathText = string.Empty;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private bool _loading = true;
 
-    protected override async Task OnParametersSetAsync()
+    private IEnumerable<ConfigurationValueHistory> FilteredHistory =>
+        string.IsNullOrWhiteSpace(_pathText)
+            ? _history
+            : _history.Where(history => history.LogicalPath.ToCanonicalString().Contains(_pathText, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
     {
-        _logicalPath = ConfigurationUiRoutes.ReadPath(NavigationManager.Uri);
-        _pathText = _logicalPath.ToCanonicalString();
+        var uri = new Uri(NavigationManager.Uri, UriKind.Absolute);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("definitionKey", out var definitionValues))
+        {
+            _definitionKey = definitionValues.FirstOrDefault();
+        }
+
+        if (query.TryGetValue("path", out var pathValues))
+        {
+            _pathText = pathValues.FirstOrDefault() ?? string.Empty;
+        }
+
+        await LoadDefinitionsAsync();
         await LoadAsync();
+    }
+
+    private async Task LoadDefinitionsAsync()
+    {
+        var result = await Facade.GetDefinitionsAsync();
+        if (!result.IsFailed(out _, out var definitions))
+        {
+            _definitions.Clear();
+            _definitions.AddRange(definitions);
+        }
     }
 
     private async Task LoadAsync()
     {
-        if (!TryParsePath(out var logicalPath))
+        _loading = true;
+        LogicalPath? logicalPath = null;
+        if (!string.IsNullOrWhiteSpace(_pathText))
         {
-            return;
+            try
+            {
+                logicalPath = LogicalPath.Parse(_pathText);
+                _pathText = logicalPath.ToCanonicalString();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
+            }
         }
 
-        _logicalPath = logicalPath;
-        _isLoading = true;
-        var result = await Facade.GetHistoryAsync(DefinitionKey, _logicalPath);
-        if (result.IsFailed(out var error, out var history))
+        DateTimeOffset? from = _fromDate is null ? null : new DateTimeOffset(_fromDate.Value);
+        DateTimeOffset? to = _toDate is null ? null : new DateTimeOffset(_toDate.Value.Date.AddDays(1).AddTicks(-1));
+
+        var historyResult = await Facade.QueryHistoryAsync(from, to, _definitionKey, logicalPath);
+        if (historyResult.IsFailed(out var historyError, out var history))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {historyError.Message}", Severity.Error);
+            _history.Clear();
+        }
+        else
+        {
+            _history.Clear();
+            _history.AddRange(history);
+        }
+
+        var groupResult = await Facade.GetMutationGroupsAsync(from, to, _definitionKey);
+        if (groupResult.IsFailed(out var groupError, out var groups))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {groupError.Message}", Severity.Error);
+            _groups.Clear();
+        }
+        else
+        {
+            _groups.Clear();
+            _groups.AddRange(groups);
+        }
+
+        _loading = false;
+    }
+
+    private async Task RollbackHistoryAsync(ConfigurationValueHistory history)
+    {
+        var parameters = new DialogParameters<RollbackConfirmationDialog>();
+        parameters.Add(dialog => dialog.HistoryRow, history);
+        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(L["Rollback:SingleTitle"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+        if (await WasConfirmedAsync(dialog))
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task RollbackGroupAsync(ConfigurationMutationGroup group)
+    {
+        var parameters = new DialogParameters<RollbackConfirmationDialog>();
+        parameters.Add(dialog => dialog.Group, group);
+        var dialog = await DialogService.ShowAsync<RollbackConfirmationDialog>(L["Rollback:GroupTitle"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+        if (await WasConfirmedAsync(dialog))
+        {
+            Snackbar.Add(L["Rollback:Success"], Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private async Task ShowGroupHistoryAsync(ConfigurationMutationGroup group)
+    {
+        var result = await Facade.GetGroupHistoryAsync(group.GroupId);
+        if (result.IsFailed(out var error, out var rows))
         {
             Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
-            _history.Clear();
-            _isLoading = false;
             return;
         }
 
         _history.Clear();
-        _history.AddRange(history);
-        _isLoading = false;
+        _history.AddRange(rows);
+        Snackbar.Add(L["Group:HistoryLoaded", group.Label], Severity.Info);
     }
 
-    private bool TryParsePath(out LogicalPath logicalPath)
+    private static async Task<bool> WasConfirmedAsync(IDialogReference dialog)
     {
-        try
-        {
-            logicalPath = LogicalPath.Parse(_pathText);
-            _pathText = logicalPath.ToCanonicalString();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logicalPath = _logicalPath;
-            Snackbar.Add($"{L["Common:Errors:InvalidPath"]}: {ex.Message}", Severity.Error);
-            return false;
-        }
+        var result = await dialog.Result;
+        return result is { Canceled: false };
     }
 
-    private void GoBack()
+    private string DefinitionDisplay(string definitionKey)
     {
-        NavigationManager.NavigateTo(ConfigurationUiRoutes.Value(DefinitionKey, _logicalPath));
+        return _definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private string GroupLabel(string? groupId)
+    {
+        if (string.IsNullOrWhiteSpace(groupId))
+        {
+            return string.Empty;
+        }
+
+        return _groups.FirstOrDefault(group => group.GroupId == groupId)?.Label ?? groupId;
+    }
+
+    private string StatusText(ConfigurationMutationGroupStatus status)
+    {
+        return L[$"Group:StatusValues:{status}"];
     }
 }

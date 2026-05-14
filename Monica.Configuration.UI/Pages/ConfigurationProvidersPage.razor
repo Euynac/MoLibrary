@@ -1,0 +1,184 @@
+@attribute [Route(PAGE_URL)]
+@inject ConfigurationFacade Facade
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<PageTitle>@L["Pages:ConfigurationProviders:Title"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-providers-page">
+    <MudStack Spacing="3">
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h4">@L["Pages:ConfigurationProviders:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Providers:Subtitle"]</MudText>
+            </MudStack>
+            <MudTooltip Text="@L["Common:Actions:Refresh"]">
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
+            </MudTooltip>
+        </MudStack>
+
+        <MudPaper Outlined="true" Class="pa-3">
+            <MudTextField T="string"
+                          @bind-Value="_searchText"
+                          Placeholder="@L["Providers:SearchPlaceholder"]"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudPaper>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (FilteredSources.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">@L["Providers:Empty"]</MudAlert>
+        }
+        else
+        {
+            <MudExpansionPanels MultiExpansion="true">
+                @foreach (var kindGroup in FilteredSources.GroupBy(source => source.Kind).OrderBy(group => group.Key.ToString()))
+                {
+                    <MudExpansionPanel Text="@kindGroup.Key.ToString()" Expanded="true">
+                        <MudGrid Spacing="2">
+                            @foreach (var source in kindGroup.OrderByDescending(source => source.Priority))
+                            {
+                                <MudItem xs="12" md="6" lg="4">
+                                    <MudPaper Outlined="true" Class="pa-3 provider-card">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween" Spacing="2">
+                                                <MudStack Spacing="0">
+                                                    <MudText Typo="Typo.subtitle2">@source.DisplayName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@source.SourceKey</MudText>
+                                                </MudStack>
+                                                <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@source.Priority</MudChip>
+                                            </MudStack>
+
+                                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                                @CapabilityChip(source.IsWritable, L["Providers:Capabilities:Writable"])
+                                                @CapabilityChip(source.SupportsWatch, L["Providers:Capabilities:Watch"])
+                                                @CapabilityChip(source.SupportsHistory, L["Providers:Capabilities:History"])
+                                            </MudStack>
+
+                                            @if (TryGetState(source.SourceKey, out var state))
+                                            {
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudChip T="string"
+                                                             Size="Size.Small"
+                                                             Color="@(state.LastReloadSucceeded ? Color.Success : Color.Error)"
+                                                             Variant="Variant.Filled">
+                                                        @(state.LastReloadSucceeded ? L["Providers:State:Succeeded"] : L["Providers:State:Failed"])
+                                                    </MudChip>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@state.LastReloadTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                    @if (!string.IsNullOrWhiteSpace(state.LastError))
+                                                    {
+                                                        <MudTooltip Text="@state.LastError">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                                        </MudTooltip>
+                                                    }
+                                                </MudStack>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Providers:State:Unknown"]</MudText>
+                                            }
+
+                                            <MudButton Variant="Variant.Text"
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.List"
+                                                       OnClick="() => LoadOverridesAsync(source)">
+                                                @L["Providers:Actions:LoadOverrides"]
+                                            </MudButton>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    public const string PAGE_URL = ConfigurationUiRoutes.PROVIDERS_ROUTE;
+
+    private readonly List<ConfigurationSourceDescriptor> _sources = [];
+    private readonly List<ConfigurationSourceState> _states = [];
+    private string _searchText = string.Empty;
+    private bool _loading = true;
+
+    private IReadOnlyList<ConfigurationSourceDescriptor> FilteredSources =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? _sources
+            : _sources.Where(source =>
+                    source.SourceKey.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                    || source.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                    || source.Kind.ToString().Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var sourceResult = await Facade.GetSourcesAsync();
+        if (sourceResult.IsFailed(out var sourceError, out var sources))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {sourceError.Message}", Severity.Error);
+            _sources.Clear();
+        }
+        else
+        {
+            _sources.Clear();
+            _sources.AddRange(sources);
+        }
+
+        var stateResult = await Facade.GetSourceStatesAsync();
+        if (!stateResult.IsFailed(out _, out var states))
+        {
+            _states.Clear();
+            _states.AddRange(states);
+        }
+
+        _loading = false;
+    }
+
+    private RenderFragment CapabilityChip(bool enabled, string label) => builder =>
+    {
+        builder.OpenComponent<MudChip<string>>(0);
+        builder.AddAttribute(1, "Size", Size.Small);
+        builder.AddAttribute(2, "Color", enabled ? Color.Success : Color.Default);
+        builder.AddAttribute(3, "Variant", enabled ? Variant.Filled : Variant.Outlined);
+        builder.AddAttribute(4, "ChildContent", (RenderFragment)(child =>
+        {
+            child.AddContent(0, label);
+        }));
+        builder.CloseComponent();
+    };
+
+    private bool TryGetState(string sourceKey, out ConfigurationSourceState state)
+    {
+        state = _states.FirstOrDefault(candidate =>
+            string.Equals(candidate.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase))!;
+        return state is not null;
+    }
+
+    private async Task LoadOverridesAsync(ConfigurationSourceDescriptor source)
+    {
+        var result = await Facade.GetSourceOverridesAsync(source.SourceKey);
+        if (result.IsFailed(out var error, out var overrides))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(L["Providers:OverridesLoaded", overrides.Count, source.DisplayName], Severity.Info);
+    }
+}

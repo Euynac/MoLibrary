@@ -1,0 +1,31 @@
+.configuration-debug-page {
+    height: 100%;
+    min-height: 0;
+}
+
+.configuration-debug-loading {
+    display: flex;
+    min-height: 14rem;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.configuration-debug-view {
+    max-height: 70vh;
+    overflow: auto;
+    padding: 1rem;
+    font-family: var(--mud-typography-default-family);
+}
+
+.debug-line {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: monospace;
+    line-height: 1.45;
+}
+
+.debug-line-match {
+    background-color: var(--mo-color-highlight-background);
+    color: var(--mo-color-highlight-text);
+}

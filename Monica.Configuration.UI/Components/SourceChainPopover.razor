@@ -1,0 +1,93 @@
+@using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudPopover Open="@Open"
+            AnchorOrigin="Origin.BottomLeft"
+            TransformOrigin="Origin.TopLeft"
+            Paper="true"
+            Class="source-chain-popover">
+    <div class="source-chain-content">
+        @if (_loading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                <MudText Typo="Typo.body2">@L["Common:States:Loading"]</MudText>
+            </MudStack>
+        }
+        else if (_chain is null)
+        {
+            <MudText Color="Color.Secondary">@L["Value:States:Empty"]</MudText>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.subtitle2">@L["Value:SourceChain"]</MudText>
+                <MudTable T="ConfigurationSourceValue" Items="@_chain.Sources" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>@L["History:Columns:Source"]</MudTh>
+                        <MudTh>@L["History:Columns:Version"]</MudTh>
+                        <MudTh>@L["History:Columns:State"]</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@L["History:Columns:Source"]">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@context.DisplayName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.SourceKey</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="@L["History:Columns:Version"]">@context.Version</MudTd>
+                        <MudTd DataLabel="@L["History:Columns:State"]">
+                            @if (context.HasValue)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                    @(context.IsSensitive ? L["State:Value:Sensitive"] : context.DisplayValue)
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Value:States:Empty"]</MudText>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudStack>
+        }
+    </div>
+</MudPopover>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter, EditorRequired] public string DefinitionKey { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public LogicalPath LogicalPath { get; set; } = LogicalPath.Root;
+
+    private ConfigurationSourceChain? _chain;
+    private bool _loading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && _chain is null && !_loading)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var result = await Facade.GetSourceChainAsync(DefinitionKey, LogicalPath);
+        if (result.IsFailed(out var error, out var chain))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            _chain = null;
+        }
+        else
+        {
+            _chain = chain;
+        }
+
+        _loading = false;
+    }
+}
