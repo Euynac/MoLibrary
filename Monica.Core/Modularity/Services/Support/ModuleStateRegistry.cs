@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Monica.Core;
 using Monica.Core.Logging;
 using Monica.Core.Modularity.Models;
 using Monica.Core.Modularity.Models.Internal;
@@ -13,17 +14,12 @@ public static class ModuleStateRegistry
     public static ILogger Logger { get; set; } = LogManager.For(typeof(ModuleStateRegistry));
 
     /// <summary>
-    /// List of disabled module types
-    /// </summary>
-    private static HashSet<Type> DisabledModuleTypes { get; } = new();
-
-    /// <summary>
     /// Gets the list of disabled module types
     /// </summary>
     /// <returns>A list of disabled module types</returns>
     internal static List<Type> GetDisabledModuleTypes()
     {
-        return [.. DisabledModuleTypes];
+        return [.. MonicaApplication.Current.State.DisabledModuleTypes];
     }
 
     public static bool DisableModule(ModuleRegistrationState moduleInfo)
@@ -40,7 +36,7 @@ public static class ModuleStateRegistry
     /// <returns>True if the module was successfully disabled, false if it was already disabled</returns>
     private static bool DisableModule(Type moduleType)
     {
-        if (!DisabledModuleTypes.Add(moduleType)) return false;
+        if (!MonicaApplication.Current.State.DisabledModuleTypes.Add(moduleType)) return false;
         CascadeDisableModulesThatDependOn(moduleType);
         return true;
 
@@ -54,7 +50,7 @@ public static class ModuleStateRegistry
     internal static bool IsModuleDisabled(Type moduleType)
     {
         // Check if the module is in the disabled list
-        if (DisabledModuleTypes.Contains(moduleType))
+        if (MonicaApplication.Current.State.DisabledModuleTypes.Contains(moduleType))
         {
             return true;
         }

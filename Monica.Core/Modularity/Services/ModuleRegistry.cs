@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Monica.Core;
 using Monica.Core.Extensions;
 using Monica.Core.Logging;
 using Monica.Core.Modularity.Abstractions;
@@ -22,19 +23,19 @@ public static class ModuleRegistry
     /// <summary>
     /// Module registration errors.
     /// </summary>
-    public static List<ModuleRegistrationError> ModuleRegisterErrors { get; } = [];
+    public static List<ModuleRegistrationError> ModuleRegisterErrors => MonicaApplication.Current.Registry.ModuleRegisterErrors;
 
     public static ILogger Logger { get; set; } = LogManager.For(typeof(ModuleRegistry));
 
     /// <summary>
     /// Module snapshots captured after successful registration.
     /// </summary>
-    public static List<ModuleRuntimeSnapshot> ModuleSnapshots { get; } = [];
+    public static List<ModuleRuntimeSnapshot> ModuleSnapshots => MonicaApplication.Current.Registry.ModuleSnapshots;
 
     /// <summary>
     /// Registration information for every module type that has been registered.
     /// </summary>
-    public static Dictionary<Type, ModuleRegistrationState> ModuleRegisterContextDict { get; } = [];
+    public static Dictionary<Type, ModuleRegistrationState> ModuleRegisterContextDict => MonicaApplication.Current.Registry.ModuleRegisterContextDict;
 
     /// <summary>
     /// Attempts to retrieve the ModuleRequestInfo for a specified module type.

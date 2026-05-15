@@ -1,20 +1,19 @@
-using System.Diagnostics;
 using System.Reflection;
 using Monica.Core;
-using Monica.Core.Modularity.Services;
-using Monica.Core.Modularity.Services.Support;
 
 namespace Test.Monica.Modularity;
 
 /// <summary>
-/// Isolates Monica module-system static state between tests.
+/// Isolates Monica module-system state between tests.
 /// </summary>
 public sealed class ModuleTestScope : IDisposable
 {
+    private readonly MonicaApplication _application;
     private bool _disposed;
 
-    private ModuleTestScope()
+    private ModuleTestScope(MonicaApplication application)
     {
+        _application = application;
     }
 
     /// <summary>
@@ -22,6 +21,7 @@ public sealed class ModuleTestScope : IDisposable
     /// </summary>
     public static ModuleTestScope Create(params Assembly[] assemblies)
     {
+        var application = MonicaApplication.CreateScoped();
         Reset();
 
         Mo.ConfigTypeDiscovery(options =>
@@ -33,23 +33,15 @@ public sealed class ModuleTestScope : IDisposable
             }
         });
 
-        return new ModuleTestScope();
+        return new ModuleTestScope(application);
     }
 
     /// <summary>
-    /// Clears Monica module-system static state.
+    /// Clears Monica module-system state for the current Monica application.
     /// </summary>
     public static void Reset()
     {
-        ModuleRegistry.ModuleRegisterErrors.Clear();
-        ModuleRegistry.ModuleSnapshots.Clear();
-        ModuleRegistry.ModuleRegisterContextDict.Clear();
-
-        ModuleDependencyAnalyzer.ModuleTypeToKeyMap.Clear();
-        ModuleDependencyAnalyzer.ModuleKeyToTypeDict.Clear();
-        ModuleDependencyAnalyzer.ModuleDependencyMap.Clear();
-
-        ResetInitializationProfiler();
+        MonicaApplication.Current.ResetModuleState();
     }
 
     /// <inheritdoc />
@@ -62,38 +54,7 @@ public sealed class ModuleTestScope : IDisposable
 
         Reset();
         Mo.ConfigTypeDiscovery();
+        _application.Dispose();
         _disposed = true;
-    }
-
-    private static void ResetInitializationProfiler()
-    {
-        var profilerType = typeof(ModuleInitializationProfiler);
-
-        ((Stopwatch?)profilerType
-            .GetField("SystemStopwatch", BindingFlags.NonPublic | BindingFlags.Static)
-            ?.GetValue(null))
-            ?.Reset();
-
-        ClearPrivateCollectionField(profilerType, "PhaseStopwatches");
-        ClearPrivateCollectionField(profilerType, "PhaseInitializationOrder");
-        ClearPrivateCollectionField(profilerType, "ModuleProfiles");
-
-        profilerType
-            .GetField("_isStarted", BindingFlags.NonPublic | BindingFlags.Static)
-            ?.SetValue(null, false);
-    }
-
-    private static void ClearPrivateCollectionField(Type type, string fieldName)
-    {
-        if (type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) is System.Collections.IList list)
-        {
-            list.Clear();
-            return;
-        }
-
-        if (type.GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) is System.Collections.IDictionary dictionary)
-        {
-            dictionary.Clear();
-        }
     }
 }

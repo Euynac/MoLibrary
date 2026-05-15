@@ -1,7 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Monica.Authority.Identity.Abstractions;
 using Monica.Core.ObjectMapping.Abstractions;
+using Monica.Core.Mediator;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
+using Monica.Repository.Entity.Abstractions;
+using Monica.Repository.Persistence.Abstractions;
+using Monica.UnitTests.Doubles;
+using Monica.UnitTests.ObjectMapping;
 using Monica.WebApi.Abstractions;
 using NSubstitute;
 
@@ -24,6 +31,9 @@ public sealed class ApplicationServiceFixtureBuilder<THandler>
         _services.AddOptions();
         _services.AddLogging();
         _services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
+        _services.AddScoped<IMediator, Mediator>();
+        _services.AddSingleton<IObjectMapper, TestObjectMapper>();
+        _services.AddSingleton<ICurrentUser, TestCurrentUser>();
     }
 
     /// <summary>
@@ -43,6 +53,7 @@ public sealed class ApplicationServiceFixtureBuilder<THandler>
         where TService : class
     {
         ArgumentNullException.ThrowIfNull(instance);
+        _services.RemoveAll<TService>();
         _services.AddSingleton(instance);
         return this;
     }
@@ -54,7 +65,45 @@ public sealed class ApplicationServiceFixtureBuilder<THandler>
         where TService : class
     {
         substitute = Substitute.For<TService>();
+        _services.RemoveAll<TService>();
         _services.AddSingleton(substitute);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a repository for entities without a strongly typed key.
+    /// </summary>
+    public ApplicationServiceFixtureBuilder<THandler> WithRepository<TEntity>(IRepository<TEntity> repository)
+        where TEntity : class, IEntity
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        _services.RemoveAll<IRepository<TEntity>>();
+        _services.AddSingleton(repository);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a repository for entities with a strongly typed key.
+    /// </summary>
+    public ApplicationServiceFixtureBuilder<THandler> WithRepository<TEntity, TKey>(IRepository<TEntity, TKey> repository)
+        where TEntity : class, IEntity<TKey>
+    {
+        ArgumentNullException.ThrowIfNull(repository);
+        _services.RemoveAll<IRepository<TEntity, TKey>>();
+        _services.RemoveAll<IRepository<TEntity>>();
+        _services.AddSingleton(repository);
+        _services.AddSingleton<IRepository<TEntity>>(repository);
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the current-user service used by the handler and repository defaults.
+    /// </summary>
+    public ApplicationServiceFixtureBuilder<THandler> WithCurrentUser(ICurrentUser currentUser)
+    {
+        ArgumentNullException.ThrowIfNull(currentUser);
+        _services.RemoveAll<ICurrentUser>();
+        _services.AddSingleton(currentUser);
         return this;
     }
 
@@ -64,6 +113,7 @@ public sealed class ApplicationServiceFixtureBuilder<THandler>
     public ApplicationServiceFixtureBuilder<THandler> WithMapper(IObjectMapper mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        _services.RemoveAll<IObjectMapper>();
         _services.AddSingleton(mapper);
         return this;
     }
