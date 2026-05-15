@@ -123,7 +123,7 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
 
     private ServiceProvider CreateReplacementProvider(Action<ISeamReplacementBuilder> replace)
     {
-        var services = new ServiceCollection();
+        IServiceCollection services = new ServiceCollection();
         foreach (var descriptor in _serviceDescriptors)
         {
             services.Add(descriptor);

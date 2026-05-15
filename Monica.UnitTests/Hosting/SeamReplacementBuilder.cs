@@ -36,7 +36,7 @@ internal sealed class SeamReplacementBuilder(IServiceCollection services) : ISea
     public ISeamReplacementBuilder Substitute<TService>(out TService substitute)
         where TService : class
     {
-        substitute = Substitute.For<TService>();
+        substitute = NSubstitute.Substitute.For<TService>();
         return With(substitute);
     }
 }
