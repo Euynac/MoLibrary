@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Localization;
 using Monica.UI.Localization;
 using Monica.UI.Theming;
-using Test.Monica.Localization;
+using Monica.UnitTests.Localization;
 using Xunit;
 
 namespace Test.Monica.UI;

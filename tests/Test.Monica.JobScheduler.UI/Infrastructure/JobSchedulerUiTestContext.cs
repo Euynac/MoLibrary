@@ -12,8 +12,8 @@ using Monica.Modules;
 using Monica.UI.Shell.State;
 using MudBlazor.Services;
 using NSubstitute;
-using Test.Monica.Localization;
-using Test.Monica.UI;
+using Monica.UnitTests.Localization;
+using Monica.UnitTests.UI;
 
 namespace Test.Monica.JobScheduler.UI.Infrastructure;
 

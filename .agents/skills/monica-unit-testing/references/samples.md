@@ -2,12 +2,16 @@
 
 Current Monica unit-testing baseline is defined by these sample projects:
 
-- `tests/Test.Monica`
+- `Monica.UnitTests`
   - Shared assertion helpers
-  - Module-system reset helpers
+  - Module-system scope helpers
   - Deterministic localization and theme test doubles
+  - Application service, sociable host, and repository fixtures
+- `tests/Test.Monica.UI`
+  - Monica UI foundation tests
 - `tests/Test.Monica.JobScheduler`
   - Module guide tests
+  - Sociable application fixture tests
   - In-memory provider tests
   - Facade tests for `Res<T>` flows
   - Service validation tests
@@ -34,6 +38,6 @@ For UI modules:
 
 ## Reuse Guidance
 
-- Put cross-project helpers into `Test.Monica`, not into each test project.
+- Put cross-project helpers into `Monica.UnitTests`, not into each test project.
 - Keep test project folder depth aligned with the source project.
 - When a new module follows an existing sample, copy the sample structure first and then adapt the assertions.
