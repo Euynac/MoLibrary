@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Monica.UnitTests</RootNamespace>
+    <PackageDescription>Shared unit-testing toolkit for Monica application and infrastructure tests.</PackageDescription>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\Monica.DependencyInjection\Monica.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Monica.UI\Monica.UI.csproj" />
+    <ProjectReference Include="..\Monica.WebApi\Monica.WebApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+</Project>
