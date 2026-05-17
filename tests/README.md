@@ -7,6 +7,7 @@
 - 当前版本覆盖基础单元测试与 Blazor 组件测试。
 - 当前版本不包含真实外部依赖集成测试、端到端测试、浏览器自动化测试。
 - 当前样板工程为 `Monica.JobScheduler` 与 `Monica.JobScheduler.UI`。
+- Monica-based 业务应用服务优先使用 sociable application testing：每个服务测试项目启动一次真实 Monica 模块图，只替换外部 seam。
 
 ## 目录与命名规则
 
@@ -49,6 +50,16 @@
 - DbContext / repository 测试 fixture。
 
 如果后续出现新的跨项目测试基础设施，应优先放到 `Monica.UnitTests`，而不是复制到各个测试项目。
+
+### Sociable Application Testing
+
+- 首选 `MonicaApplicationFixture<TStartupModule>`，用于有启动模块的业务应用服务。
+- 每个服务测试项目定义一个 xUnit collection fixture，host 在 collection 内复用。
+- 每个测试通过 `await using var scope = _app.NewScope(...)` 创建隔离 scope。
+- 只替换边界 seam，例如 DbContext、state store、event bus、HTTP/RPC client、当前用户、本地配置。
+- ApplicationService、DomainService、Repository、Mapper 与 Options 默认走真实 DI。
+- `ApplicationServiceFixture<THandler>` 只作为 fast-path，用于全部依赖都明确替换的窄范围 handler 测试。
+- 完整业务应用测试架构见 `.agents/skills/monica-application-unit-testing/`。
 
 ## Monica 特有测试规则
 

@@ -4,7 +4,10 @@ using NSubstitute;
 
 namespace Monica.UnitTests.Hosting;
 
-internal sealed class SeamReplacementBuilder(IServiceCollection services) : ISeamReplacementBuilder
+/// <summary>
+/// Default implementation of <see cref="ISeamReplacementBuilder"/> for compatibility-layer fixtures.
+/// </summary>
+public sealed class SeamReplacementBuilder(IServiceCollection services) : ISeamReplacementBuilder
 {
     public ISeamReplacementBuilder With<TService>(TService instance)
         where TService : class
@@ -38,5 +41,19 @@ internal sealed class SeamReplacementBuilder(IServiceCollection services) : ISea
     {
         substitute = NSubstitute.Substitute.For<TService>();
         return With(substitute);
+    }
+
+    public ISeamReplacementBuilder WithHttpClient(string name, HttpClient client)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(client);
+
+        services.RemoveAll<IHttpClientFactory>();
+        services.AddSingleton<IHttpClientFactory>(new TestHttpClientFactory(
+            new Dictionary<string, HttpClient>(StringComparer.Ordinal)
+            {
+                [name] = client
+            }));
+        return this;
     }
 }

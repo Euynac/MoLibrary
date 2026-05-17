@@ -5,6 +5,8 @@ using Microsoft.Extensions.Hosting;
 using Monica.Core;
 using Monica.Core.Modularity.Abstractions;
 using Monica.Core.Modularity.Extensions;
+using Monica.Core.Modularity.Models.Internal;
+using Monica.Core.Modularity.Services;
 using Monica.UnitTests.Modularity;
 using Xunit;
 
@@ -20,6 +22,7 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
     private MonicaApplication? _application;
     private IHost? _host;
     private List<ServiceDescriptor> _serviceDescriptors = [];
+    private IReadOnlyList<ModuleRuntimeSnapshot> _moduleSnapshots = [];
 
     /// <summary>
     /// Gets the root service provider for the booted module graph.
@@ -30,6 +33,18 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         {
             EnsureInitialized();
             return _host!.Services;
+        }
+    }
+
+    /// <summary>
+    /// Gets a snapshot of modules registered during fixture boot.
+    /// </summary>
+    public IReadOnlyList<ModuleRuntimeSnapshot> ModuleSnapshots
+    {
+        get
+        {
+            EnsureInitialized();
+            return _moduleSnapshots;
         }
     }
 
@@ -105,6 +120,7 @@ public class MonicaApplicationFixture<TStartupModule> : IAsyncLifetime, IAsyncDi
         app.MapMonica();
         _host = app;
         await _host.StartAsync();
+        _moduleSnapshots = ModuleRegistry.ModuleSnapshots.ToList();
     }
 
     /// <inheritdoc />

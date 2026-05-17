@@ -16,6 +16,7 @@ Use this reference when you need the stable, Monica-specific testing rules witho
 - `Res<string>` success paths must assert `Data`.
 - Module tests should cover guide methods, dependencies, or service registration behavior.
 - Sociable application tests should use `MonicaApplicationFixture<TStartupModule>` when a module startup type exists.
+- Business application sociable tests should follow the `monica-application-unit-testing` skill and use one collection fixture per service test project.
 - UI unit tests stop at component and page-shell scope.
 - Avoid real network, real persistence, and real browser automation in unit tests.
 
@@ -36,6 +37,12 @@ Use this reference when you need the stable, Monica-specific testing rules witho
 - `MonicaApplicationFixture<TStartupModule>`
 - `ApplicationServiceFixture<THandler>`
 - `DbContextFixture<TDbContext>`
+
+## Application Service Tests
+
+- Default to `MonicaApplicationFixture<TStartupModule>` when a startup module exists.
+- Use `ApplicationServiceFixture<THandler>` only for narrow fast-path tests where all collaborators are deliberately substituted.
+- Resolve application services, domain services, and repositories from the test scope instead of constructing them directly.
 
 ## WSL Execution
 

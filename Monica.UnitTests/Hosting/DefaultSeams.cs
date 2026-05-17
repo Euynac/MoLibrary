@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Monica.Authority.Identity.Abstractions;
 using Monica.DependencyInjection.Abstractions;
 using Monica.DependencyInjection.Services;
@@ -24,6 +25,11 @@ public static class DefaultSeams
     {
         services.RemoveAll<ICachedServiceProvider>();
         services.AddScoped<ICachedServiceProvider, CachedServiceProvider>();
+
+        services.RemoveAll<IHttpClientFactory>();
+        services.AddSingleton<IHttpClientFactory, TestHttpClientFactory>();
+
+        services.AddXunitTestOutputLogging();
 
         services.RemoveAll<ICurrentUser>();
         services.AddSingleton<ICurrentUser, TestCurrentUser>();

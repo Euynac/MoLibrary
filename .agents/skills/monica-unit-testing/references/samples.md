@@ -41,3 +41,4 @@ For UI modules:
 - Put cross-project helpers into `Monica.UnitTests`, not into each test project.
 - Keep test project folder depth aligned with the source project.
 - When a new module follows an existing sample, copy the sample structure first and then adapt the assertions.
+- For business service test projects, use the `monica-application-unit-testing` skill. It contains the canonical `Test.{Service}` folder layout, collection fixture pattern, and handler/domain-service/repository templates.

@@ -4,7 +4,10 @@ using Monica.Repository.Persistence.Services;
 
 namespace Monica.UnitTests.Hosting;
 
-internal sealed class TestScope : ITestScope
+/// <summary>
+/// Default implementation of <see cref="ITestScope"/> for compatibility-layer fixtures.
+/// </summary>
+public sealed class TestScope : ITestScope
 {
     private readonly IDisposable _applicationActivation;
     private readonly AsyncServiceScope _scope;

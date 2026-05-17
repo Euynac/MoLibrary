@@ -29,6 +29,12 @@ Create Monica unit tests under `tests/` using the shared root `Monica.UnitTests`
 5. For UI modules, stay at component level and page-shell level. Use bUnit, deterministic localizers, and fake or in-memory services. Do not introduce browser automation or real backend dependencies into these unit tests.
 6. After edits, run `dotnet test` with Windows paths under WSL. Keep a single build or test process at a time.
 
+## Sociable Application Tests
+
+For Monica-based business applications, prefer the `monica-application-unit-testing` skill. It defines the service-level `Test.{Service}` architecture, collection fixtures, database isolation choices, and migration rules for command handlers, query handlers, domain services, repositories, and module-registration tests.
+
+Use `MonicaApplicationFixture<TStartupModule>` as the default when the service has a startup module. Keep `ApplicationServiceFixture<THandler>` as a fast path for narrow, fully substituted handler tests.
+
 ## Required Conventions
 
 - Shared test infrastructure project: `Monica.UnitTests/Monica.UnitTests.csproj`
@@ -85,6 +91,8 @@ Use these sample projects before introducing a new pattern. When the new work ma
   - Stable Monica testing rules and decision points.
 - `references/samples.md`
   - Current sample projects, recommended target types, and starter patterns.
+- `../monica-application-unit-testing/SKILL.md`
+  - Sociable application testing architecture for Monica-based business services.
 
 ## Validation
 

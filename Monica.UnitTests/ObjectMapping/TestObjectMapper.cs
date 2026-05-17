@@ -1,4 +1,6 @@
 using Mapster;
+using MapsterMapper;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Core.ObjectMapping.Abstractions;
 
 namespace Monica.UnitTests.ObjectMapping;
@@ -6,27 +8,46 @@ namespace Monica.UnitTests.ObjectMapping;
 /// <summary>
 /// Lightweight Mapster-backed mapper for tests that need Monica's object-mapping abstraction without booting the module.
 /// </summary>
-public sealed class TestObjectMapper(TypeAdapterConfig? config = null) : IObjectMapper
+public sealed class TestObjectMapper : IObjectMapper
 {
+    private readonly IMapper _mapper;
+
+    /// <summary>
+    /// Initializes a mapper over an explicit Mapster configuration.
+    /// </summary>
+    public TestObjectMapper(TypeAdapterConfig? config = null)
+        : this(new Mapper(config ?? new TypeAdapterConfig()))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a mapper over Mapster's service-aware mapper.
+    /// </summary>
+    [ActivatorUtilitiesConstructor]
+    public TestObjectMapper(IMapper mapper)
+    {
+        _mapper = mapper;
+    }
+
     /// <inheritdoc />
-    public TypeAdapterConfig Config { get; } = config ?? new TypeAdapterConfig();
+    public TypeAdapterConfig Config => _mapper.Config;
 
     /// <inheritdoc />
     public TDestination Map<TDestination>(object source)
     {
-        return source.Adapt<TDestination>(Config);
+        return _mapper.Map<TDestination>(source);
     }
 
     /// <inheritdoc />
     public TDestination Map<TSource, TDestination>(TSource source)
     {
-        return source.Adapt<TSource, TDestination>(Config);
+        return _mapper.Map<TSource, TDestination>(source);
     }
 
     /// <inheritdoc />
     public TDestination Map<TSource, TDestination>(TSource source, TDestination destination)
     {
-        return source.Adapt(destination, Config);
+        return _mapper.Map(source, destination);
     }
 
     /// <inheritdoc />
@@ -34,15 +55,14 @@ public sealed class TestObjectMapper(TypeAdapterConfig? config = null) : IObject
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
-        return source.Adapt(destination, Config);
+        return _mapper.Map(source, destination, sourceType, destinationType);
     }
 
     /// <inheritdoc />
     public object Map(object source, Type sourceType, Type destinationType)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return source.Adapt(destinationType, Config)
-            ?? throw new InvalidOperationException($"Mapster returned null for destination type {destinationType.FullName}.");
+        return _mapper.Map(source, sourceType, destinationType);
     }
 
     /// <inheritdoc />

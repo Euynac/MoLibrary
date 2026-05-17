@@ -29,4 +29,9 @@ public interface ISeamReplacementBuilder
     /// </summary>
     ISeamReplacementBuilder Substitute<TService>(out TService substitute)
         where TService : class;
+
+    /// <summary>
+    /// Registers a named HTTP client for tests that intentionally exercise HTTP adapters.
+    /// </summary>
+    ISeamReplacementBuilder WithHttpClient(string name, HttpClient client);
 }
