@@ -7,11 +7,13 @@
 - 当前版本覆盖基础单元测试与 Blazor 组件测试。
 - 当前版本不包含真实外部依赖集成测试、端到端测试、浏览器自动化测试。
 - 当前样板工程为 `Monica.JobScheduler` 与 `Monica.JobScheduler.UI`。
+- Monica-based 业务应用服务优先使用 sociable application testing：每个服务测试项目启动一次真实 Monica 模块图，只替换外部 seam。
 
 ## 目录与命名规则
 
-- 共享测试基建项目固定为 `tests/Test.Monica/`，项目名固定为 `Test.Monica`。
+- 共享测试基建项目固定为仓库根目录 `Monica.UnitTests/`，项目名固定为 `Monica.UnitTests`。
 - 可运行测试项目固定使用 `Test.Monica.*` 前缀，并与源项目一一对应：
+  - `Monica.UI -> tests/Test.Monica.UI`
   - `Monica.JobScheduler -> tests/Test.Monica.JobScheduler`
   - `Monica.JobScheduler.UI -> tests/Test.Monica.JobScheduler.UI`
 - 测试项目内部目录默认镜像源项目结构，例如源项目的 `Modules/`、`Facades/`、`Services/Support/`、`Pages/`、`Components/` 在测试项目中使用相同相对路径。
@@ -35,16 +37,29 @@
 - `coverlet.collector`
   - 统一覆盖率收集器。
 
-## 共享测试层 `Test.Monica`
+## 共享测试层 `Monica.UnitTests`
 
-`Test.Monica` 只放 Monica 测试基础设施，不放实际测试用例。当前主要职责如下：
+`Monica.UnitTests` 只放 Monica 测试基础设施，不放实际测试用例。当前主要职责如下：
 
 - `Res` / `Res<T>` / `ResPaged<T>` 断言辅助。
 - 模块注册测试的静态状态隔离与 reset helper。
 - 通用本地化替身 `EchoStringLocalizer<T>`。
 - UI 颜色与主题替身 `TestThemeState`。
+- Application Service fast-path fixture。
+- Sociable Application Testing host fixture 与默认 seam 替换。
+- DbContext / repository 测试 fixture。
 
-如果后续出现新的跨项目测试基础设施，应优先放到 `Test.Monica`，而不是复制到各个测试项目。
+如果后续出现新的跨项目测试基础设施，应优先放到 `Monica.UnitTests`，而不是复制到各个测试项目。
+
+### Sociable Application Testing
+
+- 首选 `MonicaApplicationFixture<TStartupModule>`，用于有启动模块的业务应用服务。
+- 每个服务测试项目定义一个 xUnit collection fixture，host 在 collection 内复用。
+- 每个测试通过 `await using var scope = _app.NewScope(...)` 创建隔离 scope。
+- 只替换边界 seam，例如 DbContext、state store、event bus、HTTP/RPC client、当前用户、本地配置。
+- ApplicationService、DomainService、Repository、Mapper 与 Options 默认走真实 DI。
+- `ApplicationServiceFixture<THandler>` 只作为 fast-path，用于全部依赖都明确替换的窄范围 handler 测试。
+- 完整业务应用测试架构见 `.agents/skills/monica-application-unit-testing/`。
 
 ## Monica 特有测试规则
 
@@ -84,13 +99,13 @@
 推荐命令：
 
 ```bash
-dotnet test 'D:\Code\MoLibrary\Monica.slnx' --results-directory 'D:\Code\MoLibrary\tests\TestResults'
+dotnet test 'D:\Repositories\WorkTree1\MoLibrary\Monica.slnx' --results-directory 'D:\Repositories\WorkTree1\MoLibrary\tests\TestResults'
 ```
 
 覆盖率命令：
 
 ```bash
-dotnet test 'D:\Code\MoLibrary\Monica.slnx' --collect:"XPlat Code Coverage" --results-directory 'D:\Code\MoLibrary\tests\TestResults'
+dotnet test 'D:\Repositories\WorkTree1\MoLibrary\Monica.slnx' --collect:"XPlat Code Coverage" --results-directory 'D:\Repositories\WorkTree1\MoLibrary\tests\TestResults'
 ```
 
 不要并行启动多个独立的 `dotnet build` / `dotnet test` 进程。需要并行时只使用单个 MSBuild 进程内部的并行能力。
@@ -98,7 +113,7 @@ dotnet test 'D:\Code\MoLibrary\Monica.slnx' --collect:"XPlat Code Coverage" --re
 ## 新增测试项目时的步骤
 
 1. 在 `tests/` 下创建 `Test.Monica.{ProjectName}`。
-2. 引用 `Test.Monica` 和对应的 `Monica.{ProjectName}` 源项目。
+2. 引用 `Monica.UnitTests` 和对应的 `Monica.{ProjectName}` 源项目。
 3. 按源项目目录结构建立测试目录。
 4. 只在 UI 项目中额外引用 `bunit`。
 5. 优先补三类测试：
@@ -108,6 +123,8 @@ dotnet test 'D:\Code\MoLibrary\Monica.slnx' --collect:"XPlat Code Coverage" --re
 
 ## 当前样板说明
 
+- `Test.Monica.UI`
+  - 展示 Monica UI 基础服务的测试写法。
 - `Test.Monica.JobScheduler`
   - 展示模块 guide、内存仓储、facade 聚合入口与 service 验证类的测试写法。
 - `Test.Monica.JobScheduler.UI`

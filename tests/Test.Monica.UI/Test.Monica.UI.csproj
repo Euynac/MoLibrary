@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RootNamespace>Test.Monica</RootNamespace>
+    <RootNamespace>Test.Monica.UI</RootNamespace>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Monica.Core\Monica.Core.csproj" />
+    <ProjectReference Include="..\..\Monica.UnitTests\Monica.UnitTests.csproj" />
     <ProjectReference Include="..\..\Monica.UI\Monica.UI.csproj" />
   </ItemGroup>
 

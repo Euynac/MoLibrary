@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using Monica.Core;
 using Monica.Core.Modularity.Annotations;
 using Monica.Core.Modularity.Diagnostics.Models;
 using Monica.Core.Modularity.Models;
@@ -14,17 +15,17 @@ public class ModuleDependencyAnalyzer
     /// <summary>
     /// Dictionary mapping module types to their ModuleKey representations.
     /// </summary>
-    public static Dictionary<Type, ModuleKey> ModuleTypeToKeyMap { get; set; } = new();
+    public static Dictionary<Type, ModuleKey> ModuleTypeToKeyMap => MonicaApplication.Current.Dependencies.ModuleTypeToKeyMap;
 
     /// <summary>
     /// Dictionary mapping ModuleKey to their type representations.
     /// </summary>
-    public static Dictionary<ModuleKey, Type> ModuleKeyToTypeDict { get; set; } = new();
+    public static Dictionary<ModuleKey, Type> ModuleKeyToTypeDict => MonicaApplication.Current.Dependencies.ModuleKeyToTypeDict;
 
     /// <summary>
     /// Dictionary mapping ModuleKey to their dependencies.
     /// </summary>
-    public static Dictionary<ModuleKey, HashSet<ModuleKey>> ModuleDependencyMap { get; set; } = new();
+    public static Dictionary<ModuleKey, HashSet<ModuleKey>> ModuleDependencyMap => MonicaApplication.Current.Dependencies.ModuleDependencyMap;
 
     /// <summary>
     /// Maps a module key to its type.

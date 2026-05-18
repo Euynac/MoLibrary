@@ -1,10 +1,10 @@
 using AwesomeAssertions;
 using Monica.Core.Results;
 
-namespace Test.Monica.Results;
+namespace Monica.UnitTests.Results;
 
 /// <summary>
-/// Provides Monica-specific result assertions for infrastructure and UI tests.
+/// Provides Monica-specific result assertions for infrastructure and application tests.
 /// </summary>
 public static class ResultAssertionExtensions
 {

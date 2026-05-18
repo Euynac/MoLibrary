@@ -2,7 +2,7 @@ using Monica.UI.Shell.State;
 using Monica.UI.Theming;
 using MudBlazor;
 
-namespace Test.Monica.UI;
+namespace Monica.UnitTests.UI;
 
 /// <summary>
 /// Provides a deterministic theme implementation for UI tests.
@@ -58,14 +58,13 @@ public sealed class TestThemeState : IThemeState
     public void ToggleTheme()
     {
         IsDarkMode = !IsDarkMode;
-        OnThemeChanged?.Invoke();
     }
 
     /// <inheritdoc />
     public string GetThemeCssClass() => "mo-theme-test";
 
     /// <inheritdoc />
-    public string GetThemeDataAttribute() => "test-light";
+    public string GetThemeDataAttribute() => IsDarkMode ? "test-dark" : "test-light";
 
     /// <inheritdoc />
     public string GetColorHex(Color color)

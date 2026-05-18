@@ -1,7 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
 
-namespace Test.Monica.Localization;
+namespace Monica.UnitTests.Localization;
 
 /// <summary>
 /// Returns localization keys as visible values so UI assertions stay deterministic.
