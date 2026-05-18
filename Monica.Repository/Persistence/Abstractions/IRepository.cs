@@ -30,12 +30,17 @@ public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFea
     /// <summary>
     /// Attaches an existing entity as unchanged.
     /// </summary>
-    void Attach(TEntity entity);
+    Task AttachAsync(TEntity entity, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Marks a detached entity root as modified.
     /// </summary>
-    void Update(TEntity entity);
+    Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks multiple detached entity roots as modified.
+    /// </summary>
+    Task UpdateManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stages an entity for deletion.

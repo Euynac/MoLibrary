@@ -287,15 +287,24 @@ public class EfRepository<TDbContext, TEntity>(
     }
 
     /// <inheritdoc />
-    public override void Attach(TEntity entity)
+    public override async Task AttachAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        GetTypedDbContextAsync().GetAwaiter().GetResult().Set<TEntity>().Attach(entity);
+        cancellationToken.ThrowIfCancellationRequested();
+        (await GetTypedDbContextAsync()).Set<TEntity>().Attach(entity);
     }
 
     /// <inheritdoc />
-    public override void Update(TEntity entity)
+    public override async Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        GetTypedDbContextAsync().GetAwaiter().GetResult().Update(entity);
+        cancellationToken.ThrowIfCancellationRequested();
+        (await GetTypedDbContextAsync()).Update(entity);
+    }
+
+    /// <inheritdoc />
+    public override async Task UpdateManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        (await GetTypedDbContextAsync()).Set<TEntity>().UpdateRange(entities);
     }
 
     /// <inheritdoc />

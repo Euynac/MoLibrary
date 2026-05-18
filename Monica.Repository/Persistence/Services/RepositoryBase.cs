@@ -148,10 +148,19 @@ public abstract class RepositoryBase<TEntity> : IRepository<TEntity>
     }
 
     /// <inheritdoc />
-    public abstract void Attach(TEntity entity);
+    public abstract Task AttachAsync(TEntity entity, CancellationToken cancellationToken = default);
 
     /// <inheritdoc />
-    public abstract void Update(TEntity entity);
+    public abstract Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc />
+    public virtual async Task UpdateManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    {
+        foreach (var entity in entities)
+        {
+            await UpdateAsync(entity, cancellationToken);
+        }
+    }
 
     /// <inheritdoc />
     public abstract Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
