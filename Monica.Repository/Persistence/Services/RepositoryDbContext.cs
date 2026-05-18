@@ -17,6 +17,7 @@ using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Extensions;
 using Monica.Repository.Persistence.Services.Support;
 using Monica.Repository.UnitOfWork.Abstractions;
+using Monica.Repository.UnitOfWork.Models;
 using Monica.Tool.Extensions;
 using Monica.Tool.Runtime;
 
@@ -246,16 +247,16 @@ public abstract class RepositoryDbContext<TDbContext>(DbContextOptions<TDbContex
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    public virtual void Initialize(IUnitOfWork unitOfWork)
+    public virtual void Initialize(UnitOfWorkScopeOptions options)
     {
         if (HasInit) throw new InvalidOperationException("重复触发相同DbContext初始化设置，代码结构异常，请上报");
         HasInit = true;
 
-        if (unitOfWork.Options.Timeout.HasValue &&
+        if (options.Timeout.HasValue &&
             Database.IsRelational() &&
             !Database.GetCommandTimeout().HasValue)
         {
-            Database.SetCommandTimeout(TimeSpan.FromMilliseconds(unitOfWork.Options.Timeout.Value));
+            Database.SetCommandTimeout(TimeSpan.FromMilliseconds(options.Timeout.Value));
         }
 
         ChangeTracker.CascadeDeleteTiming = CascadeTiming.OnSaveChanges;

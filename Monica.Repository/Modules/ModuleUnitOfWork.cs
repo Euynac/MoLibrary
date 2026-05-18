@@ -38,7 +38,6 @@ public class ModuleUnitOfWork(ModuleUnitOfWorkOption option)
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IUnitOfWorkManager, UnitOfWorkManager>();
-        services.AddTransient<IUnitOfWork, UnitOfWork>();
 
         if (option.EnableEntityEvent)
         {
@@ -64,7 +63,7 @@ public class ModuleUnitOfWorkGuide : ModuleGuide<ModuleUnitOfWork, ModuleUnitOfW
     {
         ConfigureServices(context =>
         {
-            context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(UnitOfWorkDbContextProvider<TDbContext>));
+            context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(AdaptiveDbContextProvider<TDbContext>));
             //TODO Can I use Singleton?
         }, secondKey: typeof(TDbContext).FullName);
         return this;

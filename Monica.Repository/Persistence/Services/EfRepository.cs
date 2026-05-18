@@ -3,335 +3,395 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Repository.Entity.Abstractions;
 using Monica.Repository.Persistence.Abstractions;
 using Monica.Repository.Persistence.Exceptions;
-using Monica.Tool.Extensions;
+using Monica.Repository.Persistence.Models;
+using Monica.Repository.UnitOfWork.Abstractions;
 
 namespace Monica.Repository.Persistence.Services;
 
+/// <summary>
+/// Entity Framework Core repository implementation.
+/// </summary>
 public class EfRepository<TDbContext, TEntity>(
     IDbContextProvider<TDbContext> dbContextProvider)
-    : RepositoryBase<TEntity>, IRepository<TEntity>
+    : RepositoryBase<TEntity>
     where TDbContext : RepositoryDbContext<TDbContext>
     where TEntity : class, IEntity
 {
-    async Task<DbContext> IRepository.GetDbContextAsync()
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> AsTracking()
     {
-        return await GetDbContextAsync();
+        return CreateReadScope().AsTracking();
     }
 
-    protected virtual Task<TDbContext> GetDbContextAsync()
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> AsNoTracking()
+    {
+        return CreateReadScope().AsNoTracking();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    {
+        return CreateReadScope().Where(predicate);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Include(Expression<Func<TEntity, object?>> selector)
+    {
+        return CreateReadScope().Include(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Include(string navigationPath)
+    {
+        return CreateReadScope().Include(navigationPath);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> WithDetails()
+    {
+        return CreateReadScope().WithDetails();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> IgnoreSoftDeleteFilter()
+    {
+        return CreateReadScope().IgnoreSoftDeleteFilter();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> IgnoreQueryFilters()
+    {
+        return CreateReadScope().IgnoreQueryFilters();
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> OrderBy<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().OrderBy(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> OrderByDescending<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().OrderByDescending(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> ThenBy<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().ThenBy(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> ThenByDescending<TKey>(Expression<Func<TEntity, TKey>> selector)
+    {
+        return CreateReadScope().ThenByDescending(selector);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Skip(int count)
+    {
+        return CreateReadScope().Skip(count);
+    }
+
+    /// <inheritdoc />
+    public override IRepositoryRead<TEntity> Take(int count)
+    {
+        return CreateReadScope().Take(count);
+    }
+
+    /// <inheritdoc />
+    public override async Task<List<TEntity>> GetListAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<List<TEntity>> GetListAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetListAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FindAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FindAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> GetAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FirstOrDefaultAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> FirstAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity> FirstAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().FirstAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<TEntity?> SingleOrDefaultAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().SingleOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().AnyAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<bool> AnyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().AnyAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<int> CountAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<int> CountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().CountAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().LongCountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<long> LongCountAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().LongCountAsync(predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetPagedListAsync(page, pageSize, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task<PagedList<TEntity>> GetPagedListAsync(
+        int page,
+        int pageSize,
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return await CreateReadScope().GetPagedListAsync(page, pageSize, predicate, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override Task<IQueryable<TEntity>> GetQueryableAsync()
+    {
+        return CreateReadScope().GetQueryableAsync();
+    }
+
+    /// <inheritdoc />
+    public override async Task<DbContext> GetDbContextAsync()
+    {
+        return await GetTypedDbContextAsync();
+    }
+
+    protected virtual Task<TDbContext> GetTypedDbContextAsync()
     {
         return dbContextProvider.GetDbContextAsync();
     }
-    protected override async Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        await (await GetDbContextAsync()).SaveChangesAsync(cancellationToken);
-    }
 
-    public async Task<int> SaveChanges(CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override async Task<DbSet<TEntity>> GetDbSetAsync()
     {
-        var dbContext = await GetDbContextAsync();
-        return await dbContext.SaveChangesAsync(cancellationToken);
-    }
-    Task<DbSet<TEntity>> IRepository<TEntity>.GetDbSetAsync()
-    {
-        return GetDbSetAsync();
-    }
-    public virtual async Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate, Action<UpdateSettersBuilder<TEntity>> setPropertyCalls,
-        CancellationToken cancellationToken = default)
-    {
-        return await (await GetDbSetAsync()).AsQueryable().Where(predicate)
-            .ExecuteUpdateAsync(setPropertyCalls, cancellationToken);
-    }
-    public virtual async Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await (await GetDbSetAsync()).AsQueryable().Where(predicate)
-            .ExecuteDeleteAsync(cancellationToken);
-    }
-
-    protected async Task<DbSet<TEntity>> GetDbSetAsync()
-    {
-        return (await GetDbContextAsync()).Set<TEntity>();
+        return (await GetTypedDbContextAsync()).Set<TEntity>();
     }
 
     protected async Task<IDbConnection> GetDbConnectionAsync()
     {
-        return (await GetDbContextAsync()).Database.GetDbConnection();
+        return (await GetTypedDbContextAsync()).Database.GetDbConnection();
     }
 
     protected async Task<IDbTransaction?> GetDbTransactionAsync()
     {
-        return (await GetDbContextAsync()).Database.CurrentTransaction?.GetDbTransaction();
+        return (await GetTypedDbContextAsync()).Database.CurrentTransaction?.GetDbTransaction();
     }
 
-
-    public override async Task<TEntity> InsertAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override async Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
-        var dbContext = await GetDbContextAsync();
-
-        var savedEntity = (await dbContext.Set<TEntity>().AddAsync(entity, GetCancellationToken(cancellationToken))).Entity;
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(GetCancellationToken(cancellationToken));
-        }
-
-        return savedEntity;
+        var dbContext = await GetTypedDbContextAsync();
+        return (await dbContext.Set<TEntity>().AddAsync(entity, cancellationToken)).Entity;
     }
 
-    public override async Task InsertManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override async Task InsertManyAsync(
+        IEnumerable<TEntity> entities,
+        CancellationToken cancellationToken = default)
     {
         var entityArray = entities.ToArray();
-        if (entityArray.IsNullOrEmptySet())
+        if (entityArray.Length == 0)
         {
             return;
         }
 
-        var dbContext = await GetDbContextAsync();
-        cancellationToken = GetCancellationToken(cancellationToken);
-
-        //if (BulkOperationProvider != null)
-        //{
-        //    await BulkOperationProvider.InsertManyAsync<TDbContext, TEntity>(
-        //        this,
-        //        entityArray,
-        //        autoSave,
-        //        GetCancellationToken(cancellationToken)
-        //    );
-        //    return;
-        //}
-
-        await dbContext.Set<TEntity>().AddRangeAsync(entityArray, cancellationToken);
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
+        await (await GetDbSetAsync()).AddRangeAsync(entityArray, cancellationToken);
     }
 
-    public override async Task<TEntity> UpdateAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override void Attach(TEntity entity)
     {
-        var dbContext = await GetDbContextAsync();
-        //dbContext.Set<TEntity>().Attach(entity);
-        dbContext.Update(entity);
-        //if (dbContext.Set<TEntity>().Local.All(e => e != entity))
-        //{
-
-        //}
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(GetCancellationToken(cancellationToken));
-        }
-
-        return entity;
+        GetTypedDbContextAsync().GetAwaiter().GetResult().Set<TEntity>().Attach(entity);
     }
 
-    public override async Task UpdateManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override void Update(TEntity entity)
+    {
+        GetTypedDbContextAsync().GetAwaiter().GetResult().Update(entity);
+    }
+
+    /// <inheritdoc />
+    public override async Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
+    {
+        var dbSet = await GetDbSetAsync();
+        dbSet.Remove(entity);
+        await Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override async Task DeleteManyAsync(
+        IEnumerable<TEntity> entities,
+        CancellationToken cancellationToken = default)
     {
         var entityArray = entities.ToArray();
-        if (entityArray.IsNullOrEmptySet())
+        if (entityArray.Length == 0)
         {
             return;
         }
 
-        cancellationToken = GetCancellationToken(cancellationToken);
-
-        //if (BulkOperationProvider != null)
-        //{
-        //    await BulkOperationProvider.UpdateManyAsync<TDbContext, TEntity>(
-        //        this,
-        //        entityArray,
-        //        autoSave,
-        //        GetCancellationToken(cancellationToken)
-        //        );
-
-        //    return;
-        //}
-
-        var dbContext = await GetDbContextAsync();
-
-        dbContext.Set<TEntity>().UpdateRange(entityArray);
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
+        var dbContext = await GetTypedDbContextAsync();
+        dbContext.RemoveRange(entityArray);
     }
 
-    public override async Task DeleteAsync(TEntity entity, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        var dbContext = await GetDbContextAsync();
-
-        dbContext.Set<TEntity>().Remove(entity);
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(GetCancellationToken(cancellationToken));
-        }
-    }
-
-    // Pitfall: ChangeTracker only refreshes entity states to Modified when ChangeTracker.Entries() is called
-    // (internally invoking ChangeTracker.DetectChanges). If no value changes are detected, the state remains Unchanged.
-    // In data synchronization scenarios, Delete operations may therefore not trigger an update as expected.
-    public override async Task DeleteManyAsync(IEnumerable<TEntity> entities, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        var entityArray = entities.ToArray();
-        if (entityArray.IsNullOrEmptySet())
-        {
-            return;
-        }
-
-        //cancellationToken = GetCancellationToken(cancellationToken);
-
-        //if (BulkOperationProvider != null)
-        //{
-        //    await BulkOperationProvider.DeleteManyAsync<TDbContext, TEntity>(
-        //        this,
-        //        entityArray,
-        //        autoSave,
-        //        cancellationToken
-        //    );
-
-        //    return;
-        //}
-
-        var dbContext = await GetDbContextAsync();
-
-        dbContext.RemoveRange(entityArray.Select(x => x));
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-    }
-
-    public override async Task<List<TEntity>> GetListAsync(bool includeDetails = false, CancellationToken cancellationToken = default)
-    {
-        return includeDetails
-            ? await (await WithDetailsAsync()).ToListAsync(GetCancellationToken(cancellationToken))
-            : await (await GetQueryableAsync()).ToListAsync(GetCancellationToken(cancellationToken));
-    }
-
-    public override async Task<List<TEntity>> GetListAsync(Expression<Func<TEntity, bool>> predicate, bool includeDetails = false, CancellationToken cancellationToken = default)
-    {
-        return includeDetails
-            ? await (await WithDetailsAsync()).Where(predicate).ToListAsync(GetCancellationToken(cancellationToken))
-            : await (await GetQueryableAsync()).Where(predicate).ToListAsync(GetCancellationToken(cancellationToken));
-    }
-
-    public override async Task<long> GetCountAsync(CancellationToken cancellationToken = default)
-    {
-        return await (await GetQueryableAsync()).LongCountAsync(GetCancellationToken(cancellationToken));
-    }
-
-    public override async Task<IQueryable<TEntity>> GetQueryableAsync()
-    {
-        var queryable = (await GetDbSetAsync()).AsQueryable();
-        return queryable;
-    }
-
-    // TODO: Evaluate whether this can be optimized to FirstOrDefault.
-    public override async Task<TEntity?> FindAsync(
+    /// <inheritdoc />
+    public override async Task DeleteAsync(
         Expression<Func<TEntity, bool>> predicate,
-        bool includeDetails = true,
         CancellationToken cancellationToken = default)
     {
-        return includeDetails
-            ? await (await WithDetailsAsync())
-                .Where(predicate)
-                .SingleOrDefaultAsync(GetCancellationToken(cancellationToken))
-            : await (await GetQueryableAsync())
-                .Where(predicate)
-                .SingleOrDefaultAsync(GetCancellationToken(cancellationToken));
+        var entities = await AsTracking().GetListAsync(predicate, cancellationToken);
+
+        await DeleteManyAsync(entities, cancellationToken);
     }
 
-    public override async Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public override async Task<int> ExecuteUpdateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<UpdateSettersBuilder<TEntity>> setters,
+        CancellationToken cancellationToken = default)
     {
-        var dbContext = await GetDbContextAsync();
-        var dbSet = dbContext.Set<TEntity>();
-
-        var entities = await dbSet
+        return await (await GetDbSetAsync())
             .Where(predicate)
-            .ToListAsync(GetCancellationToken(cancellationToken));
-
-        await DeleteManyAsync(entities, autoSave, cancellationToken);
-
-        if (autoSave)
-        {
-            await dbContext.SaveChangesAsync(GetCancellationToken(cancellationToken));
-        }
+            .ExecuteUpdateAsync(setters, cancellationToken);
     }
 
-    public override async Task DeleteDirectAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        var dbContext = await GetDbContextAsync();
-        var dbSet = dbContext.Set<TEntity>();
-        await dbSet.Where(predicate).ExecuteDeleteAsync(GetCancellationToken(cancellationToken));
-    }
-
-    public virtual async Task EnsureCollectionLoadedAsync<TProperty>(TEntity entity,
-        Expression<Func<TEntity, IEnumerable<TProperty>>> propertyExpression,
-        CancellationToken cancellationToken)
-        where TProperty : class
-    {
-        await (await GetDbContextAsync())
-            .Entry(entity)
-            .Collection(propertyExpression)
-            .LoadAsync(GetCancellationToken(cancellationToken));
-    }
-
-    public virtual async Task EnsurePropertyLoadedAsync<TProperty>(
-        TEntity entity,
-        Expression<Func<TEntity, TProperty?>> propertyExpression,
+    /// <inheritdoc />
+    public override async Task<int> ExecuteDeleteAsync(
+        Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)
-        where TProperty : class
     {
-        await (await GetDbContextAsync())
-            .Entry(entity)
-            .Reference(propertyExpression)
-            .LoadAsync(GetCancellationToken(cancellationToken));
+        return await (await GetDbSetAsync())
+            .Where(predicate)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
-    public override async Task<IQueryable<TEntity>> WithDetailsAsync(params Expression<Func<TEntity, object>>[] propertySelectors)
+    /// <inheritdoc />
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return IncludeDetails(
-            await GetQueryableAsync(),
-            propertySelectors
-        );
-    }
-
-    private static IQueryable<TEntity> IncludeDetails(
-        IQueryable<TEntity> query,
-        Expression<Func<TEntity, object>>[] propertySelectors)
-    {
-        if (!propertySelectors.IsNullOrEmptySet())
+        var dbContext = await GetTypedDbContextAsync();
+        var current = dbContext.CachedServiceProvider.GetService<IUnitOfWorkManager>()?.Current;
+        if (current is { IsCompleted: false } unitOfWork &&
+            current is IUnitOfWorkInternals internals &&
+            internals.TryGetDbContext<TDbContext>() != null)
         {
-            foreach (var propertySelector in propertySelectors)
-            {
-                query = query.Include(propertySelector);
-            }
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return 0;
         }
 
-        return query;
+        return await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public IQueryable<TEntity> DisableSoftDeleteFilter(IQueryable<TEntity> queryable)
+    private async Task<IQueryable<TEntity>> CreateBaseQueryAsync()
     {
-        //TODO https://github.com/dotnet/efcore/issues/17347
-        return queryable.IgnoreQueryFilters();
+        return (await GetDbSetAsync()).AsQueryable();
+    }
+
+    private IRepositoryRead<TEntity> CreateReadScope()
+    {
+        return new EfRepositoryRead<TEntity>(CreateBaseQueryAsync, this);
     }
 }
 
-public class EfRepository<TDbContext, TEntity, TKey>(IDbContextProvider<TDbContext> dbContextProvider) : EfRepository<TDbContext, TEntity>(dbContextProvider), IRepository<TEntity, TKey>
+/// <summary>
+/// Entity Framework Core repository implementation for entities with a single primary key.
+/// </summary>
+public class EfRepository<TDbContext, TEntity, TKey>(
+    IDbContextProvider<TDbContext> dbContextProvider)
+    : EfRepository<TDbContext, TEntity>(dbContextProvider), IRepository<TEntity, TKey>
     where TDbContext : RepositoryDbContext<TDbContext>
     where TEntity : class, IEntity<TKey>
 {
-    public virtual async Task<TEntity> GetAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public virtual async Task<TEntity> GetAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        var entity = await FindAsync(id, includeDetails, GetCancellationToken(cancellationToken));
+        var entity = await FindAsync(id, cancellationToken);
 
         if (entity == null)
         {
@@ -341,35 +401,28 @@ public class EfRepository<TDbContext, TEntity, TKey>(IDbContextProvider<TDbConte
         return entity;
     }
 
-    public virtual async Task<TEntity?> FindAsync(TKey id, bool includeDetails = true, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public virtual async Task<TEntity?> FindAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        return includeDetails
-            ? await (await WithDetailsAsync()).OrderBy(e => e.Id).FirstOrDefaultAsync(e => e.Id!.Equals(id), GetCancellationToken(cancellationToken))
-            : await (await GetQueryableAsync()).OrderBy(e => e.Id).FirstOrDefaultAsync(e => e.Id!.Equals(id), GetCancellationToken(cancellationToken));
+        return await OrderBy(entity => entity.Id)
+            .FirstOrDefaultAsync(entity => entity.Id!.Equals(id), cancellationToken);
     }
 
-    public virtual async Task<bool> ExistAsync(TKey id)
+    /// <inheritdoc />
+    public virtual async Task<bool> ExistsAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        return (await GetQueryableAsync()).Any(s => s.Id!.Equals(id));
+        return await AnyAsync(entity => entity.Id!.Equals(id), cancellationToken);
     }
 
-    public virtual async Task DeleteAsync(TKey id, bool autoSave = false, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public virtual async Task DeleteAsync(TKey id, CancellationToken cancellationToken = default)
     {
-        var entity = await FindAsync(id, cancellationToken: cancellationToken);
+        var entity = await AsTracking().FirstOrDefaultAsync(entity => entity.Id!.Equals(id), cancellationToken);
         if (entity == null)
         {
             return;
         }
 
-        await DeleteAsync(entity, autoSave, cancellationToken);
-    }
-
-    public virtual async Task DeleteManyAsync(IEnumerable<TKey> ids, bool autoSave = false, CancellationToken cancellationToken = default)
-    {
-        cancellationToken = GetCancellationToken(cancellationToken);
-
-        var entities = await (await GetDbSetAsync()).Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
-
-        await DeleteManyAsync(entities, autoSave, cancellationToken);
+        await DeleteAsync(entity, cancellationToken);
     }
 }

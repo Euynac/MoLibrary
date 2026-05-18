@@ -14,35 +14,19 @@ public static class ServiceCollectionRepositoryExtensions
         Type repositoryImplementationType,
         bool replaceExisting = false)
     {
-        //IBasicRepository<TEntity>
-        var basicRepositoryInterface = typeof(IBasicRepository<>).MakeGenericType(entityType);
-        if (basicRepositoryInterface.IsAssignableFrom(repositoryImplementationType))
+        var repositoryInterface = typeof(IRepository<>).MakeGenericType(entityType);
+        if (repositoryInterface.IsAssignableFrom(repositoryImplementationType))
         {
-            RegisterService(services, basicRepositoryInterface, repositoryImplementationType, replaceExisting);
-
-            //IRepository<TEntity>
-            var repositoryInterface = typeof(IRepository<>).MakeGenericType(entityType);
-            if (repositoryInterface.IsAssignableFrom(repositoryImplementationType))
-            {
-                RegisterService(services, repositoryInterface, repositoryImplementationType, replaceExisting);
-            }
+            RegisterService(services, repositoryInterface, repositoryImplementationType, replaceExisting);
         }
 
         var primaryKeyType = EntityHelper.FindPrimaryKeyType(entityType);
         if (primaryKeyType != null)
         {
-            //IBasicRepository<TEntity, TKey>
-            var basicRepositoryInterfaceWithPk = typeof(IBasicRepository<,>).MakeGenericType(entityType, primaryKeyType);
-            if (basicRepositoryInterfaceWithPk.IsAssignableFrom(repositoryImplementationType))
+            var repositoryInterfaceWithPk = typeof(IRepository<,>).MakeGenericType(entityType, primaryKeyType);
+            if (repositoryInterfaceWithPk.IsAssignableFrom(repositoryImplementationType))
             {
-                RegisterService(services, basicRepositoryInterfaceWithPk, repositoryImplementationType, replaceExisting);
-
-                //IRepository<TEntity, TKey>
-                var repositoryInterfaceWithPk = typeof(IRepository<,>).MakeGenericType(entityType, primaryKeyType);
-                if (repositoryInterfaceWithPk.IsAssignableFrom(repositoryImplementationType))
-                {
-                    RegisterService(services, repositoryInterfaceWithPk, repositoryImplementationType, replaceExisting);
-                }
+                RegisterService(services, repositoryInterfaceWithPk, repositoryImplementationType, replaceExisting);
             }
         }
 

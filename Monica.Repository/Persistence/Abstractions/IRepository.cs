@@ -7,107 +7,129 @@ using Monica.Repository.Entity.Abstractions;
 namespace Monica.Repository.Persistence.Abstractions;
 
 /// <summary>
-/// Represents a repository interface for managing entities of type <typeparamref name="TEntity"/>.
+/// Defines the repository contract for managing entities of type <typeparamref name="TEntity"/>.
 /// </summary>
-/// <typeparam name="TEntity">The type of the entity managed by the repository.</typeparam>
+/// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
 /// <remarks>
-/// This interface extends multiple repository-related interfaces, providing a comprehensive set of methods
-/// for entity management, including basic CRUD operations, explicit loading, and dependency injection support.
+/// Repository write methods stage changes on the underlying DbContext. Call <see cref="SaveChangesAsync"/>
+/// to flush changes explicitly, or rely on an active unit of work to flush and commit at completion.
 /// </remarks>
-public interface IRepository<TEntity> : IBasicRepository<TEntity>, IRepository, ITransientDependency,
-    ISupportsExplicitLoading<TEntity>
+public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFeatures, ITransientDependency
     where TEntity : class, IEntity
 {
     /// <summary>
-    /// Disables the soft delete filter for the specified queryable.
+    /// Stages a new entity for insertion.
     /// </summary>
-    /// <param name="queryable">The queryable to disable the soft delete filter for.</param>
-    /// <returns>The queryable with the soft delete filter disabled.</returns>
-    IQueryable<TEntity> DisableSoftDeleteFilter(IQueryable<TEntity> queryable);
+    Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default);
+
     /// <summary>
-    /// Asynchronously retrieves the <see cref="DbSet{TEntity}"/> instance associated with the repository.
+    /// Stages multiple new entities for insertion.
     /// </summary>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
-    /// with a result of type <see cref="DbSet{TEntity}"/>.
-    /// </returns>
+    Task InsertManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Attaches an existing entity as unchanged.
+    /// </summary>
+    void Attach(TEntity entity);
+
+    /// <summary>
+    /// Marks a detached entity root as modified.
+    /// </summary>
+    void Update(TEntity entity);
+
+    /// <summary>
+    /// Stages an entity for deletion.
+    /// </summary>
+    Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages multiple entities for deletion.
+    /// </summary>
+    Task DeleteManyAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads entities matching the predicate and stages them for deletion.
+    /// </summary>
+    Task DeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a set-based update immediately against the database.
+    /// </summary>
     /// <remarks>
-    /// This method provides access to the underlying <see cref="DbSet{TEntity}"/> for the entity type <typeparamref name="TEntity"/>.
-    /// It is particularly useful for scenarios requiring direct interaction with the <see cref="DbSet{TEntity}"/>,
-    /// such as querying or manipulating entities using Entity Framework.
+    /// EF Core executes this operation immediately and does not update tracked entity instances.
+    /// When a unit of work transaction is active, the operation participates in that transaction.
     /// </remarks>
-    Task<DbSet<TEntity>> GetDbSetAsync();
-    /// <summary>
-    /// Conditional batch update
-    /// </summary>
-    /// <param name="predicate"></param>
-    /// <param name="setPropertyCalls"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task<int> ExecuteUpdateAsync(Expression<Func<TEntity, bool>> predicate,
-        Action<UpdateSettersBuilder<TEntity>> setPropertyCalls,
+    Task<int> ExecuteUpdateAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<UpdateSettersBuilder<TEntity>> setters,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Conditional batch deletion
+    /// Executes a set-based delete immediately against the database.
     /// </summary>
-    /// <param name="predicate"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate,
-        CancellationToken cancellationToken = default);
+    /// <remarks>
+    /// EF Core executes this operation immediately. Use <see cref="DeleteAsync(Expression{Func{TEntity, bool}}, CancellationToken)"/>
+    /// when soft-delete, auditing, and entity change events must run through tracked entities.
+    /// </remarks>
+    Task<int> ExecuteDeleteAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the DbContext associated with this repository.
+    /// </summary>
+    Task<DbContext> GetDbContextAsync();
+
+    /// <summary>
+    /// Gets the DbSet associated with this repository.
+    /// </summary>
+    Task<DbSet<TEntity>> GetDbSetAsync();
+
+    /// <summary>
+    /// Flushes staged changes.
+    /// </summary>
+    /// <remarks>
+    /// Inside an active unit of work this delegates to the unit of work and does not commit the transaction.
+    /// Outside a unit of work this saves the repository DbContext directly.
+    /// </remarks>
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
-// ReSharper disable once TypeParameterCanBeVariant
-public interface IRepository<TEntity, TKey> : IRepository<TEntity>, IBasicRepository<TEntity, TKey>
+/// <summary>
+/// Defines keyed repository operations for entities with a single primary key.
+/// </summary>
+/// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
+/// <typeparam name="TKey">The entity key type.</typeparam>
+public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
     where TEntity : class, IEntity<TKey>
 {
+    /// <summary>
+    /// Finds an entity by primary key.
+    /// </summary>
+    Task<TEntity?> FindAsync(TKey id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Gets an entity by primary key.
+    /// </summary>
+    /// <exception cref="Persistence.Exceptions.EntityNotFoundException">Thrown when the entity does not exist.</exception>
+    Task<TEntity> GetAsync(TKey id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns whether an entity with the primary key exists.
+    /// </summary>
+    Task<bool> ExistsAsync(TKey id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes an entity by primary key if it exists.
+    /// </summary>
+    Task DeleteAsync(TKey id, CancellationToken cancellationToken = default);
 }
 
-
 /// <summary>
-/// Repository layer method tag
-/// </summary>
-public interface IRepository : IRepositoryFeatures
-{
-    /// <summary>
-    /// Asynchronously retrieves the <see cref="DbContext"/> instance associated with the repository.
-    /// </summary>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
-    /// with a result of type <see cref="DbContext"/>.
-    /// </returns>
-    /// <remarks>
-    /// This method is useful for scenarios where direct access to the underlying database context
-    /// is required, such as executing raw SQL queries or leveraging advanced Entity Framework features.
-    /// </remarks>
-    Task<DbContext> GetDbContextAsync();
-    /// <summary>
-    /// Asynchronously saves all changes made in the repository to the underlying database.
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>
-    /// A <see cref="Task{TResult}"/> representing the asynchronous operation, 
-    /// with a result of type <see cref="int"/> that indicates the number of state entries written to the database.
-    /// </returns>
-    /// <remarks>
-    /// This method commits all tracked changes in the repository to the database. 
-    /// It is typically used to persist changes after performing operations such as adding, updating, or deleting entities.
-    /// </remarks>
-    Task<int> SaveChanges(CancellationToken cancellationToken = default);
-}
-
-
-/// <summary>
-/// Warehousing layer special functions
+/// Repository feature flags used by framework components.
 /// </summary>
 public interface IRepositoryFeatures
 {
-
     /// <summary>
-    /// This warehouse has performed table splitting operations
+    /// Returns whether the repository stores data in sharded tables where query ordering may need special handling.
     /// </summary>
-    /// <returns></returns>
     bool IsShardingTable() => false;
 }

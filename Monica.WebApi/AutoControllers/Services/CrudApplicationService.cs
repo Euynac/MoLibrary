@@ -125,7 +125,7 @@ public abstract class CrudApplicationService<TEntity, TGetOutputDto, TGetListOut
         if (input is IHasRequestIds<TKey> keys)
         {
             // TODO: Soft delete should be supported here.
-            await repository.DeleteDirectAsync(p => keys.Ids.Contains(p.Id));
+            await repository.ExecuteDeleteAsync(p => keys.Ids.Contains(p.Id));
             return ResEntityDeleteSuccess(string.Join(",", keys.Ids));
         }
 

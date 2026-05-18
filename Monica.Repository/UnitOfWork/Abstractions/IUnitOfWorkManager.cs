@@ -1,53 +1,37 @@
 using Monica.Repository.UnitOfWork.Models;
 
 namespace Monica.Repository.UnitOfWork.Abstractions;
+
 /// <summary>
-/// Defines the contract for managing units of work within the application.
+/// Manages ambient unit-of-work scopes.
 /// </summary>
-/// <remarks>
-/// A unit of work is a design pattern that maintains a list of operations 
-/// to be performed within a transactional boundary. This interface provides 
-/// methods to begin and manage such units of work.
-/// </remarks>
 public interface IUnitOfWorkManager
 {
     /// <summary>
-    /// Gets the current active unit of work, if any.
+    /// Gets the current active unit of work, or <see langword="null"/> when no scope is active.
     /// </summary>
-    /// <value>
-    /// An instance of <see cref="IUnitOfWork"/> representing the current unit of work,
-    /// or <c>null</c> if no unit of work is active.
-    /// </value>
     IUnitOfWork? Current { get; }
 
     /// <summary>
-    /// Begins a new unit of work with the specified options.
+    /// Begins a unit-of-work scope.
     /// </summary>
-    /// <param name="options">The options to configure the unit of work.</param>
-    /// <param name="requiresNew">
-    /// A boolean value indicating whether a new unit of work should be created 
-    /// even if there is an existing one.
-    /// </param>
-    /// <remarks>
-    /// Ensure the isolation level is configured correctly; otherwise, autoSave and SaveChanges calls made outside the UoW
-    /// may not be persisted to the database as expected.
-    /// </remarks>
-    /// <returns>
-    /// An instance of <see cref="IUnitOfWork"/> representing the newly created unit of work.
-    /// </returns>
-    IUnitOfWork Begin(UnitOfWorkOptions options, bool requiresNew = false);
+    /// <param name="options">Scope options. When omitted, a transactional scope is created.</param>
+    /// <returns>The opened unit-of-work scope.</returns>
+    IUnitOfWork BeginScope(UnitOfWorkScopeOptions? options = null);
 
     /// <summary>
-    /// Begins a new unit of work with the specified options.
+    /// Runs work inside a unit-of-work scope and completes it on success.
     /// </summary>
-    /// <param name="requiresNew">
-    /// A boolean value indicating whether a new unit of work should be created 
-    /// even if there is an existing one.
-    /// </param>
-    /// <returns>
-    /// An instance of <see cref="IUnitOfWork"/> representing the newly created unit of work.
-    /// </returns>
-    IUnitOfWork Begin(bool requiresNew = false);
+    Task RunAsync(
+        Func<Task> work,
+        UnitOfWorkScopeOptions? options = null,
+        CancellationToken cancellationToken = default);
 
-    IUnitOfWork BeginTransaction();
+    /// <summary>
+    /// Runs work inside a unit-of-work scope, completes it on success, and returns the result.
+    /// </summary>
+    Task<T> RunAsync<T>(
+        Func<Task<T>> work,
+        UnitOfWorkScopeOptions? options = null,
+        CancellationToken cancellationToken = default);
 }
