@@ -11,10 +11,10 @@ namespace Monica.Repository.Persistence.Abstractions;
 /// </summary>
 /// <typeparam name="TEntity">The entity type managed by the repository.</typeparam>
 /// <remarks>
-/// Repository write methods stage changes on the underlying DbContext. Call <see cref="SaveChangesAsync"/>
+/// Repository write methods stage changes on the underlying DbContext. Call <see cref="IRepositorySaveChanges.SaveChangesAsync"/>
 /// to flush changes explicitly, or rely on an active unit of work to flush and commit at completion.
 /// </remarks>
-public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFeatures, ITransientDependency
+public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFeatures, IRepositorySaveChanges, ITransientDependency
     where TEntity : class, IEntity
 {
     /// <summary>
@@ -83,14 +83,6 @@ public interface IRepository<TEntity> : IRepositoryRead<TEntity>, IRepositoryFea
     /// </summary>
     Task<DbSet<TEntity>> GetDbSetAsync();
 
-    /// <summary>
-    /// Flushes staged changes.
-    /// </summary>
-    /// <remarks>
-    /// Inside an active unit of work this delegates to the unit of work and does not commit the transaction.
-    /// Outside a unit of work this saves the repository DbContext directly.
-    /// </remarks>
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -132,4 +124,19 @@ public interface IRepositoryFeatures
     /// Returns whether the repository stores data in sharded tables where query ordering may need special handling.
     /// </summary>
     bool IsShardingTable() => false;
+}
+
+/// <summary>
+/// Defines the non-generic save contract shared by repository abstractions.
+/// </summary>
+public interface IRepositorySaveChanges
+{
+    /// <summary>
+    /// Flushes staged changes.
+    /// </summary>
+    /// <remarks>
+    /// Inside an active unit of work this delegates to the unit of work and does not commit the transaction.
+    /// Outside a unit of work this saves the repository DbContext directly.
+    /// </remarks>
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

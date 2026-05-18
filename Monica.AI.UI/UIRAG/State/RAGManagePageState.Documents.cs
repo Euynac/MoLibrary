@@ -38,7 +38,7 @@ public sealed partial class RAGManagePageState
             { nameof(ChunkViewerDialog.DocumentPath), view.DocumentPath },
             { nameof(ChunkViewerDialog.OriginalText), view.OriginalText },
             { nameof(ChunkViewerDialog.Chunks), view.Chunks },
-            { nameof(ChunkViewerDialog.MatchedChunkIndex), (int?)null },
+            { nameof(ChunkViewerDialog.MatchedChunkIndex), null },
             { nameof(ChunkViewerDialog.StatusText), statusText },
             { nameof(ChunkViewerDialog.SourceKind), view.SourceKind },
             { nameof(ChunkViewerDialog.SourceGroupKey), view.SourceGroupKey }

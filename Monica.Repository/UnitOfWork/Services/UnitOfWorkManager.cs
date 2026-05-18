@@ -91,11 +91,11 @@ public class UnitOfWorkManager(IServiceScopeFactory serviceScopeFactory)
                 scope.ServiceProvider,
                 options);
 
-            ((IUnitOfWorkInternals)unitOfWork).SetOuter(outerUow);
+            unitOfWork.SetOuter(outerUow);
 
             SetUnitOfWork(unitOfWork);
 
-            ((IUnitOfWorkInternals)unitOfWork).OnDisposed(() =>
+            unitOfWork.OnDisposed(() =>
             {
                 SetUnitOfWork(outerUow);
                 scope.Dispose();
