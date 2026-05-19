@@ -27,16 +27,13 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// </summary>
     [JsonInclude]
    // [Key]
-    public TKey Id { get; protected set; } = default!;
+    public TKey Id { get; set; } = default!;
 
     public override string ToString()
     {
         return $"[ENTITY: {GetType().Name}] Id = {Id}";
     }
-    public virtual void SetNewId(TKey key)
-    {
-        Id = key;
-    }
+
     public override object?[] GetKeys()
     {
         return [Id];
