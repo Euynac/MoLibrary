@@ -31,7 +31,7 @@ Create Monica unit tests under `tests/` using the shared root `Monica.UnitTests`
 
 ## Sociable Application Tests
 
-For Monica-based business applications, prefer the `monica-application-unit-testing` skill. It defines the service-level `Test.{Service}` architecture, collection fixtures, database isolation choices, and migration rules for command handlers, query handlers, domain services, repositories, and module-registration tests.
+For Monica-based business applications, prefer the `monica-application-unit-testing` skill. It defines the exact `Test.{ProductionProjectName}` architecture, collection fixtures, database isolation choices, and migration rules for command handlers, query handlers, domain services, repositories, and module-registration tests.
 
 Use `MonicaApplicationFixture<TStartupModule>` as the default when the service has a startup module. Keep `ApplicationServiceFixture<THandler>` as a fast path for narrow, fully substituted handler tests.
 

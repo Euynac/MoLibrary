@@ -8,16 +8,27 @@ Use this pattern for business application services and DDD modules. Infrastructu
 
 ## Project Layout
 
+The runnable test project name must be `Test.` plus the exact production project name. The folder, `.csproj` file, assembly name, and root namespace must match that value exactly.
+
+Examples:
+
+- `UserService.API.csproj` -> `Test.UserService.API/Test.UserService.API.csproj`
+- `AlarmService.API.csproj` -> `Test.AlarmService.API/Test.AlarmService.API.csproj`
+- `MessageService.Domain.csproj` -> `Test.MessageService.Domain/Test.MessageService.Domain.csproj`
+
+Do not drop suffixes such as `.API`, `.Domain`, `.Infrastructure`, `.Adaptor`, or `.WebAPI`. A shortened name like `Test.AlarmService` is not compliant when the project under test is `AlarmService.API`.
+
 ```text
-Test.AlarmService/
-  Test.AlarmService.csproj
+Test.UserService.API/
+  Test.UserService.API.csproj
   GlobalUsings.cs
   CollectionFixtures/
-    AlarmServiceCollection.cs
-    AlarmServiceTestFixture.cs
+    UserServiceCollection.cs
+    UserServiceTestFixture.cs
   HandlersCommand/
-    CommandHandlerAriseAlarmFlightTests.cs
+    CommandHandlerUserLoginTests.cs
   HandlersQuery/
+    QueryHandlerUserCheckTests.cs
   DomainServices/
   Repositories/
   Entities/
@@ -66,7 +77,7 @@ Do not replace application services, domain services, repositories, or mappers u
 - Delete tests that have no assertions, only `Console.WriteLine`, only performance loops, only random/manual output, or depend on untracked local files.
 - Migrate deterministic parser, validator, domain model, and branch behavior tests.
 - Convert old Moq/Shouldly/NUnit style to xUnit v3, NSubstitute, and AwesomeAssertions.
-- Keep names in `Test.*` form. Do not keep legacy names like `*.Xunit.Test`, `*.XUnit`, or `TestBase`.
+- Keep names in exact `Test.{ProductionProjectName}` form. Do not keep shortened names like `Test.AlarmService` for `AlarmService.API`, or legacy names like `*.Xunit.Test`, `*.XUnit`, or `TestBase`.
 
 ## Parallelism
 

@@ -1,6 +1,6 @@
 ---
 name: monica-application-unit-testing
-description: Use when creating, migrating, or reviewing sociable unit tests for Monica-based application or business services, including Test.{Service} project architecture, MonicaApplicationFixture collection fixtures, per-scope seam replacement, DbContext isolation, handler/domain-service/repository tests, and migration from mock-heavy legacy tests.
+description: Use when creating, migrating, or reviewing sociable unit tests for Monica-based application or business services, including Test.{ProductionProjectName} project architecture, MonicaApplicationFixture collection fixtures, per-scope seam replacement, DbContext isolation, handler/domain-service/repository tests, and migration from mock-heavy legacy tests.
 ---
 
 # Monica Application Unit Testing
@@ -9,7 +9,7 @@ Use sociable application tests for Monica-based business services. Boot the real
 
 ## When To Use
 
-- Create a `Test.{Service}` project for an application service.
+- Create a `Test.{ProductionProjectName}` project for an application service.
 - Migrate old NUnit/xUnit2/Moq/scratch tests into the new `Test.*` style.
 - Test command handlers, query handlers, domain services, repositories, and module/service registration in a Monica application.
 - Decide whether a test should use `MonicaApplicationFixture<TStartupModule>` or the fast-path `ApplicationServiceFixture<THandler>`.
@@ -18,7 +18,10 @@ Use sociable application tests for Monica-based business services. Boot the real
 ## Workflow
 
 1. Read the service's startup path first. Identify its module startup type or service runner and the DbContexts it registers.
-2. Create one runnable test project per service: `src/Tests/Test.{Service}` for business solutions or `tests/Test.Monica.{Project}` for Monica framework projects.
+2. Create one runnable test project per production project: `src/Tests/Test.{ProductionProjectName}` for business solutions or `tests/Test.Monica.{Project}` for Monica framework projects.
+   - `{ProductionProjectName}` is the exact `.csproj` file stem of the primary project under test.
+   - Examples: `UserService.API` -> `Test.UserService.API`; `AlarmService.API` -> `Test.AlarmService.API`; `MessageService.Domain` -> `Test.MessageService.Domain`.
+   - Do not shorten or normalize suffixes. `Test.AlarmService` is invalid when the production project is `AlarmService.API`.
 3. Add `CollectionFixtures/{Service}Collection.cs` and `{Service}TestFixture.cs`. The fixture should derive from `MonicaApplicationFixture<TStartupModule>` when the service has a startup module.
 4. Override fixture defaults only for boundaries:
    - test databases
@@ -36,7 +39,8 @@ Prefer `MonicaApplicationFixture<TStartupModule>` for application services becau
 
 ## Required Conventions
 
-- Test project: `Test.{Service}` for business services, `Test.Monica.{Project}` for Monica framework projects.
+- Test project: `Test.{ProductionProjectName}` for business services, `Test.Monica.{Project}` for Monica framework projects.
+- Test project folder, `.csproj` file name, assembly name, and `RootNamespace` must all use the same `Test.{ProductionProjectName}` value.
 - Collection class: `{Service}Collection` with a public `Name` constant.
 - Fixture class: `{Service}TestFixture`.
 - Test class: `{TypeUnderTest}Tests`.
@@ -59,12 +63,12 @@ Prefer `MonicaApplicationFixture<TStartupModule>` for application services becau
 - `references/standards.md`
   - Stable architecture and migration rules.
 - `references/templates.md`
-  - Copyable collection, fixture, handler, repository, domain-service, module, and entity test skeletons.
+  - Copyable UserService.API-based collection, fixture, handler, query-handler, repository, module, and entity test skeletons.
 - `references/database-isolation.md`
   - Choosing between per-scope SQLite, shared SQLite with transaction rollback, and real provider-backed database tests.
 
 ## Validation
 
-- `dotnet test 'D:\Path\To\Solution\src\Tests\Test.{Service}\Test.{Service}.csproj'`
+- `dotnet test 'D:\Path\To\Solution\src\Tests\Test.{ProductionProjectName}\Test.{ProductionProjectName}.csproj'`
 - Run with `--logger "console;verbosity=detailed"` when checking fixture boot time.
 - Treat warnings from the touched test project as failures. Existing application warnings may be documented separately when they are outside the migration scope.

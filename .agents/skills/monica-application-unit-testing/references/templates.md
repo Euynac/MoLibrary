@@ -1,66 +1,118 @@
 # Sociable Application Test Templates
 
+These templates use `UserService.API` as the neutral business-service sample. When adapting them, keep the runnable test project name equal to `Test.` plus the exact production project name.
+
 ## Collection
 
 ```csharp
-namespace Test.AlarmService.CollectionFixtures;
+namespace Test.UserService.API.CollectionFixtures;
 
 [CollectionDefinition(Name)]
-public sealed class AlarmServiceCollection : ICollectionFixture<AlarmServiceTestFixture>
+public sealed class UserServiceCollection : ICollectionFixture<UserServiceTestFixture>
 {
-    public const string Name = "AlarmService";
+    public const string Name = "UserService";
 }
 ```
 
 ## Fixture
 
 ```csharp
-namespace Test.AlarmService.CollectionFixtures;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
-public sealed class AlarmServiceTestFixture : MonicaApplicationFixture<ModuleAlarmService>
+namespace Test.UserService.API.CollectionFixtures;
+
+public sealed class UserServiceTestFixture : PlatformApplicationFixture<CommandHandlerUserLogin>
 {
-    protected override void ConfigureDefaults(IServiceCollection services)
+    protected override void ConfigureMappings(TypeAdapterConfig config)
     {
-        base.ConfigureDefaults(services);
-        services.UseTestDatabase<AlarmDbContext>(DatabaseIsolation.PerScopeDatabase);
-        services.UseTestDatabase<AlarmHistoryDbContext>(DatabaseIsolation.PerScopeDatabase);
+        config.NewConfig<JwtAuthResult, ResponseUserLogin>();
+        config.NewConfig<User, ResponseUserCheck>()
+            .Map(destination => destination.OrganUnit, source => source.OrganUnit);
+        config.NewConfig<OrganUnit, DtoOrganUnit>();
     }
 
-    protected override void ConfigureModule(IHostApplicationBuilder builder)
+    protected override void ConfigureService(IServiceCollection services)
     {
-        new ModuleAlarmServiceGuide()
-            .Register(options =>
-            {
-                options.ProjectName = "Test.AlarmService";
-            });
+        AddTestDbContext<UserDbContext>(services);
+        AddRepository<IRepositoryUser, RepositoryUser>(services);
+        AddRepository<IRepositoryRole, RepositoryRole>(services);
+        AddRepository<IRepositoryPermission, RepositoryPermission>(services);
+
+        services.AddScoped<DomainUserManager>();
+        services.AddScoped<QueryHandlerUserCheck>();
+        services.AddScoped<CommandHandlerUserLogin>();
+        services.AddSingleton<IPasswordCrypto, PasswordCrypto>();
+        services.AddSingleton<IAeroLocalConfig, TestAeroLocalConfig>();
+        services.AddSingleton<ISnowflakeIdGenerator, SequentialTestSnowflakeIdGenerator>();
+
+        services.RemoveAll<IJwtAuthManager>();
+        services.AddSingleton<IJwtAuthManager, StubJwtAuthManager>();
     }
 }
 ```
 
-If the business service has no Monica startup module, keep the sample on `ApplicationServiceFixture<THandler>` or introduce a business compatibility fixture that knows how to run that service's existing runner without external infrastructure.
+If the business service has a Monica startup module, derive from `MonicaApplicationFixture<TStartupModule>` and override the module guide/database options. If it has no startup module or the host is too broad for the scenario, use a business compatibility fixture such as `PlatformApplicationFixture<TService>` and register the real collaborators needed by the unit under test.
 
-## Handler Test
+## Command Handler Test
 
 ```csharp
-[Collection(AlarmServiceCollection.Name)]
-public sealed class CommandHandlerAriseAlarmFlightTests(AlarmServiceTestFixture app)
+[Collection(UserServiceCollection.Name)]
+public sealed class CommandHandlerUserLoginTests(UserServiceTestFixture app)
 {
-    private readonly AlarmServiceTestFixture _app = app;
+    private readonly UserServiceTestFixture _app = app;
 
     [Fact]
-    public async Task Handle_WhenAlarmDoesNotExist_ShouldInsertAndPublishFlight()
+    public async Task Handle_WhenCredentialsAreValid_ShouldIssueTokenWithBusinessClaims()
     {
-        await using var scope = _app.NewScope(replace => replace
-            .Substitute<IDistributedStateStore>(out var stateStore));
+        await using var scope = _app.NewScope(replace => replace.Substitute<IJwtAuthManager>(out _));
+        var jwt = scope.Resolve<IJwtAuthManager>();
+        var expectedToken = CreateJwtAuthResult("exam01");
+        Claim[] issuedClaims = [];
 
-        stateStore.GetStateAsync<List<DtoAlarmType>>(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns([new DtoAlarmType { Category = "FLT", AlarmCode = "001", IsSound = true }]);
+        jwt.GenerateTokens("exam01", Arg.Do<Claim[]>(claims => issuedClaims = claims), Arg.Any<DateTime?>())
+            .Returns(expectedToken);
+        await SeedLoginUserAsync(scope);
 
-        var handler = scope.Resolve<CommandHandlerAriseAlarmFlight>();
-        var result = await handler.Handle(new CommandAriseAlarmFlight(), scope.CancellationToken);
+        var handler = scope.Resolve<CommandHandlerUserLogin>();
+        var result = await handler.Handle(
+            new CommandUserLogin
+            {
+                Username = "exam01",
+                Password = "pass123",
+                GrantType = EGrantType.PasswordPlain
+            },
+            scope.CancellationToken);
 
         var data = result.ShouldSucceed();
-        data.AFID.Should().NotBeNullOrWhiteSpace();
+        data!.AccessToken.Should().Be(expectedToken.AccessToken);
+        issuedClaims.Should().Contain(claim => claim.Type == AuthorityClaimTypes.Username && claim.Value == "exam01");
+        jwt.Received(1).GenerateTokens("exam01", Arg.Any<Claim[]>(), Arg.Any<DateTime?>());
+    }
+}
+```
+
+## Query Handler Fast-Path Test
+
+```csharp
+public sealed class QueryHandlerUserCheckTests
+{
+    [Fact]
+    public async Task Handle_WhenUserDoesNotExist_ShouldReturnBadRequest()
+    {
+        const string username = "missing";
+        using var fixture = PlatformApplicationServiceFixture
+            .Builder<QueryHandlerUserCheck>()
+            .WithSubstitute<IRepositoryUser>(out var repository)
+            .Build();
+
+        repository.GetUserInfo(username).Returns(Task.FromResult<User?>(null));
+
+        var result = await fixture.Service.Handle(
+            new QueryUserCheck { Username = username },
+            CancellationToken.None);
+
+        result.ShouldFail(ResStatus.BadRequest, "user does not exist");
+        result.Data.Should().BeNull();
     }
 }
 ```
@@ -68,47 +120,24 @@ public sealed class CommandHandlerAriseAlarmFlightTests(AlarmServiceTestFixture 
 ## Repository Test
 
 ```csharp
-[Collection(AlarmServiceCollection.Name)]
-public sealed class RepositoryAlarmFlightTests(AlarmServiceTestFixture app)
+[Collection(UserServiceCollection.Name)]
+public sealed class RepositoryUserTests(UserServiceTestFixture app)
 {
-    private readonly AlarmServiceTestFixture _app = app;
+    private readonly UserServiceTestFixture _app = app;
 
     [Fact]
-    public async Task GetListAsync_WhenSeededWithMatchingRows_ShouldReturnMatches()
+    public async Task GetUserInfo_WhenUserExists_ShouldReturnUserWithOrganUnit()
     {
         await using var scope = _app.NewScope();
         await scope.SeedAsync(
-            AlarmFlightBuilder.Default().WithFpid(100).Build(),
-            AlarmFlightBuilder.Default().WithFpid(100).Build(),
-            AlarmFlightBuilder.Default().WithFpid(200).Build());
+            new OrganUnit { Id = 20, OrganName = "Test Tower", Code = "ZBAA-TWR" },
+            new User { Id = Guid.NewGuid(), Username = "exam01", Nickname = "Exam User", OrganUnitId = 20 });
 
-        var repository = scope.Resolve<IRepositoryAlarmFlight>();
-        var matches = await repository.GetListAsync(a => a.FPID == 100, scope.CancellationToken);
+        var repository = scope.Resolve<IRepositoryUser>();
+        var user = await repository.GetUserInfo("exam01");
 
-        matches.Should().HaveCount(2);
-    }
-}
-```
-
-## Domain Service Test
-
-```csharp
-[Collection(AlarmServiceCollection.Name)]
-public sealed class DomainPublishFlightTests(AlarmServiceTestFixture app)
-{
-    private readonly AlarmServiceTestFixture _app = app;
-
-    [Fact]
-    public async Task PublishFlight_WhenInputProvided_ShouldPublishAlarmFlightEvent()
-    {
-        await using var scope = _app.NewScope();
-
-        var service = scope.Resolve<DomainPublishFlight>();
-        var eventBus = scope.Resolve<RecordingEventBus>();
-
-        await service.PublishFlight([AlarmFlightDtoBuilder.Default().Build()], unProcess: true);
-
-        eventBus.Recorded<EventAlarmFlightEto>().Should().HaveCount(1);
+        user.Should().NotBeNull();
+        user!.OrganUnit.Should().NotBeNull();
     }
 }
 ```
@@ -116,16 +145,17 @@ public sealed class DomainPublishFlightTests(AlarmServiceTestFixture app)
 ## Module Registration Test
 
 ```csharp
-[Collection(AlarmServiceCollection.Name)]
-public sealed class AlarmServiceModuleTests(AlarmServiceTestFixture app)
+[Collection(UserServiceCollection.Name)]
+public sealed class UserServiceModuleTests(UserServiceTestFixture app)
 {
-    private readonly AlarmServiceTestFixture _app = app;
+    private readonly UserServiceTestFixture _app = app;
 
     [Fact]
     public void Module_WhenBooted_ShouldRegisterExpectedServices()
     {
-        _app.Services.GetService<IRepositoryAlarmFlight>().Should().NotBeNull();
-        _app.Services.GetService<DomainPublishFlight>().Should().NotBeNull();
+        _app.Services.GetService<IRepositoryUser>().Should().NotBeNull();
+        _app.Services.GetService<CommandHandlerUserLogin>().Should().NotBeNull();
+        _app.Services.GetService<IPasswordCrypto>().Should().NotBeNull();
     }
 }
 ```
@@ -133,14 +163,20 @@ public sealed class AlarmServiceModuleTests(AlarmServiceTestFixture app)
 ## Entity Invariant Test
 
 ```csharp
-public sealed class AlarmFlightTests
+public sealed class UserTests
 {
     [Fact]
-    public void AutoSetNewId_WhenIdIsZero_ShouldAssignId()
+    public void IsActive_WhenNewUserCreated_ShouldDefaultToExpectedState()
     {
-        var alarm = new AlarmFlight();
-        alarm.AutoSetNewId();
-        alarm.Id.Should().NotBe(0);
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = "exam01",
+            Nickname = "Exam User"
+        };
+
+        user.Username.Should().Be("exam01");
+        user.Nickname.Should().Be("Exam User");
     }
 }
 ```
