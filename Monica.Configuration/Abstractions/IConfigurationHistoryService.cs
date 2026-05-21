@@ -6,9 +6,8 @@ namespace Monica.Configuration.Abstractions;
 /// Provides the application-level history query API used by facades, endpoints, and UI surfaces.
 /// </summary>
 /// <remarks>
-/// This service is an orchestration boundary, not a storage adapter. Implementations may combine
-/// zero or more <see cref="IConfigurationHistorySource"/> instances, normalize ordering, and hide
-/// provider-specific history details from callers.
+/// This service is an orchestration boundary, not a storage adapter. Implementations use the selected
+/// <see cref="IConfigurationHistoryStore"/>, normalize ordering, and hide store-specific history details from callers.
 /// </remarks>
 public interface IConfigurationHistoryService
 {
@@ -19,7 +18,7 @@ public interface IConfigurationHistoryService
     /// <param name="logicalPath">The logical path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// History records from all history-capable sources, ordered for caller consumption.
+    /// History records from the active history store, ordered for caller consumption.
     /// </returns>
     Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoryAsync(string definitionKey, LogicalPath logicalPath, CancellationToken cancellationToken);
 
@@ -32,7 +31,7 @@ public interface IConfigurationHistoryService
     /// <param name="logicalPath">Logical path filter.</param>
     /// <param name="mutationGroupId">Mutation group filter.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Matching history records from all history-capable sources.</returns>
+    /// <returns>Matching history records from the active history store.</returns>
     Task<IReadOnlyList<ConfigurationValueHistory>> QueryHistoryAsync(
         DateTimeOffset? from,
         DateTimeOffset? to,

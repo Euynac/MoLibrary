@@ -15,8 +15,6 @@ public sealed class ConfigurationValueHistoryEntity
 
     public string? ConfigurationPath { get; set; }
 
-    public string SourceKey { get; set; } = "";
-
     public string MutationKind { get; set; } = "";
 
     public string Granularity { get; set; } = "";

@@ -48,7 +48,7 @@
       "Title": "配置调试"
     },
     "ConfigurationProviders": {
-      "Title": "配置来源"
+      "Title": "配置存储"
     },
     "RuntimeMetrics": {
       "Title": "运行时指标"

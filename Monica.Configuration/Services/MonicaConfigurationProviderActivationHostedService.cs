@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Hosting;
+using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Projection;
 
@@ -10,6 +11,9 @@ namespace Monica.Configuration.Services;
 internal sealed class MonicaConfigurationProviderActivationHostedService(
     IServiceProvider serviceProvider,
     MonicaConfigurationProviderAccessor accessor,
+    IConfigurationDefinitionRegistry definitionRegistry,
+    IConfigurationMetadataStore metadataStore,
+    IConfigurationStoreStateTracker stateTracker,
     IConfigurationReloadCoordinator reloadCoordinator)
     : IHostedService
 {
@@ -17,6 +21,17 @@ internal sealed class MonicaConfigurationProviderActivationHostedService(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         accessor.ServiceProvider = serviceProvider;
+        try
+        {
+            await metadataStore.PublishAsync(definitionRegistry.GetAll(), cancellationToken);
+            stateTracker.RecordSuccess(metadataStore.Descriptor.StoreKey);
+        }
+        catch (Exception ex)
+        {
+            stateTracker.RecordFailure(metadataStore.Descriptor.StoreKey, ex);
+            throw;
+        }
+
         await reloadCoordinator.ReloadAsync(cancellationToken);
     }
 

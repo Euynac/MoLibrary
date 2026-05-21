@@ -15,33 +15,25 @@ public sealed class ConfigurationDbContext(
 {
     public DbSet<ConfigurationDefinitionEntity> ConfigurationDefinitions => Set<ConfigurationDefinitionEntity>();
 
-    public DbSet<ConfigurationValueOverrideEntity> ConfigurationValueOverrides => Set<ConfigurationValueOverrideEntity>();
+    public DbSet<ConfigurationEffectiveValueEntity> ConfigurationEffectiveValues => Set<ConfigurationEffectiveValueEntity>();
 
     public DbSet<ConfigurationValueHistoryEntity> ConfigurationValueHistories => Set<ConfigurationValueHistoryEntity>();
 
     public DbSet<ConfigurationMutationGroupEntity> ConfigurationMutationGroups => Set<ConfigurationMutationGroupEntity>();
-
-    public DbSet<ConfigurationSourceStateEntity> ConfigurationSourceStates => Set<ConfigurationSourceStateEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<ConfigurationDefinitionEntity>().HasKey(x => x.DefinitionKey);
-        modelBuilder.Entity<ConfigurationValueOverrideEntity>().HasKey(x => x.OverrideId);
-        modelBuilder.Entity<ConfigurationValueOverrideEntity>()
-            .HasIndex(x => new { x.DefinitionKey, x.SourceKey, x.LogicalPath })
-            .IsUnique();
-        modelBuilder.Entity<ConfigurationValueOverrideEntity>()
-            .HasIndex(x => new { x.DefinitionKey, x.SourceKey, x.PathDepth });
+        modelBuilder.Entity<ConfigurationEffectiveValueEntity>().HasKey(x => x.DefinitionKey);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>().HasKey(x => x.HistoryId);
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
-            .HasIndex(x => new { x.DefinitionKey, x.SourceKey, x.PathDepth, x.ModifiedTime });
+            .HasIndex(x => new { x.DefinitionKey, x.PathDepth, x.ModifiedTime });
         modelBuilder.Entity<ConfigurationValueHistoryEntity>()
             .HasIndex(x => x.MutationGroupId);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>().HasKey(x => x.GroupId);
         modelBuilder.Entity<ConfigurationMutationGroupEntity>()
             .HasIndex(x => x.CreatedTime);
-        modelBuilder.Entity<ConfigurationSourceStateEntity>().HasKey(x => x.SourceKey);
     }
 }

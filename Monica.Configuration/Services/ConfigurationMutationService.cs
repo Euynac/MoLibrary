@@ -12,12 +12,14 @@ namespace Monica.Configuration.Services;
 /// </summary>
 internal sealed class ConfigurationMutationService(
     IConfigurationDefinitionRegistry definitionRegistry,
-    IEnumerable<IConfigurationValueSource> sources,
+    IConfigurationEffectiveValueStore effectiveValueStore,
+    IConfigurationHistoryStore historyStore,
+    ConfigurationEffectiveValueSeedFactory seedFactory,
+    ConfigurationEffectiveValueDocumentEditor documentEditor,
     ConfigurationValidationCoordinator validationCoordinator,
-    IConfigurationSensitiveValueProtector sensitiveValueProtector,
     ConfigurationPathProjector pathProjector,
     IConfigurationReloadCoordinator reloadCoordinator,
-    IEnumerable<IConfigurationChangeBroadcaster> broadcasters,
+    IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
     ConfigurationMetricsRecorder metricsRecorder)
     : IConfigurationMutationService
 {
@@ -26,30 +28,64 @@ internal sealed class ConfigurationMutationService(
     {
         var definition = definitionRegistry.GetRequired(request.DefinitionKey);
         validationCoordinator.Validate(definition, request);
-        var source = ResolveSource(request.TargetSourceKey);
         var targetNode = ResolveTargetNode(definition, request.LogicalPath);
         ValidateEditablePath(definition, request.LogicalPath);
-        var resolvedRequest = targetNode.IsSensitive
-            ? request with { Value = sensitiveValueProtector.Protect(request.Value) }
-            : request;
-        var mutation = new ConfigurationSourceMutation
-        {
-            Request = resolvedRequest,
-            Definition = definition,
-            TargetNode = targetNode,
-            SourceKey = source.Descriptor.SourceKey,
-            ConfigurationPath = pathProjector.Project(definition.SectionPath, resolvedRequest.LogicalPath),
-            Granularity = ResolveGranularity(resolvedRequest, targetNode)
-        };
+        var configurationPath = pathProjector.Project(definition.SectionPath, request.LogicalPath);
+        var granularity = ResolveGranularity(request, targetNode);
+
         ConfigurationMutationResult result;
         try
         {
-            result = await source.MutateAsync(mutation, cancellationToken);
-            metricsRecorder.RecordMutation(source.Descriptor.SourceKey);
+            var seedJson = seedFactory.CreateSeedJson(definition);
+            var existingDocument = await effectiveValueStore.EnsureCreatedAsync(definition, seedJson, cancellationToken);
+            var oldValue = documentEditor.ReadValue(definition, existingDocument.Json, request.LogicalPath);
+            var updatedJson = documentEditor.ApplyMutation(definition, existingDocument.Json, request);
+            var savedDocument = await effectiveValueStore.SaveAsync(new ConfigurationEffectiveValueSaveRequest
+            {
+                Definition = definition,
+                Json = updatedJson,
+                ExpectedVersion = request.ExpectedValueVersion,
+                Context = request.Context
+            }, cancellationToken);
+            var newValue = request.MutationKind == ConfigurationMutationKind.Remove
+                ? ConfigurationStoredValue.Null
+                : documentEditor.ReadValue(definition, savedDocument.Json, request.LogicalPath) ?? ConfigurationStoredValue.Null;
+
+            await historyStore.AppendHistoryAsync(new ConfigurationValueHistory
+            {
+                HistoryId = Guid.NewGuid().ToString("N"),
+                DefinitionKey = definition.DefinitionKey,
+                LogicalPath = request.LogicalPath,
+                ConfigurationPath = configurationPath,
+                MutationKind = request.MutationKind,
+                Granularity = granularity,
+                State = request.MutationKind == ConfigurationMutationKind.Remove
+                    ? ConfigurationValueState.Removed
+                    : ConfigurationValueState.Active,
+                OldValue = oldValue,
+                NewValue = newValue,
+                Version = savedDocument.Version,
+                SchemaVersion = definition.SchemaVersion,
+                ModifiedTime = savedDocument.LastModifiedTime,
+                ModifierId = request.Context.ModifierId,
+                ModifierName = request.Context.ModifierName,
+                Reason = request.Context.Reason,
+                MutationGroupId = request.Context.MutationGroupId
+            }, cancellationToken);
+
+            result = new ConfigurationMutationResult
+            {
+                DefinitionKey = definition.DefinitionKey,
+                LogicalPath = request.LogicalPath,
+                NewVersion = savedDocument.Version,
+                SchemaVersion = definition.SchemaVersion,
+                ModifiedTime = savedDocument.LastModifiedTime
+            };
+            metricsRecorder.RecordMutation(effectiveValueStore.Descriptor.StoreKey);
         }
         catch (Exception ex)
         {
-            metricsRecorder.RecordMutationFailure(source.Descriptor.SourceKey, ex.GetType().Name);
+            metricsRecorder.RecordMutationFailure(effectiveValueStore.Descriptor.StoreKey, ex.GetType().Name);
             throw;
         }
 
@@ -60,31 +96,16 @@ internal sealed class ConfigurationMutationService(
             NotificationId = Guid.NewGuid().ToString("N"),
             DefinitionKey = result.DefinitionKey,
             LogicalPath = result.LogicalPath,
-            SourceKey = source.Descriptor.SourceKey,
             Version = result.NewVersion,
             ChangedTime = result.ModifiedTime
         };
 
-        foreach (var broadcaster in broadcasters)
+        foreach (var notifier in changeNotifiers)
         {
-            await broadcaster.BroadcastAsync(notification, cancellationToken);
+            await notifier.NotifyAsync(notification, cancellationToken);
         }
 
         return result;
-    }
-
-    private IConfigurationValueSource ResolveSource(string? sourceKey)
-    {
-        var candidates = sources.ToArray();
-        if (!string.IsNullOrWhiteSpace(sourceKey))
-        {
-            return candidates.First(x => string.Equals(x.Descriptor.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return candidates
-            .Where(x => x.Descriptor.IsWritable)
-            .OrderByDescending(x => x.Descriptor.Priority)
-            .First();
     }
 
     private static ConfigurationNodeDefinition ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
@@ -155,12 +176,12 @@ internal sealed class ConfigurationMutationService(
         };
     }
 
-    private static ConfigurationOverrideGranularity ResolveGranularity(
+    private static ConfigurationMutationGranularity ResolveGranularity(
         ConfigurationMutationRequest request,
         ConfigurationNodeDefinition targetNode)
     {
         return request.MutationKind == ConfigurationMutationKind.Replace || targetNode.NodeKind != ConfigurationNodeKind.Scalar
-            ? ConfigurationOverrideGranularity.Container
-            : ConfigurationOverrideGranularity.Scalar;
+            ? ConfigurationMutationGranularity.Container
+            : ConfigurationMutationGranularity.Scalar;
     }
 }

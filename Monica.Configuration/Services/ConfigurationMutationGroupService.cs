@@ -7,7 +7,7 @@ namespace Monica.Configuration.Services;
 /// Default application-level service for persisted mutation groups.
 /// </summary>
 internal sealed class ConfigurationMutationGroupService(
-    IEnumerable<IConfigurationMutationGroupSource> groupSources,
+    IConfigurationHistoryStore historyStore,
     IConfigurationHistoryService historyService)
     : IConfigurationMutationGroupService
 {
@@ -18,7 +18,6 @@ internal sealed class ConfigurationMutationGroupService(
         ConfigurationMutationContext context,
         CancellationToken cancellationToken)
     {
-        var source = ResolveWritableSource();
         var now = DateTimeOffset.UtcNow;
         var group = new ConfigurationMutationGroup
         {
@@ -31,7 +30,7 @@ internal sealed class ConfigurationMutationGroupService(
             Status = ConfigurationMutationGroupStatus.Applied
         };
 
-        await source.UpsertAsync(group, cancellationToken);
+        await historyStore.UpsertGroupAsync(group, cancellationToken);
         return group;
     }
 
@@ -87,30 +86,13 @@ internal sealed class ConfigurationMutationGroupService(
         string? definitionKey,
         CancellationToken cancellationToken)
     {
-        var groups = new List<ConfigurationMutationGroup>();
-        foreach (var source in groupSources)
-        {
-            groups.AddRange(await source.ListAsync(from, to, definitionKey, cancellationToken));
-        }
-
-        return groups
-            .OrderByDescending(group => group.CreatedTime)
-            .ToArray();
+        return await historyStore.ListGroupsAsync(from, to, definitionKey, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<ConfigurationMutationGroup?> GetAsync(string groupId, CancellationToken cancellationToken)
     {
-        foreach (var source in groupSources)
-        {
-            var group = await source.GetAsync(groupId, cancellationToken);
-            if (group is not null)
-            {
-                return group;
-            }
-        }
-
-        return null;
+        return await historyStore.GetGroupAsync(groupId, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -124,16 +106,9 @@ internal sealed class ConfigurationMutationGroupService(
         Func<ConfigurationMutationGroup, ConfigurationMutationGroup> update,
         CancellationToken cancellationToken)
     {
-        var source = ResolveWritableSource();
-        var group = await source.GetAsync(groupId, cancellationToken)
+        var group = await historyStore.GetGroupAsync(groupId, cancellationToken)
             ?? throw new KeyNotFoundException($"Configuration mutation group '{groupId}' was not found.");
-        await source.UpsertAsync(update(group), cancellationToken);
-    }
-
-    private IConfigurationMutationGroupSource ResolveWritableSource()
-    {
-        return groupSources.FirstOrDefault()
-            ?? throw new InvalidOperationException("No configuration mutation group store is registered.");
+        await historyStore.UpsertGroupAsync(update(group), cancellationToken);
     }
 
     private static IReadOnlyList<string> NormalizeDefinitionKeys(IEnumerable<string> definitionKeys)

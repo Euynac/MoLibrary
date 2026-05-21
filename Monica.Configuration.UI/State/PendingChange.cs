@@ -53,11 +53,6 @@ public sealed record PendingChange
     public string? NewDisplayValue { get; init; }
 
     /// <summary>
-    /// Gets the target source key. When null, the backend selects the default writable source.
-    /// </summary>
-    public string? TargetSourceKey { get; init; }
-
-    /// <summary>
     /// Gets the expected schema version for validation.
     /// </summary>
     public int ExpectedSchemaVersion { get; init; }

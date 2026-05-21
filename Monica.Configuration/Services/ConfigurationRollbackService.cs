@@ -103,7 +103,6 @@ internal sealed class ConfigurationRollbackService(
             LogicalPath = history.LogicalPath,
             MutationKind = ConfigurationMutationKind.Remove,
             Value = ConfigurationStoredValue.Null,
-            TargetSourceKey = history.SourceKey,
             ExpectedSchemaVersion = history.SchemaVersion,
             Context = context
         };
@@ -117,11 +116,10 @@ internal sealed class ConfigurationRollbackService(
         {
             DefinitionKey = history.DefinitionKey,
             LogicalPath = history.LogicalPath,
-            MutationKind = history.Granularity == ConfigurationOverrideGranularity.Container
+            MutationKind = history.Granularity == ConfigurationMutationGranularity.Container
                 ? ConfigurationMutationKind.Replace
                 : ConfigurationMutationKind.Set,
             Value = history.OldValue!,
-            TargetSourceKey = history.SourceKey,
             ExpectedSchemaVersion = history.SchemaVersion,
             Context = context
         };

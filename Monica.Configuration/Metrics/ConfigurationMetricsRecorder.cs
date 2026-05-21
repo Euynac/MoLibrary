@@ -22,22 +22,22 @@ public sealed class ConfigurationMetricsRecorder(IMeterFactory meterFactory)
     /// <summary>
     /// Records one mutation.
     /// </summary>
-    /// <param name="sourceKey">The source key.</param>
-    public void RecordMutation(string sourceKey)
+    /// <param name="storeKey">The store key.</param>
+    public void RecordMutation(string storeKey)
     {
-        _mutationCounter.Add(1, new KeyValuePair<string, object?>("source", sourceKey));
+        _mutationCounter.Add(1, new KeyValuePair<string, object?>("store", storeKey));
     }
 
     /// <summary>
     /// Records one failed mutation.
     /// </summary>
-    /// <param name="sourceKey">The source key.</param>
+    /// <param name="storeKey">The store key.</param>
     /// <param name="exceptionType">The exception type.</param>
-    public void RecordMutationFailure(string sourceKey, string exceptionType)
+    public void RecordMutationFailure(string storeKey, string exceptionType)
     {
         _mutationFailureCounter.Add(
             1,
-            new KeyValuePair<string, object?>("source", sourceKey),
+            new KeyValuePair<string, object?>("store", storeKey),
             new KeyValuePair<string, object?>("exception.type", exceptionType));
     }
 

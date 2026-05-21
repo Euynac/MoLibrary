@@ -6,46 +6,6 @@ internal static class TestConfigurationFactory
 {
     public const string DefinitionKey = "Test.AppOptions";
 
-    public static ConfigurationSourceDescriptor Source(
-        string sourceKey,
-        int priority,
-        bool isWritable = true)
-    {
-        return new ConfigurationSourceDescriptor
-        {
-            SourceKey = sourceKey,
-            DisplayName = sourceKey,
-            Kind = ConfigurationSourceKind.Memory,
-            Priority = priority,
-            IsWritable = isWritable
-        };
-    }
-
-    public static ConfigurationValueOverride Override(
-        LogicalPath path,
-        string sourceKey = "memory:test",
-        string definitionKey = DefinitionKey,
-        string json = "\"value\"",
-        ConfigurationValueState state = ConfigurationValueState.Active,
-        ConfigurationOverrideGranularity granularity = ConfigurationOverrideGranularity.Scalar,
-        long version = 1)
-    {
-        return new ConfigurationValueOverride
-        {
-            OverrideId = Guid.NewGuid().ToString("N"),
-            DefinitionKey = definitionKey,
-            LogicalPath = path,
-            ConfigurationPath = null,
-            SourceKey = sourceKey,
-            Granularity = granularity,
-            State = state,
-            Value = ConfigurationStoredValue.Plain(json),
-            Version = version,
-            SchemaVersion = 1,
-            LastModifiedTime = DateTimeOffset.UtcNow
-        };
-    }
-
     public static ConfigurationDefinition Definition()
     {
         return new ConfigurationDefinition

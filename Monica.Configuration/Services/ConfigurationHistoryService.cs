@@ -4,14 +4,9 @@ using Monica.Configuration.Models;
 namespace Monica.Configuration.Services;
 
 /// <summary>
-/// Default application-level history service that aggregates provider history readers.
+/// Default application-level history service backed by the selected history store.
 /// </summary>
-/// <remarks>
-/// History sources remain provider-specific so non-audited value sources do not need to fake
-/// history support. This service is the single caller-facing entry point that merges those sources
-/// into one chronologically ordered result.
-/// </remarks>
-internal sealed class ConfigurationHistoryService(IEnumerable<IConfigurationHistorySource> historySources) : IConfigurationHistoryService
+internal sealed class ConfigurationHistoryService(IConfigurationHistoryStore historyStore) : IConfigurationHistoryService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<ConfigurationValueHistory>> GetHistoryAsync(
@@ -31,28 +26,13 @@ internal sealed class ConfigurationHistoryService(IEnumerable<IConfigurationHist
         string? mutationGroupId,
         CancellationToken cancellationToken)
     {
-        var histories = new List<ConfigurationValueHistory>();
-        foreach (var source in historySources)
-        {
-            histories.AddRange(await source.QueryHistoryAsync(from, to, definitionKey, logicalPath, mutationGroupId, cancellationToken));
-        }
-
-        return Sort(histories);
+        return Sort(await historyStore.QueryHistoryAsync(from, to, definitionKey, logicalPath, mutationGroupId, cancellationToken));
     }
 
     /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
-        foreach (var source in historySources)
-        {
-            var history = await source.GetHistoryByIdAsync(historyId, cancellationToken);
-            if (history is not null)
-            {
-                return history;
-            }
-        }
-
-        return null;
+        return await historyStore.GetHistoryByIdAsync(historyId, cancellationToken);
     }
 
     private static IReadOnlyList<ConfigurationValueHistory> Sort(IEnumerable<ConfigurationValueHistory> histories)

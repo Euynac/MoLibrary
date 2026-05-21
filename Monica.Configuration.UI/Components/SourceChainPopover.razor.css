@@ -1,6 +1,0 @@
-.source-chain-content {
-    width: min(42rem, calc(100vw - 2rem));
-    max-height: 28rem;
-    overflow: auto;
-    padding: 1rem;
-}

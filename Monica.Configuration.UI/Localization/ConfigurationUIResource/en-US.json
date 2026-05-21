@@ -13,7 +13,7 @@
       "Title": "Configuration Debug"
     },
     "ConfigurationProviders": {
-      "Title": "Configuration Providers"
+      "Title": "Configuration Storage"
     }
   },
   "State": {
@@ -44,9 +44,7 @@
     "Value": {
       "Sensitive": "Sensitive",
       "Required": "Required",
-      "RestartNeeded": "Restart needed",
-      "NoSource": "No source value",
-      "SourceSummary": "From {0}"
+      "RestartNeeded": "Restart needed"
     },
     "Editor": {
       "SensitivePlaceholder": "Configured. Leave empty to avoid changing the secret.",
@@ -59,7 +57,6 @@
   },
   "Value": {
     "Path": "Logical path",
-    "SourceChain": "Source chain",
     "States": {
       "Empty": "No value."
     }
@@ -67,7 +64,6 @@
   "Mutation": {
     "DefinitionKey": "Definition key",
     "LogicalPath": "Logical path",
-    "SourceKey": "Target source key",
     "MutationKind": "Mutation kind",
     "ReloadBehavior": "Reload behavior",
     "ExpectedValueVersion": "Expected value version",
@@ -94,10 +90,7 @@
     },
     "Columns": {
       "Time": "Time",
-      "Source": "Source",
-      "Kind": "Kind",
-      "State": "State",
-      "Version": "Version"
+      "Kind": "Kind"
     }
   },
   "Group": {
@@ -132,23 +125,29 @@
     "Empty": "The debug view is empty."
   },
   "Providers": {
-    "Subtitle": "Inspect registered configuration sources and their runtime state.",
-    "SearchPlaceholder": "Search providers",
-    "Empty": "No configuration providers were found.",
+    "Subtitle": "Inspect the active configuration store bundle and its runtime state.",
+    "Empty": "No configuration storage is registered.",
+    "Roles": {
+      "EffectiveValues": "Effective values",
+      "History": "History",
+      "Metadata": "Metadata"
+    },
     "Capabilities": {
-      "Writable": "Writable",
-      "Watch": "Watch",
-      "History": "History"
+      "EffectiveValues": "Effective values",
+      "History": "History",
+      "Metadata": "Metadata"
     },
     "State": {
       "Succeeded": "Healthy",
       "Failed": "Failed",
-      "Unknown": "No reload state recorded."
+      "Unknown": "No store operation recorded."
     },
-    "Actions": {
-      "LoadOverrides": "Load overrides"
-    },
-    "OverridesLoaded": "Loaded {0} overrides from {1}."
+    "Notifications": {
+      "Title": "Change notifications",
+      "Subtitle": "Cross-service hot reload requires a registered notifier implementation.",
+      "Registered": "Registered",
+      "NotRegistered": "Not registered"
+    }
   },
   "Dialogs": {
     "SaveGroup": {

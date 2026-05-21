@@ -55,27 +55,21 @@ public enum ConfigurationReloadBehavior
 }
 
 /// <summary>
-/// Identifies the backing technology of a configuration value source.
+/// Identifies the backing technology of a configuration store.
 /// </summary>
-public enum ConfigurationSourceKind
+public enum ConfigurationStoreKind
 {
-    JsonFile,
-    Database,
-    Redis,
-    DaprConfiguration,
-    Environment,
-    Memory,
-    SecretStore
+    File,
+    Database
 }
 
 /// <summary>
-/// Describes how an override participates in the merge process.
+/// Describes the lifecycle state of a stored configuration value.
 /// </summary>
 public enum ConfigurationValueState
 {
     Active,
-    RemovedOverride,
-    RemovedSubtree
+    Removed
 }
 
 /// <summary>
@@ -99,9 +93,9 @@ public enum ConfigurationStoredValueKind
 }
 
 /// <summary>
-/// Describes whether an override targets one scalar leaf or a whole container subtree.
+/// Describes whether a mutation targets one scalar leaf or a whole container subtree.
 /// </summary>
-public enum ConfigurationOverrideGranularity
+public enum ConfigurationMutationGranularity
 {
     Scalar,
     Container

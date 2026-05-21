@@ -38,13 +38,6 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" md="4">
-                    <MudTextField T="string"
-                                  @bind-Value="_targetSourceKey"
-                                  Label="@L["Mutation:SourceKey"]"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" md="4">
                     <MudNumericField T="long?"
                                      @bind-Value="_valueVersion"
                                      Label="@L["Mutation:ExpectedValueVersion"]"
@@ -82,7 +75,6 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
 
     private string _jsonText = "{}";
-    private string _targetSourceKey = string.Empty;
     private ConfigurationMutationKind _mutationKind = ConfigurationMutationKind.Replace;
     private long? _valueVersion;
     private string? _error;
@@ -98,7 +90,6 @@
 
     protected override void OnInitialized()
     {
-        _targetSourceKey = EffectiveValue?.EffectiveSourceKey ?? string.Empty;
         _valueVersion = EffectiveValue?.Version;
         if (!string.IsNullOrWhiteSpace(EffectiveValue?.DisplayValue))
         {
@@ -132,7 +123,6 @@
                 : ConfigurationStoredValue.Plain(json),
             OriginalDisplayValue = EffectiveValue?.DisplayValue,
             NewDisplayValue = _mutationKind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : json,
-            TargetSourceKey = string.IsNullOrWhiteSpace(_targetSourceKey) ? null : _targetSourceKey,
             ExpectedSchemaVersion = Definition.SchemaVersion,
             ExpectedValueVersion = _valueVersion,
             IsSensitive = Node.IsSensitive,

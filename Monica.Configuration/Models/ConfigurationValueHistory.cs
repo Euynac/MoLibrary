@@ -26,19 +26,14 @@ public sealed record ConfigurationValueHistory
     public string? ConfigurationPath { get; init; }
 
     /// <summary>
-    /// Gets the value source key.
-    /// </summary>
-    public required string SourceKey { get; init; }
-
-    /// <summary>
     /// Gets the mutation kind.
     /// </summary>
     public ConfigurationMutationKind MutationKind { get; init; }
 
     /// <summary>
-    /// Gets the override granularity.
+    /// Gets the mutation granularity.
     /// </summary>
-    public ConfigurationOverrideGranularity Granularity { get; init; }
+    public ConfigurationMutationGranularity Granularity { get; init; }
 
     /// <summary>
     /// Gets the resulting value state.

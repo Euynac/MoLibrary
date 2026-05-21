@@ -13,11 +13,9 @@ using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
 using Monica.Configuration.Projection;
-using Monica.Configuration.Providers.Environment;
-using Monica.Configuration.Providers.Json;
-using Monica.Configuration.Providers.Memory;
 using Monica.Configuration.Services;
 using Monica.Configuration.Services.Support;
+using Monica.Configuration.Stores.File;
 using Monica.Core;
 using Monica.Core.Modularity;
 using Monica.Core.Modularity.Abstractions;
@@ -113,32 +111,23 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<BootstrapSourcePipeline>();
         services.TryAddSingleton<IConfigurationBootstrapReader, ConfigurationBootstrapReader>();
         services.TryAddSingleton<IConfigurationSensitiveValueProtector, ConfigurationSensitiveValueProtector>();
-        services.TryAddSingleton<IConfigurationSourceStateTracker, ConfigurationSourceStateTracker>();
+        services.TryAddSingleton<IConfigurationStoreStateTracker, ConfigurationStoreStateTracker>();
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
-        services.TryAddSingleton<IConfigurationSourceChainService, ConfigurationSourceChainService>();
         services.TryAddSingleton<IConfigurationMutationService, ConfigurationMutationService>();
         services.TryAddSingleton<IConfigurationMutationGroupService, ConfigurationMutationGroupService>();
         services.TryAddSingleton<IConfigurationRollbackService, ConfigurationRollbackService>();
-        services.TryAddSingleton<IConfigurationOverrideNormalizer, ConfigurationOverrideNormalizer>();
-        services.TryAddSingleton<IConfigurationOverrideAggregator, ConfigurationOverrideAggregator>();
-        services.TryAddSingleton<IConfigurationMergeEngine, ConfigurationMergeEngine>();
-        services.TryAddSingleton<IConfigurationProjector, ConfigurationProjector>();
         services.TryAddSingleton<IConfigurationReloadCoordinator, ConfigurationProviderReloadCoordinator>();
         services.TryAddSingleton(_schemaHasher);
         services.TryAddSingleton<ConfigurationStoredValueCodec>();
         services.TryAddSingleton<ConfigurationValidationCoordinator>();
         services.TryAddSingleton<ConfigurationPathProjector>();
         services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
+        services.TryAddSingleton<ConfigurationContainerSnapshotEditor>();
+        services.TryAddSingleton<ConfigurationEffectiveValueDocumentEditor>();
+        services.TryAddSingleton<ConfigurationEffectiveValueSeedFactory>();
         services.TryAddSingleton(_providerAccessor);
         services.TryAddSingleton<ConfigurationMetricsRecorder>();
-        services.TryAddSingleton<MemoryConfigurationMutationGroupSource>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, JsonConfigurationValueSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, EnvironmentConfigurationValueSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, MemoryConfigurationValueSource>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationMutationGroupSource, MemoryConfigurationMutationGroupSource>(
-            serviceProvider => serviceProvider.GetRequiredService<MemoryConfigurationMutationGroupSource>()));
         services.AddHostedService<MonicaConfigurationProviderActivationHostedService>();
-        services.AddHostedService<ConfigurationSourceWatchHostedService>();
         services.TryAddSingleton<ConfigurationFacade>();
     }
 
@@ -231,17 +220,25 @@ public sealed class ModuleConfigurationGuide
     : ModuleGuide<ModuleConfiguration, ModuleConfigurationOption, ModuleConfigurationGuide>
 {
     /// <summary>
-    /// Registers a custom configuration value source.
+    /// Uses the file-backed store bundle for effective values, history, and metadata.
     /// </summary>
-    /// <typeparam name="TSource">The source implementation type.</typeparam>
+    /// <param name="configure">Optional file store configuration.</param>
     /// <returns>The module guide.</returns>
-    public ModuleConfigurationGuide AddValueSource<TSource>()
-        where TSource : class, IConfigurationValueSource
+    public ModuleConfigurationGuide UseFileConfigurationStore(Action<ConfigurationFileStoreOptions>? configure = null)
     {
         ConfigureServices(context =>
         {
-            context.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, TSource>());
-        }, secondKey: typeof(TSource).FullName);
+            context.Services.AddOptions<ConfigurationFileStoreOptions>();
+            if (configure is not null)
+            {
+                context.Services.Configure(configure);
+            }
+
+            context.Services.TryAddSingleton<FileConfigurationStore>();
+            context.Services.TryAddSingleton<IConfigurationEffectiveValueStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
+            context.Services.TryAddSingleton<IConfigurationHistoryStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
+            context.Services.TryAddSingleton<IConfigurationMetadataStore>(provider => provider.GetRequiredService<FileConfigurationStore>());
+        });
         return this;
     }
 }

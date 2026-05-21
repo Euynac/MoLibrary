@@ -4,9 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
-using Monica.Configuration.EfCore.Services;
-using Monica.Configuration.EfCore.Sources;
-using Monica.Configuration.EfCore.Sources.Internal;
+using Monica.Configuration.EfCore.Stores;
 using Monica.Configuration.Models;
 using Monica.Repository;
 using Monica.Core.Modularity;
@@ -23,12 +21,12 @@ namespace Monica.Modules;
 public static class ModuleConfigurationEfCoreBuilderExtensions
 {
     /// <summary>
-    /// Registers EF Core as a Monica.Configuration value source and schema publisher.
+    /// Registers EF Core as the Monica.Configuration distributed store bundle.
     /// </summary>
     /// <param name="guide">The configuration module guide.</param>
     /// <param name="optionsAction">DbContext configuration.</param>
     /// <returns>The configuration module guide.</returns>
-    public static ModuleConfigurationGuide UseEfCoreConfigurationStore(
+    public static ModuleConfigurationGuide UseDbConfigurationStore(
         this ModuleConfigurationGuide guide,
         Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
@@ -53,17 +51,13 @@ public sealed class ModuleConfigurationEfCore(ModuleConfigurationEfCoreOption op
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Replace(ServiceDescriptor.Scoped<IConfigurationDefinitionPublisher, EfCoreConfigurationDefinitionPublisher>());
-        services.TryAddSingleton<ConfigurationMutationGroupEfRepository>();
-        services.TryAddSingleton<DatabaseConfigurationValueSource>();
-        services.TryAddSingleton<EfCoreMutationGroupSource>();
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationValueSource, DatabaseConfigurationValueSource>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigurationHistorySource, DatabaseConfigurationValueSource>(
-            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationValueSource>()));
-        services.Replace(ServiceDescriptor.Singleton<IConfigurationMutationGroupSource>(
-            serviceProvider => serviceProvider.GetRequiredService<EfCoreMutationGroupSource>()));
-        services.AddSingleton<IHostedService, ConfigurationDefinitionPublishingHostedService>();
+        services.TryAddSingleton<DatabaseConfigurationStore>();
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationEffectiveValueStore>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationHistoryStore>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
+        services.Replace(ServiceDescriptor.Singleton<IConfigurationMetadataStore>(
+            serviceProvider => serviceProvider.GetRequiredService<DatabaseConfigurationStore>()));
     }
 }
 

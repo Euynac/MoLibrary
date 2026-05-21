@@ -3,11 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
 using Monica.Configuration.Metrics;
+using Monica.Configuration.Services.Support;
 
 namespace Monica.Configuration.Projection;
 
 /// <summary>
-/// Single Microsoft.Extensions.Configuration provider that exposes the merged Monica configuration projection.
+/// Single Microsoft.Extensions.Configuration provider that exposes Monica effective value documents.
 /// </summary>
 internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAccessor accessor) : ConfigurationProvider
 {
@@ -18,7 +19,7 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
     }
 
     /// <summary>
-    /// Reloads source overrides and emits a new flat configuration projection.
+    /// Reloads effective value documents and emits a new flat configuration projection.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task ReloadAsync(CancellationToken cancellationToken)
@@ -31,16 +32,34 @@ internal sealed class MonicaConfigurationProvider(MonicaConfigurationProviderAcc
 
         var started = TimeProvider.System.GetTimestamp();
         var definitionRegistry = accessor.ServiceProvider.GetRequiredService<IConfigurationDefinitionRegistry>();
-        var aggregator = accessor.ServiceProvider.GetRequiredService<IConfigurationOverrideAggregator>();
-        var mergeEngine = accessor.ServiceProvider.GetRequiredService<IConfigurationMergeEngine>();
-        var projector = accessor.ServiceProvider.GetRequiredService<IConfigurationProjector>();
+        var effectiveValueStore = accessor.ServiceProvider.GetRequiredService<IConfigurationEffectiveValueStore>();
+        var seedFactory = accessor.ServiceProvider.GetRequiredService<ConfigurationEffectiveValueSeedFactory>();
+        var documentEditor = accessor.ServiceProvider.GetRequiredService<ConfigurationEffectiveValueDocumentEditor>();
         var metricsRecorder = accessor.ServiceProvider.GetRequiredService<ConfigurationMetricsRecorder>();
+        var stateTracker = accessor.ServiceProvider.GetRequiredService<IConfigurationStoreStateTracker>();
 
-        var sourceSets = await aggregator.LoadAsync(cancellationToken);
-        var merged = mergeEngine.Merge(sourceSets);
-        var projected = projector.Project(definitionRegistry.GetAll(), merged);
-        Data = projected.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
-        metricsRecorder.RecordReloadLatency(TimeProvider.System.GetElapsedTime(started));
-        OnReload();
+        try
+        {
+            var projected = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var definition in definitionRegistry.GetAll())
+            {
+                var seedJson = seedFactory.CreateSeedJson(definition);
+                var document = await effectiveValueStore.EnsureCreatedAsync(definition, seedJson, cancellationToken);
+                foreach (var (key, value) in documentEditor.Project(definition, document.Json))
+                {
+                    projected[key] = value;
+                }
+            }
+
+            Data = projected;
+            stateTracker.RecordSuccess(effectiveValueStore.Descriptor.StoreKey);
+            metricsRecorder.RecordReloadLatency(TimeProvider.System.GetElapsedTime(started));
+            OnReload();
+        }
+        catch (Exception ex)
+        {
+            stateTracker.RecordFailure(effectiveValueStore.Descriptor.StoreKey, ex);
+            throw;
+        }
     }
 }

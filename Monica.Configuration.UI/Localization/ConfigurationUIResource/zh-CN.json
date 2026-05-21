@@ -13,7 +13,7 @@
       "Title": "配置调试"
     },
     "ConfigurationProviders": {
-      "Title": "配置来源"
+      "Title": "配置存储"
     }
   },
   "State": {
@@ -44,9 +44,7 @@
     "Value": {
       "Sensitive": "敏感",
       "Required": "必填",
-      "RestartNeeded": "需要重启",
-      "NoSource": "无来源值",
-      "SourceSummary": "来自 {0}"
+      "RestartNeeded": "需要重启"
     },
     "Editor": {
       "SensitivePlaceholder": "已配置。留空表示不修改密钥。",
@@ -59,7 +57,6 @@
   },
   "Value": {
     "Path": "逻辑路径",
-    "SourceChain": "来源链",
     "States": {
       "Empty": "没有值。"
     }
@@ -67,7 +64,6 @@
   "Mutation": {
     "DefinitionKey": "定义 Key",
     "LogicalPath": "逻辑路径",
-    "SourceKey": "目标来源 Key",
     "MutationKind": "修改类型",
     "ReloadBehavior": "重载行为",
     "ExpectedValueVersion": "期望值版本",
@@ -94,10 +90,7 @@
     },
     "Columns": {
       "Time": "时间",
-      "Source": "来源",
-      "Kind": "类型",
-      "State": "状态",
-      "Version": "版本"
+      "Kind": "类型"
     }
   },
   "Group": {
@@ -132,23 +125,29 @@
     "Empty": "调试视图为空。"
   },
   "Providers": {
-    "Subtitle": "查看已注册配置来源及其运行状态。",
-    "SearchPlaceholder": "搜索配置来源",
-    "Empty": "未找到配置来源。",
+    "Subtitle": "查看当前配置存储组合及其运行状态。",
+    "Empty": "未注册配置存储。",
+    "Roles": {
+      "EffectiveValues": "有效值",
+      "History": "历史",
+      "Metadata": "元数据"
+    },
     "Capabilities": {
-      "Writable": "可写",
-      "Watch": "监听",
-      "History": "历史"
+      "EffectiveValues": "有效值",
+      "History": "历史",
+      "Metadata": "元数据"
     },
     "State": {
       "Succeeded": "正常",
       "Failed": "失败",
-      "Unknown": "尚无重载状态记录。"
+      "Unknown": "尚无存储操作记录。"
     },
-    "Actions": {
-      "LoadOverrides": "加载覆盖值"
-    },
-    "OverridesLoaded": "已从 {1} 加载 {0} 个覆盖值。"
+    "Notifications": {
+      "Title": "变更通知",
+      "Subtitle": "跨服务热重载需要注册通知实现。",
+      "Registered": "已注册",
+      "NotRegistered": "未注册"
+    }
   },
   "Dialogs": {
     "SaveGroup": {

@@ -21,11 +21,6 @@ public sealed record ConfigurationChangeNotification
     public LogicalPath? LogicalPath { get; init; }
 
     /// <summary>
-    /// Gets the source that changed.
-    /// </summary>
-    public string? SourceKey { get; init; }
-
-    /// <summary>
     /// Gets the new version.
     /// </summary>
     public long? Version { get; init; }

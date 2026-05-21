@@ -26,17 +26,12 @@ public sealed record ConfigurationEffectiveValue
     public string? DisplayValue { get; init; }
 
     /// <summary>
-    /// Gets the effective source key.
-    /// </summary>
-    public string? EffectiveSourceKey { get; init; }
-
-    /// <summary>
     /// Gets whether the value is sensitive.
     /// </summary>
     public bool IsSensitive { get; init; }
 
     /// <summary>
-    /// Gets the effective value version when source-backed.
+    /// Gets the effective document version.
     /// </summary>
     public long? Version { get; init; }
 }

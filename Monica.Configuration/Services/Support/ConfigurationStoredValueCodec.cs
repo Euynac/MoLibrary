@@ -6,7 +6,7 @@ namespace Monica.Configuration.Services.Support;
 /// <summary>
 /// Converts CLR values and stored payloads.
 /// </summary>
-internal sealed class ConfigurationStoredValueCodec
+public sealed class ConfigurationStoredValueCodec
 {
     /// <summary>
     /// Encodes a CLR value as a plain JSON stored value.

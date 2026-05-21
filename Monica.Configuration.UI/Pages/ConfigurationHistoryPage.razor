@@ -75,7 +75,6 @@
                             <MudTh>@L["History:Columns:Time"]</MudTh>
                             <MudTh>@L["State:Columns:Definition"]</MudTh>
                             <MudTh>@L["State:Columns:Path"]</MudTh>
-                            <MudTh>@L["History:Columns:Source"]</MudTh>
                             <MudTh>@L["History:Columns:Kind"]</MudTh>
                             <MudTh>@L["Group:Label"]</MudTh>
                             <MudTh />
@@ -84,7 +83,6 @@
                             <MudTd DataLabel="@L["History:Columns:Time"]">@context.ModifiedTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Definition"]">@DefinitionDisplay(context.DefinitionKey)</MudTd>
                             <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                            <MudTd DataLabel="@L["History:Columns:Source"]">@context.SourceKey</MudTd>
                             <MudTd DataLabel="@L["History:Columns:Kind"]">@context.MutationKind</MudTd>
                             <MudTd DataLabel="@L["Group:Label"]">@GroupLabel(context.MutationGroupId)</MudTd>
                             <MudTd>

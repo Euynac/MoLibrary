@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageDescription>EF Core persistence provider for Monica.Configuration definitions, overrides, history, and source state.</PackageDescription>
+    <PackageDescription>EF Core persistence provider for Monica.Configuration effective values, metadata, and history.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>

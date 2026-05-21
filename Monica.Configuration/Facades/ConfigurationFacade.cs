@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Models;
+using Monica.Configuration.Services.Support;
 using Monica.Core.Extensions;
 using Monica.Core.Results;
 using Monica.Tool.Extensions;
@@ -15,11 +16,15 @@ public sealed class ConfigurationFacade(
     IConfigurationDefinitionRegistry definitionRegistry,
     IConfigurationMutationService mutationService,
     IConfigurationHistoryService historyService,
-    IConfigurationSourceChainService sourceChainService,
     IConfigurationMutationGroupService mutationGroupService,
     IConfigurationRollbackService rollbackService,
-    IConfigurationSourceStateTracker sourceStateTracker,
-    IEnumerable<IConfigurationValueSource> valueSources,
+    IConfigurationEffectiveValueStore effectiveValueStore,
+    IConfigurationHistoryStore historyStore,
+    IConfigurationMetadataStore metadataStore,
+    IEnumerable<IConfigurationChangeNotifier> changeNotifiers,
+    IConfigurationStoreStateTracker storeStateTracker,
+    ConfigurationEffectiveValueDocumentEditor documentEditor,
+    ConfigurationStoredValueCodec codec,
     IConfiguration configuration)
 {
     /// <summary>
@@ -69,24 +74,6 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Gets the source chain for one configuration value.
-    /// </summary>
-    /// <param name="definitionKey">The definition key.</param>
-    /// <param name="logicalPath">The logical path.</param>
-    /// <returns>The source chain.</returns>
-    public async Task<Res<ConfigurationSourceChain>> GetSourceChainAsync(string definitionKey, LogicalPath logicalPath)
-    {
-        try
-        {
-            return await sourceChainService.GetSourceChainAsync(definitionKey, logicalPath, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"Failed to get configuration source chain: {ex.GetMessageRecursively()}");
-        }
-    }
-
-    /// <summary>
     /// Gets the display-safe effective value for one configuration path.
     /// </summary>
     /// <param name="definitionKey">The definition key.</param>
@@ -96,19 +83,20 @@ public sealed class ConfigurationFacade(
     {
         try
         {
-            var chain = await sourceChainService.GetSourceChainAsync(definitionKey, logicalPath, CancellationToken.None);
-            var effective = chain.Sources.FirstOrDefault(source =>
-                string.Equals(source.SourceKey, chain.EffectiveSourceKey, StringComparison.OrdinalIgnoreCase));
+            var definition = definitionRegistry.GetRequired(definitionKey);
+            var targetNode = ResolveTargetNode(definition, logicalPath);
+            var isSensitive = targetNode?.IsSensitive is true;
+            var document = await effectiveValueStore.GetAsync(definitionKey, CancellationToken.None);
+            var value = document is null ? null : documentEditor.ReadValue(definition, document.Json, logicalPath);
 
             return new ConfigurationEffectiveValue
             {
                 DefinitionKey = definitionKey,
                 LogicalPath = logicalPath,
-                ConfigurationPath = chain.ConfigurationPath,
-                DisplayValue = effective?.DisplayValue,
-                EffectiveSourceKey = chain.EffectiveSourceKey,
-                IsSensitive = effective?.IsSensitive ?? chain.Sources.Any(source => source.IsSensitive),
-                Version = effective?.Version
+                ConfigurationPath = targetNode?.ConfigurationPath,
+                DisplayValue = value is null || isSensitive ? null : codec.ToConfigurationString(value),
+                IsSensitive = isSensitive,
+                Version = document?.Version
             };
         }
         catch (Exception ex)
@@ -118,41 +106,42 @@ public sealed class ConfigurationFacade(
     }
 
     /// <summary>
-    /// Gets registered configuration value source descriptors.
+    /// Gets the active configuration storage overview.
     /// </summary>
-    /// <returns>The source descriptors.</returns>
-    public Task<Res<IReadOnlyList<ConfigurationSourceDescriptor>>> GetSourcesAsync()
+    /// <returns>The storage overview.</returns>
+    public Task<Res<ConfigurationStorageOverview>> GetStorageOverviewAsync()
     {
         try
         {
-            IReadOnlyList<ConfigurationSourceDescriptor> sources = valueSources
-                .Select(source => source.Descriptor)
-                .OrderByDescending(source => source.Priority)
-                .ThenBy(source => source.SourceKey, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-            return Task.FromResult(Res.Ok(sources));
+            return Task.FromResult(Res.Ok(new ConfigurationStorageOverview
+            {
+                EffectiveValueStore = effectiveValueStore.Descriptor,
+                HistoryStore = historyStore.Descriptor,
+                MetadataStore = metadataStore.Descriptor,
+                HasChangeNotifier = changeNotifiers.Any()
+            }));
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceDescriptor>>>(
-                Res.Fail($"Failed to get configuration sources: {ex.GetMessageRecursively()}"));
+            return Task.FromResult<Res<ConfigurationStorageOverview>>(
+                Res.Fail($"Failed to get configuration storage overview: {ex.GetMessageRecursively()}"));
         }
     }
 
     /// <summary>
-    /// Gets all runtime source states currently known by this process.
+    /// Gets all runtime store states currently known by this process.
     /// </summary>
-    /// <returns>The source states.</returns>
-    public Task<Res<IReadOnlyList<ConfigurationSourceState>>> GetSourceStatesAsync()
+    /// <returns>The store states.</returns>
+    public Task<Res<IReadOnlyList<ConfigurationStoreState>>> GetStoreStatesAsync()
     {
         try
         {
-            return Task.FromResult(Res.Ok(sourceStateTracker.GetStates()));
+            return Task.FromResult(Res.Ok(storeStateTracker.GetStates()));
         }
         catch (Exception ex)
         {
-            return Task.FromResult<Res<IReadOnlyList<ConfigurationSourceState>>>(
-                Res.Fail($"Failed to get configuration source states: {ex.GetMessageRecursively()}"));
+            return Task.FromResult<Res<IReadOnlyList<ConfigurationStoreState>>>(
+                Res.Fail($"Failed to get configuration store states: {ex.GetMessageRecursively()}"));
         }
     }
 
@@ -175,30 +164,6 @@ public sealed class ConfigurationFacade(
         catch (Exception ex)
         {
             return Task.FromResult<Res<string>>(Res.Fail($"Failed to get configuration debug view: {ex.GetMessageRecursively()}"));
-        }
-    }
-
-    /// <summary>
-    /// Gets all overrides currently exposed by one value source.
-    /// </summary>
-    /// <param name="sourceKey">The source key.</param>
-    /// <returns>The source overrides.</returns>
-    public async Task<Res<IReadOnlyList<ConfigurationValueOverride>>> GetSourceOverridesAsync(string sourceKey)
-    {
-        try
-        {
-            var source = valueSources.FirstOrDefault(candidate =>
-                string.Equals(candidate.Descriptor.SourceKey, sourceKey, StringComparison.OrdinalIgnoreCase));
-            if (source is null)
-            {
-                return Res.Fail($"Configuration source '{sourceKey}' was not found.");
-            }
-
-            return Res.Ok(await source.LoadAsync(CancellationToken.None));
-        }
-        catch (Exception ex)
-        {
-            return Res.Fail($"Failed to get configuration source overrides: {ex.GetMessageRecursively()}");
         }
     }
 
@@ -425,5 +390,28 @@ public sealed class ConfigurationFacade(
         {
             return Res.Fail($"Failed to roll back configuration mutation group: {ex.GetMessageRecursively()}");
         }
+    }
+
+    private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
+    {
+        var current = definition.Root;
+        foreach (var segment in logicalPath.Segments)
+        {
+            current = segment switch
+            {
+                PropertySegment property => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
     }
 }

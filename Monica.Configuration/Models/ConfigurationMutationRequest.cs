@@ -26,11 +26,6 @@ public sealed record ConfigurationMutationRequest
     public required ConfigurationStoredValue Value { get; init; }
 
     /// <summary>
-    /// Gets the target source key. When omitted, the default writable source is used.
-    /// </summary>
-    public string? TargetSourceKey { get; init; }
-
-    /// <summary>
     /// Gets the expected schema version.
     /// </summary>
     public int ExpectedSchemaVersion { get; init; }

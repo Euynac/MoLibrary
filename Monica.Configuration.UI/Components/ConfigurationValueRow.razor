@@ -34,18 +34,6 @@
                     }
                 </MudStack>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@PathLabel</MudText>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                    <MudButton Variant="Variant.Text"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Storage"
-                               OnClick="ToggleSourceChain">
-                        @SourceSummary
-                    </MudButton>
-                    <SourceChainPopover Open="@_sourceChainOpen"
-                                        OpenChanged="OnSourceChainOpenChanged"
-                                        DefinitionKey="@Definition.DefinitionKey"
-                                        LogicalPath="@Node.RelativePath" />
-                </MudStack>
             </MudStack>
         </MudItem>
 
@@ -94,17 +82,11 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
 
-    private bool _sourceChainOpen;
-
     private PendingChange? PendingChange => StateStore.Get(Definition.DefinitionKey, Node.RelativePath);
 
     private string DisplayName => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
 
     private string PathLabel => Node.RelativePath.Depth == 0 ? L["State:Tree:Root"] : Node.RelativePath.ToCanonicalString();
-
-    private string SourceSummary => EffectiveValue?.EffectiveSourceKey is null
-        ? L["State:Value:NoSource"]
-        : L["State:Value:SourceSummary", EffectiveValue.EffectiveSourceKey];
 
     private ConfigurationReloadBehavior EffectiveReloadBehavior =>
         Node.ReloadBehavior is { } behavior and not ConfigurationReloadBehavior.Inherit
@@ -123,7 +105,6 @@
             NewValue = result.StoredValue,
             OriginalDisplayValue = EffectiveValue?.DisplayValue,
             NewDisplayValue = result.DisplayValue,
-            TargetSourceKey = EffectiveValue?.EffectiveSourceKey,
             ExpectedSchemaVersion = Definition.SchemaVersion,
             ExpectedValueVersion = EffectiveValue?.Version,
             IsSensitive = Node.IsSensitive,
@@ -164,14 +145,4 @@
         await Changed.InvokeAsync();
     }
 
-    private void ToggleSourceChain()
-    {
-        _sourceChainOpen = !_sourceChainOpen;
-    }
-
-    private Task OnSourceChainOpenChanged(bool value)
-    {
-        _sourceChainOpen = value;
-        return Task.CompletedTask;
-    }
 }

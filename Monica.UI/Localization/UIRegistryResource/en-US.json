@@ -48,7 +48,7 @@
       "Title": "Configuration Debug"
     },
     "ConfigurationProviders": {
-      "Title": "Configuration Providers"
+      "Title": "Configuration Storage"
     },
     "RuntimeMetrics": {
       "Title": "Runtime Metrics"
