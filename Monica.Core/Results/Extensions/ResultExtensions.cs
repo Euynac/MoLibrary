@@ -114,6 +114,32 @@ public static class ResultExtensions
     }
 
     /// <summary>
+    /// Adds technical detail to <c>metadata.detail</c> while keeping <see cref="IResultEnvelope.Message"/>
+    /// reserved for user-facing text.
+    /// </summary>
+    /// <param name="res">The result envelope to enrich.</param>
+    /// <param name="detail">Technical detail intended for API callers, operations, or developers.</param>
+    public static T WithDetail<T>(this T res, object? detail) where T : IResultEnvelope
+    {
+        return detail is null ? res : res.SetMetadata("detail", detail);
+    }
+
+    /// <summary>
+    /// Adds formatted technical detail to <c>metadata.detail</c> while keeping
+    /// <see cref="IResultEnvelope.Message"/> reserved for user-facing text.
+    /// </summary>
+    /// <param name="res">The result envelope to enrich.</param>
+    /// <param name="format">Composite format string for technical detail.</param>
+    /// <param name="args">Composite format arguments.</param>
+    public static T WithDetail<T>(
+        this T res,
+        [StringSyntax("CompositeFormat")] string? format,
+        params object?[] args) where T : IResultEnvelope
+    {
+        return format is null ? res : res.WithDetail((object)string.Format(format, args));
+    }
+
+    /// <summary>
     /// [not 200] indicates a problem with the request
     /// </summary>
     public static bool IsFailed<T>(this Res<T> res, [NotNullWhen(true)] out Res? error, [MaybeNullWhen(true)]out T data)
