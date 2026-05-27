@@ -47,7 +47,7 @@
     "ConfigurationDebug": {
       "Title": "配置调试"
     },
-    "ConfigurationProviders": {
+    "ConfigurationStorage": {
       "Title": "配置存储"
     },
     "RuntimeMetrics": {

@@ -9,7 +9,7 @@ namespace Monica.Configuration.Services.Support;
 /// Reads and edits effective value JSON documents by Monica logical path.
 /// </summary>
 public sealed class ConfigurationEffectiveValueDocumentEditor(
-    ConfigurationContainerSnapshotEditor snapshotEditor,
+    ConfigurationEffectiveValuePatchEngine patchEngine,
     ConfigurationStoredValueCodec codec)
 {
     /// <summary>
@@ -21,33 +21,29 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
         {
             return request.MutationKind == ConfigurationMutationKind.Remove
                 ? "{}"
-                : RequirePlainJson(request.Value, request.LogicalPath);
+                : RequireJson(request.Value);
         }
 
-        var currentValue = ConfigurationStoredValue.Plain(NormalizeJson(currentJson));
         var updated = request.MutationKind switch
         {
-            ConfigurationMutationKind.Set => snapshotEditor.Patch(
-                currentValue,
+            ConfigurationMutationKind.Set => patchEngine.Patch(
+                NormalizeJson(currentJson),
                 definition,
-                LogicalPath.Root,
                 request.LogicalPath,
-                request.Value),
-            ConfigurationMutationKind.Replace => snapshotEditor.Patch(
-                currentValue,
+                RequireJson(request.Value)),
+            ConfigurationMutationKind.Replace => patchEngine.Patch(
+                NormalizeJson(currentJson),
                 definition,
-                LogicalPath.Root,
                 request.LogicalPath,
-                request.Value),
-            ConfigurationMutationKind.Remove => snapshotEditor.Remove(
-                currentValue,
+                RequireJson(request.Value)),
+            ConfigurationMutationKind.Remove => patchEngine.Remove(
+                NormalizeJson(currentJson),
                 definition,
-                LogicalPath.Root,
                 request.LogicalPath),
             _ => throw new ArgumentOutOfRangeException(nameof(request), request.MutationKind, "Unsupported mutation kind.")
         };
 
-        return NormalizeJson(updated.PlainJson ?? "{}");
+        return NormalizeJson(updated);
     }
 
     /// <summary>
@@ -58,7 +54,7 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
         var root = JsonNode.Parse(string.IsNullOrWhiteSpace(json) ? "{}" : json) ?? new JsonObject();
         if (logicalPath.Depth == 0)
         {
-            return ConfigurationStoredValue.Plain(root.ToJsonString());
+            return ConfigurationStoredValue.FromJson(root.ToJsonString());
         }
 
         var current = root;
@@ -75,7 +71,7 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
             currentSchema = childSchema;
         }
 
-        return ConfigurationStoredValue.Plain(current.ToJsonString());
+        return ConfigurationStoredValue.FromJson(current.ToJsonString());
     }
 
     /// <summary>
@@ -83,18 +79,12 @@ public sealed class ConfigurationEffectiveValueDocumentEditor(
     /// </summary>
     public IReadOnlyDictionary<string, string?> Project(ConfigurationDefinition definition, string json)
     {
-        return codec.ToConfigurationValues(definition.SectionPath, ConfigurationStoredValue.Plain(NormalizeJson(json)));
+        return codec.ToConfigurationValues(definition.SectionPath, ConfigurationStoredValue.FromJson(NormalizeJson(json)));
     }
 
-    private static string RequirePlainJson(ConfigurationStoredValue value, LogicalPath logicalPath)
+    private static string RequireJson(ConfigurationStoredValue value)
     {
-        if (value.Kind != ConfigurationStoredValueKind.PlainJson || value.PlainJson is null)
-        {
-            throw new ConfigurationValidationFailedException(
-                $"Value for '{logicalPath}' must be a plain JSON payload when editing an effective value document.");
-        }
-
-        return NormalizeJson(value.PlainJson);
+        return NormalizeJson(value.Json);
     }
 
     private static string NormalizeJson(string json)

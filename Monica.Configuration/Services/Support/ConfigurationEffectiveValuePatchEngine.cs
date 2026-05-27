@@ -2,94 +2,64 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
-using Monica.Configuration.Utils;
 
 namespace Monica.Configuration.Services.Support;
 
 /// <summary>
-/// Edits plain JSON container snapshots by logical path.
+/// Applies nested path mutations to one effective-value JSON document.
 /// </summary>
-public sealed class ConfigurationContainerSnapshotEditor
+public sealed class ConfigurationEffectiveValuePatchEngine
 {
     /// <summary>
-    /// Replaces one descendant value inside a container snapshot.
+    /// Replaces one nested value inside an effective-value document.
     /// </summary>
-    /// <param name="container">The container snapshot payload.</param>
-    /// <param name="definition">The schema definition that owns the snapshot.</param>
-    /// <param name="containerPath">The logical path represented by the snapshot.</param>
-    /// <param name="targetPath">The descendant logical path to patch.</param>
-    /// <param name="newValue">The replacement value payload.</param>
-    /// <returns>The patched container snapshot payload.</returns>
-    public ConfigurationStoredValue Patch(
-        ConfigurationStoredValue container,
+    /// <param name="documentJson">The current effective-value document.</param>
+    /// <param name="definition">The schema definition that owns the document.</param>
+    /// <param name="targetPath">The nested logical path to patch.</param>
+    /// <param name="newValueJson">The replacement JSON value.</param>
+    /// <returns>The patched effective-value document.</returns>
+    public string Patch(
+        string documentJson,
         ConfigurationDefinition definition,
-        LogicalPath containerPath,
         LogicalPath targetPath,
-        ConfigurationStoredValue newValue)
+        string newValueJson)
     {
-        var root = ParseContainer(container, containerPath);
-        var containerNode = ResolveNode(definition, containerPath);
-        if (newValue.Kind != ConfigurationStoredValueKind.PlainJson || newValue.PlainJson is null)
-        {
-            throw new ConfigurationValidationFailedException(
-                $"Value '{targetPath}' cannot patch container snapshot '{containerPath}' because it is not plain JSON.");
-        }
-
-        PatchNode(root, containerNode, GetRelativeSegments(containerPath, targetPath), JsonNode.Parse(newValue.PlainJson));
-        return ConfigurationStoredValue.Plain(root.ToJsonString());
+        var root = ParseDocument(documentJson);
+        PatchNode(root, definition.Root, GetNestedSegments(targetPath), JsonNode.Parse(newValueJson));
+        return root.ToJsonString();
     }
 
     /// <summary>
-    /// Removes one descendant value from a container snapshot.
+    /// Removes one nested value from an effective-value document.
     /// </summary>
-    /// <param name="container">The container snapshot payload.</param>
-    /// <param name="definition">The schema definition that owns the snapshot.</param>
-    /// <param name="containerPath">The logical path represented by the snapshot.</param>
-    /// <param name="targetPath">The descendant logical path to remove.</param>
-    /// <returns>The patched container snapshot payload.</returns>
-    public ConfigurationStoredValue Remove(
-        ConfigurationStoredValue container,
+    /// <param name="documentJson">The current effective-value document.</param>
+    /// <param name="definition">The schema definition that owns the document.</param>
+    /// <param name="targetPath">The nested logical path to remove.</param>
+    /// <returns>The patched effective-value document.</returns>
+    public string Remove(
+        string documentJson,
         ConfigurationDefinition definition,
-        LogicalPath containerPath,
         LogicalPath targetPath)
     {
-        var root = ParseContainer(container, containerPath);
-        var containerNode = ResolveNode(definition, containerPath);
-        RemoveNode(root, containerNode, GetRelativeSegments(containerPath, targetPath));
-        return ConfigurationStoredValue.Plain(root.ToJsonString());
+        var root = ParseDocument(documentJson);
+        RemoveNode(root, definition.Root, GetNestedSegments(targetPath));
+        return root.ToJsonString();
     }
 
-    private static IReadOnlyList<ConfigurationPathSegment> GetRelativeSegments(LogicalPath containerPath, LogicalPath targetPath)
+    private static IReadOnlyList<ConfigurationPathSegment> GetNestedSegments(LogicalPath targetPath)
     {
-        if (!ConfigurationPathTokenizer.StartsWith(targetPath, containerPath))
+        if (targetPath.Depth == 0)
         {
             throw new ConfigurationValidationFailedException(
-                $"Path '{targetPath}' is not inside container snapshot '{containerPath}'.");
+                "Root document mutations must be applied by the effective-value document editor.");
         }
 
-        return targetPath.Segments.Skip(containerPath.Depth).ToArray();
+        return targetPath.Segments;
     }
 
-    private static JsonNode ParseContainer(ConfigurationStoredValue container, LogicalPath containerPath)
+    private static JsonNode ParseDocument(string documentJson)
     {
-        if (container.Kind != ConfigurationStoredValueKind.PlainJson || container.PlainJson is null)
-        {
-            throw new ConfigurationValidationFailedException(
-                $"Container snapshot '{containerPath}' cannot be patched because it is not plain JSON.");
-        }
-
-        return JsonNode.Parse(container.PlainJson) ?? new JsonObject();
-    }
-
-    private static ConfigurationNodeDefinition ResolveNode(ConfigurationDefinition definition, LogicalPath path)
-    {
-        var current = definition.Root;
-        foreach (var segment in path.Segments)
-        {
-            current = ResolveChildSchema(current, segment, path);
-        }
-
-        return current;
+        return JsonNode.Parse(documentJson) ?? new JsonObject();
     }
 
     private static void PatchNode(
@@ -145,8 +115,7 @@ public sealed class ConfigurationContainerSnapshotEditor
 
     private static ConfigurationNodeDefinition ResolveChildSchema(
         ConfigurationNodeDefinition current,
-        ConfigurationPathSegment segment,
-        LogicalPath? fullPath = null)
+        ConfigurationPathSegment segment)
     {
         var child = segment switch
         {
@@ -161,12 +130,7 @@ public sealed class ConfigurationContainerSnapshotEditor
         };
 
         return child ?? throw new ConfigurationValidationFailedException(
-            $"Path segment '{segment.Value}' does not exist in schema{FormatPathSuffix(fullPath)}.");
-    }
-
-    private static string FormatPathSuffix(LogicalPath? path)
-    {
-        return path is null ? string.Empty : $" for '{path}'";
+            $"Path segment '{segment.Value}' does not exist in schema.");
     }
 
     private static JsonNode GetOrCreateChild(

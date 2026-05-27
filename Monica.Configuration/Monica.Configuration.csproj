@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageDescription>Schema-first dynamic configuration module for Monica with runtime mutation, source-chain diagnostics, and Microsoft.Extensions.Configuration projection.</PackageDescription>
+    <PackageDescription>Schema-first dynamic configuration module for Monica with effective-value stores, audited runtime mutation, and Microsoft.Extensions.Configuration projection.</PackageDescription>
   </PropertyGroup>
 
   <ItemGroup>

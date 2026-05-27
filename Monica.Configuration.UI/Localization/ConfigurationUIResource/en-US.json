@@ -12,7 +12,7 @@
     "ConfigurationDebug": {
       "Title": "Configuration Debug"
     },
-    "ConfigurationProviders": {
+    "ConfigurationStorage": {
       "Title": "Configuration Storage"
     }
   },
@@ -124,7 +124,7 @@
     "SearchPlaceholder": "Search debug view",
     "Empty": "The debug view is empty."
   },
-  "Providers": {
+  "Storage": {
     "Subtitle": "Inspect the active configuration store bundle and its runtime state.",
     "Empty": "No configuration storage is registered.",
     "Roles": {

@@ -106,7 +106,7 @@
 
     private static string? DisplayValue(ConfigurationStoredValue? value)
     {
-        return value?.PlainJson ?? value?.SecretReference ?? value?.ProtectedPayload;
+        return value?.Json;
     }
 
     private void Cancel()

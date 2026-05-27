@@ -190,7 +190,7 @@
         rawJson ??= JsonSerializer.Serialize(displayValue);
         await ValueChanged.InvokeAsync(new ConfigurationScalarEditResult
         {
-            StoredValue = ConfigurationStoredValue.Plain(rawJson),
+            StoredValue = ConfigurationStoredValue.FromJson(rawJson),
             DisplayValue = displayValue
         });
     }

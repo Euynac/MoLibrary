@@ -11,7 +11,7 @@ public class ConfigurationEffectiveValueDocumentEditorTests
     public void ApplyMutation_WhenPathTargetsKeyedListItem_ShouldPatchDocument()
     {
         var editor = new ConfigurationEffectiveValueDocumentEditor(
-            new ConfigurationContainerSnapshotEditor(),
+            new ConfigurationEffectiveValuePatchEngine(),
             new ConfigurationStoredValueCodec());
         var definition = TestConfigurationFactory.Definition();
         var path = TestConfigurationFactory.ConnectedDbPath("billing", "main")
@@ -36,7 +36,7 @@ public class ConfigurationEffectiveValueDocumentEditorTests
             DefinitionKey = definition.DefinitionKey,
             LogicalPath = path,
             MutationKind = ConfigurationMutationKind.Set,
-            Value = ConfigurationStoredValue.Plain("\"new\""),
+            Value = ConfigurationStoredValue.FromJson("\"new\""),
             ExpectedSchemaVersion = definition.SchemaVersion
         });
 
@@ -48,7 +48,7 @@ public class ConfigurationEffectiveValueDocumentEditorTests
     public void Project_WhenDocumentHasScalarsAndArrays_ShouldEmitMicrosoftConfigurationKeys()
     {
         var editor = new ConfigurationEffectiveValueDocumentEditor(
-            new ConfigurationContainerSnapshotEditor(),
+            new ConfigurationEffectiveValuePatchEngine(),
             new ConfigurationStoredValueCodec());
         var definition = TestConfigurationFactory.Definition();
 

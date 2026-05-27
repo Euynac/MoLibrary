@@ -26,9 +26,9 @@ internal static class ConfigurationUiRoutes
     public const string DEBUG_ROUTE = "/configuration/debug";
 
     /// <summary>
-    /// Gets the configuration providers route.
+    /// Gets the configuration storage route.
     /// </summary>
-    public const string PROVIDERS_ROUTE = "/configuration/providers";
+    public const string STORAGE_ROUTE = "/configuration/storage";
 
     /// <summary>
     /// Builds the history route for an optional target.

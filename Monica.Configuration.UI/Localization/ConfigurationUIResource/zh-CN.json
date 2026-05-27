@@ -12,7 +12,7 @@
     "ConfigurationDebug": {
       "Title": "配置调试"
     },
-    "ConfigurationProviders": {
+    "ConfigurationStorage": {
       "Title": "配置存储"
     }
   },
@@ -124,7 +124,7 @@
     "SearchPlaceholder": "搜索调试视图",
     "Empty": "调试视图为空。"
   },
-  "Providers": {
+  "Storage": {
     "Subtitle": "查看当前配置存储组合及其运行状态。",
     "Empty": "未注册配置存储。",
     "Roles": {

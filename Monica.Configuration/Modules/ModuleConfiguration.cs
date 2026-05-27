@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -8,7 +7,6 @@ using Microsoft.Extensions.Options;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.Abstractions.Internal;
-using Monica.Configuration.Bootstrap;
 using Monica.Configuration.Facades;
 using Monica.Configuration.Metrics;
 using Monica.Configuration.Models;
@@ -93,7 +91,7 @@ public sealed class ModuleConfiguration
     public override void ConfigureBuilder(IHostApplicationBuilder builder)
     {
         _configuration = builder.Configuration;
-        // This appends Monica's merged projection after the host's default providers.
+        // This appends Monica's effective-value projection after the host's bootstrap providers.
         // If callers add more Microsoft configuration providers later, their ordering relative to Monica
         // should become an explicit module option or guide method instead of relying on call order.
         builder.Configuration.Add(new MonicaConfigurationSource(_providerAccessor));
@@ -103,14 +101,7 @@ public sealed class ModuleConfiguration
     public override void ConfigureServices(IServiceCollection services)
     {
         _services = services;
-        services.AddDataProtection();
         services.TryAddSingleton<IConfigurationDefinitionRegistry>(_definitionRegistry);
-        services.TryAddSingleton<IConfigurationDefinitionScanner>(_definitionScanner);
-        services.TryAddSingleton<BootstrapJsonReader>();
-        services.TryAddSingleton<BootstrapEnvironmentReader>();
-        services.TryAddSingleton<BootstrapSourcePipeline>();
-        services.TryAddSingleton<IConfigurationBootstrapReader, ConfigurationBootstrapReader>();
-        services.TryAddSingleton<IConfigurationSensitiveValueProtector, ConfigurationSensitiveValueProtector>();
         services.TryAddSingleton<IConfigurationStoreStateTracker, ConfigurationStoreStateTracker>();
         services.TryAddSingleton<IConfigurationHistoryService, ConfigurationHistoryService>();
         services.TryAddSingleton<IConfigurationMutationService, ConfigurationMutationService>();
@@ -121,8 +112,7 @@ public sealed class ModuleConfiguration
         services.TryAddSingleton<ConfigurationStoredValueCodec>();
         services.TryAddSingleton<ConfigurationValidationCoordinator>();
         services.TryAddSingleton<ConfigurationPathProjector>();
-        services.TryAddSingleton<ConfigurationSchemaDriftDetector>();
-        services.TryAddSingleton<ConfigurationContainerSnapshotEditor>();
+        services.TryAddSingleton<ConfigurationEffectiveValuePatchEngine>();
         services.TryAddSingleton<ConfigurationEffectiveValueDocumentEditor>();
         services.TryAddSingleton<ConfigurationEffectiveValueSeedFactory>();
         services.TryAddSingleton(_providerAccessor);

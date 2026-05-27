@@ -1,7 +1,7 @@
 namespace Monica.Configuration.Models;
 
 /// <summary>
-/// Represents a persisted configuration value payload.
+/// Represents a JSON node value recorded by mutation and history operations.
 /// </summary>
 public sealed record ConfigurationStoredValue
 {
@@ -10,41 +10,24 @@ public sealed record ConfigurationStoredValue
     /// </summary>
     public static ConfigurationStoredValue Null { get; } = new()
     {
-        Kind = ConfigurationStoredValueKind.PlainJson,
-        PlainJson = "null"
+        Json = "null"
     };
 
     /// <summary>
-    /// Gets the storage payload kind.
+    /// Gets the JSON payload.
     /// </summary>
-    public ConfigurationStoredValueKind Kind { get; init; }
+    public required string Json { get; init; }
 
     /// <summary>
-    /// Gets the plain JSON payload for non-sensitive values.
-    /// </summary>
-    public string? PlainJson { get; init; }
-
-    /// <summary>
-    /// Gets the protected payload for sensitive values.
-    /// </summary>
-    public string? ProtectedPayload { get; init; }
-
-    /// <summary>
-    /// Gets the external secret reference when the value is stored out of band.
-    /// </summary>
-    public string? SecretReference { get; init; }
-
-    /// <summary>
-    /// Creates a plain JSON stored value.
+    /// Creates a stored JSON node value.
     /// </summary>
     /// <param name="json">The JSON payload.</param>
     /// <returns>The stored value.</returns>
-    public static ConfigurationStoredValue Plain(string json)
+    public static ConfigurationStoredValue FromJson(string json)
     {
         return new ConfigurationStoredValue
         {
-            Kind = ConfigurationStoredValueKind.PlainJson,
-            PlainJson = json
+            Json = json
         };
     }
 }

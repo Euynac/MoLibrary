@@ -2,7 +2,6 @@ using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Monica.Configuration.Abstractions;
 using Monica.Configuration.Annotations;
 using Monica.Configuration.Models;
 using Monica.Configuration.Services.Support;
@@ -12,9 +11,13 @@ namespace Monica.Configuration.Services;
 /// <summary>
 /// Reflection scanner that converts CLR options types into schema definitions.
 /// </summary>
-internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher hasher) : IConfigurationDefinitionScanner
+internal sealed class ConfigurationDefinitionScanner(ConfigurationSchemaHasher hasher)
 {
-    /// <inheritdoc />
+    /// <summary>
+    /// Creates the persisted schema definition for a registered configuration options type.
+    /// </summary>
+    /// <param name="optionsType">The marked options type to inspect.</param>
+    /// <returns>The discovered configuration definition.</returns>
     public ConfigurationDefinition Scan(Type optionsType)
     {
         var attribute = optionsType.GetCustomAttribute<ConfigurationAttribute>()

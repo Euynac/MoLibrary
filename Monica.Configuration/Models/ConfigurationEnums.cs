@@ -83,16 +83,6 @@ public enum ConfigurationMutationKind
 }
 
 /// <summary>
-/// Describes how a stored value payload is persisted.
-/// </summary>
-public enum ConfigurationStoredValueKind
-{
-    PlainJson,
-    ProtectedJson,
-    SecretReference
-}
-
-/// <summary>
 /// Describes whether a mutation targets one scalar leaf or a whole container subtree.
 /// </summary>
 public enum ConfigurationMutationGranularity

@@ -9,14 +9,14 @@ namespace Monica.Configuration.Services.Support;
 public sealed class ConfigurationStoredValueCodec
 {
     /// <summary>
-    /// Encodes a CLR value as a plain JSON stored value.
+    /// Encodes a CLR value as a JSON stored value.
     /// </summary>
     /// <typeparam name="TValue">The value type.</typeparam>
     /// <param name="value">The value.</param>
     /// <returns>The stored value.</returns>
     public ConfigurationStoredValue Encode<TValue>(TValue value)
     {
-        return ConfigurationStoredValue.Plain(JsonSerializer.Serialize(value));
+        return ConfigurationStoredValue.FromJson(JsonSerializer.Serialize(value));
     }
 
     /// <summary>
@@ -26,17 +26,7 @@ public sealed class ConfigurationStoredValueCodec
     /// <returns>The scalar value.</returns>
     public string? ToConfigurationString(ConfigurationStoredValue value)
     {
-        if (value.Kind != ConfigurationStoredValueKind.PlainJson)
-        {
-            return value.SecretReference is not null ? $"<secret:{value.SecretReference}>" : value.ProtectedPayload;
-        }
-
-        if (value.PlainJson is null)
-        {
-            return null;
-        }
-
-        using var document = JsonDocument.Parse(value.PlainJson);
+        using var document = JsonDocument.Parse(value.Json);
         return document.RootElement.ValueKind switch
         {
             JsonValueKind.String => document.RootElement.GetString(),
@@ -56,15 +46,7 @@ public sealed class ConfigurationStoredValueCodec
     /// <returns>The projected key/value pairs.</returns>
     public IReadOnlyDictionary<string, string?> ToConfigurationValues(string configurationPath, ConfigurationStoredValue value)
     {
-        if (value.Kind != ConfigurationStoredValueKind.PlainJson || value.PlainJson is null)
-        {
-            return new Dictionary<string, string?>
-            {
-                [configurationPath] = ToConfigurationString(value)
-            };
-        }
-
-        using var document = JsonDocument.Parse(value.PlainJson);
+        using var document = JsonDocument.Parse(value.Json);
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         Flatten(configurationPath, document.RootElement, values);
         return values;

@@ -68,7 +68,7 @@ public class FileConfigurationStoreTests : IDisposable
             MutationKind = ConfigurationMutationKind.Set,
             Granularity = ConfigurationMutationGranularity.Scalar,
             State = ConfigurationValueState.Active,
-            NewValue = ConfigurationStoredValue.Plain("2"),
+            NewValue = ConfigurationStoredValue.FromJson("2"),
             Version = 2,
             SchemaVersion = 1,
             ModifiedTime = DateTimeOffset.UtcNow,

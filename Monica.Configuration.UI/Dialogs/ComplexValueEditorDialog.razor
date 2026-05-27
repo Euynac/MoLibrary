@@ -120,7 +120,7 @@
             MutationKind = _mutationKind,
             NewValue = _mutationKind == ConfigurationMutationKind.Remove
                 ? ConfigurationStoredValue.Null
-                : ConfigurationStoredValue.Plain(json),
+                : ConfigurationStoredValue.FromJson(json),
             OriginalDisplayValue = EffectiveValue?.DisplayValue,
             NewDisplayValue = _mutationKind == ConfigurationMutationKind.Remove ? L["Mutation:Kinds:Remove"] : json,
             ExpectedSchemaVersion = Definition.SchemaVersion,

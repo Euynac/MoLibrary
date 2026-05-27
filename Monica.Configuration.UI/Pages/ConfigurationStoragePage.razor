@@ -3,14 +3,14 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
-<PageTitle>@L["Pages:ConfigurationProviders:Title"]</PageTitle>
+<PageTitle>@L["Pages:ConfigurationStorage:Title"]</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.False" Class="configuration-providers-page">
+<MudContainer MaxWidth="MaxWidth.False" Class="configuration-storage-page">
     <MudStack Spacing="3">
         <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
             <MudStack Spacing="0">
-                <MudText Typo="Typo.h4">@L["Pages:ConfigurationProviders:Title"]</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Providers:Subtitle"]</MudText>
+                <MudText Typo="Typo.h4">@L["Pages:ConfigurationStorage:Title"]</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Storage:Subtitle"]</MudText>
             </MudStack>
             <MudTooltip Text="@L["Common:Actions:Refresh"]">
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" OnClick="LoadAsync" />
@@ -23,32 +23,32 @@
         }
         else if (_overview is null)
         {
-            <MudAlert Severity="Severity.Info">@L["Providers:Empty"]</MudAlert>
+            <MudAlert Severity="Severity.Info">@L["Storage:Empty"]</MudAlert>
         }
         else
         {
             <MudGrid Spacing="2">
                 <MudItem xs="12" md="4">
-                    @StoreCard(L["Providers:Roles:EffectiveValues"], _overview.EffectiveValueStore)
+                    @StoreCard(L["Storage:Roles:EffectiveValues"], _overview.EffectiveValueStore)
                 </MudItem>
                 <MudItem xs="12" md="4">
-                    @StoreCard(L["Providers:Roles:History"], _overview.HistoryStore)
+                    @StoreCard(L["Storage:Roles:History"], _overview.HistoryStore)
                 </MudItem>
                 <MudItem xs="12" md="4">
-                    @StoreCard(L["Providers:Roles:Metadata"], _overview.MetadataStore)
+                    @StoreCard(L["Storage:Roles:Metadata"], _overview.MetadataStore)
                 </MudItem>
             </MudGrid>
 
             <MudPaper Outlined="true" Class="pa-3">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                     <MudStack Spacing="0">
-                        <MudText Typo="Typo.subtitle2">@L["Providers:Notifications:Title"]</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Providers:Notifications:Subtitle"]</MudText>
+                        <MudText Typo="Typo.subtitle2">@L["Storage:Notifications:Title"]</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Storage:Notifications:Subtitle"]</MudText>
                     </MudStack>
                     <MudChip T="string"
                              Color="@(_overview.HasChangeNotifier ? Color.Success : Color.Default)"
                              Variant="@(_overview.HasChangeNotifier ? Variant.Filled : Variant.Outlined)">
-                        @(_overview.HasChangeNotifier ? L["Providers:Notifications:Registered"] : L["Providers:Notifications:NotRegistered"])
+                        @(_overview.HasChangeNotifier ? L["Storage:Notifications:Registered"] : L["Storage:Notifications:NotRegistered"])
                     </MudChip>
                 </MudStack>
             </MudPaper>
@@ -57,7 +57,7 @@
 </MudContainer>
 
 @code {
-    public const string PAGE_URL = ConfigurationUiRoutes.PROVIDERS_ROUTE;
+    public const string PAGE_URL = ConfigurationUiRoutes.STORAGE_ROUTE;
 
     private readonly List<ConfigurationStoreState> _states = [];
     private ConfigurationStorageOverview? _overview;
@@ -99,7 +99,7 @@
 
         builder.OpenComponent<MudPaper>(0);
         builder.AddAttribute(1, "Outlined", true);
-        builder.AddAttribute(2, "Class", "pa-3 provider-card");
+        builder.AddAttribute(2, "Class", "pa-3 storage-card");
         builder.AddAttribute(3, "ChildContent", (RenderFragment)(content =>
         {
             content.OpenComponent<MudStack>(4);
@@ -139,9 +139,9 @@
         builder.AddAttribute(3, "Spacing", 1);
         builder.AddAttribute(4, "ChildContent", (RenderFragment)(content =>
         {
-            content.AddContent(5, CapabilityChip(store.SupportsEffectiveValues, L["Providers:Capabilities:EffectiveValues"]));
-            content.AddContent(6, CapabilityChip(store.SupportsHistory, L["Providers:Capabilities:History"]));
-            content.AddContent(7, CapabilityChip(store.SupportsMetadata, L["Providers:Capabilities:Metadata"]));
+            content.AddContent(5, CapabilityChip(store.SupportsEffectiveValues, L["Storage:Capabilities:EffectiveValues"]));
+            content.AddContent(6, CapabilityChip(store.SupportsHistory, L["Storage:Capabilities:History"]));
+            content.AddContent(7, CapabilityChip(store.SupportsMetadata, L["Storage:Capabilities:Metadata"]));
         }));
         builder.CloseComponent();
     };
@@ -163,7 +163,7 @@
             builder.OpenComponent<MudText>(0);
             builder.AddAttribute(1, "Typo", Typo.caption);
             builder.AddAttribute(2, "Color", Color.Secondary);
-            builder.AddAttribute(3, "ChildContent", (RenderFragment)(child => child.AddContent(4, L["Providers:State:Unknown"])));
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(child => child.AddContent(4, L["Storage:State:Unknown"])));
             builder.CloseComponent();
             return;
         }
@@ -179,7 +179,7 @@
             content.AddAttribute(12, "Color", state.LastOperationSucceeded ? Color.Success : Color.Error);
             content.AddAttribute(13, "Variant", Variant.Filled);
             content.AddAttribute(14, "ChildContent", (RenderFragment)(child =>
-                child.AddContent(15, state.LastOperationSucceeded ? L["Providers:State:Succeeded"] : L["Providers:State:Failed"])));
+                child.AddContent(15, state.LastOperationSucceeded ? L["Storage:State:Succeeded"] : L["Storage:State:Failed"])));
             content.CloseComponent();
 
             content.OpenComponent<MudText>(16);

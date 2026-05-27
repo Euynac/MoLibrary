@@ -77,9 +77,9 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
                     addToNav: true,
                     navOrder: 30);
 
-                registry.RegisterLocalizedComponent<ConfigurationProvidersPage>(
-                    ConfigurationUiRoutes.PROVIDERS_ROUTE,
-                    "Pages:ConfigurationProviders:Title",
+                registry.RegisterLocalizedComponent<ConfigurationStoragePage>(
+                    ConfigurationUiRoutes.STORAGE_ROUTE,
+                    "Pages:ConfigurationStorage:Title",
                     Icons.Material.Filled.Storage,
                     "Categories:Configuration",
                     addToNav: true,
