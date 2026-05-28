@@ -60,6 +60,13 @@ public class ModuleRepository(ModuleRepositoryOption option)
 public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleRepositoryOption, ModuleRepositoryGuide>
 {
 
+    /// <summary>
+    /// Registers a repository DbContext and the scoped access services used by repositories and long-lived workers.
+    /// </summary>
+    /// <typeparam name="TDbContext">The repository DbContext type to register.</typeparam>
+    /// <param name="optionsAction">Configures the EF Core provider and options for the DbContext.</param>
+    /// <param name="dbContextProviderType">Selects how scoped repositories obtain the current DbContext.</param>
+    /// <returns>The repository guide for method chaining.</returns>
     public ModuleRepositoryGuide AddRepositoryDbContext<TDbContext>(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction, DbContextProviderType dbContextProviderType = DbContextProviderType.Default)
         where TDbContext : RepositoryDbContext<TDbContext>
     {
@@ -67,41 +74,27 @@ public class ModuleRepositoryGuide : ModuleGuide<ModuleRepository, ModuleReposit
         {
             DependsOnModule<ModuleUnitOfWorkGuide>().Register().AddDbContextProvider<TDbContext>();
         }
+        else if (dbContextProviderType != DbContextProviderType.Default)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(dbContextProviderType),
+                dbContextProviderType,
+                "Unknown repository DbContext provider type.");
+        }
 
         ConfigureServices(context =>
         {
-            switch (dbContextProviderType)
+            if (dbContextProviderType == DbContextProviderType.Default)
             {
-                case DbContextProviderType.ContextFactory:
-                    // Register EF Core factory and wrap it with our provider interface
-                    context.Services.AddDbContextFactory<TDbContext>(
-                        (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
-                    context.Services.AddTransient<TDbContext>(serviceProvider =>
-                        serviceProvider.GetRequiredService<IDbContextFactory<TDbContext>>().CreateDbContext());
-                    context.Services.AddSingleton(
-                        typeof(IDbContextProvider<TDbContext>),
-                        typeof(DbContextFactoryProvider<TDbContext>));
-                    break;
-                case DbContextProviderType.Default:
-                    context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
-                    break;
+                context.Services.AddTransient(typeof(IDbContextProvider<TDbContext>), typeof(DefaultDbContextProvider<TDbContext>));
             }
             
             context.Services.TryAddTransient<IAuditPropertySetter, AuditPropertySetter>();
-
-            // Only register factory separately if not using ContextFactory provider type
-            if (context.ModuleOption.UseDbContextFactory && dbContextProviderType != DbContextProviderType.ContextFactory)
-            {
-                context.Services.AddDbContextFactory<TDbContext>(
-                    (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
-            }
-
-            // Only register DbContext if not using ContextFactory (factory pattern doesn't need scoped DbContext)
-            if (dbContextProviderType != DbContextProviderType.ContextFactory)
-            {
-                context.Services.AddDbContext<TDbContext>(
-                    (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
-            }
+            context.Services.TryAddSingleton(
+                typeof(IDbContextOperation<TDbContext>),
+                typeof(ScopedDbContextOperation<TDbContext>));
+            context.Services.AddDbContext<TDbContext>(
+                (serviceProvider, builder) => ConfigureDbContextOptions(context.ModuleOption, serviceProvider, builder, optionsAction));
 
             //TODO Use Module to optimize automatic registration
             var options = new EfRepositoryRegistrationOptions(typeof(TDbContext), context.Services);
@@ -147,11 +140,6 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
     public bool UseDbFunction { get; set; }
 
     /// <summary>
-    /// Automatically register DbContext Factory
-    /// </summary>
-    public bool UseDbContextFactory { get; set; }
-
-    /// <summary>
     /// Whether to enable sensitive data logging. The default is null, which means it is enabled when the environment is Development.
     /// </summary>
     public bool? EnableSensitiveDataLogging { get; set; }
@@ -182,9 +170,18 @@ public class ModuleRepositoryOption : ModuleOptions<ModuleRepository>
     public static int ConcurrencyStampMaxLength = 40;
 }
 
+/// <summary>
+/// Selects how scoped repository services resolve the DbContext for a request or operation.
+/// </summary>
 public enum DbContextProviderType
 {
+    /// <summary>
+    /// Resolves the current DbContext directly from the active dependency injection scope.
+    /// </summary>
     Default,
-    UnitOfWork,
-    ContextFactory
+
+    /// <summary>
+    /// Resolves the current DbContext from the active unit of work.
+    /// </summary>
+    UnitOfWork
 }

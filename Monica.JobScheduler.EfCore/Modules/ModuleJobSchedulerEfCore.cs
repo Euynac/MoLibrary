@@ -53,10 +53,8 @@ public class ModuleJobSchedulerEfCoreGuide
     public ModuleJobSchedulerEfCoreGuide UseDbContext(
         Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
-        // Register Repository module dependency with DbContext using ContextFactory provider
-        // This allows Singleton services (like JobDefinitionCacheService) to safely use the repository
         DependsOnModule<ModuleRepositoryGuide>().Register()
-            .AddRepositoryDbContext<JobSchedulerDbContext>(optionsAction, DbContextProviderType.ContextFactory);
+            .AddRepositoryDbContext<JobSchedulerDbContext>(optionsAction);
         DependsOnModule<ModuleJobSchedulerGuide>().Register().UseCustomMetadataRepository<EfCoreJobMetadataRepository>();
         ConfigureEmpty();
         return this;

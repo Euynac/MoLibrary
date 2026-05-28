@@ -1,18 +1,18 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
+using Monica.Repository.Persistence.Abstractions;
 
 namespace Monica.Configuration.EfCore.Stores;
 
 /// <summary>
 /// EF Core-backed store bundle for distributed Monica.Configuration deployments.
 /// </summary>
-public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory)
+public sealed class DatabaseConfigurationStore(IDbContextOperation<ConfigurationDbContext> dbContextOperation)
     : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
 {
     /// <inheritdoc />
@@ -32,37 +32,39 @@ public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory
         string seedJson,
         CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationEffectiveValues
-            .FirstOrDefaultAsync(value => value.DefinitionKey == definition.DefinitionKey, cancellationToken);
-        if (entity is not null)
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            return ToDocument(entity);
-        }
+            var entity = await dbContext.ConfigurationEffectiveValues
+                .FirstOrDefaultAsync(value => value.DefinitionKey == definition.DefinitionKey, token);
+            if (entity is not null)
+            {
+                return ToDocument(entity);
+            }
 
-        entity = new ConfigurationEffectiveValueEntity
-        {
-            DefinitionKey = definition.DefinitionKey,
-            Json = NormalizeJson(seedJson),
-            Version = 1,
-            SchemaVersion = definition.SchemaVersion,
-            LastModifiedTime = DateTimeOffset.UtcNow
-        };
-        dbContext.ConfigurationEffectiveValues.Add(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return ToDocument(entity);
+            entity = new ConfigurationEffectiveValueEntity
+            {
+                DefinitionKey = definition.DefinitionKey,
+                Json = NormalizeJson(seedJson),
+                Version = 1,
+                SchemaVersion = definition.SchemaVersion,
+                LastModifiedTime = DateTimeOffset.UtcNow
+            };
+            dbContext.ConfigurationEffectiveValues.Add(entity);
+            await dbContext.SaveChangesAsync(token);
+            return ToDocument(entity);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument?> GetAsync(string definitionKey, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationEffectiveValues
-            .AsNoTracking()
-            .FirstOrDefaultAsync(value => value.DefinitionKey == definitionKey, cancellationToken);
-        return entity is null ? null : ToDocument(entity);
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.ConfigurationEffectiveValues
+                .AsNoTracking()
+                .FirstOrDefaultAsync(value => value.DefinitionKey == definitionKey, token);
+            return entity is null ? null : ToDocument(entity);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -70,40 +72,42 @@ public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory
         ConfigurationEffectiveValueSaveRequest request,
         CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationEffectiveValues
-            .FirstOrDefaultAsync(value => value.DefinitionKey == request.Definition.DefinitionKey, cancellationToken);
-        if (request.ExpectedVersion is not null && entity?.Version != request.ExpectedVersion)
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            throw new ConfigurationConcurrencyConflictException(
-                $"Expected version {request.ExpectedVersion} for '{request.Definition.DefinitionKey}', but current version is {entity?.Version.ToString() ?? "<none>"}.");
-        }
+            var entity = await dbContext.ConfigurationEffectiveValues
+                .FirstOrDefaultAsync(value => value.DefinitionKey == request.Definition.DefinitionKey, token);
+            if (request.ExpectedVersion is not null && entity?.Version != request.ExpectedVersion)
+            {
+                throw new ConfigurationConcurrencyConflictException(
+                    $"Expected version {request.ExpectedVersion} for '{request.Definition.DefinitionKey}', but current version is {entity?.Version.ToString() ?? "<none>"}.");
+            }
 
-        if (entity is null)
-        {
-            entity = new ConfigurationEffectiveValueEntity { DefinitionKey = request.Definition.DefinitionKey };
-            dbContext.ConfigurationEffectiveValues.Add(entity);
-        }
+            if (entity is null)
+            {
+                entity = new ConfigurationEffectiveValueEntity { DefinitionKey = request.Definition.DefinitionKey };
+                dbContext.ConfigurationEffectiveValues.Add(entity);
+            }
 
-        entity.Json = NormalizeJson(request.Json);
-        entity.Version++;
-        entity.SchemaVersion = request.Definition.SchemaVersion;
-        entity.LastModifiedTime = DateTimeOffset.UtcNow;
-        entity.LastModifierId = request.Context.ModifierId;
-        entity.LastModifierName = request.Context.ModifierName;
+            entity.Json = NormalizeJson(request.Json);
+            entity.Version++;
+            entity.SchemaVersion = request.Definition.SchemaVersion;
+            entity.LastModifiedTime = DateTimeOffset.UtcNow;
+            entity.LastModifierId = request.Context.ModifierId;
+            entity.LastModifierName = request.Context.ModifierName;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return ToDocument(entity);
+            await dbContext.SaveChangesAsync(token);
+            return ToDocument(entity);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task AppendHistoryAsync(ConfigurationValueHistory history, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        dbContext.ConfigurationValueHistories.Add(ToEntity(history));
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            dbContext.ConfigurationValueHistories.Add(ToEntity(history));
+            await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -115,78 +119,81 @@ public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory
         string? mutationGroupId,
         CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var query = dbContext.ConfigurationValueHistories.AsNoTracking();
-
-        if (from is not null)
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            query = query.Where(history => history.ModifiedTime >= from);
-        }
+            var query = dbContext.ConfigurationValueHistories.AsNoTracking();
 
-        if (to is not null)
-        {
-            query = query.Where(history => history.ModifiedTime <= to);
-        }
+            if (from is not null)
+            {
+                query = query.Where(history => history.ModifiedTime >= from);
+            }
 
-        if (!string.IsNullOrWhiteSpace(definitionKey))
-        {
-            query = query.Where(history => history.DefinitionKey == definitionKey);
-        }
+            if (to is not null)
+            {
+                query = query.Where(history => history.ModifiedTime <= to);
+            }
 
-        if (logicalPath is not null)
-        {
-            var canonicalPath = logicalPath.ToCanonicalString();
-            query = query.Where(history => history.LogicalPath == canonicalPath);
-        }
+            if (!string.IsNullOrWhiteSpace(definitionKey))
+            {
+                query = query.Where(history => history.DefinitionKey == definitionKey);
+            }
 
-        if (!string.IsNullOrWhiteSpace(mutationGroupId))
-        {
-            query = query.Where(history => history.MutationGroupId == mutationGroupId);
-        }
+            if (logicalPath is not null)
+            {
+                var canonicalPath = logicalPath.ToCanonicalString();
+                query = query.Where(history => history.LogicalPath == canonicalPath);
+            }
 
-        var entities = await query
-            .OrderByDescending(history => history.ModifiedTime)
-            .ThenByDescending(history => history.Version)
-            .ToArrayAsync(cancellationToken);
-        return entities.Select(ToHistory).ToArray();
+            if (!string.IsNullOrWhiteSpace(mutationGroupId))
+            {
+                query = query.Where(history => history.MutationGroupId == mutationGroupId);
+            }
+
+            var entities = await query
+                .OrderByDescending(history => history.ModifiedTime)
+                .ThenByDescending(history => history.Version)
+                .ToArrayAsync(token);
+            return entities.Select(ToHistory).ToArray();
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationValueHistories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(history => history.HistoryId == historyId, cancellationToken);
-        return entity is null ? null : ToHistory(entity);
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.ConfigurationValueHistories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(history => history.HistoryId == historyId, token);
+            return entity is null ? null : ToHistory(entity);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task UpsertGroupAsync(ConfigurationMutationGroup group, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationMutationGroups
-            .FirstOrDefaultAsync(candidate => candidate.GroupId == group.GroupId, cancellationToken);
-        if (entity is null)
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            entity = new ConfigurationMutationGroupEntity { GroupId = group.GroupId };
-            dbContext.ConfigurationMutationGroups.Add(entity);
-        }
+            var entity = await dbContext.ConfigurationMutationGroups
+                .FirstOrDefaultAsync(candidate => candidate.GroupId == group.GroupId, token);
+            if (entity is null)
+            {
+                entity = new ConfigurationMutationGroupEntity { GroupId = group.GroupId };
+                dbContext.ConfigurationMutationGroups.Add(entity);
+            }
 
-        entity.Label = group.Label;
-        entity.Reason = group.Reason;
-        entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys);
-        entity.MutationCount = group.MutationCount;
-        entity.CreatedTime = group.CreatedTime;
-        entity.ModifierId = group.ModifierId;
-        entity.ModifierName = group.ModifierName;
-        entity.RolledBackTime = group.RolledBackTime;
-        entity.RolledBackGroupId = group.RolledBackGroupId;
-        entity.Status = group.Status.ToString();
-        await dbContext.SaveChangesAsync(cancellationToken);
+            entity.Label = group.Label;
+            entity.Reason = group.Reason;
+            entity.DefinitionKeysJson = JsonSerializer.Serialize(group.DefinitionKeys);
+            entity.MutationCount = group.MutationCount;
+            entity.CreatedTime = group.CreatedTime;
+            entity.ModifierId = group.ModifierId;
+            entity.ModifierName = group.ModifierName;
+            entity.RolledBackTime = group.RolledBackTime;
+            entity.RolledBackGroupId = group.RolledBackGroupId;
+            entity.Status = group.Status.ToString();
+            await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -196,70 +203,73 @@ public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory
         string? definitionKey,
         CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var query = dbContext.ConfigurationMutationGroups.AsNoTracking();
-        if (from is not null)
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            query = query.Where(group => group.CreatedTime >= from);
-        }
+            var query = dbContext.ConfigurationMutationGroups.AsNoTracking();
+            if (from is not null)
+            {
+                query = query.Where(group => group.CreatedTime >= from);
+            }
 
-        if (to is not null)
-        {
-            query = query.Where(group => group.CreatedTime <= to);
-        }
+            if (to is not null)
+            {
+                query = query.Where(group => group.CreatedTime <= to);
+            }
 
-        var groups = (await query
-                .OrderByDescending(group => group.CreatedTime)
-                .ToArrayAsync(cancellationToken))
-            .Select(ToGroup)
-            .ToArray();
+            var groups = (await query
+                    .OrderByDescending(group => group.CreatedTime)
+                    .ToArrayAsync(token))
+                .Select(ToGroup)
+                .ToArray();
 
-        return string.IsNullOrWhiteSpace(definitionKey)
-            ? groups
-            : groups.Where(group => group.DefinitionKeys.Contains(definitionKey, StringComparer.OrdinalIgnoreCase)).ToArray();
+            return string.IsNullOrWhiteSpace(definitionKey)
+                ? groups
+                : groups.Where(group => group.DefinitionKeys.Contains(definitionKey, StringComparer.OrdinalIgnoreCase)).ToArray();
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<ConfigurationMutationGroup?> GetGroupAsync(string groupId, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        var entity = await dbContext.ConfigurationMutationGroups
-            .AsNoTracking()
-            .FirstOrDefaultAsync(group => group.GroupId == groupId, cancellationToken);
-        return entity is null ? null : ToGroup(entity);
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.ConfigurationMutationGroups
+                .AsNoTracking()
+                .FirstOrDefaultAsync(group => group.GroupId == groupId, token);
+            return entity is null ? null : ToGroup(entity);
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-        foreach (var definition in definitions)
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            var entity = await dbContext.ConfigurationDefinitions
-                .FirstOrDefaultAsync(x => x.DefinitionKey == definition.DefinitionKey, cancellationToken);
-
-            if (entity is null)
+            foreach (var definition in definitions)
             {
-                entity = new ConfigurationDefinitionEntity { DefinitionKey = definition.DefinitionKey };
-                dbContext.ConfigurationDefinitions.Add(entity);
+                var entity = await dbContext.ConfigurationDefinitions
+                    .FirstOrDefaultAsync(x => x.DefinitionKey == definition.DefinitionKey, token);
+
+                if (entity is null)
+                {
+                    entity = new ConfigurationDefinitionEntity { DefinitionKey = definition.DefinitionKey };
+                    dbContext.ConfigurationDefinitions.Add(entity);
+                }
+
+                entity.SectionPath = definition.SectionPath;
+                entity.DisplayName = definition.DisplayName;
+                entity.ClrTypeName = definition.ClrTypeName;
+                entity.OwnerModule = definition.OwnerModule;
+                entity.Category = definition.Category;
+                entity.SchemaVersion = definition.SchemaVersion;
+                entity.SchemaHash = definition.SchemaHash;
+                entity.ReloadBehavior = definition.ReloadBehavior.ToString();
+                entity.DefinitionJson = JsonSerializer.Serialize(definition);
+                entity.LastSeenTime = DateTimeOffset.UtcNow;
             }
 
-            entity.SectionPath = definition.SectionPath;
-            entity.DisplayName = definition.DisplayName;
-            entity.ClrTypeName = definition.ClrTypeName;
-            entity.OwnerModule = definition.OwnerModule;
-            entity.Category = definition.Category;
-            entity.SchemaVersion = definition.SchemaVersion;
-            entity.SchemaHash = definition.SchemaHash;
-            entity.ReloadBehavior = definition.ReloadBehavior.ToString();
-            entity.DefinitionJson = JsonSerializer.Serialize(definition);
-            entity.LastSeenTime = DateTimeOffset.UtcNow;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
     }
 
     private static ConfigurationEffectiveValueDocument ToDocument(ConfigurationEffectiveValueEntity entity)

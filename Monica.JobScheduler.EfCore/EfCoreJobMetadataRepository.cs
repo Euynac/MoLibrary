@@ -13,10 +13,10 @@ namespace Monica.JobScheduler.EfCore;
 
 /// <summary>
 /// EF Core implementation of IJobMetadataRepository.
-/// Thread-safe through scoped DbContext pattern using IDbContextProvider.
+/// Thread-safe for singleton consumers by executing each operation inside its own DbContext scope.
 /// </summary>
 public class EfCoreJobMetadataRepository(
-    IDbContextProvider<JobSchedulerDbContext> dbContextProvider,
+    IDbContextOperation<JobSchedulerDbContext> dbContextOperation,
     IOptions<ModuleJobSchedulerOption> options,
     ILogger<EfCoreJobMetadataRepository> logger) : IJobMetadataRepository
 {
@@ -29,16 +29,17 @@ public class EfCoreJobMetadataRepository(
         if (string.IsNullOrWhiteSpace(jobKey))
             throw new ArgumentException("Job key cannot be null or empty.", nameof(jobKey));
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.JobDefinitions
+                .AsNoTracking()
+                .IgnoreQueryFilters() // Include soft-deleted for lookups. TODO: unify filter disable logic.
+                .FirstOrDefaultAsync(
+                    e => e.JobKey == jobKey && e.SchedulerScopeKey == _schedulerScopeKey,
+                    token);
 
-        var entity = await dbContext.JobDefinitions
-            .AsNoTracking()
-            .IgnoreQueryFilters() // Include soft-deleted for lookups  TODO in future, unified filter disable logic 
-            .FirstOrDefaultAsync(
-                e => e.JobKey == jobKey && e.SchedulerScopeKey == _schedulerScopeKey,
-                cancellationToken);
-
-        return entity == null ? null : JobMetadataMapper.ToModel(entity);
+            return entity == null ? null : JobMetadataMapper.ToModel(entity);
+        }, cancellationToken);
     }
 
     public async Task SaveDefinitionAsync(JobDefinition definition, CancellationToken cancellationToken = default)
@@ -48,44 +49,46 @@ public class EfCoreJobMetadataRepository(
         if (string.IsNullOrWhiteSpace(definition.JobKey))
             throw new ArgumentException("JobDefinition.JobKey cannot be null or empty.", nameof(definition));
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-        definition.SchedulerScopeKey = _schedulerScopeKey;
-
-        var existingEntity = await dbContext.JobDefinitions
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                e => e.JobKey == definition.JobKey && e.SchedulerScopeKey == _schedulerScopeKey,
-                cancellationToken);
-
-        if (existingEntity == null)
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            // Create new
-            var newEntity = JobMetadataMapper.ToEntity(definition);
-            dbContext.JobDefinitions.Add(newEntity);
+            definition.SchedulerScopeKey = _schedulerScopeKey;
 
-            logger.LogInformation(
-                "Job definition registered: {JobKey} ({JobName}), Type: {JobType}, MaxConcurrency: {MaxConcurrency}",
-                definition.JobKey,
-                definition.JobName,
-                definition.JobType,
-                definition.MaxConcurrency);
-        }
-        else
-        {
-            // Update existing
-            JobMetadataMapper.ToEntity(definition, existingEntity);
-            if (existingEntity.IsDeleted)
+            var existingEntity = await dbContext.JobDefinitions
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    e => e.JobKey == definition.JobKey && e.SchedulerScopeKey == _schedulerScopeKey,
+                    token);
+
+            if (existingEntity == null)
             {
-                existingEntity.JobKey =  $"[deleted-{Guid.NewGuid()}]{existingEntity.JobKey}";
+                // Create new
+                var newEntity = JobMetadataMapper.ToEntity(definition);
+                dbContext.JobDefinitions.Add(newEntity);
+
+                logger.LogInformation(
+                    "Job definition registered: {JobKey} ({JobName}), Type: {JobType}, MaxConcurrency: {MaxConcurrency}",
+                    definition.JobKey,
+                    definition.JobName,
+                    definition.JobType,
+                    definition.MaxConcurrency);
+            }
+            else
+            {
+                // Update existing
+                JobMetadataMapper.ToEntity(definition, existingEntity);
+                if (existingEntity.IsDeleted)
+                {
+                    existingEntity.JobKey = $"[deleted-{Guid.NewGuid()}]{existingEntity.JobKey}";
+                }
+
+                logger.LogInformation(
+                    "Job definition updated: {JobKey} ({JobName})",
+                    definition.JobKey,
+                    definition.JobName);
             }
 
-            logger.LogInformation(
-                "Job definition updated: {JobKey} ({JobName})",
-                definition.JobKey,
-                definition.JobName);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
     }
 
     public async Task<QueryResult<JobDefinition>> QueryDefinitionsAsync(
@@ -94,39 +97,40 @@ public class EfCoreJobMetadataRepository(
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-
-        var queryable = dbContext.JobDefinitions.AsNoTracking();
-        queryable = queryable.Where(d => d.SchedulerScopeKey == _schedulerScopeKey);
-
-        // Apply soft delete filter conditionally
-        queryable = !query.IncludeDeleted ? queryable.Where(d => !d.IsDeleted) : queryable.IgnoreQueryFilters();
-
-        // Apply project filter
-        if (!string.IsNullOrEmpty(query.FromProject))
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            queryable = queryable.Where(d => d.FromProject == query.FromProject);
-        }
+            var queryable = dbContext.JobDefinitions.AsNoTracking();
+            queryable = queryable.Where(d => d.SchedulerScopeKey == _schedulerScopeKey);
 
-        // Get total count
-        var totalCount = await queryable.CountAsync(cancellationToken);
+            // Apply soft delete filter conditionally
+            queryable = !query.IncludeDeleted ? queryable.Where(d => !d.IsDeleted) : queryable.IgnoreQueryFilters();
 
-        // Apply pagination
-        var entities = await queryable
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .ToListAsync(cancellationToken);
+            // Apply project filter
+            if (!string.IsNullOrEmpty(query.FromProject))
+            {
+                queryable = queryable.Where(d => d.FromProject == query.FromProject);
+            }
 
-        var items = entities.Select(JobMetadataMapper.ToModel).ToList();
+            // Get total count
+            var totalCount = await queryable.CountAsync(token);
 
-        logger.LogDebug(
-            "QueryDefinitionsAsync: Returned {Count}/{Total} definitions (Page {PageNumber}, Size {PageSize})",
-            items.Count,
-            totalCount,
-            query.PageNumber,
-            query.PageSize);
+            // Apply pagination
+            var entities = await queryable
+                .Skip((query.PageNumber - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync(token);
 
-        return new QueryResult<JobDefinition>(items, totalCount);
+            var items = entities.Select(JobMetadataMapper.ToModel).ToList();
+
+            logger.LogDebug(
+                "QueryDefinitionsAsync: Returned {Count}/{Total} definitions (Page {PageNumber}, Size {PageSize})",
+                items.Count,
+                totalCount,
+                query.PageNumber,
+                query.PageSize);
+
+            return new QueryResult<JobDefinition>(items, totalCount);
+        }, cancellationToken);
     }
 
     #endregion
@@ -138,15 +142,16 @@ public class EfCoreJobMetadataRepository(
         if (string.IsNullOrWhiteSpace(instanceId))
             throw new ArgumentException("Instance ID cannot be null or empty.", nameof(instanceId));
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var entity = await dbContext.JobInstances
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    e => e.InstanceId == instanceId && e.SchedulerScopeKey == _schedulerScopeKey,
+                    token);
 
-        var entity = await dbContext.JobInstances
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                e => e.InstanceId == instanceId && e.SchedulerScopeKey == _schedulerScopeKey,
-                cancellationToken);
-
-        return entity == null ? null : JobMetadataMapper.ToModel(entity);
+            return entity == null ? null : JobMetadataMapper.ToModel(entity);
+        }, cancellationToken);
     }
 
     public async Task SaveInstanceAsync(JobInstance instance, CancellationToken cancellationToken = default)
@@ -156,39 +161,41 @@ public class EfCoreJobMetadataRepository(
         if (string.IsNullOrWhiteSpace(instance.InstanceId))
             throw new ArgumentException("JobInstance.InstanceId cannot be null or empty.", nameof(instance));
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-        instance.SchedulerScopeKey = _schedulerScopeKey;
-
-        var existingEntity = await dbContext.JobInstances
-            .FirstOrDefaultAsync(
-                e => e.InstanceId == instance.InstanceId && e.SchedulerScopeKey == _schedulerScopeKey,
-                cancellationToken);
-
-        if (existingEntity == null)
+        await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            // Create new
-            var newEntity = JobMetadataMapper.ToEntity(instance);
-            dbContext.JobInstances.Add(newEntity);
+            instance.SchedulerScopeKey = _schedulerScopeKey;
 
-            logger.LogDebug(
-                "Job instance created: {InstanceId} for {JobKey}, State: {State}",
-                instance.InstanceId,
-                instance.JobKey,
-                instance.State);
-        }
-        else
-        {
-            // Update existing
-            JobMetadataMapper.ToEntity(instance, existingEntity);
+            var existingEntity = await dbContext.JobInstances
+                .FirstOrDefaultAsync(
+                    e => e.InstanceId == instance.InstanceId && e.SchedulerScopeKey == _schedulerScopeKey,
+                    token);
 
-            logger.LogDebug(
-                "Job instance updated: {InstanceId} for {JobKey}, State: {State}",
-                instance.InstanceId,
-                instance.JobKey,
-                instance.State);
-        }
+            if (existingEntity == null)
+            {
+                // Create new
+                var newEntity = JobMetadataMapper.ToEntity(instance);
+                dbContext.JobInstances.Add(newEntity);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+                logger.LogDebug(
+                    "Job instance created: {InstanceId} for {JobKey}, State: {State}",
+                    instance.InstanceId,
+                    instance.JobKey,
+                    instance.State);
+            }
+            else
+            {
+                // Update existing
+                JobMetadataMapper.ToEntity(instance, existingEntity);
+
+                logger.LogDebug(
+                    "Job instance updated: {InstanceId} for {JobKey}, State: {State}",
+                    instance.InstanceId,
+                    instance.JobKey,
+                    instance.State);
+            }
+
+            await dbContext.SaveChangesAsync(token);
+        }, cancellationToken);
     }
 
     public async Task<QueryResult<JobInstance>> QueryInstancesAsync(
@@ -197,31 +204,32 @@ public class EfCoreJobMetadataRepository(
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var queryable = dbContext.JobInstances
+                .AsNoTracking()
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
+                .ApplyFilters(query);
 
-        var queryable = dbContext.JobInstances
-            .AsNoTracking()
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
-            .ApplyFilters(query);
+            // Get total count
+            var totalCount = await queryable.CountAsync(token);
 
-        // Get total count
-        var totalCount = await queryable.CountAsync(cancellationToken);
+            // Apply sorting and pagination
+            var entities = await queryable
+                .ApplySorting(query.SortBy, query.SortDescending)
+                .ApplyPaginationAsync(query.PageNumber, query.PageSize, token);
 
-        // Apply sorting and pagination
-        var entities = await queryable
-            .ApplySorting(query.SortBy, query.SortDescending)
-            .ApplyPaginationAsync(query.PageNumber, query.PageSize, cancellationToken);
+            var items = entities.Select(JobMetadataMapper.ToModel).ToList();
 
-        var items = entities.Select(JobMetadataMapper.ToModel).ToList();
+            logger.LogDebug(
+                "QueryInstancesAsync: Returned {Count}/{Total} instances (Page {PageNumber}, Size {PageSize})",
+                items.Count,
+                totalCount,
+                query.PageNumber,
+                query.PageSize);
 
-        logger.LogDebug(
-            "QueryInstancesAsync: Returned {Count}/{Total} instances (Page {PageNumber}, Size {PageSize})",
-            items.Count,
-            totalCount,
-            query.PageNumber,
-            query.PageSize);
-
-        return new QueryResult<JobInstance>(items, totalCount);
+            return new QueryResult<JobInstance>(items, totalCount);
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -235,37 +243,38 @@ public class EfCoreJobMetadataRepository(
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(selector);
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            var queryable = dbContext.JobInstances
+                .AsNoTracking()
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
+                .ApplyFilters(query);
 
-        var queryable = dbContext.JobInstances
-            .AsNoTracking()
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
-            .ApplyFilters(query);
+            // Get total count before projection
+            var totalCount = await queryable.CountAsync(token);
 
-        // Get total count before projection
-        var totalCount = await queryable.CountAsync(cancellationToken);
+            // Apply sorting
+            queryable = queryable.ApplySorting(query.SortBy, query.SortDescending);
 
-        // Apply sorting
-        queryable = queryable.ApplySorting(query.SortBy, query.SortDescending);
+            // Rewrite expression from JobInstance to JobInstanceEntity for database-side projection
+            var entitySelector = JobInstanceExpressionRewriter.Rewrite(selector);
 
-        // Rewrite expression from JobInstance to JobInstanceEntity for database-side projection
-        var entitySelector = JobInstanceExpressionRewriter.Rewrite(selector);
+            // Apply pagination and projection (database-side SELECT)
+            var items = await queryable
+                .Skip((query.PageNumber - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .Select(entitySelector)
+                .ToListAsync(token);
 
-        // Apply pagination and projection (database-side SELECT)
-        var items = await queryable
-            .Skip((query.PageNumber - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(entitySelector)
-            .ToListAsync(cancellationToken);
+            logger.LogDebug(
+                "QueryInstancesAsync<TResult>: Returned {Count}/{Total} projected instances (Page {PageNumber}, Size {PageSize})",
+                items.Count,
+                totalCount,
+                query.PageNumber,
+                query.PageSize);
 
-        logger.LogDebug(
-            "QueryInstancesAsync<TResult>: Returned {Count}/{Total} projected instances (Page {PageNumber}, Size {PageSize})",
-            items.Count,
-            totalCount,
-            query.PageNumber,
-            query.PageSize);
-
-        return new QueryResult<TResult>(items, totalCount);
+            return new QueryResult<TResult>(items, totalCount);
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -276,30 +285,31 @@ public class EfCoreJobMetadataRepository(
         DateTime? endTime = null,
         CancellationToken cancellationToken = default)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-
-        // Database-side GROUP BY - generates efficient SQL
-        var statistics = await dbContext.JobInstances
-            .AsNoTracking()
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
-            .ApplyTimeRangeFilter(startTime, endTime)
-            .GroupBy(i => i.State)
-            .Select(g => new { State = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-
-        // Convert to dictionary, ensuring all states are represented
-        var result = new Dictionary<JobState, int>();
-        foreach (var state in Enum.GetValues<JobState>())
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            result[state] = statistics.FirstOrDefault(s => s.State == state)?.Count ?? 0;
-        }
+            // Database-side GROUP BY - generates efficient SQL
+            var statistics = await dbContext.JobInstances
+                .AsNoTracking()
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey)
+                .ApplyTimeRangeFilter(startTime, endTime)
+                .GroupBy(i => i.State)
+                .Select(g => new { State = g.Key, Count = g.Count() })
+                .ToListAsync(token);
 
-        logger.LogDebug(
-            "GetStateStatisticsAsync: Retrieved statistics for {StateCount} states, total {TotalCount} instances",
-            statistics.Count,
-            statistics.Sum(s => s.Count));
+            // Convert to dictionary, ensuring all states are represented
+            var result = new Dictionary<JobState, int>();
+            foreach (var state in Enum.GetValues<JobState>())
+            {
+                result[state] = statistics.FirstOrDefault(s => s.State == state)?.Count ?? 0;
+            }
 
-        return result;
+            logger.LogDebug(
+                "GetStateStatisticsAsync: Retrieved statistics for {StateCount} states, total {TotalCount} instances",
+                statistics.Count,
+                statistics.Sum(s => s.Count));
+
+            return result;
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -317,30 +327,31 @@ public class EfCoreJobMetadataRepository(
             return new Dictionary<string, JobInstance?>();
         }
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-
-        // Use grouped subqueries to find the latest instance per job key.
-        var latestInstances = await dbContext.JobInstances
-            .AsNoTracking()
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && jobKeyList.Contains(i.JobKey))
-            .GroupBy(i => i.JobKey)
-            .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
-            .ToListAsync(cancellationToken);
-
-        // Convert to dictionary.
-        var result = new Dictionary<string, JobInstance?>();
-        foreach (var jobKey in jobKeyList)
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            var instance = latestInstances.FirstOrDefault(i => i.JobKey == jobKey);
-            result[jobKey] = instance == null ? null : JobMetadataMapper.ToModel(instance);
-        }
+            // Use grouped subqueries to find the latest instance per job key.
+            var latestInstances = await dbContext.JobInstances
+                .AsNoTracking()
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && jobKeyList.Contains(i.JobKey))
+                .GroupBy(i => i.JobKey)
+                .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
+                .ToListAsync(token);
 
-        logger.LogDebug(
-            "GetLatestInstancesAsync: Retrieved latest instances for {Count} jobs, found {FoundCount} instances",
-            jobKeyList.Count,
-            latestInstances.Count);
+            // Convert to dictionary.
+            var result = new Dictionary<string, JobInstance?>();
+            foreach (var jobKey in jobKeyList)
+            {
+                var instance = latestInstances.FirstOrDefault(i => i.JobKey == jobKey);
+                result[jobKey] = instance == null ? null : JobMetadataMapper.ToModel(instance);
+            }
 
-        return result;
+            logger.LogDebug(
+                "GetLatestInstancesAsync: Retrieved latest instances for {Count} jobs, found {FoundCount} instances",
+                jobKeyList.Count,
+                latestInstances.Count);
+
+            return result;
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -358,20 +369,21 @@ public class EfCoreJobMetadataRepository(
             return 0;
         }
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
+        {
+            // Use ExecuteDeleteAsync for efficient batch deletion (EF Core 7+)
+            // This generates a single DELETE statement without loading entities into memory
+            var deletedCount = await dbContext.JobInstances
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && instanceIdList.Contains(i.InstanceId))
+                .ExecuteDeleteAsync(token);
 
-        // Use ExecuteDeleteAsync for efficient batch deletion (EF Core 7+)
-        // This generates a single DELETE statement without loading entities into memory
-        var deletedCount = await dbContext.JobInstances
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && instanceIdList.Contains(i.InstanceId))
-            .ExecuteDeleteAsync(cancellationToken);
+            logger.LogInformation(
+                "Batch deleted {DeletedCount} job instances (requested {RequestedCount})",
+                deletedCount,
+                instanceIdList.Count);
 
-        logger.LogInformation(
-            "Batch deleted {DeletedCount} job instances (requested {RequestedCount})",
-            deletedCount,
-            instanceIdList.Count);
-
-        return deletedCount;
+            return deletedCount;
+        }, cancellationToken);
     }
 
     /// <summary>
@@ -385,95 +397,96 @@ public class EfCoreJobMetadataRepository(
     {
         ArgumentNullException.ThrowIfNull(retentionPolicies);
 
-        var dbContext = await dbContextProvider.GetDbContextAsync();
-
-        var terminalStates = new[]
+        return await dbContextOperation.ExecuteAsync(async (dbContext, token) =>
         {
-            JobState.Succeeded, JobState.Terminated,
-            JobState.Cancelled, JobState.Skipped, JobState.Failed
-        };
-
-        var now = DateTime.UtcNow;
-
-        // Step 1: Query terminal instances with projection (only needed fields)
-        // This avoids loading large StateHistory strings
-        var rankedQuery = dbContext.JobInstances
-            .AsNoTracking()
-            .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && terminalStates.Contains(i.State))
-            .Select(i => new
+            var terminalStates = new[]
             {
-                i.InstanceId,
-                i.JobKey,
-                SortDate = i.CompletedAt ?? i.CreatedAt
-            });
+                JobState.Succeeded, JobState.Terminated,
+                JobState.Cancelled, JobState.Skipped, JobState.Failed
+            };
 
-        // Materialize with projection (much lighter than full entities)
-        var allInstances = await rankedQuery.ToListAsync(cancellationToken);
+            var now = DateTime.UtcNow;
 
-        // Step 2: In-memory ranking and filtering (on lightweight objects)
-        var candidateIds = new HashSet<string>();
-
-        var groupedInstances = allInstances
-            .GroupBy(i => i.JobKey)
-            .Select(g => new
-            {
-                JobKey = g.Key,
-                Instances = g.OrderByDescending(x => x.SortDate).ToList()
-            });
-
-        foreach (var group in groupedInstances)
-        {
-            int maxRecords;
-            int? maxDays;
-
-            if (retentionPolicies.TryGetValue(group.JobKey, out var policy))
-            {
-                maxRecords = policy.MaxRecords > 0 ? policy.MaxRecords : int.MaxValue;
-                maxDays = policy.MaxDays;
-            }
-            else
-            {
-                // Orphaned - use default
-                maxRecords = maxRetainedOrphanedInstances > 0 ? maxRetainedOrphanedInstances : int.MaxValue;
-                maxDays = null;
-            }
-
-            var cutoffDate = maxDays.HasValue ? now.AddDays(-maxDays.Value) : (DateTime?)null;
-
-            for (var i = 0; i < group.Instances.Count; i++)
-            {
-                var instance = group.Instances[i];
-                var shouldDelete = false;
-
-                // Count-based: beyond maxRecords limit
-                if (i >= maxRecords)
+            // Step 1: Query terminal instances with projection (only needed fields)
+            // This avoids loading large StateHistory strings
+            var rankedQuery = dbContext.JobInstances
+                .AsNoTracking()
+                .Where(i => i.SchedulerScopeKey == _schedulerScopeKey && terminalStates.Contains(i.State))
+                .Select(i => new
                 {
-                    shouldDelete = true;
+                    i.InstanceId,
+                    i.JobKey,
+                    SortDate = i.CompletedAt ?? i.CreatedAt
+                });
+
+            // Materialize with projection (much lighter than full entities)
+            var allInstances = await rankedQuery.ToListAsync(token);
+
+            // Step 2: In-memory ranking and filtering (on lightweight objects)
+            var candidateIds = new HashSet<string>();
+
+            var groupedInstances = allInstances
+                .GroupBy(i => i.JobKey)
+                .Select(g => new
+                {
+                    JobKey = g.Key,
+                    Instances = g.OrderByDescending(x => x.SortDate).ToList()
+                });
+
+            foreach (var group in groupedInstances)
+            {
+                int maxRecords;
+                int? maxDays;
+
+                if (retentionPolicies.TryGetValue(group.JobKey, out var policy))
+                {
+                    maxRecords = policy.MaxRecords > 0 ? policy.MaxRecords : int.MaxValue;
+                    maxDays = policy.MaxDays;
                 }
-                // Time-based: older than cutoff
-                else if (cutoffDate.HasValue && instance.SortDate < cutoffDate.Value)
+                else
                 {
-                    shouldDelete = true;
+                    // Orphaned - use default
+                    maxRecords = maxRetainedOrphanedInstances > 0 ? maxRetainedOrphanedInstances : int.MaxValue;
+                    maxDays = null;
                 }
 
-                if (shouldDelete)
+                var cutoffDate = maxDays.HasValue ? now.AddDays(-maxDays.Value) : (DateTime?)null;
+
+                for (var i = 0; i < group.Instances.Count; i++)
                 {
-                    candidateIds.Add(instance.InstanceId);
+                    var instance = group.Instances[i];
+                    var shouldDelete = false;
+
+                    // Count-based: beyond maxRecords limit
+                    if (i >= maxRecords)
+                    {
+                        shouldDelete = true;
+                    }
+                    // Time-based: older than cutoff
+                    else if (cutoffDate.HasValue && instance.SortDate < cutoffDate.Value)
+                    {
+                        shouldDelete = true;
+                    }
+
+                    if (shouldDelete)
+                    {
+                        candidateIds.Add(instance.InstanceId);
+                    }
                 }
             }
-        }
 
-        // Apply per-cycle limit
-        var result = maxDeletionsPerCycle > 0 && candidateIds.Count > maxDeletionsPerCycle
-            ? candidateIds.Take(maxDeletionsPerCycle).ToList()
-            : candidateIds.ToList();
+            // Apply per-cycle limit
+            var result = maxDeletionsPerCycle > 0 && candidateIds.Count > maxDeletionsPerCycle
+                ? candidateIds.Take(maxDeletionsPerCycle).ToList()
+                : candidateIds.ToList();
 
-        logger.LogInformation(
-            "GetCleanupCandidatesAsync: Found {Count} cleanup candidates from {TotalInstances} terminal instances",
-            result.Count,
-            allInstances.Count);
+            logger.LogInformation(
+                "GetCleanupCandidatesAsync: Found {Count} cleanup candidates from {TotalInstances} terminal instances",
+                result.Count,
+                allInstances.Count);
 
-        return result;
+            return result;
+        }, cancellationToken);
     }
     #endregion
 }
