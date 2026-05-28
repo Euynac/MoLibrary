@@ -1,18 +1,18 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Monica.Configuration.Abstractions;
 using Monica.Configuration.EfCore.DbContext;
 using Monica.Configuration.EfCore.Entities;
 using Monica.Configuration.Exceptions;
 using Monica.Configuration.Models;
-using Monica.Repository.Persistence.Abstractions;
 
 namespace Monica.Configuration.EfCore.Stores;
 
 /// <summary>
 /// EF Core-backed store bundle for distributed Monica.Configuration deployments.
 /// </summary>
-public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationDbContext> dbContextProvider)
+public sealed class DatabaseConfigurationStore(IServiceScopeFactory scopeFactory)
     : IConfigurationEffectiveValueStore, IConfigurationHistoryStore, IConfigurationMetadataStore
 {
     /// <inheritdoc />
@@ -32,7 +32,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
         string seedJson,
         CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationEffectiveValues
             .FirstOrDefaultAsync(value => value.DefinitionKey == definition.DefinitionKey, cancellationToken);
         if (entity is not null)
@@ -56,7 +57,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task<ConfigurationEffectiveValueDocument?> GetAsync(string definitionKey, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationEffectiveValues
             .AsNoTracking()
             .FirstOrDefaultAsync(value => value.DefinitionKey == definitionKey, cancellationToken);
@@ -68,7 +70,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
         ConfigurationEffectiveValueSaveRequest request,
         CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationEffectiveValues
             .FirstOrDefaultAsync(value => value.DefinitionKey == request.Definition.DefinitionKey, cancellationToken);
         if (request.ExpectedVersion is not null && entity?.Version != request.ExpectedVersion)
@@ -97,7 +100,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task AppendHistoryAsync(ConfigurationValueHistory history, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         dbContext.ConfigurationValueHistories.Add(ToEntity(history));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -111,7 +115,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
         string? mutationGroupId,
         CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var query = dbContext.ConfigurationValueHistories.AsNoTracking();
 
         if (from is not null)
@@ -150,7 +155,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task<ConfigurationValueHistory?> GetHistoryByIdAsync(string historyId, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationValueHistories
             .AsNoTracking()
             .FirstOrDefaultAsync(history => history.HistoryId == historyId, cancellationToken);
@@ -160,7 +166,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task UpsertGroupAsync(ConfigurationMutationGroup group, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationMutationGroups
             .FirstOrDefaultAsync(candidate => candidate.GroupId == group.GroupId, cancellationToken);
         if (entity is null)
@@ -189,7 +196,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
         string? definitionKey,
         CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var query = dbContext.ConfigurationMutationGroups.AsNoTracking();
         if (from is not null)
         {
@@ -215,7 +223,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task<ConfigurationMutationGroup?> GetGroupAsync(string groupId, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         var entity = await dbContext.ConfigurationMutationGroups
             .AsNoTracking()
             .FirstOrDefaultAsync(group => group.GroupId == groupId, cancellationToken);
@@ -225,7 +234,8 @@ public sealed class DatabaseConfigurationStore(IDbContextProvider<ConfigurationD
     /// <inheritdoc />
     public async Task PublishAsync(IReadOnlyList<ConfigurationDefinition> definitions, CancellationToken cancellationToken)
     {
-        var dbContext = await dbContextProvider.GetDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
         foreach (var definition in definitions)
         {
             var entity = await dbContext.ConfigurationDefinitions

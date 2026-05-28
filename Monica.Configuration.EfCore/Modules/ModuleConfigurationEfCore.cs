@@ -81,7 +81,7 @@ public sealed class ModuleConfigurationEfCoreGuide
     public ModuleConfigurationEfCoreGuide UseDbContext(Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
     {
         DependsOnModule<ModuleRepositoryGuide>().Register()
-            .AddRepositoryDbContext<ConfigurationDbContext>(optionsAction, DbContextProviderType.ContextFactory);
+            .AddRepositoryDbContext<ConfigurationDbContext>(optionsAction);
         ConfigureEmpty();
         return this;
     }
