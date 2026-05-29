@@ -7,7 +7,6 @@
         <MudStack Spacing="3" Class="configuration-history-diff-dialog-content">
             <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.h6">@DialogTitle</MudText>
                     @if (Group is not null)
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count]</MudText>
