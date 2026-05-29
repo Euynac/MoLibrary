@@ -1,0 +1,65 @@
+.configuration-history-diff-dialog-content {
+    min-height: min(74vh, 860px);
+}
+
+.configuration-history-diff-layout {
+    height: min(70vh, 820px);
+    min-height: 0;
+}
+
+.configuration-history-diff-timeline-column,
+.configuration-history-diff-preview-column {
+    min-height: 0;
+}
+
+.configuration-history-diff-timeline-panel,
+.configuration-history-diff-preview-panel {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.configuration-history-diff-timeline-scroll {
+    height: calc(100% - 32px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.configuration-history-diff-timeline-button {
+    justify-content: flex-start;
+    padding: 8px;
+    text-align: left;
+    text-transform: none;
+}
+
+.configuration-history-diff-timeline-button.selected {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.configuration-history-diff-timeline-button ::deep .mud-button-label {
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.configuration-history-diff-preview-panel {
+    overflow-y: auto;
+}
+
+@media (max-width: 960px) {
+    .configuration-history-diff-dialog-content,
+    .configuration-history-diff-layout {
+        min-height: 0;
+        height: auto;
+    }
+
+    .configuration-history-diff-timeline-panel,
+    .configuration-history-diff-preview-panel {
+        height: auto;
+        max-height: none;
+    }
+
+    .configuration-history-diff-timeline-scroll {
+        height: auto;
+        max-height: 280px;
+    }
+}

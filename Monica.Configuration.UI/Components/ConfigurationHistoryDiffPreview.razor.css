@@ -1,0 +1,11 @@
+.configuration-history-diff-preview {
+    min-width: 0;
+}
+
+.configuration-history-diff-preview ::deep .diff-viewer {
+    width: 100%;
+}
+
+.configuration-history-diff-preview ::deep .diff-content {
+    max-height: min(58vh, 680px);
+}

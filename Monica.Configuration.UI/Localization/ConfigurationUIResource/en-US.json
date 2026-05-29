@@ -77,6 +77,9 @@
   "History": {
     "Title": "History",
     "Subtitle": "Audit individual mutations and persisted mutation groups.",
+    "Actions": {
+      "ViewChange": "View change"
+    },
     "Tabs": {
       "Mutations": "By mutation",
       "Groups": "By group"
@@ -91,6 +94,19 @@
     "Columns": {
       "Time": "Time",
       "Kind": "Kind"
+    },
+    "Dialog": {
+      "Title": "Configuration History",
+      "MutationTitle": "Configuration History - {0}",
+      "GroupTitle": "Configuration Group History - {0}",
+      "Timeline": "Timeline",
+      "GroupSummary": "Group summary",
+      "GroupSubtitle": "{0} mutations across {1} definitions",
+      "Version": "v{0}",
+      "Operator": "Operator",
+      "DiffDirection": "Old value -> new value",
+      "RollbackDirection": "Current mutation value -> rollback target",
+      "NoPreview": "No history rows are available for diff preview."
     }
   },
   "Group": {
@@ -104,7 +120,6 @@
     "Definitions": "Definitions",
     "Status": "Status",
     "ViewHistory": "View group history",
-    "HistoryLoaded": "Loaded history for {0}.",
     "StatusValues": {
       "Applied": "Applied",
       "PartiallyApplied": "Partially applied",
@@ -116,6 +131,7 @@
     "GroupTitle": "Roll Back Group",
     "SingleWarning": "This will apply a new mutation that restores the previous value for this history row.",
     "GroupWarning": "This will apply rollback mutations in reverse group order. If one mutation fails, the rollback group will be partial.",
+    "PreviewTitle": "Change preview",
     "Confirm": "Roll back",
     "Success": "Rollback completed."
   },
@@ -164,7 +180,8 @@
       "Back": "Back",
       "Search": "Search",
       "Cancel": "Cancel",
-      "Stage": "Stage"
+      "Stage": "Stage",
+      "Close": "Close"
     },
     "States": {
       "Loading": "Loading...",

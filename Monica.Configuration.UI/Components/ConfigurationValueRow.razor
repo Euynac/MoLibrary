@@ -1,7 +1,8 @@
 @using Monica.Configuration.UI.Localization
+@inject ConfigurationFacade Facade
 @inject ConfigurationStateStore StateStore
-@inject NavigationManager NavigationManager
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<ConfigurationUIResource> L
 
 <MudPaper Outlined="true" Class="pa-3 configuration-value-row">
@@ -60,7 +61,7 @@
                 <MudTooltip Text="@L["History:Title"]">
                     <MudIconButton Icon="@Icons.Material.Filled.History"
                                    Size="Size.Small"
-                                   OnClick="OpenHistory" />
+                                   OnClick="OpenHistoryAsync" />
                 </MudTooltip>
                 @if (PendingChange is not null)
                 {
@@ -134,9 +135,25 @@
         }
     }
 
-    private void OpenHistory()
+    private async Task OpenHistoryAsync()
     {
-        NavigationManager.NavigateTo(ConfigurationUiRoutes.History(Definition.DefinitionKey, Node.RelativePath));
+        var result = await Facade.GetHistoryAsync(Definition.DefinitionKey, Node.RelativePath);
+        if (result.IsFailed(out var error, out var rows))
+        {
+            Snackbar.Add($"{L["Common:Errors:LoadFailed"]}: {error.Message}", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfigurationHistoryDiffDialog>();
+        parameters.Add(dialog => dialog.Rows, rows);
+        parameters.Add(dialog => dialog.Definition, Definition);
+        parameters.Add(dialog => dialog.FocusPath, Node.RelativePath);
+        parameters.Add(dialog => dialog.Title, L["History:Dialog:MutationTitle", Definition.DisplayName]);
+        await DialogService.ShowAsync<ConfigurationHistoryDiffDialog>(L["History:Dialog:Title"], parameters, new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        });
     }
 
     private async Task Undo()

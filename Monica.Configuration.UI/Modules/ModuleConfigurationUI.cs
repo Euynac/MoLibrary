@@ -49,6 +49,8 @@ public sealed class ModuleConfigurationUI(ModuleConfigurationUIOption option)
 
         DependsOnModule<ModuleConfigurationGuide>().Register();
 
+        DependsOnModule<ModuleDiffHighlightGuide>().Register();
+
         DependsOnModule<ModuleShellUIGuide>().Register()
             .RegisterUIComponents(registry =>
             {

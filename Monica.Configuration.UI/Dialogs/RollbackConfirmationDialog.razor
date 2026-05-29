@@ -1,4 +1,5 @@
 @using Monica.Configuration.UI.Localization
+@using Monica.UI.UIDiffHighlight.Models
 @inject ConfigurationFacade Facade
 @inject IStringLocalizer<ConfigurationUIResource> L
 
@@ -15,20 +16,20 @@
                           Variant="Variant.Outlined"
                           Lines="2" />
 
-            @if (HistoryRow is not null)
+            @if (_loadingGroupRows)
             {
-                <MudTable T="ConfigurationValueHistory" Items="@SingleRows" Dense="true" Elevation="0">
-                    <HeaderContent>
-                        <MudTh>@L["State:Columns:Path"]</MudTh>
-                        <MudTh>@L["State:Columns:OldValue"]</MudTh>
-                        <MudTh>@L["State:Columns:NewValue"]</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@L["State:Columns:Path"]">@context.LogicalPath.ToCanonicalString()</MudTd>
-                        <MudTd DataLabel="@L["State:Columns:OldValue"]">@DisplayValue(context.OldValue)</MudTd>
-                        <MudTd DataLabel="@L["State:Columns:NewValue"]">@DisplayValue(context.NewValue)</MudTd>
-                    </RowTemplate>
-                </MudTable>
+                <MudProgressLinear Indeterminate="true" />
+            }
+            else
+            {
+                <MudPaper Outlined="true" Class="pa-3">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2">@L["Rollback:PreviewTitle"]</MudText>
+                        <ConfigurationHistoryDiffPreview Rows="@PreviewRows"
+                                                         IsRollbackPreview="true"
+                                                         ViewMode="EDiffViewMode.Split" />
+                    </MudStack>
+                </MudPaper>
             }
 
             @if (!string.IsNullOrWhiteSpace(_error))
@@ -48,7 +49,7 @@
                    Variant="Variant.Filled"
                    StartIcon="@Icons.Material.Filled.Restore"
                    OnClick="RollbackAsync"
-                   Disabled="_saving">
+                   Disabled="@(_saving || _loadingGroupRows)">
             @L["Rollback:Confirm"]
         </MudButton>
     </DialogActions>
@@ -58,14 +59,41 @@
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public ConfigurationValueHistory? HistoryRow { get; set; }
     [Parameter] public ConfigurationMutationGroup? Group { get; set; }
+    [Parameter] public IReadOnlyList<ConfigurationValueHistory> GroupRows { get; set; } = [];
 
     private string? _reason;
     private string? _error;
     private bool _saving;
+    private bool _loadingGroupRows;
+    private IReadOnlyList<ConfigurationValueHistory> _loadedGroupRows = [];
 
     private bool IsGroupRollback => Group is not null;
 
-    private IReadOnlyList<ConfigurationValueHistory> SingleRows => HistoryRow is null ? [] : [HistoryRow];
+    private IReadOnlyList<ConfigurationValueHistory> PreviewRows =>
+        HistoryRow is not null
+            ? [HistoryRow]
+            : GroupRows.Count > 0 ? GroupRows : _loadedGroupRows;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Group is null || GroupRows.Count > 0)
+        {
+            return;
+        }
+
+        _loadingGroupRows = true;
+        var result = await Facade.GetGroupHistoryAsync(Group.GroupId);
+        if (result.IsFailed(out var error, out var rows))
+        {
+            _error = error.Message;
+        }
+        else
+        {
+            _loadedGroupRows = rows;
+        }
+
+        _loadingGroupRows = false;
+    }
 
     private async Task RollbackAsync()
     {
@@ -102,11 +130,6 @@
         }
 
         MudDialog.Close(DialogResult.Ok(true));
-    }
-
-    private static string? DisplayValue(ConfigurationStoredValue? value)
-    {
-        return value?.Json;
     }
 
     private void Cancel()

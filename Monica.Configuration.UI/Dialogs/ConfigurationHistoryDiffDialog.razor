@@ -1,0 +1,231 @@
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.UIDiffHighlight.Models
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<MudDialog Class="configuration-history-diff-dialog">
+    <DialogContent>
+        <MudStack Spacing="3" Class="configuration-history-diff-dialog-content">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6">@DialogTitle</MudText>
+                    @if (Group is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count]</MudText>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(FocusPathText))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@FocusPathText</MudText>
+                    }
+                </MudStack>
+                @if (Group is not null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@StatusText(Group.Status)</MudChip>
+                }
+            </MudStack>
+
+            @if (_entries.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
+            }
+            else
+            {
+                <MudGrid Spacing="3" Class="configuration-history-diff-layout">
+                    <MudItem xs="12" md="4" Class="configuration-history-diff-timeline-column">
+                        <MudPaper Outlined="true" Class="pa-3 configuration-history-diff-timeline-panel">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">@L["History:Dialog:Timeline"]</MudText>
+                            <div class="configuration-history-diff-timeline-scroll">
+                                <MudTimeline TimelinePosition="TimelinePosition.Left" TimelineOrientation="TimelineOrientation.Vertical">
+                                    @foreach (var entry in _entries)
+                                    {
+                                        <MudTimelineItem Color="@entry.Color" Icon="@entry.Icon" Size="Size.Small">
+                                            <ItemContent>
+                                                <MudButton Variant="@(entry == _selectedEntry ? Variant.Outlined : Variant.Text)"
+                                                           Color="Color.Primary"
+                                                           FullWidth="true"
+                                                           Class="@TimelineButtonClass(entry)"
+                                                           OnClick="() => SelectEntry(entry)">
+                                                    <MudStack Spacing="1" AlignItems="AlignItems.Start">
+                                                        <MudText Typo="Typo.subtitle2">@entry.Title</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Subtitle</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                                                    </MudStack>
+                                                </MudButton>
+                                            </ItemContent>
+                                        </MudTimelineItem>
+                                    }
+                                </MudTimeline>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="8" Class="configuration-history-diff-preview-column">
+                        <MudPaper Outlined="true" Class="pa-3 configuration-history-diff-preview-panel">
+                            @if (_selectedEntry is not null)
+                            {
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.subtitle1">@_selectedEntry.Title</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@_selectedEntry.Subtitle</MudText>
+                                        </MudStack>
+                                        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@L["History:Dialog:Version", _selectedEntry.Version]</MudChip>
+                                            <MudChip T="ConfigurationMutationKind" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@_selectedEntry.MutationKind</MudChip>
+                                        </MudStack>
+                                    </MudStack>
+
+                                    <ConfigurationHistoryDiffPreview Rows="@_selectedEntry.Rows"
+                                                                     ViewMode="EDiffViewMode.Unified" />
+
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["History:Dialog:Operator"]</MudText>
+                                            <MudText Typo="Typo.body2">@OperatorText(_selectedEntry.Rows[0])</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Group:Reason"]</MudText>
+                                            <MudText Typo="Typo.body2">@ReasonText(_selectedEntry.Rows)</MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudStack>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">@L["Common:Actions:Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
+    [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
+    [Parameter] public ConfigurationDefinition? Definition { get; set; }
+    [Parameter] public ConfigurationMutationGroup? Group { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public LogicalPath? FocusPath { get; set; }
+
+    private readonly List<HistoryTimelineEntry> _entries = [];
+    private HistoryTimelineEntry? _selectedEntry;
+
+    private string DialogTitle => !string.IsNullOrWhiteSpace(Title)
+        ? Title!
+        : Group is not null
+            ? L["History:Dialog:GroupTitle", Group.Label]
+            : L["History:Dialog:Title"];
+
+    private string? FocusPathText => FocusPath?.ToCanonicalString();
+
+    protected override void OnParametersSet()
+    {
+        _entries.Clear();
+        var orderedRows = Rows
+            .OrderByDescending(row => row.ModifiedTime)
+            .ThenByDescending(row => row.Version)
+            .ToArray();
+
+        if (Group is not null && orderedRows.Length > 1)
+        {
+            _entries.Add(new HistoryTimelineEntry(
+                "group",
+                L["History:Dialog:GroupSummary"],
+                L["History:Dialog:GroupSubtitle", Group.MutationCount, Group.DefinitionKeys.Count],
+                Group.CreatedTime,
+                orderedRows,
+                ConfigurationMutationKind.Replace,
+                orderedRows.Max(row => row.Version),
+                Color.Primary,
+                Icons.Material.Filled.Folder));
+        }
+
+        foreach (var row in orderedRows)
+        {
+            _entries.Add(new HistoryTimelineEntry(
+                row.HistoryId,
+                DefinitionDisplay(row.DefinitionKey),
+                row.LogicalPath.ToCanonicalString(),
+                row.ModifiedTime,
+                [row],
+                row.MutationKind,
+                row.Version,
+                Color.Info,
+                MutationIcon(row.MutationKind)));
+        }
+
+        _selectedEntry = _entries.FirstOrDefault(entry => _selectedEntry?.Id == entry.Id) ?? _entries.FirstOrDefault();
+    }
+
+    private void SelectEntry(HistoryTimelineEntry entry)
+    {
+        _selectedEntry = entry;
+    }
+
+    private string TimelineButtonClass(HistoryTimelineEntry entry)
+    {
+        return entry == _selectedEntry
+            ? "configuration-history-diff-timeline-button selected"
+            : "configuration-history-diff-timeline-button";
+    }
+
+    private string DefinitionDisplay(string definitionKey)
+    {
+        if (Definition is not null && string.Equals(Definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Definition.DisplayName;
+        }
+
+        return Definitions.FirstOrDefault(definition =>
+            string.Equals(definition.DefinitionKey, definitionKey, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? definitionKey;
+    }
+
+    private string StatusText(ConfigurationMutationGroupStatus status)
+    {
+        return L[$"Group:StatusValues:{status}"];
+    }
+
+    private string OperatorText(ConfigurationValueHistory history)
+    {
+        return string.IsNullOrWhiteSpace(history.ModifierName)
+            ? history.ModifierId ?? L["Common:States:Empty"]
+            : history.ModifierName!;
+    }
+
+    private string ReasonText(IReadOnlyList<ConfigurationValueHistory> rows)
+    {
+        var reason = rows
+            .Select(row => row.Reason)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        return string.IsNullOrWhiteSpace(reason) ? L["Common:States:Empty"] : reason!;
+    }
+
+    private static string MutationIcon(ConfigurationMutationKind kind)
+    {
+        return kind switch
+        {
+            ConfigurationMutationKind.Remove => Icons.Material.Filled.Delete,
+            ConfigurationMutationKind.Replace => Icons.Material.Filled.FindReplace,
+            _ => Icons.Material.Filled.Edit
+        };
+    }
+
+    private void Close()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private sealed record HistoryTimelineEntry(
+        string Id,
+        string Title,
+        string Subtitle,
+        DateTimeOffset Time,
+        IReadOnlyList<ConfigurationValueHistory> Rows,
+        ConfigurationMutationKind MutationKind,
+        long Version,
+        Color Color,
+        string Icon);
+}

@@ -77,6 +77,9 @@
   "History": {
     "Title": "历史记录",
     "Subtitle": "审计单次修改和持久化修改组。",
+    "Actions": {
+      "ViewChange": "查看变更"
+    },
     "Tabs": {
       "Mutations": "按修改",
       "Groups": "按组"
@@ -91,6 +94,19 @@
     "Columns": {
       "Time": "时间",
       "Kind": "类型"
+    },
+    "Dialog": {
+      "Title": "配置历史记录",
+      "MutationTitle": "配置历史记录 - {0}",
+      "GroupTitle": "配置修改组历史 - {0}",
+      "Timeline": "时间线",
+      "GroupSummary": "修改组汇总",
+      "GroupSubtitle": "{0} 个修改，涉及 {1} 个配置定义",
+      "Version": "v{0}",
+      "Operator": "操作人",
+      "DiffDirection": "旧值 -> 新值",
+      "RollbackDirection": "当前修改值 -> 回滚目标值",
+      "NoPreview": "没有可用于差异预览的历史记录。"
     }
   },
   "Group": {
@@ -104,7 +120,6 @@
     "Definitions": "配置定义",
     "Status": "状态",
     "ViewHistory": "查看组历史",
-    "HistoryLoaded": "已加载 {0} 的历史。",
     "StatusValues": {
       "Applied": "已应用",
       "PartiallyApplied": "部分应用",
@@ -116,6 +131,7 @@
     "GroupTitle": "回滚修改组",
     "SingleWarning": "这会应用一条新的修改，将该历史记录恢复到之前的值。",
     "GroupWarning": "这会按修改组的反向顺序应用回滚修改。如果其中一条失败，回滚组会被标记为部分应用。",
+    "PreviewTitle": "变更预览",
     "Confirm": "回滚",
     "Success": "回滚已完成。"
   },
@@ -164,7 +180,8 @@
       "Back": "返回",
       "Search": "搜索",
       "Cancel": "取消",
-      "Stage": "暂存"
+      "Stage": "暂存",
+      "Close": "关闭"
     },
     "States": {
       "Loading": "加载中...",

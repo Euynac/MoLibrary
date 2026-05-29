@@ -1,0 +1,117 @@
+@using Monica.Configuration.UI.Localization
+@using Monica.UI.UIDiffHighlight.Models
+@inject ConfigurationFacade Facade
+@inject IStringLocalizer<ConfigurationUIResource> L
+
+<div class="configuration-history-diff-preview">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (Rows.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">@L["History:Dialog:NoPreview"]</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @(IsRollbackPreview ? L["History:Dialog:RollbackDirection"] : L["History:Dialog:DiffDirection"])
+            </MudText>
+            <DiffViewer OriginText="@_originText"
+                        NewText="@_targetText"
+                        Options="@_diffOptions"
+                        ViewMode="@ViewMode" />
+        </MudStack>
+    }
+</div>
+
+@code {
+    private readonly DiffHighlightOptions _diffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 5000
+    };
+
+    private readonly Dictionary<string, ConfigurationDefinition> _definitions = new(StringComparer.OrdinalIgnoreCase);
+    private string _originText = "null";
+    private string _targetText = "null";
+    private bool _loading;
+
+    [Parameter] public IReadOnlyList<ConfigurationValueHistory> Rows { get; set; } = [];
+    [Parameter] public bool IsRollbackPreview { get; set; }
+    [Parameter] public EDiffViewMode ViewMode { get; set; } = EDiffViewMode.Unified;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        await EnsureDefinitionsAsync();
+        _originText = ConfigurationHistoryDiffSnapshotBuilder.BuildOriginSnapshot(
+            Rows,
+            IsRollbackPreview,
+            IsSensitive,
+            DefinitionDisplay,
+            L["State:Value:Sensitive"]);
+        _targetText = ConfigurationHistoryDiffSnapshotBuilder.BuildTargetSnapshot(
+            Rows,
+            IsRollbackPreview,
+            IsSensitive,
+            DefinitionDisplay,
+            L["State:Value:Sensitive"]);
+        _loading = false;
+    }
+
+    private async Task EnsureDefinitionsAsync()
+    {
+        foreach (var definitionKey in Rows.Select(row => row.DefinitionKey).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (_definitions.ContainsKey(definitionKey))
+            {
+                continue;
+            }
+
+            var result = await Facade.GetDefinitionAsync(definitionKey);
+            if (!result.IsFailed(out _, out var detail))
+            {
+                _definitions[definitionKey] = detail.Definition;
+            }
+        }
+    }
+
+    private bool IsSensitive(ConfigurationValueHistory row)
+    {
+        return _definitions.TryGetValue(row.DefinitionKey, out var definition)
+               && ResolveTargetNode(definition, row.LogicalPath)?.IsSensitive is true;
+    }
+
+    private string DefinitionDisplay(string definitionKey)
+    {
+        return _definitions.TryGetValue(definitionKey, out var definition)
+            ? definition.DisplayName
+            : definitionKey;
+    }
+
+    private static ConfigurationNodeDefinition? ResolveTargetNode(ConfigurationDefinition definition, LogicalPath logicalPath)
+    {
+        var current = definition.Root;
+        foreach (var segment in logicalPath.Segments)
+        {
+            current = segment switch
+            {
+                PropertySegment property => current.Children.FirstOrDefault(child =>
+                    string.Equals(child.Name, property.Name, StringComparison.OrdinalIgnoreCase)),
+                DictionaryKeySegment => current.DictionaryTemplate?.ValueTemplate,
+                ListItemKeySegment or ListIndexSegment => current.ListTemplate?.ItemTemplate,
+                _ => null
+            };
+
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
+    }
+}
