@@ -91,9 +91,13 @@
 
         var successCount = 0;
         var definitionKeys = new List<string>();
+        var latestVersionsByDefinition = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var change in Changes)
         {
+            var expectedValueVersion = latestVersionsByDefinition.GetValueOrDefault(
+                change.DefinitionKey,
+                change.ExpectedValueVersion);
             var request = new ConfigurationMutationRequest
             {
                 DefinitionKey = change.DefinitionKey,
@@ -101,7 +105,7 @@
                 MutationKind = change.MutationKind,
                 Value = change.NewValue,
                 ExpectedSchemaVersion = change.ExpectedSchemaVersion,
-                ExpectedValueVersion = change.ExpectedValueVersion,
+                ExpectedValueVersion = expectedValueVersion,
                 Context = new ConfigurationMutationContext
                 {
                     MutationGroupId = group.GroupId,
@@ -110,7 +114,7 @@
             };
 
             var result = await Facade.MutateAsync(request);
-            if (result.IsFailed(out var error, out _))
+            if (result.IsFailed(out var error, out var mutationResult))
             {
                 await Facade.MarkMutationGroupPartialAsync(group.GroupId, successCount, definitionKeys);
                 _error = error.Message;
@@ -120,6 +124,7 @@
 
             successCount++;
             definitionKeys.Add(change.DefinitionKey);
+            latestVersionsByDefinition[change.DefinitionKey] = mutationResult.NewVersion;
         }
 
         var completeResult = await Facade.CompleteMutationGroupAsync(group.GroupId, successCount, definitionKeys);
