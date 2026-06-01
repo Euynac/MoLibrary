@@ -18,9 +18,31 @@
                 </div>
             </MudPaper>
 
-            <MudPaper Outlined="true" Class="configuration-current-value-json">
-                <pre>@DisplayJson</pre>
-            </MudPaper>
+            @if (ScopedPendingChanges.Count == 0)
+            {
+                <div class="configuration-current-value-json">
+                    <MudPaper Outlined="true">
+                        <pre>@PendingDisplayJson</pre>
+                    </MudPaper>
+                </div>
+            }
+            else
+            {
+                <div class="configuration-current-value-diff">
+                    <MudPaper Outlined="true" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="1">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Dialogs:CurrentValue:PendingDiffDirection"]</MudText>
+                                <MudChip T="int" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@ScopedPendingChanges.Count</MudChip>
+                            </MudStack>
+                            <DiffViewer OriginText="@OriginalDisplayJson"
+                                        NewText="@PendingDisplayJson"
+                                        Options="@DiffOptions"
+                                        ViewMode="EDiffViewMode.Split" />
+                        </MudStack>
+                    </MudPaper>
+                </div>
+            }
         </MudStack>
     </DialogContent>
     <DialogActions>
@@ -35,21 +57,34 @@
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
 
+    private readonly DiffHighlightOptions DiffOptions = new()
+    {
+        Mode = EDiffHighlightMode.Line,
+        ContextLines = 4,
+        MaxCharacterDiffLength = 8000
+    };
+
     private string VersionText => EffectiveValue?.Version is { } version
         ? $"v{version}"
         : L["Common:States:Empty"].Value;
 
-    private string DisplayJson
+    private IReadOnlyList<PendingChange> ScopedPendingChanges => PendingChanges
+        .Where(change => ConfigurationPendingValueDocumentBuilder.IsInScope(change, Definition.DefinitionKey, Node.RelativePath))
+        .OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private string OriginalDisplayJson => BuildDisplayJson([]);
+
+    private string PendingDisplayJson => BuildDisplayJson(ScopedPendingChanges);
+
+    private string BuildDisplayJson(IReadOnlyList<PendingChange> pendingChanges)
     {
-        get
-        {
-            var node = ConfigurationPendingValueDocumentBuilder.Build(
-                Node,
-                Definition.DefinitionKey,
-                EffectiveValue?.DisplayValue,
-                PendingChanges);
-            return ConfigurationJsonDisplayFormatter.Format(node, Node, L["State:Value:Sensitive"]);
-        }
+        var node = ConfigurationPendingValueDocumentBuilder.Build(
+            Node,
+            Definition.DefinitionKey,
+            EffectiveValue?.DisplayValue,
+            pendingChanges);
+        return ConfigurationJsonDisplayFormatter.Format(node, Node, L["State:Value:Sensitive"]);
     }
 
     private void Close()

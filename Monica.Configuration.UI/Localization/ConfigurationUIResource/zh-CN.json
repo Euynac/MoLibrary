@@ -171,7 +171,8 @@
       "ChangeCount": "{0} 个修改"
     },
     "CurrentValue": {
-      "Title": "当前值"
+      "Title": "当前值",
+      "PendingDiffDirection": "当前值 -> 暂存值"
     },
     "ComplexEditor": {
       "Title": "编辑复杂值",

@@ -38,6 +38,20 @@ public sealed class ConfigurationStateStore
     }
 
     /// <summary>
+    /// Gets all staged changes inside one definition path scope.
+    /// </summary>
+    /// <param name="definitionKey">The definition key that owns the scope.</param>
+    /// <param name="scopePath">The root logical path of the scope.</param>
+    /// <returns>The staged changes under the scope.</returns>
+    public IReadOnlyList<PendingChange> GetScope(string definitionKey, LogicalPath scopePath)
+    {
+        return _pendingChanges.Values
+            .Where(change => string.Equals(change.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, change.LogicalPath))
+            .OrderBy(change => change.LogicalPath.ToCanonicalString(), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    /// <summary>
     /// Stages one pending change.
     /// </summary>
     /// <param name="change">The pending change.</param>
@@ -84,6 +98,28 @@ public sealed class ConfigurationStateStore
     public void Undo(string definitionKey, LogicalPath path)
     {
         if (_pendingChanges.Remove(Key(definitionKey, path)))
+        {
+            NotifyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Removes all staged changes inside one definition path scope.
+    /// </summary>
+    /// <param name="definitionKey">The definition key that owns the scope.</param>
+    /// <param name="scopePath">The root logical path of the scope.</param>
+    public void UndoScope(string definitionKey, LogicalPath scopePath)
+    {
+        var scopedKeys = _pendingChanges.Keys
+            .Where(key => string.Equals(key.DefinitionKey, definitionKey, StringComparison.Ordinal) && IsPrefix(scopePath, key.LogicalPath))
+            .ToArray();
+
+        foreach (var key in scopedKeys)
+        {
+            _pendingChanges.Remove(key);
+        }
+
+        if (scopedKeys.Length > 0)
         {
             NotifyChanged();
         }

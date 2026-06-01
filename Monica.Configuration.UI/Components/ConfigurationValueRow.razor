@@ -70,7 +70,7 @@
                                    Size="Size.Small"
                                    OnClick="OpenHistoryAsync" />
                 </MudTooltip>
-                @if (PendingChange is not null)
+                @if (HasPendingChanges)
                 {
                     <MudTooltip Text="@L["State:Actions:Undo"]">
                         <MudIconButton Icon="@Icons.Material.Filled.Undo"
@@ -91,6 +91,12 @@
     [Parameter] public EventCallback Changed { get; set; }
 
     private PendingChange? PendingChange => StateStore.Get(Definition.DefinitionKey, Node.RelativePath);
+
+    private IReadOnlyList<PendingChange> ScopedPendingChanges => StateStore.GetScope(Definition.DefinitionKey, Node.RelativePath);
+
+    private bool HasPendingChanges => Node.NodeKind == ConfigurationNodeKind.Scalar
+        ? PendingChange is not null
+        : ScopedPendingChanges.Count > 0;
 
     private string DisplayName => string.IsNullOrWhiteSpace(Node.DisplayName) ? Node.Name : Node.DisplayName!;
 
@@ -209,7 +215,15 @@
 
     private async Task Undo()
     {
-        StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
+        if (Node.NodeKind == ConfigurationNodeKind.Scalar)
+        {
+            StateStore.Undo(Definition.DefinitionKey, Node.RelativePath);
+        }
+        else
+        {
+            StateStore.UndoScope(Definition.DefinitionKey, Node.RelativePath);
+        }
+
         await Changed.InvokeAsync();
     }
 

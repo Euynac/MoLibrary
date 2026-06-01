@@ -171,7 +171,8 @@
       "ChangeCount": "{0} changes"
     },
     "CurrentValue": {
-      "Title": "Current Value"
+      "Title": "Current Value",
+      "PendingDiffDirection": "Current value -> staged value"
     },
     "ComplexEditor": {
       "Title": "Edit Complex Value",

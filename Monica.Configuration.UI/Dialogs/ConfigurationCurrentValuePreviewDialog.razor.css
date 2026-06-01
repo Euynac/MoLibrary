@@ -20,6 +20,11 @@
     overflow: auto;
 }
 
+.configuration-current-value-diff {
+    max-height: min(68vh, 720px);
+    overflow: auto;
+}
+
 .configuration-current-value-json pre {
     margin: 0;
     padding: 1rem;
