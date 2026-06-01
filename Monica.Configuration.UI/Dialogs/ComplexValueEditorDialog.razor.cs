@@ -949,7 +949,7 @@ public partial class ComplexValueEditorDialog
     private static string FormatJson(JsonNode? node)
     {
         using var document = JsonDocument.Parse(node?.ToJsonString() ?? "null");
-        return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(document.RootElement, ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
     }
 
     private ConfigurationReloadBehavior EffectiveReloadBehaviorFor(ConfigurationNodeDefinition schema)

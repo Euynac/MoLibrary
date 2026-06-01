@@ -1,5 +1,4 @@
 @using Monica.Configuration.UI.Localization
-@using System.Text.Json
 @using System.Text.Json.Nodes
 @using Monica.UI.UIDiffHighlight.Models
 @inject IStringLocalizer<ConfigurationUIResource> L
@@ -27,11 +26,6 @@ else
 }
 
 @code {
-    private static readonly JsonSerializerOptions SNAPSHOT_JSON_OPTIONS = new()
-    {
-        WriteIndented = true
-    };
-
     private readonly DiffHighlightOptions DiffOptions = new()
     {
         Mode = EDiffHighlightMode.Line,
@@ -53,7 +47,7 @@ else
             snapshot[change.LogicalPath.ToCanonicalString()] = BuildSnapshotValue(change, useOriginal);
         }
 
-        return snapshot.ToJsonString(SNAPSHOT_JSON_OPTIONS);
+        return snapshot.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
     }
 
     private JsonNode? BuildSnapshotValue(PendingChange change, bool useOriginal)

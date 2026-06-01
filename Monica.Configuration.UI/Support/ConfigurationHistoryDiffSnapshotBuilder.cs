@@ -9,11 +9,6 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
 {
     private const string ROOT_KEY = "$root";
 
-    private static readonly JsonSerializerOptions JSON_OPTIONS = new()
-    {
-        WriteIndented = true
-    };
-
     public static string BuildOriginSnapshot(
         IReadOnlyList<ConfigurationValueHistory> rows,
         bool isRollbackPreview,
@@ -90,7 +85,7 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
             SetPath(root, row.LogicalPath, node);
         }
 
-        return root.ToJsonString(JSON_OPTIONS);
+        return root.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions);
     }
 
     private static IReadOnlyList<HistoryPathGroup> CollapseByPath(IReadOnlyList<ConfigurationValueHistory> rows)
@@ -160,7 +155,7 @@ internal static class ConfigurationHistoryDiffSnapshotBuilder
 
     private static string FormatJson(JsonNode? node)
     {
-        return node?.ToJsonString(JSON_OPTIONS) ?? "null";
+        return node?.ToJsonString(ConfigurationJsonDisplayFormatter.ReadableJsonOptions) ?? "null";
     }
 
     private static string BuildDefinitionNodeKey(string definitionKey, Func<string, string> definitionDisplay)

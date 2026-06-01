@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Monica.Configuration.Models;
@@ -6,15 +7,16 @@ namespace Monica.Configuration.UI.Support;
 
 internal static class ConfigurationJsonDisplayFormatter
 {
-    private static readonly JsonSerializerOptions JSON_OPTIONS = new()
+    public static JsonSerializerOptions ReadableJsonOptions { get; } = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     public static string Format(JsonNode? node, ConfigurationNodeDefinition schema, string redactedLabel)
     {
         var redacted = RedactSensitive(CloneNode(node), schema, redactedLabel);
-        return redacted?.ToJsonString(JSON_OPTIONS) ?? "null";
+        return redacted?.ToJsonString(ReadableJsonOptions) ?? "null";
     }
 
     public static string Format(string? json, ConfigurationNodeDefinition schema, string redactedLabel)

@@ -10,7 +10,7 @@
                         <MudText Typo="Typo.subtitle2">@Definition.DisplayName</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:DefinitionKey"]: @Definition.DefinitionKey</MudText>
                     </MudStack>
-                    <MudChip T="long?" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">v@EffectiveValue?.Version</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@VersionText</MudChip>
                 </MudStack>
                 <div class="configuration-current-value-path">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@L["Mutation:LogicalPath"]</MudText>
@@ -34,6 +34,10 @@
     [Parameter, EditorRequired] public ConfigurationNodeDefinition Node { get; set; } = null!;
     [Parameter] public ConfigurationEffectiveValue? EffectiveValue { get; set; }
     [Parameter] public IReadOnlyList<PendingChange> PendingChanges { get; set; } = [];
+
+    private string VersionText => EffectiveValue?.Version is { } version
+        ? $"v{version}"
+        : L["Common:States:Empty"].Value;
 
     private string DisplayJson
     {
