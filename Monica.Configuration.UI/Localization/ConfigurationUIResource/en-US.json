@@ -18,7 +18,7 @@
   },
   "State": {
     "Subtitle": "Inspect managed definitions, stage edits, and save them as one audited group.",
-    "SearchPlaceholder": "Search definitions",
+    "SearchPlaceholder": "Search definitions or options",
     "Definitions": {
       "Empty": "No configuration definitions were found.",
       "NoMatches": "No definitions match the current search.",
@@ -26,8 +26,11 @@
       "Ungrouped": "Ungrouped"
     },
     "Tree": {
-      "Title": "Schema tree",
       "Root": "Root"
+    },
+    "Sections": {
+      "Title": "Configuration sections",
+      "RootDescription": "Shows every scalar option in this configuration definition."
     },
     "Actions": {
       "SaveGroup": "Save group",

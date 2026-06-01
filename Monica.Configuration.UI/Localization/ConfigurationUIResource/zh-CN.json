@@ -18,7 +18,7 @@
   },
   "State": {
     "Subtitle": "查看受管配置定义，暂存修改，并作为一个审计组保存。",
-    "SearchPlaceholder": "搜索配置定义",
+    "SearchPlaceholder": "搜索配置定义或配置项",
     "Definitions": {
       "Empty": "未找到配置定义。",
       "NoMatches": "没有配置定义匹配当前搜索。",
@@ -26,8 +26,11 @@
       "Ungrouped": "未分组"
     },
     "Tree": {
-      "Title": "Schema 树",
       "Root": "根节点"
+    },
+    "Sections": {
+      "Title": "配置分组",
+      "RootDescription": "显示当前配置定义下的所有标量配置项。"
     },
     "Actions": {
       "SaveGroup": "保存修改组",

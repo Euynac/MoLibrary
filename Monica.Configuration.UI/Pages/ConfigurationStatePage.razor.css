@@ -111,12 +111,43 @@
     gap: 1rem;
 }
 
-.configuration-state-page ::deep .configuration-tree-panel,
+.configuration-state-page ::deep .configuration-section-panel,
 .configuration-state-page ::deep .configuration-values-panel {
     flex: 1 1 auto;
     min-height: 0;
     max-height: 100%;
     overflow: auto;
+}
+
+.configuration-section-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.configuration-section-list ::deep .configuration-section-button {
+    justify-content: flex-start;
+    min-width: 0;
+    padding: 0.625rem;
+    text-align: left;
+}
+
+.configuration-section-list ::deep .mud-button-label {
+    min-width: 0;
+    justify-content: flex-start;
+}
+
+.configuration-section-content,
+.configuration-section-title-row {
+    width: 100%;
+    min-width: 0;
+}
+
+.configuration-section-content ::deep .mud-typography {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .configuration-state-page ::deep .configuration-detail-left {
@@ -137,7 +168,7 @@
     .configuration-state-page ::deep .configuration-state-layout,
     .configuration-state-page ::deep .configuration-state-grid,
     .configuration-state-page ::deep .configuration-definition-shell,
-    .configuration-state-page ::deep .configuration-tree-panel,
+    .configuration-state-page ::deep .configuration-section-panel,
     .configuration-state-page ::deep .configuration-values-panel {
         height: auto;
         max-height: none;

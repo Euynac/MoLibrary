@@ -32,14 +32,47 @@
                             <MudListSubheader>@group.Key</MudListSubheader>
                             @foreach (var definition in group.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase))
                             {
+                                var matches = GetNodeMatches(definition);
                                 <MudListItem T="ConfigurationDefinitionSummary"
                                              Value="@definition"
                                              Icon="@Icons.Material.Filled.Settings"
                                              Class="@(IsSelected(definition) ? "selected-definition" : null)"
                                              OnClick="() => SelectedDefinitionChanged.InvokeAsync(definition)">
                                     <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2">@definition.DisplayName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetOptionsTypeName(definition)</MudText>
+                                        <MudText Typo="Typo.body2">
+                                            <MudHighlighter Text="@definition.DisplayName" HighlightedTexts="@SearchTerms" />
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudHighlighter Text="@GetOptionsTypeName(definition)" HighlightedTexts="@SearchTerms" />
+                                        </MudText>
+                                        @if (matches.Count > 0)
+                                        {
+                                            <div class="configuration-node-match-list">
+                                                @foreach (var match in matches.Take(MAX_VISIBLE_NODE_MATCHES))
+                                                {
+                                                    <div @onclick:stopPropagation="true">
+                                                        <MudButton Variant="Variant.Text"
+                                                                   Size="Size.Small"
+                                                                   StartIcon="@Icons.Material.Filled.SubdirectoryArrowRight"
+                                                                   Class="configuration-node-match-button"
+                                                                   OnClick="@(() => NodeSearchMatchSelected.InvokeAsync(match))">
+                                                            <MudStack Spacing="0" AlignItems="AlignItems.Start" Class="configuration-node-match-text">
+                                                                <MudText Typo="Typo.caption">
+                                                                    <MudHighlighter Text="@match.DisplayName" HighlightedTexts="@SearchTerms" />
+                                                                </MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@match.PathLabel</MudText>
+                                                            </MudStack>
+                                                        </MudButton>
+                                                    </div>
+                                                }
+                                                @if (matches.Count > MAX_VISIBLE_NODE_MATCHES)
+                                                {
+                                                    <MudChip T="int" Size="Size.Small" Variant="Variant.Outlined">
+                                                        +@(matches.Count - MAX_VISIBLE_NODE_MATCHES)
+                                                    </MudChip>
+                                                }
+                                            </div>
+                                        }
                                     </MudStack>
                                 </MudListItem>
                             }
@@ -76,9 +109,14 @@
 </div>
 
 @code {
+    private const int MAX_VISIBLE_NODE_MATCHES = 4;
+
     [Parameter] public IReadOnlyList<ConfigurationDefinitionSummary> Definitions { get; set; } = [];
     [Parameter] public ConfigurationDefinitionSummary? SelectedDefinition { get; set; }
     [Parameter] public EventCallback<ConfigurationDefinitionSummary> SelectedDefinitionChanged { get; set; }
+    [Parameter] public IReadOnlyDictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>> NodeSearchMatches { get; set; } =
+        new Dictionary<string, IReadOnlyList<ConfigurationNodeSearchMatch>>(StringComparer.OrdinalIgnoreCase);
+    [Parameter] public EventCallback<ConfigurationNodeSearchMatch> NodeSearchMatchSelected { get; set; }
     [Parameter] public string SearchText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
     [Parameter] public int PendingCount { get; set; }
@@ -89,11 +127,15 @@
         string.IsNullOrWhiteSpace(SearchText)
             ? Definitions
             : Definitions.Where(definition =>
-                definition.DefinitionKey.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || definition.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || definition.ClrTypeName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || definition.SectionPath.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                || (definition.OwnerModule?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false));
+                IsDefinitionMatch(definition)
+                || GetNodeMatches(definition).Count > 0);
+
+    private IReadOnlyList<string> SearchTerms => string.IsNullOrWhiteSpace(SearchText)
+        ? []
+        : SearchText
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
     private bool IsSelected(ConfigurationDefinitionSummary definition)
     {
@@ -104,6 +146,27 @@
     {
         SearchText = value;
         return SearchTextChanged.InvokeAsync(value);
+    }
+
+    private bool IsDefinitionMatch(ConfigurationDefinitionSummary definition)
+    {
+        return SearchTerms.Count == 0
+               || ContainsAny(definition.DefinitionKey)
+               || ContainsAny(definition.DisplayName)
+               || ContainsAny(definition.ClrTypeName)
+               || ContainsAny(definition.SectionPath)
+               || ContainsAny(definition.OwnerModule);
+    }
+
+    private bool ContainsAny(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+               && SearchTerms.Any(term => value.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IReadOnlyList<ConfigurationNodeSearchMatch> GetNodeMatches(ConfigurationDefinitionSummary definition)
+    {
+        return NodeSearchMatches.TryGetValue(definition.DefinitionKey, out var matches) ? matches : [];
     }
 
     private static string GetOptionsTypeName(ConfigurationDefinitionSummary definition)
