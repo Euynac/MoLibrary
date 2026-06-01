@@ -21,8 +21,15 @@
 }
 
 .configuration-current-value-diff {
-    max-height: min(68vh, 720px);
-    overflow: auto;
+    min-width: 0;
+}
+
+.configuration-current-value-diff ::deep .diff-viewer {
+    width: 100%;
+}
+
+.configuration-current-value-diff ::deep .diff-content {
+    max-height: min(52vh, 620px);
 }
 
 .configuration-current-value-json pre {

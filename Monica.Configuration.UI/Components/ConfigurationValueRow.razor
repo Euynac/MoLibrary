@@ -175,7 +175,7 @@
         parameters.Add(dialog => dialog.PendingChanges, StateStore.GetPending());
         await DialogService.ShowAsync<ConfigurationCurrentValuePreviewDialog>(L["Dialogs:CurrentValue:Title"], parameters, new DialogOptions
         {
-            MaxWidth = MaxWidth.Medium,
+            MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true
         });
     }
